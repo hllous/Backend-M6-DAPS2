@@ -1,0 +1,492 @@
+@startuml DER-Modulo6
+' DER — Backend Módulo 6 (Ambiente, Higiene y Servicios Urbanos)
+' Fuente: docs/entidades/ y docs/enumeraciones.md del Módulo 6.
+' Equivalente PlantUML del diagrama Mermaid de DER.md — mismas tablas, mismas relaciones.
+'
+' Render:  java -jar plantuml.jar DER.puml        (genera DER.png)
+'          java -jar plantuml.jar -tsvg DER.puml  (genera DER.svg)
+
+hide circle
+hide empty methods
+skinparam linetype ortho
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #4A5568
+  ArrowColor #4A5568
+  FontName Segoe UI
+  FontSize 12
+  AttributeFontSize 11
+}
+
+' ==========================================================
+package "Configuración y planificación" #EEF4FB {
+
+  entity "service_type" as service_type {
+    * id : uuid <<PK>>
+    --
+    * code : varchar <<UK>>
+    * name : varchar
+    * category : enum <<ServiceCategory>>
+    * mode : enum <<ServiceMode>>
+    * requires_vehicle : boolean
+      active : boolean
+  }
+
+  entity "zone" as zone {
+    * id : uuid <<PK>>
+    --
+    * code : varchar <<UK>>
+    * name : varchar
+      active : boolean
+  }
+
+  entity "zone_neighborhood" as zone_neighborhood {
+    * zone_id : uuid <<PK>> <<FK>>
+    * neighborhood_id : varchar <<PK>> <<EXT M9>>
+  }
+
+  entity "route" as route {
+    * id : uuid <<PK>>
+    --
+    * code : varchar <<UK>>
+    * name : varchar
+      active : boolean
+  }
+
+  entity "route_stop" as route_stop {
+    * id : uuid <<PK>>
+    --
+    * route_id : uuid <<FK>>
+    * zone_id : uuid <<FK>>
+    * sequence : int <<UK route_id+sequence>>
+      estimated_duration_min : int
+  }
+
+  entity "service_frequency" as service_frequency {
+    * id : uuid <<PK>>
+    --
+    * service_type_id : uuid <<FK>>
+    * route_id : uuid <<FK>>
+    * shift : enum <<Shift>>
+    * valid_from : date
+      valid_to : date
+  }
+
+  entity "frequency_weekday" as frequency_weekday {
+    * frequency_id : uuid <<PK>> <<FK>>
+    * weekday : smallint <<PK>> ' 1..7
+  }
+}
+
+' ==========================================================
+package "Recursos" #F3F0FA {
+
+  entity "crew" as crew {
+    * id : uuid <<PK>>
+    --
+    * name : varchar
+    * crew_type : enum <<CrewType>>
+      leader_user_id : varchar <<EXT M1>>
+      organization_id : varchar <<EXT M1>>
+      default_shift : enum <<Shift>>
+      active : boolean
+  }
+
+  entity "crew_member" as crew_member {
+    * crew_id : uuid <<PK>> <<FK>>
+    * user_id : varchar <<PK>> <<EXT M1>>
+  }
+
+  entity "vehicle" as vehicle {
+    * id : uuid <<PK>>
+    --
+    * plate : varchar <<UK>>
+    * vehicle_type : enum <<VehicleType>>
+      capacity : numeric
+      active : boolean
+  }
+}
+
+' ==========================================================
+package "Ejecución" #FDF3E7 {
+
+  entity "service" as service {
+    * id : uuid <<PK>>
+    --
+    * service_type_id : uuid <<FK>>
+    * mode : enum <<ServiceMode>>
+      route_id : uuid <<FK>> ' null si POINT
+      target_type : varchar   ' null si ROUTE
+      target_id : uuid        ' polimórfico
+    * scheduled_date : date
+      window_from : time
+      window_to : time
+      crew_id : uuid <<FK>>   ' null hasta asignar
+      vehicle_id : uuid <<FK>>
+    * status : enum <<ServiceStatus>>
+      status_reason : varchar
+    * origin : enum <<ServiceOrigin>>
+      ticket_id : varchar <<EXT M2>>
+      public_id : varchar <<EXT M2>>
+      ticket_version : int <<EXT M2>>
+      notes : text
+  }
+
+  entity "service_zone" as service_zone {
+    * service_id : uuid <<PK>> <<FK>>
+    * zone_id : uuid <<PK>> <<FK>>
+      sequence : int ' snapshot del route
+  }
+
+  entity "zone_result" as zone_result {
+    * id : uuid <<PK>>
+    --
+    * service_id : uuid <<FK>>
+    * zone_id : uuid <<FK>> <<UK service_id+zone_id>>
+    * status : enum <<ZoneResultStatus>>
+      reason : enum <<NotServicedReason>>
+      proposed_date : date
+      notes : text
+    * recorded_at : timestamp
+  }
+
+  entity "collection_record" as collection_record {
+    * id : uuid <<PK>>
+    --
+    * service_id : uuid <<FK>>
+      zone_result_id : uuid <<FK>> ' null si POINT
+    * disposal_site_id : uuid <<FK>>
+    * waste_type : enum <<WasteType>>
+      volume_m3 : numeric
+      weight_kg : numeric
+  }
+
+  entity "disposal_site" as disposal_site {
+    * id : uuid <<PK>>
+    --
+    * code : varchar <<UK>>
+    * name : varchar
+    * site_type : enum <<DisposalSiteType>>
+  }
+
+  entity "attachment" as attachment {
+    * id : uuid <<PK>>
+    --
+    * owner_type : varchar ' SERVICE | ZONE_RESULT | INSPECTION
+    * owner_id : uuid      ' polimórfico
+    * url : varchar
+      filename : varchar
+    * uploaded_at : timestamp
+  }
+}
+
+' ==========================================================
+package "Inventario urbano" #EAF6EE {
+
+  entity "container" as container {
+    * id : uuid <<PK>>
+    --
+    * code : varchar <<UK>>
+    * container_type : enum <<ContainerType>>
+    * zone_id : uuid <<FK>>
+      address : varchar
+      lat : numeric
+      lng : numeric
+      capacity_liters : int
+    * status : enum <<ContainerStatus>>
+      damage_type : enum <<solo DAMAGED>>
+      severity : enum <<solo DAMAGED>>
+      requires_public_works : boolean <<solo DAMAGED>>
+  }
+
+  entity "green_point" as green_point {
+    * id : uuid <<PK>>
+    --
+    * code : varchar <<UK>>
+    * name : varchar
+    * zone_id : uuid <<FK>>
+      address : varchar
+      lat : numeric
+      lng : numeric
+      active : boolean
+  }
+
+  entity "green_point_waste_type" as green_point_waste_type {
+    * green_point_id : uuid <<PK>> <<FK>>
+    * waste_type : enum <<PK>> <<WasteType>>
+  }
+
+  entity "tree" as tree {
+    * id : uuid <<PK>>
+    --
+    * survey_code : varchar <<UK>>
+    * species : varchar
+    * zone_id : uuid <<FK>>
+      address : varchar
+      lat : numeric
+      lng : numeric
+      height_m : numeric
+      diameter_cm : numeric
+      active : boolean
+  }
+
+  entity "tree_survey" as tree_survey {
+    * id : uuid <<PK>>
+    --
+    * tree_id : uuid <<FK>>
+    * surveyed_at : timestamp
+      inspector_id : varchar <<EXT M1>>
+    * health_status : enum <<TreeHealthStatus>>
+    * risk_level : enum <<RiskLevel>>
+      risk_type : enum <<RiskType>>
+      suggested_intervention : enum <<TreeInterventionType>>
+      requires_street_closure : boolean
+      requires_public_works : boolean
+      notes : text
+  }
+
+  entity "tree_intervention" as tree_intervention {
+    * id : uuid <<PK>>
+    --
+    * intervention_type : enum <<TreeInterventionType>>
+      service_id : uuid <<FK>> ' null hasta programar
+      address : varchar
+      requires_street_closure : boolean
+    * status : enum <<TreeInterventionStatus>>
+      priority : enum <<Severity>>
+      authorized_by_user_id : varchar <<solo REMOVAL>>
+      authorized_at : timestamp <<solo REMOVAL>>
+      justification : text <<solo REMOVAL>>
+  }
+
+  entity "intervention_tree" as intervention_tree {
+    * intervention_id : uuid <<PK>> <<FK>>
+    * tree_id : uuid <<PK>> <<FK>>
+  }
+
+  entity "green_space" as green_space {
+    * id : uuid <<PK>>
+    --
+    * name : varchar
+    * space_type : enum <<GreenSpaceType>>
+    * zone_id : uuid <<FK>>
+      area_m2 : numeric
+      active : boolean
+  }
+}
+
+' ==========================================================
+package "Control ambiental" #FBEEF0 {
+
+  entity "environmental_report" as environmental_report {
+    * id : uuid <<PK>>
+    --
+    * report_type : enum <<EnvironmentalReportType>>
+      address : varchar
+      lat : numeric
+      lng : numeric
+      ticket_id : varchar <<EXT M2>>
+      reporter_snapshot : jsonb
+    * status : enum <<EnvironmentalReportStatus>>
+      priority : enum <<Severity>>
+      deadline_at : timestamp ' cierre por vencimiento
+  }
+
+  entity "environmental_inspection" as environmental_inspection {
+    * id : uuid <<PK>>
+    --
+    * report_id : uuid <<FK>>
+    * service_id : uuid <<FK>>
+      inspector_id : varchar <<EXT M1 — interno>>
+      inspected_at : timestamp
+      findings : text <<interno>>
+    * outcome : enum <<InspectionOutcome>>
+      next_step : enum <<InspectionNextStep>>
+  }
+
+  entity "checklist_item" as checklist_item {
+    * id : uuid <<PK>>
+    --
+    * inspection_id : uuid <<FK>>
+    * item_code : varchar
+      label : varchar
+      result : boolean
+      observations : text
+  }
+
+  entity "violation_notice" as violation_notice {
+    * id : uuid <<PK>>
+    --
+    * notice_number : varchar <<UK>>
+    * inspection_id : uuid <<FK>> <<UK>>
+    * issued_at : timestamp
+    * establishment_id : varchar <<EXT M4 — obligatorio>>
+    * violation_type : enum <<ViolationType>>
+    * severity : enum <<Severity>>
+      suggested_action : enum <<SuggestedAction — no vinculante>>
+      prior_notice_count : int
+  }
+
+  entity "sanction_outcome" as sanction_outcome {
+    * id : uuid <<PK>>
+    --
+    * violation_notice_id : uuid <<FK>> <<UK>>
+    * decision : enum <<SanctionDecision>>
+    * decided_at : timestamp
+      external_ref : varchar <<EXT M4>>
+      dismissal_reason : text
+  }
+}
+
+' ==========================================================
+package "Derivaciones salientes" #F7F2E7 {
+
+  entity "repair_request" as repair_request {
+    * id : uuid <<PK>>
+    --
+    * damage_type : enum <<RepairDamageType>>
+    * severity : enum <<Severity>>
+      address : varchar
+    * detected_in_type : varchar ' SERVICE | INSPECTION
+    * detected_in_id : uuid      ' polimórfico
+    * status : varchar           ' REQUESTED | IN_PROGRESS | CLOSED
+      work_order_id : varchar <<EXT M3>>
+    * requested_at : timestamp
+  }
+
+  entity "street_closure_request" as street_closure_request {
+    * id : uuid <<PK>>
+    --
+    * reason : varchar
+    * source_type : varchar ' SERVICE | TREE_INTERVENTION
+    * source_id : uuid      ' polimórfico
+      closure_type : enum <<StreetClosureType>>
+    * closure_from : timestamp
+    * closure_to : timestamp
+    * status : varchar ' REQUESTED | APPROVED | REJECTED | ENDED
+      closure_id : varchar <<EXT M7>>
+  }
+
+  entity "closure_street" as closure_street {
+    * id : uuid <<PK>>
+    --
+    * request_id : uuid <<FK>>
+    * street_name : varchar
+      from_cross : varchar
+      to_cross : varchar
+  }
+}
+
+' ==========================================================
+package "Integración (técnico, no de dominio)" #EFEFEF {
+
+  entity "outbox_event" as outbox_event {
+    * id : uuid <<PK>>
+    --
+    * event_type : varchar
+    * aggregate_type : varchar
+    * aggregate_id : uuid
+    * payload : jsonb
+    * status : varchar ' PENDING | SENT | FAILED
+    * occurred_at : timestamp
+      published_at : timestamp
+  }
+
+  entity "inbox_event" as inbox_event {
+    * id : uuid <<PK>>
+    --
+    * message_id : varchar <<UK — idempotencia>>
+    * event_type : varchar
+    * payload : jsonb
+    * received_at : timestamp
+      processed_at : timestamp
+  }
+}
+
+' ==========================================================
+' RELACIONES
+' ==========================================================
+
+zone              ||--o{ zone_neighborhood : agrupa
+route             ||--|{ route_stop : ordena
+zone              ||--o{ route_stop : "es parada de"
+service_type      ||--o{ service_frequency : programa
+route             ||--o{ service_frequency : "se repite en"
+service_frequency ||--|{ frequency_weekday : "corre los"
+
+crew              ||--o{ crew_member : integra
+service_type      ||--o{ service : tipifica
+route             ||--o{ service : "recorre (mode = ROUTE)"
+crew              ||--o{ service : ejecuta
+vehicle           ||--o{ service : "se asigna a"
+
+service           ||--|{ service_zone : "cubre (snapshot)"
+zone              ||--o{ service_zone : "es cubierta por"
+service           ||--o{ zone_result : "resulta en"
+zone              ||--o{ zone_result : "se reporta en"
+service           ||--o{ collection_record : registra
+zone_result       ||--o{ collection_record : detalla
+disposal_site     ||--o{ collection_record : recibe
+
+zone              ||--o{ container : ubica
+zone              ||--o{ green_point : ubica
+zone              ||--o{ tree : ubica
+zone              ||--o{ green_space : ubica
+green_point       ||--o{ green_point_waste_type : acepta
+tree              ||--o{ tree_survey : "tiene historial de"
+tree_intervention ||--|{ intervention_tree : "interviene sobre"
+tree              ||--o{ intervention_tree : "es intervenido en"
+service           ||--o| tree_intervention : "ejecuta el cuándo de"
+
+environmental_report     ||--o{ environmental_inspection : "se inspecciona en"
+service                  ||--o| environmental_inspection : "ejecuta el cuándo de"
+environmental_inspection ||--o{ checklist_item : verifica
+environmental_inspection ||--o| violation_notice : "constata en"
+violation_notice         ||--o| sanction_outcome : "es resuelta por"
+
+street_closure_request ||--|{ closure_street : corta
+
+' ==========================================================
+' REFERENCIAS POLIMÓRFICAS — no son FK, se resuelven por (type, id)
+' ==========================================================
+
+note as N_polimorficas
+  **Referencias polimórficas** (sin integridad referencial)
+  ""service.target_type + target_id""
+      → container | green_point | tree | green_space | dirección suelta
+  ""repair_request.detected_in_type + detected_in_id""
+      → service | environmental_inspection
+  ""street_closure_request.source_type + source_id""
+      → service | tree_intervention
+  ""attachment.owner_type + owner_id""
+      → service | zone_result | environmental_inspection
+end note
+
+note as N_externos
+  **IDs externos** <<EXT>> — viven en otra base, van con índice y sin FK
+  M1 · ""organization_id"", ""leader_user_id"", ""user_id"", ""inspector_id""
+  M2 · ""ticket_id"", ""public_id"", ""ticket_version""
+  M3 · ""work_order_id""
+  M4 · ""establishment_id"", ""external_ref""
+  M7 · ""closure_id""
+  M9 · ""neighborhood_id""
+end note
+
+note as N_convenciones
+  **Convenciones**
+  · Toda tabla lleva ""created_at"", ""updated_at"", ""created_by"" (no se dibujan)
+  · ""*"" = NOT NULL
+  · Los 32 enums viven en el código, no en tablas de catálogo:
+    son valores cerrados versionados, no configurables por el municipio
+  · ""service_zone"" es un **snapshot** copiado al programar:
+    editar un ""route"" no altera lo ya ejecutado
+  · ""violation_notice"" es **inmutable**: si hay error se emite otra acta
+end note
+
+N_polimorficas -[hidden]d- N_externos
+N_externos -[hidden]d- N_convenciones
+
+@enduml
