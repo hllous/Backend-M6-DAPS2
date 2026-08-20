@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uade.m6.grupo04/eventos/treeRiskDetected.schema.json",
+  "title": "treeRiskDetected",
+  "description": "M6 → M3, M7. Un relevamiento arrojó riesgo HIGH o CRITICAL sobre un árbol. Con cualquier otro riskLevel el evento no se publica.",
+  "type": "object",
+  "properties": {
+    "treeId": { "type": "string" },
+    "surveyCode": { "type": "string" },
+    "species": { "type": "string" },
+    "zoneId": { "type": "string" },
+    "location": { "$ref": "_shared.schema.json#/$defs/location" },
+    "riskLevel": {
+      "type": "string",
+      "enum": ["HIGH", "CRITICAL"],
+      "description": "El enum completo es NONE | LOW | MEDIUM | HIGH | CRITICAL, pero el evento solo se publica con estos dos."
+    },
+    "riskType": {
+      "type": "string",
+      "enum": ["FALLING_BRANCH", "TRUNK_INSTABILITY", "ROOT_UPLIFT", "POWER_LINE_CONTACT", "SIGN_OBSTRUCTION", "PEST_INFESTATION"]
+    },
+    "healthStatus": {
+      "type": "string",
+      "enum": ["HEALTHY", "WEAKENED", "DISEASED", "DEAD"],
+      "description": "CONFLICTO SIN RESOLVER: el acuerdo publicado declara HEALTHY | DECLINING | DEAD. Ver enumeraciones.md, divergencia 3."
+    },
+    "suggestedIntervention": {
+      "type": "string",
+      "enum": ["FORMATION_PRUNING", "SAFETY_PRUNING", "REMOVAL", "PLANTING", "TREATMENT"],
+      "description": "CONFLICTO SIN RESOLVER: el acuerdo publicado declara PRUNING | FELLING | TREATMENT | MONITORING. Ver enumeraciones.md, divergencia 4."
+    },
+    "requiresStreetClosure": {
+      "type": "boolean",
+      "description": "En true, después le llega a M7 un streetClosureRequested."
+    },
+    "requiresPublicWorks": {
+      "type": "boolean",
+      "description": "En true, hay un componente de infraestructura que le corresponde a M3."
+    },
+    "surveyedAt": { "$ref": "_shared.schema.json#/$defs/timestamp" }
+  },
+  "required": ["treeId", "surveyCode", "species", "zoneId", "location", "riskLevel", "riskType", "healthStatus", "suggestedIntervention", "requiresStreetClosure", "requiresPublicWorks", "surveyedAt"],
+  "additionalProperties": false
+}

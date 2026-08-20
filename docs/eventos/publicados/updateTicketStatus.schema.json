@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uade.m6.grupo04/eventos/updateTicketStatus.schema.json",
+  "title": "updateTicketStatus",
+  "description": "M6 → M2. Payload definido por el contrato v1.2 de M2 y adoptado sin cambios. Se publica solo cuando el Service o el EnvironmentalReport tiene ticketId. No lleva status ni sourceRef.",
+  "type": "object",
+  "properties": {
+    "ticketId": { "type": "string", "description": "De M2" },
+    "publicId": { "type": "string", "description": "De M2" },
+    "expectedTicketVersion": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Control optimista. Exige persistir ticketVersion de nuestro lado."
+    },
+    "updateType": {
+      "type": "string",
+      "enum": ["STARTED", "PROGRESS", "INFORMATION_REQUIRED", "RETURNED", "RESOLVED", "REJECTED"]
+    },
+    "message": { "type": "string", "description": "Texto libre para el vecino" },
+    "details": {
+      "type": "object",
+      "description": "La forma depende del updateType. PROGRESS lleva progress; RESOLVED lleva resolution; REJECTED lleva cancellation; RETURNED lleva returnInfo; INFORMATION_REQUIRED lleva los tres campos de pedido. STARTED va vacío.",
+      "properties": {
+        "progress": {
+          "type": "object",
+          "properties": {
+            "estimatedCompletionAt": { "$ref": "_shared.schema.json#/$defs/timestamp" }
+          },
+          "additionalProperties": true
+        },
+        "resolution": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "publicMessage": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "cancellation": {
+          "type": "object",
+          "properties": {
+            "reasonCode": { "type": "string" },
+            "reason": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "returnInfo": {
+          "type": "object",
+          "properties": {
+            "reasonCode": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "informationRequestId": {
+          "type": "string",
+          "description": "Lo genera el módulo que pregunta. Correlaciona con ticketUpdated / INFORMATION_PROVIDED."
+        },
+        "messageForCitizen": { "type": "string" },
+        "requestedItems": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "attachments": {
+      "type": "array",
+      "description": "En el formato de M2, no en el nuestro.",
+      "items": { "$ref": "_shared.schema.json#/$defs/m2Attachment" }
+    },
+    "updatedBy": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "const": "AREA_USER" },
+        "id": { "type": "string" }
+      },
+      "required": ["type", "id"],
+      "additionalProperties": false
+    },
+    "updatedAt": { "$ref": "_shared.schema.json#/$defs/timestamp" }
+  },
+  "required": ["ticketId", "publicId", "expectedTicketVersion", "updateType", "updatedBy", "updatedAt"],
+  "additionalProperties": false
+}

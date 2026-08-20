@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uade.m6.grupo04/eventos/environmentalViolationDetected.schema.json",
+  "title": "environmentalViolationDetected",
+  "description": "M6 → M4. Se emitió un acta de constatación ambiental. Solo se publica si el acta tiene establishmentId: sin establecimiento no se deriva.",
+  "type": "object",
+  "properties": {
+    "violationId": {
+      "type": "string",
+      "description": "Nuestro. Es el que le pedimos a M4 que devuelva como sourceViolationId."
+    },
+    "noticeNumber": { "type": "string" },
+    "issuedAt": { "$ref": "_shared.schema.json#/$defs/timestamp" },
+    "reportId": { "type": "string" },
+    "inspectionId": { "type": "string" },
+    "ticketId": { "type": "string", "description": "De M2. Solo si el expediente nació de un reclamo." },
+    "violationType": {
+      "type": "string",
+      "description": "Sale del catálogo de M6 y viaja como texto: NOISE_LIMIT, ILLEGAL_DUMPING, UNTREATED_DISCHARGE, HAZARDOUS_WASTE, AIR_EMISSION, NO_WASTE_MANAGEMENT, INSPECTION_OBSTRUCTION."
+    },
+    "severity": { "$ref": "_shared.schema.json#/$defs/severity" },
+    "location": { "$ref": "_shared.schema.json#/$defs/location" },
+    "establishmentId": {
+      "type": "string",
+      "description": "De M4. Obligatorio: es lo único sobre lo que pueden actuar."
+    },
+    "priorNoticeCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Actas previas al mismo establecimiento según nuestro histórico."
+    },
+    "evidence": {
+      "type": "array",
+      "items": { "$ref": "_shared.schema.json#/$defs/evidence" }
+    },
+    "suggestedAction": {
+      "type": "string",
+      "enum": ["WARNING", "FORMAL_NOTICE", "FINE", "CLOSURE"],
+      "description": "No vinculante. CONFLICTO SIN RESOLVER: el acuerdo publicado no incluye FORMAL_NOTICE. Ver enumeraciones.md, divergencia 5."
+    }
+  },
+  "required": ["violationId", "noticeNumber", "issuedAt", "reportId", "inspectionId", "violationType", "severity", "location", "establishmentId", "priorNoticeCount", "evidence", "suggestedAction"],
+  "additionalProperties": false
+}

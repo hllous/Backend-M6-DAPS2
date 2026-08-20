@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uade.m6.grupo04/eventos/urbanServiceScheduled.schema.json",
+  "title": "urbanServiceScheduled",
+  "description": "M6 → M7. Se agendó un servicio con fecha, zona y cuadrilla. Informativo: M7 no responde.",
+  "type": "object",
+  "properties": {
+    "serviceId": { "type": "string" },
+    "serviceTypeCode": { "type": "string" },
+    "category": {
+      "type": "string",
+      "enum": ["WASTE_COLLECTION", "STREET_CLEANING", "CONTAINERS", "TREES", "GREEN_SPACES", "ENVIRONMENTAL_CONTROL"]
+    },
+    "mode": { "type": "string", "enum": ["ROUTE", "POINT"] },
+    "zoneIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Nunca vacío: una zona en POINT, las del recorrido en ROUTE."
+    },
+    "routeId": { "type": "string", "description": "Solo en mode = ROUTE" },
+    "targetRef": { "type": "string", "description": "El bien del inventario, solo en mode = POINT" },
+    "scheduledDate": { "$ref": "_shared.schema.json#/$defs/date" },
+    "timeWindow": { "$ref": "_shared.schema.json#/$defs/timeWindow" },
+    "crewId": { "type": "string" },
+    "vehicleId": { "type": "string" },
+    "origin": {
+      "type": "string",
+      "enum": ["PLANNED", "TICKET", "WEATHER_ALERT", "INSPECTION", "MANUAL"],
+      "description": "CONFLICTO SIN RESOLVER: el acuerdo publicado declara SCHEDULED | TICKET | INSPECTION | INTERNAL. Ver enumeraciones.md, divergencia 2."
+    },
+    "ticketId": { "type": "string", "description": "De M2. Viaja siempre que origin = TICKET." }
+  },
+  "required": ["serviceId", "serviceTypeCode", "category", "mode", "zoneIds", "scheduledDate", "timeWindow", "origin"],
+  "additionalProperties": false
+}

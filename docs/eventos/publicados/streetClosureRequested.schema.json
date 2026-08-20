@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uade.m6.grupo04/eventos/streetClosureRequested.schema.json",
+  "title": "streetClosureRequested",
+  "description": "M6 → M7. Un servicio o una intervención requiere cortar la calle. Mismo contrato que la solicitud que M7 recibe de M3.",
+  "type": "object",
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "description": "Nuestro. Es el que le pedimos a M7 que devuelva como sourceRequestId."
+    },
+    "sourceModule": {
+      "type": "string",
+      "const": "M6",
+      "description": "Campo que M7 pidió por su cuenta."
+    },
+    "sourceRef": {
+      "type": "string",
+      "description": "El serviceId o interventionId que origina el corte."
+    },
+    "reason": { "type": "string" },
+    "streets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "from": { "$ref": "_shared.schema.json#/$defs/timestamp" },
+    "to": { "$ref": "_shared.schema.json#/$defs/timestamp" },
+    "closureType": { "type": "string", "enum": ["TOTAL", "PARTIAL"] },
+    "requestedAt": { "$ref": "_shared.schema.json#/$defs/timestamp" }
+  },
+  "required": ["requestId", "sourceModule", "sourceRef", "reason", "streets", "from", "to", "closureType", "requestedAt"],
+  "additionalProperties": false
+}

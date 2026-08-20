@@ -1,0 +1,35 @@
+# === Formatos derivados del pipeline de doc ===
+# Los .html y muchos .pdf se regeneran desde los .md — no van al repo.
+*.html
+fuentes/*.pdf
+M6-por-modulo/*.pdf
+M6-por-modulo/*.zip
+
+# Excepciones: los 3 entregables oficiales sí se commitean (docs/).
+!docs/Documento de Alcance - Grupo 04 (Modulo 6).pdf
+!docs/Diagrama de Eventos - Grupo 04 (Modulo 6).pdf
+!docs/Acuerdo-Eventos-M6.pdf
+
+# === Pipeline de doc ===
+# Scripts de generación y librerías de terceros: viven fuera del repo.
+fuentes/*.py
+fuentes/*.js
+
+# === Node / NestJS (cuando se cree el proyecto) ===
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.local
+.env.*.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# === IDE y sistema operativo ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

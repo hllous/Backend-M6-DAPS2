@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uade.m6.grupo04/eventos/containerDamaged.schema.json",
+  "title": "containerDamaged",
+  "description": "M6 → M3. Se detectó un contenedor dañado o faltante. requiresPublicWorks = true es la señal de que el arreglo le corresponde a M3.",
+  "type": "object",
+  "properties": {
+    "containerId": { "type": "string" },
+    "containerCode": { "type": "string" },
+    "zoneId": { "type": "string" },
+    "location": { "$ref": "_shared.schema.json#/$defs/location" },
+    "damageType": {
+      "type": "string",
+      "description": "Sale del catálogo de M6 y viaja como texto, no como enum validado: STRUCTURAL, BURNT, LID_BROKEN, WHEELS_BROKEN, VANDALIZED, MISSING."
+    },
+    "severity": { "$ref": "_shared.schema.json#/$defs/severity" },
+    "requiresPublicWorks": {
+      "type": "boolean",
+      "description": "En true, el componente de infraestructura civil le corresponde a M3."
+    },
+    "detectedAt": { "$ref": "_shared.schema.json#/$defs/timestamp" },
+    "ticketId": { "type": "string", "description": "De M2. Solo si el daño lo reportó un vecino." }
+  },
+  "required": ["containerId", "containerCode", "zoneId", "location", "damageType", "severity", "requiresPublicWorks", "detectedAt"],
+  "additionalProperties": false
+}

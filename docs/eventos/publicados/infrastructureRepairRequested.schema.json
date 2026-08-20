@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uade.m6.grupo04/eventos/infrastructureRepairRequested.schema.json",
+  "title": "infrastructureRepairRequested",
+  "description": "M6 → M3. Detectamos un daño de infraestructura ajeno a nuestra competencia. Abre una RepairRequest con seguimiento.",
+  "type": "object",
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "description": "Nuestro. Es el que le pedimos a M3 que devuelva como sourceRequestId."
+    },
+    "damageType": {
+      "type": "string",
+      "enum": ["BROKEN_PAVEMENT", "BROKEN_SIDEWALK", "BROKEN_STREETLIGHT", "BLOCKED_DRAIN", "DAMAGED_STRUCTURE"]
+    },
+    "severity": { "$ref": "_shared.schema.json#/$defs/severity" },
+    "location": { "$ref": "_shared.schema.json#/$defs/location" },
+    "detectedIn": {
+      "type": "string",
+      "description": "El serviceId o inspectionId de M6 que originó la detección."
+    },
+    "ticketId": { "type": "string", "description": "De M2. Solo si el daño lo reportó un vecino." },
+    "publicSafetyRisk": { "type": "boolean" },
+    "requestedAt": { "$ref": "_shared.schema.json#/$defs/timestamp" }
+  },
+  "required": ["requestId", "damageType", "severity", "location", "detectedIn", "publicSafetyRisk", "requestedAt"],
+  "additionalProperties": false
+}
