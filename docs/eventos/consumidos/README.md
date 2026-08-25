@@ -8,15 +8,14 @@
 | [`workOrderScheduled`](workOrderScheduled.md) | **M3** | Pasamos la solicitud de reparación a en curso |
 | [`workOrderCompleted`](workOrderCompleted.md) | **M3** | Cerramos la solicitud de reparación |
 | [`commercialFineGenerated`](commercialFineGenerated.md) | **M4** | Registramos la resolución del acta, pasamos a `SANCTIONED` y cerramos |
-| [`closureOrdered`](closureOrdered.md) | **M4** | Ídem, con la clausura como resolución |
-| [`closureLifted`](closureLifted.md) | **M4** | Registramos el levantamiento de la clausura y cerramos |
+| [`closureUpdate`](closureUpdate.md) | **M4** | `status: ORDERED` → ídem con la clausura como resolución. `status: LIFTED` → registramos el levantamiento y cerramos |
 | [`streetClosureApproved`](streetClosureApproved.md) | **M7** | Habilitamos la ejecución del servicio bloqueado |
 | [`streetClosureRejected`](streetClosureRejected.md) | **M7** | Reprogramamos o cancelamos el servicio dependiente |
 | [`streetClosureEnded`](streetClosureEnded.md) | **M7** | Liberamos la dependencia |
 | [`notificationSent`](notificationSent.md) | **M9** | Registramos el acuse. 🔴 Puede que lo saquemos |
 | [`weatherAlertIssued`](weatherAlertIssued.md) | *nadie* | **Simulado internamente.** Dispara la reprogramación masiva por zona |
 
-Diez de la cohorte, de cinco módulos, más uno simulado. **De M1, M5 y M8 no consumimos ningún evento.**
+Nueve de la cohorte, de cinco módulos, más uno simulado (`closureOrdered` + `closureLifted` se fusionaron en `closureUpdate`, 24/08). **De M1, M5 y M8 no consumimos ningún evento.**
 
 ## No llevan schema
 
@@ -26,11 +25,11 @@ El payload lo define el módulo que publica. Acá documentamos **solo los campos
 
 | Origen | Campo | Estado |
 |---|---|---|
-| M2 | El módulo responsable en `ROUTED`, y `location` con `neighborhoodId` | 🔴 Bloqueante |
-| M3 | `sourceRequestId` en los dos eventos, y cuándo se dispara `workOrderScheduled` | ⚠️ Abierto |
-| M4 | `sourceViolationId` en los tres, y confirmar el ruteo de `commercialFineGenerated` | ⚠️ Abierto |
-| M7 | `sourceRequestId` + `sourceModule` en las tres respuestas | ⚠️ Abierto |
 | M9 | Que alguien publique algo que origine una notificación | 🔴 Sin publicador |
+| M2 | `progress` de `updateTicketStatus` (lo que publicamos, no lo que consumimos) no sirve para la fecha agendada | 🔴 Bloqueante — ver [`updateTicketStatus`](../publicados/updateTicketStatus.md) |
+| M4 | Confirmar ruteo de `commercialFineGenerated`, `decidedAt`/`externalRef` pendientes de publicar, pregunta sobre `actId` | ⚠️ Abierto |
+| M3 | Cuándo se dispara `workOrderScheduled`, nombre `evidence` vs `attachments[]` a confirmar | ⚠️ Abierto (no bloqueante) |
+| M7 | Asimetría: `streetClosureEnded` no trae el origen de la solicitud, se persiste desde `streetClosureApproved` | ⚠️ Resuelto de nuestro lado |
 
 Detalle en [bloqueantes.md](../../bloqueantes.md).
 

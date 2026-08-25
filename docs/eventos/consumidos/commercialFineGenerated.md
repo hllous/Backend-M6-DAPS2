@@ -12,16 +12,19 @@ El `SanctionOutcome` es un **espejo de solo lectura**: no lo editamos, existe pa
 
 | Campo | Nota |
 |---|---|
-| 🔴 `sourceViolationId` | El `violationId` que mandamos en [`environmentalViolationDetected`](../publicados/environmentalViolationDetected.md). **Sin él el expediente queda en `NOTICE_ISSUED` para siempre** |
+| ✅ `sourceViolationId` | El `violationId` que mandamos en [`environmentalViolationDetected`](../publicados/environmentalViolationDetected.md). **Confirmado (24/08)** en el payload de ejemplo. Era nuestro bloqueante principal, queda cerrado |
+| `actId` | Nuevo en el documento vigente. 🟡 A confirmar si es el mismo dato que `externalRef` o dos identificadores distintos |
 | `decision` | Qué resolvieron |
-| `decidedAt` | Cuándo |
-| `externalRef` | Su identificador de la multa, para poder referenciarla |
+| ⚠️ `decidedAt` | Confirmado verbalmente (24/08) que lo reincorporan — el ejemplo publicado todavía no lo muestra |
+| ⚠️ `externalRef` | Su identificador de la multa. Mismo caso que `decidedAt`: confirmado, no publicado todavía |
 
 Nice to have: `establishmentId`, que ya tienen — lo aprovechamos, pero no reemplaza a `sourceViolationId`.
 
 ## Lo que falta confirmar
 
-⚠️ **Está rotulado solo "(rentas)".** En su lista figura dirigido a M5, que lo consume como cargo. Falta que confirmen que **también nos lo rutean a nosotros**: sin este evento no cerramos el expediente. Ver [bloqueantes.md](../../bloqueantes.md#m4--habilitaciones-).
+⚠️ **Sigue rotulado solo "M4 → Core → Rentas"** en su documento vigente. Falta que confirmen que **también nos lo rutean a nosotros**: sin este evento no cerramos el expediente por la vía de la multa. Ver [bloqueantes.md](../../bloqueantes.md#m4--habilitaciones--con-dos-preguntas-abiertas).
+
+🟡 **¿`actId` es lo mismo que `externalRef`?** Si es el mismo número con otro nombre, conviene decírselo para no duplicar el campo.
 
 ## Nota de vocabulario
 

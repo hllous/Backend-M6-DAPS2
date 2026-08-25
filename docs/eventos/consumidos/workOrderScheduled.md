@@ -10,9 +10,8 @@ Pasa la [`RepairRequest`](../../entidades/derivaciones.md#repairrequest--m3) cor
 
 | Campo | Nota |
 |---|---|
-| 🔴 `sourceRequestId` | El `requestId` que mandamos en [`infrastructureRepairRequested`](../publicados/infrastructureRepairRequested.md). **Sin él no sabemos a cuál de nuestras solicitudes contestan** y hay que correlacionar por dirección, que es frágil |
-
-Nice to have: la fecha programada del trabajo, si la tienen — nos permitiría estimar cuándo se libera lo que dependa de esa reparación.
+| ✅ `sourceRequestId` | El `requestId` que mandamos en [`infrastructureRepairRequested`](../publicados/infrastructureRepairRequested.md). **Confirmado (25/08).** Era nuestro bloqueante principal, queda cerrado |
+| `estimatedDuration` | Nuevo en la confirmación de M3. Nice to have: permite estimar cuándo se libera lo que dependa de la reparación |
 
 ## Lo que falta definir
 

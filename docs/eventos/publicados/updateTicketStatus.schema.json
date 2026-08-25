@@ -2,63 +2,81 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uade.m6.grupo04/eventos/updateTicketStatus.schema.json",
   "title": "updateTicketStatus",
-  "description": "M6 → M2. Payload definido por el contrato v1.2 de M2 y adoptado sin cambios. Se publica solo cuando el Service o el EnvironmentalReport tiene ticketId. No lleva status ni sourceRef.",
+  "description": "M6 → M2. Payload definido por el contrato v1.5 de M2 (reemplaza la v1.2) y adoptado sin cambios. Se publica solo cuando el Service o el EnvironmentalReport tiene ticketId. No lleva status ni sourceRef. publicId y expectedTicketVersion ya no existen en el contrato: la correlación es solo por ticketId.",
   "type": "object",
   "properties": {
-    "ticketId": { "type": "string", "description": "De M2" },
-    "publicId": { "type": "string", "description": "De M2" },
-    "expectedTicketVersion": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "Control optimista. Exige persistir ticketVersion de nuestro lado."
-    },
+    "ticketId": { "type": "string", "description": "De M2. Único campo de correlación." },
     "updateType": {
       "type": "string",
       "enum": ["STARTED", "PROGRESS", "INFORMATION_REQUIRED", "RETURNED", "RESOLVED", "REJECTED"]
     },
-    "message": { "type": "string", "description": "Texto libre para el vecino" },
+    "publicMessage": { "type": "string", "description": "Texto que puede ver el vecino" },
+    "internalMessage": { "type": "string", "description": "Nota privada, nunca se republica ni se muestra al vecino" },
+    "progress": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Porcentaje estimado. NO sirve para transportar la fecha/franja agendada — ver bloqueante en updateTicketStatus.md. No confundir con el objeto progress.estimatedCompletionAt de la v1.2, que ya no existe."
+    },
     "details": {
       "type": "object",
-      "description": "La forma depende del updateType. PROGRESS lleva progress; RESOLVED lleva resolution; REJECTED lleva cancellation; RETURNED lleva returnInfo; INFORMATION_REQUIRED lleva los tres campos de pedido. STARTED va vacío.",
+      "description": "La forma depende del updateType. RESOLVED lleva resolution; REJECTED lleva cancellation; RETURNED lleva returnInfo; INFORMATION_REQUIRED lleva informationRequest. STARTED y PROGRESS no tienen estructura de details definida en la v1.5 (details obligatorio: Ninguno) — es el origen del bloqueante de la fecha agendada.",
       "properties": {
-        "progress": {
-          "type": "object",
-          "properties": {
-            "estimatedCompletionAt": { "$ref": "_shared.schema.json#/$defs/timestamp" }
-          },
-          "additionalProperties": true
-        },
         "resolution": {
           "type": "object",
           "properties": {
-            "type": { "type": "string" },
-            "publicMessage": { "type": "string" }
+            "type": {
+              "type": "string",
+              "enum": [
+                "ACTION_COMPLETED",
+                "REQUEST_FULFILLED",
+                "INFORMATION_PROVIDED",
+                "ACKNOWLEDGED",
+                "NO_FURTHER_ACTION_REQUIRED"
+              ]
+            }
           },
+          "required": ["type"],
           "additionalProperties": true
         },
         "cancellation": {
           "type": "object",
           "properties": {
-            "reasonCode": { "type": "string" },
-            "reason": { "type": "string" }
+            "reasonCode": {
+              "type": "string",
+              "enum": [
+                "OUT_OF_SCOPE",
+                "DOES_NOT_APPLY",
+                "INVALID_REQUEST_TYPE",
+                "INVALID_DATA",
+                "REJECTED_BY_AREA",
+                "OTHER"
+              ]
+            }
           },
+          "required": ["reasonCode"],
           "additionalProperties": true
         },
         "returnInfo": {
           "type": "object",
           "properties": {
-            "reasonCode": { "type": "string" }
+            "reasonCode": {
+              "type": "string",
+              "enum": ["INVALID_INFORMATION", "REQUEST_TYPE_MISMATCH", "INSUFFICIENT_CONTEXT", "OTHER"]
+            }
           },
+          "required": ["reasonCode"],
           "additionalProperties": true
         },
-        "informationRequestId": {
-          "type": "string",
-          "description": "Lo genera el módulo que pregunta. Correlaciona con ticketUpdated / INFORMATION_PROVIDED."
-        },
-        "messageForCitizen": { "type": "string" },
-        "requestedItems": {
-          "type": "array",
-          "items": { "type": "string" }
+        "informationRequest": {
+          "type": "object",
+          "description": "Sin ID de correlación: la v1.5 impone como máximo una InformationRequest activa por ticket.",
+          "properties": {
+            "messageForCitizen": { "type": "string" },
+            "requiredBy": { "$ref": "_shared.schema.json#/$defs/timestamp" }
+          },
+          "required": ["messageForCitizen"],
+          "additionalProperties": true
         }
       },
       "additionalProperties": true
@@ -77,8 +95,11 @@
       "required": ["type", "id"],
       "additionalProperties": false
     },
-    "updatedAt": { "$ref": "_shared.schema.json#/$defs/timestamp" }
+    "statusChangedAt": {
+      "$ref": "_shared.schema.json#/$defs/timestamp",
+      "description": "Antes 'updatedAt' en la v1.2. Renombrado en la v1.5."
+    }
   },
-  "required": ["ticketId", "publicId", "expectedTicketVersion", "updateType", "updatedBy", "updatedAt"],
+  "required": ["ticketId", "updateType", "updatedBy", "statusChangedAt"],
   "additionalProperties": false
 }

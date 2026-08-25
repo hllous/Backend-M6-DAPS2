@@ -2,21 +2,29 @@
 
 M7 no autorizó el corte de calle que pedimos.
 
+> ✅ **Payload confirmado (25/08).** Ver [`streetClosureApproved`](streetClosureApproved.md) para el contexto del documento de referencia que publicó M7.
+
 ## Qué hace M6 al recibirlo
 
 Marca la [`StreetClosureRequest`](../../entidades/derivaciones.md#streetclosurerequest--m7) como rechazada y **reprograma o cancela** el [`Service`](../../entidades/service.md) dependiente.
 
 Cuál de las dos depende del trabajo: una poda de seguridad se reprograma, un servicio que ya no tiene sentido se cancela. Si el trabajo nació de un reclamo, el cambio se le informa al vecino con un [`updateTicketStatus`](../publicados/updateTicketStatus.md).
 
-## Campos imprescindibles
+## Payload confirmado
+
+```
+streetClosureRejected
+  closureRequestId, rejectionReason, requestingModule (Obras|Ambiente)
+```
 
 | Campo | Nota |
 |---|---|
-| `sourceRequestId` | El `requestId` que mandamos. Sin él no sabemos qué servicio reprogramar |
+| ✅ `closureRequestId` | El `requestId` que mandamos. **No se llama `sourceRequestId`** como habíamos pedido, pero es el mismo dato — sin él no sabemos qué servicio reprogramar |
 | `rejectionReason` | Decide si tiene sentido volver a pedirlo con otra ventana |
+| ✅ `requestingModule` | Nosotros somos `"Ambiente"` |
 
 ## Notas
 
 `rejectionReason` es lo que separa "esta calle no se puede cortar" de "no en ese horario". Del primero no se reintenta; del segundo sí, con otra ventana.
 
-Falta que M7 devuelva `sourceRequestId` y `sourceModule` en las tres respuestas.
+Los campos de origen llegaron con otro nombre del que pedimos (`closureRequestId`/`requestingModule`), pero el dato está — a diferencia de [`streetClosureEnded`](streetClosureEnded.md), que no lo trae.
