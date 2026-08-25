@@ -18,6 +18,10 @@ TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal d
 
 Documentación interna (equipo + IA que programe el módulo), no lo entregado a la cátedra ni lo que circula a otros grupos — eso es el pipeline de PDF en [`fuentes/`](fuentes/) (ver [LEEME.md](LEEME.md)). Ambos conjuntos pueden divergir un tiempo; no están unificados aún — mejora pendiente, no bug.
 
+## PDFs en `docs/`
+
+`docs/*.pdf` (Documento de Alcance, Diagrama de Eventos, Acuerdo-Eventos-M6) son entregables compilados, no fuente — no leerlos para contexto. El contenido vive en Markdown editable: `Acuerdo-Eventos-M6.md`, `fuentes/alcance-entregable.md`, y el resto de `docs/` (ver [LEEME.md](LEEME.md) para el mapeo fuente → PDF). Abrir el PDF solo si se pide explícitamente verificar el entregable compilado tal cual se presentó.
+
 ## Convenciones
 
 - Nombres de evento y campo en **camelCase**
@@ -30,12 +34,26 @@ Documentación interna (equipo + IA que programe el módulo), no lo entregado a 
 
 Flujo: `main ← test ← develop ← feature/*|bugfix/*|refactor/*|infra/*|docs/*|hotfix/*`. Nunca commitear directo a `main`/`test`/`develop`.
 
-- **Ramas**: parten de `develop`, formato obligatorio `tipo/M6-XXX-descripcion-corta` (ej. `feature/M6-101-alta-servicio-urbano`)
+- **Ramas**: parten de `develop`, formato obligatorio `tipo/XXX-descripcion-corta` (ej. `feature/101-alta-servicio-urbano`), donde `XXX` es el número de Issue en GitHub
 - **Commits**: Conventional Commits (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `docs(scope):`, `chore(ci):`) — nunca mensajes vagos ("update", "fix")
-- **PRs**: siempre hacia `develop`, nunca merge directo; checklist obligatorio (descripción, Issue M6-XXX, cambios, evidencias, checklist compilación/tests/docs/Swagger); tamaño recomendado 100–400 líneas (máx. 800); mínimo 1 aprobación ajena (nunca autoaprobación)
+- **PRs**: siempre hacia `develop`, nunca merge directo; checklist obligatorio (descripción, Issue #XXX, cambios, evidencias, checklist compilación/tests/docs/Swagger)
 - **Antes de abrir PR**: debe compilar, tests deben pasar, docs/Swagger actualizados, sin conflictos
 - **Cambios a contratos** (APIs REST, DTOs públicos, eventos/exchanges/colas RabbitMQ, OpenAPI): avisar a consumidores, actualizar docs, mantener retrocompatibilidad cuando sea posible
 
 **Stack confirmado**: Node.js + TypeScript + Nest.js + PostgreSQL (backend); React + TypeScript + Next.js + Tailwind (frontend); ORM pendiente (TypeORM/Prisma); mensajería RabbitMQ (config pendiente de M9). M6 se comunica solo por eventos asincrónicos, patrón outbox/inbox.
 
 **Principios clave**: nunca hardcodear secretos (usar `.env.example`); status como enums; `ValidationPipe` global desde el inicio; Auth/JWT prioritario antes de tocar módulos de dominio.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues (repo: `hllous/Backend-M6-DAPS2`), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five canonical roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context, but this repo predates `CONTEXT.md`/`docs/adr/`: use the existing `docs/README.md` (glossary) and `docs/decisiones/` (ADRs) instead. See `docs/agents/domain.md`.
