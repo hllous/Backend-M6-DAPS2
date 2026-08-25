@@ -15,21 +15,44 @@ M6-por-modulo/*.zip
 fuentes/*.py
 fuentes/*.js
 
-# === Node / NestJS (cuando se cree el proyecto) ===
+# === Node / NestJS ===
 node_modules/
 dist/
 build/
 coverage/
-.env
-.env.local
-.env.*.local
+*.tsbuildinfo
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# === Variables de entorno ===
+# Nunca se commitean secretos (AGENTS.md) — solo .env.example, que sí se versiona.
+.env
+.env.*
+!.env.example
+
+# === Prisma ===
+# schema.prisma y prisma/migrations/ SÍ se versionan — no tocar esas rutas acá.
+
+# === Deploy (ADR-001: Railway backend, Neon DB) ===
+.railway/
+
+# === Claude Code / agent skills ===
+# .agents/skills/ es el contenido descargado (regenerable desde skills-lock.json,
+# igual que node_modules/ desde package-lock.json). .claude/skills/* son symlinks
+# con rutas absolutas atadas a esta máquina — rompen en cualquier otro clon.
+# skills-lock.json SÍ se versiona: es el manifiesto para regenerar ambos.
+.agents/
+.claude/skills/
+.claude/settings.local.json
 
 # === IDE y sistema operativo ===
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
+*.stackdump
