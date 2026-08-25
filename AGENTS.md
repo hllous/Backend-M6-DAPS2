@@ -2,8 +2,6 @@
 
 TPO "Municipalidad UADE" de Desarrollo de Aplicaciones II: plataforma municipal distribuida, 9 grupos, un módulo cada uno, integración por eventos asincrónicos (`AsyncAPI`/bus de eventos, sobre pendiente de que M9 lo defina) y REST solo para lo síncrono. Cada módulo tiene frontend + backend en tres capas + base de datos propia; nada de acceso directo entre bases. Ver [enunciado/TPO - Desarrollo de Apps II - Gestión de municipalidad.pdf](enunciado/TPO%20-%20Desarrollo%20de%20Apps%20II%20-%20Gesti%C3%B3n%20de%20municipalidad.pdf) para el enunciado completo.
 
-Este repo es el de **Grupo 04 — Módulo 6 (Ambiente, Higiene y Servicios Urbanos)**.
-
 ## Por dónde empezar
 
 1. [docs/README.md](docs/README.md) — qué hace el módulo y el glosario de términos propios (`Zone`, `Service`, `Crew`, etc.)
@@ -22,7 +20,7 @@ Este repo es el de **Grupo 04 — Módulo 6 (Ambiente, Higiene y Servicios Urban
 
 ## Convenciones
 
-- Nombres de evento y de campo en **camelCase**, siempre — es lo que usa toda la cohorte (ver [docs/bloqueantes.md](docs/bloqueantes.md) sobre la migración de PascalCase).
+- Nombres de evento y de campo en **camelCase**
 - Un archivo de evento se llama igual que el evento: `docs/eventos/publicados/urbanServiceScheduled.md`.
 - Cada evento publicado tiene un `.schema.json` hermano con su payload en JSON Schema — es la fuente para validar y generar tipos, no para leer prosa.
 - Los eventos consumidos no tienen schema propio: el payload lo define el módulo que lo publica. Documentamos ahí solo los campos que necesitamos.
