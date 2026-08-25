@@ -1,0 +1,851 @@
+// ──────────────────────────────────────────────────────────────
+// Prisma Schema — M6 Ambiente, Higiene y Servicios Urbanos
+// Derivado del DER: docs/DER.md
+// Enums: docs/enumeraciones.md (catálogo interno)
+// ──────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ════════════════════════════════════════════════════════════════
+// ENUMS — 32 del catálogo (docs/enumeraciones.md)
+// ════════════════════════════════════════════════════════════════
+
+enum ServiceCategory {
+  WASTE_COLLECTION
+  STREET_CLEANING
+  CONTAINERS
+  TREES
+  GREEN_SPACES
+  ENVIRONMENTAL_CONTROL
+}
+
+enum ServiceMode {
+  ROUTE
+  POINT
+}
+
+enum ServiceStatus {
+  SCHEDULED
+  RESCHEDULED
+  IN_PROGRESS
+  SUSPENDED
+  COMPLETED
+  PARTIALLY_COMPLETED
+  CANCELLED
+}
+
+// Divergencia 2: el acuerdo usa SCHEDULED/INTERNAL en vez de PLANNED/MANUAL.
+// Se mantiene el catálogo interno hasta resolución — ver enumeraciones.md.
+enum ServiceOrigin {
+  PLANNED
+  TICKET
+  WEATHER_ALERT
+  INSPECTION
+  MANUAL
+}
+
+enum ZoneResultStatus {
+  SERVICED
+  PARTIAL
+  NOT_SERVICED
+}
+
+enum NotServicedReason {
+  VEHICLE_BREAKDOWN
+  CREW_UNAVAILABLE
+  BLOCKED_ACCESS
+  STREET_CLOSURE
+  WEATHER
+  EXCESS_VOLUME
+  SECURITY_INCIDENT
+  OTHER
+}
+
+enum WasteType {
+  HOUSEHOLD
+  RECYCLABLE
+  BULKY
+  GREEN
+  MIXED
+}
+
+enum DisposalSiteType {
+  LANDFILL
+  TRANSFER_STATION
+  RECYCLING_PLANT
+  COMPOSTING_PLANT
+}
+
+enum ContainerType {
+  HOUSEHOLD
+  RECYCLABLE
+  BULKY
+  GREEN
+}
+
+enum ContainerStatus {
+  ACTIVE
+  OVERFLOWED
+  DAMAGED
+  UNDER_REPAIR
+  RELOCATING
+  REMOVED
+}
+
+enum DamageType {
+  STRUCTURAL
+  BURNT
+  LID_BROKEN
+  WHEELS_BROKEN
+  VANDALIZED
+  MISSING
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// Divergencia 3: el acuerdo colapsa WEAKENED+DISEASED en DECLINING.
+enum TreeHealthStatus {
+  HEALTHY
+  WEAKENED
+  DISEASED
+  DEAD
+}
+
+// Divergencia 6: el catálogo tiene NONE, el acuerdo no. Sin consecuencia
+// práctica: el evento solo sale con HIGH o CRITICAL.
+enum RiskLevel {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RiskType {
+  FALLING_BRANCH
+  TRUNK_INSTABILITY
+  ROOT_UPLIFT
+  POWER_LINE_CONTACT
+  SIGN_OBSTRUCTION
+  PEST_INFESTATION
+}
+
+// Divergencia 4: el acuerdo usa PRUNING/FELLING, el catálogo distingue
+// FORMATION_PRUNING/SAFETY_PRUNING y llama REMOVAL a FELLING.
+enum TreeInterventionType {
+  FORMATION_PRUNING
+  SAFETY_PRUNING
+  REMOVAL
+  PLANTING
+  TREATMENT
+}
+
+enum TreeInterventionStatus {
+  REQUESTED
+  PENDING_AUTHORIZATION
+  AUTHORIZED
+  REJECTED
+}
+
+enum GreenSpaceType {
+  SQUARE
+  PARK
+  PLANTER
+  MEDIAN
+  PROMENADE
+}
+
+enum EnvironmentalReportType {
+  NOISE
+  DUMPING
+  ILLEGAL_DUMPSITE
+  WATER_DISCHARGE
+  AIR_EMISSION
+  ODOR
+  PEST_INFESTATION
+  OTHER
+}
+
+enum EnvironmentalReportStatus {
+  RECEIVED
+  UNDER_REVIEW
+  FORWARDED
+  DISMISSED
+  INSPECTION_SCHEDULED
+  INSPECTED
+  NO_VIOLATION
+  VIOLATION_FOUND
+  NOTICE_ISSUED
+  SANCTIONED
+  CLOSED
+}
+
+enum InspectionOutcome {
+  NO_VIOLATION
+  VIOLATION_FOUND
+  INCONCLUSIVE
+}
+
+enum InspectionNextStep {
+  NOTICE_TO_BE_ISSUED
+  REINSPECTION
+  CASE_CLOSED
+}
+
+enum ViolationType {
+  NOISE_LIMIT
+  ILLEGAL_DUMPING
+  UNTREATED_DISCHARGE
+  HAZARDOUS_WASTE
+  AIR_EMISSION
+  NO_WASTE_MANAGEMENT
+  INSPECTION_OBSTRUCTION
+}
+
+// Divergencia 5: falta FORMAL_NOTICE en el acuerdo.
+enum SuggestedAction {
+  WARNING
+  FORMAL_NOTICE
+  FINE
+  CLOSURE
+}
+
+enum SanctionDecision {
+  FINE_ISSUED
+  CLOSURE_ORDERED
+  FORMAL_NOTICE_ISSUED
+  DISMISSED
+}
+
+enum CrewType {
+  MUNICIPAL
+  COOPERATIVE
+  CONTRACTOR
+}
+
+enum VehicleType {
+  COMPACTOR_TRUCK
+  DUMP_TRUCK
+  SWEEPER
+  WATER_TANKER
+  CRANE_TRUCK
+  VAN
+}
+
+enum Shift {
+  MORNING
+  AFTERNOON
+  NIGHT
+}
+
+enum RepairDamageType {
+  BROKEN_PAVEMENT
+  BROKEN_SIDEWALK
+  BROKEN_STREETLIGHT
+  BLOCKED_DRAIN
+  DAMAGED_STRUCTURE
+}
+
+enum StreetClosureType {
+  TOTAL
+  PARTIAL
+}
+
+enum DelayType {
+  START
+  DURATION
+}
+
+enum OutboxEventStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN Y PLANIFICACIÓN
+// ════════════════════════════════════════════════════════════════
+
+model ServiceType {
+  id              String          @id @default(uuid()) @db.Uuid
+  code            String          @unique
+  name            String
+  category        ServiceCategory
+  mode            ServiceMode
+  requiresVehicle Boolean         @default(false) @map("requires_vehicle")
+  active          Boolean         @default(true)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  services    Service[]
+  frequencies ServiceFrequency[]
+
+  @@map("service_type")
+}
+
+model Zone {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  neighborhoods ZoneNeighborhood[]
+  routeStops    RouteStop[]
+  serviceZones  ServiceZone[]
+  zoneResults   ZoneResult[]
+  containers    Container[]
+  greenPoints   GreenPoint[]
+  trees         Tree[]
+  greenSpaces   GreenSpace[]
+
+  @@map("zone")
+}
+
+model ZoneNeighborhood {
+  zoneId          String @map("zone_id") @db.Uuid
+  neighborhoodId  String @map("neighborhood_id") // EXT M9
+
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@id([zoneId, neighborhoodId])
+  @@index([neighborhoodId])
+  @@map("zone_neighborhood")
+}
+
+model Route {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stops       RouteStop[]
+  services    Service[]
+  frequencies ServiceFrequency[]
+
+  @@map("route")
+}
+
+model RouteStop {
+  id                  String @id @default(uuid()) @db.Uuid
+  routeId             String @map("route_id") @db.Uuid
+  zoneId              String @map("zone_id") @db.Uuid
+  sequence            Int
+  estimatedDurationMin Int    @map("estimated_duration_min")
+
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  zone  Zone  @relation(fields: [zoneId], references: [id])
+
+  @@unique([routeId, sequence])
+  @@map("route_stop")
+}
+
+model ServiceFrequency {
+  id            String   @id @default(uuid()) @db.Uuid
+  serviceTypeId String   @map("service_type_id") @db.Uuid
+  routeId       String   @map("route_id") @db.Uuid
+  shift         Shift
+  validFrom     DateTime @map("valid_from") @db.Date
+  validTo       DateTime? @map("valid_to") @db.Date
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  serviceType ServiceType        @relation(fields: [serviceTypeId], references: [id])
+  route       Route              @relation(fields: [routeId], references: [id])
+  weekdays    FrequencyWeekday[]
+
+  @@map("service_frequency")
+}
+
+model FrequencyWeekday {
+  frequencyId String @map("frequency_id") @db.Uuid
+  weekday     Int    @db.SmallInt // 1=Lunes … 7=Domingo
+
+  frequency ServiceFrequency @relation(fields: [frequencyId], references: [id], onDelete: Cascade)
+
+  @@id([frequencyId, weekday])
+  @@map("frequency_weekday")
+}
+
+// ════════════════════════════════════════════════════════════════
+// RECURSOS
+// ════════════════════════════════════════════════════════════════
+
+model Crew {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  crewType       CrewType @map("crew_type")
+  leaderUserId   String?  @map("leader_user_id") // EXT M1
+  organizationId String?  @map("organization_id") // EXT M1
+  defaultShift   Shift    @map("default_shift")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  members  CrewMember[]
+  services Service[]
+
+  @@map("crew")
+}
+
+model CrewMember {
+  crewId String @map("crew_id") @db.Uuid
+  userId String @map("user_id") // EXT M1
+
+  crew Crew @relation(fields: [crewId], references: [id], onDelete: Cascade)
+
+  @@id([crewId, userId])
+  @@map("crew_member")
+}
+
+model Vehicle {
+  id          String      @id @default(uuid()) @db.Uuid
+  plate       String      @unique
+  vehicleType VehicleType @map("vehicle_type")
+  capacity    Decimal?    @db.Decimal(10, 2)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  services Service[]
+
+  @@map("vehicle")
+}
+
+// ════════════════════════════════════════════════════════════════
+// EJECUCIÓN
+// ════════════════════════════════════════════════════════════════
+
+model Service {
+  id             String        @id @default(uuid()) @db.Uuid
+  serviceTypeId  String        @map("service_type_id") @db.Uuid
+  mode           ServiceMode
+  routeId        String?       @map("route_id") @db.Uuid // null si POINT
+  targetType     String?       @map("target_type") // null si ROUTE
+  targetId       String?       @map("target_id") @db.Uuid // polimórfico
+  scheduledDate  DateTime      @map("scheduled_date") @db.Date
+  windowFrom     DateTime?     @map("window_from") @db.Time()
+  windowTo       DateTime?     @map("window_to") @db.Time()
+  crewId         String?       @map("crew_id") @db.Uuid // null hasta asignar
+  vehicleId      String?       @map("vehicle_id") @db.Uuid
+  status         ServiceStatus @default(SCHEDULED)
+  statusReason   String?       @map("status_reason")
+  origin         ServiceOrigin
+  ticketId       String?       @map("ticket_id") // EXT M2
+  publicId       String?       @map("public_id") // EXT M2
+  ticketVersion  Int?          @map("ticket_version") // EXT M2
+  notes          String?       @db.Text
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  createdBy      String?       @map("created_by")
+
+  serviceType         ServiceType              @relation(fields: [serviceTypeId], references: [id])
+  route               Route?                   @relation(fields: [routeId], references: [id])
+  crew                Crew?                    @relation(fields: [crewId], references: [id])
+  vehicle             Vehicle?                 @relation(fields: [vehicleId], references: [id])
+  zones               ServiceZone[]
+  zoneResults         ZoneResult[]
+  collectionRecords   CollectionRecord[]
+  treeIntervention    TreeIntervention?
+  inspection          EnvironmentalInspection?
+
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([ticketId])
+  @@map("service")
+}
+
+model ServiceZone {
+  serviceId String @map("service_id") @db.Uuid
+  zoneId    String @map("zone_id") @db.Uuid
+  sequence  Int    // snapshot del Route
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  zone    Zone    @relation(fields: [zoneId], references: [id])
+
+  @@id([serviceId, zoneId])
+  @@map("service_zone")
+}
+
+model ZoneResult {
+  id           String           @id @default(uuid()) @db.Uuid
+  serviceId    String           @map("service_id") @db.Uuid
+  zoneId       String           @map("zone_id") @db.Uuid
+  status       ZoneResultStatus
+  reason       NotServicedReason?
+  proposedDate DateTime?        @map("proposed_date") @db.Date
+  notes        String?          @db.Text
+  recordedAt   DateTime         @default(now()) @map("recorded_at")
+
+  service           Service            @relation(fields: [serviceId], references: [id])
+  zone              Zone               @relation(fields: [zoneId], references: [id])
+  collectionRecords CollectionRecord[]
+
+  @@unique([serviceId, zoneId])
+  @@map("zone_result")
+}
+
+model CollectionRecord {
+  id            String       @id @default(uuid()) @db.Uuid
+  serviceId     String       @map("service_id") @db.Uuid
+  zoneResultId  String?      @map("zone_result_id") @db.Uuid // null si POINT
+  disposalSiteId String      @map("disposal_site_id") @db.Uuid
+  wasteType     WasteType    @map("waste_type")
+  volumeM3      Decimal?     @map("volume_m3") @db.Decimal(10, 2)
+  weightKg      Decimal?     @map("weight_kg") @db.Decimal(10, 2)
+
+  service     Service      @relation(fields: [serviceId], references: [id])
+  zoneResult  ZoneResult?  @relation(fields: [zoneResultId], references: [id])
+  disposalSite DisposalSite @relation(fields: [disposalSiteId], references: [id])
+
+  @@map("collection_record")
+}
+
+model DisposalSite {
+  id       String          @id @default(uuid()) @db.Uuid
+  code     String          @unique
+  name     String
+  siteType DisposalSiteType @map("site_type")
+
+  collectionRecords CollectionRecord[]
+
+  @@map("disposal_site")
+}
+
+model Attachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  ownerType  String   @map("owner_type") // SERVICE | ZONE_RESULT | INSPECTION
+  ownerId    String   @map("owner_id") @db.Uuid // polimórfico
+  url        String
+  filename   String
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  @@index([ownerType, ownerId])
+  @@map("attachment")
+}
+
+// ════════════════════════════════════════════════════════════════
+// INVENTARIO URBANO
+// ════════════════════════════════════════════════════════════════
+
+model Container {
+  id                 String          @id @default(uuid()) @db.Uuid
+  code               String          @unique
+  containerType      ContainerType   @map("container_type")
+  zoneId             String          @map("zone_id") @db.Uuid
+  address            String?
+  lat                Decimal?        @db.Decimal(10, 7)
+  lng                Decimal?        @db.Decimal(10, 7)
+  capacityLiters     Int             @map("capacity_liters")
+  status             ContainerStatus @default(ACTIVE)
+  damageType         DamageType?     @map("damage_type") // solo DAMAGED
+  severity           Severity?       // solo DAMAGED
+  requiresPublicWorks Boolean?       @map("requires_public_works") // solo DAMAGED
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  zone Zone @relation(fields: [zoneId], references: [id])
+
+  @@index([status])
+  @@map("container")
+}
+
+model GreenPoint {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  name      String
+  zoneId    String   @map("zone_id") @db.Uuid
+  address   String?
+  lat       Decimal? @db.Decimal(10, 7)
+  lng       Decimal? @db.Decimal(10, 7)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  zone       Zone                  @relation(fields: [zoneId], references: [id])
+  wasteTypes GreenPointWasteType[]
+
+  @@map("green_point")
+}
+
+model GreenPointWasteType {
+  greenPointId String    @map("green_point_id") @db.Uuid
+  wasteType    WasteType @map("waste_type")
+
+  greenPoint GreenPoint @relation(fields: [greenPointId], references: [id], onDelete: Cascade)
+
+  @@id([greenPointId, wasteType])
+  @@map("green_point_waste_type")
+}
+
+model Tree {
+  id         String   @id @default(uuid()) @db.Uuid
+  surveyCode String   @unique @map("survey_code")
+  species    String?
+  zoneId     String   @map("zone_id") @db.Uuid
+  address    String?
+  lat        Decimal? @db.Decimal(10, 7)
+  lng        Decimal? @db.Decimal(10, 7)
+  heightM    Decimal? @map("height_m") @db.Decimal(5, 2)
+  diameterCm Decimal? @map("diameter_cm") @db.Decimal(5, 1)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  zone          Zone               @relation(fields: [zoneId], references: [id])
+  surveys       TreeSurvey[]
+  interventions InterventionTree[]
+
+  @@map("tree")
+}
+
+model TreeSurvey {
+  id                    String                @id @default(uuid()) @db.Uuid
+  treeId                String                @map("tree_id") @db.Uuid
+  surveyedAt            DateTime              @map("surveyed_at")
+  inspectorId           String?               @map("inspector_id") // EXT M1 — interno
+  healthStatus          TreeHealthStatus      @map("health_status")
+  riskLevel             RiskLevel             @map("risk_level")
+  riskType              RiskType?             @map("risk_type")
+  suggestedIntervention TreeInterventionType? @map("suggested_intervention")
+  requiresStreetClosure Boolean               @default(false) @map("requires_street_closure")
+  requiresPublicWorks   Boolean               @default(false) @map("requires_public_works")
+  notes                 String?               @db.Text
+  createdAt             DateTime              @default(now()) @map("created_at")
+
+  tree Tree @relation(fields: [treeId], references: [id])
+
+  @@map("tree_survey")
+}
+
+model TreeIntervention {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  interventionType      TreeInterventionType   @map("intervention_type")
+  serviceId             String?                @unique @map("service_id") @db.Uuid // null hasta programar
+  address               String?
+  requiresStreetClosure Boolean                @default(false) @map("requires_street_closure")
+  status                TreeInterventionStatus
+  priority              Severity?
+  authorizedByUserId    String?                @map("authorized_by_user_id") // solo REMOVAL
+  authorizedAt          DateTime?              @map("authorized_at") // solo REMOVAL
+  justification         String?                @db.Text // solo REMOVAL
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+
+  service Service?           @relation(fields: [serviceId], references: [id])
+  trees   InterventionTree[]
+
+  @@map("tree_intervention")
+}
+
+model InterventionTree {
+  interventionId String @map("intervention_id") @db.Uuid
+  treeId         String @map("tree_id") @db.Uuid
+
+  intervention TreeIntervention @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+  tree         Tree             @relation(fields: [treeId], references: [id])
+
+  @@id([interventionId, treeId])
+  @@map("intervention_tree")
+}
+
+model GreenSpace {
+  id        String         @id @default(uuid()) @db.Uuid
+  name      String
+  spaceType GreenSpaceType @map("space_type")
+  zoneId    String         @map("zone_id") @db.Uuid
+  areaM2    Decimal?       @map("area_m2") @db.Decimal(10, 2)
+  active    Boolean        @default(true)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  zone Zone @relation(fields: [zoneId], references: [id])
+
+  @@map("green_space")
+}
+
+// ════════════════════════════════════════════════════════════════
+// CONTROL AMBIENTAL
+// ════════════════════════════════════════════════════════════════
+
+model EnvironmentalReport {
+  id               String                    @id @default(uuid()) @db.Uuid
+  reportType       EnvironmentalReportType   @map("report_type")
+  address          String?
+  lat              Decimal?                  @db.Decimal(10, 7)
+  lng              Decimal?                  @db.Decimal(10, 7)
+  ticketId         String?                   @map("ticket_id") // EXT M2
+  reporterSnapshot Json?                     @map("reporter_snapshot")
+  status           EnvironmentalReportStatus @default(RECEIVED)
+  priority         Severity?
+  deadlineAt       DateTime?                 @map("deadline_at") // cierre por vencimiento
+  createdAt        DateTime                  @default(now()) @map("created_at")
+  updatedAt        DateTime                  @updatedAt @map("updated_at")
+
+  inspections EnvironmentalInspection[]
+
+  @@index([status])
+  @@index([ticketId])
+  @@map("environmental_report")
+}
+
+model EnvironmentalInspection {
+  id          String            @id @default(uuid()) @db.Uuid
+  reportId    String            @map("report_id") @db.Uuid
+  serviceId   String?           @unique @map("service_id") @db.Uuid
+  inspectorId String?           @map("inspector_id") // EXT M1 — interno
+  inspectedAt DateTime?         @map("inspected_at")
+  findings    String?           @db.Text // interno
+  outcome     InspectionOutcome?
+  nextStep    InspectionNextStep? @map("next_step")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  report         EnvironmentalReport @relation(fields: [reportId], references: [id])
+  service        Service?            @relation(fields: [serviceId], references: [id])
+  checklistItems ChecklistItem[]
+  violationNotice ViolationNotice?
+
+  @@map("environmental_inspection")
+}
+
+model ChecklistItem {
+  id           String  @id @default(uuid()) @db.Uuid
+  inspectionId String  @map("inspection_id") @db.Uuid
+  itemCode     String  @map("item_code")
+  label        String
+  result       Boolean
+  observations String? @db.Text
+
+  inspection EnvironmentalInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_item")
+}
+
+model ViolationNotice {
+  id               String         @id @default(uuid()) @db.Uuid
+  noticeNumber     String         @unique @map("notice_number")
+  inspectionId     String         @unique @map("inspection_id") @db.Uuid // inmutable
+  issuedAt         DateTime       @map("issued_at")
+  establishmentId  String?        @map("establishment_id") // EXT M4 — obligatorio para derivar
+  violationType    ViolationType  @map("violation_type")
+  severity         Severity
+  suggestedAction  SuggestedAction @map("suggested_action") // no vinculante
+  priorNoticeCount Int            @default(0) @map("prior_notice_count")
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  inspection      EnvironmentalInspection @relation(fields: [inspectionId], references: [id])
+  sanctionOutcome SanctionOutcome?
+
+  @@map("violation_notice")
+}
+
+model SanctionOutcome {
+  id                String           @id @default(uuid()) @db.Uuid
+  violationNoticeId String           @unique @map("violation_notice_id") @db.Uuid // solo lectura
+  decision          SanctionDecision
+  decidedAt         DateTime?        @map("decided_at")
+  externalRef       String?          @map("external_ref") // EXT M4
+  dismissalReason   String?          @map("dismissal_reason") @db.Text
+  createdAt         DateTime         @default(now()) @map("created_at")
+
+  violationNotice ViolationNotice @relation(fields: [violationNoticeId], references: [id])
+
+  @@map("sanction_outcome")
+}
+
+// ════════════════════════════════════════════════════════════════
+// DERIVACIONES SALIENTES
+// ════════════════════════════════════════════════════════════════
+
+model RepairRequest {
+  id             String          @id @default(uuid()) @db.Uuid
+  damageType     RepairDamageType @map("damage_type")
+  severity       Severity
+  address        String?
+  detectedInType String          @map("detected_in_type") // SERVICE | INSPECTION
+  detectedInId   String          @map("detected_in_id") @db.Uuid // polimórfico
+  status         String          @default("REQUESTED") // REQUESTED | IN_PROGRESS | CLOSED
+  workOrderId    String?         @map("work_order_id") // EXT M3
+  requestedAt    DateTime        @default(now()) @map("requested_at")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("repair_request")
+}
+
+model StreetClosureRequest {
+  id          String  @id @default(uuid()) @db.Uuid
+  reason      String
+  sourceType  String  @map("source_type") // SERVICE | TREE_INTERVENTION
+  sourceId    String  @map("source_id") @db.Uuid // polimórfico
+  closureType StreetClosureType? @map("closure_type")
+  closureFrom DateTime? @map("closure_from")
+  closureTo   DateTime? @map("closure_to")
+  status      String  @default("REQUESTED") // REQUESTED | APPROVED | REJECTED | ENDED
+  closureId   String? @map("closure_id") // EXT M7
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  streets ClosureStreet[]
+
+  @@index([status])
+  @@map("street_closure_request")
+}
+
+model ClosureStreet {
+  id        String @id @default(uuid()) @db.Uuid
+  requestId String @map("request_id") @db.Uuid
+  streetName String @map("street_name")
+  fromCross  String @map("from_cross")
+  toCross    String @map("to_cross")
+
+  request StreetClosureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@map("closure_street")
+}
+
+// ════════════════════════════════════════════════════════════════
+// INTEGRACIÓN (técnico, no de dominio)
+// ════════════════════════════════════════════════════════════════
+
+model OutboxEvent {
+  id            String            @id @default(uuid()) @db.Uuid
+  eventType     String            @map("event_type")
+  aggregateType String            @map("aggregate_type")
+  aggregateId   String            @map("aggregate_id") @db.Uuid
+  payload       Json
+  status        OutboxEventStatus @default(PENDING)
+  occurredAt    DateTime          @default(now()) @map("occurred_at")
+  publishedAt   DateTime?         @map("published_at")
+
+  @@index([status])
+  @@map("outbox_event")
+}
+
+model InboxEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  messageId   String    @unique @map("message_id") // idempotencia
+  eventType   String    @map("event_type")
+  payload     Json
+  receivedAt  DateTime  @default(now()) @map("received_at")
+  processedAt DateTime? @map("processed_at")
+
+  @@map("inbox_event")
+}
