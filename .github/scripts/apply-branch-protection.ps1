@@ -18,10 +18,10 @@
 #
 #  QUÉ HACE:
 #   Para cada repo (backend y frontend) y cada rama (main/test/develop):
-#    - Exige 1 aprobación en el PR
 #    - Exige checks "build" y "test" (strict)
 #    - Squash merge, historial lineal, sin force-push, sin borrar
-#    - En main/test exige además revisión de code owner (CODEOWNERS)
+#    - NO exige aprobación de PR (sin required_pull_request_reviews) --
+#      decisión del equipo, ver issue de referencia
 # =============================================================
 
 $ErrorActionPreference = "Stop"
@@ -32,21 +32,13 @@ $failed = @()
 
 foreach ($repo in $repos) {
   foreach ($branch in $branches) {
-    # En develop no se exige code owner; en main/test sí.
-    $codeOwner = if ($branch -eq "develop") { $false } else { $true }
-
     $body = [ordered]@{
       required_status_checks = [ordered]@{
         strict   = $true
         contexts = @("build", "test")
       }
       enforce_admins = $false
-      required_pull_request_reviews = [ordered]@{
-        dismiss_stale_reviews           = $true
-        require_code_owner_reviews      = $codeOwner
-        required_approving_review_count = 1
-        require_last_push_approval      = $true
-      }
+      required_pull_request_reviews = $null
       restrictions = $null
       required_linear_history          = $true
       allow_force_pushes               = $false
