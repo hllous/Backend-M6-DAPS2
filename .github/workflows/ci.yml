@@ -3,7 +3,7 @@
 # Se ejecuta en PRs y pushes a develop/test/main.
 #
 # IMPORTANTE: los jobs se llaman exactamente "build" y "test"
-# porque así lo exige la branch protection (docs/gestion/branch-protection-rules.json).
+# porque así lo exige la branch protection (.github/branch-protection-rules.json).
 # No renombrarlos sin actualizar esa regla.
 # ──────────────────────────────────────────────────────────────
 
