@@ -19,10 +19,9 @@
 #  QUÉ HACE:
 #   Para cada repo (backend y frontend) y cada rama (main/test/develop):
 #    - Exige checks "build" y "test" (strict)
-#    - Squash merge, historial lineal, sin force-push, sin borrar
+#    - Historial lineal, sin force-push y sin borrar
 #    - NO exige aprobación de PR (sin required_pull_request_reviews) --
-#      decisión del equipo, ver issue de referencia
-# =============================================================
+#      decisión del equipo, ver issue #17
 
 $ErrorActionPreference = "Stop"
 
