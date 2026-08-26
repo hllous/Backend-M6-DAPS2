@@ -1,0 +1,63 @@
+# ──────────────────────────────────────────────────────────────
+# CI — Integración continua del backend M6
+# Se ejecuta en PRs y pushes a develop/test/main.
+#
+# IMPORTANTE: los jobs se llaman exactamente "build" y "test"
+# porque así lo exige la branch protection (.github/branch-protection-rules.json).
+# No renombrarlos sin actualizar esa regla.
+# ──────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, test, main]
+  push:
+    branches: [develop, test, main]
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build
+        run: npm run build
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      # --passWithNoTests: temporal mientras no haya tests escritos.
+      # Cuando el equipo agregue tests (*.spec.ts), se puede quitar.
+      - name: Run tests
+        run: npm run test -- --passWithNoTests

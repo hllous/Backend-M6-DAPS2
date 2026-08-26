@@ -1,0 +1,4 @@
+# Code owners del repositorio.
+# Lo usa la branch protection con "require code owner review".
+# Actualizar los usuarios de GitHub del equipo cuando se conozcan todos.
+* @hllous @bcanteli-dev
