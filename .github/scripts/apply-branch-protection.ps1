@@ -1,4 +1,4 @@
-# =============================================================
+﻿# =============================================================
 #  Aplica branch protection a los repos de M6 (Grupo 04)
 # -------------------------------------------------------------
 #  REQUISITOS:
@@ -9,7 +9,12 @@
 #       con solo "write" no puede aplicar branch protection)
 #
 #  USO:
-#   powershell -ExecutionPolicy Bypass -File apply-branch-protection.ps1
+#   pwsh -File .github/scripts/apply-branch-protection.ps1
+#
+#  NOTA: usar `pwsh` (PowerShell 7+), no `powershell` (Windows PowerShell
+#  5.1) - igual el script escribe el JSON a un archivo temporal en vez de
+#  pipearlo a `gh api`, así que ambos motores deberían funcionar, pero
+#  pwsh es el probado.
 #
 #  QUÉ HACE:
 #   Para cada repo (backend y frontend) y cada rama (main/test/develop):
@@ -23,6 +28,7 @@ $ErrorActionPreference = "Stop"
 
 $repos = @("hllous/Backend-M6-DAPS2", "hllous/Frontend-M6-DAPS2")
 $branches = @("main", "test", "develop")
+$failed = @()
 
 foreach ($repo in $repos) {
   foreach ($branch in $branches) {
@@ -49,9 +55,30 @@ foreach ($repo in $repos) {
     } | ConvertTo-Json -Depth 8
 
     Write-Host "==> Aplicando proteccion a $repo / $branch" -ForegroundColor Cyan
-    $body | gh api --method PUT "repos/$repo/branches/$branch/protection" --input - | Out-Null
-    Write-Host "    OK" -ForegroundColor Green
+
+    # Se escribe a un archivo temporal (UTF-8 sin BOM) en vez de pipear el
+    # JSON directo a `gh api --input -`: en Windows PowerShell 5.1 ese pipe
+    # corrompe el body y `gh` responde HTTP 400 sin que el script lo note.
+    $tmpFile = [System.IO.Path]::GetTempFileName()
+    try {
+      [System.IO.File]::WriteAllText($tmpFile, $body, [System.Text.UTF8Encoding]::new($false))
+      gh api --method PUT "repos/$repo/branches/$branch/protection" --input $tmpFile | Out-Null
+      if ($LASTEXITCODE -ne 0) {
+        Write-Host "    FALLÓ (exit $LASTEXITCODE)" -ForegroundColor Red
+        $failed += "$repo / $branch"
+      } else {
+        Write-Host "    OK" -ForegroundColor Green
+      }
+    } finally {
+      Remove-Item $tmpFile -ErrorAction SilentlyContinue
+    }
   }
+}
+
+if ($failed.Count -gt 0) {
+  Write-Host "`nTerminado con errores en:" -ForegroundColor Red
+  $failed | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+  exit 1
 }
 
 Write-Host "`nListo. Branch protection aplicada." -ForegroundColor Green
