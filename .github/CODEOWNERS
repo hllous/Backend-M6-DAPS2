@@ -1,11 +1,11 @@
 # 1. Code owners por defecto del repositorio
 # Ante cualquier cambio en archivos no especificados abajo, se les solicitará revisión a ellos.
-* @hllous @bcanteli-dev @Benji-9
+* @hllous @bcanteli-dev @Benji-9 @MQuintieriFulter
 
 # 2. Backend
-/src/     @Benji-9 @hllous @MQuintieriFulter
-/test/    @Benji-9 @hllous @MQuintieriFulter
-/prisma/  @Benji-9 @hllous @MQuintieriFulter
+/src/     @MQuintieriFulter
+/test/    @MQuintieriFulter
+/prisma/  @MQuintieriFulter
 
 # 3. Infraestructura y DevOps
 /.github/            @bcanteli-dev
