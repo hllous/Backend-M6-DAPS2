@@ -3,9 +3,9 @@
 * @hllous @bcanteli-dev @Benji-9 @MQuintieriFulter
 
 # 2. Backend
-/src/     @MQuintieriFulter
-/test/    @MQuintieriFulter
-/prisma/  @MQuintieriFulter
+/src/     @Benji-9 @hllous @MQuintieriFulter
+/test/    @Benji-9 @hllous @MQuintieriFulter
+/prisma/  @Benji-9 @hllous @MQuintieriFulter
 
 # 3. Infraestructura y DevOps
 /.github/            @bcanteli-dev
