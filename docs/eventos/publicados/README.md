@@ -27,9 +27,9 @@ Cada evento tiene un `.schema.json` hermano: es la fuente para validar y generar
 |---|---|---|
 | M3 | `sourceRequestId` | Correlacionar la reparación con nuestra `RepairRequest` |
 | M4 | `sourceViolationId` | Saber cuál de nuestras actas resolvieron |
-| M7 | `sourceRequestId` + `sourceModule` | Saber cuál de nuestras solicitudes de corte contestaron |
+| M7 | ✅ `closureRequestId` + `requestingModule` | Saber cuál de nuestras solicitudes de corte contestaron — devuelto en los tres eventos desde el 25/08 |
 
-Los tres siguen abiertos: ver [bloqueantes.md](../../bloqueantes.md#tablero).
+M3 y M4 siguen abiertos: ver [bloqueantes.md](../../bloqueantes.md#tablero).
 
 ## Convenciones
 
