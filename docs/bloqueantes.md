@@ -2,7 +2,7 @@
 
 > **Fuente única.** Este archivo reemplaza el estado que estaba duplicado en [`LEEME.md`](../LEEME.md), [`Eventos.txt`](../Eventos.txt) y [`fuentes/alcance-entregable.md`](../fuentes/alcance-entregable.md) §7. Si algo de eso dice otra cosa, vale lo que dice acá.
 >
-> Última revisión general: **25 ago 2026**. M2 publicó la v1.5 (reemplaza la v1.2), M4 publicó `Modulo_4_Eventos.docx`, M7 publicó su documento de referencia con el payload real de corte de calle, y M3 confirmó `sourceRequestId`. Se edita a medida que cada grupo contesta — actualizá la fila y su fecha, no reescribas el archivo.
+> Última revisión general: **30 ago 2026**. M7 actualizó su documento de referencia: `streetClosureEnded` ya trae `closureRequestId` (cierra la asimetría que tenía) y propuso unificar `streetClosureRequested` con el payload de M3, propuesta que aceptamos. Antes, el 25 ago: M2 publicó la v1.5 (reemplaza la v1.2), M4 publicó `Modulo_4_Eventos.docx`, y M3 confirmó `sourceRequestId`. Se edita a medida que cada grupo contesta — actualizá la fila y su fecha, no reescribas el archivo.
 
 ## Tablero
 
@@ -25,8 +25,10 @@
 | **M3** | `sourceRequestId` en `workOrderScheduled` y `workOrderCompleted` | ✅ Cerrado | 25 ago 2026 |
 | **M3** | Nombre de campo a confirmar: nuestro diseño esperaba `attachments[]` en `workOrderCompleted`, lo que confirmaron es `evidence`. Probablemente el mismo dato con otro nombre | ⚠️ A confirmar | 25 ago 2026 |
 | **M7** | Payload completo de `streetClosureApproved`, `streetClosureRejected` y `streetClosureEnded`, confirmado con su documento de referencia | ✅ Cerrado | 25 ago 2026 |
-| **M7** | El origen de la solicitud vuelve como `closureRequestId` + `requestingModule` (no `sourceRequestId`/`sourceModule` como pedíamos, pero el dato está) en `streetClosureApproved` y `streetClosureRejected`. **`streetClosureEnded` no lo trae** — solo `streetClosureId`. Hay que persistir el origen desde el `streetClosureApproved` anterior para poder correlacionar el cierre | ⚠️ A resolver de nuestro lado | 25 ago 2026 |
+| **M7** | El origen de la solicitud vuelve como `closureRequestId` + `requestingModule` (no `sourceRequestId`/`sourceModule` como pedíamos, pero el dato está) en las **tres** respuestas de corte, incluida `streetClosureEnded` | ✅ Cerrado | 30 ago 2026 |
 | **M7** | Typo en su lista: `streetClousureEnded` → `streetClosureEnded` | ✅ Cerrado | 25 ago 2026 |
+| **M7** | `streetClosureRequested` tenía forma distinta según el origen (Obras vs. Ambiente/nosotros). M7 propuso un esquema único y lo aceptamos, renombrando `requestId→closureRequestId`, `streets[]→affectedSections`, `from`/`to`→`requestedFrom`/`requestedTo` | ✅ Cerrado | 30 ago 2026 |
+| **M7** | Payloads de `urbanServiceScheduled` y `treeRiskDetected`: preguntaron si los teníamos definidos. Ya estaban — se les compartió el documento completo con los 8 eventos que publicamos | ✅ Cerrado | 30 ago 2026 |
 | **M1** | Confirmar las dos consultas REST (ciudadano por `citizenId`, organización por `organizationId`). No se ven en una lista de eventos, hay que reclamarlas aparte | ⚠️ A confirmar — dijeron que lo pasan el 25/8 | 25 ago 2026 |
 | **M1** | Decidir si el acta ambiental va al expediente digital. Nuestra postura: no — el hecho les llega vía M4 | ⚠️ A definir | 17 ago 2026 |
 | **Cohorte** | Fijar el sobre común. M2 ya formalizó el suyo en la v1.5 (`specVersion`, `eventId`, `eventType`, `occurredAt`, `producer`, `subject`, `data`) — sigue siendo el único envelope escrito de la cohorte | ⚠️ A definir | 25 ago 2026 |
@@ -93,13 +95,17 @@ También les pedimos por REST la búsqueda de establecimiento por dirección, CU
 
 ### M7 — Tránsito ✅
 
-El cruce más limpio, y ahora con payload confirmado. Publicaron su documento de referencia ("TPO - Desarrollo de Apps II - Modulo 7") con los campos reales de `streetClosureApproved`, `streetClosureRejected` y `streetClosureEnded`.
+El cruce más limpio, y con payload confirmado desde el 25/08 y actualizado el 30/08.
 
-El origen de la solicitud vuelve como **`closureRequestId` + `requestingModule`** (valores `"Obras"`/`"Ambiente"` — nosotros somos `"Ambiente"`), no con los nombres `sourceRequestId`/`sourceModule` que habíamos pedido, pero el dato está en `streetClosureApproved` y `streetClosureRejected`.
+El origen de la solicitud vuelve como **`closureRequestId` + `requestingModule`** (valores `"Obras"`/`"Ambiente"` — nosotros somos `"Ambiente"`), no con los nombres `sourceRequestId`/`sourceModule` que habíamos pedido, pero el dato está.
 
-**Excepción: `streetClosureEnded` no trae el origen**, solo `streetClosureId`. Para poder correlacionar el cierre con nuestra solicitud, hay que persistir el origen desde el `streetClosureApproved` anterior — no es algo que se les pueda pedir, es una asimetría del payload que resolvemos guardando el dato antes.
+**La asimetría de `streetClosureEnded` quedó resuelta (30/08).** Hasta el 25/08 ese evento no traía el origen, solo `streetClosureId` — había que persistirlo desde el `streetClosureApproved` anterior para correlacionar el cierre. El documento de referencia nuevo de M7 ya agrega `closureRequestId` también ahí, igualando los tres eventos de respuesta.
 
-El typo `streetClousureEnded` ya está corregido en su documento nuevo: escriben `streetClosureEnded` bien, coincidiendo con lo que usamos nosotros y M3.
+El typo `streetClousureEnded` ya está corregido desde el 25/08: escriben `streetClosureEnded` bien, coincidiendo con lo que usamos nosotros y M3.
+
+**Nuevo (30/08): `streetClosureRequested` se unifica con la solicitud de M3.** Hasta ahora M7 recibía este evento con dos formas distintas según el origen (la nuestra y la de Obras). Propusieron un esquema único y lo aceptamos: de nuestro lado implica renombrar `requestId→closureRequestId`, `streets[]→affectedSections` y `from`/`to`→`requestedFrom`/`requestedTo`. Ya actualizado en [`streetClosureRequested.md`](eventos/publicados/streetClosureRequested.md).
+
+**También preguntaron si teníamos definidos `urbanServiceScheduled` y `treeRiskDetected`.** Ya estaban diseñados en este documento; se les compartió el payload completo de los 8 eventos que publicamos.
 
 ### M1 — Ciudadanos ⚪ sin eventos
 

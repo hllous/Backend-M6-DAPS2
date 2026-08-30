@@ -2,7 +2,7 @@
 
 El corte de calle terminó.
 
-> ✅ **Typo corregido (25/08).** El documento nuevo de M7 ya escribe `streetClosureEnded` bien — ver más abajo.
+> ✅ **Payload actualizado (30/08).** M7 ahora incluye `closureRequestId`, cerrando la asimetría que tenía este evento frente a `streetClosureApproved` y `streetClosureRejected`.
 
 ## Qué hace M6 al recibirlo
 
@@ -12,22 +12,21 @@ Libera la dependencia de la [`StreetClosureRequest`](../../entidades/derivacione
 
 ```
 streetClosureEnded
-  streetClosureId, completionDateTime, notes
+  streetClosureId, closureRequestId, completionDateTime, notes
 ```
 
 | Campo | Nota |
 |---|---|
 | `streetClosureId` | El identificador propio de M7 para el corte |
+| ✅ `closureRequestId` | El `closureRequestId` que mandamos en [`streetClosureRequested`](../publicados/streetClosureRequested.md), de ida y vuelta. Ya no hace falta correlacionar por otra vía |
 | `completionDateTime` | Cuándo terminó |
 
-## ⚠️ La asimetría: no trae el origen
+## La asimetría, ya resuelta
 
-**A diferencia de [`streetClosureApproved`](streetClosureApproved.md) y [`streetClosureRejected`](streetClosureRejected.md), este evento no trae `closureRequestId` ni `requestingModule`.** Solo `streetClosureId`.
+**Hasta el 25/08, este evento no traía el origen de la solicitud** — a diferencia de [`streetClosureApproved`](streetClosureApproved.md) y [`streetClosureRejected`](streetClosureRejected.md), que sí lo traían. Persistíamos el mapeo `streetClosureId → closureRequestId` desde el `streetClosureApproved` anterior para poder correlacionar el cierre.
 
-Para poder correlacionar el cierre con nuestra `StreetClosureRequest`, **persistimos el origen desde el `streetClosureApproved` anterior** — cuando llega la aprobación, guardamos `streetClosureId → closureRequestId` en una tabla propia, y usamos ese mapeo cuando llega el `streetClosureEnded`. No es algo que se le pueda pedir a M7: es una asimetría del payload que resolvemos de nuestro lado.
+**El documento de referencia nuevo de M7 (30/08) agrega `closureRequestId` directamente en `streetClosureEnded`.** Ya no necesitamos ese mapeo propio como única vía de correlación; se puede mantener como fallback, pero no es imprescindible.
 
 ## El typo, ya resuelto
 
-**En la lista anterior de M7 figuraba como `streetClousureEnded`**, con una `u` de más. El mismo error estaba en nuestra recopilación. El documento de referencia nuevo (25/08) ya lo escribe bien: **`streetClosureEnded`**, coincidiendo con lo que usamos nosotros y M3.
-
-Un nombre mal escrito en un topic es un evento que no llega: si el Core matchea el tipo como string literal, `streetClousureEnded` y `streetClosureEnded` son dos eventos distintos. Ver [bloqueantes.md](../../bloqueantes.md#m7--tránsito-).
+**En la lista anterior de M7 figuraba como `streetClousureEnded`**, con una `u` de más. El documento de referencia (25/08) ya lo escribe bien: **`streetClosureEnded`**, coincidiendo con lo que usamos nosotros y M3.

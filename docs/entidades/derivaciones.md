@@ -5,7 +5,7 @@ Las dos entidades que representan un pedido a otro módulo. Existen para poder *
 | Entidad | Campos principales |
 |---|---|
 | `RepairRequest` | Hacia **M3**. `damageType`, `location`, `severity`, `detectedIn`, `status` |
-| `StreetClosureRequest` | Hacia **M7**. `reason`, `sourceRef`, `streets[]`, `from`, `to`, `status` |
+| `StreetClosureRequest` | Hacia **M7**. `reason`, `sourceRef`, `affectedSections[]`, `requestedFrom`, `requestedTo`, `status` |
 
 Enums: `damageType` es `RepairDamageType`, `severity` es `Severity` — ver [enumeraciones.md](../enumeraciones.md).
 
@@ -36,4 +36,4 @@ El corte de calle que necesita un servicio o una poda. `sourceRef` apunta al [`S
 | Llega [`streetClosureRejected`](../eventos/consumidos/streetClosureRejected.md) | Se reprograma o se cancela el servicio dependiente |
 | Llega [`streetClosureEnded`](../eventos/consumidos/streetClosureEnded.md) | Se libera la dependencia |
 
-Las tres respuestas tienen que traer `sourceRequestId` y `sourceModule` — M7 pidió por su cuenta el campo de módulo de origen en la solicitud, que era exactamente nuestro pedido, pero falta que lo devuelvan.
+Las tres respuestas traen `closureRequestId` y `requestingModule` (nombres de M7, no los que pedimos, pero el mismo dato) — confirmado desde el 25/08, y desde el 30/08 también en `streetClosureEnded`, que antes era la excepción.
