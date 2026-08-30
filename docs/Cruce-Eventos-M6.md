@@ -382,6 +382,7 @@ Lo que cambiamos de nuestro lado, independientemente de la reunión.
 | 10 | ✅ **Hecho (24/08).** Adaptamos el consumo de `closureOrdered`/`closureLifted` al evento fusionado `closureUpdate` (`status: ORDERED | LIFTED`) de M4 | 1 evento consumido, renombrado | — |
 | 11 | **Nuevo (24/08).** M2 publicó la v1.5: dejar de persistir `publicId`/`ticketVersion`, partir el `message` que mandábamos en `publicMessage`/`internalMessage`, y renombrar `updatedAt` a `statusChangedAt` en el publisher de `updateTicketStatus` | 1 evento publicado, payload | Antes de implementar el publisher |
 | 12 | **Nuevo (25/08).** M7 publicó el payload real de `streetClosureApproved`/`Rejected`/`Ended`: usar los nombres reales (`closureRequestId`, `requestingModule`, `startDate`/`endDate`) en vez del diseño tentativo, y persistir `streetClosureId` para poder correlacionar `streetClosureEnded`, que no trae el origen | 3 eventos consumidos, payload | Antes de implementar el consumer |
+| 13 | ✅ **Hecho (30/08).** M7 actualizó `streetClosureEnded`: ya trae `closureRequestId`, cierra la asimetría del ítem 12. Además propuso unificar `streetClosureRequested` con el payload de M3 y lo aceptamos: renombrar `requestId→closureRequestId`, `streets[]→affectedSections`, `from`/`to`→`requestedFrom`/`requestedTo` | 1 evento consumido (payload) + 1 publicado (rename) | Antes de implementar publisher/consumer |
 
 Los PDF de `fuentes/` y de `M6-por-modulo/` quedaron **desactualizados**: hay que reimprimirlos desde los HTML ya corregidos.
 

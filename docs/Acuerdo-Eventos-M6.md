@@ -152,16 +152,18 @@ publicSafetyRisk: booleano
 detectedIn:       nuestro serviceId o inspectionId que originó la detección
 ```
 
-**8. `streetClosureRequested` → M7**
+**8. `streetClosureRequested` → M7** · *esquema unificado con la solicitud de M3 (30/08)*
 
 ```
-requestId, sourceModule, sourceRef,
-reason, streets[], from, to, closureType, requestedAt
+closureRequestId, sourceModule, sourceRef,
+reason, affectedSections[], requestedFrom, requestedTo, closureType?, requestedAt
 
-sourceModule: siempre M6
+sourceModule: M3 | M6 — nosotros, siempre M6
 sourceRef:    el serviceId o interventionId que origina el corte
-closureType:  TOTAL | PARTIAL
+closureType:  TOTAL | PARTIAL (opcional en el esquema unificado; lo mandamos siempre)
 ```
+
+Antes de la unificación, M7 recibía este evento con forma distinta según el origen: nuestros campos eran `requestId`, `streets[]`, `from`, `to`. M7 propuso un esquema común para Obras y Ambiente, y lo aceptamos.
 
 ---
 
@@ -259,15 +261,13 @@ Un evento: `environmentalViolationDetected` (6).
 
 Cuatro eventos, y ya confirmaron que los reciben los cuatro.
 
-El que dispara acción es `streetClosureRequested` (8). `sourceModule` viene en `M6`, que es el campo que ustedes mismos pidieron. `sourceRef` apunta al servicio o a la intervención que origina el corte. Mismo contrato que la solicitud que les manda M3.
+El que dispara acción es `streetClosureRequested` (8), con el esquema unificado que propusieron y aceptamos el 30/08 — mismo payload que la solicitud que les manda M3. `sourceModule` viene en `M6`, que es el campo que ustedes mismos pidieron. `sourceRef` apunta al servicio o a la intervención que origina el corte.
 
 Los otros tres son informativos: `urbanServiceScheduled` (2) —para que sepan que hay un camión circulando—, `treePruningScheduled` (5) con `requiresStreetClosure` —la poda que va a necesitar corte les llega antes que la solicitud— y `treeRiskDetected` (4).
 
-✅ **Pedido cerrado (25/08): ya devuelven el origen de la solicitud.** Publicaron el payload completo de las tres respuestas de corte: `closureRequestId` (nuestro `requestId`, de ida y vuelta) y `requestingModule` (valores `"Obras"` / `"Ambiente"` — nosotros somos `"Ambiente"`) viajan en `streetClosureApproved` y `streetClosureRejected`. Era el pedido de prioridad alta.
+✅ **Pedido cerrado: ya devuelven el origen de la solicitud, en las tres respuestas.** Publicaron el payload completo de las tres respuestas de corte: `closureRequestId` (nuestro `closureRequestId`, de ida y vuelta) y `requestingModule` (valores `"Obras"` / `"Ambiente"` — nosotros somos `"Ambiente"`) viajan en `streetClosureApproved`, `streetClosureRejected` **y, desde el 30/08, también en `streetClosureEnded`**, que hasta entonces era la excepción. Era el pedido de prioridad alta.
 
-🔴 **`streetClosureEnded` es la excepción.** No trae `closureRequestId` ni `requestingModule`, solo `streetClosureId`, `completionDateTime` y `notes`. La única forma de saber a qué solicitud nuestra corresponde un cierre es haber guardado el `streetClosureId` que llegó en el `streetClosureApproved` anterior.
-
-✅ **Typo corregido.** El documento nuevo escribe `streetClosureEnded` bien; el pedido de prioridad media queda cerrado.
+✅ **Typo corregido.** El documento escribe `streetClosureEnded` bien; el pedido de prioridad media queda cerrado.
 
 ---
 
@@ -382,13 +382,13 @@ details.routing:  requestType (catalogRef), ticketType, summary, description,
 
 Lo único que puede interesarles: cuando constatamos una infracción ambiental emitimos un acta pero **no generamos el cargo económico**. El acta va a M4, que decide la sanción y publica `commercialFineGenerated`, que ustedes sí consumen. **Una multa comercial que les llegue puede tener origen en una constatación ambiental nuestra.**
 
-## M7 — Tránsito ✅ Contrato confirmado 25/08
+## M7 — Tránsito ✅ Contrato confirmado, actualizado 30/08
 
 | Evento | Campos imprescindibles |
 |---|---|
 | `streetClosureApproved` | ✅ `streetClosureId`, `closureRequestId`, `requestingModule`, `startDate`, `endDate` |
 | `streetClosureRejected` | ✅ `closureRequestId`, `rejectionReason`, `requestingModule` |
-| `streetClosureEnded` | ✅ `streetClosureId`, `completionDateTime` — sin `closureRequestId` |
+| `streetClosureEnded` | ✅ `streetClosureId`, `closureRequestId`, `completionDateTime`, `notes` |
 
 Payloads reales, del documento de referencia que publicó M7:
 ```
@@ -401,14 +401,16 @@ streetClosureRejected
   closureRequestId, rejectionReason, requestingModule (Obras|Ambiente)
 
 streetClosureEnded
-  streetClosureId, completionDateTime, notes
+  streetClosureId, closureRequestId, completionDateTime, notes
 ```
 
 ✅ **Ya no es el diseño tentativo `sourceRequestId`/`sourceModule`/`from`/`to`.** Los nombres reales son `closureRequestId`, `requestingModule` (`"Obras"` | `"Ambiente"` — nosotros somos `"Ambiente"`) y `startDate`/`endDate`.
 
-🔴 **`streetClosureEnded` no correlaciona por sí solo.** No trae `closureRequestId`. Hay que persistir `streetClosureId` desde el `streetClosureApproved` para poder cerrar la dependencia cuando llega el `streetClosureEnded`.
+✅ **`streetClosureEnded` ya correlaciona por sí solo (30/08).** Hasta el 25/08 no traía `closureRequestId` y había que persistir `streetClosureId` desde el `streetClosureApproved` anterior para poder cerrar la dependencia. El documento de referencia nuevo ya lo incluye directamente.
 
-✅ **Typo corregido.** El documento nuevo ya escribe `streetClosureEnded` bien, sin la `u` de más.
+✅ **Typo corregido.** El documento ya escribe `streetClosureEnded` bien, sin la `u` de más.
+
+✅ **Nuevo (30/08): `streetClosureRequested` unificado con M3.** Hasta ahora M7 recibía este evento con forma distinta según el origen (la nuestra y la de Obras). Propusieron un esquema único — ver §1.5 — y lo aceptamos: de nuestro lado implica renombrar `requestId→closureRequestId`, `streets[]→affectedSections` y `from`/`to`→`requestedFrom`/`requestedTo`.
 
 ## M8 — Desarrollo social
 
