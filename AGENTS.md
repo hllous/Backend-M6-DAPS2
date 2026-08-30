@@ -44,9 +44,12 @@ Flujo: `main ← test ← develop ← feature/*|bugfix/*|refactor/*|infra/*|docs
 
 Para cambios simples y de bajo riesgo — típicamente documentación, o una corrección puntual que no toca lógica de dominio — que no ameritan escalar `develop → test → main`. Es la única rama que **no** parte de `develop`.
 
+Patrón clásico de Git Flow: la misma rama se mergea **dos veces, a dos destinos**, no en cadena.
+
 - **Parte de `main`**, formato `hotfix/XXX-descripcion-corta` (mismo criterio de Issue que el resto)
-- **PR directo a `main`**, saltando `test` — mismo checklist y CI en verde (`build`, `test`) que cualquier otro PR; la branch protection de `main` no distingue el branch de origen, así que no hace falta tocar `.github/branch-protection-rules.json`
-- **Apenas mergea a `main`, PR espejo de `main` a `develop`** (o cherry-pick del mismo commit) para que `develop` no quede atrasado respecto de `main`. Sin este paso, la próxima promoción normal `develop → test → main` puede pisar o duplicar el hotfix
+- **Dos PRs desde esa misma rama**: `hotfix/XXX → main` y `hotfix/XXX → develop`. Ambos con el mismo checklist y CI en verde (`build`, `test`); la branch protection no distingue el branch de origen, así que no hace falta tocar `.github/branch-protection-rules.json`
+- Los dos PRs se pueden abrir y revisar en paralelo — no hay que esperar a que uno mergee para abrir el otro
+- **No borrar la rama hasta que los dos mergearon.** Si se borra apenas mergea el primero (p.ej. con `--delete-branch` en el PR a `main`), ya no queda rama para abrir/mergear el segundo
 - `test` se pone al día solo, en la siguiente promoción `develop → test` — no hace falta un tercer PR
 - **Reservado para lo que objetivamente no puede romper nada** (docs, config no ejecutable, typos). Ante la duda de si algo "es de bajo riesgo", usar el flujo normal por `develop`
 
