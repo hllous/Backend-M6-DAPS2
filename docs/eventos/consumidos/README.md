@@ -29,7 +29,7 @@ El payload lo define el módulo que publica. Acá documentamos **solo los campos
 | M2 | `progress` de `updateTicketStatus` (lo que publicamos, no lo que consumimos) no sirve para la fecha agendada | 🔴 Bloqueante — ver [`updateTicketStatus`](../publicados/updateTicketStatus.md) |
 | M4 | Confirmar ruteo de `commercialFineGenerated`, `decidedAt`/`externalRef` pendientes de publicar, pregunta sobre `actId` | ⚠️ Abierto |
 | M3 | Cuándo se dispara `workOrderScheduled`, nombre `evidence` vs `attachments[]` a confirmar | ⚠️ Abierto (no bloqueante) |
-| M7 | Asimetría: `streetClosureEnded` no trae el origen de la solicitud, se persiste desde `streetClosureApproved` | ⚠️ Resuelto de nuestro lado |
+| M7 | ~~Asimetría: `streetClosureEnded` no traía el origen de la solicitud~~ | ✅ Resuelto (30/08): ya trae `closureRequestId` |
 
 Detalle en [bloqueantes.md](../../bloqueantes.md).
 
