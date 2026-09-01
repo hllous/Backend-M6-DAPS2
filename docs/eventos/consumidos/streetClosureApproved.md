@@ -8,7 +8,7 @@ M7 autorizó el corte de calle que pedimos.
 
 Marca la [`StreetClosureRequest`](../../entidades/derivaciones.md#streetclosurerequest--m7) como aprobada y **habilita la ejecución del [`Service`](../../entidades/service.md) o la [`TreeIntervention`](../../entidades/tree-intervention.md) que estaba bloqueada**.
 
-Persiste el origen de la solicitud (`closureRequestId`) junto con el `streetClosureId` — lo va a necesitar cuando llegue [`streetClosureEnded`](streetClosureEnded.md), que no trae ese dato.
+Persiste el origen de la solicitud (`closureRequestId`) junto con el `streetClosureId` como fallback de correlación — desde el 30/08, [`streetClosureEnded`](streetClosureEnded.md) ya trae `closureRequestId` propio, así que dejó de ser imprescindible.
 
 ## Payload confirmado
 

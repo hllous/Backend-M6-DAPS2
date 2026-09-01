@@ -2,33 +2,34 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uade.m6.grupo04/eventos/streetClosureRequested.schema.json",
   "title": "streetClosureRequested",
-  "description": "M6 → M7. Un servicio o una intervención requiere cortar la calle. Mismo contrato que la solicitud que M7 recibe de M3.",
+  "description": "M6 → M7. Un servicio o una intervención requiere cortar la calle. Esquema unificado con la solicitud que M7 recibe de M3 (30/08).",
   "type": "object",
   "properties": {
-    "requestId": {
+    "closureRequestId": {
       "type": "string",
-      "description": "Nuestro. Es el que le pedimos a M7 que devuelva como sourceRequestId."
+      "description": "Nuestro. Antes 'requestId'. Es el que le pedimos a M7 que devuelva como closureRequestId."
     },
     "sourceModule": {
       "type": "string",
       "const": "M6",
-      "description": "Campo que M7 pidió por su cuenta."
+      "description": "M3 | M6 en el esquema unificado. Para nosotros, siempre M6."
     },
     "sourceRef": {
       "type": "string",
       "description": "El serviceId o interventionId que origina el corte."
     },
     "reason": { "type": "string" },
-    "streets": {
+    "affectedSections": {
       "type": "array",
       "items": { "type": "string" },
-      "minItems": 1
+      "minItems": 1,
+      "description": "Antes 'streets'."
     },
-    "from": { "$ref": "_shared.schema.json#/$defs/timestamp" },
-    "to": { "$ref": "_shared.schema.json#/$defs/timestamp" },
-    "closureType": { "type": "string", "enum": ["TOTAL", "PARTIAL"] },
+    "requestedFrom": { "$ref": "_shared.schema.json#/$defs/timestamp", "description": "Antes 'from'." },
+    "requestedTo": { "$ref": "_shared.schema.json#/$defs/timestamp", "description": "Antes 'to'." },
+    "closureType": { "type": "string", "enum": ["TOTAL", "PARTIAL"], "description": "Opcional en el esquema unificado; lo mandamos siempre." },
     "requestedAt": { "$ref": "_shared.schema.json#/$defs/timestamp" }
   },
-  "required": ["requestId", "sourceModule", "sourceRef", "reason", "streets", "from", "to", "closureType", "requestedAt"],
+  "required": ["closureRequestId", "sourceModule", "sourceRef", "reason", "affectedSections", "requestedFrom", "requestedTo", "requestedAt"],
   "additionalProperties": false
 }
