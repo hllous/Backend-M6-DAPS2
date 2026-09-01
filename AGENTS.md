@@ -38,22 +38,9 @@ Flujo: `main ← test ← develop ← feature/*|bugfix/*|refactor/*|infra/*|docs
 - **Commits**: Conventional Commits (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `docs(scope):`, `chore(ci):`) — nunca mensajes vagos ("update", "fix")
 - **PRs**: siempre hacia `develop`, nunca merge directo; checklist obligatorio (descripción, Issue #XXX, cambios, evidencias, checklist compilación/tests/docs/Swagger)
 - **Antes de abrir PR**: debe compilar, tests deben pasar, docs/Swagger actualizados, sin conflictos
-- **Cambios a contratos** (APIs REST, DTOs públicos, eventos/exchanges/colas RabbitMQ, OpenAPI): avisar a consumidores, actualizar docs, mantener retrocompatibilidad cuando sea posible
+- **Cambios a contratos** (APIs REST, DTOs públicos, eventos/topics/particiones Kafka, OpenAPI): avisar a consumidores, actualizar docs, mantener retrocompatibilidad cuando sea posible
 
-### Excepción: `hotfix/*`
-
-Para cambios simples y de bajo riesgo — típicamente documentación, o una corrección puntual que no toca lógica de dominio — que no ameritan escalar `develop → test → main`. Es la única rama que **no** parte de `develop`.
-
-Patrón clásico de Git Flow: la misma rama se mergea **dos veces, a dos destinos**, no en cadena.
-
-- **Parte de `main`**, formato `hotfix/XXX-descripcion-corta` (mismo criterio de Issue que el resto)
-- **Dos PRs desde esa misma rama**: `hotfix/XXX → main` y `hotfix/XXX → develop`. Ambos con el mismo checklist y CI en verde (`build`, `test`); la branch protection no distingue el branch de origen, así que no hace falta tocar `.github/branch-protection-rules.json`
-- Los dos PRs se pueden abrir y revisar en paralelo — no hay que esperar a que uno mergee para abrir el otro
-- **No borrar la rama hasta que los dos mergearon.** Si se borra apenas mergea el primero (p.ej. con `--delete-branch` en el PR a `main`), ya no queda rama para abrir/mergear el segundo
-- `test` se pone al día solo, en la siguiente promoción `develop → test` — no hace falta un tercer PR
-- **Reservado para lo que objetivamente no puede romper nada** (docs, config no ejecutable, typos). Ante la duda de si algo "es de bajo riesgo", usar el flujo normal por `develop`
-
-**Stack confirmado**: Node.js + TypeScript + Nest.js + PostgreSQL (backend); React + TypeScript + Next.js + Tailwind (frontend); ORM pendiente (TypeORM/Prisma); mensajería RabbitMQ (config pendiente de M9). M6 se comunica solo por eventos asincrónicos, patrón outbox/inbox.
+**Stack confirmado**: Node.js + TypeScript + Nest.js + Prisma + PostgreSQL (backend); React + TypeScript + Next.js + Tailwind (frontend); mensajería Kafka (confirmado por M9). M6 se comunica solo por eventos asincrónicos, patrón outbox/inbox.
 
 **Principios clave**: nunca hardcodear secretos (usar `.env.example`); status como enums; `ValidationPipe` global desde el inicio; Auth/JWT prioritario antes de tocar módulos de dominio.
 
