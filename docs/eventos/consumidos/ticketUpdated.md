@@ -6,7 +6,7 @@ No consumimos `ticketCreated`: va hacia M1 con los datos mínimos del registro d
 
 ## Qué hace M6 al recibirlo
 
-Depende del discriminador `updateType`. **Un solo evento, siete comportamientos.**
+Depende del discriminador `updateType`. La v1.5 define trece valores posibles (§7.2) — **la tabla de abajo cubre los trece**, no solo los que nos interesan: seis disparan acción, siete se ignoran a propósito.
 
 | `updateType` | Qué hacemos |
 |---|---|
@@ -16,9 +16,13 @@ Depende del discriminador `updateType`. **Un solo evento, siete comportamientos.
 | `REOPENED` | Reabrimos: el vecino rechazó la solución y vuelve a gestión |
 | `PRIORITY_CHANGED` | Reordenamos la cola de la cuadrilla |
 | `ESCALATION_CHANGED` | Lo marcamos como escalado y se lo mostramos al supervisor |
+| `CONTENT_UPDATED` | **Nada, decisión propia.** Su matriz dice "área responsable sólo si el contenido le corresponde", pero la v1.5 no define ningún `details` para este tipo: no hay campo estructurado del que copiar `summary`/`description`/`formData` corregidos. Si trae `publicMessage`, lo dejamos en el registro de mensajes del ticket para trazabilidad; no reescribimos el expediente ni el servicio con él. Si en el futuro definen un `details.content` estructurado, se reevalúa |
+| `PROGRESS` | **Nada.** Es el eco público de un `updateTicketStatus/PROGRESS` que en general originamos nosotros mismos |
+| `DUPLICATE_LINKED` | **Nada.** Gestión de vinculación que hace M2; no genera trabajo operativo propio |
+| `INFORMATION_REQUIRED` (variante de `ticketUpdated`, no confundir con la de `updateTicketStatus`) | **Nada.** Su propio contrato dice explícitamente que este tipo de update es solo para uso interno y de M1 |
 | `STATUS_CHANGED`, `RESOLVED`, `CLOSED` | **Nada.** Se reciben y se descartan: en esos casos el cierre lo originamos nosotros |
 
-> **No implementar un handler para los tres últimos.** Están en la tabla justamente para que quede escrito que se ignoran a propósito.
+> **No implementar handler para ninguna de las siete filas de "Nada".** Están en la tabla justamente para que quede escrito que se ignoran a propósito, y para que la lista de trece quede completa y no haya que volver a auditarla contra el contrato.
 
 La cancelación llega por acá: no hace falta un `ticketCancelled`, que es uno de los huérfanos de la cohorte.
 
