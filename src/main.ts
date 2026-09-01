@@ -71,9 +71,10 @@ async function bootstrap() {
 
   // ─── Start ─────────────────────────────────────
   const port = configService.get<number>('port', 3000);
-  await app.listen(port);
-  logger.log(`🚀 M6 Ambiente API corriendo en http://localhost:${port}`);
-  logger.log(`📄 Swagger UI en http://localhost:${port}/api/docs`);
+  await app.listen(port, '0.0.0.0');
+  const host = process.env.HOST || '0.0.0.0';
+  logger.log(`🚀 M6 Ambiente API corriendo en http://${host}:${port}`);
+  logger.log(`📄 Swagger UI en http://${host}:${port}/api/docs`);
 }
 
 bootstrap();
