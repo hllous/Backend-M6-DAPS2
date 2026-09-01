@@ -12,8 +12,10 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(8),
   JWT_EXPIRATION: z.coerce.number().default(3600),
 
-  // RabbitMQ — sujeto a confirmación de M9
-  // RABBITMQ_URL: z.string().url().optional(),
+  // Kafka — confirmado por M9
+  // KAFKA_BROKERS: z.string().optional(),
+  // KAFKA_CLIENT_ID: z.string().optional(),
+  // KAFKA_GROUP_ID: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
