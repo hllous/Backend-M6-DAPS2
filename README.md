@@ -8,9 +8,9 @@ M6 gestiona los servicios urbanos y el control ambiental de la ciudad: recolecci
 
 - **NestJS** + TypeScript + Node 20 LTS
 - **PostgreSQL** + Prisma como ORM
-- **RabbitMQ** (a confirmar con M9) para eventos asincrónicos
+- **Kafka** para eventos asincrónicos (confirmado por M9)
 - **Jest** + Supertest para testing (cobertura mínima 85%)
-- Deploy en **Railway**
+- Deploy en **Vercel** (frontend) + **Render** (backend + postgres)
 
 Ver decisiones detalladas en [`docs/decisiones/`](docs/decisiones/).
 
@@ -28,7 +28,7 @@ Requisitos:
 
 - Node.js 20 LTS o superior
 - PostgreSQL 15+ (o base gestionada tipo Neon)
-- RabbitMQ (o el broker que confirme M9)
+- Kafka (confirmado por M9)
 
 ## Enlaces útiles
 

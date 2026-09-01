@@ -38,9 +38,9 @@ Flujo: `main ← test ← develop ← feature/*|bugfix/*|refactor/*|infra/*|docs
 - **Commits**: Conventional Commits (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `docs(scope):`, `chore(ci):`) — nunca mensajes vagos ("update", "fix")
 - **PRs**: siempre hacia `develop`, nunca merge directo; checklist obligatorio (descripción, Issue #XXX, cambios, evidencias, checklist compilación/tests/docs/Swagger)
 - **Antes de abrir PR**: debe compilar, tests deben pasar, docs/Swagger actualizados, sin conflictos
-- **Cambios a contratos** (APIs REST, DTOs públicos, eventos/exchanges/colas RabbitMQ, OpenAPI): avisar a consumidores, actualizar docs, mantener retrocompatibilidad cuando sea posible
+- **Cambios a contratos** (APIs REST, DTOs públicos, eventos/topics/particiones Kafka, OpenAPI): avisar a consumidores, actualizar docs, mantener retrocompatibilidad cuando sea posible
 
-**Stack confirmado**: Node.js + TypeScript + Nest.js + PostgreSQL (backend); React + TypeScript + Next.js + Tailwind (frontend); ORM pendiente (TypeORM/Prisma); mensajería RabbitMQ (config pendiente de M9). M6 se comunica solo por eventos asincrónicos, patrón outbox/inbox.
+**Stack confirmado**: Node.js + TypeScript + Nest.js + Prisma + PostgreSQL (backend); React + TypeScript + Next.js + Tailwind (frontend); mensajería Kafka (confirmado por M9). M6 se comunica solo por eventos asincrónicos, patrón outbox/inbox.
 
 **Principios clave**: nunca hardcodear secretos (usar `.env.example`); status como enums; `ValidationPipe` global desde el inicio; Auth/JWT prioritario antes de tocar módulos de dominio.
 
