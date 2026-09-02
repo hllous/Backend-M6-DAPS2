@@ -2,7 +2,7 @@
 
 Resumen de lo que expone el backend. La fuente de verdad interactiva es el Swagger en `/api/docs`; este archivo existe para poder ver el mapa completo sin levantar nada, y porque el [DoD](../gestion/definition-of-done.md) lo pide para cada endpoint nuevo.
 
-> **Actualizado al 02/09/2026** — Fase 5 del plan de implementación (derivaciones salientes). 118 rutas, agrupadas en 20 tags de Swagger.
+> **Actualizado al 02/09/2026** — Fase 6 del plan de implementación (inbox y consumidores). 120 rutas, agrupadas en 21 tags de Swagger.
 
 ## Convenciones
 
@@ -192,6 +192,19 @@ Una transición no válida devuelve 409 nombrando las que sí lo son.
 | POST | `/tree-interventions/:id/reject` | `PENDING_AUTHORIZATION → REJECTED` |
 | POST | `/tree-interventions/:id/assign-service` | Asociar la intervención al `Service` que la ejecuta. La intervención guarda **qué** hay que hacer; el servicio, **cuándo, con qué cuadrilla y cómo terminó**. Solo una intervención `AUTHORIZED`, contra un servicio `POINT` que no ejecute ya otra |
 
+## `events` — ingesta de eventos entrantes
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/events/inbox` | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed` |
+| GET | `/events/handlers` | Los tipos de evento con handler registrado |
+
+**La idempotencia es por `eventId`** y vive en el inbox, no en cada handler: un mensaje ya recibido se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. La decide el `@unique` de `InboxEvent.messageId`, no una consulta previa que podría correr en paralelo con otra igual.
+
+Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin `processedAt` y con el error, para poder reintentarla.
+
+> Este endpoint existe **porque M9 nunca expuso un bus**: sin él no hay forma de ejercitar los consumidores. Cuando haya broker, el consumidor de Kafka llama al mismo `ingest()`.
+
 ## `repair-requests` — reparaciones derivadas a M3
 
 El daño de infraestructura que detectamos pero que no nos corresponde arreglar. La solicitud existe para **poder seguir el pedido**: publicar el evento no alcanza, porque la respuesta de M3 vuelve asincrónica.
@@ -275,5 +288,4 @@ Por fase del plan de implementación:
 | Fase | Qué falta |
 |---|---|
 | 3.5 | Adjuntos y evidencia — hoy `evidence` viaja vacío en el acta |
-| 6 | Inbox y consumidores de eventos |
 | 7 | `citizen-portal` (público) e indicadores del tablero |

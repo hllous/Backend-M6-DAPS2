@@ -18,7 +18,7 @@
 | **M9** | Token de servicio del Core para tráfico máquina-a-máquina: emisión, obtención, claims y validación sin definir | 🔴 Bloqueante si M6 necesita una consulta inter-módulo síncrona | 1 sep 2026 |
 | **M9** | Catálogo de barrios con `neighborhoodId` estable, sin exponer. M2 ya lo usa en `location`, así que el catálogo tiene que existir en algún lado aunque no lo hayamos visto publicado | 🔴 Bloqueante | 17 ago 2026 |
 | **M9** | "Zona operativa" (nuestra, agrupa barrios) contra "zona" (de ellos). Misma palabra, distinta cosa | ⚠️ A definir | 17 ago 2026 |
-| **M9** | `notificationSent` no lo publica nadie hoy. Puede que lo saquemos de lo consumido | ⚠️ A confirmar | 17 ago 2026 |
+| **M9** | `notificationSent` no lo publica nadie hoy. **Se implementó la Fase 6 sin handler para él**: escribir código para un evento que no existe no tiene sentido. Confirmar si se saca de lo consumido | ⚠️ A confirmar | 2 sep 2026 |
 | **M4** | `sourceViolationId` en `commercialFineGenerated` y `closureUpdate` | ✅ Cerrado | 24 ago 2026 |
 | **M4** | `decidedAt` y `externalRef`: los habían sacado del payload, confirmaron que los reincorporan. El documento vigente todavía no los muestra en el ejemplo | ⚠️ Confirmado, pendiente de publicar | 24 ago 2026 |
 | **M4** | `closureOrdered` y `closureLifted` se fusionaron en un evento único, `closureUpdate` con `status: ORDERED \| LIFTED`. Actualizar el lado consumidor | ✅ Cerrado (cambio de forma, no bloqueante) | 24 ago 2026 |

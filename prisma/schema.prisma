@@ -707,6 +707,12 @@ model EnvironmentalReport {
   reporterSnapshot Json?                     @map("reporter_snapshot")
   status           EnvironmentalReportStatus @default(RECEIVED)
   priority         Severity?
+  // ticketUpdated/ESCALATION_CHANGED: se lo mostramos al supervisor.
+  escalated        Boolean                   @default(false)
+  // ticketUpdated/INFORMATION_PROVIDED: lo que el vecino respondio. La v1.5 de
+  // M2 no usa ID de correlacion — hay como maximo una solicitud activa por
+  // ticket, asi que la respuesta siempre corresponde a la nuestra.
+  citizenResponse  String?                   @map("citizen_response")
   deadlineAt       DateTime?                 @map("deadline_at") // cierre por vencimiento
   createdAt        DateTime                  @default(now()) @map("created_at")
   updatedAt        DateTime                  @updatedAt @map("updated_at")
@@ -865,7 +871,11 @@ model InboxEvent {
   eventType   String    @map("event_type")
   payload     Json
   receivedAt  DateTime  @default(now()) @map("received_at")
+  // Null mientras no se aplico el efecto: un handler que falla deja la fila
+  // sin procesar y con el error, para poder reintentarla.
   processedAt DateTime? @map("processed_at")
+  error       String?
 
+  @@index([processedAt])
   @@map("inbox_event")
 }
