@@ -12,10 +12,12 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(8),
   JWT_EXPIRATION: z.coerce.number().default(3600),
 
-  // Kafka — confirmado por M9
-  // KAFKA_BROKERS: z.string().optional(),
-  // KAFKA_CLIENT_ID: z.string().optional(),
-  // KAFKA_GROUP_ID: z.string().optional(),
+  // Kafka — el transporte confirmado por M9, pero todavía sin broker expuesto.
+  // Si KAFKA_BROKERS no está, los eventos se encolan en el outbox y se
+  // registran en el log; la app arranca igual. Ver src/events/events.module.ts.
+  KAFKA_BROKERS: z.string().optional(),
+  KAFKA_CLIENT_ID: z.string().default('m6-ambiente'),
+  KAFKA_GROUP_ID: z.string().default('m6-ambiente-group'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
-import { Prisma, ContainerStatus } from '@prisma/client';
+import { Container, Prisma, ContainerStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
+import { AggregateType, EventType } from '../../events/event-types';
+import { containerDamaged } from '../../events/payloads';
 import {
   CreateContainerDto,
   UpdateContainerDto,
@@ -38,7 +41,10 @@ export const CONTAINER_TRANSITIONS: Record<ContainerStatus, ContainerStatus[]> =
 export class ContainersService {
   private readonly logger = new Logger(ContainersService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outbox: OutboxService,
+  ) {}
 
   // ─── CRUD ──────────────────────────────────────────
 
@@ -162,11 +168,22 @@ export class ContainersService {
 
   /** ACTIVE → DAMAGED */
   async reportDamage(id: string, dto: ReportDamageDto): Promise<ContainerResponseDto> {
-    return this.transition(id, ContainerStatus.DAMAGED, {
-      damageType: dto.damageType,
-      severity: dto.severity,
-      requiresPublicWorks: dto.requiresPublicWorks ?? false,
-    });
+    return this.transition(
+      id,
+      ContainerStatus.DAMAGED,
+      {
+        damageType: dto.damageType,
+        severity: dto.severity,
+        requiresPublicWorks: dto.requiresPublicWorks ?? false,
+      },
+      // requiresPublicWorks = true es lo que hace que a M3 le sirva el evento.
+      (container) => ({
+        eventType: EventType.CONTAINER_DAMAGED,
+        aggregateType: AggregateType.CONTAINER,
+        aggregateId: container.id,
+        payload: containerDamaged(container),
+      }),
+    );
   }
 
   /** DAMAGED → UNDER_REPAIR */
@@ -212,6 +229,9 @@ export class ContainersService {
     id: string,
     targetStatus: ContainerStatus,
     additionalData: Record<string, any> = {},
+    // Si viene, la fila del outbox se escribe en la MISMA transaccion que el
+    // cambio de estado: o quedan los dos, o no queda ninguno.
+    event?: (container: Container) => OutboxEntry,
   ): Promise<ContainerResponseDto> {
     const container = await this.prisma.container.findUnique({
       where: { id },
@@ -228,12 +248,16 @@ export class ContainersService {
       );
     }
 
-    const updated = await this.prisma.container.update({
-      where: { id },
-      data: {
-        status: targetStatus,
-        ...additionalData,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.container.update({
+        where: { id },
+        data: {
+          status: targetStatus,
+          ...additionalData,
+        },
+      });
+      if (event) await this.outbox.enqueue(tx, event(row));
+      return row;
     });
 
     this.logger.log(`Contenedor ${container.code}: ${container.status} → ${targetStatus}`);

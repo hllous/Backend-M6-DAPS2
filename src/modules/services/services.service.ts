@@ -17,6 +17,9 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CONTAINER_TRANSITIONS } from '../containers/containers.service';
+import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
+import { AggregateType, EventType } from '../../events/event-types';
+import * as payloads from '../../events/payloads';
 import {
   AssignCrewDto,
   CompleteServiceDto,
@@ -93,7 +96,10 @@ function toNumber(value: Prisma.Decimal | null): number | null {
 export class ServicesService {
   private readonly logger = new Logger(ServicesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outbox: OutboxService,
+  ) {}
 
   // ─── Programación ─────────────────────────────────
 
@@ -123,28 +129,39 @@ export class ServicesService {
 
     await this.assertResourcesExist(dto.crewId, dto.vehicleId);
 
-    const service = await this.prisma.service.create({
-      data: {
-        serviceTypeId: dto.serviceTypeId,
-        mode,
-        status: ServiceStatus.SCHEDULED,
-        origin: dto.origin,
-        routeId: mode === ServiceMode.ROUTE ? (dto.routeId as string) : null,
-        targetType: mode === ServiceMode.POINT ? (dto.targetType ?? null) : null,
-        targetId: mode === ServiceMode.POINT ? (dto.targetId ?? null) : null,
-        scheduledDate: toDateOnly(dto.scheduledDate),
-        windowFrom: toTime(dto.windowFrom),
-        windowTo: toTime(dto.windowTo),
-        crewId: dto.crewId ?? null,
-        vehicleId: dto.vehicleId ?? null,
-        ticketId: dto.ticketId ?? null,
-        notes: dto.notes ?? null,
-        createdBy: createdBy ?? null,
-        // Snapshot: se copia al programar y no se recalcula, para que editar un
-        // recorrido no altere lo ya ejecutado (docs/entidades/service.md).
-        zones: { createMany: { data: zones } },
-      },
-      include: SERVICE_INCLUDE,
+    const service = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.service.create({
+        data: {
+          serviceTypeId: dto.serviceTypeId,
+          mode,
+          status: ServiceStatus.SCHEDULED,
+          origin: dto.origin,
+          routeId: mode === ServiceMode.ROUTE ? (dto.routeId as string) : null,
+          targetType: mode === ServiceMode.POINT ? (dto.targetType ?? null) : null,
+          targetId: mode === ServiceMode.POINT ? (dto.targetId ?? null) : null,
+          scheduledDate: toDateOnly(dto.scheduledDate),
+          windowFrom: toTime(dto.windowFrom),
+          windowTo: toTime(dto.windowTo),
+          crewId: dto.crewId ?? null,
+          vehicleId: dto.vehicleId ?? null,
+          ticketId: dto.ticketId ?? null,
+          notes: dto.notes ?? null,
+          createdBy: createdBy ?? null,
+          // Snapshot: se copia al programar y no se recalcula, para que editar un
+          // recorrido no altere lo ya ejecutado (docs/entidades/service.md).
+          zones: { createMany: { data: zones } },
+        },
+        include: SERVICE_INCLUDE,
+      });
+
+      await this.outbox.enqueue(tx, {
+        eventType: EventType.URBAN_SERVICE_SCHEDULED,
+        aggregateType: AggregateType.SERVICE,
+        aggregateId: created.id,
+        payload: payloads.urbanServiceScheduled(created, serviceType),
+      });
+
+      return created;
     });
 
     this.logger.log(
@@ -248,7 +265,7 @@ export class ServicesService {
    * No se puede iniciar sin cuadrilla, ni sin vehículo si el tipo de servicio
    * lo exige: es el caso que el propio estándar Swagger usa como ejemplo de 409.
    */
-  async start(id: string): Promise<ServiceResponseDto> {
+  async start(id: string, actorId = 'sistema'): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
 
     if (!current.crewId) {
@@ -267,7 +284,15 @@ export class ServicesService {
       );
     }
 
-    return this.transition(current, ServiceStatus.IN_PROGRESS);
+    return this.transition(
+      current,
+      ServiceStatus.IN_PROGRESS,
+      {},
+      this.ticketEvents(current, actorId, {
+        updateType: 'STARTED',
+        publicMessage: 'La cuadrilla comenzó a atender su reclamo.',
+      }),
+    );
   }
 
   /** IN_PROGRESS → SUSPENDED */
@@ -289,7 +314,11 @@ export class ServicesService {
    * servicio tienen que tener resultado, y alcanza con que una haya quedado
    * NOT_SERVICED o PARTIAL para que el cierre sea parcial.
    */
-  async complete(id: string, dto: CompleteServiceDto = {}): Promise<ServiceResponseDto> {
+  async complete(
+    id: string,
+    dto: CompleteServiceDto = {},
+    actorId = 'sistema',
+  ): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
 
     const reported = new Set(current.zoneResults.map((r) => r.zoneId));
@@ -311,14 +340,22 @@ export class ServicesService {
     // Las dos escrituras van juntas: si el contenedor no se puede actualizar, el
     // servicio tampoco se cierra. Sin esto el frontend tendria que encadenar dos
     // llamadas y quedarse con el contenedor colgado si la segunda falla.
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.service.update({
+    const events = this.ticketEvents(current, actorId, {
+      updateType: 'RESOLVED',
+      publicMessage: 'El servicio se completó.',
+      details: { resolution: { type: 'ACTION_COMPLETED' } },
+    });
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.service.update({
         where: { id: current.id },
         data: { status: target },
         include: SERVICE_INCLUDE,
-      }),
-      ...(containerUpdate ? [this.prisma.container.update(containerUpdate)] : []),
-    ]);
+      });
+      if (containerUpdate) await tx.container.update(containerUpdate);
+      await this.outbox.enqueueMany(tx, events);
+      return row;
+    });
 
     this.logger.log(`Servicio ${current.id}: ${current.status} -> ${target}`);
     if (containerUpdate) {
@@ -326,7 +363,7 @@ export class ServicesService {
         `Servicio ${current.id}: contenedor ${current.targetId} -> ${String(containerUpdate.data.status)}`,
       );
     }
-    return this.toResponseDto(updated as ServiceWithRelations);
+    return this.toResponseDto(updated);
   }
 
   /**
@@ -408,9 +445,18 @@ export class ServicesService {
   }
 
   /** SCHEDULED | SUSPENDED → CANCELLED */
-  async cancel(id: string, reason: string): Promise<ServiceResponseDto> {
+  async cancel(id: string, reason: string, actorId = 'sistema'): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
-    return this.transition(current, ServiceStatus.CANCELLED, { statusReason: reason });
+    return this.transition(
+      current,
+      ServiceStatus.CANCELLED,
+      { statusReason: reason },
+      this.ticketEvents(current, actorId, {
+        updateType: 'REJECTED',
+        internalMessage: reason,
+        details: { cancellation: { reasonCode: 'OTHER' } },
+      }),
+    );
   }
 
   /**
@@ -681,17 +727,59 @@ export class ServicesService {
     current: ServiceWithRelations,
     targetStatus: ServiceStatus,
     additionalData: Prisma.ServiceUpdateInput = {},
+    // Los eventos se escriben en la MISMA transaccion que el cambio de estado.
+    events: OutboxEntry[] = [],
   ): Promise<ServiceResponseDto> {
     this.assertTransition(current.status, targetStatus);
 
-    const updated = await this.prisma.service.update({
-      where: { id: current.id },
-      data: { status: targetStatus, ...additionalData },
-      include: SERVICE_INCLUDE,
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.service.update({
+        where: { id: current.id },
+        data: { status: targetStatus, ...additionalData },
+        include: SERVICE_INCLUDE,
+      });
+      await this.outbox.enqueueMany(tx, events);
+      return row;
     });
 
     this.logger.log(`Servicio ${current.id}: ${current.status} → ${targetStatus}`);
     return this.toResponseDto(updated);
+  }
+
+  /**
+   * El evento hacia M2, solo si el servicio nacio de un reclamo.
+   *
+   * Un servicio planificado —la recoleccion de todos los martes— no proyecta
+   * nada: sin ticketId no sale nada hacia M2 (docs/entidades/service.md).
+   *
+   * La fecha y la franja agendadas NO viajan: `progress` en la v1.5 de M2 es un
+   * entero de porcentaje y no hay estructura de `details` para STARTED ni
+   * PROGRESS. Es un bloqueante abierto con ellos.
+   */
+  private ticketEvents(
+    service: ServiceWithRelations,
+    actorId: string,
+    update: {
+      updateType: payloads.TicketUpdateType;
+      publicMessage?: string;
+      internalMessage?: string;
+      details?: Record<string, unknown>;
+    },
+  ): OutboxEntry[] {
+    if (!service.ticketId) return [];
+
+    return [
+      {
+        eventType: EventType.UPDATE_TICKET_STATUS,
+        aggregateType: AggregateType.SERVICE,
+        aggregateId: service.id,
+        payload: payloads.updateTicketStatus({
+          ticketId: service.ticketId,
+          updatedById: actorId,
+          ...update,
+        }),
+      },
+    ];
   }
 
   private assertTransition(from: ServiceStatus, to: ServiceStatus): void {

@@ -846,10 +846,13 @@ model OutboxEvent {
   aggregateId   String            @map("aggregate_id") @db.Uuid
   payload       Json
   status        OutboxEventStatus @default(PENDING)
+  attempts      Int               @default(0)
+  lastError     String?           @map("last_error")
   occurredAt    DateTime          @default(now()) @map("occurred_at")
   publishedAt   DateTime?         @map("published_at")
 
-  @@index([status])
+  // El dispatcher barre PENDING en orden de ocurrencia.
+  @@index([status, occurredAt])
   @@map("outbox_event")
 }
 

@@ -12,5 +12,10 @@ export default () => {
       secret: parsed.JWT_SECRET,
       expirationSeconds: parsed.JWT_EXPIRATION,
     },
+    kafka: {
+      brokers: parsed.KAFKA_BROKERS,
+      clientId: parsed.KAFKA_CLIENT_ID,
+      groupId: parsed.KAFKA_GROUP_ID,
+    },
   };
 };
