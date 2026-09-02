@@ -58,7 +58,7 @@ async function bootstrap() {
 bootstrap();
 ```
 
-**URL pública en producción:** `https://[url-railway]/api/docs`
+**URL pública en producción:** `https://m6-backend-m64k.onrender.com/api/docs`
 
 ---
 
@@ -339,7 +339,7 @@ Antes de aprobar un PR que agrega o modifica endpoints, verificar:
 
 - Documentación oficial NestJS Swagger: https://docs.nestjs.com/openapi/introduction
 - OpenAPI Specification 3.0: https://swagger.io/specification/
-- URL pública de nuestro Swagger: (pegar acá cuando esté desplegado)
+- URL pública de nuestro Swagger: https://m6-backend-m64k.onrender.com/api/docs
 
 ---
 
