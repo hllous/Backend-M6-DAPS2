@@ -22,12 +22,12 @@
     "healthStatus": {
       "type": "string",
       "enum": ["HEALTHY", "WEAKENED", "DISEASED", "DEAD"],
-      "description": "CONFLICTO SIN RESOLVER: el acuerdo publicado declara HEALTHY | DECLINING | DEAD. Ver enumeraciones.md, divergencia 3."
+      "description": "Resuelto por ADR-003: se mantienen los cuatro valores y se corrige el acuerdo publicado, que colapsaba WEAKENED y DISEASED en DECLINING. Son dos diagnosticos distintos que el relevamiento registra."
     },
     "suggestedIntervention": {
       "type": "string",
       "enum": ["FORMATION_PRUNING", "SAFETY_PRUNING", "REMOVAL", "PLANTING", "TREATMENT"],
-      "description": "CONFLICTO SIN RESOLVER: el acuerdo publicado declara PRUNING | FELLING | TREATMENT | MONITORING. Ver enumeraciones.md, divergencia 4."
+      "description": "Opcional: su ausencia significa que solo corresponde monitorear. Resuelto por ADR-003: se mantienen estos valores, se corrige el acuerdo publicado (PRUNING | FELLING | TREATMENT) y se descarta MONITORING, que no era una intervencion sino la ausencia de una."
     },
     "requiresStreetClosure": {
       "type": "boolean",
@@ -39,6 +39,6 @@
     },
     "surveyedAt": { "$ref": "_shared.schema.json#/$defs/timestamp" }
   },
-  "required": ["treeId", "surveyCode", "species", "zoneId", "location", "riskLevel", "riskType", "healthStatus", "suggestedIntervention", "requiresStreetClosure", "requiresPublicWorks", "surveyedAt"],
+  "required": ["treeId", "surveyCode", "species", "zoneId", "location", "riskLevel", "riskType", "healthStatus", "requiresStreetClosure", "requiresPublicWorks", "surveyedAt"],
   "additionalProperties": false
 }

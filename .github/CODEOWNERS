@@ -1,4 +1,15 @@
-# Code owners del repositorio.
-# Lo usa la branch protection con "require code owner review".
-# Actualizar los usuarios de GitHub del equipo cuando se conozcan todos.
-* @hllous @bcanteli-dev
+# 1. Code owners por defecto del repositorio
+# Ante cualquier cambio en archivos no especificados abajo, se les solicitará revisión a ellos.
+* @hllous @bcanteli-dev @Benji-9 @MQuintieriFulter
+
+# 2. Backend
+/src/     @Benji-9 @hllous @MQuintieriFulter
+/test/    @Benji-9 @hllous @MQuintieriFulter
+/prisma/  @Benji-9 @hllous @MQuintieriFulter
+
+# 3. Infraestructura y DevOps
+/.github/            @bcanteli-dev
+/Dockerfile          @bcanteli-dev
+/.dockerignore       @bcanteli-dev
+/docker/             @bcanteli-dev
+/docker-compose.yml  @bcanteli-dev

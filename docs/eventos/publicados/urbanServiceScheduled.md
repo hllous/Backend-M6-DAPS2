@@ -29,7 +29,7 @@ crewId?, vehicleId?, origin, ticketId?
 
 Enums: `category` es `ServiceCategory`, `mode` es `ServiceMode`, `origin` es `ServiceOrigin` — ver [enumeraciones.md](../../enumeraciones.md).
 
-⚠️ **`origin` está en conflicto** entre el catálogo y el acuerdo publicado ([divergencia 2](../../enumeraciones.md#divergencias-con-el-acuerdo-publicado)). Hay que resolverlo antes de implementar: es un valor que M7 no va a reconocer si queda mal.
+✅ **`origin` conserva los cinco valores del catálogo** ([ADR-003](../../decisiones/adr-003-divergencias-enums.md), divergencia 2). Además del costo de cambiarlo, `SCHEDULED` como origen colisionaba con `SCHEDULED` como estado del servicio, y los dos viajan en este mismo payload. Pendiente de avisarle a M7.
 
 ## Qué le pedimos al consumidor
 

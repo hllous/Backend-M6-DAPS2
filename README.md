@@ -8,19 +8,19 @@ M6 gestiona los servicios urbanos y el control ambiental de la ciudad: recolecci
 
 - **NestJS** + TypeScript + Node 20 LTS
 - **PostgreSQL** + Prisma como ORM
-- **RabbitMQ** (a confirmar con M9) para eventos asincrónicos
+- **Kafka** para eventos asincrónicos (confirmado por M9)
 - **Jest** + Supertest para testing (cobertura mínima 85%)
-- Deploy en **Railway**
+- Deploy en **Vercel** (frontend) + **Render** (backend + postgres)
 
 Ver decisiones detalladas en [`docs/decisiones/`](docs/decisiones/).
 
 ## Cómo correr localmente
 
-> Instrucciones a completar cuando se inicialice el proyecto NestJS en el Sprint 1.
-
 ```bash
-# Placeholder — se completa cuando exista package.json
 npm install
+cp .env.example .env          # completar DATABASE_URL y JWT_SECRET
+npm run prisma:migrate:deploy # crea el esquema
+npm run prisma:seed           # catálogos y recursos mínimos (idempotente)
 npm run start:dev
 ```
 
@@ -28,13 +28,16 @@ Requisitos:
 
 - Node.js 20 LTS o superior
 - PostgreSQL 15+ (o base gestionada tipo Neon)
-- RabbitMQ (o el broker que confirme M9)
+- Kafka (confirmado por M9)
+
+> Para levantar el stack completo con Docker local: ver `docker-compose.yml` en la raíz del workspace DevOps.
 
 ## Enlaces útiles
 
 | Recurso | Dónde |
-|---|---|
-| **API interactiva (Swagger)** | *pendiente hasta primer deploy* |
+|---|---|---|
+| **API interactiva (Swagger)** | `https://m6-backend-m64k.onrender.com/api/docs` |
+| **Despliegue y estado** | [`docs/deploy.md`](docs/deploy.md) |
 | **Índice de la documentación** | [`LEEME.md`](LEEME.md) |
 | **Alcance del módulo** | [`docs/Documento de Alcance.pdf`](docs/Documento%20de%20Alcance%20-%20Grupo%2004%20%28Modulo%206%29.pdf) |
 | **Diagrama de eventos** | [`docs/Diagrama de Eventos.pdf`](docs/Diagrama%20de%20Eventos%20-%20Grupo%2004%20%28Modulo%206%29.pdf) |
@@ -55,9 +58,9 @@ Para orientarse en el repo, el punto de entrada recomendado es [`AGENTS.md`](AGE
 ├── M6-por-modulo/           una ficha por módulo (M1..M9) para circular
 ├── enunciado/               TPO oficial de la cátedra
 ├── referencias/             documentación relevante de otros módulos
-├── src/                     código NestJS (pendiente sprint 1)
-├── prisma/                  schema y migraciones (pendiente sprint 1)
-└── test/                    tests (pendiente sprint 1)
+├── src/                     código NestJS (controllers y services en desarrollo)
+├── prisma/                  schema completo; migraciones pendientes de generar
+└── test/                    tests (pendientes — ver DoD: cobertura ≥ 85%)
 ```
 
 Detalle completo del contenido de doc: ver [`LEEME.md`](LEEME.md).

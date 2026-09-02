@@ -19,7 +19,7 @@ Los siete que se cayeron del contrato están en [descartados.md](descartados.md)
 
 Cada evento tiene un `.schema.json` hermano: es la fuente para validar y generar tipos, no para leer. Los objetos que se repiten —`location`, `timeWindow`, `attachments[]`, `evidence[]`— están en [`_shared.schema.json`](_shared.schema.json) y se referencian con `$ref`.
 
-⚠️ **Cinco enums que salen al bus están en conflicto** entre el catálogo de [enumeraciones.md](../../enumeraciones.md) y el [acuerdo que ya circuló](../../../Acuerdo-Eventos-M6.md). Los schemas siguen el catálogo y lo marcan en la `description` del campo. Hay que resolverlo antes de implementar: ver [las divergencias](../../enumeraciones.md#divergencias-con-el-acuerdo-publicado).
+✅ **Los cinco enums que estaban en conflicto** entre el catálogo de [enumeraciones.md](../../enumeraciones.md) y el [acuerdo que ya circuló](../../Acuerdo-Eventos-M6.md) quedaron resueltos por [ADR-003](../../decisiones/adr-003-divergencias-enums.md): manda el catálogo y se corrige el acuerdo. Falta avisarle a M3, M4 y M7 — ver [bloqueantes.md](../../bloqueantes.md).
 
 ## Qué pedimos de vuelta
 

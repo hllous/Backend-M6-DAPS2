@@ -43,7 +43,7 @@ attachments[]?, updatedBy, statusChangedAt
 
 **No guardamos `publicId` ni `ticketVersion`.** Ya no hace falta con la v1.5: solo correlacionamos por `ticketId`.
 
-`updateType` no usa nuestro enum `TicketStatusUpdate`, que quedó [obsoleto](../../enumeraciones.md#divergencias-con-el-acuerdo-publicado).
+`updateType` no usa nuestro enum `TicketStatusUpdate`, que [ADR-003](../../decisiones/adr-003-divergencias-enums.md) eliminó del catálogo: el vocabulario lo define M2 y lo adoptamos tal cual.
 
 ### 🔴 Bloqueante: `progress` no sirve para la fecha agendada
 
