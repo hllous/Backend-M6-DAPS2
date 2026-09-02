@@ -7,6 +7,7 @@ import configuration from './config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
+import { EventsModule } from './events/events.module';
 import { JwtAuthGuard } from './common/guards';
 
 // Módulos de dominio
@@ -40,6 +41,7 @@ import { WeatherAlertsModule } from './modules/weather-alerts/weather-alerts.mod
     PrismaModule,
     HealthModule,
     AuthModule,
+    EventsModule,
 
     // ─── Dominios de negocio ────────────────────────
     ZonesModule,
