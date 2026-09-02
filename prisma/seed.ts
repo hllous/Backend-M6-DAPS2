@@ -5,9 +5,13 @@ import {
   PrismaClient,
   ServiceCategory,
   ServiceMode,
+  ServiceOrigin,
+  ServiceStatus,
   Shift,
   VehicleType,
   WasteType,
+  ZoneResultStatus,
+  NotServicedReason,
 } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -263,6 +267,115 @@ async function main() {
     }
   }
 
+  // Servicios de ejemplo, uno por estado interesante.
+  //
+  // Service no tiene clave unica natural, asi que la idempotencia es por
+  // presencia: si ya hay servicios cargados, no se toca nada.
+  if ((await prisma.service.count()) === 0 && recDom) {
+    const contVac = await prisma.serviceType.findUnique({ where: { code: 'CONT-VAC' } });
+    const crew = await prisma.crew.findFirst({ where: { name: 'Cuadrilla Norte — Recolección' } });
+    const vehicle = await prisma.vehicle.findUnique({ where: { plate: 'AA123BB' } });
+    const site = await prisma.disposalSite.findUnique({ where: { code: 'DS-CEAMSE' } });
+    const container = await prisma.container.findUnique({ where: { code: 'CT-0001' } });
+
+    const routeZones = ZONES.map((z, i) => ({
+      zoneId: zones.get(z.code) as string,
+      sequence: i + 1,
+    }));
+
+    // 1. Programado, sin cuadrilla todavia.
+    await prisma.service.create({
+      data: {
+        serviceTypeId: recDom.id,
+        mode: ServiceMode.ROUTE,
+        status: ServiceStatus.SCHEDULED,
+        origin: ServiceOrigin.PLANNED,
+        routeId: route.id,
+        scheduledDate: new Date('2026-09-15T00:00:00.000Z'),
+        windowFrom: new Date('1970-01-01T06:00:00.000Z'),
+        windowTo: new Date('1970-01-01T12:00:00.000Z'),
+        zones: { createMany: { data: routeZones } },
+      },
+    });
+
+    // 2. En ejecucion, con cuadrilla y vehiculo.
+    await prisma.service.create({
+      data: {
+        serviceTypeId: recDom.id,
+        mode: ServiceMode.ROUTE,
+        status: ServiceStatus.IN_PROGRESS,
+        origin: ServiceOrigin.PLANNED,
+        routeId: route.id,
+        scheduledDate: new Date('2026-09-02T00:00:00.000Z'),
+        crewId: crew?.id ?? null,
+        vehicleId: vehicle?.id ?? null,
+        zones: { createMany: { data: routeZones } },
+      },
+    });
+
+    // 3. Cerrado parcial: una zona quedo sin atender, con su motivo y su
+    //    registro de recoleccion asociado.
+    const partial = await prisma.service.create({
+      data: {
+        serviceTypeId: recDom.id,
+        mode: ServiceMode.ROUTE,
+        status: ServiceStatus.PARTIALLY_COMPLETED,
+        origin: ServiceOrigin.PLANNED,
+        routeId: route.id,
+        scheduledDate: new Date('2026-08-29T00:00:00.000Z'),
+        crewId: crew?.id ?? null,
+        vehicleId: vehicle?.id ?? null,
+        zones: { createMany: { data: routeZones } },
+      },
+    });
+
+    const servicedZones = routeZones.slice(0, 2);
+    for (const z of servicedZones) {
+      await prisma.zoneResult.create({
+        data: { serviceId: partial.id, zoneId: z.zoneId, status: ZoneResultStatus.SERVICED },
+      });
+    }
+    const blocked = routeZones[2];
+    await prisma.zoneResult.create({
+      data: {
+        serviceId: partial.id,
+        zoneId: blocked.zoneId,
+        status: ZoneResultStatus.NOT_SERVICED,
+        reason: NotServicedReason.BLOCKED_ACCESS,
+        notes: 'Camion de mudanza bloqueando la cuadra.',
+      },
+    });
+
+    if (site) {
+      await prisma.collectionRecord.create({
+        data: {
+          serviceId: partial.id,
+          disposalSiteId: site.id,
+          wasteType: WasteType.HOUSEHOLD,
+          volumeM3: 18.5,
+          weightKg: 4200,
+        },
+      });
+    }
+
+    // 4. Puntual nacido de un reclamo de M2.
+    if (contVac && container) {
+      await prisma.service.create({
+        data: {
+          serviceTypeId: contVac.id,
+          mode: ServiceMode.POINT,
+          status: ServiceStatus.SCHEDULED,
+          origin: ServiceOrigin.TICKET,
+          ticketId: 'TCK-2026-004821',
+          targetType: 'CONTAINER',
+          targetId: container.id,
+          scheduledDate: new Date('2026-09-04T00:00:00.000Z'),
+          zones: { createMany: { data: [{ zoneId: container.zoneId, sequence: 1 }] } },
+        },
+      });
+    }
+  }
+
   const counts = {
     serviceTypes: await prisma.serviceType.count(),
     zones: await prisma.zone.count(),
@@ -274,6 +387,8 @@ async function main() {
     trees: await prisma.tree.count(),
     greenPoints: await prisma.greenPoint.count(),
     frequencies: await prisma.serviceFrequency.count(),
+    services: await prisma.service.count(),
+    zoneResults: await prisma.zoneResult.count(),
   };
   console.table(counts);
 }

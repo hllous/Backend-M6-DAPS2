@@ -16,6 +16,7 @@ import {
   TreeInterventionResponseDto,
   QueryTreeInterventionsDto,
   AuthorizeInterventionDto,
+  AssignInterventionServiceDto,
 } from './dto';
 import { ErrorResponseDto } from '../../../common/dto';
 
@@ -156,5 +157,44 @@ export class TreeInterventionsController {
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async reject(@Param('id', ParseUUIDPipe) id: string): Promise<TreeInterventionResponseDto> {
     return this.treeInterventionsService.reject(id);
+  }
+
+  @Post(':id/assign-service')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Asociar la intervención al servicio que la ejecuta',
+    description:
+      'La intervención guarda qué hay que hacer; el servicio, cuándo, con qué cuadrilla y cómo terminó. Solo se programa una intervención AUTHORIZED, contra un servicio de modo POINT que no esté ya ejecutando otra intervención.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID de la intervención', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Intervención asociada al servicio',
+    type: TreeInterventionResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'El servicio no es de modo POINT',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
+  @ApiResponse({ status: 403, description: 'Sin permisos', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 404,
+    description: 'Intervención o servicio no encontrado',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description:
+      'La intervención no está autorizada, ya tiene servicio, o el servicio ya ejecuta otra intervención',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  async assignService(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AssignInterventionServiceDto,
+  ): Promise<TreeInterventionResponseDto> {
+    return this.treeInterventionsService.assignService(id, dto);
   }
 }
