@@ -1,15 +1,7 @@
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
-import {
-  CreateTreeSurveyDto,
-  QueryTreeSurveysDto,
-  TreeSurveyResponseDto,
-} from './dto';
+import { CreateTreeSurveyDto, QueryTreeSurveysDto, TreeSurveyResponseDto } from './dto';
 import { PaginatedResponseDto } from '../../../common/dto';
 
 @Injectable()
@@ -18,10 +10,7 @@ export class TreeSurveysService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    treeId: string,
-    dto: CreateTreeSurveyDto,
-  ): Promise<TreeSurveyResponseDto> {
+  async create(treeId: string, dto: CreateTreeSurveyDto): Promise<TreeSurveyResponseDto> {
     await this.ensureTreeExists(treeId);
 
     const survey = await this.prisma.treeSurvey.create({
@@ -78,10 +67,7 @@ export class TreeSurveysService {
     );
   }
 
-  async findOne(
-    treeId: string,
-    surveyId: string,
-  ): Promise<TreeSurveyResponseDto> {
+  async findOne(treeId: string, surveyId: string): Promise<TreeSurveyResponseDto> {
     await this.ensureTreeExists(treeId);
 
     const survey = await this.prisma.treeSurvey.findFirst({

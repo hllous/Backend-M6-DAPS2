@@ -51,12 +51,13 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # Copia el código ya compilado.
 COPY --from=builder /app/dist ./dist
 
-# Copia el schema de Prisma (lo usarán las migraciones cuando existan).
+# Copia el schema y las migraciones de Prisma.
 COPY prisma ./prisma
 
 # Puerto que expone la app (coincide con PORT del .env.example).
 EXPOSE 3000
 
-# Arranca la aplicación.
-# Nota: cuando existan migraciones, sumar "npx prisma migrate deploy" antes.
-CMD ["node", "dist/main.js"]
+# Aplica las migraciones pendientes y arranca.
+# Si la migración falla el contenedor no levanta, que es lo correcto:
+# preferimos no servir una API contra un esquema desactualizado.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]

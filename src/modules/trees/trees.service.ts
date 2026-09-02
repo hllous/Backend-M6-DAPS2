@@ -13,10 +13,14 @@ export class TreesService {
     try {
       const tree = await this.prisma.tree.create({
         data: {
-          surveyCode: dto.surveyCode, zoneId: dto.zoneId,
-          species: dto.species ?? null, address: dto.address ?? null,
-          lat: dto.lat ?? null, lng: dto.lng ?? null,
-          heightM: dto.heightM ?? null, diameterCm: dto.diameterCm ?? null,
+          surveyCode: dto.surveyCode,
+          zoneId: dto.zoneId,
+          species: dto.species ?? null,
+          address: dto.address ?? null,
+          lat: dto.lat ?? null,
+          lng: dto.lng ?? null,
+          heightM: dto.heightM ?? null,
+          diameterCm: dto.diameterCm ?? null,
           active: dto.active ?? true,
         },
       });
@@ -44,10 +48,20 @@ export class TreesService {
       ];
     }
     const [trees, total] = await Promise.all([
-      this.prisma.tree.findMany({ where, skip: query.skip, take: query.take, orderBy: { surveyCode: 'asc' } }),
+      this.prisma.tree.findMany({
+        where,
+        skip: query.skip,
+        take: query.take,
+        orderBy: { surveyCode: 'asc' },
+      }),
       this.prisma.tree.count({ where }),
     ]);
-    return new PaginatedResponseDto(trees.map((t) => this.toResponseDto(t)), total, query.page, query.pageSize);
+    return new PaginatedResponseDto(
+      trees.map((t) => this.toResponseDto(t)),
+      total,
+      query.page,
+      query.pageSize,
+    );
   }
 
   async findOne(id: string): Promise<TreeResponseDto> {
@@ -95,12 +109,18 @@ export class TreesService {
 
   private toResponseDto(tree: any): TreeResponseDto {
     return {
-      id: tree.id, surveyCode: tree.surveyCode, species: tree.species,
-      zoneId: tree.zoneId, address: tree.address,
-      lat: tree.lat ? Number(tree.lat) : null, lng: tree.lng ? Number(tree.lng) : null,
+      id: tree.id,
+      surveyCode: tree.surveyCode,
+      species: tree.species,
+      zoneId: tree.zoneId,
+      address: tree.address,
+      lat: tree.lat ? Number(tree.lat) : null,
+      lng: tree.lng ? Number(tree.lng) : null,
       heightM: tree.heightM ? Number(tree.heightM) : null,
       diameterCm: tree.diameterCm ? Number(tree.diameterCm) : null,
-      active: tree.active, createdAt: tree.createdAt, updatedAt: tree.updatedAt,
+      active: tree.active,
+      createdAt: tree.createdAt,
+      updatedAt: tree.updatedAt,
     };
   }
 }

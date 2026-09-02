@@ -18,6 +18,9 @@ Ver decisiones detalladas en [`docs/decisiones/`](docs/decisiones/).
 
 ```bash
 npm install
+cp .env.example .env          # completar DATABASE_URL y JWT_SECRET
+npm run prisma:migrate:deploy # crea el esquema
+npm run prisma:seed           # catálogos y recursos mínimos (idempotente)
 npm run start:dev
 ```
 

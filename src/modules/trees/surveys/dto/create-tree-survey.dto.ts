@@ -1,18 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsEnum,
-  IsOptional,
-  IsBoolean,
-  IsString,
-  IsDateString,
-  MaxLength,
-} from 'class-validator';
-import {
-  TreeHealthStatus,
-  RiskLevel,
-  RiskType,
-  TreeInterventionType,
-} from '@prisma/client';
+import { IsEnum, IsOptional, IsBoolean, IsString, IsDateString, MaxLength } from 'class-validator';
+import { TreeHealthStatus, RiskLevel, RiskType, TreeInterventionType } from '@prisma/client';
 
 export class CreateTreeSurveyDto {
   @ApiProperty({

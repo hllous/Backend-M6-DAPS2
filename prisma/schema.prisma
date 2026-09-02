@@ -268,6 +268,19 @@ enum DelayType {
   DURATION
 }
 
+enum RepairRequestStatus {
+  REQUESTED
+  IN_PROGRESS
+  CLOSED
+}
+
+enum StreetClosureRequestStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  ENDED
+}
+
 enum OutboxEventStatus {
   PENDING
   SENT
@@ -316,8 +329,8 @@ model Zone {
 }
 
 model ZoneNeighborhood {
-  zoneId          String @map("zone_id") @db.Uuid
-  neighborhoodId  String @map("neighborhood_id") // EXT M9
+  zoneId         String @map("zone_id") @db.Uuid
+  neighborhoodId String @map("neighborhood_id") // EXT M9
 
   zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
@@ -342,10 +355,10 @@ model Route {
 }
 
 model RouteStop {
-  id                  String @id @default(uuid()) @db.Uuid
-  routeId             String @map("route_id") @db.Uuid
-  zoneId              String @map("zone_id") @db.Uuid
-  sequence            Int
+  id                   String @id @default(uuid()) @db.Uuid
+  routeId              String @map("route_id") @db.Uuid
+  zoneId               String @map("zone_id") @db.Uuid
+  sequence             Int
   estimatedDurationMin Int    @map("estimated_duration_min")
 
   route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
@@ -356,14 +369,14 @@ model RouteStop {
 }
 
 model ServiceFrequency {
-  id            String   @id @default(uuid()) @db.Uuid
-  serviceTypeId String   @map("service_type_id") @db.Uuid
-  routeId       String   @map("route_id") @db.Uuid
+  id            String    @id @default(uuid()) @db.Uuid
+  serviceTypeId String    @map("service_type_id") @db.Uuid
+  routeId       String    @map("route_id") @db.Uuid
   shift         Shift
-  validFrom     DateTime @map("valid_from") @db.Date
+  validFrom     DateTime  @map("valid_from") @db.Date
   validTo       DateTime? @map("valid_to") @db.Date
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   serviceType ServiceType        @relation(fields: [serviceTypeId], references: [id])
   route       Route              @relation(fields: [routeId], references: [id])
@@ -432,37 +445,35 @@ model Vehicle {
 // ════════════════════════════════════════════════════════════════
 
 model Service {
-  id             String        @id @default(uuid()) @db.Uuid
-  serviceTypeId  String        @map("service_type_id") @db.Uuid
-  mode           ServiceMode
-  routeId        String?       @map("route_id") @db.Uuid // null si POINT
-  targetType     String?       @map("target_type") // null si ROUTE
-  targetId       String?       @map("target_id") @db.Uuid // polimórfico
-  scheduledDate  DateTime      @map("scheduled_date") @db.Date
-  windowFrom     DateTime?     @map("window_from") @db.Time()
-  windowTo       DateTime?     @map("window_to") @db.Time()
-  crewId         String?       @map("crew_id") @db.Uuid // null hasta asignar
-  vehicleId      String?       @map("vehicle_id") @db.Uuid
-  status         ServiceStatus @default(SCHEDULED)
-  statusReason   String?       @map("status_reason")
-  origin         ServiceOrigin
-  ticketId       String?       @map("ticket_id") // EXT M2
-  publicId       String?       @map("public_id") // EXT M2
-  ticketVersion  Int?          @map("ticket_version") // EXT M2
-  notes          String?       @db.Text
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  createdBy      String?       @map("created_by")
+  id            String        @id @default(uuid()) @db.Uuid
+  serviceTypeId String        @map("service_type_id") @db.Uuid
+  mode          ServiceMode
+  routeId       String?       @map("route_id") @db.Uuid // null si POINT
+  targetType    String?       @map("target_type") // null si ROUTE
+  targetId      String?       @map("target_id") @db.Uuid // polimórfico
+  scheduledDate DateTime      @map("scheduled_date") @db.Date
+  windowFrom    DateTime?     @map("window_from") @db.Time()
+  windowTo      DateTime?     @map("window_to") @db.Time()
+  crewId        String?       @map("crew_id") @db.Uuid // null hasta asignar
+  vehicleId     String?       @map("vehicle_id") @db.Uuid
+  status        ServiceStatus @default(SCHEDULED)
+  statusReason  String?       @map("status_reason")
+  origin        ServiceOrigin
+  ticketId      String?       @map("ticket_id") // EXT M2
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  createdBy     String?       @map("created_by")
 
-  serviceType         ServiceType              @relation(fields: [serviceTypeId], references: [id])
-  route               Route?                   @relation(fields: [routeId], references: [id])
-  crew                Crew?                    @relation(fields: [crewId], references: [id])
-  vehicle             Vehicle?                 @relation(fields: [vehicleId], references: [id])
-  zones               ServiceZone[]
-  zoneResults         ZoneResult[]
-  collectionRecords   CollectionRecord[]
-  treeIntervention    TreeIntervention?
-  inspection          EnvironmentalInspection?
+  serviceType       ServiceType              @relation(fields: [serviceTypeId], references: [id])
+  route             Route?                   @relation(fields: [routeId], references: [id])
+  crew              Crew?                    @relation(fields: [crewId], references: [id])
+  vehicle           Vehicle?                 @relation(fields: [vehicleId], references: [id])
+  zones             ServiceZone[]
+  zoneResults       ZoneResult[]
+  collectionRecords CollectionRecord[]
+  treeIntervention  TreeIntervention?
+  inspection        EnvironmentalInspection?
 
   @@index([status])
   @@index([scheduledDate])
@@ -473,7 +484,7 @@ model Service {
 model ServiceZone {
   serviceId String @map("service_id") @db.Uuid
   zoneId    String @map("zone_id") @db.Uuid
-  sequence  Int    // snapshot del Route
+  sequence  Int // snapshot del Route
 
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   zone    Zone    @relation(fields: [zoneId], references: [id])
@@ -483,14 +494,14 @@ model ServiceZone {
 }
 
 model ZoneResult {
-  id           String           @id @default(uuid()) @db.Uuid
-  serviceId    String           @map("service_id") @db.Uuid
-  zoneId       String           @map("zone_id") @db.Uuid
+  id           String             @id @default(uuid()) @db.Uuid
+  serviceId    String             @map("service_id") @db.Uuid
+  zoneId       String             @map("zone_id") @db.Uuid
   status       ZoneResultStatus
   reason       NotServicedReason?
-  proposedDate DateTime?        @map("proposed_date") @db.Date
-  notes        String?          @db.Text
-  recordedAt   DateTime         @default(now()) @map("recorded_at")
+  proposedDate DateTime?          @map("proposed_date") @db.Date
+  notes        String?            @db.Text
+  recordedAt   DateTime           @default(now()) @map("recorded_at")
 
   service           Service            @relation(fields: [serviceId], references: [id])
   zone              Zone               @relation(fields: [zoneId], references: [id])
@@ -501,24 +512,24 @@ model ZoneResult {
 }
 
 model CollectionRecord {
-  id            String       @id @default(uuid()) @db.Uuid
-  serviceId     String       @map("service_id") @db.Uuid
-  zoneResultId  String?      @map("zone_result_id") @db.Uuid // null si POINT
-  disposalSiteId String      @map("disposal_site_id") @db.Uuid
-  wasteType     WasteType    @map("waste_type")
-  volumeM3      Decimal?     @map("volume_m3") @db.Decimal(10, 2)
-  weightKg      Decimal?     @map("weight_kg") @db.Decimal(10, 2)
+  id             String    @id @default(uuid()) @db.Uuid
+  serviceId      String    @map("service_id") @db.Uuid
+  zoneResultId   String?   @map("zone_result_id") @db.Uuid // null si POINT
+  disposalSiteId String    @map("disposal_site_id") @db.Uuid
+  wasteType      WasteType @map("waste_type")
+  volumeM3       Decimal?  @map("volume_m3") @db.Decimal(10, 2)
+  weightKg       Decimal?  @map("weight_kg") @db.Decimal(10, 2)
 
-  service     Service      @relation(fields: [serviceId], references: [id])
-  zoneResult  ZoneResult?  @relation(fields: [zoneResultId], references: [id])
+  service      Service      @relation(fields: [serviceId], references: [id])
+  zoneResult   ZoneResult?  @relation(fields: [zoneResultId], references: [id])
   disposalSite DisposalSite @relation(fields: [disposalSiteId], references: [id])
 
   @@map("collection_record")
 }
 
 model DisposalSite {
-  id       String          @id @default(uuid()) @db.Uuid
-  code     String          @unique
+  id       String           @id @default(uuid()) @db.Uuid
+  code     String           @unique
   name     String
   siteType DisposalSiteType @map("site_type")
 
@@ -544,20 +555,20 @@ model Attachment {
 // ════════════════════════════════════════════════════════════════
 
 model Container {
-  id                 String          @id @default(uuid()) @db.Uuid
-  code               String          @unique
-  containerType      ContainerType   @map("container_type")
-  zoneId             String          @map("zone_id") @db.Uuid
-  address            String?
-  lat                Decimal?        @db.Decimal(10, 7)
-  lng                Decimal?        @db.Decimal(10, 7)
-  capacityLiters     Int             @map("capacity_liters")
-  status             ContainerStatus @default(ACTIVE)
-  damageType         DamageType?     @map("damage_type") // solo DAMAGED
-  severity           Severity?       // solo DAMAGED
-  requiresPublicWorks Boolean?       @map("requires_public_works") // solo DAMAGED
-  createdAt          DateTime        @default(now()) @map("created_at")
-  updatedAt          DateTime        @updatedAt @map("updated_at")
+  id                  String          @id @default(uuid()) @db.Uuid
+  code                String          @unique
+  containerType       ContainerType   @map("container_type")
+  zoneId              String          @map("zone_id") @db.Uuid
+  address             String?
+  lat                 Decimal?        @db.Decimal(10, 7)
+  lng                 Decimal?        @db.Decimal(10, 7)
+  capacityLiters      Int             @map("capacity_liters")
+  status              ContainerStatus @default(ACTIVE)
+  damageType          DamageType?     @map("damage_type") // solo DAMAGED
+  severity            Severity? // solo DAMAGED
+  requiresPublicWorks Boolean?        @map("requires_public_works") // solo DAMAGED
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
 
   zone Zone @relation(fields: [zoneId], references: [id])
 
@@ -705,20 +716,20 @@ model EnvironmentalReport {
 }
 
 model EnvironmentalInspection {
-  id          String            @id @default(uuid()) @db.Uuid
-  reportId    String            @map("report_id") @db.Uuid
-  serviceId   String?           @unique @map("service_id") @db.Uuid
-  inspectorId String?           @map("inspector_id") // EXT M1 — interno
-  inspectedAt DateTime?         @map("inspected_at")
-  findings    String?           @db.Text // interno
+  id          String              @id @default(uuid()) @db.Uuid
+  reportId    String              @map("report_id") @db.Uuid
+  serviceId   String?             @unique @map("service_id") @db.Uuid
+  inspectorId String?             @map("inspector_id") // EXT M1 — interno
+  inspectedAt DateTime?           @map("inspected_at")
+  findings    String?             @db.Text // interno
   outcome     InspectionOutcome?
   nextStep    InspectionNextStep? @map("next_step")
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
 
-  report         EnvironmentalReport @relation(fields: [reportId], references: [id])
-  service        Service?            @relation(fields: [serviceId], references: [id])
-  checklistItems ChecklistItem[]
+  report          EnvironmentalReport @relation(fields: [reportId], references: [id])
+  service         Service?            @relation(fields: [serviceId], references: [id])
+  checklistItems  ChecklistItem[]
   violationNotice ViolationNotice?
 
   @@map("environmental_inspection")
@@ -738,16 +749,16 @@ model ChecklistItem {
 }
 
 model ViolationNotice {
-  id               String         @id @default(uuid()) @db.Uuid
-  noticeNumber     String         @unique @map("notice_number")
-  inspectionId     String         @unique @map("inspection_id") @db.Uuid // inmutable
-  issuedAt         DateTime       @map("issued_at")
-  establishmentId  String?        @map("establishment_id") // EXT M4 — obligatorio para derivar
-  violationType    ViolationType  @map("violation_type")
+  id               String          @id @default(uuid()) @db.Uuid
+  noticeNumber     String          @unique @map("notice_number")
+  inspectionId     String          @unique @map("inspection_id") @db.Uuid // inmutable
+  issuedAt         DateTime        @map("issued_at")
+  establishmentId  String?         @map("establishment_id") // EXT M4 — obligatorio para derivar
+  violationType    ViolationType   @map("violation_type")
   severity         Severity
   suggestedAction  SuggestedAction @map("suggested_action") // no vinculante
-  priorNoticeCount Int            @default(0) @map("prior_notice_count")
-  createdAt        DateTime       @default(now()) @map("created_at")
+  priorNoticeCount Int             @default(0) @map("prior_notice_count")
+  createdAt        DateTime        @default(now()) @map("created_at")
 
   inspection      EnvironmentalInspection @relation(fields: [inspectionId], references: [id])
   sanctionOutcome SanctionOutcome?
@@ -774,34 +785,34 @@ model SanctionOutcome {
 // ════════════════════════════════════════════════════════════════
 
 model RepairRequest {
-  id             String          @id @default(uuid()) @db.Uuid
-  damageType     RepairDamageType @map("damage_type")
+  id             String              @id @default(uuid()) @db.Uuid
+  damageType     RepairDamageType    @map("damage_type")
   severity       Severity
   address        String?
-  detectedInType String          @map("detected_in_type") // SERVICE | INSPECTION
-  detectedInId   String          @map("detected_in_id") @db.Uuid // polimórfico
-  status         String          @default("REQUESTED") // REQUESTED | IN_PROGRESS | CLOSED
-  workOrderId    String?         @map("work_order_id") // EXT M3
-  requestedAt    DateTime        @default(now()) @map("requested_at")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
+  detectedInType String              @map("detected_in_type") // SERVICE | INSPECTION
+  detectedInId   String              @map("detected_in_id") @db.Uuid // polimórfico
+  status         RepairRequestStatus @default(REQUESTED)
+  workOrderId    String?             @map("work_order_id") // EXT M3
+  requestedAt    DateTime            @default(now()) @map("requested_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
 
   @@index([status])
   @@map("repair_request")
 }
 
 model StreetClosureRequest {
-  id          String  @id @default(uuid()) @db.Uuid
+  id          String                     @id @default(uuid()) @db.Uuid
   reason      String
-  sourceType  String  @map("source_type") // SERVICE | TREE_INTERVENTION
-  sourceId    String  @map("source_id") @db.Uuid // polimórfico
-  closureType StreetClosureType? @map("closure_type")
-  closureFrom DateTime? @map("closure_from")
-  closureTo   DateTime? @map("closure_to")
-  status      String  @default("REQUESTED") // REQUESTED | APPROVED | REJECTED | ENDED
-  closureId   String? @map("closure_id") // EXT M7
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  sourceType  String                     @map("source_type") // SERVICE | TREE_INTERVENTION
+  sourceId    String                     @map("source_id") @db.Uuid // polimórfico
+  closureType StreetClosureType?         @map("closure_type")
+  closureFrom DateTime?                  @map("closure_from")
+  closureTo   DateTime?                  @map("closure_to")
+  status      StreetClosureRequestStatus @default(REQUESTED)
+  closureId   String?                    @map("closure_id") // EXT M7
+  createdAt   DateTime                   @default(now()) @map("created_at")
+  updatedAt   DateTime                   @updatedAt @map("updated_at")
 
   streets ClosureStreet[]
 
@@ -810,8 +821,8 @@ model StreetClosureRequest {
 }
 
 model ClosureStreet {
-  id        String @id @default(uuid()) @db.Uuid
-  requestId String @map("request_id") @db.Uuid
+  id         String @id @default(uuid()) @db.Uuid
+  requestId  String @map("request_id") @db.Uuid
   streetName String @map("street_name")
   fromCross  String @map("from_cross")
   toCross    String @map("to_cross")

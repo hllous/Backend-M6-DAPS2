@@ -1,9 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  TreeInterventionType,
-  TreeInterventionStatus,
-  Severity,
-} from '@prisma/client';
+import { TreeInterventionType, TreeInterventionStatus, Severity } from '@prisma/client';
 
 class InterventionTreeResponseDto {
   @ApiProperty({

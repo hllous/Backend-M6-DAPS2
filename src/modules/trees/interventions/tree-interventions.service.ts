@@ -5,7 +5,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { Prisma, TreeInterventionStatus } from '@prisma/client';
+import { Prisma, TreeInterventionStatus, TreeInterventionType } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
   CreateTreeInterventionDto,
@@ -24,14 +24,8 @@ import { PaginatedResponseDto } from '../../../common/dto';
  *   PENDING_AUTHORIZATION → REJECTED
  */
 const VALID_TRANSITIONS: Record<TreeInterventionStatus, TreeInterventionStatus[]> = {
-  REQUESTED: [
-    TreeInterventionStatus.PENDING_AUTHORIZATION,
-    TreeInterventionStatus.AUTHORIZED,
-  ],
-  PENDING_AUTHORIZATION: [
-    TreeInterventionStatus.AUTHORIZED,
-    TreeInterventionStatus.REJECTED,
-  ],
+  REQUESTED: [TreeInterventionStatus.PENDING_AUTHORIZATION, TreeInterventionStatus.AUTHORIZED],
+  PENDING_AUTHORIZATION: [TreeInterventionStatus.AUTHORIZED, TreeInterventionStatus.REJECTED],
   AUTHORIZED: [],
   REJECTED: [],
 };
@@ -42,9 +36,7 @@ export class TreeInterventionsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    dto: CreateTreeInterventionDto,
-  ): Promise<TreeInterventionResponseDto> {
+  async create(dto: CreateTreeInterventionDto): Promise<TreeInterventionResponseDto> {
     // Verificar que todos los árboles existen
     const trees = await this.prisma.tree.findMany({
       where: { id: { in: dto.treeIds } },
@@ -54,9 +46,7 @@ export class TreeInterventionsService {
     if (trees.length !== dto.treeIds.length) {
       const foundIds = new Set(trees.map((t) => t.id));
       const missing = dto.treeIds.filter((id) => !foundIds.has(id));
-      throw new NotFoundException(
-        `Árboles no encontrados: ${missing.join(', ')}`,
-      );
+      throw new NotFoundException(`Árboles no encontrados: ${missing.join(', ')}`);
     }
 
     const intervention = await this.prisma.treeIntervention.create({
@@ -120,9 +110,7 @@ export class TreeInterventionsService {
     });
 
     if (!intervention) {
-      throw new NotFoundException(
-        `Intervención con id '${id}' no encontrada`,
-      );
+      throw new NotFoundException(`Intervención con id '${id}' no encontrada`);
     }
 
     return this.toResponseDto(intervention);
@@ -131,12 +119,10 @@ export class TreeInterventionsService {
   /**
    * REQUESTED → PENDING_AUTHORIZATION (para REMOVAL).
    */
-  async submitForAuthorization(
-    id: string,
-  ): Promise<TreeInterventionResponseDto> {
+  async submitForAuthorization(id: string): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
 
-    if (intervention.interventionType !== 'REMOVAL') {
+    if (intervention.interventionType !== TreeInterventionType.REMOVAL) {
       throw new BadRequestException(
         'Solo las intervenciones de tipo REMOVAL requieren autorización',
       );
@@ -148,21 +134,26 @@ export class TreeInterventionsService {
   /**
    * PENDING_AUTHORIZATION → AUTHORIZED (o REQUESTED → AUTHORIZED para podas).
    */
-  async authorize(
-    id: string,
-    dto: AuthorizeInterventionDto,
-  ): Promise<TreeInterventionResponseDto> {
+  async authorize(id: string, dto: AuthorizeInterventionDto): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
 
-    return this.transition(
-      intervention,
-      TreeInterventionStatus.AUTHORIZED,
-      {
-        authorizedByUserId: dto.authorizedByUserId ?? null,
-        authorizedAt: new Date(),
-        ...(dto.justification && { justification: dto.justification }),
-      },
-    );
+    // Sin esto una extracción se autoriza directo desde REQUESTED y el control
+    // de autorización queda salteado: la tabla de transiciones habilita
+    // REQUESTED → AUTHORIZED, pero eso es para las podas, que no lo requieren.
+    if (
+      intervention.interventionType === TreeInterventionType.REMOVAL &&
+      intervention.status === TreeInterventionStatus.REQUESTED
+    ) {
+      throw new ConflictException(
+        'Una extracción debe pasar por PENDING_AUTHORIZATION antes de autorizarse. Usar POST /tree-interventions/:id/submit-for-authorization',
+      );
+    }
+
+    return this.transition(intervention, TreeInterventionStatus.AUTHORIZED, {
+      authorizedByUserId: dto.authorizedByUserId ?? null,
+      authorizedAt: new Date(),
+      ...(dto.justification && { justification: dto.justification }),
+    });
   }
 
   /**
@@ -182,9 +173,7 @@ export class TreeInterventionsService {
     });
 
     if (!intervention) {
-      throw new NotFoundException(
-        `Intervención con id '${id}' no encontrada`,
-      );
+      throw new NotFoundException(`Intervención con id '${id}' no encontrada`);
     }
 
     return intervention;
@@ -209,9 +198,7 @@ export class TreeInterventionsService {
       include: { trees: true },
     });
 
-    this.logger.log(
-      `Intervención ${intervention.id}: ${intervention.status} → ${targetStatus}`,
-    );
+    this.logger.log(`Intervención ${intervention.id}: ${intervention.status} → ${targetStatus}`);
     return this.toResponseDto(updated);
   }
 

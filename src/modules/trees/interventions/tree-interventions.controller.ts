@@ -9,13 +9,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { TreeInterventionsService } from './tree-interventions.service';
 import {
   CreateTreeInterventionDto,
@@ -29,9 +23,7 @@ import { ErrorResponseDto } from '../../../common/dto';
 @ApiBearerAuth('JWT-auth')
 @Controller('tree-interventions')
 export class TreeInterventionsController {
-  constructor(
-    private readonly treeInterventionsService: TreeInterventionsService,
-  ) {}
+  constructor(private readonly treeInterventionsService: TreeInterventionsService) {}
 
   @Post()
   @ApiOperation({
@@ -39,15 +31,25 @@ export class TreeInterventionsController {
     description:
       'Crea una solicitud de intervención (poda, extracción, plantación o tratamiento) sobre uno o más árboles. Se crea en estado REQUESTED. Las extracciones (REMOVAL) requieren autorización adicional vía el endpoint submit-for-authorization.',
   })
-  @ApiResponse({ status: 201, description: 'Intervención solicitada exitosamente', type: TreeInterventionResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Intervención solicitada exitosamente',
+    type: TreeInterventionResponseDto,
+  })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({ status: 403, description: 'Sin permisos para solicitar intervenciones', type: ErrorResponseDto })
-  @ApiResponse({ status: 404, description: 'Uno o más árboles no encontrados', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 403,
+    description: 'Sin permisos para solicitar intervenciones',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Uno o más árboles no encontrados',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async create(
-    @Body() dto: CreateTreeInterventionDto,
-  ): Promise<TreeInterventionResponseDto> {
+  async create(@Body() dto: CreateTreeInterventionDto): Promise<TreeInterventionResponseDto> {
     return this.treeInterventionsService.create(dto);
   }
 
@@ -70,13 +72,15 @@ export class TreeInterventionsController {
     description: 'Retorna el detalle de una intervención incluyendo los árboles afectados.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la intervención', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Intervención encontrada', type: TreeInterventionResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Intervención encontrada',
+    type: TreeInterventionResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Intervención no encontrada', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<TreeInterventionResponseDto> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<TreeInterventionResponseDto> {
     return this.treeInterventionsService.findOne(id);
   }
 
@@ -90,8 +94,16 @@ export class TreeInterventionsController {
       'Transición REQUESTED → PENDING_AUTHORIZATION. Solo para intervenciones de tipo REMOVAL. Las podas no requieren este paso.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la intervención', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Enviada a autorización', type: TreeInterventionResponseDto })
-  @ApiResponse({ status: 400, description: 'Solo REMOVAL requiere autorización', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Enviada a autorización',
+    type: TreeInterventionResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Solo REMOVAL requiere autorización',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Intervención no encontrada', type: ErrorResponseDto })
   @ApiResponse({ status: 409, description: 'Transición inválida', type: ErrorResponseDto })
@@ -110,7 +122,11 @@ export class TreeInterventionsController {
       'Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó y cuándo.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la intervención', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Intervención autorizada', type: TreeInterventionResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Intervención autorizada',
+    type: TreeInterventionResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Intervención no encontrada', type: ErrorResponseDto })
   @ApiResponse({ status: 409, description: 'Transición inválida', type: ErrorResponseDto })
@@ -126,18 +142,19 @@ export class TreeInterventionsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Rechazar una intervención',
-    description:
-      'Transición PENDING_AUTHORIZATION → REJECTED. Estado terminal.',
+    description: 'Transición PENDING_AUTHORIZATION → REJECTED. Estado terminal.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la intervención', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Intervención rechazada', type: TreeInterventionResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Intervención rechazada',
+    type: TreeInterventionResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Intervención no encontrada', type: ErrorResponseDto })
   @ApiResponse({ status: 409, description: 'Transición inválida', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async reject(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<TreeInterventionResponseDto> {
+  async reject(@Param('id', ParseUUIDPipe) id: string): Promise<TreeInterventionResponseDto> {
     return this.treeInterventionsService.reject(id);
   }
 }

@@ -11,13 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { GreenSpacesService } from './green-spaces.service';
 import {
   CreateGreenSpaceDto,
@@ -69,9 +63,7 @@ export class GreenSpacesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async create(
-    @Body() dto: CreateGreenSpaceDto,
-  ): Promise<GreenSpaceResponseDto> {
+  async create(@Body() dto: CreateGreenSpaceDto): Promise<GreenSpaceResponseDto> {
     return this.greenSpacesService.create(dto);
   }
 
@@ -129,9 +121,7 @@ export class GreenSpacesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<GreenSpaceResponseDto> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<GreenSpaceResponseDto> {
     return this.greenSpacesService.findOne(id);
   }
 

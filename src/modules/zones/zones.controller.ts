@@ -11,13 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { ZonesService } from './zones.service';
 import {
   CreateZoneDto,
@@ -103,8 +97,7 @@ export class ZonesController {
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener una zona por ID',
-    description:
-      'Retorna el detalle de una zona operativa incluyendo los barrios asignados.',
+    description: 'Retorna el detalle de una zona operativa incluyendo los barrios asignados.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la zona', format: 'uuid' })
   @ApiResponse({
@@ -127,9 +120,7 @@ export class ZonesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ZoneResponseDto> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ZoneResponseDto> {
     return this.zonesService.findOne(id);
   }
 
@@ -263,8 +254,7 @@ export class ZonesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Quitar un barrio de una zona',
-    description:
-      'Desvincula un barrio específico de esta zona operativa.',
+    description: 'Desvincula un barrio específico de esta zona operativa.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la zona', format: 'uuid' })
   @ApiParam({

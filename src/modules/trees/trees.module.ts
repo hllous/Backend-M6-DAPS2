@@ -7,16 +7,8 @@ import { TreeInterventionsController } from './interventions/tree-interventions.
 import { TreeInterventionsService } from './interventions/tree-interventions.service';
 
 @Module({
-  controllers: [
-    TreesController,
-    TreeSurveysController,
-    TreeInterventionsController,
-  ],
-  providers: [
-    TreesService,
-    TreeSurveysService,
-    TreeInterventionsService,
-  ],
+  controllers: [TreesController, TreeSurveysController, TreeInterventionsController],
+  providers: [TreesService, TreeSurveysService, TreeInterventionsService],
   exports: [TreesService, TreeSurveysService, TreeInterventionsService],
 })
 export class TreesModule {}

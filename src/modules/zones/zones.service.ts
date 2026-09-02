@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -38,13 +33,8 @@ export class ZonesService {
       this.logger.log(`Zona creada: ${zone.code} (${zone.id})`);
       return this.toResponseDto(zone);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          `Ya existe una zona con el código '${dto.code}'`,
-        );
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(`Ya existe una zona con el código '${dto.code}'`);
       }
       throw error;
     }
@@ -53,9 +43,7 @@ export class ZonesService {
   /**
    * Lista zonas con paginación y filtros opcionales.
    */
-  async findAll(
-    query: QueryZonesDto,
-  ): Promise<PaginatedResponseDto<ZoneResponseDto>> {
+  async findAll(query: QueryZonesDto): Promise<PaginatedResponseDto<ZoneResponseDto>> {
     const where: Prisma.ZoneWhereInput = {};
 
     if (query.active !== undefined) {
@@ -137,10 +125,7 @@ export class ZonesService {
    * Asigna barrios a una zona.
    * Ignora duplicados silenciosamente (skipDuplicates).
    */
-  async addNeighborhoods(
-    zoneId: string,
-    dto: AddNeighborhoodsDto,
-  ): Promise<ZoneResponseDto> {
+  async addNeighborhoods(zoneId: string, dto: AddNeighborhoodsDto): Promise<ZoneResponseDto> {
     await this.ensureExists(zoneId);
 
     await this.prisma.zoneNeighborhood.createMany({
@@ -151,19 +136,14 @@ export class ZonesService {
       skipDuplicates: true,
     });
 
-    this.logger.log(
-      `Barrios asignados a zona ${zoneId}: ${dto.neighborhoodIds.join(', ')}`,
-    );
+    this.logger.log(`Barrios asignados a zona ${zoneId}: ${dto.neighborhoodIds.join(', ')}`);
     return this.findOne(zoneId);
   }
 
   /**
    * Quita un barrio de una zona.
    */
-  async removeNeighborhood(
-    zoneId: string,
-    neighborhoodId: string,
-  ): Promise<void> {
+  async removeNeighborhood(zoneId: string, neighborhoodId: string): Promise<void> {
     await this.ensureExists(zoneId);
 
     const deleted = await this.prisma.zoneNeighborhood.deleteMany({
@@ -176,9 +156,7 @@ export class ZonesService {
       );
     }
 
-    this.logger.log(
-      `Barrio '${neighborhoodId}' removido de zona '${zoneId}'`,
-    );
+    this.logger.log(`Barrio '${neighborhoodId}' removido de zona '${zoneId}'`);
   }
 
   // ─── Helpers ──────────────────────────────────────
@@ -197,10 +175,7 @@ export class ZonesService {
    * Mapea la entidad Prisma al DTO de respuesta.
    * @param includeNeighborhoods incluir barrios (solo en detalle)
    */
-  private toResponseDto(
-    zone: any,
-    includeNeighborhoods = false,
-  ): ZoneResponseDto {
+  private toResponseDto(zone: any, includeNeighborhoods = false): ZoneResponseDto {
     const dto: ZoneResponseDto = {
       id: zone.id,
       code: zone.code,
@@ -211,11 +186,9 @@ export class ZonesService {
     };
 
     if (includeNeighborhoods && zone.neighborhoods) {
-      dto.neighborhoods = zone.neighborhoods.map(
-        (n: { neighborhoodId: string }) => ({
-          neighborhoodId: n.neighborhoodId,
-        }),
-      );
+      dto.neighborhoods = zone.neighborhoods.map((n: { neighborhoodId: string }) => ({
+        neighborhoodId: n.neighborhoodId,
+      }));
     }
 
     return dto;

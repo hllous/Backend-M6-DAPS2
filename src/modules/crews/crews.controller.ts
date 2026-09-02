@@ -11,13 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { CrewsService } from './crews.service';
 import {
   CreateCrewDto,
@@ -98,8 +92,7 @@ export class CrewsController {
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener una cuadrilla por ID',
-    description:
-      'Retorna el detalle de una cuadrilla incluyendo la lista de miembros asignados.',
+    description: 'Retorna el detalle de una cuadrilla incluyendo la lista de miembros asignados.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la cuadrilla', format: 'uuid' })
   @ApiResponse({
@@ -122,9 +115,7 @@ export class CrewsController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<CrewResponseDto> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<CrewResponseDto> {
     return this.crewsService.findOne(id);
   }
 
