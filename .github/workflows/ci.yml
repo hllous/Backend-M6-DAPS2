@@ -38,6 +38,10 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Sin --fix: en CI el lint verifica, no corrige.
+      - name: Lint
+        run: npm run lint:check
+
   test:
     name: test
     runs-on: ubuntu-latest

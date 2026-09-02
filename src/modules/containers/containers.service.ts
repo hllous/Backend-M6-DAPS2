@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { Prisma, ContainerStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -67,34 +62,20 @@ export class ContainersService {
         },
       });
 
-      this.logger.log(
-        `Contenedor registrado: ${container.code} (${container.id})`,
-      );
+      this.logger.log(`Contenedor registrado: ${container.code} (${container.id})`);
       return this.toResponseDto(container);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          `Ya existe un contenedor con el código '${dto.code}'`,
-        );
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(`Ya existe un contenedor con el código '${dto.code}'`);
       }
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2003'
-      ) {
-        throw new NotFoundException(
-          `Zona con id '${dto.zoneId}' no encontrada`,
-        );
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new NotFoundException(`Zona con id '${dto.zoneId}' no encontrada`);
       }
       throw error;
     }
   }
 
-  async findAll(
-    query: QueryContainersDto,
-  ): Promise<PaginatedResponseDto<ContainerResponseDto>> {
+  async findAll(query: QueryContainersDto): Promise<PaginatedResponseDto<ContainerResponseDto>> {
     const where: Prisma.ContainerWhereInput = {};
 
     if (query.status) {
@@ -134,18 +115,13 @@ export class ContainersService {
     });
 
     if (!container) {
-      throw new NotFoundException(
-        `Contenedor con id '${id}' no encontrado`,
-      );
+      throw new NotFoundException(`Contenedor con id '${id}' no encontrado`);
     }
 
     return this.toResponseDto(container);
   }
 
-  async update(
-    id: string,
-    dto: UpdateContainerDto,
-  ): Promise<ContainerResponseDto> {
+  async update(id: string, dto: UpdateContainerDto): Promise<ContainerResponseDto> {
     await this.ensureExists(id);
 
     try {
@@ -162,18 +138,11 @@ export class ContainersService {
         },
       });
 
-      this.logger.log(
-        `Contenedor actualizado: ${container.code} (${container.id})`,
-      );
+      this.logger.log(`Contenedor actualizado: ${container.code} (${container.id})`);
       return this.toResponseDto(container);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2003'
-      ) {
-        throw new NotFoundException(
-          `Zona con id '${dto.zoneId}' no encontrada`,
-        );
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new NotFoundException(`Zona con id '${dto.zoneId}' no encontrada`);
       }
       throw error;
     }
@@ -197,10 +166,7 @@ export class ContainersService {
   }
 
   /** ACTIVE → DAMAGED */
-  async reportDamage(
-    id: string,
-    dto: ReportDamageDto,
-  ): Promise<ContainerResponseDto> {
+  async reportDamage(id: string, dto: ReportDamageDto): Promise<ContainerResponseDto> {
     return this.transition(id, ContainerStatus.DAMAGED, {
       damageType: dto.damageType,
       severity: dto.severity,
@@ -228,10 +194,7 @@ export class ContainersService {
   }
 
   /** RELOCATING → ACTIVE (con nueva ubicación) */
-  async confirmRelocation(
-    id: string,
-    dto: ConfirmRelocationDto,
-  ): Promise<ContainerResponseDto> {
+  async confirmRelocation(id: string, dto: ConfirmRelocationDto): Promise<ContainerResponseDto> {
     return this.transition(id, ContainerStatus.ACTIVE, {
       address: dto.address,
       lat: dto.lat ?? null,
@@ -260,9 +223,7 @@ export class ContainersService {
     });
 
     if (!container) {
-      throw new NotFoundException(
-        `Contenedor con id '${id}' no encontrado`,
-      );
+      throw new NotFoundException(`Contenedor con id '${id}' no encontrado`);
     }
 
     const allowed = VALID_TRANSITIONS[container.status] ?? [];
@@ -280,9 +241,7 @@ export class ContainersService {
       },
     });
 
-    this.logger.log(
-      `Contenedor ${container.code}: ${container.status} → ${targetStatus}`,
-    );
+    this.logger.log(`Contenedor ${container.code}: ${container.status} → ${targetStatus}`);
     return this.toResponseDto(updated);
   }
 
@@ -292,9 +251,7 @@ export class ContainersService {
       select: { id: true },
     });
     if (!exists) {
-      throw new NotFoundException(
-        `Contenedor con id '${id}' no encontrado`,
-      );
+      throw new NotFoundException(`Contenedor con id '${id}' no encontrado`);
     }
   }
 

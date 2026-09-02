@@ -11,20 +11,9 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { VehiclesService } from './vehicles.service';
-import {
-  CreateVehicleDto,
-  UpdateVehicleDto,
-  VehicleResponseDto,
-  QueryVehiclesDto,
-} from './dto';
+import { CreateVehicleDto, UpdateVehicleDto, VehicleResponseDto, QueryVehiclesDto } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 
 @ApiTags('vehicles')
@@ -123,9 +112,7 @@ export class VehiclesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<VehicleResponseDto> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<VehicleResponseDto> {
     return this.vehiclesService.findOne(id);
   }
 

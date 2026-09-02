@@ -1,10 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  TreeHealthStatus,
-  RiskLevel,
-  RiskType,
-  TreeInterventionType,
-} from '@prisma/client';
+import { TreeHealthStatus, RiskLevel, RiskType, TreeInterventionType } from '@prisma/client';
 
 export class TreeSurveyResponseDto {
   @ApiProperty({

@@ -7,7 +7,11 @@ export class QueryTreesDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filtrar por activo/inactivo' })
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => { if (value === 'true') return true; if (value === 'false') return false; return value; })
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   active?: boolean;
 
   @ApiPropertyOptional({ description: 'Filtrar por zona', format: 'uuid' })

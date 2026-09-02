@@ -1,10 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  ContainerType,
-  ContainerStatus,
-  DamageType,
-  Severity,
-} from '@prisma/client';
+import { ContainerType, ContainerStatus, DamageType, Severity } from '@prisma/client';
 
 export class ContainerResponseDto {
   @ApiProperty({

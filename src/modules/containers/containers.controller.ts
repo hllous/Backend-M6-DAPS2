@@ -10,13 +10,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { ContainersService } from './containers.service';
 import {
   CreateContainerDto,
@@ -77,9 +71,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async create(
-    @Body() dto: CreateContainerDto,
-  ): Promise<ContainerResponseDto> {
+  async create(@Body() dto: CreateContainerDto): Promise<ContainerResponseDto> {
     return this.containersService.create(dto);
   }
 
@@ -138,9 +130,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ContainerResponseDto> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
     return this.containersService.findOne(id);
   }
 
@@ -198,8 +188,7 @@ export class ContainersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Reportar desborde de un contenedor',
-    description:
-      'Transición ACTIVE → OVERFLOWED. Registra que el contenedor está desbordado.',
+    description: 'Transición ACTIVE → OVERFLOWED. Registra que el contenedor está desbordado.',
   })
   @ApiParam({
     name: 'id',
@@ -223,8 +212,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Transición inválida (el contenedor no está en estado ACTIVE)',
+    description: 'Transición inválida (el contenedor no está en estado ACTIVE)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -232,9 +220,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async reportOverflow(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ContainerResponseDto> {
+  async reportOverflow(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
     return this.containersService.reportOverflow(id);
   }
 
@@ -272,8 +258,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Transición inválida (el contenedor no está en estado ACTIVE)',
+    description: 'Transición inválida (el contenedor no está en estado ACTIVE)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -317,8 +302,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Transición inválida (el contenedor no está en estado OVERFLOWED)',
+    description: 'Transición inválida (el contenedor no está en estado OVERFLOWED)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -326,9 +310,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async empty(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ContainerResponseDto> {
+  async empty(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
     return this.containersService.empty(id);
   }
 
@@ -346,8 +328,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Reparación iniciada. Retorna el contenedor actualizado',
+    description: 'Reparación iniciada. Retorna el contenedor actualizado',
     type: ContainerResponseDto,
   })
   @ApiResponse({
@@ -362,8 +343,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Transición inválida (el contenedor no está en estado DAMAGED)',
+    description: 'Transición inválida (el contenedor no está en estado DAMAGED)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -371,9 +351,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async startRepair(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ContainerResponseDto> {
+  async startRepair(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
     return this.containersService.startRepair(id);
   }
 
@@ -391,8 +369,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Reparación completada. Retorna el contenedor actualizado',
+    description: 'Reparación completada. Retorna el contenedor actualizado',
     type: ContainerResponseDto,
   })
   @ApiResponse({
@@ -407,8 +384,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Transición inválida (el contenedor no está en estado UNDER_REPAIR)',
+    description: 'Transición inválida (el contenedor no está en estado UNDER_REPAIR)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -416,9 +392,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async completeRepair(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ContainerResponseDto> {
+  async completeRepair(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
     return this.containersService.completeRepair(id);
   }
 
@@ -436,8 +410,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Reubicación iniciada. Retorna el contenedor actualizado',
+    description: 'Reubicación iniciada. Retorna el contenedor actualizado',
     type: ContainerResponseDto,
   })
   @ApiResponse({
@@ -452,8 +425,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Transición inválida (el contenedor no está en estado ACTIVE)',
+    description: 'Transición inválida (el contenedor no está en estado ACTIVE)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -461,9 +433,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async relocate(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ContainerResponseDto> {
+  async relocate(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
     return this.containersService.relocate(id);
   }
 
@@ -481,8 +451,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Reubicación confirmada. Retorna el contenedor con la nueva ubicación',
+    description: 'Reubicación confirmada. Retorna el contenedor con la nueva ubicación',
     type: ContainerResponseDto,
   })
   @ApiResponse({
@@ -502,8 +471,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Transición inválida (el contenedor no está en estado RELOCATING)',
+    description: 'Transición inválida (el contenedor no está en estado RELOCATING)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -532,8 +500,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Contenedor retirado. Retorna el contenedor en estado REMOVED',
+    description: 'Contenedor retirado. Retorna el contenedor en estado REMOVED',
     type: ContainerResponseDto,
   })
   @ApiResponse({
@@ -548,8 +515,7 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Transición inválida (solo se puede retirar desde ACTIVE o DAMAGED)',
+    description: 'Transición inválida (solo se puede retirar desde ACTIVE o DAMAGED)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -557,9 +523,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async remove(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ContainerResponseDto> {
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
     return this.containersService.remove(id);
   }
 }
