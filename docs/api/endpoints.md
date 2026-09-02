@@ -2,7 +2,7 @@
 
 Resumen de lo que expone el backend. La fuente de verdad interactiva es el Swagger en `/api/docs`; este archivo existe para poder ver el mapa completo sin levantar nada, y porque el [DoD](../gestion/definition-of-done.md) lo pide para cada endpoint nuevo.
 
-> **Actualizado al 02/09/2026** — Fase 1 del plan de implementación (catálogos). 77 rutas.
+> **Actualizado al 02/09/2026** — Fase 2 del plan de implementación (`Service`). 94 rutas.
 
 ## Convenciones
 
@@ -59,7 +59,42 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 
 ## `services` — servicios urbanos y su configuración
 
-> El CRUD de `Service` en sí es la **Fase 2** y todavía no existe. Lo que sigue son los catálogos que lo habilitan.
+### Programación y ejecución
+
+`Service` es la unidad de trabajo programable del módulo: recolección, barrido, lavado, vaciado de contenedor, poda y riego son todos un servicio. Lo que varía es sobre qué se ejecuta — un recorrido de zonas (`ROUTE`) o un objetivo puntual (`POINT`).
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/services` | Programar. El **modo se copia del `ServiceType`**, no se elige. Un `ROUTE` exige recorrido y copia sus zonas como snapshot; un `POINT` se ubica por el bien del inventario (`targetType` + `targetId`) o por una `zoneId` suelta. `origin = TICKET` exige `ticketId`, y ningún otro origen lo admite. Nace en `SCHEDULED` |
+| GET | `/services` | Listar. Filtros: `status`, `serviceTypeId`, `mode`, `origin`, `crewId`, `vehicleId`, `zoneId`, `ticketId`, `scheduledFrom`, `scheduledTo` |
+| GET | `/services/:id` | Detalle con zonas, resultados por zona y registros de recolección |
+| PATCH | `/services/:id` | Corregir vehículo, ventana horaria y notas, **solo antes de iniciar**. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar |
+| POST | `/services/:id/assign-crew` | Asignar cuadrilla, y vehículo en la misma operación |
+
+**Máquina de estados.** Una transición inválida devuelve 409 nombrando las válidas desde el estado actual.
+
+| Método | Ruta | Transición |
+|---|---|---|
+| POST | `/services/:id/start` | `SCHEDULED → IN_PROGRESS`. **409 sin cuadrilla asignada**, o sin vehículo si el `ServiceType` lo exige |
+| POST | `/services/:id/suspend` | `IN_PROGRESS → SUSPENDED`. Motivo obligatorio |
+| POST | `/services/:id/resume` | `SUSPENDED → IN_PROGRESS`. Limpia el motivo |
+| POST | `/services/:id/complete` | `IN_PROGRESS → COMPLETED` o `PARTIALLY_COMPLETED`. **El estado final se calcula**, no se elige: parcial si alguna zona quedó `NOT_SERVICED` o `PARTIAL`. 409 si falta el resultado de alguna zona |
+| POST | `/services/:id/cancel` | `SCHEDULED` o `SUSPENDED` → `CANCELLED`. Motivo obligatorio |
+| POST | `/services/:id/reschedule` | `SCHEDULED → RESCHEDULED`. Deja el servicio a la espera de fecha nueva, con el motivo. Es donde caen los servicios ante una alerta meteorológica o el rechazo de un corte |
+| POST | `/services/:id/confirm-reschedule` | `RESCHEDULED → SCHEDULED` con la fecha y ventana nuevas |
+
+`DELAYED` no es un estado: es un aviso puntual, el servicio sigue en `SCHEDULED` o `IN_PROGRESS`.
+
+**Resultado y residuos.**
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/services/:id/zone-results` | Informar cómo quedó una zona. Solo con el servicio en `IN_PROGRESS`, una vez por zona, y sobre una zona del servicio. `reason` **obligatorio** si no quedó `SERVICED`, y rechazado si sí |
+| GET | `/services/:id/zone-results` | Resultados informados, en orden de registro |
+| POST | `/services/:id/collection-records` | Registrar residuos: tipo, volumen, peso y destino final. Solo sobre servicios iniciados o cerrados, contra un sitio de disposición activo |
+| GET | `/services/:id/collection-records` | Registros del servicio |
+
+### Catálogos
 
 | Método | Ruta | Qué hace |
 |---|---|---|
@@ -145,6 +180,7 @@ Una transición no válida devuelve 409 nombrando las que sí lo son.
 | POST | `/tree-interventions/:id/submit-for-authorization` | `REQUESTED → PENDING_AUTHORIZATION`. Solo para `REMOVAL` |
 | POST | `/tree-interventions/:id/authorize` | `→ AUTHORIZED`. Una `REMOVAL` en `REQUESTED` da 409: tiene que pasar por `PENDING_AUTHORIZATION` |
 | POST | `/tree-interventions/:id/reject` | `PENDING_AUTHORIZATION → REJECTED` |
+| POST | `/tree-interventions/:id/assign-service` | Asociar la intervención al `Service` que la ejecuta. La intervención guarda **qué** hay que hacer; el servicio, **cuándo, con qué cuadrilla y cómo terminó**. Solo una intervención `AUTHORIZED`, contra un servicio `POINT` que no ejecute ya otra |
 
 ## `green-spaces` — espacios verdes
 
@@ -164,7 +200,6 @@ Por fase del plan de implementación:
 
 | Fase | Qué falta |
 |---|---|
-| 2 | `services` — el CRUD de `Service`, su máquina de estados, `ZoneResult` y `CollectionRecord` |
 | 3 | Outbox y publicación de eventos a Kafka |
 | 4 | `environmental-reports`, `environmental-inspections`, actas y resoluciones |
 | 5 | `outbound-requests` — derivaciones a M3 y M7 |
