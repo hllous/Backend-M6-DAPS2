@@ -12,6 +12,7 @@ export default () => {
       secret: parsed.JWT_SECRET,
       expirationSeconds: parsed.JWT_EXPIRATION,
     },
+    sanctionDeadlineDays: parsed.SANCTION_DEADLINE_DAYS,
     kafka: {
       brokers: parsed.KAFKA_BROKERS,
       clientId: parsed.KAFKA_CLIENT_ID,

@@ -1,10 +1,13 @@
 import {
   Container,
+  EnvironmentalInspection,
+  EnvironmentalReport,
   Service,
   ServiceType,
   Tree,
   TreeIntervention,
   TreeSurvey,
+  ViolationNotice,
 } from '@prisma/client';
 
 /**
@@ -143,6 +146,40 @@ export function treePruningScheduled(
     timeWindow: window,
     crewId: service.crewId,
     requiresStreetClosure: intervention.requiresStreetClosure,
+  });
+}
+
+// ─── environmentalViolationDetected → M4 ──────────
+
+/**
+ * El acta que se le deriva a M4.
+ *
+ * `priorNoticeCount` les adelanta la reincidencia del establecimiento.
+ * `evidence` viaja vacío hasta que exista el módulo de adjuntos: el schema lo
+ * permite, y es preferible a inventar una referencia.
+ *
+ * Solo se construye cuando hay `establishmentId`: sin establecimiento el acta
+ * no se deriva.
+ */
+export function environmentalViolationDetected(
+  notice: ViolationNotice,
+  inspection: EnvironmentalInspection,
+  report: EnvironmentalReport,
+): Record<string, unknown> {
+  return compact({
+    violationId: notice.id,
+    noticeNumber: notice.noticeNumber,
+    issuedAt: notice.issuedAt.toISOString(),
+    reportId: report.id,
+    inspectionId: inspection.id,
+    ticketId: report.ticketId ?? undefined,
+    violationType: notice.violationType,
+    severity: notice.severity,
+    location: location(report),
+    establishmentId: notice.establishmentId as string,
+    priorNoticeCount: notice.priorNoticeCount,
+    evidence: [],
+    suggestedAction: notice.suggestedAction,
   });
 }
 

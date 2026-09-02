@@ -2,7 +2,7 @@
 
 Resumen de lo que expone el backend. La fuente de verdad interactiva es el Swagger en `/api/docs`; este archivo existe para poder ver el mapa completo sin levantar nada, y porque el [DoD](../gestion/definition-of-done.md) lo pide para cada endpoint nuevo.
 
-> **Actualizado al 02/09/2026** — Fase 2 del plan de implementación (`Service`). 94 rutas, agrupadas en 18 tags de Swagger.
+> **Actualizado al 02/09/2026** — Fase 4 del plan de implementación (control ambiental). 107 rutas, agrupadas en 18 tags de Swagger.
 
 ## Convenciones
 
@@ -192,6 +192,39 @@ Una transición no válida devuelve 409 nombrando las que sí lo son.
 | POST | `/tree-interventions/:id/reject` | `PENDING_AUTHORIZATION → REJECTED` |
 | POST | `/tree-interventions/:id/assign-service` | Asociar la intervención al `Service` que la ejecuta. La intervención guarda **qué** hay que hacer; el servicio, **cuándo, con qué cuadrilla y cómo terminó**. Solo una intervención `AUTHORIZED`, contra un servicio `POINT` que no ejecute ya otra |
 
+## `environmental-reports` — expedientes ambientales
+
+El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emisiones—, con su máquina de 11 estados. Puede nacer de un reclamo de M2 (`ticketId`) o de una **detección de oficio**, que es el camino que no depende de ningún otro módulo.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/environmental-reports` | Abrir expediente. Nace en `RECEIVED` |
+| GET | `/environmental-reports` | Listar. Filtros: `status`, `reportType`, `priority`, `ticketId`, `search` |
+| GET | `/environmental-reports/:id` | Detalle, con su plazo de vencimiento si lo tiene |
+| POST | `/environmental-reports/:id/start-review` | `RECEIVED → UNDER_REVIEW` |
+| POST | `/environmental-reports/:id/forward` | `UNDER_REVIEW → FORWARDED`. Hacia M2 sale como **`RETURNED`**, no `REJECTED`: devolver lo que no es de nuestra área es distinto de desestimarlo |
+| POST | `/environmental-reports/:id/dismiss` | `UNDER_REVIEW → DISMISSED`. Hacia M2 sale como `REJECTED` |
+| POST | `/environmental-reports/:id/close` | Cierre manual |
+
+**Cierre por vencimiento.** `NOTICE_ISSUED → CLOSED` lo hace el sistema solo cuando pasa `deadlineAt`, sin endpoint. No es un atajo: M4 no publica nada cuando decide que no corresponde castigo, así que sin ese cierre el expediente quedaría abierto para siempre. El plazo se configura con `SANCTION_DEADLINE_DAYS`.
+
+## `environmental-inspections` — inspecciones y actas
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/environmental-reports/:reportId/inspections` | Programar. Lleva el expediente a `INSPECTION_SCHEDULED`. Se ejecuta como un `Service` de modo `POINT` |
+| GET | `/environmental-reports/:reportId/inspections` | Inspecciones del expediente |
+| GET | `/environmental-inspections/:id` | Detalle con checklist y hallazgos |
+| POST | `/environmental-inspections/:id/complete` | Cierra con su `outcome`. Lleva el expediente a `INSPECTED` y de ahí, en la misma operación, a `NO_VIOLATION` o `VIOLATION_FOUND`. Un `INCONCLUSIVE` lo deja en `INSPECTED` |
+| POST | `/environmental-inspections/:id/violation-notice` | **Emitir el acta.** Solo sobre una inspección `VIOLATION_FOUND` |
+| GET | `/environmental-inspections/:id/violation-notice` | El acta emitida |
+
+**`checklist[]`, `findings` e `inspectorId` son internos: nunca salen hacia M2.**
+
+**El acta es inmutable.** No hay `PATCH` ni `DELETE`: si hay un error se emite otra sobre una inspección nueva. Una segunda acta sobre la misma inspección da 409.
+
+**Sin `establishmentId` el acta no se deriva.** Se registra igual, pero no se publica `environmentalViolationDetected` y el expediente cierra de nuestro lado: intimar, clausurar y multar se le aplican a un comercio habilitado, que es lo único sobre lo que M4 puede actuar.
+
 ## `green-spaces` — espacios verdes
 
 | Método | Ruta | Qué hace |
@@ -210,8 +243,7 @@ Por fase del plan de implementación:
 
 | Fase | Qué falta |
 |---|---|
-| 3 | Outbox y publicación de eventos a Kafka |
-| 4 | `environmental-reports`, `environmental-inspections`, actas y resoluciones |
+| 3.5 | Adjuntos y evidencia — hoy `evidence` viaja vacío en el acta |
 | 5 | `outbound-requests` — derivaciones a M3 y M7 |
 | 6 | Inbox y consumidores de eventos |
-| 7 | `citizen-portal` (público), adjuntos, indicadores del tablero |
+| 7 | `citizen-portal` (público) e indicadores del tablero |

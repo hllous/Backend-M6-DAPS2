@@ -12,6 +12,10 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(8),
   JWT_EXPIRATION: z.coerce.number().default(3600),
 
+  // Plazo que le damos a M4 para resolver un acta antes de cerrar el
+  // expediente por vencimiento. Ver ReportDeadlineSweeper.
+  SANCTION_DEADLINE_DAYS: z.coerce.number().int().positive().default(30),
+
   // Kafka — el transporte confirmado por M9, pero todavía sin broker expuesto.
   // Si KAFKA_BROKERS no está, los eventos se encolan en el outbox y se
   // registran en el log; la app arranca igual. Ver src/events/events.module.ts.
