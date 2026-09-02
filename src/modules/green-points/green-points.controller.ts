@@ -21,9 +21,7 @@ import {
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 
-// Tag 'containers': docs/README.md agrupa "Contenedores y puntos verdes" en la
-// misma área. El estándar (estandar-swagger.md §2) no admite tags nuevos.
-@ApiTags('containers')
+@ApiTags('green-points')
 @ApiBearerAuth('JWT-auth')
 @Controller('green-points')
 export class GreenPointsController {

@@ -49,15 +49,30 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
-    .addTag('services', 'Programación y ejecución de servicios urbanos')
-    .addTag('containers', 'Gestión de contenedores')
-    .addTag('trees', 'Gestión de arbolado urbano')
-    .addTag('green-spaces', 'Espacios verdes')
-    .addTag('zones', 'Zonas, recorridos y frecuencias')
-    .addTag('environmental-reports', 'Denuncias y expedientes ambientales')
-    .addTag('environmental-inspections', 'Inspecciones ambientales')
+    // El orden de declaración es el orden en que Swagger UI muestra los grupos:
+    // primero sobre qué se programa, después la operación, después el inventario.
+    // ─── Configuración y planificación ────────────
+    .addTag('zones', 'Zonas operativas y los barrios que agrupan')
+    .addTag('routes', 'Recorridos y su secuencia de paradas')
+    .addTag('service-frequencies', 'Reglas que generan los servicios planificados')
+    .addTag('service-types', 'Catálogo de tipos de servicio')
+    .addTag('disposal-sites', 'Sitios de disposición final de residuos')
+    // ─── Recursos ─────────────────────────────────
     .addTag('crews', 'Cuadrillas')
     .addTag('vehicles', 'Vehículos')
+    // ─── Operación ────────────────────────────────
+    .addTag('services', 'Programación y ejecución de servicios urbanos')
+    // ─── Inventario urbano ────────────────────────
+    .addTag('containers', 'Gestión de contenedores')
+    .addTag('green-points', 'Puntos verdes de entrega voluntaria')
+    .addTag('trees', 'Censo de arbolado urbano')
+    .addTag('tree-surveys', 'Relevamientos de arbolado')
+    .addTag('tree-interventions', 'Podas, extracciones, plantaciones y tratamientos')
+    .addTag('green-spaces', 'Espacios verdes')
+    // ─── Control ambiental ────────────────────────
+    .addTag('environmental-reports', 'Denuncias y expedientes ambientales')
+    .addTag('environmental-inspections', 'Inspecciones ambientales')
+    // ─── Otros ────────────────────────────────────
     .addTag('citizen-portal', 'Endpoints públicos del portal del ciudadano')
     .addTag('health', 'Health check y estado del servicio')
     .build();

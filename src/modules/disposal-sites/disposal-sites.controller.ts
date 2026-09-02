@@ -21,9 +21,7 @@ import {
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 
-// Tag 'services': el destino final del residuo se registra al cerrar un servicio
-// de recolección. docs/api/estandar-swagger.md §2 no admite tags nuevos.
-@ApiTags('services')
+@ApiTags('disposal-sites')
 @ApiBearerAuth('JWT-auth')
 @Controller('disposal-sites')
 export class DisposalSitesController {
