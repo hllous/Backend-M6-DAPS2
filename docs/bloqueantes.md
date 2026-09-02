@@ -2,7 +2,7 @@
 
 > **Fuente única.** Este archivo reemplaza el estado que estaba duplicado en [`LEEME.md`](../LEEME.md), [`Eventos.txt`](../Eventos.txt) y [`fuentes/alcance-entregable.md`](../fuentes/alcance-entregable.md) §7. Si algo de eso dice otra cosa, vale lo que dice acá.
 >
-> Última revisión general: **2 sep 2026**. Se resolvieron las divergencias de enums por [ADR-003](decisiones/adr-003-divergencias-enums.md) —manda el catálogo, se corrige el acuerdo— y quedan tres avisos pendientes a M3, M4 y M7. M7 volvió con un cruce que confirma `streetClosureRequested` y `treePruningScheduled` campo por campo, pero se contradice a sí mismo sobre `requestingModule` vs `sourceModule`. Antes, el 30 ago 2026: M7 actualizó su documento de referencia: `streetClosureEnded` ya trae `closureRequestId` (cierra la asimetría que tenía) y propuso unificar `streetClosureRequested` con el payload de M3, propuesta que aceptamos. Antes, el 25 ago: M2 publicó la v1.5 (reemplaza la v1.2), M4 publicó `Modulo_4_Eventos.docx`, y M3 confirmó `sourceRequestId`. Se edita a medida que cada grupo contesta — actualizá la fila y su fecha, no reescribas el archivo.
+> Última revisión general: **2 sep 2026**. Se resolvieron las divergencias de enums por [ADR-003](decisiones/adr-003-divergencias-enums.md) —manda el catálogo, se corrige el acuerdo— y quedan tres avisos pendientes a M3, M4 y M7. M7 volvió con un cruce que confirma `streetClosureRequested` y `treePruningScheduled` campo por campo, pero se contradice a sí mismo sobre `requestingModule` vs `sourceModule`. M1 compartió su catálogo v2: M1 emite el JWT de usuario y M6 lo valida; su contrato criptográfico todavía no está publicado. Antes, el 30 ago 2026: M7 actualizó su documento de referencia: `streetClosureEnded` ya trae `closureRequestId` (cierra la asimetría que tenía) y propuso unificar `streetClosureRequested` con el payload de M3, propuesta que aceptamos. Antes, el 25 ago: M2 publicó la v1.5 (reemplaza la v1.2), M4 publicó `Modulo_4_Eventos.docx`, y M3 confirmó `sourceRequestId`. Se edita a medida que cada grupo contesta — actualizá la fila y su fecha, no reescribas el archivo.
 
 ## Tablero
 
@@ -11,7 +11,11 @@
 | **M2** | `responsibleAreaId`, `citizenId`, `isAnonymous` y `location` estructurada (`neighborhoodId`, `street`, `streetNumber`, `latitude`, `longitude`) ahora son campos comunes de `ticketUpdated` en la v1.5 | ✅ Cerrado | 25 ago 2026 |
 | **M2** | `progress` de `updateTicketStatus` en la v1.5 es un `Int` (porcentaje), no la fecha/franja agendada que necesitamos mandar. No hay estructura de `details` definida para `STARTED`/`PROGRESS` | 🔴 Bloqueante | 25 ago 2026 |
 | **M9** | Ausente de la recopilación. Falta la lista de eventos del Core | 🔴 Bloqueante | 17 ago 2026 |
+| **M1** | M1 confirmado como emisor del JWT de usuario; faltan `alg`, `iss`, `aud`, claves/JWKS, claims y TTL para que M6 pueda verificarlo | ⚠️ Confirmado el emisor; contrato técnico pendiente | 1 sep 2026 |
+| **M9** | Token de servicio del Core para tráfico máquina-a-máquina: emisión, obtención, claims y validación sin definir | 🔴 Bloqueante si M6 necesita una consulta inter-módulo síncrona | 1 sep 2026 |
 | **M9** | Claim set del JWT sin definir. El enunciado le asigna la identidad a M9 **y** a M1. Mitigado de nuestro lado con una estrategia HS256 provisoria y guard global ([ADR-002](decisiones/adr-002-auth-provisoria.md)): la API ya no está abierta, pero los tokens no son los definitivos y la autorización por rol sigue sin existir | 🔴 Bloqueante — el principal del proyecto | 2 sep 2026 |
+| **M1** | M1 confirmado como emisor del JWT de usuario; faltan `alg`, `iss`, `aud`, claves/JWKS, claims y TTL para que M6 pueda verificarlo | ⚠️ Confirmado el emisor; contrato técnico pendiente | 1 sep 2026 |
+| **M9** | Token de servicio del Core para tráfico máquina-a-máquina: emisión, obtención, claims y validación sin definir | 🔴 Bloqueante si M6 necesita una consulta inter-módulo síncrona | 1 sep 2026 |
 | **M9** | Catálogo de barrios con `neighborhoodId` estable, sin exponer. M2 ya lo usa en `location`, así que el catálogo tiene que existir en algún lado aunque no lo hayamos visto publicado | 🔴 Bloqueante | 17 ago 2026 |
 | **M9** | "Zona operativa" (nuestra, agrupa barrios) contra "zona" (de ellos). Misma palabra, distinta cosa | ⚠️ A definir | 17 ago 2026 |
 | **M9** | `notificationSent` no lo publica nadie hoy. Puede que lo saquemos de lo consumido | ⚠️ A confirmar | 17 ago 2026 |
@@ -29,7 +33,7 @@
 | **M7** | Typo en su lista: `streetClousureEnded` → `streetClosureEnded` | ✅ Cerrado | 25 ago 2026 |
 | **M7** | `streetClosureRequested` tenía forma distinta según el origen (Obras vs. Ambiente/nosotros). M7 propuso un esquema único y lo aceptamos, renombrando `requestId→closureRequestId`, `streets[]→affectedSections`, `from`/`to`→`requestedFrom`/`requestedTo` | ✅ Cerrado | 30 ago 2026 |
 | **M7** | Payloads de `urbanServiceScheduled` y `treeRiskDetected`: preguntaron si los teníamos definidos. Ya estaban — se les compartió el documento completo con los 8 eventos que publicamos | ✅ Cerrado | 30 ago 2026 |
-| **M1** | Confirmar las dos consultas REST (ciudadano por `citizenId`, organización por `organizationId`). No se ven en una lista de eventos, hay que reclamarlas aparte | ⚠️ A confirmar — dijeron que lo pasan el 25/8 | 25 ago 2026 |
+| **M1** | Catálogo v2 recibido: tiene endpoints y eventos de identidad, pero M6 no consume ninguno en su alcance actual | ✅ Sin dependencia actual | 1 sep 2026 |
 | **M1** | Decidir si el acta ambiental va al expediente digital. Nuestra postura: no — el hecho les llega vía M4 | ⚠️ A definir | 17 ago 2026 |
 | **Cohorte** | Fijar el sobre común. M2 ya formalizó el suyo en la v1.5 (`specVersion`, `eventId`, `eventType`, `occurredAt`, `producer`, `subject`, `data`) — sigue siendo el único envelope escrito de la cohorte | ⚠️ A definir | 25 ago 2026 |
 | **Interno** | Los enums del [acuerdo publicado](Acuerdo-Eventos-M6.md) no coincidían con el catálogo en seis casos. Decidido por [ADR-003](decisiones/adr-003-divergencias-enums.md): manda el catálogo, se corrige el acuerdo | ✅ Cerrado | 2 sep 2026 |
@@ -127,9 +131,13 @@ Nuestro schema manda `sourceModule = "M6"`, que es lo que dice su tabla. Pero su
 
 ⚠️ **Un problema nuestro que salió de su tabla:** `treePruningScheduled` declara `crewId` y `timeWindow` como requeridos, y en nuestro modelo `Service.crewId` es opcional hasta que se asigna la cuadrilla y `windowFrom`/`windowTo` son opcionales. El evento entonces **no puede publicarse al programar la intervención**, sino recién cuando el servicio tiene cuadrilla y ventana. Hay que decidir en la Fase 3 si se difiere la publicación hasta ese momento o si se le pide a M7 que los acepte opcionales.
 
-### M1 — Ciudadanos ⚪ sin eventos
+### M1 — Ciudadanos ⚪ JWT confirmado; sin integración de dominio actual
 
-Coherente con lo acordado: sin eventos en ninguna dirección. Los dos pedidos son REST y hay que reclamarlos aparte, porque no se ven en una lista de eventos.
+**M1 emite el JWT de usuario y M6 lo valida.** Es el acuerdo de identidad que tomamos para avanzar. Todavía no recibimos el contrato verificable del token: algoritmo de firma, emisor (`iss`), audiencia (`aud`), clave pública/JWKS o mecanismo equivalente, claims, TTL y política de refresh. M6 no debe emitir ni reinterpretar un token propio; implementará la validación como una integración configurable hasta recibir esos datos.
+
+M1 publicó eventos de ciudadanos, organizaciones y representaciones, además de endpoints REST inter-módulo. **No los consumimos por ahora:** los casos de uso actuales de M6 no requieren replicar ni consultar esos datos. Por eso no abrimos un consumidor ni una dependencia de sus endpoints. Si un caso futuro necesita información de identidad, debe hacerlo a través de un puerto de aplicación (adaptador), para poder resolver después si el transporte será REST síncrono o request/response por Kafka sin filtrar esa decisión al dominio.
+
+Su catálogo v2 trae inconsistencia en organización: `cuit: 3311` es aparentemente `organizationId`, mientras que `taxId: "30712345678"` es el CUIT; también mezcla `ACTIVE` y `ACTIVA`. M1 confirmó que lo documentó mal y lo corregirá. No afecta a M6 mientras no consumamos ese contrato.
 
 Sobre el expediente digital: M1 consume las actuaciones de todas las áreas —inspecciones de M4, beneficios de M8, infracciones apeladas de M7— menos las nuestras. Nuestra postura es que está bien así, porque el acta la derivamos a M4 y M4 sí les reporta el resultado: el hecho les llega igual, por un solo camino. Falta que lo confirmen, o publicarles `environmentalViolationDetected` también a ellos.
 

@@ -29,7 +29,7 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'JWT emitido por el módulo Core (M9)',
+        description: 'JWT de usuario emitido por M1 y validado por M6. El contrato de firma, claims y audiencia se configura desde el contrato publicado por M1; M6 no emite JWT propios.',
       },
       'JWT-auth',
     )
@@ -276,6 +276,14 @@ Definir un DTO `ErrorResponseDto` y reutilizarlo en todos los `@ApiResponse` de 
 ---
 
 ## 6. Autenticación en Swagger
+
+### 6.0 Origen y validación del JWT
+
+M1 es el emisor del JWT de usuario; M6 actúa exclusivamente como *resource server*: recibe `Authorization: Bearer <token>` y valida firma, expiración, emisor y audiencia según el contrato técnico de M1. No crear tokens alternativos ni asumir un secreto, algoritmo o claims no publicados.
+
+El contrato técnico pendiente de M1 incluye `alg`, `iss`, `aud`, mecanismo de distribución de claves (JWKS/clave pública o equivalente), claims obligatorios y TTL. Hasta recibirlo, la configuración local de desarrollo es temporal y nunca se reutiliza en ambientes compartidos.
+
+Un token de servicio del Core/M9, si se necesitara en una futura comunicación máquina-a-máquina, es distinto del JWT de usuario y no autoriza peticiones de usuarios a esta API.
 
 Endpoints públicos (portal del ciudadano sin login, health check):
 
