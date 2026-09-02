@@ -21,9 +21,7 @@ import {
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 
-// Tag 'zones': el estándar (docs/api/estandar-swagger.md §2) declara que ese
-// tag cubre "Zonas operativas, recorridos y frecuencias".
-@ApiTags('zones')
+@ApiTags('service-frequencies')
 @ApiBearerAuth('JWT-auth')
 @Controller('service-frequencies')
 export class ServiceFrequenciesController {

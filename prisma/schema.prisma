@@ -707,6 +707,12 @@ model EnvironmentalReport {
   reporterSnapshot Json?                     @map("reporter_snapshot")
   status           EnvironmentalReportStatus @default(RECEIVED)
   priority         Severity?
+  // ticketUpdated/ESCALATION_CHANGED: se lo mostramos al supervisor.
+  escalated        Boolean                   @default(false)
+  // ticketUpdated/INFORMATION_PROVIDED: lo que el vecino respondio. La v1.5 de
+  // M2 no usa ID de correlacion — hay como maximo una solicitud activa por
+  // ticket, asi que la respuesta siempre corresponde a la nuestra.
+  citizenResponse  String?                   @map("citizen_response")
   deadlineAt       DateTime?                 @map("deadline_at") // cierre por vencimiento
   createdAt        DateTime                  @default(now()) @map("created_at")
   updatedAt        DateTime                  @updatedAt @map("updated_at")
@@ -788,17 +794,20 @@ model SanctionOutcome {
 // ════════════════════════════════════════════════════════════════
 
 model RepairRequest {
-  id             String              @id @default(uuid()) @db.Uuid
-  damageType     RepairDamageType    @map("damage_type")
-  severity       Severity
-  address        String?
-  detectedInType String              @map("detected_in_type") // SERVICE | INSPECTION
-  detectedInId   String              @map("detected_in_id") @db.Uuid // polimórfico
-  status         RepairRequestStatus @default(REQUESTED)
-  workOrderId    String?             @map("work_order_id") // EXT M3
-  requestedAt    DateTime            @default(now()) @map("requested_at")
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
+  id               String              @id @default(uuid()) @db.Uuid
+  damageType       RepairDamageType    @map("damage_type")
+  severity         Severity
+  address          String?
+  detectedInType   String              @map("detected_in_type") // SERVICE | INSPECTION
+  detectedInId     String              @map("detected_in_id") @db.Uuid // polimórfico
+  // Requerido por el schema de infrastructureRepairRequested: M3 prioriza con
+  // esto. No se deriva de severity — son dos cosas distintas.
+  publicSafetyRisk Boolean             @default(false) @map("public_safety_risk")
+  status           RepairRequestStatus @default(REQUESTED)
+  workOrderId      String?             @map("work_order_id") // EXT M3
+  requestedAt      DateTime            @default(now()) @map("requested_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
 
   @@index([status])
   @@map("repair_request")
@@ -846,10 +855,13 @@ model OutboxEvent {
   aggregateId   String            @map("aggregate_id") @db.Uuid
   payload       Json
   status        OutboxEventStatus @default(PENDING)
+  attempts      Int               @default(0)
+  lastError     String?           @map("last_error")
   occurredAt    DateTime          @default(now()) @map("occurred_at")
   publishedAt   DateTime?         @map("published_at")
 
-  @@index([status])
+  // El dispatcher barre PENDING en orden de ocurrencia.
+  @@index([status, occurredAt])
   @@map("outbox_event")
 }
 
@@ -859,7 +871,11 @@ model InboxEvent {
   eventType   String    @map("event_type")
   payload     Json
   receivedAt  DateTime  @default(now()) @map("received_at")
+  // Null mientras no se aplico el efecto: un handler que falla deja la fila
+  // sin procesar y con el error, para poder reintentarla.
   processedAt DateTime? @map("processed_at")
+  error       String?
 
+  @@index([processedAt])
   @@map("inbox_event")
 }

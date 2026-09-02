@@ -2,28 +2,64 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uade.m6.grupo04/eventos/treePruningScheduled.schema.json",
   "title": "treePruningScheduled",
-  "description": "M6 → M7. Se programó una intervención de poda. Informativo: si requiresStreetClosure es true, después sale streetClosureRequested.",
+  "description": "M6 -> M7. Se programo una intervencion de poda. Informativo: si requiresStreetClosure es true, despues sale streetClosureRequested. crewId y timeWindow son requeridos por pedido de M7, y en el modelo de M6 son opcionales hasta que se asignan: por eso el evento NO se publica al asociar la intervencion a su Service, sino recien cuando ese servicio tiene cuadrilla y franja horaria cargadas.",
   "type": "object",
   "properties": {
-    "interventionId": { "type": "string" },
-    "serviceId": { "type": "string", "description": "El Service que la ejecuta. Va explícito para poder correlacionar." },
+    "interventionId": {
+      "type": "string"
+    },
+    "serviceId": {
+      "type": "string",
+      "description": "El Service que la ejecuta. Va explícito para poder correlacionar."
+    },
     "interventionType": {
       "type": "string",
-      "enum": ["FORMATION_PRUNING", "SAFETY_PRUNING", "REMOVAL", "PLANTING", "TREATMENT"],
+      "enum": [
+        "FORMATION_PRUNING",
+        "SAFETY_PRUNING",
+        "REMOVAL",
+        "PLANTING",
+        "TREATMENT"
+      ],
       "description": "Resuelto por ADR-003: se mantienen estos cinco valores y se corrige el acuerdo publicado, que declaraba PRUNING | FELLING | PLANTING | TREATMENT. Las dos podas responden a motivos distintos: una es estetica y programable, la otra es por riesgo."
     },
     "treeIds": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "minItems": 1
     },
-    "zoneId": { "type": "string" },
-    "location": { "$ref": "_shared.schema.json#/$defs/location" },
-    "scheduledDate": { "$ref": "_shared.schema.json#/$defs/date" },
-    "timeWindow": { "$ref": "_shared.schema.json#/$defs/timeWindow" },
-    "crewId": { "type": "string" },
-    "requiresStreetClosure": { "type": "boolean" }
+    "zoneId": {
+      "type": "string"
+    },
+    "location": {
+      "$ref": "_shared.schema.json#/$defs/location"
+    },
+    "scheduledDate": {
+      "$ref": "_shared.schema.json#/$defs/date"
+    },
+    "timeWindow": {
+      "$ref": "_shared.schema.json#/$defs/timeWindow"
+    },
+    "crewId": {
+      "type": "string"
+    },
+    "requiresStreetClosure": {
+      "type": "boolean"
+    }
   },
-  "required": ["interventionId", "serviceId", "interventionType", "treeIds", "zoneId", "location", "scheduledDate", "timeWindow", "crewId", "requiresStreetClosure"],
+  "required": [
+    "interventionId",
+    "serviceId",
+    "interventionType",
+    "treeIds",
+    "zoneId",
+    "location",
+    "scheduledDate",
+    "timeWindow",
+    "crewId",
+    "requiresStreetClosure"
+  ],
   "additionalProperties": false
 }

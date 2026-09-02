@@ -491,7 +491,7 @@ export class ContainersController {
   @ApiOperation({
     summary: 'Retirar un contenedor definitivamente',
     description:
-      'Transición ACTIVE|DAMAGED → REMOVED. Retira el contenedor del servicio de forma permanente. Estado terminal: no admite más transiciones.',
+      'Transición DAMAGED → REMOVED, para el daño que no admite reparación. Un contenedor ACTIVE no se retira directamente: primero se reporta el daño. Estado terminal: no admite más transiciones.',
   })
   @ApiParam({
     name: 'id',

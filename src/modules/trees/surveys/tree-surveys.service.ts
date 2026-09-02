@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, RiskLevel } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { OutboxService } from '../../../events/outbox/outbox.service';
+import { AggregateType, EventType } from '../../../events/event-types';
+import { treeRiskDetected } from '../../../events/payloads';
 import { CreateTreeSurveyDto, QueryTreeSurveysDto, TreeSurveyResponseDto } from './dto';
 import { PaginatedResponseDto } from '../../../common/dto';
 
@@ -8,24 +11,45 @@ import { PaginatedResponseDto } from '../../../common/dto';
 export class TreeSurveysService {
   private readonly logger = new Logger(TreeSurveysService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outbox: OutboxService,
+  ) {}
 
   async create(treeId: string, dto: CreateTreeSurveyDto): Promise<TreeSurveyResponseDto> {
-    await this.ensureTreeExists(treeId);
+    const tree = await this.prisma.tree.findUnique({ where: { id: treeId } });
+    if (!tree) {
+      throw new NotFoundException(`Árbol con id '${treeId}' no encontrado`);
+    }
 
-    const survey = await this.prisma.treeSurvey.create({
-      data: {
-        treeId,
-        surveyedAt: new Date(dto.surveyedAt),
-        inspectorId: dto.inspectorId ?? null,
-        healthStatus: dto.healthStatus,
-        riskLevel: dto.riskLevel,
-        riskType: dto.riskType ?? null,
-        suggestedIntervention: dto.suggestedIntervention ?? null,
-        requiresStreetClosure: dto.requiresStreetClosure ?? false,
-        requiresPublicWorks: dto.requiresPublicWorks ?? false,
-        notes: dto.notes ?? null,
-      },
+    const survey = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.treeSurvey.create({
+        data: {
+          treeId,
+          surveyedAt: new Date(dto.surveyedAt),
+          inspectorId: dto.inspectorId ?? null,
+          healthStatus: dto.healthStatus,
+          riskLevel: dto.riskLevel,
+          riskType: dto.riskType ?? null,
+          suggestedIntervention: dto.suggestedIntervention ?? null,
+          requiresStreetClosure: dto.requiresStreetClosure ?? false,
+          requiresPublicWorks: dto.requiresPublicWorks ?? false,
+          notes: dto.notes ?? null,
+        },
+      });
+
+      // Solo HIGH y CRITICAL salen al bus. Con cualquier otro riskLevel el
+      // relevamiento se guarda igual pero no se publica nada.
+      if (row.riskLevel === RiskLevel.HIGH || row.riskLevel === RiskLevel.CRITICAL) {
+        await this.outbox.enqueue(tx, {
+          eventType: EventType.TREE_RISK_DETECTED,
+          aggregateType: AggregateType.TREE_SURVEY,
+          aggregateId: row.id,
+          payload: treeRiskDetected(tree, row),
+          occurredAt: row.surveyedAt,
+        });
+      }
+      return row;
     });
 
     this.logger.log(

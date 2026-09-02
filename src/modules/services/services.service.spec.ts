@@ -22,6 +22,7 @@ const CONTAINER_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
 describe('ServicesService', () => {
   let prisma: any;
+  let outbox: any;
   let service: ServicesService;
 
   const serviceRow = (over: Record<string, unknown> = {}) => ({
@@ -76,7 +77,10 @@ describe('ServicesService', () => {
         }),
       },
       zone: { findUnique: jest.fn().mockResolvedValue({ id: ZONE_A }) },
-      container: { findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_B }) },
+      container: {
+        findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_B }),
+        update: jest.fn(async (args: unknown) => args),
+      },
       tree: { findUnique: jest.fn() },
       greenSpace: { findUnique: jest.fn() },
       greenPoint: { findUnique: jest.fn() },
@@ -96,6 +100,13 @@ describe('ServicesService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
       },
+      outboxEvent: { create: jest.fn(), createMany: jest.fn() },
+      // El $transaction real acepta un array de operaciones o un callback.
+      $transaction: jest.fn((arg: unknown) =>
+        typeof arg === 'function'
+          ? (arg as (tx: unknown) => unknown)(prisma)
+          : Promise.all(arg as Promise<unknown>[]),
+      ),
       zoneResult: { create: jest.fn().mockResolvedValue({ id: 'zr1', zoneId: ZONE_A }) },
       collectionRecord: {
         create: jest.fn().mockResolvedValue({
@@ -108,7 +119,8 @@ describe('ServicesService', () => {
         }),
       },
     };
-    service = new ServicesService(prisma as unknown as PrismaService);
+    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
+    service = new ServicesService(prisma as unknown as PrismaService, outbox);
   });
 
   const baseDto = {

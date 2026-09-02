@@ -5,32 +5,83 @@
   "description": "M6 → M7. Se agendó un servicio con fecha, zona y cuadrilla. Informativo: M7 no responde.",
   "type": "object",
   "properties": {
-    "serviceId": { "type": "string" },
-    "serviceTypeCode": { "type": "string" },
+    "serviceId": {
+      "type": "string"
+    },
+    "serviceTypeCode": {
+      "type": "string"
+    },
     "category": {
       "type": "string",
-      "enum": ["WASTE_COLLECTION", "STREET_CLEANING", "CONTAINERS", "TREES", "GREEN_SPACES", "ENVIRONMENTAL_CONTROL"]
+      "enum": [
+        "WASTE_COLLECTION",
+        "STREET_CLEANING",
+        "CONTAINERS",
+        "TREES",
+        "GREEN_SPACES",
+        "ENVIRONMENTAL_CONTROL"
+      ]
     },
-    "mode": { "type": "string", "enum": ["ROUTE", "POINT"] },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "ROUTE",
+        "POINT"
+      ]
+    },
     "zoneIds": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "minItems": 1,
       "description": "Nunca vacío: una zona en POINT, las del recorrido en ROUTE."
     },
-    "routeId": { "type": "string", "description": "Solo en mode = ROUTE" },
-    "targetRef": { "type": "string", "description": "El bien del inventario, solo en mode = POINT" },
-    "scheduledDate": { "$ref": "_shared.schema.json#/$defs/date" },
-    "timeWindow": { "$ref": "_shared.schema.json#/$defs/timeWindow" },
-    "crewId": { "type": "string" },
-    "vehicleId": { "type": "string" },
+    "routeId": {
+      "type": "string",
+      "description": "Solo en mode = ROUTE"
+    },
+    "targetRef": {
+      "type": "string",
+      "description": "El bien del inventario, solo en mode = POINT"
+    },
+    "scheduledDate": {
+      "$ref": "_shared.schema.json#/$defs/date"
+    },
+    "timeWindow": {
+      "$ref": "_shared.schema.json#/$defs/timeWindow",
+      "description": "Franja horaria. Opcional: Service.windowFrom y windowTo lo son en el modelo, y un servicio se puede programar sin franja definida."
+    },
+    "crewId": {
+      "type": "string"
+    },
+    "vehicleId": {
+      "type": "string"
+    },
     "origin": {
       "type": "string",
-      "enum": ["PLANNED", "TICKET", "WEATHER_ALERT", "INSPECTION", "MANUAL"],
+      "enum": [
+        "PLANNED",
+        "TICKET",
+        "WEATHER_ALERT",
+        "INSPECTION",
+        "MANUAL"
+      ],
       "description": "Resuelto por ADR-003: se mantienen estos cinco valores y se corrige el acuerdo publicado, que declaraba SCHEDULED | TICKET | INSPECTION | INTERNAL. PLANNED evita ademas la colision con ServiceStatus.SCHEDULED, que viaja en este mismo payload."
     },
-    "ticketId": { "type": "string", "description": "De M2. Viaja siempre que origin = TICKET." }
+    "ticketId": {
+      "type": "string",
+      "description": "De M2. Viaja siempre que origin = TICKET."
+    }
   },
-  "required": ["serviceId", "serviceTypeCode", "category", "mode", "zoneIds", "scheduledDate", "timeWindow", "origin"],
+  "required": [
+    "serviceId",
+    "serviceTypeCode",
+    "category",
+    "mode",
+    "zoneIds",
+    "scheduledDate",
+    "origin"
+  ],
   "additionalProperties": false
 }

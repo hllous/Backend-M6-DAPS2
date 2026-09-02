@@ -1,10 +1,14 @@
 # ──────────────────────────────────────────────────────────────
-# CI — Integración continua del backend M6
+# CI/CD — Integración continua + deploy del backend M6
 # Se ejecuta en PRs y pushes a develop/test/main.
 #
-# IMPORTANTE: los jobs se llaman exactamente "build" y "test"
+# IMPORTANTE: los jobs "build" y "test" se llaman exactamente así
 # porque así lo exige la branch protection (.github/branch-protection-rules.json).
 # No renombrarlos sin actualizar esa regla.
+#
+# Deploy: en push a develop, y SOLO si build+test pasan, se dispara el
+# deploy en Render vía Deploy Hook URL (secret RENDER_DEPLOY_HOOK_URL),
+# desplegando el commit exacto que se mergeó.
 # ──────────────────────────────────────────────────────────────
 
 name: CI
@@ -63,3 +67,18 @@ jobs:
 
       - name: Run tests
         run: npm run test
+
+  # ──────────────────────────────────────────────────────────────
+  # deploy — Dispara el deploy en Render (solo push a develop).
+  # Depende de build+test: si el CI falla, no se deploya.
+  # ──────────────────────────────────────────────────────────────
+  deploy:
+    name: deploy
+    needs: [build, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deploy en Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: curl -f -X POST "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}"
