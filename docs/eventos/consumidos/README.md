@@ -17,6 +17,25 @@
 
 Nueve de la cohorte, de cinco módulos, más uno simulado (`closureOrdered` + `closureLifted` se fusionaron en `closureUpdate`, 24/08). **De M1, M5 y M8 no consumimos ningún evento.**
 
+## Qué se consume hoy
+
+**Nueve de los diez tienen handler.** Entran por `POST /events/inbox` —o por Kafka cuando haya broker— y la idempotencia es por `eventId`, resuelta en el inbox y no en cada handler.
+
+| Evento | Handler | Efecto |
+|---|---|---|
+| `ticketUpdated` | ✅ | Seis `updateType` disparan acción; **los otros siete se descartan a propósito** |
+| `workOrderScheduled` | ✅ | La `RepairRequest` pasa a `IN_PROGRESS` con su `workOrderId` |
+| `workOrderCompleted` | ✅ | Se cierra |
+| `commercialFineGenerated` | ✅ | Crea el `SanctionOutcome` y cierra el expediente |
+| `closureUpdate` | ✅ | `ORDERED` → clausura, `LIFTED` → levantamiento |
+| `streetClosureApproved` | ✅ | Habilita el trabajo bloqueado |
+| `streetClosureRejected` | ✅ | El servicio dependiente queda en `RESCHEDULED` |
+| `streetClosureEnded` | ✅ | Libera la dependencia |
+| `weatherAlertIssued` | ✅ | Reprogramación masiva por zona. **Simulado internamente** |
+| `notificationSent` | ❌ **sin handler** | **Nadie lo publica en toda la cohorte.** Implementarlo sería escribir código para un evento que no existe |
+
+Toda la correlación es por el id que mandamos y nos devuelven: `sourceRequestId` (M3), `closureRequestId` (M7) y `sourceViolationId` (M4). Un id que no corresponde a nada nuestro se descarta con log, no falla: puede ser una solicitud de Obras que nos rutean por error.
+
 ## No llevan schema
 
 El payload lo define el módulo que publica. Acá documentamos **solo los campos que necesitamos**: cualquier campo extra que ya publiquen lo aprovechamos, pero sin los marcados 🔴 el flujo no funciona.

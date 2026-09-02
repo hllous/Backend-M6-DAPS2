@@ -1,9 +1,21 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ServicesService } from './services.service';
 import {
   AssignCrewDto,
   CollectionRecordResponseDto,
+  CompleteServiceDto,
   ConfirmRescheduleDto,
   CreateCollectionRecordDto,
   CreateServiceDto,
@@ -121,6 +133,7 @@ export class ServicesController {
   }
 
   @Post(':id/assign-crew')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Asignar cuadrilla a un servicio',
     description:
@@ -156,6 +169,7 @@ export class ServicesController {
   // ─── Ejecución ────────────────────────────────────
 
   @Post(':id/start')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Iniciar la ejecución',
     description:
@@ -172,11 +186,15 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
-  async start(@Param('id', ParseUUIDPipe) id: string): Promise<ServiceResponseDto> {
-    return this.servicesService.start(id);
+  async start(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('userId') userId: string,
+  ): Promise<ServiceResponseDto> {
+    return this.servicesService.start(id, userId);
   }
 
   @Post(':id/suspend')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Suspender la ejecución',
     description: 'IN_PROGRESS → SUSPENDED. El motivo queda registrado en statusReason.',
@@ -197,6 +215,7 @@ export class ServicesController {
   }
 
   @Post(':id/resume')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Reanudar la ejecución',
     description: 'SUSPENDED → IN_PROGRESS. Limpia el motivo de la suspensión.',
@@ -213,10 +232,11 @@ export class ServicesController {
   }
 
   @Post(':id/complete')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cerrar el servicio',
     description:
-      'IN_PROGRESS → COMPLETED o PARTIALLY_COMPLETED. El estado final no se elige: se calcula a partir de los resultados por zona. Si alguna zona quedó NOT_SERVICED o PARTIAL, el cierre es parcial. Todas las zonas del servicio tienen que tener resultado informado.',
+      'IN_PROGRESS → COMPLETED o PARTIALLY_COMPLETED. El estado final no se elige: se calcula a partir de los resultados por zona. Si alguna zona quedó NOT_SERVICED o PARTIAL, el cierre es parcial. Todas las zonas del servicio tienen que tener resultado informado. Si el servicio actúa sobre un contenedor y cierra COMPLETED, **el contenedor transiciona en la misma operación**: OVERFLOWED o UNDER_REPAIR vuelven a ACTIVE sin datos extra, y RELOCATING vuelve a ACTIVE exigiendo `containerLocation` en el body. Las dos escrituras son atómicas. Un cierre parcial no transiciona el contenedor: el trabajo no se hizo.',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Servicio cerrado', type: ServiceResponseDto })
@@ -224,16 +244,27 @@ export class ServicesController {
   @ApiResponse(FORBIDDEN)
   @ApiResponse(NOT_FOUND)
   @ApiResponse({
+    status: 400,
+    description:
+      'El contenedor que atiende el servicio está en RELOCATING y no vino containerLocation',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 409,
     description: 'Transición inválida, o faltan resultados de alguna zona',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
-  async complete(@Param('id', ParseUUIDPipe) id: string): Promise<ServiceResponseDto> {
-    return this.servicesService.complete(id);
+  async complete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CompleteServiceDto,
+    @CurrentUser('userId') userId: string,
+  ): Promise<ServiceResponseDto> {
+    return this.servicesService.complete(id, dto, userId);
   }
 
   @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cancelar el servicio',
     description: 'SCHEDULED o SUSPENDED → CANCELLED. El motivo queda registrado.',
@@ -249,11 +280,13 @@ export class ServicesController {
   async cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StatusChangeDto,
+    @CurrentUser('userId') userId: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.cancel(id, dto.reason);
+    return this.servicesService.cancel(id, dto.reason, userId);
   }
 
   @Post(':id/reschedule')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Marcar el servicio para reprogramar',
     description:
@@ -279,6 +312,7 @@ export class ServicesController {
   }
 
   @Post(':id/confirm-reschedule')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Confirmar la nueva fecha',
     description: 'RESCHEDULED → SCHEDULED con la fecha y la ventana horaria nuevas.',

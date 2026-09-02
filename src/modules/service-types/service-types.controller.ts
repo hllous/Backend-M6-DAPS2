@@ -21,9 +21,7 @@ import {
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 
-// Tag 'services': el catálogo de tipos es configuración de los servicios.
-// docs/api/estandar-swagger.md §2 no admite tags fuera de los declarados en main.ts.
-@ApiTags('services')
+@ApiTags('service-types')
 @ApiBearerAuth('JWT-auth')
 @Controller('service-types')
 export class ServiceTypesController {

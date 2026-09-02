@@ -13,7 +13,7 @@
 | **PostgreSQL** | Render (Managed, free) | ✅ Available | (Internal URL, no accesible desde afuera) |
 | **Frontend** (Next.js) | Vercel (free) | ✅ Live | `https://m6-ambiente-frontend.vercel.app` |
 
-El deploy está **enlazado a la rama `develop`** de cada repo: al pushear código a `develop`, Render y Vercel buildean y depliegan automáticamente (~2-5 min).
+El deploy está **enlazado a la rama `develop`** de cada repo: al pushear código a `develop` se actualiza automáticamente — el backend vía GitHub Actions + Deploy Hook de Render, el frontend vía auto-deploy nativo de Vercel (~2-5 min).
 
 ---
 
@@ -49,16 +49,33 @@ curl https://m6-ambiente-frontend.vercel.app/api/health
 
 ### Automático (lo normal)
 
+**Backend (Render)** — lo dispara GitHub Actions:
+
 ```
 git push origin develop
     ↓
-Render detecta cambios en Backend-M6-DAPS2 → buildea Docker → deploya
+GitHub Actions corre build + test (CI)
+    ↓  si ambos pasan
+Job "deploy" dispara el Deploy Hook de Render (con el commit exacto)
+    ↓
+Render buildea Docker y deploya
+    ↓
+Backend actualizado en ~3-5 min
+```
+
+**Frontend (Vercel)** — deploy nativo:
+
+```
+git push origin develop
+    ↓
 Vercel detecta cambios en Frontend-M6-DAPS2 → buildea Next.js → deploya
     ↓
-Servicios actualizados en ~2-5 min
+Frontend actualizado en ~2-5 min
 ```
 
 No hay que hacer nada manual en el día a día.
+
+> **Nota**: el job `deploy` de GitHub Actions depende de `build`+`test`: si el CI falla, **no** se deploya. La config es el secret `RENDER_DEPLOY_HOOK_URL` (Deploy Hook del servicio en Render) + **Auto-Deploy apagado** en Render (para evitar dobles deploys).
 
 ### Deploy manual (cuando hace falta forzarlo)
 
