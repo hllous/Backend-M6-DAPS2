@@ -50,6 +50,10 @@ Flujo: `main ← test ← develop ← feature/*|bugfix/*|refactor/*|infra/*|docs
 
 GitHub Issues (repo: `hllous/Backend-M6-DAPS2`), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
+### Cross-repo changes
+
+Backend y Frontend son repos separados con trackers separados. Cuando el trabajo acá revela algo que el *otro* repo necesita arreglar, agregar o confirmar — un gap, una pregunta de contrato, una doc desactualizada — abrir un Issue de GitHub en `hllous/Frontend-M6-DAPS2` en vez de solo dejarlo documentado localmente. Linkear al issue/ticket que lo originó. La misma regla aplica en sentido inverso, de Frontend a Backend.
+
 ### Triage labels
 
 Default five canonical roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
