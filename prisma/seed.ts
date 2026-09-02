@@ -7,6 +7,7 @@ import {
   ServiceMode,
   Shift,
   VehicleType,
+  WasteType,
 } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -222,6 +223,46 @@ async function main() {
     });
   }
 
+  // Punto verde de entrega voluntaria, con los residuos que acepta.
+  const greenPoint = await prisma.greenPoint.upsert({
+    where: { code: 'GP-0001' },
+    update: {},
+    create: {
+      code: 'GP-0001',
+      name: 'Punto verde Plaza Mitre',
+      zoneId: zonaCentro,
+      address: 'Av. Mitre 1200',
+    },
+  });
+  await prisma.greenPointWasteType.createMany({
+    data: [WasteType.RECYCLABLE, WasteType.GREEN].map((wasteType) => ({
+      greenPointId: greenPoint.id,
+      wasteType,
+    })),
+    skipDuplicates: true,
+  });
+
+  // Frecuencia: recolección domiciliaria sobre R-01, martes y viernes, mañana.
+  // ServiceFrequency no tiene clave única natural, así que se busca por la
+  // combinación que la identifica en la práctica.
+  const recDom = await prisma.serviceType.findUnique({ where: { code: 'REC-DOM' } });
+  if (recDom) {
+    const existingFrequency = await prisma.serviceFrequency.findFirst({
+      where: { serviceTypeId: recDom.id, routeId: route.id, shift: Shift.MORNING },
+    });
+    if (!existingFrequency) {
+      await prisma.serviceFrequency.create({
+        data: {
+          serviceTypeId: recDom.id,
+          routeId: route.id,
+          shift: Shift.MORNING,
+          validFrom: new Date('2026-09-01T00:00:00.000Z'),
+          weekdays: { createMany: { data: [{ weekday: 2 }, { weekday: 5 }] } },
+        },
+      });
+    }
+  }
+
   const counts = {
     serviceTypes: await prisma.serviceType.count(),
     zones: await prisma.zone.count(),
@@ -231,6 +272,8 @@ async function main() {
     crews: await prisma.crew.count(),
     containers: await prisma.container.count(),
     trees: await prisma.tree.count(),
+    greenPoints: await prisma.greenPoint.count(),
+    frequencies: await prisma.serviceFrequency.count(),
   };
   console.table(counts);
 }

@@ -20,6 +20,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { ContainersModule } from './modules/containers/containers.module';
 import { TreesModule } from './modules/trees/trees.module';
 import { GreenSpacesModule } from './modules/green-spaces/green-spaces.module';
+import { GreenPointsModule } from './modules/green-points/green-points.module';
 import { ServicesModule } from './modules/services/services.module';
 import { EnvironmentalReportsModule } from './modules/environmental-reports/environmental-reports.module';
 import { EnvironmentalInspectionsModule } from './modules/environmental-inspections/environmental-inspections.module';
@@ -51,6 +52,7 @@ import { WeatherAlertsModule } from './modules/weather-alerts/weather-alerts.mod
     ContainersModule,
     TreesModule,
     GreenSpacesModule,
+    GreenPointsModule,
     ServicesModule,
     EnvironmentalReportsModule,
     EnvironmentalInspectionsModule,

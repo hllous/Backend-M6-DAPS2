@@ -5,15 +5,13 @@ Documentación técnica de la API que expone el backend, para uso del equipo int
 ## Qué hay acá
 
 - [`estandar-swagger.md`](estandar-swagger.md) — convenciones que **todo endpoint debe cumplir** (tags, formato de respuestas, códigos HTTP, autenticación, DTOs). De lectura obligatoria antes de escribir el primer endpoint.
-- `endpoints.md` — resumen de endpoints REST expuestos por M6. *A completar cuando existan endpoints reales.*
+- [`endpoints.md`](endpoints.md) — resumen de los endpoints REST expuestos por M6, con sus filtros y su semántica de baja.
 
 ## URL pública del Swagger
 
-Cuando el backend esté desplegado, la doc interactiva vive en:
+> `https://m6-backend-m64k.onrender.com/api/docs`
 
-> `https://[url-railway]/api/docs`
-
-*Pendiente: pegar la URL cuando se haga el primer deploy (sprint 1).*
+Ver [`docs/deploy.md`](../deploy.md) para el estado del despliegue.
 
 ## Convención general
 
