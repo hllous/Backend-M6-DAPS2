@@ -61,7 +61,5 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      # --passWithNoTests: temporal mientras no haya tests escritos.
-      # Cuando el equipo agregue tests (*.spec.ts), se puede quitar.
       - name: Run tests
-        run: npm run test -- --passWithNoTests
+        run: npm run test

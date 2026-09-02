@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import configuration from './config/configuration';
 
 // Infraestructura
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './common/guards';
 
 // Módulos de dominio
 import { ZonesModule } from './modules/zones/zones.module';
@@ -31,6 +34,7 @@ import { WeatherAlertsModule } from './modules/weather-alerts/weather-alerts.mod
     // ─── Infraestructura ────────────────────────────
     PrismaModule,
     HealthModule,
+    AuthModule,
 
     // ─── Dominios de negocio ────────────────────────
     ZonesModule,
@@ -45,6 +49,10 @@ import { WeatherAlertsModule } from './modules/weather-alerts/weather-alerts.mod
     OutboundRequestsModule,
     CitizenPortalModule,
     WeatherAlertsModule,
+  ],
+  providers: [
+    // Todo endpoint exige JWT por defecto. Los publicos se marcan con @Public().
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule {}

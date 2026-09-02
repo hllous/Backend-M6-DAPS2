@@ -14,8 +14,7 @@ Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeraci�
 
 ## Índice
 
-*A completar a medida que se agreguen ADRs.*
-
 | Nº | Título | Estado | Fecha |
 |---|---|---|---|
-| — | *(sin ADRs todavía)* | — | — |
+| [001](adr-001-stack-tecnologico.md) | Stack tecnológico del módulo | Aceptado | 2026-08-20 |
+| [002](adr-002-auth-provisoria.md) | Autenticación provisoria mientras M9 no define el claim set | Propuesto | 2026-09-02 |
