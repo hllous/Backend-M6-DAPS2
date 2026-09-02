@@ -33,10 +33,10 @@ Se adopta el siguiente stack:
 | Frontend | **Next.js 15** + React 19 + TypeScript + Tailwind + shadcn/ui |
 | Backend | **NestJS** + TypeScript + Node 20 LTS |
 | Base de datos | **PostgreSQL** + Prisma como ORM |
-| Broker de eventos | **RabbitMQ** (sujeto a confirmación de M9) |
+| Broker de eventos | **Kafka** (confirmado por M9) |
 | Deploy frontend | Vercel |
-| Deploy backend | Railway |
-| Base de datos gestionada | Neon (PostgreSQL serverless) |
+| Deploy backend | Render |
+| Base de datos gestionada | Render PostgreSQL |
 
 ## Alternativas consideradas
 
@@ -53,7 +53,7 @@ Se adopta el siguiente stack:
 - **Node + Express**: rápido de arrancar, mismo lenguaje que el front. Se descartó porque no impone arquitectura de tres capas, y sostener la disciplina a lo largo de 3 meses sin esa imposición es un riesgo alto en un equipo estudiantil.
 - **Python (FastAPI)**: curva baja, buena documentación. Menos maduro para eventos y colas que Java o Node. El equipo prefirió un ecosistema más alineado con TypeScript.
 - **Go, PHP/Laravel**: descartados por curvas altas para el tiempo disponible o por menor demanda de mercado.
-- **NestJS** (elegida): equivalente a Spring pero en TypeScript. Impone tres capas mediante decoradores (`@Controller`, `@Injectable`, `@Module`), Swagger integrado, soporte oficial para RabbitMQ/Kafka con `@nestjs/microservices`, y comparte lenguaje con el frontend.
+- **NestJS** (elegida): equivalente a Spring pero en TypeScript. Impone tres capas mediante decoradores (`@Controller`, `@Injectable`, `@Module`), Swagger integrado, soporte oficial para Kafka con `@nestjs/microservices`, y comparte lenguaje con el frontend.
 
 ### Base de datos
 
@@ -68,8 +68,8 @@ Se adopta el siguiente stack:
 
 ### Broker de eventos
 
-- **Kafka**: potente pero más complejo de operar y con mayor curva de configuración.
-- **RabbitMQ** (elegida, sujeta a confirmación): más simple, con documentación abundante en castellano, alcanza y sobra para el volumen del TPO. **Esta decisión depende de lo que confirme M9 (Core)** — si M9 elige otra opción, se adoptará esa.
+- **Kafka** (confirmado por M9): potente, alta throughput, particionado, replay de mensajes. Más complejo de operar que RabbitMQ pero es lo que definió el Core. NestJS lo soporta nativamente con `@nestjs/microservices`.
+- **RabbitMQ**: más simple, con documentación abundante en castellano. Descartado porque M9 definió Kafka.
 
 ## Consecuencias
 
@@ -79,13 +79,13 @@ Se adopta el siguiente stack:
 - **NestJS impone la arquitectura de tres capas** que exige el TPO, evitando el riesgo de que el código se degrade sprint a sprint.
 - **Swagger integrado** en NestJS mediante decoradores — cubre requisito del TPO sin trabajo extra.
 - **Prisma genera los tipos TypeScript** desde el schema, eliminando desincronización entre modelos y base.
-- **Deploy trivial**: Vercel para el frontend, Railway para el backend, ambos con tier gratuito suficiente para el TPO.
+- **Deploy trivial**: Vercel para el frontend, Render para el backend y postgres, ambos con tier gratuito suficiente para el TPO.
 - El stack elegido es de los **más pedidos en el mercado laboral argentino**, sumando valor formativo al TPO.
 
 ### Negativas
 
 - **El equipo aprende Next.js y NestJS por primera vez.** Suma curva de aprendizaje durante el Sprint 1 y parte del 2, en paralelo al desarrollo funcional.
-- **RabbitMQ depende de la decisión de M9.** Si el Core define Kafka u otro broker, hay que refactorizar la capa de eventos (mitigado por la abstracción de `@nestjs/microservices`, que permite cambiar transporte sin tocar el código de negocio).
+- **M9 confirmó Kafka.** El broker de eventos está definido. NestJS lo soporta nativamente con `@nestjs/microservices` y `KafkaModule`.
 - **Prisma es un cambio respecto a JPA/Hibernate**, que era lo conocido del equipo.
 
 ### Neutras

@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -42,9 +38,7 @@ export class CrewsService {
   /**
    * Lista cuadrillas con paginación y filtros opcionales.
    */
-  async findAll(
-    query: QueryCrewsDto,
-  ): Promise<PaginatedResponseDto<CrewResponseDto>> {
+  async findAll(query: QueryCrewsDto): Promise<PaginatedResponseDto<CrewResponseDto>> {
     const where: Prisma.CrewWhereInput = {};
 
     if (query.active !== undefined) {
@@ -133,10 +127,7 @@ export class CrewsService {
    * Agrega miembros a una cuadrilla.
    * Ignora duplicados silenciosamente (skipDuplicates).
    */
-  async addMembers(
-    crewId: string,
-    dto: AddCrewMembersDto,
-  ): Promise<CrewResponseDto> {
+  async addMembers(crewId: string, dto: AddCrewMembersDto): Promise<CrewResponseDto> {
     await this.ensureExists(crewId);
 
     await this.prisma.crewMember.createMany({
@@ -147,9 +138,7 @@ export class CrewsService {
       skipDuplicates: true,
     });
 
-    this.logger.log(
-      `Miembros agregados a cuadrilla ${crewId}: ${dto.userIds.join(', ')}`,
-    );
+    this.logger.log(`Miembros agregados a cuadrilla ${crewId}: ${dto.userIds.join(', ')}`);
     return this.findOne(crewId);
   }
 
@@ -164,14 +153,10 @@ export class CrewsService {
     });
 
     if (deleted.count === 0) {
-      throw new NotFoundException(
-        `Usuario '${userId}' no es miembro de la cuadrilla '${crewId}'`,
-      );
+      throw new NotFoundException(`Usuario '${userId}' no es miembro de la cuadrilla '${crewId}'`);
     }
 
-    this.logger.log(
-      `Miembro '${userId}' removido de cuadrilla '${crewId}'`,
-    );
+    this.logger.log(`Miembro '${userId}' removido de cuadrilla '${crewId}'`);
   }
 
   // ─── Helpers ──────────────────────────────────────
@@ -186,10 +171,7 @@ export class CrewsService {
     }
   }
 
-  private toResponseDto(
-    crew: any,
-    includeMembers = false,
-  ): CrewResponseDto {
+  private toResponseDto(crew: any, includeMembers = false): CrewResponseDto {
     const dto: CrewResponseDto = {
       id: crew.id,
       name: crew.name,

@@ -23,8 +23,7 @@
       "@config/*": ["src/config/*"],
       "@auth/*": ["src/auth/*"],
       "@modules/*": ["src/modules/*"],
-      "@events/*": ["src/events/*"],
-      "@prisma/*": ["src/prisma/*"]
+      "@events/*": ["src/events/*"]
     }
   }
 }

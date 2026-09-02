@@ -1,17 +1,7 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import {
-  CreateVehicleDto,
-  UpdateVehicleDto,
-  QueryVehiclesDto,
-  VehicleResponseDto,
-} from './dto';
+import { CreateVehicleDto, UpdateVehicleDto, QueryVehiclesDto, VehicleResponseDto } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
 
 @Injectable()
@@ -38,13 +28,8 @@ export class VehiclesService {
       this.logger.log(`Vehículo registrado: ${vehicle.plate} (${vehicle.id})`);
       return this.toResponseDto(vehicle);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          `Ya existe un vehículo con la patente '${dto.plate}'`,
-        );
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(`Ya existe un vehículo con la patente '${dto.plate}'`);
       }
       throw error;
     }
@@ -53,9 +38,7 @@ export class VehiclesService {
   /**
    * Lista vehículos con paginación y filtros opcionales.
    */
-  async findAll(
-    query: QueryVehiclesDto,
-  ): Promise<PaginatedResponseDto<VehicleResponseDto>> {
+  async findAll(query: QueryVehiclesDto): Promise<PaginatedResponseDto<VehicleResponseDto>> {
     const where: Prisma.VehicleWhereInput = {};
 
     if (query.active !== undefined) {
@@ -103,10 +86,7 @@ export class VehiclesService {
    * Actualiza campos mutables de un vehículo (plate, capacity, active).
    * vehicleType no se puede cambiar después de la creación.
    */
-  async update(
-    id: string,
-    dto: UpdateVehicleDto,
-  ): Promise<VehicleResponseDto> {
+  async update(id: string, dto: UpdateVehicleDto): Promise<VehicleResponseDto> {
     await this.ensureExists(id);
 
     try {
@@ -119,18 +99,11 @@ export class VehiclesService {
         },
       });
 
-      this.logger.log(
-        `Vehículo actualizado: ${vehicle.plate} (${vehicle.id})`,
-      );
+      this.logger.log(`Vehículo actualizado: ${vehicle.plate} (${vehicle.id})`);
       return this.toResponseDto(vehicle);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          `Ya existe un vehículo con la patente '${dto.plate}'`,
-        );
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(`Ya existe un vehículo con la patente '${dto.plate}'`);
       }
       throw error;
     }

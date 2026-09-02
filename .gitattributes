@@ -1,0 +1,8 @@
+# Normaliza los finales de línea a LF en el repo.
+# Sin esto, los archivos escritos desde Windows quedan con CRLF y
+# el linter falla (.prettierrc fija endOfLine: lf).
+* text=auto eol=lf
+
+*.pdf binary
+*.png binary
+*.jpg binary

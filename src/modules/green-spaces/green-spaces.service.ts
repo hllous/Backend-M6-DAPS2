@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -31,26 +27,17 @@ export class GreenSpacesService {
         },
       });
 
-      this.logger.log(
-        `Espacio verde registrado: ${greenSpace.name} (${greenSpace.id})`,
-      );
+      this.logger.log(`Espacio verde registrado: ${greenSpace.name} (${greenSpace.id})`);
       return this.toResponseDto(greenSpace);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2003'
-      ) {
-        throw new NotFoundException(
-          `Zona con id '${dto.zoneId}' no encontrada`,
-        );
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new NotFoundException(`Zona con id '${dto.zoneId}' no encontrada`);
       }
       throw error;
     }
   }
 
-  async findAll(
-    query: QueryGreenSpacesDto,
-  ): Promise<PaginatedResponseDto<GreenSpaceResponseDto>> {
+  async findAll(query: QueryGreenSpacesDto): Promise<PaginatedResponseDto<GreenSpaceResponseDto>> {
     const where: Prisma.GreenSpaceWhereInput = {};
 
     if (query.active !== undefined) {
@@ -90,18 +77,13 @@ export class GreenSpacesService {
     });
 
     if (!greenSpace) {
-      throw new NotFoundException(
-        `Espacio verde con id '${id}' no encontrado`,
-      );
+      throw new NotFoundException(`Espacio verde con id '${id}' no encontrado`);
     }
 
     return this.toResponseDto(greenSpace);
   }
 
-  async update(
-    id: string,
-    dto: UpdateGreenSpaceDto,
-  ): Promise<GreenSpaceResponseDto> {
+  async update(id: string, dto: UpdateGreenSpaceDto): Promise<GreenSpaceResponseDto> {
     await this.ensureExists(id);
 
     try {
@@ -115,18 +97,11 @@ export class GreenSpacesService {
         },
       });
 
-      this.logger.log(
-        `Espacio verde actualizado: ${greenSpace.name} (${greenSpace.id})`,
-      );
+      this.logger.log(`Espacio verde actualizado: ${greenSpace.name} (${greenSpace.id})`);
       return this.toResponseDto(greenSpace);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2003'
-      ) {
-        throw new NotFoundException(
-          `Zona con id '${dto.zoneId}' no encontrada`,
-        );
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new NotFoundException(`Zona con id '${dto.zoneId}' no encontrada`);
       }
       throw error;
     }
@@ -151,9 +126,7 @@ export class GreenSpacesService {
       select: { id: true },
     });
     if (!exists) {
-      throw new NotFoundException(
-        `Espacio verde con id '${id}' no encontrado`,
-      );
+      throw new NotFoundException(`Espacio verde con id '${id}' no encontrado`);
     }
   }
 

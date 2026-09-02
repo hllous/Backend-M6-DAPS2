@@ -27,7 +27,7 @@
     "origin": {
       "type": "string",
       "enum": ["PLANNED", "TICKET", "WEATHER_ALERT", "INSPECTION", "MANUAL"],
-      "description": "CONFLICTO SIN RESOLVER: el acuerdo publicado declara SCHEDULED | TICKET | INSPECTION | INTERNAL. Ver enumeraciones.md, divergencia 2."
+      "description": "Resuelto por ADR-003: se mantienen estos cinco valores y se corrige el acuerdo publicado, que declaraba SCHEDULED | TICKET | INSPECTION | INTERNAL. PLANNED evita ademas la colision con ServiceStatus.SCHEDULED, que viaja en este mismo payload."
     },
     "ticketId": { "type": "string", "description": "De M2. Viaja siempre que origin = TICKET." }
   },
