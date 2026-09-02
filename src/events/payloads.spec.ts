@@ -269,6 +269,76 @@ describe('payloads de los eventos publicados', () => {
     });
   });
 
+  describe('infrastructureRepairRequested', () => {
+    const request = {
+      id: ID(1),
+      damageType: 'BLOCKED_DRAIN',
+      severity: 'HIGH',
+      publicSafetyRisk: true,
+      detectedInType: 'SERVICE',
+      detectedInId: ID(2),
+      address: 'Rivadavia 4500',
+      status: 'REQUESTED',
+      workOrderId: null,
+      requestedAt: new Date('2026-09-15T10:00:00.000Z'),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never;
+
+    it('valida la solicitud derivada a M3', () => {
+      expectValido(
+        'infrastructureRepairRequested',
+        payloads.infrastructureRepairRequested(request),
+      );
+    });
+
+    it('lleva el ticketId solo si el daño salio de un servicio con reclamo', () => {
+      const con = payloads.infrastructureRepairRequested(request, 'TCK-2026-900');
+      expect(con.ticketId).toBe('TCK-2026-900');
+      expectValido('infrastructureRepairRequested', con);
+
+      expect(payloads.infrastructureRepairRequested(request)).not.toHaveProperty('ticketId');
+    });
+  });
+
+  describe('streetClosureRequested', () => {
+    const closure = {
+      id: ID(1),
+      sourceType: 'TREE_INTERVENTION',
+      sourceId: ID(2),
+      reason: 'Extracción con riesgo de caída',
+      closureFrom: new Date('2026-10-05T07:00:00.000Z'),
+      closureTo: new Date('2026-10-05T13:00:00.000Z'),
+      closureType: 'PARTIAL',
+      status: 'REQUESTED',
+      closureId: null,
+      createdAt: new Date('2026-09-20T09:00:00.000Z'),
+      updatedAt: new Date(),
+      streets: [
+        {
+          id: 's1',
+          requestId: ID(1),
+          streetName: 'Rivadavia',
+          fromCross: 'Mitre',
+          toCross: 'San Martín',
+        },
+      ],
+    } as never;
+
+    it('valida la solicitud de corte con sourceModule = M6', () => {
+      const p = payloads.streetClosureRequested(closure);
+
+      expect(p.sourceModule).toBe('M6');
+      expectValido('streetClosureRequested', p);
+    });
+
+    it('affectedSections nunca viaja vacio: el schema exige minItems 1', () => {
+      const p = payloads.streetClosureRequested(closure);
+
+      expect(p.affectedSections).toEqual(['Rivadavia entre Mitre y San Martín']);
+    });
+  });
+
   describe('environmentalViolationDetected', () => {
     const notice = {
       id: ID(1),

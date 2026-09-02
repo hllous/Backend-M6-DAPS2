@@ -69,6 +69,9 @@ async function bootstrap() {
     .addTag('tree-surveys', 'Relevamientos de arbolado')
     .addTag('tree-interventions', 'Podas, extracciones, plantaciones y tratamientos')
     .addTag('green-spaces', 'Espacios verdes')
+    // ─── Derivaciones salientes ───────────────────
+    .addTag('repair-requests', 'Reparaciones de infraestructura derivadas a Obras Públicas')
+    .addTag('street-closure-requests', 'Cortes de calle solicitados a Tránsito')
     // ─── Control ambiental ────────────────────────
     .addTag('environmental-reports', 'Denuncias y expedientes ambientales')
     .addTag('environmental-inspections', 'Inspecciones ambientales')

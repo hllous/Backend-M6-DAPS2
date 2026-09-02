@@ -2,7 +2,7 @@
 
 Resumen de lo que expone el backend. La fuente de verdad interactiva es el Swagger en `/api/docs`; este archivo existe para poder ver el mapa completo sin levantar nada, y porque el [DoD](../gestion/definition-of-done.md) lo pide para cada endpoint nuevo.
 
-> **Actualizado al 02/09/2026** — Fase 4 del plan de implementación (control ambiental). 107 rutas, agrupadas en 18 tags de Swagger.
+> **Actualizado al 02/09/2026** — Fase 5 del plan de implementación (derivaciones salientes). 118 rutas, agrupadas en 20 tags de Swagger.
 
 ## Convenciones
 
@@ -192,6 +192,37 @@ Una transición no válida devuelve 409 nombrando las que sí lo son.
 | POST | `/tree-interventions/:id/reject` | `PENDING_AUTHORIZATION → REJECTED` |
 | POST | `/tree-interventions/:id/assign-service` | Asociar la intervención al `Service` que la ejecuta. La intervención guarda **qué** hay que hacer; el servicio, **cuándo, con qué cuadrilla y cómo terminó**. Solo una intervención `AUTHORIZED`, contra un servicio `POINT` que no ejecute ya otra |
 
+## `repair-requests` — reparaciones derivadas a M3
+
+El daño de infraestructura que detectamos pero que no nos corresponde arreglar. La solicitud existe para **poder seguir el pedido**: publicar el evento no alcanza, porque la respuesta de M3 vuelve asincrónica.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/repair-requests` | Crear y publicar `infrastructureRepairRequested` → M3. Si el daño salió de un servicio nacido de un reclamo, el `ticketId` viaja en el evento |
+| GET | `/repair-requests` | Listar. Filtros: `status`, `damageType`, `severity`, `detectedInId` |
+| GET | `/repair-requests/:id` | Detalle, con la orden de trabajo de M3 si la informaron |
+| POST | `/repair-requests/:id/start` | → `IN_PROGRESS`. **Normalmente lo dispara `workOrderScheduled`** (Fase 6) |
+| POST | `/repair-requests/:id/close` | → `CLOSED`. **Normalmente lo dispara `workOrderCompleted`** |
+
+**Tres estados, no una máquina**: pedida, en curso, cerrada. Alcanza con eso, y por eso no consumimos `workOrderUpdated`.
+
+`publicSafetyRisk` es un campo propio, **no derivado de `severity`**: son dos cosas distintas y M3 prioriza con él.
+
+## `street-closure-requests` — cortes derivados a M7
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/street-closure-requests` | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío |
+| GET | `/street-closure-requests` | Listar. Filtros: `status`, `sourceId` |
+| GET | `/street-closure-requests/:id` | Detalle con sus tramos |
+| POST | `/street-closure-requests/:id/approve` | → `APPROVED`, guarda el `closureId` de M7. **Normalmente lo dispara `streetClosureApproved`** |
+| POST | `/street-closure-requests/:id/reject` | → `REJECTED`. **Normalmente lo dispara `streetClosureRejected`** |
+| POST | `/street-closure-requests/:id/end` | → `ENDED`. **Normalmente lo dispara `streetClosureEnded`** |
+
+`sourceRef` apunta al `Service` o a la `TreeIntervention` que origina el corte: es lo que hace que la respuesta de M7 se pueda aplicar sobre el trabajo correcto.
+
+> Los endpoints de transición existen para **operación manual y para poder demostrar el circuito mientras no haya bus**. Cuando la Fase 6 conecte los consumidores, lo normal va a ser que los muevan los eventos.
+
 ## `environmental-reports` — expedientes ambientales
 
 El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emisiones—, con su máquina de 11 estados. Puede nacer de un reclamo de M2 (`ticketId`) o de una **detección de oficio**, que es el camino que no depende de ningún otro módulo.
@@ -244,6 +275,5 @@ Por fase del plan de implementación:
 | Fase | Qué falta |
 |---|---|
 | 3.5 | Adjuntos y evidencia — hoy `evidence` viaja vacío en el acta |
-| 5 | `outbound-requests` — derivaciones a M3 y M7 |
 | 6 | Inbox y consumidores de eventos |
 | 7 | `citizen-portal` (público) e indicadores del tablero |

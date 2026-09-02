@@ -51,6 +51,9 @@ async function bootstrap() {
     .addTag('tree-surveys', 'Relevamientos de arbolado')
     .addTag('tree-interventions', 'Podas, extracciones, plantaciones y tratamientos')
     .addTag('green-spaces', 'Espacios verdes')
+    // Derivaciones salientes
+    .addTag('repair-requests', 'Reparaciones de infraestructura derivadas a Obras Públicas')
+    .addTag('street-closure-requests', 'Cortes de calle solicitados a Tránsito')
     // Control ambiental
     .addTag('environmental-reports', 'Denuncias y expedientes ambientales')
     .addTag('environmental-inspections', 'Inspecciones ambientales')
@@ -97,6 +100,8 @@ Un endpoint pertenece a **un solo tag**. Los tags deben coincidir exactamente co
 | | `tree-surveys` | Relevamientos de arbolado |
 | | `tree-interventions` | Podas, extracciones, plantaciones y tratamientos |
 | | `green-spaces` | Plazas, parques, riego, corte de césped |
+| Derivaciones | `repair-requests` | Reparaciones de infraestructura derivadas a M3 |
+| | `street-closure-requests` | Cortes de calle solicitados a M7 |
 | Control ambiental | `environmental-reports` | Denuncias ambientales, expedientes |
 | | `environmental-inspections` | Inspecciones programadas y realizadas |
 | Otros | `citizen-portal` | Endpoints expuestos al ciudadano (portal público) |

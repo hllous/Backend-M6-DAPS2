@@ -1,9 +1,12 @@
 import {
+  ClosureStreet,
   Container,
   EnvironmentalInspection,
   EnvironmentalReport,
+  RepairRequest,
   Service,
   ServiceType,
+  StreetClosureRequest,
   Tree,
   TreeIntervention,
   TreeSurvey,
@@ -180,6 +183,63 @@ export function environmentalViolationDetected(
     priorNoticeCount: notice.priorNoticeCount,
     evidence: [],
     suggestedAction: notice.suggestedAction,
+  });
+}
+
+// ─── infrastructureRepairRequested → M3 ───────────
+
+/**
+ * El daño de infraestructura que no nos corresponde arreglar.
+ *
+ * `requestId` es el que le pedimos a M3 que nos devuelva como
+ * `sourceRequestId`: sin él habría que correlacionar por dirección, que es
+ * frágil. Ya confirmaron que lo mandan (bloqueantes.md, 25/08).
+ */
+export function infrastructureRepairRequested(
+  request: RepairRequest,
+  ticketId?: string,
+): Record<string, unknown> {
+  return compact({
+    requestId: request.id,
+    damageType: request.damageType,
+    severity: request.severity,
+    location: location({ address: request.address, lat: null, lng: null }),
+    detectedIn: request.detectedInId,
+    ticketId,
+    publicSafetyRisk: request.publicSafetyRisk,
+    requestedAt: request.requestedAt.toISOString(),
+  });
+}
+
+// ─── streetClosureRequested → M7 ──────────────────
+
+/** Un tramo, como texto plano: `affectedSections` es un array de strings. */
+function seccion(s: ClosureStreet): string {
+  return `${s.streetName} entre ${s.fromCross} y ${s.toCross}`;
+}
+
+/**
+ * La solicitud de corte, en el esquema unificado con la de M3 (30/08).
+ *
+ * `sourceModule` va como `"M6"`, que es lo que dice la tabla de campos de M7.
+ * Su mensaje del 02/09 se contradecía —la prosa hablaba de `requestingModule`
+ * con valores "Obras"/"Ambiente"— y se resolvió a favor de la tabla. Sus tres
+ * eventos de respuesta sí usan `requestingModule`; es probable que hayan
+ * mezclado el campo de ida con el de vuelta. Ver bloqueantes.md.
+ */
+export function streetClosureRequested(
+  request: StreetClosureRequest & { streets: ClosureStreet[] },
+): Record<string, unknown> {
+  return compact({
+    closureRequestId: request.id,
+    sourceModule: 'M6' as const,
+    sourceRef: request.sourceId,
+    reason: request.reason,
+    affectedSections: request.streets.map(seccion),
+    requestedFrom: request.closureFrom?.toISOString(),
+    requestedTo: request.closureTo?.toISOString(),
+    closureType: request.closureType ?? undefined,
+    requestedAt: request.createdAt.toISOString(),
   });
 }
 
