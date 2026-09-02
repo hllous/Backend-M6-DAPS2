@@ -11,3 +11,4 @@ export { StatusChangeDto, ConfirmRescheduleDto } from './status-change.dto';
 export { AssignCrewDto } from './assign-crew.dto';
 export { CreateZoneResultDto } from './create-zone-result.dto';
 export { CreateCollectionRecordDto } from './create-collection-record.dto';
+export { CompleteServiceDto, ContainerRelocationDto } from './complete-service.dto';

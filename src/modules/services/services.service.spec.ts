@@ -76,7 +76,10 @@ describe('ServicesService', () => {
         }),
       },
       zone: { findUnique: jest.fn().mockResolvedValue({ id: ZONE_A }) },
-      container: { findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_B }) },
+      container: {
+        findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_B }),
+        update: jest.fn(async (args: unknown) => args),
+      },
       tree: { findUnique: jest.fn() },
       greenSpace: { findUnique: jest.fn() },
       greenPoint: { findUnique: jest.fn() },
@@ -96,6 +99,7 @@ describe('ServicesService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
       },
+      $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
       zoneResult: { create: jest.fn().mockResolvedValue({ id: 'zr1', zoneId: ZONE_A }) },
       collectionRecord: {
         create: jest.fn().mockResolvedValue({
