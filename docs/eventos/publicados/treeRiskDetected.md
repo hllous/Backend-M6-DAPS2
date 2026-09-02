@@ -27,7 +27,7 @@ surveyedAt
 
 Enums: `riskLevel` es `RiskLevel`, `riskType` es `RiskType`, `healthStatus` es `TreeHealthStatus`, `suggestedIntervention` es `TreeInterventionType` — ver [enumeraciones.md](../../enumeraciones.md).
 
-⚠️ **Dos enums en conflicto** con el acuerdo publicado: `healthStatus` ([divergencia 3](../../enumeraciones.md#divergencias-con-el-acuerdo-publicado)) y `suggestedIntervention` ([divergencia 4](../../enumeraciones.md#divergencias-con-el-acuerdo-publicado), que además agrega un `MONITORING` que no existe en el catálogo). Hay que resolverlos antes de implementar.
+✅ **Los dos enums quedaron resueltos** por [ADR-003](../../decisiones/adr-003-divergencias-enums.md): `healthStatus` conserva `WEAKENED` y `DISEASED` en vez de colapsarlos en `DECLINING` (divergencia 3), e `interventionType` conserva los cinco valores del catálogo (divergencia 4). El `MONITORING` que el acuerdo agregaba **se descarta**: monitorear no es una intervención sino la ausencia de una, así que `suggestedIntervention` pasa a ser **opcional** y su ausencia es la que lo expresa. Pendiente de avisarle a M3 y M7.
 
 ## Qué le pedimos al consumidor
 

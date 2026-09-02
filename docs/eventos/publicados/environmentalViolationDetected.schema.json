@@ -36,7 +36,7 @@
     "suggestedAction": {
       "type": "string",
       "enum": ["WARNING", "FORMAL_NOTICE", "FINE", "CLOSURE"],
-      "description": "No vinculante. CONFLICTO SIN RESOLVER: el acuerdo publicado no incluye FORMAL_NOTICE. Ver enumeraciones.md, divergencia 5."
+      "description": "No vinculante: la decision sancionatoria es de M4. Resuelto por ADR-003: se mantiene FORMAL_NOTICE, que el acuerdo publicado no incluia, y se corrige el acuerdo. Pendiente de confirmar con M4."
     }
   },
   "required": ["violationId", "noticeNumber", "issuedAt", "reportId", "inspectionId", "violationType", "severity", "location", "establishmentId", "priorNoticeCount", "evidence", "suggestedAction"],

@@ -4,7 +4,7 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 
 > **Es la fuente.** Los archivos de evento y de entidad linkean acá en vez de repetir los valores. Si agregás un valor, agregalo en esta tabla y no en el archivo que lo usa.
 >
-> Migrado de [`fuentes/alcance-entregable.md`](../fuentes/alcance-entregable.md) §5.3. Ojo con las [divergencias contra el acuerdo publicado](#divergencias-con-el-acuerdo-publicado) al final.
+> Migrado de [`fuentes/alcance-entregable.md`](../fuentes/alcance-entregable.md) §5.3. Ojo con las [divergencias contra el acuerdo publicado](#divergencias-con-el-acuerdo-publicado--resueltas), ya resueltas al final.
 
 ## Catálogo
 
@@ -43,19 +43,23 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 | `RepairDamageType` | `BROKEN_PAVEMENT`, `BROKEN_SIDEWALK`, `BROKEN_STREETLIGHT`, `BLOCKED_DRAIN`, `DAMAGED_STRUCTURE` |
 | `StreetClosureType` | `TOTAL`, `PARTIAL` |
 
-Son 32. `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](../Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
+Son 32. `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
 
-## Divergencias con el acuerdo publicado
+## Divergencias con el acuerdo publicado — resueltas
 
-Seis enums difieren entre este catálogo y lo que quedó escrito en [`Acuerdo-Eventos-M6.md`](../Acuerdo-Eventos-M6.md) §1.1, que es el documento que ya circuló a los otros grupos. **No están resueltas** — hay que elegir un lado y corregir el otro antes de implementar, porque los `.schema.json` de [eventos/publicados/](eventos/publicados/) validan contra lo que se decida.
+> **Resueltas por [ADR-003](decisiones/adr-003-divergencias-enums.md) (02/09/2026).** Se mantiene el catálogo de este archivo y se corrige el [acuerdo publicado](Acuerdo-Eventos-M6.md) §1.1. El criterio: el catálogo está materializado en `prisma/schema.prisma`, en la migración aplicada en Render y en el código ya mergeado; el acuerdo es un documento que se regenera. Y en cuatro de los seis casos el catálogo tiene más información que el acuerdo.
+>
+> Esta tabla queda como registro de qué se decidió y qué hay que comunicarle a cada grupo. El estado vivo de esos avisos está en [bloqueantes.md](bloqueantes.md).
 
-| # | Enum | Catálogo (este archivo) | Acuerdo publicado | Nota |
+| # | Enum | Qué queda | Qué decía el acuerdo | A quién hay que avisarle |
 |---|---|---|---|---|
-| 1 | `TicketStatusUpdate` | `IN_PROGRESS`, `UPDATED`, `COMPLETED`, `REJECTED` | `updateType`: `STARTED`, `PROGRESS`, `INFORMATION_REQUIRED`, `RETURNED`, `RESOLVED`, `REJECTED` | **El enum propio quedó obsoleto.** El vocabulario lo define M2 en su contrato v1.2 y lo adoptamos tal cual — ver [`updateTicketStatus`](eventos/publicados/updateTicketStatus.md). Este enum se borra cuando se confirme que nada lo referencia |
-| 2 | `ServiceOrigin` | `PLANNED`, `TICKET`, `WEATHER_ALERT`, `INSPECTION`, `MANUAL` | `origin`: `SCHEDULED`, `TICKET`, `INSPECTION`, `INTERNAL` | Dos nombres distintos para lo mismo (`PLANNED`/`SCHEDULED`, `MANUAL`/`INTERNAL`) y `WEATHER_ALERT` no está en el acuerdo. Viaja en [`urbanServiceScheduled`](eventos/publicados/urbanServiceScheduled.md) |
-| 3 | `TreeHealthStatus` | `HEALTHY`, `WEAKENED`, `DISEASED`, `DEAD` | `HEALTHY`, `DECLINING`, `DEAD` | El acuerdo colapsa `WEAKENED` y `DISEASED` en `DECLINING`. Viaja en [`treeRiskDetected`](eventos/publicados/treeRiskDetected.md) |
-| 4 | `TreeInterventionType` | `FORMATION_PRUNING`, `SAFETY_PRUNING`, `REMOVAL`, `PLANTING`, `TREATMENT` | `PRUNING`, `FELLING`, `PLANTING`, `TREATMENT` | El acuerdo no distingue los dos tipos de poda y llama `FELLING` a `REMOVAL`. Además, el `suggestedIntervention` de `treeRiskDetected` agrega un quinto valor, `MONITORING`, que no existe en ningún lado — puede que corresponda un enum aparte |
-| 5 | `SuggestedAction` | `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE` | `WARNING`, `FINE`, `CLOSURE` | Falta `FORMAL_NOTICE` en el acuerdo. Viaja en [`environmentalViolationDetected`](eventos/publicados/environmentalViolationDetected.md) hacia M4 |
-| 6 | `RiskLevel` | `NONE`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` | `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` | Diferencia sin consecuencia práctica: el evento solo se publica con `HIGH` o `CRITICAL`, así que `NONE` nunca sale del módulo |
+| 1 | `TicketStatusUpdate` | **Se elimina del catálogo.** El vocabulario es de M2 | `updateType`: `STARTED`, `PROGRESS`, `INFORMATION_REQUIRED`, `RETURNED`, `RESOLVED`, `REJECTED` | Nadie: adoptamos el suyo tal cual |
+| 2 | `ServiceOrigin` | `PLANNED`, `TICKET`, `WEATHER_ALERT`, `INSPECTION`, `MANUAL` | `SCHEDULED`, `TICKET`, `INSPECTION`, `INTERNAL` | **M7**, en [`urbanServiceScheduled`](eventos/publicados/urbanServiceScheduled.md) |
+| 3 | `TreeHealthStatus` | `HEALTHY`, `WEAKENED`, `DISEASED`, `DEAD` | `HEALTHY`, `DECLINING`, `DEAD` | **M3 y M7**, en [`treeRiskDetected`](eventos/publicados/treeRiskDetected.md) |
+| 4 | `TreeInterventionType` | `FORMATION_PRUNING`, `SAFETY_PRUNING`, `REMOVAL`, `PLANTING`, `TREATMENT` | `PRUNING`, `FELLING`, `PLANTING`, `TREATMENT` | **M7**, en [`treePruningScheduled`](eventos/publicados/treePruningScheduled.md) y `treeRiskDetected` |
+| 5 | `SuggestedAction` | `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE` | `WARNING`, `FINE`, `CLOSURE` | **M4**, en [`environmentalViolationDetected`](eventos/publicados/environmentalViolationDetected.md). Es el caso más expuesto: M4 actúa sobre el valor, aunque el campo es no vinculante |
+| 6 | `RiskLevel` | `NONE`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` | `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` | Nadie: el evento solo se publica con `HIGH` o `CRITICAL`, `NONE` nunca sale del módulo |
 
-Las divergencias 2 a 5 sí salen al bus, así que el que quede mal es un valor que el consumidor no va a reconocer. Anotado también en [bloqueantes.md](bloqueantes.md).
+### `MONITORING`, que no existía en ningún lado
+
+El acuerdo declaraba `MONITORING` como valor posible de `suggestedIntervention` en `treeRiskDetected`, y no está en ningún enum. **Se descarta:** monitorear no es una intervención, es la ausencia de una. `TreeSurvey.suggestedIntervention` ya es nullable en Prisma, así que el campo pasa a ser **opcional** en el schema del evento — antes era requerido, lo que además hacía impublicable un relevamiento de riesgo alto sin intervención sugerida.

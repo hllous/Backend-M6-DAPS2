@@ -10,7 +10,7 @@
     "interventionType": {
       "type": "string",
       "enum": ["FORMATION_PRUNING", "SAFETY_PRUNING", "REMOVAL", "PLANTING", "TREATMENT"],
-      "description": "CONFLICTO SIN RESOLVER: el acuerdo publicado declara PRUNING | FELLING | PLANTING | TREATMENT. Ver enumeraciones.md, divergencia 4."
+      "description": "Resuelto por ADR-003: se mantienen estos cinco valores y se corrige el acuerdo publicado, que declaraba PRUNING | FELLING | PLANTING | TREATMENT. Las dos podas responden a motivos distintos: una es estetica y programable, la otra es por riesgo."
     },
     "treeIds": {
       "type": "array",

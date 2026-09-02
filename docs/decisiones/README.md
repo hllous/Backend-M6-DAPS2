@@ -18,3 +18,4 @@ Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeraci�
 |---|---|---|---|
 | [001](adr-001-stack-tecnologico.md) | Stack tecnológico del módulo | Aceptado | 2026-08-20 |
 | [002](adr-002-auth-provisoria.md) | Autenticación provisoria mientras M9 no define el claim set | Propuesto | 2026-09-02 |
+| [003](adr-003-divergencias-enums.md) | Resolución de las divergencias de enums con el acuerdo publicado | Propuesto | 2026-09-02 |
