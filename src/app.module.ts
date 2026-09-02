@@ -11,11 +11,16 @@ import { JwtAuthGuard } from './common/guards';
 
 // Módulos de dominio
 import { ZonesModule } from './modules/zones/zones.module';
+import { ServiceTypesModule } from './modules/service-types/service-types.module';
+import { DisposalSitesModule } from './modules/disposal-sites/disposal-sites.module';
+import { RoutesModule } from './modules/routes/routes.module';
+import { ServiceFrequenciesModule } from './modules/service-frequencies/service-frequencies.module';
 import { CrewsModule } from './modules/crews/crews.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { ContainersModule } from './modules/containers/containers.module';
 import { TreesModule } from './modules/trees/trees.module';
 import { GreenSpacesModule } from './modules/green-spaces/green-spaces.module';
+import { GreenPointsModule } from './modules/green-points/green-points.module';
 import { ServicesModule } from './modules/services/services.module';
 import { EnvironmentalReportsModule } from './modules/environmental-reports/environmental-reports.module';
 import { EnvironmentalInspectionsModule } from './modules/environmental-inspections/environmental-inspections.module';
@@ -38,11 +43,16 @@ import { WeatherAlertsModule } from './modules/weather-alerts/weather-alerts.mod
 
     // ─── Dominios de negocio ────────────────────────
     ZonesModule,
+    ServiceTypesModule,
+    DisposalSitesModule,
+    RoutesModule,
+    ServiceFrequenciesModule,
     CrewsModule,
     VehiclesModule,
     ContainersModule,
     TreesModule,
     GreenSpacesModule,
+    GreenPointsModule,
     ServicesModule,
     EnvironmentalReportsModule,
     EnvironmentalInspectionsModule,
