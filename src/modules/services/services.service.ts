@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  Container,
+  ContainerStatus,
   Prisma,
   Service,
   ServiceMode,
@@ -14,8 +16,10 @@ import {
   ZoneResultStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CONTAINER_TRANSITIONS } from '../containers/containers.service';
 import {
   AssignCrewDto,
+  CompleteServiceDto,
   ConfirmRescheduleDto,
   CreateCollectionRecordDto,
   CreateServiceDto,
@@ -285,7 +289,7 @@ export class ServicesService {
    * servicio tienen que tener resultado, y alcanza con que una haya quedado
    * NOT_SERVICED o PARTIAL para que el cierre sea parcial.
    */
-  async complete(id: string): Promise<ServiceResponseDto> {
+  async complete(id: string, dto: CompleteServiceDto = {}): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
 
     const reported = new Set(current.zoneResults.map((r) => r.zoneId));
@@ -300,8 +304,107 @@ export class ServicesService {
 
     const allServiced = current.zoneResults.every((r) => r.status === ZoneResultStatus.SERVICED);
     const target = allServiced ? ServiceStatus.COMPLETED : ServiceStatus.PARTIALLY_COMPLETED;
+    this.assertTransition(current.status, target);
 
-    return this.transition(current, target);
+    const containerUpdate = await this.resolveContainerOutcome(current, target, dto);
+
+    // Las dos escrituras van juntas: si el contenedor no se puede actualizar, el
+    // servicio tampoco se cierra. Sin esto el frontend tendria que encadenar dos
+    // llamadas y quedarse con el contenedor colgado si la segunda falla.
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.service.update({
+        where: { id: current.id },
+        data: { status: target },
+        include: SERVICE_INCLUDE,
+      }),
+      ...(containerUpdate ? [this.prisma.container.update(containerUpdate)] : []),
+    ]);
+
+    this.logger.log(`Servicio ${current.id}: ${current.status} -> ${target}`);
+    if (containerUpdate) {
+      this.logger.log(
+        `Servicio ${current.id}: contenedor ${current.targetId} -> ${String(containerUpdate.data.status)}`,
+      );
+    }
+    return this.toResponseDto(updated as ServiceWithRelations);
+  }
+
+  /**
+   * Que le pasa al contenedor cuando se cierra el servicio que lo atiende.
+   *
+   * El vaciado y la reubicacion se ejecutan como un `Service` con `mode = POINT`
+   * apuntando al contenedor (docs/entidades/container.md), asi que cerrar el
+   * servicio **es** la transicion del contenedor, no un paso aparte.
+   *
+   * La transicion se deriva del estado actual del contenedor, no del tipo de
+   * servicio: es el estado el que dice que trabajo estaba pendiente. Devuelve
+   * `null` cuando no hay nada que hacer.
+   */
+  private async resolveContainerOutcome(
+    service: ServiceWithRelations,
+    target: ServiceStatus,
+    dto: CompleteServiceDto,
+  ): Promise<Prisma.ContainerUpdateArgs | null> {
+    // Un cierre parcial significa que el trabajo no se hizo.
+    if (target !== ServiceStatus.COMPLETED) return null;
+    if (service.targetType !== ServiceTargetType.CONTAINER || !service.targetId) return null;
+
+    const container = await this.prisma.container.findUnique({
+      where: { id: service.targetId },
+    });
+    if (!container) {
+      throw new NotFoundException(
+        `El contenedor '${service.targetId}' que este servicio atiende no existe`,
+      );
+    }
+
+    const data = this.containerTransitionData(container, dto);
+    if (!data) return null;
+
+    const allowed = CONTAINER_TRANSITIONS[container.status] ?? [];
+    if (!allowed.includes(ContainerStatus.ACTIVE)) {
+      throw new ConflictException(
+        `El contenedor '${container.code}' esta en '${container.status}' y no puede volver a ACTIVE al cerrar el servicio`,
+      );
+    }
+
+    return { where: { id: container.id }, data };
+  }
+
+  private containerTransitionData(
+    container: Container,
+    dto: CompleteServiceDto,
+  ): Prisma.ContainerUpdateInput | null {
+    switch (container.status) {
+      // Vaciado y reparacion no necesitan datos extra.
+      case ContainerStatus.OVERFLOWED:
+      case ContainerStatus.UNDER_REPAIR:
+        return {
+          status: ContainerStatus.ACTIVE,
+          damageType: null,
+          severity: null,
+          requiresPublicWorks: null,
+        };
+
+      // La reubicacion es la unica que pide un dato que el Service no lleva.
+      case ContainerStatus.RELOCATING:
+        if (!dto.containerLocation) {
+          throw new BadRequestException(
+            `El contenedor '${container.code}' esta en RELOCATING: para cerrar el servicio hace falta 'containerLocation' con la ubicacion nueva`,
+          );
+        }
+        return {
+          status: ContainerStatus.ACTIVE,
+          address: dto.containerLocation.address,
+          lat: dto.containerLocation.lat ?? null,
+          lng: dto.containerLocation.lng ?? null,
+        };
+
+      // ACTIVE no tiene trabajo pendiente; DAMAGED todavia no paso por
+      // start-repair; REMOVED es terminal. En los tres, cerrar no transiciona.
+      default:
+        return null;
+    }
   }
 
   /** SCHEDULED | SUSPENDED → CANCELLED */
@@ -579,12 +682,7 @@ export class ServicesService {
     targetStatus: ServiceStatus,
     additionalData: Prisma.ServiceUpdateInput = {},
   ): Promise<ServiceResponseDto> {
-    const allowed = VALID_TRANSITIONS[current.status] ?? [];
-    if (!allowed.includes(targetStatus)) {
-      throw new ConflictException(
-        `No se puede pasar de '${current.status}' a '${targetStatus}'. Transiciones válidas desde '${current.status}': [${allowed.join(', ') || 'ninguna, es un estado final'}]`,
-      );
-    }
+    this.assertTransition(current.status, targetStatus);
 
     const updated = await this.prisma.service.update({
       where: { id: current.id },
@@ -594,6 +692,15 @@ export class ServicesService {
 
     this.logger.log(`Servicio ${current.id}: ${current.status} → ${targetStatus}`);
     return this.toResponseDto(updated);
+  }
+
+  private assertTransition(from: ServiceStatus, to: ServiceStatus): void {
+    const allowed = VALID_TRANSITIONS[from] ?? [];
+    if (!allowed.includes(to)) {
+      throw new ConflictException(
+        `No se puede pasar de '${from}' a '${to}'. Transiciones válidas desde '${from}': [${allowed.join(', ') || 'ninguna, es un estado final'}]`,
+      );
+    }
   }
 
   private assertEditable(service: Service): void {

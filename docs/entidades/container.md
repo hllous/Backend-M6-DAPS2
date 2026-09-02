@@ -30,6 +30,17 @@ stateDiagram-v2
 
 El vaciado y la reubicación se ejecutan como [`Service`](service.md) con `mode = POINT` y `targetRef` apuntando al contenedor.
 
+**Cerrar ese servicio *es* la transición del contenedor**, no un paso aparte: `POST /services/:id/complete` mueve los dos en la misma transacción. La transición se deriva del estado en que está el contenedor, porque es el estado el que dice qué trabajo estaba pendiente:
+
+| Estado al cerrar | Queda | Necesita |
+|---|---|---|
+| `OVERFLOWED` | `ACTIVE` | nada — es el vaciado |
+| `UNDER_REPAIR` | `ACTIVE` | nada — es la reparación terminada |
+| `RELOCATING` | `ACTIVE` | `containerLocation` en el body: la ubicación nueva no viaja en el `Service` |
+| `ACTIVE`, `DAMAGED`, `REMOVED` | sin cambio | no había trabajo pendiente que cerrar |
+
+Un cierre `PARTIALLY_COMPLETED` no transiciona el contenedor: el trabajo no se hizo.
+
 ## Qué publica
 
 - Al pasar a `DAMAGED`: [`containerDamaged`](../eventos/publicados/containerDamaged.md) → M3.

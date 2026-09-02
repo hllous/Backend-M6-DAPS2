@@ -25,7 +25,7 @@ import { PaginatedResponseDto } from '../../common/dto';
  *   ACTIVE → RELOCATING
  *   RELOCATING → ACTIVE (nueva ubicación)
  */
-const VALID_TRANSITIONS: Record<ContainerStatus, ContainerStatus[]> = {
+export const CONTAINER_TRANSITIONS: Record<ContainerStatus, ContainerStatus[]> = {
   ACTIVE: [ContainerStatus.OVERFLOWED, ContainerStatus.DAMAGED, ContainerStatus.RELOCATING],
   OVERFLOWED: [ContainerStatus.ACTIVE],
   DAMAGED: [ContainerStatus.UNDER_REPAIR, ContainerStatus.REMOVED],
@@ -221,7 +221,7 @@ export class ContainersService {
       throw new NotFoundException(`Contenedor con id '${id}' no encontrado`);
     }
 
-    const allowed = VALID_TRANSITIONS[container.status] ?? [];
+    const allowed = CONTAINER_TRANSITIONS[container.status] ?? [];
     if (!allowed.includes(targetStatus)) {
       throw new ConflictException(
         `No se puede pasar de '${container.status}' a '${targetStatus}'. Transiciones válidas desde '${container.status}': [${allowed.join(', ')}]`,
