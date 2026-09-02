@@ -5,9 +5,10 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { Prisma, TreeInterventionStatus, TreeInterventionType } from '@prisma/client';
+import { Prisma, ServiceMode, TreeInterventionStatus, TreeInterventionType } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
+  AssignInterventionServiceDto,
   CreateTreeInterventionDto,
   QueryTreeInterventionsDto,
   TreeInterventionResponseDto,
@@ -162,6 +163,61 @@ export class TreeInterventionsService {
   async reject(id: string): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
     return this.transition(intervention, TreeInterventionStatus.REJECTED);
+  }
+
+  /**
+   * Asocia la intervención al Service que la ejecuta.
+   *
+   * La intervención guarda **qué** hay que hacer; el servicio, **cuándo, con
+   * qué cuadrilla y cómo terminó** (docs/entidades/tree-intervention.md). Solo
+   * se programa lo autorizado, y un servicio ejecuta una sola intervención:
+   * TreeIntervention.serviceId es @unique.
+   */
+  async assignService(
+    id: string,
+    dto: AssignInterventionServiceDto,
+  ): Promise<TreeInterventionResponseDto> {
+    const intervention = await this.getIntervention(id);
+
+    if (intervention.status !== TreeInterventionStatus.AUTHORIZED) {
+      throw new ConflictException(
+        `Solo se programa una intervención autorizada (esta está en ${intervention.status})`,
+      );
+    }
+    if (intervention.serviceId) {
+      throw new ConflictException(
+        `La intervención ya está asociada al servicio '${intervention.serviceId}'`,
+      );
+    }
+
+    const service = await this.prisma.service.findUnique({
+      where: { id: dto.serviceId },
+      select: { id: true, mode: true },
+    });
+    if (!service) {
+      throw new NotFoundException(`Servicio con id '${dto.serviceId}' no encontrado`);
+    }
+    if (service.mode !== ServiceMode.POINT) {
+      throw new BadRequestException(
+        `Una intervención de arbolado se ejecuta sobre un objetivo puntual, así que el servicio tiene que ser de modo POINT (este es ${service.mode})`,
+      );
+    }
+
+    try {
+      const updated = await this.prisma.treeIntervention.update({
+        where: { id },
+        data: { serviceId: dto.serviceId },
+        include: { trees: true },
+      });
+
+      this.logger.log(`Intervención ${id}: asociada al servicio ${dto.serviceId}`);
+      return this.toResponseDto(updated);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(`El servicio '${dto.serviceId}' ya ejecuta otra intervención`);
+      }
+      throw error;
+    }
   }
 
   // ─── Helpers ──────────────────────────────────────
