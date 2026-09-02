@@ -2,7 +2,7 @@
 
 Resumen de lo que expone el backend. La fuente de verdad interactiva es el Swagger en `/api/docs`; este archivo existe para poder ver el mapa completo sin levantar nada, y porque el [DoD](../gestion/definition-of-done.md) lo pide para cada endpoint nuevo.
 
-> **Actualizado al 02/09/2026** — Fase 2 del plan de implementación (`Service`). 94 rutas.
+> **Actualizado al 02/09/2026** — Fase 2 del plan de implementación (`Service`). 94 rutas, agrupadas en 18 tags de Swagger.
 
 ## Convenciones
 
@@ -12,6 +12,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **Autorización por rol**: todavía no existe. Cualquier usuario autenticado puede llamar cualquier endpoint — pendiente de que M9 publique su taxonomía de roles ([bloqueantes.md](../bloqueantes.md)).
 - **Listados**: paginados con `?page` (default 1) y `?pageSize` (default 20, máx 100). Devuelven `{ data: [...], meta: { total, page, pageSize, totalPages } }`.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
+- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 18 tags están declarados en `main.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
 
 ---
@@ -22,9 +23,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 |---|---|---|
 | GET | `/health` | Health check. **Público**, no requiere JWT. |
 
-## `zones` — zonas operativas, recorridos y frecuencias
-
-### Zonas
+## `zones` — zonas operativas
 
 | Método | Ruta | Qué hace |
 |---|---|---|
@@ -36,7 +35,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 | POST | `/zones/:id/neighborhoods` | Asignar barrios (catálogo de M9). Ignora duplicados |
 | DELETE | `/zones/:id/neighborhoods/:neighborhoodId` | Quitar un barrio |
 
-### Recorridos
+## `routes` — recorridos
 
 | Método | Ruta | Qué hace |
 |---|---|---|
@@ -47,7 +46,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 | DELETE | `/routes/:id` | Baja lógica |
 | PUT | `/routes/:id/stops` | **Reemplaza la secuencia completa de paradas.** Cubre alta, baja y reordenamiento en una sola llamada atómica: el orden del array es el orden del recorrido. Una zona no puede repetirse (400) — rompería `ServiceZone` cuando un servicio copie el recorrido. Array vacío deja el recorrido sin paradas |
 
-### Frecuencias
+## `service-frequencies` — frecuencias
 
 | Método | Ruta | Qué hace |
 |---|---|---|
@@ -57,9 +56,49 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 | PATCH | `/service-frequencies/:id` | Actualizar días, turno y vigencia. El array de días reemplaza el conjunto completo. El tipo y el recorrido son inmutables |
 | DELETE | `/service-frequencies/:id` | **Cierra la vigencia** (`validTo = hoy`), no marca `active`: el modelo no tiene esa columna y el dominio ya expresa la baja con `validTo`. Si la regla todavía no empezó a regir, se cierra en su `validFrom` |
 
-## `services` — servicios urbanos y su configuración
+## `service-types` — catálogo de tipos de servicio
 
-### Programación y ejecución
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/service-types` | Crear tipo de servicio |
+| GET | `/service-types` | Listar. Filtros: `active`, `category`, `mode`, `search` |
+| GET | `/service-types/:id` | Detalle |
+| PATCH | `/service-types/:id` | Actualizar nombre, `requiresVehicle` y estado. `code`, `category` y `mode` son inmutables: hay servicios ya programados que los copiaron |
+| DELETE | `/service-types/:id` | Baja lógica |
+
+## `disposal-sites` — sitios de disposición final
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/disposal-sites` | Crear sitio de disposición final |
+| GET | `/disposal-sites` | Listar. Filtros: `active`, `siteType`, `search` |
+| GET | `/disposal-sites/:id` | Detalle |
+| PATCH | `/disposal-sites/:id` | Actualizar nombre, tipo y estado |
+| DELETE | `/disposal-sites/:id` | Baja lógica. Los `CollectionRecord` ya cargados lo referencian |
+
+## `crews` — cuadrillas
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/crews` | Crear cuadrilla |
+| GET | `/crews` | Listar. Filtros: `active`, `crewType`, `defaultShift` |
+| GET | `/crews/:id` | Detalle, con los integrantes |
+| PATCH | `/crews/:id` | Actualizar |
+| DELETE | `/crews/:id` | Baja lógica |
+| POST | `/crews/:id/members` | Agregar integrantes |
+| DELETE | `/crews/:id/members/:userId` | Quitar un integrante |
+
+## `vehicles` — vehículos
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/vehicles` | Registrar vehículo |
+| GET | `/vehicles` | Listar. Filtros: `active`, `vehicleType` |
+| GET | `/vehicles/:id` | Detalle |
+| PATCH | `/vehicles/:id` | Actualizar |
+| DELETE | `/vehicles/:id` | Baja lógica |
+
+## `services` — programación y ejecución
 
 `Service` es la unidad de trabajo programable del módulo: recolección, barrido, lavado, vaciado de contenedor, poda y riego son todos un servicio. Lo que varía es sobre qué se ejecuta — un recorrido de zonas (`ROUTE`) o un objetivo puntual (`POINT`).
 
@@ -94,46 +133,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 | POST | `/services/:id/collection-records` | Registrar residuos: tipo, volumen, peso y destino final. Solo sobre servicios iniciados o cerrados, contra un sitio de disposición activo |
 | GET | `/services/:id/collection-records` | Registros del servicio |
 
-### Catálogos
-
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/service-types` | Crear tipo de servicio |
-| GET | `/service-types` | Listar. Filtros: `active`, `category`, `mode`, `search` |
-| GET | `/service-types/:id` | Detalle |
-| PATCH | `/service-types/:id` | Actualizar nombre, `requiresVehicle` y estado. `code`, `category` y `mode` son inmutables: hay servicios ya programados que los copiaron |
-| DELETE | `/service-types/:id` | Baja lógica |
-| POST | `/disposal-sites` | Crear sitio de disposición final |
-| GET | `/disposal-sites` | Listar. Filtros: `active`, `siteType`, `search` |
-| GET | `/disposal-sites/:id` | Detalle |
-| PATCH | `/disposal-sites/:id` | Actualizar nombre, tipo y estado |
-| DELETE | `/disposal-sites/:id` | Baja lógica. Los `CollectionRecord` ya cargados lo referencian |
-
-## `crews` — cuadrillas
-
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/crews` | Crear cuadrilla |
-| GET | `/crews` | Listar. Filtros: `active`, `crewType`, `defaultShift` |
-| GET | `/crews/:id` | Detalle, con los integrantes |
-| PATCH | `/crews/:id` | Actualizar |
-| DELETE | `/crews/:id` | Baja lógica |
-| POST | `/crews/:id/members` | Agregar integrantes |
-| DELETE | `/crews/:id/members/:userId` | Quitar un integrante |
-
-## `vehicles` — vehículos
-
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/vehicles` | Registrar vehículo |
-| GET | `/vehicles` | Listar. Filtros: `active`, `vehicleType` |
-| GET | `/vehicles/:id` | Detalle |
-| PATCH | `/vehicles/:id` | Actualizar |
-| DELETE | `/vehicles/:id` | Baja lógica |
-
-## `containers` — contenedores y puntos verdes
-
-### Contenedores
+## `containers` — contenedores
 
 | Método | Ruta | Qué hace |
 |---|---|---|
@@ -152,7 +152,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 
 Una transición no válida devuelve 409 nombrando las que sí lo son.
 
-### Puntos verdes
+## `green-points` — puntos verdes
 
 | Método | Ruta | Qué hace |
 |---|---|---|
@@ -171,9 +171,19 @@ Una transición no válida devuelve 409 nombrando las que sí lo son.
 | GET | `/trees/:id` | Detalle |
 | PATCH | `/trees/:id` | Actualizar |
 | DELETE | `/trees/:id` | Baja lógica |
+
+## `tree-surveys` — relevamientos de arbolado
+
+| Método | Ruta | Qué hace |
+|---|---|---|
 | POST | `/trees/:treeId/surveys` | Cargar un relevamiento |
 | GET | `/trees/:treeId/surveys` | Historial de relevamientos. Filtros: `healthStatus`, `riskLevel` |
 | GET | `/trees/:treeId/surveys/:surveyId` | Detalle de un relevamiento |
+
+## `tree-interventions` — podas, extracciones, plantaciones y tratamientos
+
+| Método | Ruta | Qué hace |
+|---|---|---|
 | POST | `/tree-interventions` | Crear intervención sobre uno o más árboles |
 | GET | `/tree-interventions` | Listar. Filtros: `interventionType`, `status` |
 | GET | `/tree-interventions/:id` | Detalle |
