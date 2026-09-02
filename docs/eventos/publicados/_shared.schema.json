@@ -6,65 +6,126 @@
   "$defs": {
     "location": {
       "type": "object",
-      "description": "Ubicación en la vía pública. neighborhoodId es del catálogo de M9, que todavía no lo expuso.",
+      "description": "Ubicacion en la via publica. neighborhoodId sale del catalogo de barrios de M9, que sigue sin exponerse (docs/bloqueantes.md): hasta que exista, M6 no puede completarlo y el campo viaja ausente. street lleva la direccion tal como la tenemos, sin partir en calle y numero, porque el modelo la guarda como texto libre. Los dos pasaran a requeridos cuando M9 publique el catalogo.",
       "properties": {
-        "street": { "type": "string" },
-        "number": { "type": "string" },
-        "neighborhoodId": { "type": "string" },
-        "lat": { "type": "number" },
-        "lng": { "type": "number" }
+        "street": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string"
+        },
+        "neighborhoodId": {
+          "type": "string"
+        },
+        "lat": {
+          "type": "number"
+        },
+        "lng": {
+          "type": "number"
+        }
       },
-      "required": ["street", "neighborhoodId"],
+      "required": [],
       "additionalProperties": false
     },
     "timeWindow": {
       "type": "object",
       "description": "Franja horaria del día agendado. Horas HH:mm.",
       "properties": {
-        "from": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
-        "to": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" }
+        "from": {
+          "type": "string",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        }
       },
-      "required": ["from", "to"],
+      "required": [
+        "from",
+        "to"
+      ],
       "additionalProperties": false
     },
     "attachment": {
       "type": "object",
       "description": "Adjunto en el formato de M6. Lo que va hacia M2 usa m2Attachment, que es el suyo.",
       "properties": {
-        "url": { "type": "string", "format": "uri" },
-        "mimeType": { "type": "string" },
-        "description": { "type": "string" }
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
       },
-      "required": ["url", "mimeType"],
+      "required": [
+        "url",
+        "mimeType"
+      ],
       "additionalProperties": false
     },
     "evidence": {
       "type": "object",
       "description": "Misma forma que attachment. Se mantiene con nombre propio porque en el acta es prueba documental, no un adjunto cualquiera.",
       "properties": {
-        "url": { "type": "string", "format": "uri" },
-        "mimeType": { "type": "string" },
-        "description": { "type": "string" }
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
       },
-      "required": ["url", "mimeType"],
+      "required": [
+        "url",
+        "mimeType"
+      ],
       "additionalProperties": false
     },
     "m2Attachment": {
       "type": "object",
       "description": "Adjunto en el formato del contrato v1.2 de M2. Solo para updateTicketStatus.",
       "properties": {
-        "attachmentId": { "type": "string" },
-        "fileName": { "type": "string" },
-        "contentType": { "type": "string" },
-        "url": { "type": "string", "format": "uri" },
-        "sizeBytes": { "type": "integer", "minimum": 0 }
+        "attachmentId": {
+          "type": "string"
+        },
+        "fileName": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": 0
+        }
       },
-      "required": ["attachmentId", "fileName", "contentType", "url"],
+      "required": [
+        "attachmentId",
+        "fileName",
+        "contentType",
+        "url"
+      ],
       "additionalProperties": false
     },
     "severity": {
       "type": "string",
-      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ]
     },
     "date": {
       "type": "string",

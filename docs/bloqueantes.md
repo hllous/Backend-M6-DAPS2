@@ -41,7 +41,10 @@
 | **M7** | Avisar que `ServiceOrigin` tiene 5 valores (`PLANNED`/`MANUAL`/`WEATHER_ALERT`, no `SCHEDULED`/`INTERNAL`), que `TreeHealthStatus` no colapsa en `DECLINING` y que `TreeInterventionType` distingue las dos podas y usa `REMOVAL`, no `FELLING` | ⚠️ Aviso pendiente | 2 sep 2026 |
 | **M3** | Avisar que `TreeHealthStatus` conserva `WEAKENED` y `DISEASED` en vez de `DECLINING`, en `treeRiskDetected` | ⚠️ Aviso pendiente | 2 sep 2026 |
 | **M4** | Confirmar que toleran `FORMAL_NOTICE` como cuarto valor de `suggestedAction`. El campo no es vinculante, así que no debería bloquearles el circuito, pero son los que actúan sobre el valor | ⚠️ A confirmar | 2 sep 2026 |
-| **M7** | `streetClosureRequested`: su mensaje del 02/09 dice `requestingModule: "Obras" \| "Ambiente"` en la prosa y `sourceModule: M3 \| M6` en la tabla de campos, para el mismo evento. Dos nombres y dos vocabularios. Preguntar cuál vale | ⚠️ Pregunta abierta | 2 sep 2026 |
+| **M7** | `streetClosureRequested`: su mensaje del 02/09 decía `requestingModule: "Obras" \| "Ambiente"` en la prosa y `sourceModule: M3 \| M6` en la tabla de campos. **Se resolvió a favor de la tabla: mandamos `sourceModule = "M6"`.** Conviene confirmárselo, porque sus tres eventos de respuesta usan `requestingModule` | ⚠️ Resuelto de nuestro lado, avisar | 2 sep 2026 |
+| **M9** | Catálogo de barrios: sin él no podemos completar `location.neighborhoodId`, que era requerido en tres eventos que van a M3 y M7. Pasó a opcional y viaja ausente | 🔴 Bloqueante, ahora con consecuencia concreta | 2 sep 2026 |
+| **M3 y M7** | Avisar que `location.neighborhoodId` llega vacío hasta que M9 publique su catálogo, y que `location.street` lleva la dirección sin partir en calle y número | ⚠️ Aviso pendiente | 2 sep 2026 |
+| **M9** | Sin broker Kafka expuesto, los eventos quedan en el outbox y solo se registran en el log. El circuito está implementado y listo para enchufar | 🔴 Bloqueante | 2 sep 2026 |
 | **M7** | `treePruningScheduled` exige `crewId` y `timeWindow`, que en nuestro modelo son opcionales hasta que se asignan. Implica que el evento no puede salir al programar, sino recién con cuadrilla y ventana cargadas | ⚠️ A resolver de nuestro lado | 2 sep 2026 |
 
 ## El detalle, por contraparte

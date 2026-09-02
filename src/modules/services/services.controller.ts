@@ -186,8 +186,11 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
-  async start(@Param('id', ParseUUIDPipe) id: string): Promise<ServiceResponseDto> {
-    return this.servicesService.start(id);
+  async start(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('userId') userId: string,
+  ): Promise<ServiceResponseDto> {
+    return this.servicesService.start(id, userId);
   }
 
   @Post(':id/suspend')
@@ -255,8 +258,9 @@ export class ServicesController {
   async complete(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CompleteServiceDto,
+    @CurrentUser('userId') userId: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.complete(id, dto);
+    return this.servicesService.complete(id, dto, userId);
   }
 
   @Post(':id/cancel')
@@ -276,8 +280,9 @@ export class ServicesController {
   async cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StatusChangeDto,
+    @CurrentUser('userId') userId: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.cancel(id, dto.reason);
+    return this.servicesService.cancel(id, dto.reason, userId);
   }
 
   @Post(':id/reschedule')

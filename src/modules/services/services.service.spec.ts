@@ -22,6 +22,7 @@ const CONTAINER_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
 describe('ServicesService', () => {
   let prisma: any;
+  let outbox: any;
   let service: ServicesService;
 
   const serviceRow = (over: Record<string, unknown> = {}) => ({
@@ -99,7 +100,13 @@ describe('ServicesService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
       },
-      $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
+      outboxEvent: { create: jest.fn(), createMany: jest.fn() },
+      // El $transaction real acepta un array de operaciones o un callback.
+      $transaction: jest.fn((arg: unknown) =>
+        typeof arg === 'function'
+          ? (arg as (tx: unknown) => unknown)(prisma)
+          : Promise.all(arg as Promise<unknown>[]),
+      ),
       zoneResult: { create: jest.fn().mockResolvedValue({ id: 'zr1', zoneId: ZONE_A }) },
       collectionRecord: {
         create: jest.fn().mockResolvedValue({
@@ -112,7 +119,8 @@ describe('ServicesService', () => {
         }),
       },
     };
-    service = new ServicesService(prisma as unknown as PrismaService);
+    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
+    service = new ServicesService(prisma as unknown as PrismaService, outbox);
   });
 
   const baseDto = {

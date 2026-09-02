@@ -7,7 +7,8 @@ export interface OutboxEntry {
   eventType: EventTypeName;
   aggregateType: AggregateTypeName;
   aggregateId: string;
-  payload: Prisma.InputJsonValue;
+  /** El objeto del payload. Se castea a InputJsonObject al escribir. */
+  payload: Record<string, unknown>;
   /** Cuándo ocurrió el hecho. Por defecto, ahora. */
   occurredAt?: Date;
 }
@@ -35,7 +36,7 @@ export class OutboxService {
         eventType: entry.eventType,
         aggregateType: entry.aggregateType,
         aggregateId: entry.aggregateId,
-        payload: entry.payload,
+        payload: entry.payload as Prisma.InputJsonObject,
         occurredAt: entry.occurredAt ?? new Date(),
       },
     });
@@ -50,7 +51,7 @@ export class OutboxService {
         eventType: entry.eventType,
         aggregateType: entry.aggregateType,
         aggregateId: entry.aggregateId,
-        payload: entry.payload,
+        payload: entry.payload as Prisma.InputJsonObject,
         occurredAt: entry.occurredAt ?? new Date(),
       })),
     });

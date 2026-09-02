@@ -20,6 +20,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
   const ZONE = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
   let prisma: any;
+  let outbox: any;
   let service: ServicesService;
 
   const serviceRow = (over: Record<string, unknown> = {}) => ({
@@ -65,10 +66,16 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
         findUnique: jest.fn().mockResolvedValue(container(ContainerStatus.OVERFLOWED)),
         update: jest.fn(async (args: unknown) => args),
       },
-      // El $transaction real devuelve el RESULTADO de cada operacion, no la operacion.
-      $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
+      outboxEvent: { create: jest.fn(), createMany: jest.fn() },
+      // complete() usa la forma de callback; otros metodos, la de array.
+      $transaction: jest.fn((arg: unknown) =>
+        typeof arg === 'function'
+          ? (arg as (tx: unknown) => unknown)(prisma)
+          : Promise.all(arg as Promise<unknown>[]),
+      ),
     };
-    service = new ServicesService(prisma as unknown as PrismaService);
+    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
+    service = new ServicesService(prisma as unknown as PrismaService, outbox);
   });
 
   /** Los argumentos con los que se actualizo el contenedor. */
@@ -77,7 +84,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
   it('un contenedor OVERFLOWED vuelve a ACTIVE al cerrar (vaciado)', async () => {
     await service.complete(SERVICE_ID);
 
-    expect(prisma.$transaction.mock.calls[0][0]).toHaveLength(2);
+    expect(prisma.container.update).toHaveBeenCalledTimes(1);
     expect(containerOp().data).toMatchObject({ status: ContainerStatus.ACTIVE });
     expect(containerOp().where).toEqual({ id: CONTAINER_ID });
   });
@@ -126,7 +133,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
 
     await service.complete(SERVICE_ID);
 
-    expect(prisma.$transaction.mock.calls[0][0]).toHaveLength(1);
+    expect(prisma.container.update).not.toHaveBeenCalled();
     expect(prisma.container.findUnique).not.toHaveBeenCalled();
   });
 
@@ -135,7 +142,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
 
     await service.complete(SERVICE_ID);
 
-    expect(prisma.$transaction.mock.calls[0][0]).toHaveLength(1);
+    expect(prisma.container.update).not.toHaveBeenCalled();
   });
 
   it('un contenedor DAMAGED no transiciona: falta pasar por start-repair', async () => {
@@ -143,7 +150,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
 
     await service.complete(SERVICE_ID);
 
-    expect(prisma.$transaction.mock.calls[0][0]).toHaveLength(1);
+    expect(prisma.container.update).not.toHaveBeenCalled();
   });
 
   it('un servicio ROUTE no mira contenedores', async () => {
@@ -154,7 +161,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
     await service.complete(SERVICE_ID);
 
     expect(prisma.container.findUnique).not.toHaveBeenCalled();
-    expect(prisma.$transaction.mock.calls[0][0]).toHaveLength(1);
+    expect(prisma.container.update).not.toHaveBeenCalled();
   });
 
   it('404 si el contenedor que el servicio dice atender no existe', async () => {

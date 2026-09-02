@@ -22,7 +22,13 @@ describe('TreeInterventionsService — autorización', () => {
         update: jest.fn((args) => ({ ...intervention(), ...args.data, trees: [] })),
       },
     };
-    service = new TreeInterventionsService(prisma as unknown as PrismaService);
+    service = new TreeInterventionsService(
+      prisma as unknown as PrismaService,
+      {
+        enqueue: jest.fn(),
+        enqueueMany: jest.fn(),
+      } as never,
+    );
   });
 
   it('no deja autorizar una extraccion que sigue en REQUESTED', async () => {
