@@ -269,6 +269,61 @@ describe('payloads de los eventos publicados', () => {
     });
   });
 
+  describe('environmentalViolationDetected', () => {
+    const notice = {
+      id: ID(1),
+      noticeNumber: 'ACTA-2026-000012',
+      inspectionId: ID(2),
+      issuedAt: new Date('2026-09-10T12:00:00.000Z'),
+      establishmentId: 'EST-004512',
+      violationType: 'UNTREATED_DISCHARGE',
+      severity: 'HIGH',
+      suggestedAction: 'FINE',
+      priorNoticeCount: 2,
+      createdAt: new Date(),
+    } as never;
+
+    const inspection = { id: ID(2), reportId: ID(3) } as never;
+    const report = {
+      id: ID(3),
+      address: 'Camino de Cintura 4500',
+      lat: null,
+      lng: null,
+      ticketId: null,
+    } as never;
+
+    it('valida el acta derivada a M4', () => {
+      const p = payloads.environmentalViolationDetected(notice, inspection, report);
+
+      expect(p.priorNoticeCount).toBe(2);
+      expect(p.evidence).toEqual([]);
+      expectValido('environmentalViolationDetected', p);
+    });
+
+    it('lleva el ticketId solo si el expediente nacio de un reclamo', () => {
+      const sinTicket = payloads.environmentalViolationDetected(notice, inspection, report);
+      expect(sinTicket).not.toHaveProperty('ticketId');
+
+      const conTicket = payloads.environmentalViolationDetected(notice, inspection, {
+        ...(report as object),
+        ticketId: 'TCK-2026-555',
+      } as never);
+      expect(conTicket.ticketId).toBe('TCK-2026-555');
+      expectValido('environmentalViolationDetected', conTicket);
+    });
+
+    it('mantiene FORMAL_NOTICE, el valor que ADR-003 conservo contra el acuerdo', () => {
+      const p = payloads.environmentalViolationDetected(
+        { ...(notice as object), suggestedAction: 'FORMAL_NOTICE' } as never,
+        inspection,
+        report,
+      );
+
+      expect(p.suggestedAction).toBe('FORMAL_NOTICE');
+      expectValido('environmentalViolationDetected', p);
+    });
+  });
+
   describe('updateTicketStatus', () => {
     it('valida un STARTED', () => {
       expectValido(
