@@ -11,6 +11,8 @@ import { JwtAuthGuard } from './common/guards';
 
 // Módulos de dominio
 import { ZonesModule } from './modules/zones/zones.module';
+import { ServiceTypesModule } from './modules/service-types/service-types.module';
+import { DisposalSitesModule } from './modules/disposal-sites/disposal-sites.module';
 import { CrewsModule } from './modules/crews/crews.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { ContainersModule } from './modules/containers/containers.module';
@@ -38,6 +40,8 @@ import { WeatherAlertsModule } from './modules/weather-alerts/weather-alerts.mod
 
     // ─── Dominios de negocio ────────────────────────
     ZonesModule,
+    ServiceTypesModule,
+    DisposalSitesModule,
     CrewsModule,
     VehiclesModule,
     ContainersModule,
