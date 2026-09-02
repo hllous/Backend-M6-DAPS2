@@ -788,17 +788,20 @@ model SanctionOutcome {
 // ════════════════════════════════════════════════════════════════
 
 model RepairRequest {
-  id             String              @id @default(uuid()) @db.Uuid
-  damageType     RepairDamageType    @map("damage_type")
-  severity       Severity
-  address        String?
-  detectedInType String              @map("detected_in_type") // SERVICE | INSPECTION
-  detectedInId   String              @map("detected_in_id") @db.Uuid // polimórfico
-  status         RepairRequestStatus @default(REQUESTED)
-  workOrderId    String?             @map("work_order_id") // EXT M3
-  requestedAt    DateTime            @default(now()) @map("requested_at")
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
+  id               String              @id @default(uuid()) @db.Uuid
+  damageType       RepairDamageType    @map("damage_type")
+  severity         Severity
+  address          String?
+  detectedInType   String              @map("detected_in_type") // SERVICE | INSPECTION
+  detectedInId     String              @map("detected_in_id") @db.Uuid // polimórfico
+  // Requerido por el schema de infrastructureRepairRequested: M3 prioriza con
+  // esto. No se deriva de severity — son dos cosas distintas.
+  publicSafetyRisk Boolean             @default(false) @map("public_safety_risk")
+  status           RepairRequestStatus @default(REQUESTED)
+  workOrderId      String?             @map("work_order_id") // EXT M3
+  requestedAt      DateTime            @default(now()) @map("requested_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
 
   @@index([status])
   @@map("repair_request")

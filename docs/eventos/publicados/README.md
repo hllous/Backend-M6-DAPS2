@@ -17,7 +17,7 @@ Los siete que se cayeron del contrato están en [descartados.md](descartados.md)
 
 ## Qué se emite hoy
 
-**Cinco de los ocho ya se emiten**, por el patrón outbox: el dominio encola la fila en la misma transacción que su escritura, y un dispatcher la publica.
+**Los ocho se emiten**, por el patrón outbox: el dominio encola la fila en la misma transacción que su escritura, y un dispatcher la publica.
 
 | Evento | Estado | Dónde se dispara |
 |---|---|---|
@@ -26,9 +26,9 @@ Los siete que se cayeron del contrato están en [descartados.md](descartados.md)
 | `containerDamaged` | ✅ emitido | `POST /containers/:id/report-damage` |
 | `treeRiskDetected` | ✅ emitido | un relevamiento con `riskLevel` `HIGH` o `CRITICAL` |
 | `treePruningScheduled` | ⚠️ emitido, con reserva | `POST /tree-interventions/:id/assign-service`, **solo si el servicio ya tiene cuadrilla y franja horaria**: M7 los declara requeridos y en nuestro modelo son opcionales. Si faltan, el evento se difiere y queda un warning en el log |
-| `environmentalViolationDetected` | ⏳ Fase 4 | su entidad (`ViolationNotice`) todavía no existe |
-| `infrastructureRepairRequested` | ⏳ Fase 5 | ídem (`RepairRequest`) |
-| `streetClosureRequested` | ⏳ Fase 5 | ídem (`StreetClosureRequest`). Va con `sourceModule = "M6"` |
+| `environmentalViolationDetected` | ✅ emitido | `POST /environmental-inspections/:id/violation-notice`, **solo si el acta tiene `establishmentId`** |
+| `infrastructureRepairRequested` | ✅ emitido | `POST /repair-requests` |
+| `streetClosureRequested` | ✅ emitido | `POST /street-closure-requests`, con `sourceModule = "M6"` |
 
 🔴 **No hay bus.** M9 nunca expuso un Kafka, así que sin `KAFKA_BROKERS` configurado el adaptador por defecto solo deja rastro en el log. Las filas de `outbox_event` —con su payload, su `status` y su `publishedAt`— son la evidencia de qué se habría publicado. Enchufar el broker no toca el dominio.
 
