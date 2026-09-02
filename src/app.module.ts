@@ -14,6 +14,7 @@ import { ZonesModule } from './modules/zones/zones.module';
 import { ServiceTypesModule } from './modules/service-types/service-types.module';
 import { DisposalSitesModule } from './modules/disposal-sites/disposal-sites.module';
 import { RoutesModule } from './modules/routes/routes.module';
+import { ServiceFrequenciesModule } from './modules/service-frequencies/service-frequencies.module';
 import { CrewsModule } from './modules/crews/crews.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { ContainersModule } from './modules/containers/containers.module';
@@ -44,6 +45,7 @@ import { WeatherAlertsModule } from './modules/weather-alerts/weather-alerts.mod
     ServiceTypesModule,
     DisposalSitesModule,
     RoutesModule,
+    ServiceFrequenciesModule,
     CrewsModule,
     VehiclesModule,
     ContainersModule,
