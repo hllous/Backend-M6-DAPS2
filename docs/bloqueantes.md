@@ -2,7 +2,7 @@
 
 > **Fuente única.** Este archivo reemplaza el estado que estaba duplicado en [`LEEME.md`](../LEEME.md), [`Eventos.txt`](../Eventos.txt) y [`fuentes/alcance-entregable.md`](../fuentes/alcance-entregable.md) §7. Si algo de eso dice otra cosa, vale lo que dice acá.
 >
-> Última revisión general: **30 ago 2026**. M7 actualizó su documento de referencia: `streetClosureEnded` ya trae `closureRequestId` (cierra la asimetría que tenía) y propuso unificar `streetClosureRequested` con el payload de M3, propuesta que aceptamos. Antes, el 25 ago: M2 publicó la v1.5 (reemplaza la v1.2), M4 publicó `Modulo_4_Eventos.docx`, y M3 confirmó `sourceRequestId`. Se edita a medida que cada grupo contesta — actualizá la fila y su fecha, no reescribas el archivo.
+> Última revisión general: **2 sep 2026**. Se resolvieron las divergencias de enums por [ADR-003](decisiones/adr-003-divergencias-enums.md) —manda el catálogo, se corrige el acuerdo— y quedan tres avisos pendientes a M3, M4 y M7. M7 volvió con un cruce que confirma `streetClosureRequested` y `treePruningScheduled` campo por campo, pero se contradice a sí mismo sobre `requestingModule` vs `sourceModule`. Antes, el 30 ago 2026: M7 actualizó su documento de referencia: `streetClosureEnded` ya trae `closureRequestId` (cierra la asimetría que tenía) y propuso unificar `streetClosureRequested` con el payload de M3, propuesta que aceptamos. Antes, el 25 ago: M2 publicó la v1.5 (reemplaza la v1.2), M4 publicó `Modulo_4_Eventos.docx`, y M3 confirmó `sourceRequestId`. Se edita a medida que cada grupo contesta — actualizá la fila y su fecha, no reescribas el archivo.
 
 ## Tablero
 
@@ -32,7 +32,13 @@
 | **M1** | Confirmar las dos consultas REST (ciudadano por `citizenId`, organización por `organizationId`). No se ven en una lista de eventos, hay que reclamarlas aparte | ⚠️ A confirmar — dijeron que lo pasan el 25/8 | 25 ago 2026 |
 | **M1** | Decidir si el acta ambiental va al expediente digital. Nuestra postura: no — el hecho les llega vía M4 | ⚠️ A definir | 17 ago 2026 |
 | **Cohorte** | Fijar el sobre común. M2 ya formalizó el suyo en la v1.5 (`specVersion`, `eventId`, `eventType`, `occurredAt`, `producer`, `subject`, `data`) — sigue siendo el único envelope escrito de la cohorte | ⚠️ A definir | 25 ago 2026 |
-| **Interno** | Los enums del [acuerdo publicado](../Acuerdo-Eventos-M6.md) no coinciden con el catálogo en cinco casos. Ver [enumeraciones.md](enumeraciones.md#divergencias-con-el-acuerdo-publicado) | ⚠️ A resolver de nuestro lado | 18 ago 2026 |
+| **Interno** | Los enums del [acuerdo publicado](Acuerdo-Eventos-M6.md) no coincidían con el catálogo en seis casos. Decidido por [ADR-003](decisiones/adr-003-divergencias-enums.md): manda el catálogo, se corrige el acuerdo | ✅ Cerrado | 2 sep 2026 |
+| **Interno** | Regenerar el acuerdo publicado con los enums corregidos y volver a circularlo | ⚠️ Pendiente | 2 sep 2026 |
+| **M7** | Avisar que `ServiceOrigin` tiene 5 valores (`PLANNED`/`MANUAL`/`WEATHER_ALERT`, no `SCHEDULED`/`INTERNAL`), que `TreeHealthStatus` no colapsa en `DECLINING` y que `TreeInterventionType` distingue las dos podas y usa `REMOVAL`, no `FELLING` | ⚠️ Aviso pendiente | 2 sep 2026 |
+| **M3** | Avisar que `TreeHealthStatus` conserva `WEAKENED` y `DISEASED` en vez de `DECLINING`, en `treeRiskDetected` | ⚠️ Aviso pendiente | 2 sep 2026 |
+| **M4** | Confirmar que toleran `FORMAL_NOTICE` como cuarto valor de `suggestedAction`. El campo no es vinculante, así que no debería bloquearles el circuito, pero son los que actúan sobre el valor | ⚠️ A confirmar | 2 sep 2026 |
+| **M7** | `streetClosureRequested`: su mensaje del 02/09 dice `requestingModule: "Obras" \| "Ambiente"` en la prosa y `sourceModule: M3 \| M6` en la tabla de campos, para el mismo evento. Dos nombres y dos vocabularios. Preguntar cuál vale | ⚠️ Pregunta abierta | 2 sep 2026 |
+| **M7** | `treePruningScheduled` exige `crewId` y `timeWindow`, que en nuestro modelo son opcionales hasta que se asignan. Implica que el evento no puede salir al programar, sino recién con cuadrilla y ventana cargadas | ⚠️ A resolver de nuestro lado | 2 sep 2026 |
 
 ## El detalle, por contraparte
 
@@ -107,6 +113,20 @@ El typo `streetClousureEnded` ya está corregido desde el 25/08: escriben `stree
 
 **También preguntaron si teníamos definidos `urbanServiceScheduled` y `treeRiskDetected`.** Ya estaban diseñados en este documento; se les compartió el payload completo de los 8 eventos que publicamos.
 
+#### Cruce del 02/09 — confirmaciones y una contradicción
+
+Volvieron con un mensaje que en su mayor parte **repite lo ya cerrado el 30/08**. Lo que aporta:
+
+- **`streetClosureRequested` coincide campo por campo** con nuestro [schema](eventos/publicados/streetClosureRequested.schema.json): `closureRequestId`, `sourceModule`, `sourceRef`, `reason`, `affectedSections[]`, `requestedFrom`, `requestedTo`, `closureType?`, `requestedAt`. Nada que cambiar de nuestro lado.
+- **`treePruningScheduled` también coincide exacto**, los 11 campos y el mismo conjunto de requeridos.
+- **Volvieron a preguntar por `urbanServiceScheduled` y `treeRiskDetected`**, que ya se les había compartido el 30/08. Conviene reenviarles el documento y confirmar que les llegó.
+
+🔴 **La contradicción, que es lo único accionable:** en el mismo mensaje describen `streetClosureRequested` con `{requestingModule: "Obras" | "Ambiente"}` en la prosa y con `sourceModule: string — M3 o M6` en la tabla de campos. Son dos nombres de campo distintos y dos vocabularios distintos para el mismo dato.
+
+Nuestro schema manda `sourceModule = "M6"`, que es lo que dice su tabla. Pero sus tres eventos de respuesta devuelven `requestingModule` con valores `"Obras"`/`"Ambiente"`, así que puede ser que hayan mezclado el campo de ida con el de vuelta. **Hay que preguntarlo antes de fijar el publisher en la Fase 3**: si mandamos el nombre equivocado, no pueden rutear la respuesta.
+
+⚠️ **Un problema nuestro que salió de su tabla:** `treePruningScheduled` declara `crewId` y `timeWindow` como requeridos, y en nuestro modelo `Service.crewId` es opcional hasta que se asigna la cuadrilla y `windowFrom`/`windowTo` son opcionales. El evento entonces **no puede publicarse al programar la intervención**, sino recién cuando el servicio tiene cuadrilla y ventana. Hay que decidir en la Fase 3 si se difiere la publicación hasta ese momento o si se le pide a M7 que los acepte opcionales.
+
 ### M1 — Ciudadanos ⚪ sin eventos
 
 Coherente con lo acordado: sin eventos en ninguna dirección. Los dos pedidos son REST y hay que reclamarlos aparte, porque no se ven en una lista de eventos.
@@ -142,7 +162,7 @@ Sin integración, confirmado de los dos lados. De M5: nuestra acta les llega con
 
 **Los adjuntos se llaman distinto.** M2 usa `attachment { attachmentId, fileName, contentType, url, sizeBytes }`; nosotros veníamos con `{ url, mimeType, description }`. Nos alineamos al suyo en lo que va hacia M2; conviene unificarlo en toda la cohorte antes de implementar.
 
-**Huérfanos ajenos** (alguien los espera y nadie los publica): el par `paymentRegistered` / `debtSettled` es el más caro — rompe el cierre financiero de M4 y M7 con Rentas, porque M5 los publica como `paymentRecorded` y `debtCancelled`. La lista completa está en [`Cruce-Eventos-M6.md`](../Cruce-Eventos-M6.md) Parte 3; no la duplicamos acá porque no nos toca mantenerla.
+**Huérfanos ajenos** (alguien los espera y nadie los publica): el par `paymentRegistered` / `debtSettled` es el más caro — rompe el cierre financiero de M4 y M7 con Rentas, porque M5 los publica como `paymentRecorded` y `debtCancelled`. La lista completa está en [`Cruce-Eventos-M6.md`](Cruce-Eventos-M6.md) Parte 3; no la duplicamos acá porque no nos toca mantenerla.
 
 ## Plan B si M2 no resuelve
 

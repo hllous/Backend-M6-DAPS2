@@ -25,7 +25,7 @@ crewId, requiresStreetClosure
 
 Enums: `interventionType` es `TreeInterventionType` — ver [enumeraciones.md](../../enumeraciones.md).
 
-⚠️ **`interventionType` está en conflicto** con el acuerdo publicado ([divergencia 4](../../enumeraciones.md#divergencias-con-el-acuerdo-publicado)).
+✅ **`interventionType` conserva los cinco valores del catálogo** ([ADR-003](../../decisiones/adr-003-divergencias-enums.md), divergencia 4): el acuerdo publicado no distinguía las dos podas y llamaba `FELLING` a `REMOVAL`. Pendiente de avisarle a M7.
 
 ## Qué le pedimos al consumidor
 
