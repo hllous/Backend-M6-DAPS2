@@ -2,6 +2,12 @@ import { Global, Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OutboxService } from './outbox/outbox.service';
+import { InboxService } from './inbox/inbox.service';
+import { InboxController } from './inbox/inbox.controller';
+import { OutboundResponsesConsumer } from './consumers/outbound-responses.consumer';
+import { SanctionsConsumer } from './consumers/sanctions.consumer';
+import { TicketsConsumer } from './consumers/tickets.consumer';
+import { WeatherConsumer } from './consumers/weather.consumer';
 import { OutboxDispatcher } from './outbox/outbox-dispatcher.service';
 import { EventPublisher } from './publishers/event-publisher.port';
 import { KafkaEventPublisher } from './publishers/kafka.publisher';
@@ -19,9 +25,16 @@ import { LoggingEventPublisher } from './publishers/logging.publisher';
 @Global()
 @Module({
   imports: [ScheduleModule.forRoot()],
+  controllers: [InboxController],
   providers: [
     OutboxService,
     OutboxDispatcher,
+    InboxService,
+    // Cada uno registra sus handlers en su onModuleInit.
+    OutboundResponsesConsumer,
+    SanctionsConsumer,
+    TicketsConsumer,
+    WeatherConsumer,
     {
       provide: EventPublisher,
       inject: [ConfigService],
@@ -41,6 +54,6 @@ import { LoggingEventPublisher } from './publishers/logging.publisher';
       },
     },
   ],
-  exports: [OutboxService, OutboxDispatcher],
+  exports: [OutboxService, OutboxDispatcher, InboxService],
 })
 export class EventsModule {}

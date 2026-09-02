@@ -57,6 +57,8 @@ async function bootstrap() {
     // Control ambiental
     .addTag('environmental-reports', 'Denuncias y expedientes ambientales')
     .addTag('environmental-inspections', 'Inspecciones ambientales')
+    // Integración
+    .addTag('events', 'Ingesta de eventos entrantes y estado de los handlers')
     // Otros
     .addTag('citizen-portal', 'Endpoints públicos del portal del ciudadano')
     .addTag('health', 'Health check y estado del servicio')
@@ -104,6 +106,7 @@ Un endpoint pertenece a **un solo tag**. Los tags deben coincidir exactamente co
 | | `street-closure-requests` | Cortes de calle solicitados a M7 |
 | Control ambiental | `environmental-reports` | Denuncias ambientales, expedientes |
 | | `environmental-inspections` | Inspecciones programadas y realizadas |
+| Integración | `events` | Ingesta de eventos entrantes y estado de los handlers |
 | Otros | `citizen-portal` | Endpoints expuestos al ciudadano (portal público) |
 | | `health` | `/health`, `/ready`, `/metrics` |
 

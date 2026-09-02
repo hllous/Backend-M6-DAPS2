@@ -30,11 +30,14 @@ export const REPORT_TRANSITIONS: Record<S, S[]> = {
   INSPECTED: [S.NO_VIOLATION, S.VIOLATION_FOUND],
   VIOLATION_FOUND: [S.NOTICE_ISSUED],
   NOTICE_ISSUED: [S.SANCTIONED, S.CLOSED],
-  FORWARDED: [S.CLOSED],
-  DISMISSED: [S.CLOSED],
-  NO_VIOLATION: [S.CLOSED],
+  // La reapertura llega por ticketUpdated/REOPENED: el vecino rechazó la
+  // solución y el expediente vuelve a gestión. No se reabre un expediente
+  // SANCTIONED — eso ya lo resolvió M4 y no es nuestro para revertir.
+  FORWARDED: [S.CLOSED, S.UNDER_REVIEW],
+  DISMISSED: [S.CLOSED, S.UNDER_REVIEW],
+  NO_VIOLATION: [S.CLOSED, S.UNDER_REVIEW],
   SANCTIONED: [S.CLOSED],
-  CLOSED: [],
+  CLOSED: [S.UNDER_REVIEW],
 };
 
 function toNumber(value: Prisma.Decimal | null): number | null {
