@@ -11,7 +11,7 @@
 | **M2** | `responsibleAreaId`, `citizenId`, `isAnonymous` y `location` estructurada (`neighborhoodId`, `street`, `streetNumber`, `latitude`, `longitude`) ahora son campos comunes de `ticketUpdated` en la v1.5 | ✅ Cerrado | 25 ago 2026 |
 | **M2** | `progress` de `updateTicketStatus` en la v1.5 es un `Int` (porcentaje), no la fecha/franja agendada que necesitamos mandar. No hay estructura de `details` definida para `STARTED`/`PROGRESS` | 🔴 Bloqueante | 25 ago 2026 |
 | **M9** | Ausente de la recopilación. Falta la lista de eventos del Core | 🔴 Bloqueante | 17 ago 2026 |
-| **M9** | Claim set del JWT sin definir. El enunciado le asigna la identidad a M9 **y** a M1 | 🔴 Bloqueante — el principal del proyecto | 17 ago 2026 |
+| **M9** | Claim set del JWT sin definir. El enunciado le asigna la identidad a M9 **y** a M1. Mitigado de nuestro lado con una estrategia HS256 provisoria y guard global ([ADR-002](decisiones/adr-002-auth-provisoria.md)): la API ya no está abierta, pero los tokens no son los definitivos y la autorización por rol sigue sin existir | 🔴 Bloqueante — el principal del proyecto | 2 sep 2026 |
 | **M9** | Catálogo de barrios con `neighborhoodId` estable, sin exponer. M2 ya lo usa en `location`, así que el catálogo tiene que existir en algún lado aunque no lo hayamos visto publicado | 🔴 Bloqueante | 17 ago 2026 |
 | **M9** | "Zona operativa" (nuestra, agrupa barrios) contra "zona" (de ellos). Misma palabra, distinta cosa | ⚠️ A definir | 17 ago 2026 |
 | **M9** | `notificationSent` no lo publica nadie hoy. Puede que lo saquemos de lo consumido | ⚠️ A confirmar | 17 ago 2026 |
