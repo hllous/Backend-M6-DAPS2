@@ -26,12 +26,7 @@ import { PaginatedResponseDto } from '../../common/dto';
  *   RELOCATING → ACTIVE (nueva ubicación)
  */
 const VALID_TRANSITIONS: Record<ContainerStatus, ContainerStatus[]> = {
-  ACTIVE: [
-    ContainerStatus.OVERFLOWED,
-    ContainerStatus.DAMAGED,
-    ContainerStatus.RELOCATING,
-    ContainerStatus.REMOVED,
-  ],
+  ACTIVE: [ContainerStatus.OVERFLOWED, ContainerStatus.DAMAGED, ContainerStatus.RELOCATING],
   OVERFLOWED: [ContainerStatus.ACTIVE],
   DAMAGED: [ContainerStatus.UNDER_REPAIR, ContainerStatus.REMOVED],
   UNDER_REPAIR: [ContainerStatus.ACTIVE],
@@ -202,7 +197,7 @@ export class ContainersService {
     });
   }
 
-  /** DAMAGED → REMOVED (o ACTIVE → REMOVED) */
+  /** DAMAGED → REMOVED (no admite reparación) */
   async remove(id: string): Promise<ContainerResponseDto> {
     return this.transition(id, ContainerStatus.REMOVED);
   }

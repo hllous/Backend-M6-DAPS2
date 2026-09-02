@@ -5,7 +5,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { Prisma, TreeInterventionStatus } from '@prisma/client';
+import { Prisma, TreeInterventionStatus, TreeInterventionType } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
   CreateTreeInterventionDto,
@@ -122,7 +122,7 @@ export class TreeInterventionsService {
   async submitForAuthorization(id: string): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
 
-    if (intervention.interventionType !== 'REMOVAL') {
+    if (intervention.interventionType !== TreeInterventionType.REMOVAL) {
       throw new BadRequestException(
         'Solo las intervenciones de tipo REMOVAL requieren autorización',
       );
@@ -136,6 +136,18 @@ export class TreeInterventionsService {
    */
   async authorize(id: string, dto: AuthorizeInterventionDto): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
+
+    // Sin esto una extracción se autoriza directo desde REQUESTED y el control
+    // de autorización queda salteado: la tabla de transiciones habilita
+    // REQUESTED → AUTHORIZED, pero eso es para las podas, que no lo requieren.
+    if (
+      intervention.interventionType === TreeInterventionType.REMOVAL &&
+      intervention.status === TreeInterventionStatus.REQUESTED
+    ) {
+      throw new ConflictException(
+        'Una extracción debe pasar por PENDING_AUTHORIZATION antes de autorizarse. Usar POST /tree-interventions/:id/submit-for-authorization',
+      );
+    }
 
     return this.transition(intervention, TreeInterventionStatus.AUTHORIZED, {
       authorizedByUserId: dto.authorizedByUserId ?? null,

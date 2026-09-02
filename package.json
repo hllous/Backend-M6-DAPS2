@@ -88,8 +88,7 @@
       "^@config/(.*)$": "<rootDir>/config/$1",
       "^@auth/(.*)$": "<rootDir>/auth/$1",
       "^@modules/(.*)$": "<rootDir>/modules/$1",
-      "^@events/(.*)$": "<rootDir>/events/$1",
-      "^@prisma/(.*)$": "<rootDir>/prisma/$1"
+      "^@events/(.*)$": "<rootDir>/events/$1"
     }
   },
   "prisma": {
