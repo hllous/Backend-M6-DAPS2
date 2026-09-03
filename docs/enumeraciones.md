@@ -4,7 +4,7 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 
 > **Es la fuente.** Los archivos de evento y de entidad linkean acá en vez de repetir los valores. Si agregás un valor, agregalo en esta tabla y no en el archivo que lo usa.
 >
-> Migrado de [`fuentes/alcance-entregable.md`](../fuentes/alcance-entregable.md) §5.3. Ojo con las [divergencias contra el acuerdo publicado](#divergencias-con-el-acuerdo-publicado--resueltas), ya resueltas al final.
+> Migrado de `fuentes/alcance-entregable.md` §5.3, en el repositorio de documentación. Ojo con las [divergencias contra el acuerdo publicado](#divergencias-con-el-acuerdo-publicado--resueltas), ya resueltas al final.
 
 ## Catálogo
 

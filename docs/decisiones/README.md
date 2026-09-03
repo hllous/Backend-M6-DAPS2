@@ -17,6 +17,6 @@ Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeraci�
 | Nº | Título | Estado | Fecha |
 |---|---|---|---|
 | [001](adr-001-stack-tecnologico.md) | Stack tecnológico del módulo | Aceptado | 2026-08-20 |
-| [002](adr-002-auth-provisoria.md) | Autenticación provisoria mientras M9 no define el claim set | Propuesto | 2026-09-02 |
+| [002](adr-002-auth-provisoria.md) | Autenticación provisoria mientras M1 no publica su contrato de JWT | Aceptado | 2026-09-02 |
 | [003](adr-003-divergencias-enums.md) | Resolución de las divergencias de enums con el acuerdo publicado | Propuesto | 2026-09-02 |
 | [004](adr-004-jwt-m1-y-puerto-identidad.md) | JWT de usuario emitido por M1 y consulta a identidad desacoplada por puerto | Aceptado | 2026-09-01 |
