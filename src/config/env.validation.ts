@@ -22,6 +22,15 @@ export const envSchema = z.object({
   KAFKA_BROKERS: z.string().optional(),
   KAFKA_CLIENT_ID: z.string().default('m6-ambiente'),
   KAFKA_GROUP_ID: z.string().default('m6-ambiente-group'),
+
+  // Cloudflare R2 (S3-compatible) para evidencia/adjuntos — Issue #64.
+  // Opcionales: sin credenciales la app arranca igual, pero POST /evidence
+  // falla al subir. Ver src/modules/attachments/storage/r2-evidence-storage.service.ts.
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET: z.string().optional(),
+  R2_PUBLIC_URL_BASE: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
