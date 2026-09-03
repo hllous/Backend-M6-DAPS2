@@ -29,6 +29,7 @@ import { OutboundRequestsModule } from './modules/outbound-requests/outbound-req
 import { CitizenPortalModule } from './modules/citizen-portal/citizen-portal.module';
 import { WeatherAlertsModule } from './modules/weather-alerts/weather-alerts.module';
 import { AttachmentsModule } from './modules/attachments/attachments.module';
+import { IndicatorsModule } from './modules/indicators/indicators.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { AttachmentsModule } from './modules/attachments/attachments.module';
     CitizenPortalModule,
     WeatherAlertsModule,
     AttachmentsModule,
+    IndicatorsModule,
   ],
   providers: [
     // Todo endpoint exige JWT por defecto. Los publicos se marcan con @Public().

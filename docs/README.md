@@ -1,6 +1,6 @@
 # Módulo 6 — Ambiente, Higiene y Servicios Urbanos
 
-> Fuente original: [`fuentes/alcance-entregable.md`](../fuentes/alcance-entregable.md) §1-2. Esta versión es la que se mantiene viva; el entregable formal se sigue generando de la fuente original hasta que se unifique el pipeline (ver [bloqueantes.md](bloqueantes.md)).
+> Fuente original: `fuentes/alcance-entregable.md` §1-2, en el repositorio de documentación. Esta versión es la que se mantiene viva; el entregable formal se sigue generando de la fuente original hasta que se unifique el pipeline (ver [bloqueantes.md](bloqueantes.md)).
 
 Módulo operativo de campo de la higiene urbana y el control ambiental. Planifica y ejecuta los servicios de recolección, limpieza, arbolado y espacios verdes; administra el inventario urbano ambiental; y tramita las denuncias ambientales hasta el acta de constatación, registrando después la resolución sancionatoria que devuelve M4.
 
@@ -17,9 +17,9 @@ Módulo operativo de campo de la higiene urbana y el control ambiental. Planific
 | **Arbolado** | Censo con historial de relevamientos; poda, extracción, plantación y tratamiento |
 | **Espacios verdes** | Plazas y parques, con riego y corte de césped |
 | **Control ambiental** | Denuncias ambientales —ruidos, vertidos, microbasurales, emisiones—, inspección, acta de constatación y violación constatada |
-| **Seguimiento del ciudadano** | Publicamos el avance de la inspección para que M2 lo muestre, y ofrecemos una vista de consulta complementaria con el detalle operativo |
+| **Seguimiento del ciudadano** | Publicamos el avance de la inspección para que M2 lo muestre, y servimos sin token la consulta complementaria bajo `/public`: seguimiento de la denuncia, cuándo pasa el servicio y dónde están los puntos verdes |
 
-Detalle funcional de cada área (qué se puede hacer, no solo el título): ver [`fuentes/alcance-entregable.md`](../fuentes/alcance-entregable.md) §3. No se migró acá porque cambia poco y no es algo que otro módulo necesite consultar — si empieza a cambiar seguido, se trocea.
+Detalle funcional de cada área (qué se puede hacer, no solo el título): ver `fuentes/alcance-entregable.md` §3, en el repositorio de documentación. No se migró acá porque cambia poco y no es algo que otro módulo necesite consultar — si empieza a cambiar seguido, se trocea.
 
 ## Glosario
 
@@ -31,12 +31,16 @@ Detalle funcional de cada área (qué se puede hacer, no solo el título): ver [
 | **Acta** (`ViolationNotice`) | Lo que emitimos al constatar una violación. Inmutable una vez emitida. Ver [entidades/control-ambiental.md](entidades/control-ambiental.md) |
 | **Cuadrilla** (`Crew`) | Equipo de trabajo, municipal o de cooperativa, que ejecuta servicios |
 
-## Tablero de indicadores (a construir)
+## Tablero de indicadores
+
+Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](api/endpoints.md).
 
 - **Cobertura**: objetivos atendidos sobre programados, por período, zona y tipo de servicio.
 - **Cumplimiento**: servicios finalizados en término, demorados, y ranking de zonas no atendidas con sus motivos.
 - **Incidencias**: contenedores desbordados y dañados por zona, árboles por nivel de riesgo, denuncias por tipo y estado, y tiempo medio de resolución.
-- **Residuos**: toneladas y metros cúbicos por tipo y destino, y porcentaje desviado a reciclaje.
+- **Residuos**: kilos y metros cúbicos por tipo y destino, y porcentaje desviado a reciclaje.
+
+**El objetivo es el par (servicio, zona), no el servicio.** Un recorrido que pasa por cuatro zonas y atiende tres son tres objetivos cumplidos y uno no; medirlo por servicio perdería justamente la zona que quedó sin atender.
 
 ## Mapa de esta carpeta
 

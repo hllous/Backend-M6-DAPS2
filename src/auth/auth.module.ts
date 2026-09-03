@@ -5,8 +5,8 @@ import { JwtStrategy } from './jwt.strategy';
 /**
  * Registra la estrategia JWT que usa el JwtAuthGuard global.
  *
- * No emite tokens: la identidad es de otro módulo (M9/M1, sin definir).
- * Acá solo los verificamos.
+ * No emite tokens: la identidad es de M1, que gestiona los usuarios de la
+ * plataforma. Acá solo los verificamos.
  */
 @Module({
   imports: [PassportModule],

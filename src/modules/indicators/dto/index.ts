@@ -1,0 +1,21 @@
+export { PeriodQueryDto, ServicePeriodQueryDto } from './indicators-queries.dto';
+export {
+  ComplianceFinishedDto,
+  ComplianceIndicatorDto,
+  ContainersByZoneDto,
+  CoverageBreakdownDto,
+  CoverageIndicatorDto,
+  CoverageTotalsDto,
+  IncidentsIndicatorDto,
+  NotServicedZoneDto,
+  PeriodDto,
+  ReasonCountDto,
+  ReportStatusCountDto,
+  ReportTypeCountDto,
+  RiskCountDto,
+  StatusCountDto,
+  WasteByTypeDto,
+  WasteBySiteDto,
+  WasteIndicatorDto,
+  WasteTotalsDto,
+} from './indicators-responses.dto';

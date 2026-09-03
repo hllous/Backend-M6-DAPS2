@@ -292,6 +292,8 @@ package "Control ambiental" #FBEEF0 {
       reporter_snapshot : jsonb
     * status : enum <<EnvironmentalReportStatus>>
       priority : enum <<Severity>>
+    * escalated : boolean       ' ticketUpdated/ESCALATION_CHANGED
+      citizen_response : text   ' ticketUpdated/INFORMATION_PROVIDED
       deadline_at : timestamp ' cierre por vencimiento
   }
 
@@ -352,7 +354,8 @@ package "Derivaciones salientes" #F7F2E7 {
       address : varchar
     * detected_in_type : varchar ' SERVICE | INSPECTION
     * detected_in_id : uuid      ' polimórfico
-    * status : varchar           ' REQUESTED | IN_PROGRESS | CLOSED
+    * public_safety_risk : boolean ' M3 prioriza con esto; no se deriva de severity
+    * status : enum <<RepairRequestStatus>>
       work_order_id : varchar <<EXT M3>>
     * requested_at : timestamp
   }
@@ -364,9 +367,9 @@ package "Derivaciones salientes" #F7F2E7 {
     * source_type : varchar ' SERVICE | TREE_INTERVENTION
     * source_id : uuid      ' polimórfico
       closure_type : enum <<StreetClosureType>>
-    * closure_from : timestamp
-    * closure_to : timestamp
-    * status : varchar ' REQUESTED | APPROVED | REJECTED | ENDED
+      closure_from : timestamp
+      closure_to : timestamp
+    * status : enum <<StreetClosureRequestStatus>>
       closure_id : varchar <<EXT M7>>
   }
 
@@ -390,7 +393,9 @@ package "Integración (técnico, no de dominio)" #EFEFEF {
     * aggregate_type : varchar
     * aggregate_id : uuid
     * payload : jsonb
-    * status : varchar ' PENDING | SENT | FAILED
+    * status : enum <<OutboxEventStatus>>
+    * attempts : integer      ' reintentos del dispatcher, tope 5
+      last_error : varchar    ' por qué falló el último intento
     * occurred_at : timestamp
       published_at : timestamp
   }
@@ -402,7 +407,8 @@ package "Integración (técnico, no de dominio)" #EFEFEF {
     * event_type : varchar
     * payload : jsonb
     * received_at : timestamp
-      processed_at : timestamp
+      processed_at : timestamp ' null mientras no se aplicó el efecto
+      error : varchar          ' por qué falló el handler
   }
 }
 

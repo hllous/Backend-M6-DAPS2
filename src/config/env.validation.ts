@@ -8,7 +8,7 @@ export const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().url(),
 
-  // JWT — placeholder hasta que M9 defina el claim set
+  // JWT — placeholder hasta que M1 publique su contrato de firma y claims
   JWT_SECRET: z.string().min(8),
   JWT_EXPIRATION: z.coerce.number().default(3600),
 

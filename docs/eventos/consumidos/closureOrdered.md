@@ -1,5 +1,7 @@
 # `closureOrdered` ← M4
 
+> **Reemplazado el 24/08/2026.** M4 fusionó `closureOrdered` y `closureLifted` en un evento único, [`closureUpdate`](closureUpdate.md) con `status: ORDERED | LIFTED`. Este archivo queda como registro de lo que se acordó antes; **el handler implementado es el de `closureUpdate`**.
+
 M4 resolvió clausurar el establecimiento del acta que les derivamos. Segunda de las tres señales de cierre.
 
 ## Qué hace M6 al recibirlo
