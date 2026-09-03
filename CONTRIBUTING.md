@@ -26,7 +26,7 @@ Los tipos que usamos:
 | `fix/` | Corrección de un bug |
 | `docs/` | Cambios solo en documentación |
 | `refactor/` | Reescritura sin cambio de comportamiento |
-| `test/` | Agregado o corrección de tests |
+| `tests/` | Agregado o corrección de tests. **En plural**: `test/` choca con la rama protegida `test` y git rechaza el push |
 | `chore/` | Configuración, dependencias, tooling |
 
 Ejemplos:
@@ -36,7 +36,7 @@ feature/endpoint-crear-contenedor
 fix/validacion-fecha-servicio
 docs/adr-002-broker
 refactor/service-modulo-arboles
-test/environmental-report-coverage
+tests/environmental-report-coverage
 chore/actualizar-nestjs
 ```
 
