@@ -75,6 +75,11 @@ async function bootstrap() {
     // ─── Control ambiental ────────────────────────
     .addTag('environmental-reports', 'Denuncias y expedientes ambientales')
     .addTag('environmental-inspections', 'Inspecciones ambientales')
+    // ─── Evidencia ────────────────────────────────
+    .addTag(
+      'evidence',
+      'Adjuntos de evidencia (foto/PDF) para Container, Service, ZoneResult e Inspection',
+    )
     // ─── Integración ──────────────────────────────
     .addTag('events', 'Ingesta de eventos entrantes y estado de los handlers')
     // ─── Tablero ──────────────────────────────────

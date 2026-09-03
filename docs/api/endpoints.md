@@ -2,7 +2,7 @@
 
 Resumen de lo que expone el backend. La fuente de verdad interactiva es el Swagger en `/api/docs`; este archivo existe para poder ver el mapa completo sin levantar nada, y porque el [DoD](../gestion/definition-of-done.md) lo pide para cada endpoint nuevo.
 
-> **Actualizado al 02/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero). 128 rutas, agrupadas en 22 tags de Swagger.
+> **Actualizado al 02/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero) + evidencia genérica (Issue #64). 130 rutas, agrupadas en 23 tags de Swagger.
 
 ## Convenciones
 
@@ -268,6 +268,19 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 **El acta es inmutable.** No hay `PATCH` ni `DELETE`: si hay un error se emite otra sobre una inspección nueva. Una segunda acta sobre la misma inspección da 409.
 
 **Sin `establishmentId` el acta no se deriva.** Se registra igual, pero no se publica `environmentalViolationDetected` y el expediente cierra de nuestro lado: intimar, clausurar y multar se le aplican a un comercio habilitado, que es lo único sobre lo que M4 puede actuar.
+
+## `evidence` — adjuntos (foto/PDF)
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key` |
+| GET | `/evidence` | Lista la evidencia de un `ownerType`/`ownerId`, por query params |
+
+**Genérico por diseño (Issue #64).** Un solo módulo sirve a los cuatro tipos de recurso en vez de reimplementar la subida por cada uno — el modelo `Attachment` ya era polimórfico en el schema, esto le agrega el endpoint que faltaba.
+
+**Storage: Cloudflare R2** (S3-compatible), bucket público. La respuesta (`{id, url, filename, contentType, uploadedAt}`) sigue la hipótesis ya documentada por el frontend en su `CONTRACTS.md`, distinta del shape `{attachmentId, fileName, sizeBytes}` que espera M2 en sus eventos — ese mapeo queda para cuando se implemente el envío de `evidence` hacia M2 (ver `bloqueantes.md`).
+
+**Idempotencia real, no solo validada.** `Idempotency-Key` repetida para el mismo owner devuelve el `Attachment` existente en vez de subir de nuevo — respaldado por un constraint único en DB (`ownerType`, `ownerId`, `idempotencyKey`), no por una consulta previa que podría perder una carrera.
 
 ## `green-spaces` — espacios verdes
 
