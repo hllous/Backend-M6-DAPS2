@@ -136,7 +136,7 @@ export class GreenSpacesService {
       name: greenSpace.name,
       spaceType: greenSpace.spaceType,
       zoneId: greenSpace.zoneId,
-      areaM2: greenSpace.areaM2 ? Number(greenSpace.areaM2) : null,
+      areaM2: greenSpace.areaM2 === null ? null : Number(greenSpace.areaM2),
       active: greenSpace.active,
       createdAt: greenSpace.createdAt,
       updatedAt: greenSpace.updatedAt,
