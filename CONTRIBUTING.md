@@ -66,7 +66,7 @@ Un commit por cambio lógico. No metas 15 archivos sin relación en un commit gi
 
 ## Pull Requests
 
-Todo cambio entra a `main` por PR. Nada de commits directos a `main`.
+Todo cambio entra por PR. La rama de integración es `develop`: ahí apuntan los PR de `feature/*`, `fix/*`, `docs/*` e `infra/*`. De `develop` sale a `test` y de `test` a `main`. Nada de commits directos a ninguna de las tres.
 
 **Un buen PR tiene:**
 
@@ -134,17 +134,17 @@ Si vas a hacer un cambio grande en la doc de dominio (`docs/entidades/`, `docs/e
 
 - **Nunca commitear** claves, tokens, connection strings, secretos de ningún tipo.
 - Todo va a `.env` (que está en `.gitignore`).
-- Si agregás una nueva variable, actualizá el `.env.example` (a crear en sprint 1) con un valor placeholder.
+- Si agregás una nueva variable, actualizá el [`.env.example`](.env.example) con un valor placeholder, y sumala al esquema de [`src/config/env.validation.ts`](src/config/env.validation.ts) para que la app falle al arrancar si falta.
 
-## Cuando algo se rompe en `main`
+## Cuando algo se rompe en `develop`
 
-Si un PR mergeado rompe el build o los tests en `main`:
+Es la rama donde corren el CI y el deploy automático, así que es donde se ve primero. Si un PR mergeado rompe el build o los tests:
 
 1. Avisar al equipo por el canal del grupo.
 2. Revertir el commit (`git revert`) si la fix va a tardar más de 1 hora.
 3. Trabajar la fix en una rama `fix/*` aparte, no directo en `main`.
 
-`main` siempre debe estar deployable.
+`develop` siempre debe estar deployable: cada push a esa rama dispara el deploy en Render.
 
 ## Definition of Done
 

@@ -23,7 +23,7 @@ Los tres PDF están en [`docs/`](docs/) para tenerlos junto al resto de la docum
 |---|---|
 | [`docs/Documento de Alcance - Grupo 04 (Modulo 6).pdf`](docs/Documento%20de%20Alcance%20-%20Grupo%2004%20%28Modulo%206%29.pdf) | **El entregable de la cátedra.** Alcance completo del módulo |
 | [`docs/Diagrama de Eventos - Grupo 04 (Modulo 6).pdf`](docs/Diagrama%20de%20Eventos%20-%20Grupo%2004%20%28Modulo%206%29.pdf) | Diagrama de integración M6 ↔ resto vía Core |
-| [`docs/Acuerdo-Eventos-M6.pdf`](docs/Acuerdo-Eventos-M6.pdf) | **El documento que circula a los otros grupos.** Los 8 eventos que publicamos con sus payloads, lo que consumimos, y las incongruencias abiertas |
+| `docs/Acuerdo-Eventos-M6.pdf` (compilado, en el repositorio de documentación) | **El documento que circula a los otros grupos.** Los 8 eventos que publicamos con sus payloads, lo que consumimos, y las incongruencias abiertas |
 | `Cruce-Eventos-M6.md` | Análisis interno: cruce de las listas de eventos de M1–M9 contra la nuestra |
 | `M6-por-modulo/M6-para-M{1..9}.md` | Una ficha por módulo, para mandarle a cada grupo la suya |
 
@@ -87,7 +87,8 @@ Bloqueantes abiertos:
 |---|---|
 | **M2** | Que `ticketUpdated / ROUTED` diga a qué módulo va —o el catálogo de `requestTypeId` que nos corresponden— y que `location` traiga `neighborhoodId` en vez de texto libre |
 | **M4** | Que devuelvan `sourceViolationId` en `commercialFineGenerated`, `closureOrdered` y `closureLifted` |
-| **M9** | No aparece en la recopilación. Falta el claim set del JWT y el catálogo de barrios |
+| **M9** | No aparece en la recopilación. Falta la lista de eventos del Core y el catálogo de barrios |
+| **M1** | Confirmado como emisor del JWT; falta su contrato técnico: `alg`, `iss`, `aud`, claves/JWKS, claims y TTL |
 
 M3, M4 y M7 ya confirmaron todo lo que les mandamos.
 

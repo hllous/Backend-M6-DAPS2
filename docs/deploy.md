@@ -124,7 +124,7 @@ La infraestructura está deployada, las migraciones corren solas en cada deploy 
 |---|---|---|
 | 1 | **Migraciones de Prisma** | ✅ Resuelto (PR #49). El `CMD` del Dockerfile corre `npx prisma migrate deploy` antes de arrancar. Si la migración falla, el contenedor no levanta — es deliberado: preferimos no servir una API contra un esquema desactualizado |
 | 2 | **Services de dominio** | ✅ Zonas, cuadrillas, vehículos, contenedores, arbolado, espacios verdes, catálogos y `Service` completo |
-| 3 | **Autenticación** | ⚠️ Provisoria. Todo endpoint exige JWT (guard global), pero la verificación es HS256 contra `JWT_SECRET` hasta que M9 publique su claim set. La autorización por rol **todavía no existe**: cualquier usuario autenticado puede llamar cualquier endpoint. Ver [ADR-002](decisiones/adr-002-auth-provisoria.md) |
+| 3 | **Autenticación** | ⚠️ Provisoria. Todo endpoint exige JWT (guard global), pero la verificación es HS256 contra `JWT_SECRET` hasta que M1 publique su contrato de firma y claims. La autorización por rol **todavía no existe**: cualquier usuario autenticado puede llamar cualquier endpoint. Ver [ADR-002](decisiones/adr-002-auth-provisoria.md) |
 | 4 | **Eventos** | ⏳ Fase 3. No se publica ni se consume nada del bus todavía |
 | 5 | **UI del frontend** | ⏳ Frontend. Falta construir las vistas que consuman la API por `NEXT_PUBLIC_API_URL` |
 

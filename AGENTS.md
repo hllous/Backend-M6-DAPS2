@@ -1,6 +1,6 @@
 # AGENTS.md — Módulo 6, Grupo 04
 
-TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal distribuida, 9 grupos, 1 módulo c/u, integrada por eventos asincrónicos (`AsyncAPI`/bus de eventos, sobre pendiente de que M9 lo defina) + REST solo para lo síncrono. Cada módulo: frontend + backend en 3 capas + DB propia; sin acceso directo entre bases. Enunciado completo: [enunciado/TPO - Desarrollo de Apps II - Gestión de municipalidad.pdf](enunciado/TPO%20-%20Desarrollo%20de%20Apps%20II%20-%20Gesti%C3%B3n%20de%20municipalidad.pdf).
+TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal distribuida, 9 grupos, 1 módulo c/u, integrada por eventos asincrónicos (`AsyncAPI`/bus de eventos, sobre pendiente de que M9 lo defina) + REST solo para lo síncrono. Cada módulo: frontend + backend en 3 capas + DB propia; sin acceso directo entre bases. Enunciado completo: `enunciado/TPO - Desarrollo de Apps II - Gestión de municipalidad.pdf`, en el repositorio de documentación.
 
 ## Por dónde empezar
 
@@ -16,11 +16,11 @@ TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal d
 
 ## Qué NO es `docs/`
 
-Documentación interna (equipo + IA que programe el módulo), no lo entregado a la cátedra ni lo que circula a otros grupos — eso es el pipeline de PDF en [`fuentes/`](fuentes/) (ver [LEEME.md](LEEME.md)). Ambos conjuntos pueden divergir un tiempo; no están unificados aún — mejora pendiente, no bug.
+Documentación interna (equipo + IA que programe el módulo), no lo entregado a la cátedra ni lo que circula a otros grupos — eso es el pipeline de PDF en `fuentes/`, que vive en el repositorio de documentación (ver [LEEME.md](LEEME.md)). Ambos conjuntos pueden divergir un tiempo; no están unificados aún — mejora pendiente, no bug.
 
 ## PDFs en `docs/`
 
-`docs/*.pdf` (Documento de Alcance, Diagrama de Eventos, Acuerdo-Eventos-M6) son entregables compilados, no fuente — no leerlos para contexto. El contenido vive en Markdown editable: `Acuerdo-Eventos-M6.md`, `fuentes/alcance-entregable.md`, y el resto de `docs/` (ver [LEEME.md](LEEME.md) para el mapeo fuente → PDF). Abrir el PDF solo si se pide explícitamente verificar el entregable compilado tal cual se presentó.
+`docs/*.pdf` (Documento de Alcance, Diagrama de Eventos, Acuerdo-Eventos-M6) son entregables compilados, no fuente — no leerlos para contexto. El contenido vive en Markdown editable: `Acuerdo-Eventos-M6.md`, el resto de `docs/`, y `fuentes/alcance-entregable.md` en el repositorio de documentación (ver [LEEME.md](LEEME.md) para el mapeo fuente → PDF). Abrir el PDF solo si se pide explícitamente verificar el entregable compilado tal cual se presentó.
 
 ## Convenciones
 

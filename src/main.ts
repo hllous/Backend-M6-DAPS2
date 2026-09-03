@@ -45,7 +45,7 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'JWT emitido por el módulo Core (M9)',
+        description: 'JWT emitido por M1, que gestiona los usuarios de la plataforma',
       },
       'JWT-auth',
     )

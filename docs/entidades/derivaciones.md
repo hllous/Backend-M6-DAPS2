@@ -4,7 +4,7 @@ Las dos entidades que representan un pedido a otro módulo. Existen para poder *
 
 | Entidad | Campos principales |
 |---|---|
-| `RepairRequest` | Hacia **M3**. `damageType`, `location`, `severity`, `detectedIn`, `status` |
+| `RepairRequest` | Hacia **M3**. `damageType`, `location`, `severity`, `publicSafetyRisk`, `detectedIn`, `status`, `workOrderId` |
 | `StreetClosureRequest` | Hacia **M7**. `reason`, `sourceRef`, `affectedSections[]`, `requestedFrom`, `requestedTo`, `status` |
 
 Enums: `damageType` es `RepairDamageType`, `severity` es `Severity` — ver [enumeraciones.md](../enumeraciones.md).
@@ -12,6 +12,8 @@ Enums: `damageType` es `RepairDamageType`, `severity` es `Severity` — ver [enu
 ## `RepairRequest` → M3
 
 Un daño de infraestructura que detectamos pero que no nos corresponde arreglar: pavimento roto, vereda hundida, luminaria caída, sumidero tapado. `detectedIn` guarda el `serviceId` o el `inspectionId` que lo originó.
+
+**`publicSafetyRisk` es un campo propio y no se deriva de `severity`.** Son dos cosas distintas: una vereda rota puede ser de severidad baja y aun así tener a un chico cayéndose adentro. M3 prioriza con este campo y su schema lo exige, así que lo carga quien reporta el daño.
 
 **Tres estados, no una máquina:** pedida, en curso, cerrada. Alcanza con eso, y por eso no consumimos `workOrderUpdated` de M3.
 

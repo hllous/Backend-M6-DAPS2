@@ -213,7 +213,7 @@ Dos ausencias a confirmar, no a corregir: `weatherAlertIssued` no está porque l
 
 Publicaron una **guía de integración con contrato v1.2**: sobre común, JSON Schema, matriz de transiciones, reglas de idempotencia y DLQ. Es, por lejos, el documento de integración más completo de la cohorte, y es el único que define un envelope.
 
-> 🔄 **Actualización 24/08.** M2 publicó la **v1.5**, que reemplaza la v1.2 de esta sección. Cambió el payload de `updateTicketStatus` y se resolvieron los dos bloqueantes de `ROUTED` (más el menor de `citizenId`). El detalle está en las notas de esta sección y en la ficha [M6-para-M2.md](M6-por-modulo/M6-para-M2.md).
+> 🔄 **Actualización 24/08.** M2 publicó la **v1.5**, que reemplaza la v1.2 de esta sección. Cambió el payload de `updateTicketStatus` y se resolvieron los dos bloqueantes de `ROUTED` (más el menor de `citizenId`). El detalle está en las notas de esta sección y en la ficha `M6-por-modulo/M6-para-M2.md`, en el repositorio de documentación.
 
 Publica `ticketCreated` —solo hacia M1, con el registro mínimo del ciudadano— y `ticketUpdated`. Consume `updateTicketStatus`. La riqueza no está en la cantidad de eventos sino en el discriminador: **`updateType` es lo que hace el trabajo**, en las dos direcciones.
 
@@ -276,7 +276,7 @@ Consumen `environmentalViolationDetected` y publican `commercialFineGenerated` h
 - Adoptamos `closureLifted` como tercera señal de cierre (§1.6). No les pedimos evento nuevo.
 - Su `commercialFineGenerated` está rotulado "(rentas)": confirmar que también nos lo rutean, y que trae `sourceViolationId`.
 
-> **🔄 Actualización 24/08, contra `Modulo_4_Eventos.docx`.** `closureOrdered` y `closureLifted` (abajo, y en §1.6/§1.8) se fusionaron en un solo evento, `closureUpdate`, con `status: ORDERED | LIFTED`. `sourceViolationId` ya viaja en `commercialFineGenerated` y `closureUpdate` — bloqueante cerrado. M4 confirmó además que reincorpora `decidedAt` y `externalRef`, que había sacado del payload. Sigue sin confirmarse el ruteo de `commercialFineGenerated` hacia nosotros. Detalle en [M6-por-modulo/M6-para-M4.md](M6-por-modulo/M6-para-M4.md).
+> **🔄 Actualización 24/08, contra `Modulo_4_Eventos.docx`.** `closureOrdered` y `closureLifted` (abajo, y en §1.6/§1.8) se fusionaron en un solo evento, `closureUpdate`, con `status: ORDERED | LIFTED`. `sourceViolationId` ya viaja en `commercialFineGenerated` y `closureUpdate` — bloqueante cerrado. M4 confirmó además que reincorpora `decidedAt` y `externalRef`, que había sacado del payload. Sigue sin confirmarse el ruteo de `commercialFineGenerated` hacia nosotros. Detalle en `M6-por-modulo/M6-para-M4.md`, en el repositorio de documentación.
 
 ## M7 — Tránsito ✅ ENCAJA
 
@@ -285,7 +285,7 @@ El cruce más limpio. Reciben los cuatro que les mandamos y publican los tres qu
 - ✅ Resuelto: M3 adoptó `streetClosureApproved` / `streetClosureRejected` / `streetClosureEnded`, que son los de M7. Los tres módulos coincidimos.
 - Sigue abierto `sourceRequestId` + `sourceModule` en las tres respuestas.
 
-> 🔄 **Actualización 25/08.** M7 publicó el documento "TPO - Desarrollo de Apps II - Modulo 7" con el payload completo. Cierra el typo (`streetClosureEnded`, ya sin la `u` de más) y el pedido de `sourceRequestId`/`sourceModule` —aunque con nombres distintos a los tentativos: `closureRequestId` + `requestingModule` (`"Obras"`/`"Ambiente"`), presentes en `streetClosureApproved` y `streetClosureRejected` pero no en `streetClosureEnded`, que solo trae `streetClosureId`. Detalle en [M6-por-modulo/M6-para-M7.md](M6-por-modulo/M6-para-M7.md). También confirmó con payload el `roadAccidentRegistered` que esperaba M3 (ver huérfanos, más abajo).
+> 🔄 **Actualización 25/08.** M7 publicó el documento "TPO - Desarrollo de Apps II - Modulo 7" con el payload completo. Cierra el typo (`streetClosureEnded`, ya sin la `u` de más) y el pedido de `sourceRequestId`/`sourceModule` —aunque con nombres distintos a los tentativos: `closureRequestId` + `requestingModule` (`"Obras"`/`"Ambiente"`), presentes en `streetClosureApproved` y `streetClosureRejected` pero no en `streetClosureEnded`, que solo trae `streetClosureId`. Detalle en `M6-por-modulo/M6-para-M7.md`, en el repositorio de documentación. También confirmó con payload el `roadAccidentRegistered` que esperaba M3 (ver huérfanos, más abajo).
 
 ## M1 — Ciudadanos ⚪ SIN EVENTOS, COMO ESTABA PREVISTO
 
@@ -353,7 +353,8 @@ Ordenado por lo que nos bloquea, no por módulo.
 | **M2** ✅ | **Resuelto por su contrato, actualizado a v1.5 (24/08).** `ticketUpdated / ROUTED` ya dice a qué módulo va (`responsibleAreaId`) y trae `location` estructurada con `neighborhoodId`. Era la entrada única de todo nuestro flujo de reclamos |
 | **M2** ✅ | **Resuelto por su contrato (v1.5):** `updateTicketStatus` es un evento único con `updateType`, la cancelación llega como `ticketUpdated / CANCELLED`. Adoptamos su payload tal cual |
 | **M2** 🔴 | **Nuevo (24/08): la fecha agendada del servicio no tiene campo.** El `progress` común de la v1.5 es un `Int` (porcentaje), no una fecha, y no hay `details` definido para `STARTED`/`PROGRESS` |
-| **M9** 🔴 | **Presentar la lista del Core, el claim set del JWT y el catálogo de barrios.** Nada se rutea ni se autentica sin esto, y es lo único que no avanzó en esta ronda |
+| **M9** 🔴 | **Presentar la lista de eventos del Core y el catálogo de barrios.** Sin eso no se rutea nada, y es lo único que no avanzó en esta ronda |
+| **M1** 🔴 | **Publicar el contrato técnico del JWT**: algoritmo de firma, `iss`, `aud`, claves o JWKS, claims y TTL. M1 ya está confirmado como emisor; sin esos datos no se puede verificar un token real |
 | **M4** | **Confirmar que nos rutean `commercialFineGenerated`,** que hoy está rotulado solo hacia Rentas. Les avisamos además que adoptamos `closureLifted` (hoy `closureUpdate / LIFTED`) como señal de cierre y que no les pedimos ningún evento nuevo |
 | **M3 · M4 · M7** ✅ M3 · ✅ M4 · ✅ M7 | **Devolver el identificador de origen.** `sourceRequestId` en `workOrderCompleted` y en las tres de corte; `sourceViolationId` en `commercialFineGenerated` y `closureOrdered` — **los tres ya lo devuelven.** M3 confirmó `sourceRequestId` en `workOrderScheduled` y `workOrderCompleted`; M4 confirmó `sourceViolationId` en `commercialFineGenerated` y en el evento fusionado `closureUpdate` (24/08); M7 confirmó el 25/08, como `closureRequestId` + `requestingModule` en `streetClosureApproved`/`Rejected` — no en `streetClosureEnded`, que solo trae `streetClosureId` |
 | **M3** | ✅ Lista actualizada: borraron los dos nombres viejos y `workOrderValidated`. **Queda definir cuándo se dispara `workOrderScheduled`** |
