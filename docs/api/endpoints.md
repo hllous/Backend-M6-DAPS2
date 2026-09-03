@@ -2,7 +2,7 @@
 
 Resumen de lo que expone el backend. La fuente de verdad interactiva es el Swagger en `/api/docs`; este archivo existe para poder ver el mapa completo sin levantar nada, y porque el [DoD](../gestion/definition-of-done.md) lo pide para cada endpoint nuevo.
 
-> **Actualizado al 02/09/2026** — Fase 6 del plan de implementación (inbox y consumidores). 120 rutas, agrupadas en 21 tags de Swagger.
+> **Actualizado al 02/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero). 128 rutas, agrupadas en 22 tags de Swagger.
 
 ## Convenciones
 
@@ -12,7 +12,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **Autorización por rol**: todavía no existe. Cualquier usuario autenticado puede llamar cualquier endpoint — pendiente de que M9 publique su taxonomía de roles ([bloqueantes.md](../bloqueantes.md)).
 - **Listados**: paginados con `?page` (default 1) y `?pageSize` (default 20, máx 100). Devuelven `{ data: [...], meta: { total, page, pageSize, totalPages } }`.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
-- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 18 tags están declarados en `main.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
+- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 22 tags están declarados en `main.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
 
 ---
@@ -281,11 +281,49 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 ---
 
+## `indicators` — tablero de indicadores
+
+Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran por período con `from` y `to`; sin ellos, los últimos 30 días.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| GET | `/indicators/coverage` | Objetivos atendidos sobre programados, con desglose por zona y por tipo de servicio. Filtros extra: `zoneId`, `serviceTypeId` |
+| GET | `/indicators/compliance` | Finalizados en término contra demorados, y ranking de zonas no atendidas con sus motivos. Filtros extra: `zoneId`, `serviceTypeId` |
+| GET | `/indicators/incidents` | Contenedores desbordados y dañados por zona, árboles por nivel de riesgo, y denuncias por tipo y estado con el tiempo medio de resolución |
+| GET | `/indicators/waste` | Kg y m³ por tipo de residuo y por destino, y porcentaje desviado del relleno |
+
+**La unidad de cobertura es el par (servicio, zona), no el servicio.** Un recorrido que pasa por cuatro zonas y atiende tres no es "un servicio a medias": son tres objetivos cumplidos y uno no. `ServiceZone` ya es ese par y `ZoneResult` es su resultado, así que el desglose por zona sale del mismo dato que el total.
+
+**Los servicios `CANCELLED` no cuentan como incumplimiento.** Un servicio cancelado no es un objetivo fallado, es un objetivo que dejó de existir.
+
+**"En término" se mide con el último `ZoneResult.recordedAt` contra `Service.scheduledDate`.** `Service` no tiene columna de cierre, y `updatedAt` se mueve con cualquier edición posterior: no sirve para medir puntualidad. El resultado de campo sí es la marca de cuándo se terminó el trabajo.
+
+**Contenedores y arbolado son una foto del estado actual, no del período.** El inventario no tiene historial de estados, así que el período solo filtra las denuncias. El nivel de riesgo de cada árbol sale de su último relevamiento, uno por árbol.
+
+**El tiempo medio de resolución cuenta solo los expedientes `CLOSED`**, que es el único estado del que no se sale, medido de `createdAt` a `updatedAt`.
+
+## `citizen-portal` — vista pública
+
+**Los únicos endpoints del módulo que se sirven sin JWT.** El `@Public()` va endpoint por endpoint y no a nivel de clase: el guard global hace que todo endpoint nuevo nazca protegido, y abrir la clase entera haría que el próximo `GET` de acá salga público sin que nadie lo decida.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| GET | `/public/reports/:ticketId` | **Público.** Seguimiento de la denuncia por el número de reclamo de M2, que es lo único que el vecino tiene en la mano. 404 exista o no el ticket |
+| GET | `/public/services` | **Público.** Cuándo pasa el servicio. Filtros: `zoneId`, `serviceTypeId`, `from`, `to`. Sin fechas, los próximos 30 días |
+| GET | `/public/green-points` | **Público.** Puntos verdes activos con su ubicación y qué residuos recibe cada uno. Filtro: `zoneId` |
+| GET | `/public/zones` | **Público.** Zonas activas, para que el frontend arme el filtro de los otros dos. Sin paginar |
+
+**Cada respuesta es una proyección explícita, no la fila de la base.** La diferencia importa: si mañana alguien agrega una columna al expediente, una proyección no la publica sola.
+
+**Lo que no sale nunca por acá**, aunque esté en la misma fila: la identidad del inspector, los hallazgos y el checklist, el contenido del acta, la identidad del denunciante, y —en los servicios— la cuadrilla, el vehículo, las notas y el motivo interno de una reprogramación. Hay un test que lo verifica campo por campo.
+
+**El expediente se resume a siete etapas, no a sus once estados.** `EnvironmentalReportStatus` es vocabulario de inspector: distingue cosas que le importan al supervisor, no al vecino. `VIOLATION_FOUND`, `NOTICE_ISSUED` y `SANCTIONED` son la misma etapa para el denunciante — el trámite sancionatorio sigue su curso.
+---
+
 ## Lo que todavía no existe
 
 Por fase del plan de implementación:
 
 | Fase | Qué falta |
 |---|---|
-| 3.5 | Adjuntos y evidencia — hoy `evidence` viaja vacío en el acta |
-| 7 | `citizen-portal` (público) e indicadores del tablero |
+| 3.5 | Adjuntos y evidencia — hoy `evidence` viaja vacío en el acta. El equipo definió **Cloudflare R2** y lo toma otra persona: el backend guarda en `Attachment` la URL pública que devuelve el bucket, más el nombre del archivo |

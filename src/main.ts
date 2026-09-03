@@ -77,6 +77,8 @@ async function bootstrap() {
     .addTag('environmental-inspections', 'Inspecciones ambientales')
     // ─── Integración ──────────────────────────────
     .addTag('events', 'Ingesta de eventos entrantes y estado de los handlers')
+    // ─── Tablero ──────────────────────────────────
+    .addTag('indicators', 'Indicadores de cobertura, cumplimiento, incidencias y residuos')
     // ─── Otros ────────────────────────────────────
     .addTag('citizen-portal', 'Endpoints públicos del portal del ciudadano')
     .addTag('health', 'Health check y estado del servicio')
