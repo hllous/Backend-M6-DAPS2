@@ -101,3 +101,95 @@ describe('GreenPointsService', () => {
     });
   });
 });
+
+describe('GreenPointsService — listado y detalle', () => {
+  const ID = '77777777-7777-7777-7777-777777777777';
+
+  let prisma: any;
+  let service: GreenPointsService;
+
+  const punto = (over: Record<string, unknown> = {}) => ({
+    id: ID,
+    code: 'GP-0012',
+    name: 'Punto verde Plaza Mitre',
+    zoneId: 'z-centro',
+    address: 'Av. Mitre 1200',
+    lat: new Prisma.Decimal('-34.6037'),
+    lng: new Prisma.Decimal('-58.3816'),
+    active: true,
+    wasteTypes: [{ wasteType: WasteType.RECYCLABLE }],
+    createdAt: new Date('2026-08-01T10:00:00.000Z'),
+    updatedAt: new Date('2026-08-02T10:00:00.000Z'),
+    ...over,
+  });
+
+  beforeEach(() => {
+    prisma = {
+      greenPoint: {
+        findUnique: jest.fn().mockResolvedValue(punto()),
+        findMany: jest.fn().mockResolvedValue([punto()]),
+        count: jest.fn().mockResolvedValue(1),
+        update: jest.fn().mockResolvedValue(punto()),
+      },
+    };
+    service = new GreenPointsService(prisma as unknown as PrismaService);
+  });
+
+  /** El vecino busca "dónde llevo el cartón", no un punto verde por nombre. */
+  it('el filtro por tipo de residuo busca en los que recibe cada punto', async () => {
+    await service.findAll({ page: 1, pageSize: 20, wasteType: WasteType.GREEN } as any);
+
+    expect(prisma.greenPoint.findMany.mock.calls[0][0].where.wasteTypes).toEqual({
+      some: { wasteType: WasteType.GREEN },
+    });
+  });
+
+  it('la búsqueda mira nombre y dirección a la vez', async () => {
+    await service.findAll({ page: 1, pageSize: 20, search: 'mitre' } as any);
+
+    expect(prisma.greenPoint.findMany.mock.calls[0][0].where.OR).toEqual([
+      { name: { contains: 'mitre', mode: 'insensitive' } },
+      { address: { contains: 'mitre', mode: 'insensitive' } },
+    ]);
+  });
+
+  it('filtra por zona y estado', async () => {
+    await service.findAll({ page: 1, pageSize: 20, zoneId: 'z-sur', active: true } as any);
+
+    expect(prisma.greenPoint.findMany.mock.calls[0][0].where).toEqual({
+      zoneId: 'z-sur',
+      active: true,
+    });
+  });
+
+  it('el listado trae los tipos de residuo de cada punto', async () => {
+    const { data } = await service.findAll({ page: 1, pageSize: 20 } as any);
+
+    expect(prisma.greenPoint.findMany.mock.calls[0][0].include).toEqual({ wasteTypes: true });
+    expect(data[0].wasteTypes).toEqual([WasteType.RECYCLABLE]);
+  });
+
+  it('findOne da 404 si no está', async () => {
+    prisma.greenPoint.findUnique.mockResolvedValue(null);
+
+    await expect(service.findOne(ID)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('actualizar un punto inexistente da 404', async () => {
+    prisma.greenPoint.findUnique.mockResolvedValue(null);
+
+    await expect(service.update(ID, {} as any)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('un DTO vacío no toca los tipos de residuo', async () => {
+    await service.update(ID, {} as any);
+
+    expect(prisma.greenPoint.update.mock.calls[0][0].data).toEqual({});
+  });
+
+  it('un error ajeno a Prisma se propaga', async () => {
+    prisma.greenPoint.update.mockRejectedValue(new Error('la base se cayó'));
+
+    await expect(service.update(ID, { name: 'X' } as any)).rejects.toThrow('la base se cayó');
+  });
+});
