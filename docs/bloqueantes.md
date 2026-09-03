@@ -173,6 +173,8 @@ Sin integración, confirmado de los dos lados. De M5: nuestra acta les llega con
 
 **Los adjuntos se llaman distinto.** M2 usa `attachment { attachmentId, fileName, contentType, url, sizeBytes }`; nosotros veníamos con `{ url, mimeType, description }`. Nos alineamos al suyo en lo que va hacia M2; conviene unificarlo en toda la cohorte antes de implementar.
 
+**Dónde viven los archivos: resuelto internamente el 02/09.** El equipo eligió **Cloudflare R2**, con el backend subiendo al bucket y guardando en `Attachment` la URL pública que devuelve, más el nombre del archivo. Es lo que hace que el `url` del contrato de M2 sea un enlace que ellos puedan abrir sin pedirnos nada. La implementación la toma otra persona del equipo; hasta entonces `evidence` viaja vacío en el acta hacia M4.
+
 **Huérfanos ajenos** (alguien los espera y nadie los publica): el par `paymentRegistered` / `debtSettled` es el más caro — rompe el cierre financiero de M4 y M7 con Rentas, porque M5 los publica como `paymentRecorded` y `debtCancelled`. La lista completa está en [`Cruce-Eventos-M6.md`](Cruce-Eventos-M6.md) Parte 3; no la duplicamos acá porque no nos toca mantenerla.
 
 ## Plan B si M2 no resuelve
