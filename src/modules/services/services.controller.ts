@@ -267,7 +267,10 @@ export class ServicesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cancelar el servicio',
-    description: 'SCHEDULED o SUSPENDED → CANCELLED. El motivo queda registrado.',
+    description:
+      'SCHEDULED, RESCHEDULED o SUSPENDED → CANCELLED. El motivo queda registrado. ' +
+      'Un servicio RESCHEDULED se cancela directo: no hace falta confirmar antes una fecha ' +
+      'nueva. IN_PROGRESS no se cancela — hay que suspenderlo o cerrarlo.',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Servicio cancelado', type: ServiceResponseDto })
