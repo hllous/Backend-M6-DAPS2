@@ -96,8 +96,8 @@ No hay que hacer nada manual en el día a día.
 | `R2_ACCOUNT_ID` | Account ID de Cloudflare R2 | Para subida de adjuntos (`/evidence`) |
 | `R2_ACCESS_KEY_ID` | Key ID de API de Cloudflare R2 | Para subida de adjuntos (`/evidence`) |
 | `R2_SECRET_ACCESS_KEY` | Secret de API de Cloudflare R2 | Para subida de adjuntos (`/evidence`) |
-| `R2_BUCKET_NAME` | Nombre del bucket R2 | Para subida de adjuntos (`/evidence`) |
-| `R2_PUBLIC_URL` | URL pública base del bucket R2 | Para devolver URLs directas en `/evidence` |
+| `R2_BUCKET` | Nombre del bucket R2, p. ej. `m6-evidence` | Para subida de adjuntos (`/evidence`) |
+| `R2_PUBLIC_URL_BASE` | Dominio público del bucket, p. ej. `https://pub-xxxx.r2.dev` (sin barra final) | Para devolver URLs directas en `/evidence` |
 | `KAFKA_BROKERS` | Lista de brokers (ej. `localhost:9092`) | Opcional hasta que M9 provea broker |
 | `KAFKA_CLIENT_ID` | `m6-backend` | Opcional |
 | `KAFKA_GROUP_ID` | `m6-backend-group` | Opcional |
