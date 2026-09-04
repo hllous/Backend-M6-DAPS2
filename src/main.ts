@@ -45,7 +45,7 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'JWT emitido por el módulo Core (M9)',
+        description: 'JWT emitido por M1, que gestiona los usuarios de la plataforma',
       },
       'JWT-auth',
     )
@@ -75,8 +75,15 @@ async function bootstrap() {
     // ─── Control ambiental ────────────────────────
     .addTag('environmental-reports', 'Denuncias y expedientes ambientales')
     .addTag('environmental-inspections', 'Inspecciones ambientales')
+    // ─── Evidencia ────────────────────────────────
+    .addTag(
+      'evidence',
+      'Adjuntos de evidencia (foto/PDF) para Container, Service, ZoneResult e Inspection',
+    )
     // ─── Integración ──────────────────────────────
     .addTag('events', 'Ingesta de eventos entrantes y estado de los handlers')
+    // ─── Tablero ──────────────────────────────────
+    .addTag('indicators', 'Indicadores de cobertura, cumplimiento, incidencias y residuos')
     // ─── Otros ────────────────────────────────────
     .addTag('citizen-portal', 'Endpoints públicos del portal del ciudadano')
     .addTag('health', 'Health check y estado del servicio')

@@ -8,9 +8,13 @@ La denuncia ambiental tal como la tramitamos nosotros: ruidos, vertidos, microba
 
 | Entidad | Campos principales |
 |---|---|
-| `EnvironmentalReport` | `reportType`, `location`, `ticketId`, `reporterSnapshot`, `status`, `priority` |
+| `EnvironmentalReport` | `reportType`, `location`, `ticketId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `deadlineAt` |
 
 Enums: `reportType` es `EnvironmentalReportType`, `status` es `EnvironmentalReportStatus` — ver [enumeraciones.md](../enumeraciones.md).
+
+**`escalated` y `citizenResponse` los escribe M2, no nosotros.** Llegan por `ticketUpdated`: `ESCALATION_CHANGED` marca el expediente como escalado para que lo vea el supervisor, e `INFORMATION_PROVIDED` trae lo que el vecino respondió a nuestro pedido de información. La v1.5 de M2 no usa ID de correlación —impone como máximo una solicitud activa por ticket—, así que la respuesta siempre corresponde a la nuestra.
+
+**`deadlineAt` es el plazo que le damos a M4** para resolver el acta antes de cerrar el expediente por vencimiento. Se configura con `SANCTION_DEADLINE_DAYS`.
 
 La inspección, el acta y la resolución de M4 son entidades aparte: ver [control-ambiental.md](control-ambiental.md).
 

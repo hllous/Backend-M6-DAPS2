@@ -44,7 +44,7 @@ Enums: `crewType` es `CrewType`, `vehicleType` es `VehicleType`, `defaultShift` 
 
 Equipo de trabajo, municipal o de cooperativa. `organizationId` es de M1: **las cooperativas existen acá como cuadrillas, no como beneficiarias de un programa social** — su registro como organización es de M1, no de M8. Para mostrar el nombre de la cooperativa en pantalla hace falta la consulta REST a M1, que sigue [pendiente de confirmar](../bloqueantes.md#m1--ciudadanos--sin-eventos).
 
-`leaderUserId` y `memberUserIds[]` son usuarios; quién emite esa identidad sigue sin definirse entre M9 y M1.
+`leaderUserId` y `memberUserIds[]` son usuarios de **M1**, que es quien los gestiona y emite el JWT. No los replicamos: guardamos el id y nada más.
 
 ### `Vehicle`
 

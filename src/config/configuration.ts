@@ -18,5 +18,12 @@ export default () => {
       clientId: parsed.KAFKA_CLIENT_ID,
       groupId: parsed.KAFKA_GROUP_ID,
     },
+    r2: {
+      accountId: parsed.R2_ACCOUNT_ID,
+      accessKeyId: parsed.R2_ACCESS_KEY_ID,
+      secretAccessKey: parsed.R2_SECRET_ACCESS_KEY,
+      bucket: parsed.R2_BUCKET,
+      publicUrlBase: parsed.R2_PUBLIC_URL_BASE,
+    },
   };
 };
