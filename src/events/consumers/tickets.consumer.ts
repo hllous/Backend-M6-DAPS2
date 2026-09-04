@@ -127,7 +127,14 @@ export class TicketsConsumer implements OnModuleInit {
     );
   }
 
-  /** El vecino canceló: se cancela el servicio ya programado. */
+  /**
+   * El vecino canceló: se cancela el servicio ya programado.
+   *
+   * El `where` filtra por los dos estados desde los que `VALID_TRANSITIONS`
+   * admite `CANCELLED`. Es la única garantía: `updateMany` no pasa por
+   * `assertTransition`, así que el filtro **es** el guard. Si algún día se
+   * agrega un estado cancelable, hay que sumarlo acá también.
+   */
   private async cancelled(ticketId: string): Promise<void> {
     const { count } = await this.prisma.service.updateMany({
       where: {
@@ -153,6 +160,14 @@ export class TicketsConsumer implements OnModuleInit {
     );
   }
 
+  /**
+   * La prioridad la manda M2 y **se acepta aunque el expediente esté cerrado**:
+   * es un dato del reclamo, no un cambio de estado nuestro. Decisión del
+   * 04/09/2026, ver bloqueantes.md.
+   *
+   * Hoy este handler es el único camino por el que la prioridad cambia después
+   * del alta: no existe `PATCH /environmental-reports/:id`.
+   */
   private async priorityChanged(ticketId: string, data: Record<string, unknown>): Promise<void> {
     const priority = this.prioridad(data.currentPriority);
     if (!priority) return;
@@ -171,6 +186,10 @@ export class TicketsConsumer implements OnModuleInit {
    *
    * La v1.5 no usa ID de correlación: impone como máximo una solicitud activa
    * por ticket, así que la respuesta siempre corresponde a la nuestra.
+   *
+   * **Se acepta aunque el expediente esté cerrado**: perder lo que el vecino
+   * contestó es peor que guardarlo tarde, y no cambia el estado del trámite.
+   * Decisión del 04/09/2026, ver bloqueantes.md.
    */
   private async informationProvided(
     ticketId: string,
@@ -190,7 +209,14 @@ export class TicketsConsumer implements OnModuleInit {
     );
   }
 
-  /** El vecino rechazó la solución: el expediente vuelve a gestión. */
+  /**
+   * El vecino rechazó la solución: el expediente vuelve a gestión.
+   *
+   * **Un expediente `CLOSED` sí se reabre.** Es lo que la tabla admite desde la
+   * Fase 6 y la decisión del 04/09/2026 lo confirma: `SANCTIONED` es el único
+   * cierre que no se revierte, porque eso ya lo resolvió M4. El frontend
+   * asumía lo contrario — ver el aviso en bloqueantes.md.
+   */
   private async reopened(ticketId: string): Promise<void> {
     const report = await this.prisma.environmentalReport.findFirst({ where: { ticketId } });
     if (!report) return;
@@ -213,6 +239,11 @@ export class TicketsConsumer implements OnModuleInit {
     );
   }
 
+  /**
+   * **Se acepta aunque el expediente esté cerrado**, por el mismo criterio que
+   * `informationProvided`: marca algo que pasó del lado de M2 y no mueve el
+   * trámite. Decisión del 04/09/2026, ver bloqueantes.md.
+   */
   private async escalationChanged(ticketId: string, data: Record<string, unknown>): Promise<void> {
     const escalated = Boolean(
       (data.escalation as Record<string, unknown>)?.escalated ?? data.escalated ?? true,

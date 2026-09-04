@@ -13,6 +13,7 @@ import {
   ServiceMode,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AttachmentOwnerType } from '../attachments/attachment-owner-type';
 import { OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
@@ -196,13 +197,25 @@ export class EnvironmentalInspectionsService {
       await this.reports.applyTransition(tx, report, S.NOTICE_ISSUED, { deadlineAt });
 
       if (dto.establishmentId) {
+        // Las fotos que el inspector cargó durante la inspección. Se leen
+        // dentro de la transacción para que el evento describa el mismo estado
+        // que el acta que se acaba de crear.
+        const evidencia = await tx.attachment.findMany({
+          where: { ownerType: AttachmentOwnerType.INSPECTION, ownerId: inspectionId },
+          orderBy: { uploadedAt: 'asc' },
+        });
+
         await this.outbox.enqueue(tx, {
           eventType: EventType.ENVIRONMENTAL_VIOLATION_DETECTED,
           aggregateType: AggregateType.VIOLATION_NOTICE,
           aggregateId: row.id,
-          payload: payloads.environmentalViolationDetected(row, inspection, report),
+          payload: payloads.environmentalViolationDetected(row, inspection, report, evidencia),
           occurredAt: issuedAt,
         });
+
+        this.logger.log(
+          `Acta ${noticeNumber} derivada a M4 con ${evidencia.length} pieza/s de evidencia`,
+        );
       } else {
         this.logger.warn(
           `Acta ${noticeNumber} emitida SIN establishmentId: no se deriva a M4 y el expediente cierra de nuestro lado`,

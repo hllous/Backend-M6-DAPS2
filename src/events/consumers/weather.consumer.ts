@@ -57,6 +57,10 @@ export class WeatherConsumer implements OnModuleInit {
       return;
     }
 
+    // Solo SCHEDULED: es el único estado desde el que VALID_TRANSITIONS admite
+    // RESCHEDULED, y `updateMany` no pasa por assertTransition. El filtro es el
+    // guard. Un servicio ya iniciado no se reprograma por una alerta: lo
+    // suspende la cuadrilla que está en la calle.
     const { count } = await this.prisma.service.updateMany({
       where: {
         status: ServiceStatus.SCHEDULED,

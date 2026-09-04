@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { EvidenceStorage, UploadedObject } from './evidence-storage.interface';
 
 /**
@@ -10,8 +10,8 @@ import { EvidenceStorage, UploadedObject } from './evidence-storage.interface';
  * el bucket — la URL que persiste `Attachment.url` se arma con ese base + key.
  */
 @Injectable()
-export class R2EvidenceStorageService implements EvidenceStorage {
-  private readonly logger = new Logger(R2EvidenceStorageService.name);
+export class R2EvidenceStorage implements EvidenceStorage {
+  private readonly logger = new Logger(R2EvidenceStorage.name);
   private readonly client: S3Client;
   private readonly bucket?: string;
   private readonly publicUrlBase?: string;
@@ -57,5 +57,20 @@ export class R2EvidenceStorageService implements EvidenceStorage {
     }
 
     return { url: `${this.publicUrlBase.replace(/\/$/, '')}/${params.key}` };
+  }
+
+  /**
+   * Se llama cuando la fila no se pudo escribir después de subir el archivo.
+   * No relanza: el error que importa es el de la escritura, no el de la
+   * limpieza, y tapar uno con el otro deja al cliente sin saber qué pasó.
+   */
+  async remove(key: string): Promise<void> {
+    if (!this.bucket) return;
+
+    try {
+      await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    } catch (error) {
+      this.logger.warn(`No se pudo borrar el objeto huérfano ${key} de R2`, error as Error);
+    }
   }
 }
