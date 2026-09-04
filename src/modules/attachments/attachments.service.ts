@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { EvidenceResponseDto, QueryEvidenceDto, UploadEvidenceDto } from './dto';
 import { EVIDENCE_EXTENSION_BY_MIME, MAX_EVIDENCE_SIZE_BYTES } from './evidence-mime';
+import { sanitizeFilename, sniffMime, stripMetadata } from './evidence-file';
 import { EVIDENCE_STORAGE, EvidenceStorage } from './storage/evidence-storage.interface';
 
 @Injectable()
@@ -39,6 +40,18 @@ export class AttachmentsService {
       );
     }
 
+    // El `mimetype` de Multer es el que declaró el cliente: no inspecciona el
+    // archivo. Acá se mira el contenido, que es lo único que no se puede
+    // falsear renombrando (Issue #90).
+    const real = sniffMime(file.buffer);
+    if (real !== file.mimetype) {
+      throw new BadRequestException(
+        real
+          ? `El archivo dice ser ${file.mimetype} pero su contenido es ${real}`
+          : `El contenido del archivo no corresponde a ningún tipo aceptado`,
+      );
+    }
+
     await this.assertOwnerExists(dto.ownerType, dto.ownerId);
 
     const uniqueKey = {
@@ -57,9 +70,13 @@ export class AttachmentsService {
       return this.toResponseDto(existing);
     }
 
+    // La foto de un inspector lleva GPS, fecha y modelo del teléfono, y el
+    // bucket es público. Se limpia antes de subir, no después.
+    const limpio = stripMetadata(file.buffer, file.mimetype);
+
     const key = `evidence/${dto.ownerType}/${dto.ownerId}/${randomUUID()}.${extension}`;
     const { url } = await this.storage.upload({
-      buffer: file.buffer,
+      buffer: limpio,
       key,
       contentType: file.mimetype,
     });
@@ -70,9 +87,11 @@ export class AttachmentsService {
           ownerType: dto.ownerType,
           ownerId: dto.ownerId,
           url,
-          filename: key.split('/').pop() as string,
+          // El nombre que puso quien sacó la foto, no el UUID de la key:
+          // `medidor-frente.jpg` le dice algo a quien abre el acta.
+          filename: sanitizeFilename(file.originalname, extension),
           contentType: file.mimetype,
-          size: file.size,
+          size: limpio.length,
           idempotencyKey,
         },
       });
@@ -80,6 +99,10 @@ export class AttachmentsService {
       this.logger.log(`Evidencia subida: ${attachment.id} (owner=${dto.ownerType}/${dto.ownerId})`);
       return this.toResponseDto(attachment);
     } catch (error) {
+      // El archivo ya está en el bucket: si la fila no se escribe, el objeto
+      // queda sin que nadie lo referencie nunca.
+      await this.storage.remove(key);
+
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         // Carrera: dos reintentos concurrentes con la misma Idempotency-Key.
         // El otro ganó la inserción primero — devolvemos ese registro.
