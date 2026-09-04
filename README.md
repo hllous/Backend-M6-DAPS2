@@ -45,7 +45,7 @@ Requisitos:
 | **Estado de la integración** | [`docs/bloqueantes.md`](docs/bloqueantes.md) — fuente única de qué está confirmado y qué falta |
 | **Modelo de datos** | [`docs/entidades/`](docs/entidades/) |
 | **Eventos publicados** | [`docs/eventos/publicados/`](docs/eventos/publicados/) — 8 eventos con JSON Schema |
-| **Eventos consumidos** | [`docs/eventos/consumidos/`](docs/eventos/consumidos/) — 11 eventos de 5 módulos |
+| **Eventos consumidos** | [`docs/eventos/consumidos/`](docs/eventos/consumidos/) — 10 eventos de 5 módulos, 9 con handler |
 
 Para orientarse en el repo, el punto de entrada recomendado es [`AGENTS.md`](AGENTS.md).
 
@@ -54,16 +54,18 @@ Para orientarse en el repo, el punto de entrada recomendado es [`AGENTS.md`](AGE
 ```
 .
 ├── docs/                    documentación técnica y de gestión
-├── fuentes/                 fuentes .md de las versiones largas del alcance
-├── M6-por-modulo/           una ficha por módulo (M1..M9) para circular
-├── enunciado/               TPO oficial de la cátedra
-├── referencias/             documentación relevante de otros módulos
-├── src/                     código NestJS (controllers y services en desarrollo)
-├── prisma/                  schema completo; migraciones pendientes de generar
-└── test/                    tests (pendientes — ver DoD: cobertura ≥ 85%)
+├── src/                     código NestJS: 128 rutas en 18 módulos de dominio
+│   ├── auth/                validación del JWT que emite M1
+│   ├── common/              guards, filtros, interceptores y DTOs compartidos
+│   ├── events/              outbox, inbox, consumidores y publishers
+│   └── modules/             un módulo por recurso
+├── prisma/                  schema (34 modelos), migraciones y seed
+└── test/                    e2e (vacío — ver DoD: cobertura ≥ 85%)
 ```
 
-Detalle completo del contenido de doc: ver [`LEEME.md`](LEEME.md).
+Los tests unitarios viven al lado del código que prueban (`*.spec.ts` dentro de `src/`), no en `test/`.
+
+El pipeline de documentación que genera los entregables para la cátedra —`fuentes/`, `M6-por-modulo/`, `enunciado/` y los PDF compilados— vive en el **repositorio de documentación**, no acá. Detalle del mapeo fuente → PDF: ver [`LEEME.md`](LEEME.md).
 
 ## Integración con otros módulos
 

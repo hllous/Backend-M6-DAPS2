@@ -10,7 +10,7 @@ Toda tarjeta, sea de código, documentación, decisión técnica o coordinación
 
 - [ ] La tarjeta tiene descripción clara y criterios de aceptación explícitos.
 - [ ] Está asignada a una persona responsable.
-- [ ] Los cambios están en `main` (o en la rama que corresponda al flujo del sprint).
+- [ ] Los cambios están mergeados en `develop` por PR (o en la rama que corresponda al flujo del sprint). El Git Flow es `main ← test ← develop`: nada va directo a `main`.
 - [ ] La tarjeta está movida a "Hecho" en Trello.
 - [ ] Los archivos, links o entregables producidos están accesibles al equipo.
 
@@ -25,7 +25,7 @@ Además de lo general:
 - [ ] No hay código comentado ni `console.log` de debug olvidados.
 - [ ] Ninguna variable sensible (secretos, tokens, credenciales, URLs privadas) quedó hardcodeada.
 - [ ] Si aplica: la variable de entorno nueva está agregada al `.env.example`.
-- [ ] El cambio funciona en el entorno desplegado (Railway para backend, Vercel para frontend), no solo local.
+- [ ] El cambio funciona en el entorno desplegado (Render para el backend y su Postgres, Vercel para el frontend), no solo local. Ver [deploy.md](../deploy.md).
 
 ### Extras si el cambio es un endpoint REST
 
