@@ -30,6 +30,9 @@ Detalle funcional de cada área (qué se puede hacer, no solo el título): ver `
 | **Ticket** | El reclamo que el vecino presenta en M2, dueño del registro. Se llamaba `complaint` en los documentos viejos de este módulo — **migrado a `ticket`**, que es el nombre que usa toda la cohorte, antes de la primera entrega para no arrastrar un rename de esquema después |
 | **Acta** (`ViolationNotice`) | Lo que emitimos al constatar una violación. Inmutable una vez emitida. Ver [entidades/control-ambiental.md](entidades/control-ambiental.md) |
 | **Cuadrilla** (`Crew`) | Equipo de trabajo, municipal o de cooperativa, que ejecuta servicios |
+| **Resultado de zona** (`ZoneResult`) | Resultado de la atención de una zona específica dentro de un servicio: `SERVICED`, `PARTIAL` o `NOT_SERVICED`, con motivo y observaciones si no fue atendida |
+| **Evidencia** (`Evidence` / `Attachment`) | Archivo adjunto (foto o documento) subido a Cloudflare R2 vía `POST /evidence` con `Idempotency-Key`, asociado a `SERVICE`, `ZONE_RESULT`, `INSPECTION` o `CONTAINER` |
+| **Actores: Oficina y Campo** (`Office` / `Field`) | Separación estricta de responsabilidades (ADR-0002 frontend). Oficina programa, asigna, reprograma y emite actas; Campo (líder y miembros) ejecuta e inspecciona en calle |
 
 ## Tablero de indicadores
 
@@ -44,8 +47,13 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 
 ## Mapa de esta carpeta
 
-- [entidades/](entidades/) — modelo de datos y estados
-- [eventos/publicados/](eventos/publicados/) — lo que este módulo emite
-- [eventos/consumidos/](eventos/consumidos/) — lo que este módulo escucha
-- [bloqueantes.md](bloqueantes.md) — estado vivo de la integración
+- [api/](api/) — estándar Swagger y 130 endpoints REST del backend
+- [entidades/](entidades/) — modelo conceptual de datos y máquinas de estados
+- [DER.md](DER.md) — modelo relacional entidad-relación (diagrama Mermaid y reglas de esquema)
+- [eventos/publicados/](eventos/publicados/) — los 8 eventos que este módulo emite (con sus `.schema.json`)
+- [eventos/consumidos/](eventos/consumidos/) — los 11 eventos que este módulo escucha
+- [bloqueantes.md](bloqueantes.md) — estado vivo de la integración inter-módulo (fuente única)
 - [enumeraciones.md](enumeraciones.md) — catálogo de valores cerrados
+- [decisiones/](decisiones/) — ADRs (decisiones técnicas de arquitectura)
+- [deploy.md](deploy.md) — despliegue, URLs, variables de entorno y estado operativo
+- [gestion/](gestion/) — proceso Scrum: DoD, sprints y bitácoras
