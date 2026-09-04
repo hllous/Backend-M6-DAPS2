@@ -98,6 +98,9 @@ export class OutboundResponsesConsumer implements OnModuleInit {
     });
 
     if (request.sourceType === 'SERVICE') {
+      // El `where` acota a SCHEDULED, que es el único estado desde el que
+      // VALID_TRANSITIONS admite RESCHEDULED. `updateMany` no pasa por
+      // assertTransition: el filtro es el guard.
       const { count } = await this.prisma.service.updateMany({
         where: { id: request.sourceId, status: ServiceStatus.SCHEDULED },
         data: {

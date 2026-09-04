@@ -30,7 +30,20 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
 
   // ─── CORS ──────────────────────────────────────
-  app.enableCors();
+  // Sin CORS_ORIGINS se aceptan todos, que es lo que hace falta en desarrollo
+  // y lo que veniamos haciendo. En el entorno desplegado se carga la URL del
+  // frontend.
+  //
+  // Alcance: el JWT viaja en un header y no en una cookie, asi que esto no
+  // cierra un CSRF — no habia uno. Evita que un sitio cualquiera use la API
+  // desde el navegador de un usuario nuestro.
+  const corsOrigins = configService.get<string[]>('corsOrigins');
+  app.enableCors(corsOrigins?.length ? { origin: corsOrigins } : undefined);
+  logger.log(
+    corsOrigins?.length
+      ? `CORS restringido a: ${corsOrigins.join(', ')}`
+      : 'CORS abierto a cualquier origen (sin CORS_ORIGINS)',
+  );
 
   // ─── Swagger ───────────────────────────────────
   // Configuración según docs/api/estandar-swagger.md

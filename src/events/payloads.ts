@@ -1,4 +1,5 @@
 import {
+  Attachment,
   ClosureStreet,
   Container,
   EnvironmentalInspection,
@@ -54,6 +55,18 @@ function timeWindow(from: Date | null, to: Date | null): Record<string, string> 
   const f = hhmm(from);
   const t = hhmm(to);
   return f && t ? { from: f, to: t } : undefined;
+}
+
+/**
+ * Los adjuntos nuestros, en la forma que define el contrato para `evidence`.
+ *
+ * `_shared.schema.json` tiene dos objetos que se parecen y no son lo mismo:
+ * `evidence` —`{url, mimeType}`, lo que consume M4 en el acta— y
+ * `m2Attachment` —`{attachmentId, fileName, contentType, url, sizeBytes}`, lo
+ * que consume M2 en `updateTicketStatus`. Este mapea al primero.
+ */
+function evidence(attachments: Attachment[]): Record<string, unknown>[] {
+  return attachments.map((a) => ({ url: a.url, mimeType: a.contentType }));
 }
 
 /** Saca las claves en undefined: los schemas usan `additionalProperties: false`. */
@@ -158,8 +171,11 @@ export function treePruningScheduled(
  * El acta que se le deriva a M4.
  *
  * `priorNoticeCount` les adelanta la reincidencia del establecimiento.
- * `evidence` viaja vacío hasta que exista el módulo de adjuntos: el schema lo
- * permite, y es preferible a inventar una referencia.
+ *
+ * `evidence` son las fotos que el inspector cargó **en la inspección**, no en
+ * el acta: el acta no tiene adjuntos propios, formaliza lo que la inspección
+ * encontró. El campo es requerido por el schema, así que una inspección sin
+ * fotos manda una lista vacía, no omite la clave.
  *
  * Solo se construye cuando hay `establishmentId`: sin establecimiento el acta
  * no se deriva.
@@ -168,6 +184,7 @@ export function environmentalViolationDetected(
   notice: ViolationNotice,
   inspection: EnvironmentalInspection,
   report: EnvironmentalReport,
+  attachments: Attachment[] = [],
 ): Record<string, unknown> {
   return compact({
     violationId: notice.id,
@@ -181,7 +198,7 @@ export function environmentalViolationDetected(
     location: location(report),
     establishmentId: notice.establishmentId as string,
     priorNoticeCount: notice.priorNoticeCount,
-    evidence: [],
+    evidence: evidence(attachments),
     suggestedAction: notice.suggestedAction,
   });
 }
