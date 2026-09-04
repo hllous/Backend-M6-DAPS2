@@ -280,6 +280,16 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 **Storage: Cloudflare R2** (S3-compatible), bucket público. La respuesta (`{id, url, filename, contentType, uploadedAt}`) sigue la hipótesis ya documentada por el frontend en su `CONTRACTS.md`, distinta del shape `{attachmentId, fileName, sizeBytes}` que espera M2 en sus eventos — ese mapeo queda para cuando se implemente el envío de `evidence` hacia M2 (ver `bloqueantes.md`).
 
+**El backend no le cree al cliente sobre el archivo.** El `Content-Type` que llega en el multipart lo declara quien sube: Multer no inspecciona el contenido. Se verifica el tipo real por los primeros bytes y se rechaza con 400 si no coincide con lo declarado — un ejecutable renombrado a `.jpg` no entra. Es el pedido 1 del [Issue #90](https://github.com/hllous/Backend-M6-DAPS2/issues/90), donde el frontend dejó escrito que sus propios controles son defensa en profundidad y que la autoridad es el backend.
+
+**Se quitan los metadatos antes de subir.** Una foto sacada con el teléfono de un inspector lleva coordenadas GPS, fecha y modelo del equipo, y el bucket es público. Se saca el Exif, el XMP y los comentarios de JPEG, PNG y WebP.
+
+**Sin re-codificar la imagen.** Es evidencia: se recorta la estructura del contenedor y los píxeles quedan bit a bit idénticos. Una librería de imágenes los volvería a comprimir. Y ante cualquier estructura que el parser no entienda, **el archivo se sube entero, sin tocar**: no sacar un metadato es una fuga de privacidad, pero entregar un recorte de un archivo que no entendimos es perder la evidencia.
+
+⚠️ **Los PDF pasan sin limpiar.** Sacarle los metadatos a un PDF necesita un parser de PDF, que es otro trabajo. El escaneo de malware, el tercer pedido de #90, tampoco existe: necesita un servicio externo que no está contratado.
+
+**`filename` es el nombre que puso quien subió el archivo**, saneado (sin ruta, sin caracteres de control, acotado a 120). La key del bucket sí es un UUID. Es lo que hace que un inspector abriendo el acta vea `medidor-frente.jpg` y no cuatro identificadores opacos.
+
 **Idempotencia real, no solo validada.** `Idempotency-Key` repetida para el mismo owner devuelve el `Attachment` existente en vez de subir de nuevo — respaldado por un constraint único en DB (`ownerType`, `ownerId`, `idempotencyKey`), no por una consulta previa que podría perder una carrera.
 
 ## `green-spaces` — espacios verdes
