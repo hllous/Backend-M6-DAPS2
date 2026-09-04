@@ -90,6 +90,7 @@ No hay que hacer nada manual en el día a día.
 |---|---|---|
 | `DATABASE_URL` | (Internal Database URL del Postgres) | ✅ Sí |
 | `JWT_SECRET` | Secreto ≥ 8 caracteres (generar random) | ✅ Sí |
+| `CORS_ORIGINS` | `https://m6-ambiente-frontend.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
 | `JWT_EXPIRATION` | `3600` | No (default 3600s) |
 | `NODE_ENV` | `production` | ✅ Sí |
 | `SANCTION_DEADLINE_DAYS` | `30` | No (default 30 días para cierre de expediente ambiental sin resolución M4) |
@@ -117,7 +118,18 @@ No hay que hacer nada manual en el día a día.
 
 ## 5. Gotchas conocidos
 
-- **Spin-down de Render (free tier)**: el backend se "duerme" tras **15 min** sin requests. El primer request tras dormirse tarda **30-60 s** en responder (lo despierta). Para demos, abrir `/health` ~1 min antes. El Postgres y el frontend (Vercel) **no se duermen**.
+- **Spin-down de Render (free tier)**: el backend se "duerme" tras **15 min** sin requests. El primer request tras dormirse tarda **30-60 s** en responder (lo despierta). El Postgres y el frontend (Vercel) **no se duermen**.
+
+  **Y mientras duerme no corren los procesos de fondo**, que es lo que de verdad importa:
+
+  | Proceso | Qué hace | Dormido |
+  |---|---|---|
+  | `@Interval(10s)` | Despacha el outbox | Los eventos quedan `PENDING`; se recupera solo al despertar |
+  | `@Cron(EVERY_HOUR)` | Cierra expedientes vencidos | **Se pierde el barrido entero** |
+
+  El segundo no se recupera: `ReportDeadlineSweeper` es el único camino por el que un expediente pasa de `NOTICE_ISSUED` a `CLOSED` cuando M4 nunca contesta, y con la instancia dormida puede quedar abierto pasado su plazo sin que nadie se entere.
+
+  Por eso existe el workflow [`keepalive.yml`](../.github/workflows/keepalive.yml), que pega a `/health` cada 10 minutos. **Necesita la variable de repositorio `RENDER_HEALTH_URL`** (Settings › Secrets and variables › Actions › Variables) con `https://m6-backend-m64k.onrender.com/health`. Sin ella el workflow avisa y sale sin fallar.
 - **Health Check Path de Render**: dejarlo **vacío**. Un path de health check mal configurado produce `==> Timed Out` en el deploy aunque la app arranque bien.
 - **Bind `0.0.0.0`**: el backend escucha en `0.0.0.0:PORT` (no `localhost`), que es lo que Render espera. No cambiar esto.
 - **Postgres free tier**: 256 MB de storage y retención de 90 días (los datos viejos se purgan). Suficiente para el TPO.

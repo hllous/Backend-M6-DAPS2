@@ -1,0 +1,65 @@
+# ──────────────────────────────────────────────────────────────
+# keepalive — mantiene despierta la instancia de Render.
+#
+# El free tier suspende el servicio tras 15 minutos sin requests, y
+# mientras duerme NO corren los dos procesos de fondo:
+#
+#   @Interval(10s)    despacha el outbox      → se recupera solo al despertar
+#   @Cron(EVERY_HOUR) cierra vencimientos     → SE PIERDE EL BARRIDO
+#
+# El segundo es el que importa: ReportDeadlineSweeper es el único camino por
+# el que un expediente pasa de NOTICE_ISSUED a CLOSED cuando M4 nunca
+# contesta. No hay endpoint para eso, es a propósito.
+#
+# Se hace desde acá y no desde UptimeRobot o cron-job.org porque así queda
+# versionado y a la vista: un alta manual en un servicio de terceros es algo
+# que nadie encuentra cuando deja de funcionar.
+#
+# Dos límites conocidos, los dos aceptables para la ventana del TPO:
+#   - El cron de GitHub Actions es best-effort: puede atrasarse varios
+#     minutos cuando la cola está cargada.
+#   - GitHub deshabilita los workflows programados en repos sin actividad
+#     durante 60 días.
+# ──────────────────────────────────────────────────────────────
+
+name: keepalive
+
+on:
+  schedule:
+    # Cada 10 minutos: Render duerme a los 15.
+    - cron: '*/10 * * * *'
+  # Para poder despertarlo a mano antes de una demo.
+  workflow_dispatch:
+
+# Si un ping quedó colgado, el siguiente lo reemplaza: no tiene sentido
+# encolarlos.
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    name: ping
+    runs-on: ubuntu-latest
+    steps:
+      - name: Despertar el backend
+        env:
+          # Variable del repositorio. Sin ella el job no falla: avisa y sale,
+          # para no llenar de rojo el historial de un fork o de un repo recién
+          # clonado.
+          HEALTH_URL: ${{ vars.RENDER_HEALTH_URL }}
+        run: |
+          if [ -z "$HEALTH_URL" ]; then
+            echo "::notice::RENDER_HEALTH_URL no está configurada. Cargala en Settings › Secrets and variables › Actions › Variables."
+            exit 0
+          fi
+
+          # --max-time 90: el primer request tras dormirse tarda 30-60 s,
+          # que es justamente el caso que este workflow existe para cubrir.
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 --retry 2 --retry-delay 15 "$HEALTH_URL")
+
+          echo "GET $HEALTH_URL → $codigo"
+          if [ "$codigo" != "200" ]; then
+            echo "::error::El health check respondió $codigo"
+            exit 1
+          fi
