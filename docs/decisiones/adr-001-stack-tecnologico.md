@@ -31,7 +31,7 @@ Se adopta el siguiente stack:
 | Capa | Elección |
 |---|---|
 | Frontend | **Next.js 15** + React 19 + TypeScript + Tailwind + shadcn/ui |
-| Backend | **NestJS** + TypeScript + Node 20 LTS |
+| Backend | **NestJS** + TypeScript + Node 22 LTS (actualizado desde Node 20 LTS por EOL/deprecación) |
 | Base de datos | **PostgreSQL** + Prisma como ORM |
 | Broker de eventos | **Kafka** (confirmado por M9) |
 | Deploy frontend | Vercel |
@@ -93,6 +93,13 @@ Se adopta el siguiente stack:
 - Los repos frontend y backend viven separados; el proyecto NestJS convive con la documentación en `m6-ambiente-backend`.
 - Se acordó nomenclatura de eventos y campos en `camelCase`, alineada con la cohorte.
 - Los tipos TypeScript de los payloads de eventos se pueden compartir entre front y back copiando manualmente. Si en el futuro se decide monorepo con workspaces, se documentará como ADR nuevo.
+
+## Adendas
+
+### Adenda 2026-09-03: Actualización a Node.js 22 LTS
+
+- **Motivo**: Node.js 20 alcanzó el fin de su ciclo de vida (EOL / deprecado).
+- **Acción**: Se migró el entorno de ejecución, `Dockerfile` (`node:22-alpine` en builder y runner), CI GitHub Actions (`node-version: 22`), `.nvmrc` y `@types/node` a Node 22 LTS, asegurando compatibilidad con el entorno activo y pipelines.
 
 ## Referencias
 
