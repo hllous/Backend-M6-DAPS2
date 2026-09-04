@@ -225,6 +225,41 @@ describe('consumidores de eventos', () => {
       expect(args.where.ticketId).toBe('TCK-1');
     });
 
+    /**
+     * `updateMany` no pasa por `assertTransition`: el filtro del `where` es el
+     * único guard. Tiene que coincidir con los estados desde los que
+     * `VALID_TRANSITIONS` admite `CANCELLED`, o M2 haría una transición que la
+     * API rechaza.
+     */
+    it('CANCELLED solo toca los estados desde los que se puede cancelar', async () => {
+      await h({ ticketId: 'TCK-1', updateType: 'CANCELLED' });
+
+      const [[args]] = prisma.service.updateMany.mock.calls;
+      expect(args.where.status).toEqual({
+        in: [ServiceStatus.SCHEDULED, ServiceStatus.RESCHEDULED],
+      });
+    });
+
+    // ─── Decisión del 04/09/2026: qué pasa sobre un expediente cerrado ──
+
+    /**
+     * Son datos del reclamo, no cambios de estado nuestros: perderlos es peor
+     * que guardarlos tarde. Ver bloqueantes.md.
+     */
+    it.each([
+      ['ESCALATION_CHANGED', { escalation: { escalated: true } }, 'escalated'],
+      ['INFORMATION_PROVIDED', { publicMessage: 'El ruido sigue' }, 'citizenResponse'],
+      ['PRIORITY_CHANGED', { currentPriority: 'CRITICAL' }, 'priority'],
+    ])('%s se acepta aunque el expediente esté cerrado', async (updateType, extra, campo) => {
+      prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'rep-1', status: S.CLOSED });
+
+      await h({ ticketId: 'TCK-1', updateType, ...extra });
+
+      const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+      expect(args.where).toEqual({ ticketId: 'TCK-1' });
+      expect(args.data).toHaveProperty(campo);
+    });
+
     it('REOPENED no reabre un expediente que no admite la transicion', async () => {
       prisma.environmentalReport.findFirst.mockResolvedValue({
         id: 'rep-1',

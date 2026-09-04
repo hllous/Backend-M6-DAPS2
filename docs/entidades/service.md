@@ -38,6 +38,7 @@ stateDiagram-v2
     SCHEDULED --> CANCELLED
     SCHEDULED --> RESCHEDULED : se reprograma
     RESCHEDULED --> SCHEDULED : nueva fecha
+    RESCHEDULED --> CANCELLED : ya no se hace
     SCHEDULED --> IN_PROGRESS : la cuadrilla inicia
     IN_PROGRESS --> SUSPENDED
     SUSPENDED --> IN_PROGRESS : se reanuda
@@ -50,6 +51,8 @@ stateDiagram-v2
 ```
 
 `DELAYED` **no es un estado**: es un aviso puntual. El hecho interno `urbanServiceDelayed` ocurre una vez y el servicio sigue en `SCHEDULED` o `IN_PROGRESS`.
+
+**`RESCHEDULED` no obliga a reprogramar.** Es el estado "hay que moverlo pero todavía no sé adónde", y el sistema mete servicios ahí solo: lo hacen el rechazo de un corte de calle de M7 y la alerta meteorológica. Si el motivo es definitivo —M7 rechaza el corte porque hay obra por dos meses— cancelar es la decisión correcta y sale directo, sin pasar por una fecha inventada.
 
 ## Qué publica
 
