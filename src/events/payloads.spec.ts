@@ -353,6 +353,19 @@ describe('payloads de los eventos publicados', () => {
       createdAt: new Date(),
     } as never;
 
+    const adjunto = (url: string, contentType: string) =>
+      ({
+        id: ID(9),
+        ownerType: 'INSPECTION',
+        ownerId: ID(2),
+        url,
+        filename: 'medidor-frente.jpg',
+        contentType,
+        size: 1024,
+        idempotencyKey: 'k',
+        uploadedAt: new Date('2026-09-10T11:00:00.000Z'),
+      }) as never;
+
     const inspection = { id: ID(2), reportId: ID(3) } as never;
     const report = {
       id: ID(3),
@@ -368,6 +381,45 @@ describe('payloads de los eventos publicados', () => {
       expect(p.priorNoticeCount).toBe(2);
       expect(p.evidence).toEqual([]);
       expectValido('environmentalViolationDetected', p);
+    });
+
+    /**
+     * Nuestra tabla guarda `contentType`; el contrato define `evidence` como
+     * `{url, mimeType}`. Son dos vocabularios distintos y el mapeo es el
+     * trabajo de este builder.
+     */
+    it('mapea los adjuntos de la inspeccion a la forma que espera M4', () => {
+      const p = payloads.environmentalViolationDetected(notice, inspection, report, [
+        adjunto('https://cdn.example.com/e/1.jpg', 'image/jpeg'),
+        adjunto('https://cdn.example.com/e/2.pdf', 'application/pdf'),
+      ]);
+
+      expect(p.evidence).toEqual([
+        { url: 'https://cdn.example.com/e/1.jpg', mimeType: 'image/jpeg' },
+        { url: 'https://cdn.example.com/e/2.pdf', mimeType: 'application/pdf' },
+      ]);
+      expectValido('environmentalViolationDetected', p);
+    });
+
+    /**
+     * `evidence` es requerido en el schema: una inspeccion sin fotos manda la
+     * lista vacia, no omite la clave.
+     */
+    it('sin adjuntos manda la lista vacia, no omite el campo', () => {
+      const p = payloads.environmentalViolationDetected(notice, inspection, report, []);
+
+      expect(p).toHaveProperty('evidence', []);
+      expectValido('environmentalViolationDetected', p);
+    });
+
+    /** El nombre y el tamano son de M2, no de M4: su schema no los admite. */
+    it('no manda el nombre ni el tamano, que son del contrato de M2', () => {
+      const p = payloads.environmentalViolationDetected(notice, inspection, report, [
+        adjunto('https://cdn.example.com/e/1.jpg', 'image/jpeg'),
+      ]);
+
+      const uno = (p.evidence as Record<string, unknown>[])[0];
+      expect(Object.keys(uno).sort()).toEqual(['mimeType', 'url']);
     });
 
     it('lleva el ticketId solo si el expediente nacio de un reclamo', () => {

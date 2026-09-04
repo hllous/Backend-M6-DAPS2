@@ -74,6 +74,7 @@ describe('EnvironmentalInspectionsService', () => {
         create: jest.fn((args) => ({ ...args.data, id: 'notice-1', createdAt: new Date() })),
       },
       service: { findUnique: jest.fn() },
+      attachment: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
@@ -157,6 +158,51 @@ describe('EnvironmentalInspectionsService', () => {
       await expect(service.issueNotice(INSPECTION_ID, noticeDto, 'user-1')).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    const conEstablecimiento = { ...noticeDto, establishmentId: ESTABLISHMENT };
+
+    it('el acta viaja con la evidencia de su inspeccion', async () => {
+      prisma.attachment.findMany.mockResolvedValue([
+        {
+          url: 'https://cdn.example.com/e/1.jpg',
+          contentType: 'image/jpeg',
+          filename: 'medidor-frente.jpg',
+        },
+      ]);
+
+      await service.issueNotice(INSPECTION_ID, conEstablecimiento, 'user-1');
+
+      const [[, entrada]] = outbox.enqueue.mock.calls;
+      expect(entrada.payload.evidence).toEqual([
+        { url: 'https://cdn.example.com/e/1.jpg', mimeType: 'image/jpeg' },
+      ]);
+    });
+
+    /**
+     * Las fotos son de la inspeccion, no del acta: `AttachmentOwnerType` no
+     * tiene `VIOLATION_NOTICE` porque el acta formaliza lo que la inspeccion
+     * encontro, no aporta adjuntos propios.
+     */
+    it('busca la evidencia de la inspeccion, no la del acta', async () => {
+      await service.issueNotice(INSPECTION_ID, conEstablecimiento, 'user-1');
+
+      const [[args]] = prisma.attachment.findMany.mock.calls;
+      expect(args.where).toEqual({ ownerType: 'INSPECTION', ownerId: INSPECTION_ID });
+    });
+
+    it('sin evidencia el acta viaja igual, con la lista vacia', async () => {
+      await service.issueNotice(INSPECTION_ID, conEstablecimiento, 'user-1');
+
+      const [[, entrada]] = outbox.enqueue.mock.calls;
+      expect(entrada.payload.evidence).toEqual([]);
+    });
+
+    /** Sin establecimiento no se deriva nada, asi que no hay que ir a buscarla. */
+    it('un acta que no se deriva no consulta la evidencia', async () => {
+      await service.issueNotice(INSPECTION_ID, noticeDto, 'user-1');
+
+      expect(prisma.attachment.findMany).not.toHaveBeenCalled();
     });
 
     it('fija el plazo de vencimiento sobre el expediente', async () => {
