@@ -542,13 +542,17 @@ model DisposalSite {
 }
 
 model Attachment {
-  id         String   @id @default(uuid()) @db.Uuid
-  ownerType  String   @map("owner_type") // SERVICE | ZONE_RESULT | INSPECTION
-  ownerId    String   @map("owner_id") @db.Uuid // polimórfico
-  url        String
-  filename   String
-  uploadedAt DateTime @default(now()) @map("uploaded_at")
+  id             String   @id @default(uuid()) @db.Uuid
+  ownerType      String   @map("owner_type") // SERVICE | ZONE_RESULT | INSPECTION | CONTAINER
+  ownerId        String   @map("owner_id") @db.Uuid // polimórfico
+  url            String
+  filename       String
+  contentType    String   @map("content_type")
+  size           Int // bytes
+  idempotencyKey String   @map("idempotency_key")
+  uploadedAt     DateTime @default(now()) @map("uploaded_at")
 
+  @@unique([ownerType, ownerId, idempotencyKey])
   @@index([ownerType, ownerId])
   @@map("attachment")
 }

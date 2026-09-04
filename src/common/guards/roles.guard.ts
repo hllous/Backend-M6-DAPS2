@@ -8,7 +8,7 @@ import { ROLES_KEY } from '../decorators/roles.decorator';
  *
  * Si el endpoint no tiene @Roles(), permite el acceso (no restringe).
  *
- * Nota: el shape de `user.roles` depende del claim set de M9 — pendiente.
+ * Nota: el shape de `user.roles` depende del claim set de M1 — pendiente.
  * Por ahora se asume que el JwtStrategy pone un array de strings en user.roles.
  */
 @Injectable()

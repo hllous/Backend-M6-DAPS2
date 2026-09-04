@@ -140,7 +140,7 @@ export class VehiclesService {
       id: vehicle.id,
       plate: vehicle.plate,
       vehicleType: vehicle.vehicleType,
-      capacity: vehicle.capacity ? Number(vehicle.capacity) : null,
+      capacity: vehicle.capacity === null ? null : Number(vehicle.capacity),
       active: vehicle.active,
       createdAt: vehicle.createdAt,
       updatedAt: vehicle.updatedAt,

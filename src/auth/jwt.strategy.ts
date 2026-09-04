@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 /**
  * Payload que este módulo espera del JWT.
  *
- * PROVISORIO: M9 todavía no publicó su claim set (ver docs/bloqueantes.md).
+ * PROVISORIO: M1 todavía no publicó su claim set (ver docs/bloqueantes.md).
  * Asumimos el mínimo estándar —`sub` como identidad y `roles` como array de
  * strings— porque es lo que cubre cualquier forma razonable que elijan.
  */
@@ -31,9 +31,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   // ponytail: verificación HS256 contra JWT_SECRET local, provisoria hasta que
-  // M9 confirme cómo emite los tokens. Cuando lo hagan, lo único que cambia es
-  // este archivo: `secretOrKey` (o `secretOrKeyProvider` si usan JWKS) y el
-  // mapeo de claims de abajo. Los guards y los controllers no se tocan.
+  // M1 publique su contrato: algoritmo de firma, `iss`, `aud`, TTL y el nombre
+  // del claim de roles. Cuando lleguen, lo único que cambia es este archivo:
+  // `secretOrKey` (o `secretOrKeyProvider` si usan JWKS) y el mapeo de claims
+  // de abajo. Los guards y los controllers no se tocan.
   validate(payload: JwtPayload): AuthenticatedUser {
     return { userId: payload.sub, roles: payload.roles ?? [] };
   }
