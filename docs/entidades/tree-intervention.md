@@ -14,20 +14,20 @@ Enums: `interventionType` es `TreeInterventionType`, `status` es `TreeInterventi
 
 ## Estados
 
-La extracción necesita autorización; el resto no.
+Toda intervención debe alcanzar el estado `AUTHORIZED` antes de poder asociarse a un [`Service`](service.md) de modo `POINT` mediante `POST /tree-interventions/:id/assign-service`. La extracción (`REMOVAL`) exige un paso intermedio de supervisión obligatoria (`PENDING_AUTHORIZATION`) con justificación; el resto de intervenciones pasa directo de `REQUESTED` a `AUTHORIZED`.
 
 ```mermaid
 stateDiagram-v2
     [*] --> REQUESTED
-    REQUESTED --> PENDING_AUTHORIZATION : solo REMOVAL
-    PENDING_AUTHORIZATION --> AUTHORIZED : autoriza el supervisor
-    PENDING_AUTHORIZATION --> REJECTED : rechaza el supervisor
-    AUTHORIZED --> [*] : se programa como Service
-    REQUESTED --> [*] : el resto se programa directo
+    REQUESTED --> PENDING_AUTHORIZATION : solo REMOVAL (submit-for-authorization)
+    PENDING_AUTHORIZATION --> AUTHORIZED : autoriza el supervisor (authorize)
+    PENDING_AUTHORIZATION --> REJECTED : rechaza el supervisor (reject)
+    REQUESTED --> AUTHORIZED : poda / plantación / tratamiento (authorize directo)
+    AUTHORIZED --> [*] : se programa asociando a un Service POINT (assign-service)
     REJECTED --> [*]
 ```
 
-Los tres campos de autorización (`authorizedByUserId`, `authorizedAt`, `justification`) se llenan solo en el camino `REMOVAL`. El estado terminal no es "hecho": la intervención sale de esta máquina al programarse, y a partir de ahí el estado que importa es el del [`Service`](service.md#estados).
+Los campos de auditoría de autorización (`authorizedByUserId`, `authorizedAt`) se registran al pasar a `AUTHORIZED`. `justification` es obligatoria para `REMOVAL`. El estado terminal de esta entidad es quedar asociada a un servicio (`serviceId` asignado); a partir de ahí el avance operativo se sigue desde el [`Service`](service.md#estados).
 
 ## Qué publica
 

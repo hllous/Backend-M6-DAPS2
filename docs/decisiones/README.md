@@ -20,3 +20,4 @@ Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeraci�
 | [002](adr-002-auth-provisoria.md) | Autenticaci처n provisoria mientras M1 no publica su contrato de JWT | Aceptado | 2026-09-02 |
 | [003](adr-003-divergencias-enums.md) | Resoluci처n de las divergencias de enums con el acuerdo publicado | Propuesto | 2026-09-02 |
 | [004](adr-004-jwt-m1-y-puerto-identidad.md) | JWT de usuario emitido por M1 y consulta a identidad desacoplada por puerto | Aceptado | 2026-09-01 |
+| [005](adr-005-alineacion-frontend-sesion-y-seguridad.md) | Alineaci처n de arquitectura de sesi처n BFF, separaci처n de actores y postura de seguridad con el Frontend | Aceptado | 2026-09-03 |
