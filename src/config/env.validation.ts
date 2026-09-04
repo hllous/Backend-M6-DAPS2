@@ -8,6 +8,12 @@ export const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().url(),
 
+  // Origenes que pueden llamar a la API desde un navegador, separados por
+  // coma. Sin la variable se aceptan todos, que es lo que hace falta en
+  // desarrollo. El JWT viaja en un header y no en una cookie, asi que esto no
+  // cierra un CSRF: es higiene, no un limite de seguridad.
+  CORS_ORIGINS: z.string().optional(),
+
   // JWT — placeholder hasta que M1 publique su contrato de firma y claims
   JWT_SECRET: z.string().min(8),
   JWT_EXPIRATION: z.coerce.number().default(3600),
@@ -25,7 +31,7 @@ export const envSchema = z.object({
 
   // Cloudflare R2 (S3-compatible) para evidencia/adjuntos — Issue #64.
   // Opcionales: sin credenciales la app arranca igual, pero POST /evidence
-  // falla al subir. Ver src/modules/attachments/storage/r2-evidence-storage.service.ts.
+  // falla al subir. Ver src/modules/attachments/storage/r2-evidence.storage.ts.
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),

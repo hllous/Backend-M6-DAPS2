@@ -42,16 +42,23 @@ import { PaginatedResponseDto } from '../../common/dto';
  *
  *   [*] → SCHEDULED
  *   SCHEDULED → IN_PROGRESS | RESCHEDULED | CANCELLED
- *   RESCHEDULED → SCHEDULED (con la nueva fecha)
+ *   RESCHEDULED → SCHEDULED (con la nueva fecha) | CANCELLED
  *   IN_PROGRESS → SUSPENDED | COMPLETED | PARTIALLY_COMPLETED
  *   SUSPENDED → IN_PROGRESS | CANCELLED
  *
  * DELAYED no está: no es un estado, es un aviso puntual. El servicio sigue
  * en SCHEDULED o IN_PROGRESS.
+ *
+ * `RESCHEDULED → CANCELLED` existe porque el sistema mete servicios en ese
+ * estado solo: lo hacen el rechazo de un corte de calle de M7 y la alerta
+ * meteorológica. "Hay que moverlo" no obliga a moverlo — si M7 rechaza el corte
+ * porque hay obra por dos meses, cancelar es la decisión correcta, y sin esta
+ * fila el operador tenía que confirmar una reprogramación a una fecha inventada
+ * para poder cancelar después.
  */
 const VALID_TRANSITIONS: Record<ServiceStatus, ServiceStatus[]> = {
   SCHEDULED: [ServiceStatus.IN_PROGRESS, ServiceStatus.RESCHEDULED, ServiceStatus.CANCELLED],
-  RESCHEDULED: [ServiceStatus.SCHEDULED],
+  RESCHEDULED: [ServiceStatus.SCHEDULED, ServiceStatus.CANCELLED],
   IN_PROGRESS: [
     ServiceStatus.SUSPENDED,
     ServiceStatus.COMPLETED,

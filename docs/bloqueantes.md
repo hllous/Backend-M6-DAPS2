@@ -63,6 +63,19 @@ Publicaron **la v1.5**, que reemplaza la v1.2 que habíamos adoptado. Sigue sien
 
 Además: `informationRequestId` desapareció — la v1.5 lo reemplaza por una invariante de "como máximo una `InformationRequest` activa por ticket", así que la correlación no necesita ID. Y los tres enums que faltaban (`resolution.type`, `returnInfo.reasonCode`, `cancellation.reasonCode`) ya están publicados.
 
+**Decisión propia, 04/09/2026 — qué hacemos con un `ticketUpdated` que llega sobre un expediente ya cerrado.** No estaba decidido, estaba implícito en el código. Queda así:
+
+| `updateType` | Sobre un expediente `CLOSED` | Por qué |
+|---|---|---|
+| `ESCALATION_CHANGED` | **Se acepta** | Marca algo que pasó del lado de M2 y no mueve nuestro trámite |
+| `INFORMATION_PROVIDED` | **Se acepta** | Perder lo que el vecino contestó es peor que guardarlo tarde |
+| `PRIORITY_CHANGED` | **Se acepta** | Es un dato del reclamo, no un cambio de estado nuestro |
+| `REOPENED` | **Reabre el expediente** | El vecino rechazó la solución. `SANCTIONED` sigue siendo el único cierre que no se revierte: eso ya lo resolvió M4 |
+
+La idempotencia la garantiza el `messageId` del inbox, así que un reenvío no vuelve a aplicar nada. No hay falla observable: el handler registra cuántas filas tocó y sigue.
+
+⚠️ **Hay que avisarle al frontend.** Su [issue #104](https://github.com/hllous/Backend-M6-DAPS2/issues/104) asume que *"late M2 information never reopens a case automatically"*, y `REOPENED` sí reabre desde la Fase 6. La UI está diseñada sobre la suposición contraria.
+
 **Decisión propia, no pedido:** ante la ambigüedad de qué Request Types admiten `RESOLVED` directo desde `ROUTED` (el catálogo no está publicado), decidimos publicar siempre `STARTED` inmediatamente antes de `RESOLVED`, sin excepción. Es válido en cualquier caso de su matriz y no depende de que publiquen nada más.
 
 ### M9 — Core 🔴
@@ -171,7 +184,11 @@ Sin integración, confirmado de los dos lados. De M5: nuestra acta les llega con
 
 **Los adjuntos se llaman distinto.** M2 usa `attachment { attachmentId, fileName, contentType, url, sizeBytes }`; nosotros veníamos con `{ url, mimeType, description }`. Nos alineamos al suyo en lo que va hacia M2; conviene unificarlo en toda la cohorte antes de implementar.
 
-**Dónde viven los archivos: resuelto internamente el 02/09, implementado el mismo día (Issue #64).** El equipo eligió **Cloudflare R2**, con el backend subiendo al bucket y guardando en `Attachment` la URL pública que devuelve, más el nombre del archivo. `POST /evidence` y `GET /evidence` ya existen, genéricos por `ownerType`/`ownerId` (Container, Service, ZoneResult, Inspection). Es lo que hace que el `url` del contrato de M2 sea un enlace que ellos puedan abrir sin pedirnos nada — pero **ese envío hacia M2 todavía no está hecho**: `evidence` sigue viajando vacío en el acta hacia M4 hasta que alguien mapee `Attachment` (`id`/`filename`/`size`) al shape `{attachmentId, fileName, sizeBytes}` que espera M2 (fila de arriba) y lo enchufe en el evento correspondiente.
+**Dónde viven los archivos: resuelto internamente el 02/09, implementado el mismo día (Issue #64).** El equipo eligió **Cloudflare R2**, con el backend subiendo al bucket y guardando en `Attachment` la URL pública que devuelve, más el nombre del archivo. `POST /evidence` y `GET /evidence` ya existen, genéricos por `ownerType`/`ownerId` (Container, Service, ZoneResult, Inspection). Es lo que hace que el `url` del contrato sea un enlace que se pueda abrir sin pedirnos nada.
+
+**Hacia M4 ya viaja (04/09).** `environmentalViolationDetected` lleva `evidence[]` con los adjuntos de la inspección, en la forma `{url, mimeType}` que define `_shared.schema.json`.
+
+**Hacia M2 sigue pendiente**, y no es el mismo trabajo: `updateTicketStatus.attachments[]` usa el shape de ellos —`{attachmentId, fileName, contentType, url, sizeBytes}`— y antes de mandarlo hay que decidir **qué adjuntos ve el vecino**. Las fotos de una inspección son internas, por el mismo criterio que deja afuera `findings` y el contenido del acta.
 
 **Huérfanos ajenos** (alguien los espera y nadie los publica): el par `paymentRegistered` / `debtSettled` es el más caro — rompe el cierre financiero de M4 y M7 con Rentas, porque M5 los publica como `paymentRecorded` y `debtCancelled`. La lista completa está en [`Cruce-Eventos-M6.md`](Cruce-Eventos-M6.md) Parte 3; no la duplicamos acá porque no nos toca mantenerla.
 

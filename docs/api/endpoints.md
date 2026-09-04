@@ -12,6 +12,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **Autorización por rol**: todavía no existe. Cualquier usuario autenticado puede llamar cualquier endpoint — pendiente de que M1 publique su taxonomía de roles ([bloqueantes.md](../bloqueantes.md)).
 - **Listados**: paginados con `?page` (default 1) y `?pageSize` (default 20, máx 100). Devuelven `{ data: [...], meta: { total, page, pageSize, totalPages } }`.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
+- **CORS**: los orígenes permitidos salen de `CORS_ORIGINS`. Sin esa variable se acepta cualquiera, que es lo que hace falta en desarrollo. El JWT viaja en un header y no en una cookie, así que esto no cierra un CSRF — es higiene, no un límite de seguridad.
 - **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 22 tags están declarados en `main.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
 
@@ -118,9 +119,11 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 | POST | `/services/:id/suspend` | `IN_PROGRESS → SUSPENDED`. Motivo obligatorio |
 | POST | `/services/:id/resume` | `SUSPENDED → IN_PROGRESS`. Limpia el motivo |
 | POST | `/services/:id/complete` | `IN_PROGRESS → COMPLETED` o `PARTIALLY_COMPLETED`. **El estado final se calcula**, no se elige: parcial si alguna zona quedó `NOT_SERVICED` o `PARTIAL`. 409 si falta el resultado de alguna zona. Si el servicio atiende un contenedor y cierra `COMPLETED`, **el contenedor transiciona en la misma transacción** (ver [container.md](../entidades/container.md)); si está en `RELOCATING` hace falta `containerLocation` en el body o da 400 |
-| POST | `/services/:id/cancel` | `SCHEDULED` o `SUSPENDED` → `CANCELLED`. Motivo obligatorio |
+| POST | `/services/:id/cancel` | `SCHEDULED`, `RESCHEDULED` o `SUSPENDED` → `CANCELLED`. Motivo obligatorio. **`IN_PROGRESS` no se cancela**: hay que suspenderlo o cerrarlo |
 | POST | `/services/:id/reschedule` | `SCHEDULED → RESCHEDULED`. Deja el servicio a la espera de fecha nueva, con el motivo. Es donde caen los servicios ante una alerta meteorológica o el rechazo de un corte |
 | POST | `/services/:id/confirm-reschedule` | `RESCHEDULED → SCHEDULED` con la fecha y ventana nuevas |
+
+**`RESCHEDULED` no obliga a reprogramar.** Es el estado "hay que moverlo pero todavía no sé adónde", y el sistema mete servicios ahí solo: lo hacen el rechazo de un corte de calle de M7 y la alerta meteorológica. Si el motivo es definitivo —M7 rechaza el corte porque hay obra por dos meses— **se cancela directo**, sin pasar por una fecha inventada.
 
 `DELAYED` no es un estado: es un aviso puntual, el servicio sigue en `SCHEDULED` o `IN_PROGRESS`.
 
@@ -280,6 +283,16 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 **Storage: Cloudflare R2** (S3-compatible), bucket público. La respuesta (`{id, url, filename, contentType, uploadedAt}`) sigue la hipótesis ya documentada por el frontend en su `CONTRACTS.md`, distinta del shape `{attachmentId, fileName, sizeBytes}` que espera M2 en sus eventos — ese mapeo queda para cuando se implemente el envío de `evidence` hacia M2 (ver `bloqueantes.md`).
 
+**El backend no le cree al cliente sobre el archivo.** El `Content-Type` que llega en el multipart lo declara quien sube: Multer no inspecciona el contenido. Se verifica el tipo real por los primeros bytes y se rechaza con 400 si no coincide con lo declarado — un ejecutable renombrado a `.jpg` no entra. Es el pedido 1 del [Issue #90](https://github.com/hllous/Backend-M6-DAPS2/issues/90), donde el frontend dejó escrito que sus propios controles son defensa en profundidad y que la autoridad es el backend.
+
+**Se quitan los metadatos antes de subir.** Una foto sacada con el teléfono de un inspector lleva coordenadas GPS, fecha y modelo del equipo, y el bucket es público. Se saca el Exif, el XMP y los comentarios de JPEG, PNG y WebP.
+
+**Sin re-codificar la imagen.** Es evidencia: se recorta la estructura del contenedor y los píxeles quedan bit a bit idénticos. Una librería de imágenes los volvería a comprimir. Y ante cualquier estructura que el parser no entienda, **el archivo se sube entero, sin tocar**: no sacar un metadato es una fuga de privacidad, pero entregar un recorte de un archivo que no entendimos es perder la evidencia.
+
+⚠️ **Los PDF pasan sin limpiar.** Sacarle los metadatos a un PDF necesita un parser de PDF, que es otro trabajo. El escaneo de malware, el tercer pedido de #90, tampoco existe: necesita un servicio externo que no está contratado.
+
+**`filename` es el nombre que puso quien subió el archivo**, saneado (sin ruta, sin caracteres de control, acotado a 120). La key del bucket sí es un UUID. Es lo que hace que un inspector abriendo el acta vea `medidor-frente.jpg` y no cuatro identificadores opacos.
+
 **Idempotencia real, no solo validada.** `Idempotency-Key` repetida para el mismo owner devuelve el `Attachment` existente en vez de subir de nuevo — respaldado por un constraint único en DB (`ownerType`, `ownerId`, `idempotencyKey`), no por una consulta previa que podría perder una carrera.
 
 ## `green-spaces` — espacios verdes
@@ -325,6 +338,10 @@ Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran p
 | GET | `/public/services` | **Público.** Cuándo pasa el servicio. Filtros: `zoneId`, `serviceTypeId`, `from`, `to`. Sin fechas, los próximos 30 días |
 | GET | `/public/green-points` | **Público.** Puntos verdes activos con su ubicación y qué residuos recibe cada uno. Filtro: `zoneId` |
 | GET | `/public/zones` | **Público.** Zonas activas, para que el frontend arme el filtro de los otros dos. Sin paginar |
+
+**Límite de tasa, y solo acá.** Al no exigir token, esta es la única superficie que cualquiera en internet puede pegar: **60 consultas por minuto por dirección**, y **20 en `/public/reports/:ticketId`**, que es más estricto porque deja probar números de reclamo de a uno para averiguar cuáles tienen expediente ambiental. Devolver el mismo 404 exista o no el ticket evita confirmar uno puntual; el límite evita insistir. Pasado el límite, 429.
+
+No hay límite global: también alcanzaría a un operador municipal en su turno, y un 429 a mitad de una carga de resultados de zona es peor que el riesgo que evita.
 
 **Cada respuesta es una proyección explícita, no la fila de la base.** La diferencia importa: si mañana alguien agrega una columna al expediente, una proyección no la publica sola.
 

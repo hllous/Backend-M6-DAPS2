@@ -345,6 +345,50 @@ describe('ServicesService', () => {
       expect(data.status).toBe(ServiceStatus.SCHEDULED);
       expect(data.scheduledDate.toISOString().slice(0, 10)).toBe('2026-09-22');
     });
+
+    /**
+     * El sistema mete servicios en RESCHEDULED solo: lo hacen el rechazo de un
+     * corte de M7 y la alerta meteorológica. Si el motivo es definitivo,
+     * cancelar es la decisión correcta y tiene que salir directo — antes había
+     * que confirmar una reprogramación a una fecha inventada para poder
+     * cancelar después, y eso ensuciaba el dato.
+     */
+    it('un servicio reprogramado se puede cancelar sin inventar una fecha', async () => {
+      prisma.service.findUnique.mockResolvedValue(
+        serviceRow({ status: ServiceStatus.RESCHEDULED }),
+      );
+
+      await service.cancel(SERVICE_ID, 'M7 rechazó el corte: hay obra por dos meses');
+
+      const { data } = prisma.service.update.mock.calls[0][0];
+      expect(data.status).toBe(ServiceStatus.CANCELLED);
+      expect(data.statusReason).toContain('obra por dos meses');
+    });
+
+    /**
+     * Es la transición que `tickets.consumer` ya hacía por `updateMany` cuando
+     * el vecino cancela el reclamo en M2. Antes de este arreglo, M2 podía
+     * cancelar un servicio reprogramado y el operador municipal no.
+     */
+    it.each([ServiceStatus.SCHEDULED, ServiceStatus.RESCHEDULED, ServiceStatus.SUSPENDED])(
+      'se puede cancelar desde %s',
+      async (desde) => {
+        prisma.service.findUnique.mockResolvedValue(serviceRow({ status: desde }));
+
+        await expect(service.cancel(SERVICE_ID, 'motivo')).resolves.toBeDefined();
+      },
+    );
+
+    it.each([
+      ServiceStatus.IN_PROGRESS,
+      ServiceStatus.COMPLETED,
+      ServiceStatus.PARTIALLY_COMPLETED,
+      ServiceStatus.CANCELLED,
+    ])('no se puede cancelar desde %s', async (desde) => {
+      prisma.service.findUnique.mockResolvedValue(serviceRow({ status: desde }));
+
+      await expect(service.cancel(SERVICE_ID, 'motivo')).rejects.toBeInstanceOf(ConflictException);
+    });
   });
 
   // ─── Cierre calculado ────────────────────────────
