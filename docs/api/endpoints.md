@@ -12,6 +12,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **Autorización por rol**: todavía no existe. Cualquier usuario autenticado puede llamar cualquier endpoint — pendiente de que M1 publique su taxonomía de roles ([bloqueantes.md](../bloqueantes.md)).
 - **Listados**: paginados con `?page` (default 1) y `?pageSize` (default 20, máx 100). Devuelven `{ data: [...], meta: { total, page, pageSize, totalPages } }`.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
+- **CORS**: los orígenes permitidos salen de `CORS_ORIGINS`. Sin esa variable se acepta cualquiera, que es lo que hace falta en desarrollo. El JWT viaja en un header y no en una cookie, así que esto no cierra un CSRF — es higiene, no un límite de seguridad.
 - **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 22 tags están declarados en `main.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
 
@@ -335,6 +336,10 @@ Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran p
 | GET | `/public/services` | **Público.** Cuándo pasa el servicio. Filtros: `zoneId`, `serviceTypeId`, `from`, `to`. Sin fechas, los próximos 30 días |
 | GET | `/public/green-points` | **Público.** Puntos verdes activos con su ubicación y qué residuos recibe cada uno. Filtro: `zoneId` |
 | GET | `/public/zones` | **Público.** Zonas activas, para que el frontend arme el filtro de los otros dos. Sin paginar |
+
+**Límite de tasa, y solo acá.** Al no exigir token, esta es la única superficie que cualquiera en internet puede pegar: **60 consultas por minuto por dirección**, y **20 en `/public/reports/:ticketId`**, que es más estricto porque deja probar números de reclamo de a uno para averiguar cuáles tienen expediente ambiental. Devolver el mismo 404 exista o no el ticket evita confirmar uno puntual; el límite evita insistir. Pasado el límite, 429.
+
+No hay límite global: también alcanzaría a un operador municipal en su turno, y un 429 a mitad de una carga de resultados de zona es peor que el riesgo que evita.
 
 **Cada respuesta es una proyección explícita, no la fila de la base.** La diferencia importa: si mañana alguien agrega una columna al expediente, una proyección no la publica sola.
 

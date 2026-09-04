@@ -18,6 +18,9 @@ export default () => {
       clientId: parsed.KAFKA_CLIENT_ID,
       groupId: parsed.KAFKA_GROUP_ID,
     },
+    corsOrigins: parsed.CORS_ORIGINS?.split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
     r2: {
       accountId: parsed.R2_ACCOUNT_ID,
       accessKeyId: parsed.R2_ACCESS_KEY_ID,
