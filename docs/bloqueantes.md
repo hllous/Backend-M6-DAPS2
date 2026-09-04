@@ -63,6 +63,19 @@ Publicaron **la v1.5**, que reemplaza la v1.2 que habíamos adoptado. Sigue sien
 
 Además: `informationRequestId` desapareció — la v1.5 lo reemplaza por una invariante de "como máximo una `InformationRequest` activa por ticket", así que la correlación no necesita ID. Y los tres enums que faltaban (`resolution.type`, `returnInfo.reasonCode`, `cancellation.reasonCode`) ya están publicados.
 
+**Decisión propia, 04/09/2026 — qué hacemos con un `ticketUpdated` que llega sobre un expediente ya cerrado.** No estaba decidido, estaba implícito en el código. Queda así:
+
+| `updateType` | Sobre un expediente `CLOSED` | Por qué |
+|---|---|---|
+| `ESCALATION_CHANGED` | **Se acepta** | Marca algo que pasó del lado de M2 y no mueve nuestro trámite |
+| `INFORMATION_PROVIDED` | **Se acepta** | Perder lo que el vecino contestó es peor que guardarlo tarde |
+| `PRIORITY_CHANGED` | **Se acepta** | Es un dato del reclamo, no un cambio de estado nuestro |
+| `REOPENED` | **Reabre el expediente** | El vecino rechazó la solución. `SANCTIONED` sigue siendo el único cierre que no se revierte: eso ya lo resolvió M4 |
+
+La idempotencia la garantiza el `messageId` del inbox, así que un reenvío no vuelve a aplicar nada. No hay falla observable: el handler registra cuántas filas tocó y sigue.
+
+⚠️ **Hay que avisarle al frontend.** Su [issue #104](https://github.com/hllous/Backend-M6-DAPS2/issues/104) asume que *"late M2 information never reopens a case automatically"*, y `REOPENED` sí reabre desde la Fase 6. La UI está diseñada sobre la suposición contraria.
+
 **Decisión propia, no pedido:** ante la ambigüedad de qué Request Types admiten `RESOLVED` directo desde `ROUTED` (el catálogo no está publicado), decidimos publicar siempre `STARTED` inmediatamente antes de `RESOLVED`, sin excepción. Es válido en cualquier caso de su matriz y no depende de que publiquen nada más.
 
 ### M9 — Core 🔴
