@@ -96,7 +96,7 @@ Se adopta el siguiente stack:
 
 ## Referencias
 
-- Enunciado del TPO: [`enunciado/TPO - Desarrollo de Apps II - Gestin de municipalidad.pdf`](../../enunciado/)
+- Enunciado del TPO: `enunciado/TPO - Desarrollo de Apps II - Gestión de municipalidad.pdf`, en el repositorio de documentación
 - Documentación NestJS: https://docs.nestjs.com
 - Documentación Next.js: https://nextjs.org/docs
 - Documentación Prisma: https://www.prisma.io/docs

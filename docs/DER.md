@@ -130,13 +130,17 @@ erDiagram
         varchar code UK
         varchar name
         enum site_type "DisposalSiteType"
+        boolean active
     }
     ATTACHMENT {
         uuid id PK
-        varchar owner_type "SERVICE ZONE_RESULT INSPECTION"
+        varchar owner_type "SERVICE ZONE_RESULT INSPECTION CONTAINER"
         uuid owner_id "polimorfico"
         varchar url
         varchar filename
+        varchar content_type
+        int size "bytes"
+        varchar idempotency_key "UK owner+idempotency_key"
         timestamp uploaded_at
     }
 
@@ -230,6 +234,8 @@ erDiagram
         jsonb reporter_snapshot
         enum status "EnvironmentalReportStatus"
         enum priority "Severity"
+        boolean escalated "EXT M2 - ticketUpdated"
+        text citizen_response "EXT M2 - ticketUpdated"
         timestamp deadline_at "cierre por vencimiento"
     }
     ENVIRONMENTAL_INSPECTION {
@@ -278,7 +284,8 @@ erDiagram
         varchar address
         varchar detected_in_type "SERVICE INSPECTION"
         uuid detected_in_id "polimorfico"
-        varchar status "REQUESTED IN_PROGRESS CLOSED"
+        boolean public_safety_risk "M3 prioriza con esto; no se deriva de severity"
+        enum status "RepairRequestStatus"
         varchar work_order_id "EXT M3"
         timestamp requested_at
     }
@@ -290,7 +297,7 @@ erDiagram
         enum closure_type "StreetClosureType"
         timestamp closure_from
         timestamp closure_to
-        varchar status "REQUESTED APPROVED REJECTED ENDED"
+        enum status "StreetClosureRequestStatus"
         varchar closure_id "EXT M7"
     }
     CLOSURE_STREET {
@@ -309,6 +316,8 @@ erDiagram
         uuid aggregate_id
         jsonb payload
         varchar status "PENDING SENT FAILED"
+        int attempts "reintentos del dispatcher, tope 5"
+        varchar last_error "error del ultimo intento"
         timestamp occurred_at
         timestamp published_at
     }
@@ -318,7 +327,8 @@ erDiagram
         varchar event_type
         jsonb payload
         timestamp received_at
-        timestamp processed_at
+        timestamp processed_at "null mientras no se aplico"
+        varchar error
     }
 
     %% ======== RELACIONES ========
@@ -375,6 +385,8 @@ erDiagram
 | 7 | `damage_type`, `severity`, `requires_public_works` como columnas nullables en `CONTAINER` | Solo se llenan en `DAMAGED`. La alternativa (tabla `CONTAINER_DAMAGE` con historial) es mejor si se quiere saber cuántas veces se rompió un contenedor: hoy el doc no lo pide |
 | 8 | `OUTBOX_EVENT` / `INBOX_EVENT` | No son dominio, pero el módulo publica 8 eventos y consume 12. Sin outbox transaccional, un commit que falla al publicar deja el estado y el bus desincronizados; sin inbox con `message_id` único, un evento reentregado por M4 duplica el `SANCTION_OUTCOME` |
 | 9 | Los enums viven en el código, no en tablas de catálogo | Son valores cerrados versionados con el código (32 en total). `SERVICE_TYPE` y `ZONE` sí son tablas: esos los configura el municipio |
+| 10 | `ATTACHMENT` polimórfico y genérico con idempotencia | En vez de endpoints de subida aislados por recurso, `POST /evidence` acepta `owner_type` (`SERVICE`, `ZONE_RESULT`, `INSPECTION`, `CONTAINER`), guarda el archivo en Cloudflare R2 y exige `Idempotency-Key` respaldado por índice único `(owner_type, owner_id, idempotency_key)` para reintentos seguros |
+| 11 | `REPAIR_REQUEST.public_safety_risk` independiente de `severity` | Requerido por el esquema de M3 (`infrastructureRepairRequested`). No se deriva de `severity`: un daño leve puede implicar riesgo peatonal inminente |
 
 ## Riesgos abiertos que impactan el esquema
 

@@ -204,7 +204,7 @@ Esta es la tabla con la que lo implementamos. La columna izquierda son **hechos 
 | El reclamo no es de nuestra área | `RETURNED` | `details.returnInfo.reasonCode`. Vuelve a M2 para que lo re-derive, en vez de cancelárselo al vecino |
 | El inspector necesita un dato del vecino | `INFORMATION_REQUIRED` | `details.informationRequest.messageForCitizen` (+ `requiredBy` opcional) |
 
-Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode` ya están publicados en la v1.5 (antes no estaban enumerados) — están detallados en la ficha [M6-para-M2.md](M6-por-modulo/M6-para-M2.md).
+Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode` ya están publicados en la v1.5 (antes no estaban enumerados) — están detallados en la ficha `M6-por-modulo/M6-para-M2.md`, en el repositorio de documentación.
 
 Los otros dos no tienen una traducción directa, y conviene que quede escrito por qué:
 

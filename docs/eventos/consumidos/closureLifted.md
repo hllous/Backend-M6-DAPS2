@@ -1,5 +1,7 @@
 # `closureLifted` ← M4
 
+> **Reemplazado el 24/08/2026.** M4 fusionó `closureOrdered` y `closureLifted` en un evento único, [`closureUpdate`](closureUpdate.md) con `status: ORDERED | LIFTED`. Este archivo queda como registro de lo que se acordó antes; **el handler implementado es el de `closureUpdate`**.
+
 M4 levantó una clausura ya dispuesta. Tercera y última señal de cierre del expediente.
 
 ## Qué hace M6 al recibirlo
