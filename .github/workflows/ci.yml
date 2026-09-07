@@ -46,6 +46,14 @@ jobs:
       - name: Lint
         run: npm run lint:check
 
+      # El contrato versionado tiene que reflejar el codigo. Si alguien cambia
+      # un DTO y no corre `npm run openapi:generate`, el frontend se queda
+      # validando contra una forma que ya no existe.
+      - name: Contrato OpenAPI al dia
+        run: |
+          npm run openapi:generate
+          git diff --exit-code docs/api/openapi.json             || (echo "::error::docs/api/openapi.json quedo desactualizado. Corre 'npm run openapi:generate' y commiteá el resultado." && exit 1)
+
   test:
     name: test
     runs-on: ubuntu-latest
