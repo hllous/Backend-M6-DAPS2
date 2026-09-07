@@ -1,6 +1,10 @@
 # Endpoints REST de M6
 
-Resumen de lo que expone el backend. La fuente de verdad interactiva es el Swagger en `/api/docs`; este archivo existe para poder ver el mapa completo sin levantar nada, y porque el [DoD](../gestion/definition-of-done.md) lo pide para cada endpoint nuevo.
+**Este archivo es un mapa, no el contrato.** Es una tabla resumen: dice qué hace cada endpoint y por qué, no la forma exacta de sus DTO.
+
+El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde el código con `npm run openapi:generate` y versionado en el repo. Ahí están los request y response completos, con required/optional, enums, formatos y ejemplos — que es lo que necesita un consumidor para generar tipos o validar con Zod. El CI falla si queda desactualizado respecto del código.
+
+El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
 > **Actualizado al 02/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero) + evidencia genérica (Issue #64). 130 rutas, agrupadas en 23 tags de Swagger.
 
