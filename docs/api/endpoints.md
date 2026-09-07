@@ -113,7 +113,8 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 | GET | `/services` | Listar. Filtros: `status`, `serviceTypeId`, `mode`, `origin`, `crewId`, `vehicleId`, `zoneId`, `ticketId`, `scheduledFrom`, `scheduledTo` |
 | GET | `/services/:id` | Detalle con zonas, resultados por zona y registros de recolección |
 | PATCH | `/services/:id` | Corregir vehículo, ventana horaria y notas, **solo antes de iniciar**. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar |
-| POST | `/services/:id/assign-crew` | Asignar cuadrilla, y vehículo en la misma operación |
+| POST | `/services/:id/assign-crew` | Asignar cuadrilla, y vehículo en la misma operación. **El solapamiento avisa, no bloquea**: si la cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, devuelve 409 nombrando los servicios; con `overrideNote` (10-500 caracteres) la asignación se hace igual y la nota queda guardada con quién y cuándo |
+| GET | `/services/:id/assignment-conflicts` | Con qué se solapa asignar `crewId` / `vehicleId`, **antes** de enviar. Sin parámetros evalúa los que el servicio ya tiene. Existe para que el planificador se entere por un aviso y no por un 409 |
 
 **Máquina de estados.** Una transición inválida devuelve 409 nombrando las válidas desde el estado actual.
 
@@ -129,7 +130,12 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 
 **`RESCHEDULED` no obliga a reprogramar.** Es el estado "hay que moverlo pero todavía no sé adónde", y el sistema mete servicios ahí solo: lo hacen el rechazo de un corte de calle de M7 y la alerta meteorológica. Si el motivo es definitivo —M7 rechaza el corte porque hay obra por dos meses— **se cancela directo**, sin pasar por una fecha inventada.
 
-`DELAYED` no es un estado: es un aviso puntual, el servicio sigue en `SCHEDULED` o `IN_PROGRESS`.
+**Aviso de demora.** `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o en `IN_PROGRESS` mientras se demora, y esos son los dos únicos momentos en los que un retraso significa algo.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/services/:id/delay-notices` | Avisar que se demora. **No cambia el estado.** El tipo tiene que coincidir con el momento: `START` solo antes de arrancar, `DURATION` solo con la cuadrilla trabajando — la combinación cruzada da 400. Un aviso nuevo **reemplaza** al vigente y el anterior queda en el historial. Si el servicio nació de un reclamo sale hacia M2 como `updateTicketStatus / PROGRESS`, con el motivo como mensaje interno: al vecino se le dice que se demora, no por qué |
+| GET | `/services/:id/delay-notices` | Historial completo, del más reciente al más viejo. El vigente es el que tiene `active: true` |
 
 **Resultado y residuos.**
 

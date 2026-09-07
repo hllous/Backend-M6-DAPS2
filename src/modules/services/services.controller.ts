@@ -14,6 +14,10 @@ import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@ne
 import { ServicesService } from './services.service';
 import {
   AssignCrewDto,
+  AssignmentConflictsResponseDto,
+  CreateDelayNoticeDto,
+  DelayNoticeResponseDto,
+  QueryAssignmentConflictsDto,
   CollectionRecordResponseDto,
   CompleteServiceDto,
   ConfirmRescheduleDto,
@@ -155,15 +159,106 @@ export class ServicesController {
   })
   @ApiResponse({
     status: 409,
-    description: 'El servicio ya arrancó o cerró',
+    description:
+      'El servicio ya arrancó o cerró, o hay solapamiento y falta `overrideNote`. ' +
+      'El solapamiento no bloquea: con la nota, la asignación se hace igual.',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
   async assignCrew(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssignCrewDto,
+    @CurrentUser('userId') userId?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.assignCrew(id, dto);
+    return this.servicesService.assignCrew(id, dto, userId);
+  }
+
+  @Get(':id/assignment-conflicts')
+  @ApiOperation({
+    summary: 'Con qué se solapa asignar estos recursos',
+    description:
+      'Los servicios del mismo día cuya franja horaria se pisa con la de este y que ya tienen tomada la cuadrilla o el vehículo. ' +
+      'Existe para poder **avisar antes de enviar**: sin esta consulta, el planificador se enteraría por un 409. ' +
+      'Sin `crewId` ni `vehicleId` evalúa los que el servicio ya tiene asignados. ' +
+      'Una franja horaria ausente se trata como todo el día.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Solapamientos encontrados',
+    type: AssignmentConflictsResponseDto,
+  })
+  @ApiResponse(AUTH)
+  @ApiResponse(FORBIDDEN)
+  @ApiResponse({
+    status: 404,
+    description: 'Servicio, cuadrilla o vehículo no encontrado',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse(SERVER)
+  async assignmentConflicts(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: QueryAssignmentConflictsDto,
+  ): Promise<AssignmentConflictsResponseDto> {
+    return this.servicesService.getAssignmentConflicts(id, query);
+  }
+
+  // ─── Aviso de demora ──────────────────────────────
+
+  @Post(':id/delay-notices')
+  @ApiOperation({
+    summary: 'Avisar que el servicio se demora',
+    description:
+      '**No cambia el estado del servicio.** `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o `IN_PROGRESS` mientras se demora. ' +
+      'El tipo tiene que coincidir con el momento — `START` antes de arrancar, `DURATION` con la cuadrilla trabajando. ' +
+      'Un aviso nuevo reemplaza al vigente; el anterior queda en el historial y no se borra. ' +
+      'Si el servicio nació de un reclamo, sale hacia M2 como `updateTicketStatus / PROGRESS`: el motivo viaja como mensaje interno, no se le muestra al vecino.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
+  @ApiResponse({ status: 201, description: 'Aviso registrado', type: DelayNoticeResponseDto })
+  @ApiResponse({
+    status: 400,
+    description:
+      'El tipo de demora no corresponde al estado del servicio, o los datos son inválidos',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse(AUTH)
+  @ApiResponse(FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  @ApiResponse({
+    status: 409,
+    description: 'El servicio no está en SCHEDULED ni en IN_PROGRESS',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse(SERVER)
+  async addDelayNotice(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateDelayNoticeDto,
+    @CurrentUser('userId') userId?: string,
+  ): Promise<DelayNoticeResponseDto> {
+    return this.servicesService.addDelayNotice(id, dto, userId);
+  }
+
+  @Get(':id/delay-notices')
+  @ApiOperation({
+    summary: 'Historial de avisos de demora',
+    description:
+      'Del más reciente al más viejo. El vigente es el que tiene `active: true`; los demás fueron reemplazados por uno posterior.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Avisos del servicio',
+    type: DelayNoticeResponseDto,
+    isArray: true,
+  })
+  @ApiResponse(AUTH)
+  @ApiResponse(NOT_FOUND)
+  @ApiResponse(SERVER)
+  async findDelayNotices(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<DelayNoticeResponseDto[]> {
+    return this.servicesService.findDelayNotices(id);
   }
 
   // ─── Ejecución ────────────────────────────────────

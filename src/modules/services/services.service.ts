@@ -8,10 +8,12 @@ import {
 import {
   Container,
   ContainerStatus,
+  DelayType,
   Prisma,
   Service,
   ServiceMode,
   ServiceOrigin,
+  ServiceDelayNotice,
   ServiceStatus,
   ZoneResultStatus,
 } from '@prisma/client';
@@ -22,6 +24,12 @@ import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
 import {
   AssignCrewDto,
+  AssignmentConflictDto,
+  AssignmentConflictsResponseDto,
+  ConflictResource,
+  CreateDelayNoticeDto,
+  DelayNoticeResponseDto,
+  QueryAssignmentConflictsDto,
   CompleteServiceDto,
   ConfirmRescheduleDto,
   CreateCollectionRecordDto,
@@ -93,6 +101,59 @@ function toTime(hhmm?: string | null): Date | null {
 
 function fromTime(value: Date | null): string | null {
   return value ? value.toISOString().slice(11, 16) : null;
+}
+
+/**
+ * Los dos momentos en los que un retraso significa algo.
+ *
+ * Uno cerrado o cancelado ya no se puede demorar, y uno suspendido ya tiene su
+ * motivo en `statusReason`.
+ */
+const ADMITEN_DEMORA: ServiceStatus[] = [ServiceStatus.SCHEDULED, ServiceStatus.IN_PROGRESS];
+
+function toDelayNoticeDto(aviso: ServiceDelayNotice): DelayNoticeResponseDto {
+  return {
+    id: aviso.id,
+    serviceId: aviso.serviceId,
+    delayType: aviso.delayType,
+    delayMinutes: aviso.delayMinutes,
+    reason: aviso.reason,
+    newEstimatedEnd: aviso.newEstimatedEnd?.toISOString() ?? null,
+    serviceStatus: aviso.serviceStatus,
+    reportedBy: aviso.reportedBy,
+    detectedAt: aviso.detectedAt.toISOString(),
+    createdAt: aviso.createdAt.toISOString(),
+    active: aviso.supersededById === null,
+  };
+}
+
+/**
+ * Los estados en los que un servicio todavia tiene tomados sus recursos.
+ *
+ * Un servicio cerrado o cancelado ya no ocupa a nadie, asi que no genera
+ * solapamiento. Un RESCHEDULED si: sigue teniendo la cuadrilla asignada y una
+ * fecha, aunque este esperando una nueva.
+ */
+const OCUPAN_RECURSO: ServiceStatus[] = [
+  ServiceStatus.SCHEDULED,
+  ServiceStatus.RESCHEDULED,
+  ServiceStatus.IN_PROGRESS,
+  ServiceStatus.SUSPENDED,
+];
+
+/**
+ * Si dos servicios del mismo dia se pisan en horario.
+ *
+ * **Sin franja horaria se asume todo el dia.** Es lo unico honesto cuando no
+ * sabemos cuando empieza: suponer lo contrario haria desaparecer el aviso
+ * justo en el caso donde menos informacion hay.
+ */
+function seSolapan(
+  a: { windowFrom: Date | null; windowTo: Date | null },
+  b: { windowFrom: Date | null; windowTo: Date | null },
+): boolean {
+  if (!a.windowFrom || !a.windowTo || !b.windowFrom || !b.windowTo) return true;
+  return a.windowFrom < b.windowTo && b.windowFrom < a.windowTo;
 }
 
 function toNumber(value: Prisma.Decimal | null): number | null {
@@ -246,22 +307,129 @@ export class ServicesService {
     return this.toResponseDto(service);
   }
 
-  async assignCrew(id: string, dto: AssignCrewDto): Promise<ServiceResponseDto> {
+  /**
+   * Asigna la cuadrilla, y el vehiculo si viene en la misma llamada.
+   *
+   * **Avisa del solapamiento, no lo bloquea.** Una cuadrilla que ya tiene otro
+   * servicio ese dia puede tomar este igual: el que planifica sabe cosas que la
+   * base no —que la otra parada termina antes, que se coordino por radio—. Lo
+   * que no se acepta es hacerlo en silencio, asi que con solapamiento la nota
+   * es obligatoria y queda persistida con quien la escribio.
+   *
+   * El frontend deberia consultar antes `GET /services/:id/assignment-conflicts`
+   * para poder avisar; el 409 de aca es la red, no el camino previsto.
+   */
+  async assignCrew(id: string, dto: AssignCrewDto, actorId?: string): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     this.assertEditable(current);
     await this.assertResourcesExist(dto.crewId, dto.vehicleId);
+
+    const conflictos = await this.findAssignmentConflicts(current, dto.crewId, dto.vehicleId);
+    if (conflictos.length > 0 && !dto.overrideNote) {
+      throw new ConflictException(
+        `La asignacion se solapa con ${conflictos.length} servicio/s ya programado/s: ${conflictos
+          .map((c) => `${c.resourceName} en ${c.serviceId}`)
+          .join('; ')}. Se puede asignar igual, pero hace falta 'overrideNote' explicando por que.`,
+      );
+    }
 
     const service = await this.prisma.service.update({
       where: { id },
       data: {
         crewId: dto.crewId,
         ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
+        // La nota solo se guarda si hubo algo que justificar: mandarla sin
+        // solapamiento no deja rastro de un override que no ocurrio.
+        ...(conflictos.length > 0 &&
+          dto.overrideNote && {
+            assignmentOverrideNote: dto.overrideNote,
+            assignmentOverrideBy: actorId ?? null,
+            assignmentOverrideAt: new Date(),
+          }),
       },
       include: SERVICE_INCLUDE,
     });
 
-    this.logger.log(`Servicio ${id}: cuadrilla ${dto.crewId} asignada`);
+    this.logger.log(
+      conflictos.length > 0
+        ? `Servicio ${id}: cuadrilla ${dto.crewId} asignada con override sobre ${conflictos.length} solapamiento/s`
+        : `Servicio ${id}: cuadrilla ${dto.crewId} asignada`,
+    );
     return this.toResponseDto(service);
+  }
+
+  /**
+   * Con que otros servicios se solapa asignar estos recursos.
+   *
+   * Dos servicios se solapan si son el mismo dia y sus franjas se pisan.
+   * **Sin franja se asume todo el dia**: es lo unico honesto cuando no sabemos
+   * cuando empieza, y hace que el aviso aparezca en vez de perderse.
+   *
+   * Los servicios cerrados o cancelados no cuentan: ya no ocupan a nadie.
+   */
+  async getAssignmentConflicts(
+    id: string,
+    query: QueryAssignmentConflictsDto,
+  ): Promise<AssignmentConflictsResponseDto> {
+    const current = await this.getService(id);
+    await this.assertResourcesExist(query.crewId, query.vehicleId);
+
+    const conflicts = await this.findAssignmentConflicts(
+      current,
+      query.crewId ?? current.crewId ?? undefined,
+      query.vehicleId ?? current.vehicleId ?? undefined,
+    );
+
+    return { serviceId: id, hasConflicts: conflicts.length > 0, conflicts };
+  }
+
+  private async findAssignmentConflicts(
+    service: Service,
+    crewId?: string,
+    vehicleId?: string,
+  ): Promise<AssignmentConflictDto[]> {
+    const recursos: [ConflictResource, string | undefined][] = [
+      [ConflictResource.CREW, crewId],
+      [ConflictResource.VEHICLE, vehicleId],
+    ];
+    if (recursos.every(([, valor]) => !valor)) return [];
+
+    const candidatos = await this.prisma.service.findMany({
+      where: {
+        id: { not: service.id },
+        scheduledDate: service.scheduledDate,
+        status: { in: OCUPAN_RECURSO },
+        OR: [...(crewId ? [{ crewId }] : []), ...(vehicleId ? [{ vehicleId }] : [])],
+      },
+      include: { serviceType: { select: { name: true } }, crew: true, vehicle: true },
+      orderBy: { windowFrom: 'asc' },
+    });
+
+    const conflictos: AssignmentConflictDto[] = [];
+    for (const otro of candidatos) {
+      if (!seSolapan(service, otro)) continue;
+
+      for (const [resource, valor] of recursos) {
+        const propio = resource === ConflictResource.CREW ? otro.crewId : otro.vehicleId;
+        if (!valor || propio !== valor) continue;
+
+        conflictos.push({
+          resource,
+          resourceId: valor,
+          resourceName:
+            resource === ConflictResource.CREW
+              ? (otro.crew?.name ?? valor)
+              : (otro.vehicle?.plate ?? valor),
+          serviceId: otro.id,
+          serviceStatus: otro.status,
+          serviceTypeName: otro.serviceType.name,
+          scheduledDate: otro.scheduledDate.toISOString().slice(0, 10),
+          windowFrom: fromTime(otro.windowFrom),
+          windowTo: fromTime(otro.windowTo),
+        });
+      }
+    }
+    return conflictos;
   }
 
   // ─── Máquina de estados ───────────────────────────
@@ -488,6 +656,110 @@ export class ServicesService {
       ...(dto.windowFrom !== undefined && { windowFrom: toTime(dto.windowFrom) }),
       ...(dto.windowTo !== undefined && { windowTo: toTime(dto.windowTo) }),
     });
+  }
+
+  // ─── Aviso de demora ──────────────────────────────
+
+  /**
+   * Levanta un aviso de que el servicio va con retraso.
+   *
+   * **No mueve la maquina de estados.** `DELAYED` nunca fue un estado: el
+   * servicio sigue en `SCHEDULED` o en `IN_PROGRESS` mientras se demora, y esos
+   * son justamente los dos unicos momentos en los que un retraso significa algo.
+   * Uno cerrado o cancelado ya no se puede demorar, y uno suspendido tiene su
+   * propio motivo registrado.
+   *
+   * `delayType` tiene que coincidir con el momento: `START` es empezar tarde y
+   * solo aplica antes de arrancar; `DURATION` es tardar mas, y solo aplica con
+   * la cuadrilla trabajando. Aceptar la combinacion cruzada dejaria entrar datos
+   * que despues nadie sabe leer.
+   *
+   * Los avisos se acumulan: uno nuevo **reemplaza** al vigente en vez de
+   * pisarlo, y el reemplazado queda en el historial. Un aviso emitido no se
+   * corrige, se emite otro — el mismo criterio que el acta.
+   *
+   * Hacia M2 sale como `updateTicketStatus / PROGRESS` con la nueva estimacion,
+   * solo si el servicio nacio de un reclamo. El motivo viaja como mensaje
+   * interno: al vecino se le dice que se demora, no por que.
+   */
+  async addDelayNotice(
+    serviceId: string,
+    dto: CreateDelayNoticeDto,
+    actorId?: string,
+  ): Promise<DelayNoticeResponseDto> {
+    const service = await this.getService(serviceId);
+
+    if (!ADMITEN_DEMORA.includes(service.status)) {
+      throw new ConflictException(
+        `Solo se avisa demora de un servicio en [${ADMITEN_DEMORA.join(', ')}] (este esta en ${service.status})`,
+      );
+    }
+
+    const esperado =
+      service.status === ServiceStatus.IN_PROGRESS ? DelayType.DURATION : DelayType.START;
+    if (dto.delayType !== esperado) {
+      throw new BadRequestException(
+        `Un servicio en ${service.status} solo admite un aviso de tipo ${esperado}: ` +
+          (esperado === DelayType.START
+            ? 'todavia no arranco, asi que lo que se demora es el inicio'
+            : 'ya arranco, asi que lo que se demora es la duracion'),
+      );
+    }
+
+    const vigente = await this.prisma.serviceDelayNotice.findFirst({
+      where: { serviceId, supersededById: null },
+      orderBy: { detectedAt: 'desc' },
+    });
+
+    const detectedAt = dto.detectedAt ? new Date(dto.detectedAt) : new Date();
+    const eventos = this.ticketEvents(service, actorId ?? 'sistema', {
+      updateType: 'PROGRESS',
+      publicMessage: 'El servicio se esta demorando. Estamos trabajando para normalizarlo.',
+      internalMessage: dto.reason,
+    });
+
+    const aviso = await this.prisma.$transaction(async (tx) => {
+      const creado = await tx.serviceDelayNotice.create({
+        data: {
+          serviceId,
+          delayType: dto.delayType,
+          delayMinutes: dto.delayMinutes,
+          reason: dto.reason,
+          newEstimatedEnd: dto.newEstimatedEnd ? new Date(dto.newEstimatedEnd) : null,
+          serviceStatus: service.status,
+          reportedBy: actorId ?? null,
+          detectedAt,
+        },
+      });
+
+      if (vigente) {
+        await tx.serviceDelayNotice.update({
+          where: { id: vigente.id },
+          data: { supersededById: creado.id },
+        });
+      }
+
+      await this.outbox.enqueueMany(tx, eventos);
+      return creado;
+    });
+
+    this.logger.log(
+      `Servicio ${serviceId}: aviso de demora ${dto.delayType} de ${dto.delayMinutes} min` +
+        (vigente ? ` (reemplaza a ${vigente.id})` : ''),
+    );
+    return toDelayNoticeDto(aviso);
+  }
+
+  /** El historial completo, del mas reciente al mas viejo. */
+  async findDelayNotices(serviceId: string): Promise<DelayNoticeResponseDto[]> {
+    await this.getService(serviceId);
+
+    const avisos = await this.prisma.serviceDelayNotice.findMany({
+      where: { serviceId },
+      orderBy: { detectedAt: 'desc' },
+    });
+
+    return avisos.map(toDelayNoticeDto);
   }
 
   // ─── Resultado por zona ───────────────────────────
