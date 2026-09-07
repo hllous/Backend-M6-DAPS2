@@ -133,6 +133,24 @@ package "Ejecución" #FDF3E7 {
       public_id : varchar <<EXT M2>>
       ticket_version : int <<EXT M2>>
       notes : text
+      assignment_override_note : text ' solo si se asigno sobre un solapamiento
+      assignment_override_by : varchar <<EXT M1>>
+      assignment_override_at : timestamp
+  }
+
+  ' DELAYED no es un estado: el servicio sigue en SCHEDULED o IN_PROGRESS.
+  entity "service_delay_notice" as service_delay_notice {
+    * id : uuid <<PK>>
+    --
+    * service_id : uuid <<FK>>
+    * delay_type : enum <<DelayType>>
+    * delay_minutes : int
+    * reason : text
+      new_estimated_end : timestamp
+    * service_status : enum <<ServiceStatus>> ' en que estado estaba
+      reported_by : varchar <<EXT M1>>
+    * detected_at : timestamp
+      superseded_by_id : uuid <<FK>> <<UK>> ' el aviso que lo reemplazo
   }
 
   entity "service_zone" as service_zone {
@@ -428,6 +446,9 @@ service_type      ||--o{ service : tipifica
 route             ||--o{ service : "recorre (mode = ROUTE)"
 crew              ||--o{ service : ejecuta
 vehicle           ||--o{ service : "se asigna a"
+
+service           ||--o{ service_delay_notice : "se demora"
+service_delay_notice ||--o| service_delay_notice : reemplaza
 
 service           ||--|{ service_zone : "cubre (snapshot)"
 zone              ||--o{ service_zone : "es cubierta por"

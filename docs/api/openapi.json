@@ -7353,7 +7353,285 @@
             }
           },
           "409": {
-            "description": "El servicio ya arrancó o cerró",
+            "description": "El servicio ya arrancó o cerró, o hay solapamiento y falta `overrideNote`. El solapamiento no bloquea: con la nota, la asignación se hace igual.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "services"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/services/{id}/assignment-conflicts": {
+      "get": {
+        "operationId": "ServicesController_assignmentConflicts",
+        "summary": "Con qué se solapa asignar estos recursos",
+        "description": "Los servicios del mismo día cuya franja horaria se pisa con la de este y que ya tienen tomada la cuadrilla o el vehículo. Existe para poder **avisar antes de enviar**: sin esta consulta, el planificador se enteraría por un 409. Sin `crewId` ni `vehicleId` evalúa los que el servicio ya tiene asignados. Una franja horaria ausente se trata como todo el día.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del servicio",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "crewId",
+            "required": false,
+            "in": "query",
+            "description": "Cuadrilla a evaluar",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vehicleId",
+            "required": false,
+            "in": "query",
+            "description": "Vehículo a evaluar",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solapamientos encontrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentConflictsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos sobre servicios urbanos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Servicio, cuadrilla o vehículo no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "services"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/services/{id}/delay-notices": {
+      "post": {
+        "operationId": "ServicesController_addDelayNotice",
+        "summary": "Avisar que el servicio se demora",
+        "description": "**No cambia el estado del servicio.** `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o `IN_PROGRESS` mientras se demora. El tipo tiene que coincidir con el momento — `START` antes de arrancar, `DURATION` con la cuadrilla trabajando. Un aviso nuevo reemplaza al vigente; el anterior queda en el historial y no se borra. Si el servicio nació de un reclamo, sale hacia M2 como `updateTicketStatus / PROGRESS`: el motivo viaja como mensaje interno, no se le muestra al vecino.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del servicio",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDelayNoticeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Aviso registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DelayNoticeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El tipo de demora no corresponde al estado del servicio, o los datos son inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos sobre servicios urbanos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Servicio no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El servicio no está en SCHEDULED ni en IN_PROGRESS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "services"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "ServicesController_findDelayNotices",
+        "summary": "Historial de avisos de demora",
+        "description": "Del más reciente al más viejo. El vigente es el que tiene `active: true`; los demás fueron reemplazados por uno posterior.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del servicio",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avisos del servicio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DelayNoticeResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Servicio no encontrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -14262,10 +14540,236 @@
             "description": "Vehículo asignado en la misma operación, si el tipo de servicio lo exige",
             "example": "f6a7b8c9-d0e1-2345-fabc-456789012345",
             "format": "uuid"
+          },
+          "overrideNote": {
+            "type": "string",
+            "description": "Por qué se asigna igual un recurso que ya está tomado ese día. **Obligatorio si hay solapamiento**: la asignación avisa y deja pasar, pero no en silencio. Consultar antes con `GET /services/:id/assignment-conflicts`.",
+            "minLength": 10,
+            "maxLength": 500,
+            "example": "La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla."
           }
         },
         "required": [
           "crewId"
+        ]
+      },
+      "AssignmentConflictDto": {
+        "type": "object",
+        "properties": {
+          "resource": {
+            "type": "string",
+            "enum": [
+              "CREW",
+              "VEHICLE"
+            ],
+            "description": "Qué recurso ya está tomado"
+          },
+          "resourceId": {
+            "type": "string",
+            "description": "UUID del recurso",
+            "format": "uuid"
+          },
+          "resourceName": {
+            "type": "string",
+            "description": "Nombre de la cuadrilla o patente del vehículo",
+            "example": "Cuadrilla Centro 1"
+          },
+          "serviceId": {
+            "type": "string",
+            "description": "El otro servicio que lo tiene tomado",
+            "format": "uuid"
+          },
+          "serviceStatus": {
+            "type": "string",
+            "enum": [
+              "SCHEDULED",
+              "RESCHEDULED",
+              "IN_PROGRESS",
+              "SUSPENDED",
+              "COMPLETED",
+              "PARTIALLY_COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "serviceTypeName": {
+            "type": "string",
+            "example": "Recolección domiciliaria"
+          },
+          "scheduledDate": {
+            "type": "string",
+            "example": "2026-09-15",
+            "format": "date"
+          },
+          "windowFrom": {
+            "type": "string",
+            "description": "Franja del otro servicio. `null` en las dos puntas significa todo el día.",
+            "example": "06:00",
+            "nullable": true
+          },
+          "windowTo": {
+            "type": "string",
+            "example": "11:00",
+            "nullable": true
+          }
+        },
+        "required": [
+          "resource",
+          "resourceId",
+          "resourceName",
+          "serviceId",
+          "serviceStatus",
+          "serviceTypeName",
+          "scheduledDate",
+          "windowFrom",
+          "windowTo"
+        ]
+      },
+      "AssignmentConflictsResponseDto": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Servicio que se quiere asignar"
+          },
+          "hasConflicts": {
+            "type": "boolean",
+            "description": "Si hay algún solapamiento. Con `true`, asignar exige `overrideNote`; la asignación se permite igual.",
+            "example": true
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignmentConflictDto"
+            }
+          }
+        },
+        "required": [
+          "serviceId",
+          "hasConflicts",
+          "conflicts"
+        ]
+      },
+      "CreateDelayNoticeDto": {
+        "type": "object",
+        "properties": {
+          "delayType": {
+            "type": "string",
+            "enum": [
+              "START",
+              "DURATION"
+            ],
+            "description": "`START` si el servicio va a empezar tarde (sigue en SCHEDULED). `DURATION` si ya arrancó y va a tardar más (IN_PROGRESS).",
+            "example": "START"
+          },
+          "delayMinutes": {
+            "type": "number",
+            "description": "Minutos de retraso estimados",
+            "minimum": 1,
+            "maximum": 1440,
+            "example": 90
+          },
+          "reason": {
+            "type": "string",
+            "description": "Por qué se demora. Viaja hacia M2 como mensaje interno, no se le muestra al vecino.",
+            "maxLength": 500,
+            "example": "Corte de calle imprevisto por rotura de un caño"
+          },
+          "newEstimatedEnd": {
+            "type": "string",
+            "description": "Nueva hora estimada de finalización, si se puede estimar",
+            "format": "date-time",
+            "example": "2026-09-15T14:30:00.000Z"
+          },
+          "detectedAt": {
+            "type": "string",
+            "description": "Cuándo se detectó el retraso. Por defecto, ahora.",
+            "format": "date-time",
+            "example": "2026-09-15T11:05:00.000Z"
+          }
+        },
+        "required": [
+          "delayType",
+          "delayMinutes",
+          "reason"
+        ]
+      },
+      "DelayNoticeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "delayType": {
+            "type": "string",
+            "enum": [
+              "START",
+              "DURATION"
+            ]
+          },
+          "delayMinutes": {
+            "type": "number",
+            "example": 90
+          },
+          "reason": {
+            "type": "string",
+            "example": "Corte de calle imprevisto por rotura de un caño"
+          },
+          "newEstimatedEnd": {
+            "type": "string",
+            "description": "Nueva hora estimada de finalización, si se informó",
+            "format": "date-time",
+            "nullable": true
+          },
+          "serviceStatus": {
+            "type": "string",
+            "enum": [
+              "SCHEDULED",
+              "RESCHEDULED",
+              "IN_PROGRESS",
+              "SUSPENDED",
+              "COMPLETED",
+              "PARTIALLY_COMPLETED",
+              "CANCELLED"
+            ],
+            "description": "En qué estado estaba el servicio cuando se levantó el aviso. El aviso **no** cambia el estado."
+          },
+          "reportedBy": {
+            "type": "string",
+            "description": "Quién lo reportó, del JWT. Null si lo generó el sistema.",
+            "nullable": true
+          },
+          "detectedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Si este aviso sigue vigente. Un aviso nuevo reemplaza al anterior; los reemplazados quedan en el historial.",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "serviceId",
+          "delayType",
+          "delayMinutes",
+          "reason",
+          "newEstimatedEnd",
+          "serviceStatus",
+          "reportedBy",
+          "detectedAt",
+          "createdAt",
+          "active"
         ]
       },
       "StatusChangeDto": {

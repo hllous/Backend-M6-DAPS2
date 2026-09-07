@@ -445,25 +445,31 @@ model Vehicle {
 // ════════════════════════════════════════════════════════════════
 
 model Service {
-  id            String        @id @default(uuid()) @db.Uuid
-  serviceTypeId String        @map("service_type_id") @db.Uuid
-  mode          ServiceMode
-  routeId       String?       @map("route_id") @db.Uuid // null si POINT
-  targetType    String?       @map("target_type") // null si ROUTE
-  targetId      String?       @map("target_id") @db.Uuid // polimórfico
-  scheduledDate DateTime      @map("scheduled_date") @db.Date
-  windowFrom    DateTime?     @map("window_from") @db.Time()
-  windowTo      DateTime?     @map("window_to") @db.Time()
-  crewId        String?       @map("crew_id") @db.Uuid // null hasta asignar
-  vehicleId     String?       @map("vehicle_id") @db.Uuid
-  status        ServiceStatus @default(SCHEDULED)
-  statusReason  String?       @map("status_reason")
-  origin        ServiceOrigin
-  ticketId      String?       @map("ticket_id") // EXT M2
-  notes         String?       @db.Text
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-  createdBy     String?       @map("created_by")
+  id                     String        @id @default(uuid()) @db.Uuid
+  serviceTypeId          String        @map("service_type_id") @db.Uuid
+  mode                   ServiceMode
+  routeId                String?       @map("route_id") @db.Uuid // null si POINT
+  targetType             String?       @map("target_type") // null si ROUTE
+  targetId               String?       @map("target_id") @db.Uuid // polimórfico
+  scheduledDate          DateTime      @map("scheduled_date") @db.Date
+  windowFrom             DateTime?     @map("window_from") @db.Time()
+  windowTo               DateTime?     @map("window_to") @db.Time()
+  crewId                 String?       @map("crew_id") @db.Uuid // null hasta asignar
+  vehicleId              String?       @map("vehicle_id") @db.Uuid
+  status                 ServiceStatus @default(SCHEDULED)
+  statusReason           String?       @map("status_reason")
+  origin                 ServiceOrigin
+  ticketId               String?       @map("ticket_id") // EXT M2
+  notes                  String?       @db.Text
+  // Por que se asigno una cuadrilla o un vehiculo que ya estaba tomado. Se
+  // exige cuando hay solapamiento: la asignacion avisa y deja pasar, pero no
+  // en silencio (Issue #123).
+  assignmentOverrideNote String?       @map("assignment_override_note") @db.Text
+  assignmentOverrideBy   String?       @map("assignment_override_by")
+  assignmentOverrideAt   DateTime?     @map("assignment_override_at")
+  createdAt              DateTime      @default(now()) @map("created_at")
+  updatedAt              DateTime      @updatedAt @map("updated_at")
+  createdBy              String?       @map("created_by")
 
   serviceType       ServiceType              @relation(fields: [serviceTypeId], references: [id])
   route             Route?                   @relation(fields: [routeId], references: [id])
@@ -474,10 +480,15 @@ model Service {
   collectionRecords CollectionRecord[]
   treeIntervention  TreeIntervention?
   inspection        EnvironmentalInspection?
+  delayNotices      ServiceDelayNotice[]
 
   @@index([status])
   @@index([scheduledDate])
   @@index([ticketId])
+  // Buscar que mas tiene tomado una cuadrilla ese dia, para detectar
+  // solapamientos al asignar.
+  @@index([crewId, scheduledDate])
+  @@index([vehicleId, scheduledDate])
   @@map("service")
 }
 
@@ -509,6 +520,39 @@ model ZoneResult {
 
   @@unique([serviceId, zoneId])
   @@map("zone_result")
+}
+
+// El aviso de que un servicio va con retraso.
+//
+// DELAYED **no es un estado**: el servicio sigue en SCHEDULED o IN_PROGRESS
+// mientras tanto. Por eso vive en su propia tabla y no como columna del
+// Service (Issue #122).
+//
+// Se guardan todos: `supersededById` encadena el que reemplaza al anterior,
+// asi que el ultimo vigente es el que no fue reemplazado. Un aviso emitido no
+// se borra ni se corrige — se emite otro, igual que el acta.
+model ServiceDelayNotice {
+  id              String        @id @default(uuid()) @db.Uuid
+  serviceId       String        @map("service_id") @db.Uuid
+  delayType       DelayType     @map("delay_type")
+  delayMinutes    Int           @map("delay_minutes")
+  reason          String        @db.Text
+  newEstimatedEnd DateTime?     @map("new_estimated_end")
+  // Estado del servicio cuando se levanto el aviso: para poder leer el
+  // historial sin cruzarlo contra otra tabla.
+  serviceStatus   ServiceStatus @map("service_status")
+  reportedBy      String?       @map("reported_by") // EXT M1
+  detectedAt      DateTime      @map("detected_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  // Null en el aviso vigente. Apunta al que lo dejo sin efecto.
+  supersededById  String?       @unique @map("superseded_by_id") @db.Uuid
+
+  service      Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  supersededBy ServiceDelayNotice? @relation("Reemplazo", fields: [supersededById], references: [id])
+  supersedes   ServiceDelayNotice? @relation("Reemplazo")
+
+  @@index([serviceId, detectedAt])
+  @@map("service_delay_notice")
 }
 
 model CollectionRecord {
