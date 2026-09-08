@@ -185,6 +185,10 @@ Una transición no válida devuelve 409 nombrando las que sí lo son.
 | PATCH | `/trees/:id` | Actualizar |
 | DELETE | `/trees/:id` | Baja lógica |
 
+**Toda respuesta de árbol trae `lastSurvey`**, el resumen del último relevamiento: `surveyedAt`, `healthStatus`, `riskLevel`, `riskType` y `suggestedIntervention`. Es `null` si el árbol todavía no fue relevado, que es un estado real —se censa el arbolado antes de poder recorrerlo entero— y no un error.
+
+Existe para que el listado se pueda pintar por riesgo sin pedir los relevamientos árbol por árbol: en un censo real eso serían miles de llamadas. Es un **resumen**, no el historial; el inspector, las notas y las derivaciones siguen en `GET /trees/:treeId/surveys`.
+
 ## `tree-surveys` — relevamientos de arbolado
 
 | Método | Ruta | Qué hace |
