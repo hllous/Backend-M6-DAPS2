@@ -1,5 +1,15 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsNumber, IsUUID, Min, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  IsUUID,
+  IsLatitude,
+  IsLongitude,
+  Min,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateGreenSpaceDto {
   @ApiPropertyOptional({
@@ -20,6 +30,16 @@ export class UpdateGreenSpaceDto {
   @IsOptional()
   @IsUUID()
   zoneId?: string;
+
+  @ApiPropertyOptional({ description: 'Latitud', example: -34.5724 })
+  @IsOptional()
+  @IsLatitude()
+  lat?: number;
+
+  @ApiPropertyOptional({ description: 'Longitud', example: -58.4166 })
+  @IsOptional()
+  @IsLongitude()
+  lng?: number;
 
   @ApiPropertyOptional({
     description: 'Superficie en metros cuadrados',

@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Route, RouteStop } from '@prisma/client';
+import { Prisma, Route, RouteStop, Zone } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateRouteDto,
@@ -16,7 +16,9 @@ import {
 } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
 
-type RouteWithStops = Route & { stops?: RouteStop[] };
+// La zona es opcional porque el listado no incluye paradas; solo el detalle
+// las trae, y ahi si viene con su Zone.
+type RouteWithStops = Route & { stops?: (RouteStop & { zone?: Zone })[] };
 
 @Injectable()
 export class RoutesService {
@@ -74,7 +76,9 @@ export class RoutesService {
   async findOne(id: string): Promise<RouteResponseDto> {
     const route = await this.prisma.route.findUnique({
       where: { id },
-      include: { stops: { orderBy: { sequence: 'asc' } } },
+      // La zona viene embebida para que quien dibuje el recorrido no tenga que
+      // pedir /zones aparte solo para traducir el UUID a un nombre.
+      include: { stops: { orderBy: { sequence: 'asc' }, include: { zone: true } } },
     });
 
     if (!route) {
@@ -190,6 +194,8 @@ export class RoutesService {
         id: stop.id,
         sequence: stop.sequence,
         zoneId: stop.zoneId,
+        zoneCode: stop.zone?.code ?? '',
+        zoneName: stop.zone?.name ?? '',
         estimatedDurationMin: stop.estimatedDurationMin,
       }));
     }
