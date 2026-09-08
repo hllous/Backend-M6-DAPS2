@@ -11,6 +11,7 @@ import {
   InspectionNextStep,
   InspectionOutcome,
   NotServicedReason,
+  OutboxEventStatus,
   PrismaClient,
   RepairDamageType,
   RepairRequestStatus,
@@ -193,38 +194,25 @@ const SERVICE_TYPES = [
  * "Zona operativa" (la nuestra) y "zona" (la de M9) son la misma palabra para
  * cosas distintas — está anotado como pendiente en docs/bloqueantes.md.
  *
- * **Palermo va partido en tres.** Es el barrio más grande de la Ciudad: más
- * que Belgrano, Recoleta y Retiro juntos. Una cuadrilla no lo cubre en un
- * turno, así que se parte con criterio operativo real — la trama gastronómica
- * de Hollywood y Las Cañitas, la comercial de Soho, y el corredor de parques
- * sobre Figueroa Alcorta, que es mantenimiento de espacios verdes y no
- * recolección domiciliaria. Belgrano va partido en dos por lo mismo, más leve:
- * Belgrano C es alta densidad y Belgrano R es casi todo casa baja.
+ * **Una zona por barrio oficial.** Antes Palermo iba partido en tres y Belgrano
+ * en dos, con criterio operativo: Hollywood, Soho, Las Cañitas, Belgrano R.
+ * Se unificaron porque **esas subdivisiones no existen como límite oficial**, y
+ * sin límite oficial no hay polígono: el GeoJSON de la Ciudad publica los 48
+ * barrios, no los recortes que usa la gente para ubicarse.
+ *
+ * Dibujar una zona en el mapa exige un contorno, y un contorno inventado es
+ * peor que uno grande: muestra como dato lo que es una opinión sobre dónde
+ * termina Palermo Soho. Con el barrio entero el polígono es el oficial.
+ *
+ * El costo es real: Palermo tiene unas 17 km² y una cuadrilla no lo cubre en
+ * un turno. Cuando haga falta partirlo de nuevo, lo primero que hace falta es
+ * el polígono, no el código.
  */
 const ZONES = [
-  {
-    code: 'Z-BEL-C',
-    name: 'Belgrano C y Barrio Chino',
-    neighborhoods: ['caba-belgrano-c', 'caba-bajo-belgrano', 'caba-barrio-chino'],
-  },
-  { code: 'Z-BEL-R', name: 'Belgrano R', neighborhoods: ['caba-belgrano-r'] },
-  {
-    code: 'Z-PAL-H',
-    name: 'Palermo Hollywood y Las Cañitas',
-    neighborhoods: ['caba-palermo-hollywood', 'caba-las-canitas'],
-  },
-  {
-    code: 'Z-PAL-S',
-    name: 'Palermo Soho y Villa Freud',
-    neighborhoods: ['caba-palermo-soho', 'caba-villa-freud'],
-  },
-  {
-    code: 'Z-PAL-P',
-    name: 'Palermo Parque y Botánico',
-    neighborhoods: ['caba-palermo-chico', 'caba-palermo-botanico', 'caba-bosques-de-palermo'],
-  },
+  { code: 'Z-BEL', name: 'Belgrano', neighborhoods: ['caba-belgrano'] },
+  { code: 'Z-PAL', name: 'Palermo', neighborhoods: ['caba-palermo'] },
   { code: 'Z-REC', name: 'Recoleta', neighborhoods: ['caba-recoleta'] },
-  { code: 'Z-RET', name: 'Retiro y Catalinas', neighborhoods: ['caba-retiro', 'caba-catalinas'] },
+  { code: 'Z-RET', name: 'Retiro', neighborhoods: ['caba-retiro'] },
 ];
 
 /**
@@ -236,16 +224,15 @@ const ROUTES = [
     code: 'R-REC-N',
     name: 'Recolección domiciliaria — corredor Cabildo (Belgrano y Palermo norte)',
     stops: [
-      { zone: 'Z-BEL-R', min: 75 },
-      { zone: 'Z-BEL-C', min: 110 },
-      { zone: 'Z-PAL-H', min: 95 },
+      { zone: 'Z-BEL', min: 185 },
+      { zone: 'Z-PAL', min: 95 },
     ],
   },
   {
     code: 'R-REC-S',
     name: 'Recolección domiciliaria — corredor Santa Fe (Palermo sur, Recoleta y Retiro)',
     stops: [
-      { zone: 'Z-PAL-S', min: 105 },
+      { zone: 'Z-PAL', min: 105 },
       { zone: 'Z-REC', min: 120 },
       { zone: 'Z-RET', min: 80 },
     ],
@@ -254,25 +241,21 @@ const ROUTES = [
     code: 'R-RECI',
     name: 'Recolección de reciclables — Comunas 2, 13 y 14',
     stops: [
-      { zone: 'Z-BEL-C', min: 70 },
-      { zone: 'Z-PAL-H', min: 70 },
-      { zone: 'Z-PAL-S', min: 70 },
+      { zone: 'Z-BEL', min: 70 },
+      { zone: 'Z-PAL', min: 140 },
       { zone: 'Z-REC', min: 65 },
     ],
   },
   {
     code: 'R-BAR-CAB',
     name: 'Barrido mecánico — Av. Cabildo y Av. Luis María Campos',
-    stops: [
-      { zone: 'Z-BEL-C', min: 60 },
-      { zone: 'Z-BEL-R', min: 45 },
-    ],
+    stops: [{ zone: 'Z-BEL', min: 105 }],
   },
   {
     code: 'R-BAR-SF',
     name: 'Barrido mecánico — Av. Santa Fe, Av. Las Heras y Av. del Libertador',
     stops: [
-      { zone: 'Z-PAL-S', min: 55 },
+      { zone: 'Z-PAL', min: 55 },
       { zone: 'Z-REC', min: 70 },
       { zone: 'Z-RET', min: 50 },
     ],
@@ -281,8 +264,8 @@ const ROUTES = [
     code: 'R-PARQ',
     name: 'Mantenimiento de parques — Bosques de Palermo y Barrancas',
     stops: [
-      { zone: 'Z-PAL-P', min: 180 },
-      { zone: 'Z-BEL-C', min: 60 },
+      { zone: 'Z-PAL', min: 180 },
+      { zone: 'Z-BEL', min: 60 },
     ],
   },
 ];
@@ -446,7 +429,7 @@ const CREWS = [
 const CONTAINERS = [
   {
     code: 'CT-BEL-0001',
-    zone: 'Z-BEL-C',
+    zone: 'Z-BEL',
     containerType: ContainerType.HOUSEHOLD,
     address: 'Av. Cabildo 2200',
     lat: -34.5619,
@@ -455,7 +438,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-BEL-0002',
-    zone: 'Z-BEL-C',
+    zone: 'Z-BEL',
     containerType: ContainerType.RECYCLABLE,
     address: 'Av. Juramento 2400',
     lat: -34.5615,
@@ -464,7 +447,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-BEL-0003',
-    zone: 'Z-BEL-C',
+    zone: 'Z-BEL',
     containerType: ContainerType.HOUSEHOLD,
     address: 'Arribeños 2100',
     lat: -34.5546,
@@ -475,7 +458,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-BEL-0004',
-    zone: 'Z-BEL-C',
+    zone: 'Z-BEL',
     containerType: ContainerType.GREEN,
     address: 'Av. Virrey Vértiz 1900',
     lat: -34.5577,
@@ -484,7 +467,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-BEL-0005',
-    zone: 'Z-BEL-R',
+    zone: 'Z-BEL',
     containerType: ContainerType.HOUSEHOLD,
     address: 'Echeverría 2800',
     lat: -34.5702,
@@ -493,7 +476,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-BEL-0006',
-    zone: 'Z-BEL-R',
+    zone: 'Z-BEL',
     containerType: ContainerType.RECYCLABLE,
     address: 'Av. Elcano 3100',
     lat: -34.5731,
@@ -502,7 +485,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-PAL-0001',
-    zone: 'Z-PAL-H',
+    zone: 'Z-PAL',
     containerType: ContainerType.HOUSEHOLD,
     address: 'Honduras 5800',
     lat: -34.5842,
@@ -511,7 +494,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-PAL-0002',
-    zone: 'Z-PAL-H',
+    zone: 'Z-PAL',
     containerType: ContainerType.RECYCLABLE,
     address: 'Fitz Roy 1700',
     lat: -34.5836,
@@ -520,7 +503,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-PAL-0003',
-    zone: 'Z-PAL-H',
+    zone: 'Z-PAL',
     containerType: ContainerType.HOUSEHOLD,
     address: 'Báez 400',
     lat: -34.5668,
@@ -534,7 +517,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-PAL-0004',
-    zone: 'Z-PAL-S',
+    zone: 'Z-PAL',
     containerType: ContainerType.HOUSEHOLD,
     address: 'Gurruchaga 1800',
     lat: -34.5889,
@@ -543,7 +526,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-PAL-0005',
-    zone: 'Z-PAL-S',
+    zone: 'Z-PAL',
     containerType: ContainerType.RECYCLABLE,
     address: 'Jorge Luis Borges 1900',
     lat: -34.5884,
@@ -552,7 +535,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-PAL-0006',
-    zone: 'Z-PAL-S',
+    zone: 'Z-PAL',
     containerType: ContainerType.BULKY,
     address: 'Av. Juan B. Justo 1900',
     lat: -34.5866,
@@ -561,7 +544,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-PAL-0007',
-    zone: 'Z-PAL-P',
+    zone: 'Z-PAL',
     containerType: ContainerType.GREEN,
     address: 'Av. Sarmiento 2700',
     lat: -34.5738,
@@ -570,7 +553,7 @@ const CONTAINERS = [
   },
   {
     code: 'CT-PAL-0008',
-    zone: 'Z-PAL-P',
+    zone: 'Z-PAL',
     containerType: ContainerType.HOUSEHOLD,
     address: 'Av. Las Heras 3900',
     lat: -34.5798,
@@ -632,6 +615,29 @@ const CONTAINERS = [
     lng: -58.3814,
     capacityLiters: 2400,
   },
+  // En el taller: se lo llevaron a reparar y todavia no volvio.
+  {
+    code: 'CT-PAL-0009',
+    zone: 'Z-PAL',
+    containerType: ContainerType.HOUSEHOLD,
+    address: 'Godoy Cruz 1800',
+    lat: -34.5849,
+    lng: -58.4297,
+    capacityLiters: 2400,
+    status: ContainerStatus.UNDER_REPAIR,
+  },
+  // Retirado: la esquina se peatonalizo y el contenedor ya no va ahi. Se
+  // conserva la fila porque los servicios historicos la referencian.
+  {
+    code: 'CT-BEL-0009',
+    zone: 'Z-BEL',
+    containerType: ContainerType.RECYCLABLE,
+    address: 'Arribenos 2100',
+    lat: -34.5629,
+    lng: -58.4497,
+    capacityLiters: 1100,
+    status: ContainerStatus.REMOVED,
+  },
 ];
 
 /**
@@ -641,7 +647,7 @@ const GREEN_POINTS = [
   {
     code: 'GP-BEL-01',
     name: 'Punto Verde Barrancas de Belgrano',
-    zone: 'Z-BEL-C',
+    zone: 'Z-BEL',
     address: 'Av. Juramento y 11 de Septiembre de 1888',
     lat: -34.5585,
     lng: -58.4508,
@@ -650,7 +656,7 @@ const GREEN_POINTS = [
   {
     code: 'GP-PAL-01',
     name: 'Punto Verde Plaza Güemes',
-    zone: 'Z-PAL-S',
+    zone: 'Z-PAL',
     address: 'Charcas y Salguero',
     lat: -34.5895,
     lng: -58.4116,
@@ -659,7 +665,7 @@ const GREEN_POINTS = [
   {
     code: 'GP-PAL-02',
     name: 'Punto Verde Parque Tres de Febrero',
-    zone: 'Z-PAL-P',
+    zone: 'Z-PAL',
     address: 'Av. Infanta Isabel y Av. Sarmiento',
     lat: -34.5724,
     lng: -58.4166,
@@ -694,7 +700,7 @@ const GREEN_POINTS = [
 const TREES = [
   {
     surveyCode: 'ARB-13-00101',
-    zone: 'Z-BEL-C',
+    zone: 'Z-BEL',
     species: 'Tipuana tipu',
     address: 'Av. Juramento 2200',
     lat: -34.5612,
@@ -704,7 +710,7 @@ const TREES = [
   },
   {
     surveyCode: 'ARB-13-00102',
-    zone: 'Z-BEL-C',
+    zone: 'Z-BEL',
     species: 'Jacaranda mimosifolia',
     address: 'Vuelta de Obligado 2300',
     lat: -34.5606,
@@ -714,7 +720,7 @@ const TREES = [
   },
   {
     surveyCode: 'ARB-13-00103',
-    zone: 'Z-BEL-C',
+    zone: 'Z-BEL',
     species: 'Platanus x acerifolia',
     address: '11 de Septiembre de 1888 1700',
     lat: -34.5588,
@@ -724,7 +730,7 @@ const TREES = [
   },
   {
     surveyCode: 'ARB-13-00104',
-    zone: 'Z-BEL-R',
+    zone: 'Z-BEL',
     species: 'Fraxinus pennsylvanica',
     address: 'Echeverría 2600',
     lat: -34.5695,
@@ -734,7 +740,7 @@ const TREES = [
   },
   {
     surveyCode: 'ARB-13-00105',
-    zone: 'Z-BEL-R',
+    zone: 'Z-BEL',
     species: 'Ceiba speciosa',
     address: 'Superí 1800',
     lat: -34.5716,
@@ -744,7 +750,7 @@ const TREES = [
   },
   {
     surveyCode: 'ARB-14-00201',
-    zone: 'Z-PAL-H',
+    zone: 'Z-PAL',
     species: 'Tipuana tipu',
     address: 'Gorriti 5600',
     lat: -34.5855,
@@ -754,7 +760,7 @@ const TREES = [
   },
   {
     surveyCode: 'ARB-14-00202',
-    zone: 'Z-PAL-H',
+    zone: 'Z-PAL',
     species: 'Fraxinus pennsylvanica',
     address: 'Arévalo 1500',
     lat: -34.5824,
@@ -764,7 +770,7 @@ const TREES = [
   },
   {
     surveyCode: 'ARB-14-00203',
-    zone: 'Z-PAL-S',
+    zone: 'Z-PAL',
     species: 'Jacaranda mimosifolia',
     address: 'Armenia 1700',
     lat: -34.5893,
@@ -774,7 +780,7 @@ const TREES = [
   },
   {
     surveyCode: 'ARB-14-00204',
-    zone: 'Z-PAL-S',
+    zone: 'Z-PAL',
     species: 'Tipuana tipu',
     address: 'Thames 1800',
     lat: -34.5879,
@@ -784,7 +790,7 @@ const TREES = [
   },
   {
     surveyCode: 'ARB-14-00205',
-    zone: 'Z-PAL-P',
+    zone: 'Z-PAL',
     species: 'Platanus x acerifolia',
     address: 'Av. Figueroa Alcorta 3200',
     lat: -34.5749,
@@ -794,7 +800,7 @@ const TREES = [
   },
   {
     surveyCode: 'ARB-14-00206',
-    zone: 'Z-PAL-P',
+    zone: 'Z-PAL',
     species: 'Erythrina crista-galli',
     address: 'Av. Infanta Isabel 500',
     lat: -34.5731,
@@ -859,7 +865,7 @@ const GREEN_SPACES = [
   {
     name: 'Barrancas de Belgrano',
     spaceType: GreenSpaceType.PARK,
-    zone: 'Z-BEL-C',
+    zone: 'Z-BEL',
     lat: -34.5583,
     lng: -58.4506,
     areaM2: 54000,
@@ -867,7 +873,7 @@ const GREEN_SPACES = [
   {
     name: 'Plaza Manuel Belgrano',
     spaceType: GreenSpaceType.SQUARE,
-    zone: 'Z-BEL-C',
+    zone: 'Z-BEL',
     lat: -34.5617,
     lng: -58.457,
     areaM2: 9800,
@@ -875,7 +881,7 @@ const GREEN_SPACES = [
   {
     name: 'Plaza Noruega',
     spaceType: GreenSpaceType.SQUARE,
-    zone: 'Z-BEL-R',
+    zone: 'Z-BEL',
     lat: -34.5726,
     lng: -58.461,
     areaM2: 4200,
@@ -883,7 +889,7 @@ const GREEN_SPACES = [
   {
     name: 'Plaza Castelli',
     spaceType: GreenSpaceType.SQUARE,
-    zone: 'Z-BEL-R',
+    zone: 'Z-BEL',
     lat: -34.5697,
     lng: -58.4676,
     areaM2: 3100,
@@ -891,7 +897,7 @@ const GREEN_SPACES = [
   {
     name: 'Parque Tres de Febrero (Bosques de Palermo)',
     spaceType: GreenSpaceType.PARK,
-    zone: 'Z-PAL-P',
+    zone: 'Z-PAL',
     lat: -34.572,
     lng: -58.416,
     areaM2: 3900000,
@@ -899,7 +905,7 @@ const GREEN_SPACES = [
   {
     name: 'Jardín Botánico Carlos Thays',
     spaceType: GreenSpaceType.PARK,
-    zone: 'Z-PAL-P',
+    zone: 'Z-PAL',
     lat: -34.5822,
     lng: -58.4172,
     areaM2: 69800,
@@ -907,7 +913,7 @@ const GREEN_SPACES = [
   {
     name: 'Plaza Italia',
     spaceType: GreenSpaceType.SQUARE,
-    zone: 'Z-PAL-P',
+    zone: 'Z-PAL',
     lat: -34.5806,
     lng: -58.4206,
     areaM2: 7600,
@@ -915,7 +921,7 @@ const GREEN_SPACES = [
   {
     name: 'El Rosedal de Palermo',
     spaceType: GreenSpaceType.PARK,
-    zone: 'Z-PAL-P',
+    zone: 'Z-PAL',
     lat: -34.5715,
     lng: -58.4185,
     areaM2: 34000,
@@ -923,7 +929,7 @@ const GREEN_SPACES = [
   {
     name: 'Plazoleta Julio Cortázar (Plaza Serrano)',
     spaceType: GreenSpaceType.SQUARE,
-    zone: 'Z-PAL-S',
+    zone: 'Z-PAL',
     lat: -34.5885,
     lng: -58.43,
     areaM2: 2400,
@@ -931,7 +937,7 @@ const GREEN_SPACES = [
   {
     name: 'Plaza Güemes',
     spaceType: GreenSpaceType.SQUARE,
-    zone: 'Z-PAL-S',
+    zone: 'Z-PAL',
     lat: -34.5895,
     lng: -58.4116,
     areaM2: 12500,
@@ -939,7 +945,7 @@ const GREEN_SPACES = [
   {
     name: 'Cantero central Av. Dorrego',
     spaceType: GreenSpaceType.MEDIAN,
-    zone: 'Z-PAL-H',
+    zone: 'Z-PAL',
     lat: -34.58,
     lng: -58.431,
     areaM2: 3400,
@@ -1351,7 +1357,7 @@ async function main() {
         'Se asigna igual: es la única cuadrilla con hidroelevador disponible y el contenedor está obstruyendo la vereda.',
       assignmentOverrideBy: 'usr-m1-0001',
       assignmentOverrideAt: momento(0, 7, 15),
-      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL-H'), sequence: 1 }] } },
+      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL'), sequence: 1 }] } },
       createdBy: 'usr-m1-0001',
     },
   });
@@ -1427,7 +1433,7 @@ async function main() {
     },
   });
 
-  // 4. Cierre parcial: Palermo Hollywood quedó sin atender.
+  // 4. Cierre parcial: Belgrano a medias y Palermo sin atender.
   //
   //    Es el caso que abre el abanico hacia M2 — un `PROGRESS` por cada
   //    reclamo abierto de esa zona, porque `zoneNotServiced` no tiene forma de
@@ -1448,31 +1454,35 @@ async function main() {
   });
 
   const zonasParcial = zonasDe('R-REC-N');
-  for (const z of zonasParcial.slice(0, 2)) {
-    const zr = await prisma.zoneResult.create({
-      data: {
-        serviceId: parcial.id,
-        zoneId: z.zoneId,
-        status: ZoneResultStatus.SERVICED,
-        recordedAt: momento(-5, 11),
-      },
-    });
-    await prisma.collectionRecord.create({
-      data: {
-        serviceId: parcial.id,
-        zoneResultId: zr.id,
-        disposalSiteId: norte3,
-        wasteType: WasteType.HOUSEHOLD,
-        volumeM3: 17.2,
-        weightKg: 4350,
-      },
-    });
-  }
+
+  // Belgrano se atendio a medias: el camion se lleno antes de terminar. Es el
+  // caso de PARTIAL, que no es "salio bien" ni "no se hizo".
+  const zrParcial = await prisma.zoneResult.create({
+    data: {
+      serviceId: parcial.id,
+      zoneId: zonasParcial[0].zoneId,
+      status: ZoneResultStatus.PARTIAL,
+      reason: NotServicedReason.EXCESS_VOLUME,
+      proposedDate: dia(-4),
+      notes: 'Volumen muy por encima de lo habitual. Quedo sin levantar el tramo de Av. Elcano.',
+      recordedAt: momento(-5, 11),
+    },
+  });
+  await prisma.collectionRecord.create({
+    data: {
+      serviceId: parcial.id,
+      zoneResultId: zrParcial.id,
+      disposalSiteId: norte3,
+      wasteType: WasteType.HOUSEHOLD,
+      volumeM3: 17.2,
+      weightKg: 4350,
+    },
+  });
 
   await prisma.zoneResult.create({
     data: {
       serviceId: parcial.id,
-      zoneId: zonasParcial[2].zoneId,
+      zoneId: zonasParcial[1].zoneId,
       status: ZoneResultStatus.NOT_SERVICED,
       reason: NotServicedReason.STREET_CLOSURE,
       proposedDate: dia(-4),
@@ -1529,7 +1539,7 @@ async function main() {
       crewId: crewId('Cuadrilla Belgrano — Recolección'),
       vehicleId: await vehicle('AC789DF'),
       notes: 'Reclamo por desborde reiterado sobre Arribeños.',
-      zones: { createMany: { data: [{ zoneId: zoneId('Z-BEL-C'), sequence: 1 }] } },
+      zones: { createMany: { data: [{ zoneId: zoneId('Z-BEL'), sequence: 1 }] } },
       createdBy: 'usr-m1-0001',
     },
   });
@@ -1546,7 +1556,7 @@ async function main() {
       crewId: crewId('Cuadrilla Palermo — Recolección'),
       vehicleId: await vehicle('AD678EJ'),
       notes: 'Restos de mudanza en la vereda de Honduras al 5800.',
-      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL-H'), sequence: 1 }] } },
+      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL'), sequence: 1 }] } },
       createdBy: 'usr-m1-0001',
     },
   });
@@ -1563,7 +1573,7 @@ async function main() {
       windowTo: hora(13),
       crewId: crewId('Cuadrilla Espacios Verdes — Bosques de Palermo'),
       notes: 'Corte de césped y limpieza del Rosedal.',
-      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL-P'), sequence: 1 }] } },
+      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL'), sequence: 1 }] } },
       createdBy: 'usr-m1-0001',
     },
   });
@@ -1600,7 +1610,7 @@ async function main() {
       crewId: crewId('Cuadrilla Arbolado Comuna 14'),
       vehicleId: await vehicle('AH789JR'),
       notes: 'Poda de seguridad por contacto con tendido eléctrico.',
-      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL-P'), sequence: 1 }] } },
+      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL'), sequence: 1 }] } },
       createdBy: 'usr-m1-0401',
     },
   });
@@ -1756,7 +1766,7 @@ async function main() {
       ticketId: 'b58d3e07-91c4-4f6a-a3e5-2d7c04b9f851',
       scheduledDate: dia(-14),
       crewId: crewId('Inspectores Ambientales — Comunas 1, 2, 13 y 14'),
-      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL-S'), sequence: 1 }] } },
+      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL'), sequence: 1 }] } },
       createdBy: 'usr-m1-0601',
     },
   });
@@ -1845,7 +1855,7 @@ async function main() {
       windowTo: hora(23, 59),
       crewId: crewId('Inspectores Ambientales — Comunas 1, 2, 13 y 14'),
       notes: 'Medición de nivel sonoro en horario nocturno.',
-      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL-H'), sequence: 1 }] } },
+      zones: { createMany: { data: [{ zoneId: zoneId('Z-PAL'), sequence: 1 }] } },
       createdBy: 'usr-m1-0601',
     },
   });
@@ -1858,7 +1868,450 @@ async function main() {
     },
   });
 
+  await cubrirEstadosRestantes({
+    ambInsp,
+    recDom,
+    norte3,
+    zonaPal: zoneId('Z-PAL'),
+    zonaBel: zoneId('Z-BEL'),
+    zonaRet: zoneId('Z-RET'),
+    cuadrillaInsp: crewId('Inspectores Ambientales — Comunas 1, 2, 13 y 14'),
+    arbolSeco: buscar(trees, 'ARB-02-00302', 'el árbol'),
+    servicioParaEventos: parcial.id,
+  });
+
   await resumen();
+}
+
+/**
+ * Cierra los huecos de estado que el recorrido narrativo de arriba no toca.
+ *
+ * El seed cuenta una historia —un dia de operacion, un expediente que termina
+ * en multa, una poda con corte de calle— y una historia no pasa por todos los
+ * estados posibles. Pero para probar la API hace falta que **cada estado tenga
+ * al menos una fila**: si no, el primero que abre el listado filtrado por
+ * `DISMISSED` ve una tabla vacia y no sabe si es que no hay datos o es que el
+ * filtro esta roto.
+ *
+ * Todo lo de aca es deliberadamente sobrio: una fila por estado, con datos
+ * plausibles y sin adornos. Lo rico esta arriba.
+ */
+async function cubrirEstadosRestantes(ctx: {
+  ambInsp: string;
+  recDom: string;
+  norte3: string;
+  zonaPal: string;
+  zonaBel: string;
+  zonaRet: string;
+  cuadrillaInsp: string;
+  arbolSeco: string;
+  servicioParaEventos: string;
+}) {
+  // ── Motivos de zona no atendida ──────────────────────────
+  //
+  // Los seis que faltaban. Van sobre un servicio parcial viejo, del mes
+  // pasado: es donde caen naturalmente y ademas le da profundidad al historial.
+  const historico = await prisma.service.create({
+    data: {
+      serviceTypeId: ctx.recDom,
+      mode: ServiceMode.ROUTE,
+      status: ServiceStatus.PARTIALLY_COMPLETED,
+      origin: ServiceOrigin.PLANNED,
+      scheduledDate: dia(-28),
+      zones: { createMany: { data: [{ zoneId: ctx.zonaPal, sequence: 1 }] } },
+      notes: 'Servicio historico: concentra los motivos de no atencion para poder probar el filtro.',
+      createdBy: 'usr-m1-0001',
+    },
+  });
+
+  const MOTIVOS: [NotServicedReason, string][] = [
+    [NotServicedReason.VEHICLE_BREAKDOWN, 'Rotura de la caja compactadora a mitad del recorrido.'],
+    [NotServicedReason.CREW_UNAVAILABLE, 'Dos ausencias sin reemplazo disponible en el turno.'],
+    [NotServicedReason.BLOCKED_ACCESS, 'Mudanza con camion cruzado en la unica entrada al pasaje.'],
+    [NotServicedReason.WEATHER, 'Granizo. Se suspendio la salida por seguridad del personal.'],
+    [NotServicedReason.SECURITY_INCIDENT, 'Incidente en la via publica. Intervino la policia.'],
+    [NotServicedReason.OTHER, 'Acto en la plaza con vallado municipal, sin aviso previo.'],
+  ];
+
+  // Un ZoneResult por zona y servicio, asi que cada motivo necesita su
+  // servicio. Se crean al vuelo y sin ruido: son datos de prueba, no historia.
+  for (const [i, [reason, notes]] of MOTIVOS.entries()) {
+    const svc =
+      i === 0
+        ? historico
+        : await prisma.service.create({
+            data: {
+              serviceTypeId: ctx.recDom,
+              mode: ServiceMode.ROUTE,
+              status: ServiceStatus.PARTIALLY_COMPLETED,
+              origin: ServiceOrigin.PLANNED,
+              scheduledDate: dia(-28 + i),
+              zones: { createMany: { data: [{ zoneId: ctx.zonaPal, sequence: 1 }] } },
+              createdBy: 'usr-m1-0001',
+            },
+          });
+
+    await prisma.zoneResult.create({
+      data: {
+        serviceId: svc.id,
+        zoneId: ctx.zonaPal,
+        status: ZoneResultStatus.NOT_SERVICED,
+        reason,
+        notes,
+        recordedAt: momento(-28 + i, 13),
+      },
+    });
+  }
+
+  // ── Demora por duracion ──────────────────────────────────
+  //
+  // El otro DelayType. El de arriba es START (empezo tarde); este es un
+  // servicio en curso que va a terminar mas tarde de lo previsto.
+  const enCursoLento = await prisma.service.create({
+    data: {
+      serviceTypeId: ctx.recDom,
+      mode: ServiceMode.ROUTE,
+      status: ServiceStatus.IN_PROGRESS,
+      origin: ServiceOrigin.PLANNED,
+      scheduledDate: dia(0),
+      windowFrom: hora(13),
+      windowTo: hora(18),
+      zones: { createMany: { data: [{ zoneId: ctx.zonaRet, sequence: 1 }] } },
+      createdBy: 'usr-m1-0001',
+    },
+  });
+
+  await prisma.serviceDelayNotice.create({
+    data: {
+      serviceId: enCursoLento.id,
+      delayType: DelayType.DURATION,
+      delayMinutes: 75,
+      reason: 'Trafico cortado en Alem por manifestacion. El recorrido avanza a media velocidad.',
+      newEstimatedEnd: momento(0, 19, 15),
+      serviceStatus: ServiceStatus.IN_PROGRESS,
+      reportedBy: 'usr-m1-0001',
+      detectedAt: momento(0, 15, 40),
+    },
+  });
+
+  // ── Arbolado ─────────────────────────────────────────────
+  //
+  // Un ejemplar muerto en pie: el estado sanitario mas grave, y el que dispara
+  // la extraccion.
+  await prisma.treeSurvey.create({
+    data: {
+      treeId: ctx.arbolSeco,
+      surveyedAt: momento(-2, 10),
+      inspectorId: 'usr-m1-0402',
+      healthStatus: TreeHealthStatus.DEAD,
+      riskLevel: RiskLevel.CRITICAL,
+      riskType: RiskType.TRUNK_INSTABILITY,
+      suggestedIntervention: TreeInterventionType.REMOVAL,
+      requiresStreetClosure: true,
+      requiresPublicWorks: false,
+      notes: 'Ejemplar seco en pie, sin follaje ni brotacion. Corteza desprendida en toda la base.',
+    },
+  });
+
+  // Recien pedida, todavia sin evaluar.
+  const pedida = await prisma.treeIntervention.create({
+    data: {
+      interventionType: TreeInterventionType.FORMATION_PRUNING,
+      address: 'Av. Santa Fe 3800',
+      status: TreeInterventionStatus.REQUESTED,
+      priority: Severity.LOW,
+      trees: { createMany: { data: [{ treeId: ctx.arbolSeco }] } },
+    },
+  });
+
+  // Rechazada: se pidio extraer un arbol sano porque tapaba un cartel.
+  await prisma.treeIntervention.create({
+    data: {
+      interventionType: TreeInterventionType.REMOVAL,
+      address: 'Jose Hernandez 1600',
+      status: TreeInterventionStatus.REJECTED,
+      priority: Severity.LOW,
+      justification:
+        'Pedido de extraccion por obstruccion de cartel comercial. Rechazado: el ejemplar esta sano y la obstruccion se resuelve con poda de formacion.',
+      trees: { createMany: { data: [{ treeId: ctx.arbolSeco }] } },
+    },
+  });
+
+  // ── Derivaciones a M7 y M3 ───────────────────────────────
+  const rechazado = await prisma.streetClosureRequest.create({
+    data: {
+      reason: 'Corte para poda de altura sobre Av. Cabildo.',
+      sourceType: 'TREE_INTERVENTION',
+      sourceId: pedida.id,
+      closureType: StreetClosureType.PARTIAL,
+      closureFrom: momento(6, 9),
+      closureTo: momento(6, 13),
+      status: StreetClosureRequestStatus.REJECTED,
+      // El motivo que manda M7 no se persiste: StreetClosureRequest no tiene
+      // campo para eso y el consumidor solo lo loguea.
+    },
+  });
+  await prisma.closureStreet.create({
+    data: {
+      requestId: rechazado.id,
+      streetName: 'Av. Cabildo',
+      fromCross: 'Juramento',
+      toCross: 'Mendoza',
+    },
+  });
+
+  const terminado = await prisma.streetClosureRequest.create({
+    data: {
+      reason: 'Lavado de calzada tras vuelco de residuos organicos.',
+      sourceType: 'SERVICE',
+      sourceId: ctx.servicioParaEventos,
+      closureType: StreetClosureType.TOTAL,
+      closureFrom: momento(-9, 6),
+      closureTo: momento(-9, 10),
+      status: StreetClosureRequestStatus.ENDED,
+      closureId: 'M7-CL-2026-01102',
+    },
+  });
+  await prisma.closureStreet.create({
+    data: {
+      requestId: terminado.id,
+      streetName: 'Gorriti',
+      fromCross: 'Thames',
+      toCross: 'Serrano',
+    },
+  });
+
+  await prisma.repairRequest.create({
+    data: {
+      damageType: RepairDamageType.BROKEN_STREETLIGHT,
+      severity: Severity.LOW,
+      address: 'Plaza Vicente Lopez y Planes',
+      detectedInType: 'SERVICE',
+      detectedInId: ctx.servicioParaEventos,
+      publicSafetyRisk: false,
+      status: RepairRequestStatus.CLOSED,
+      workOrderId: 'M3-OT-2026-00517',
+      requestedAt: momento(-25, 10),
+    },
+  });
+
+  // ── Expedientes ambientales ──────────────────────────────
+  //
+  // Los ocho estados que el circuito narrado no toca. La maquina de estados de
+  // la denuncia es la mas larga del modulo: once estados, y sin esto solo se
+  // veian tres.
+  const denuncia = (
+    status: EnvironmentalReportStatus,
+    reportType: EnvironmentalReportType,
+    address: string,
+    extra: Record<string, unknown> = {},
+  ) =>
+    prisma.environmentalReport.create({
+      data: {
+        reportType,
+        address,
+        status,
+        priority: Severity.MEDIUM,
+        lat: -34.58,
+        lng: -58.42,
+        ...extra,
+      },
+    });
+
+  await denuncia(
+    EnvironmentalReportStatus.RECEIVED,
+    EnvironmentalReportType.DUMPING,
+    'Av. Cordoba 4800',
+    { ticketId: 'c91e4a55-3b28-4d17-8e60-9f2a17c3b504', deadlineAt: momento(15, 23, 59) },
+  );
+
+  await denuncia(
+    EnvironmentalReportStatus.FORWARDED,
+    EnvironmentalReportType.WATER_DISCHARGE,
+    'Av. Warnes 2300',
+    { citizenResponse: 'Es un desagote industrial, corresponde a la autoridad del agua.' },
+  );
+
+  await denuncia(
+    EnvironmentalReportStatus.DISMISSED,
+    EnvironmentalReportType.NOISE,
+    'Malabia 1700',
+    { escalated: false },
+  );
+
+  await denuncia(
+    EnvironmentalReportStatus.INSPECTION_SCHEDULED,
+    EnvironmentalReportType.ILLEGAL_DUMPSITE,
+    'Bonpland 2400',
+    { deadlineAt: momento(9, 23, 59) },
+  );
+
+  // INSPECTED con acta no concluyente: se fue a mirar y no alcanzo para decidir.
+  const inspeccionada = await denuncia(
+    EnvironmentalReportStatus.INSPECTED,
+    EnvironmentalReportType.ODOR,
+    'Humboldt 1900',
+  );
+  await prisma.environmentalInspection.create({
+    data: {
+      reportId: inspeccionada.id,
+      inspectorId: 'usr-m1-0602',
+      inspectedAt: momento(-4, 16),
+      findings:
+        'No se percibio olor durante la inspeccion. El vecino refiere que ocurre de madrugada. Se solicita nueva visita en horario nocturno.',
+      outcome: InspectionOutcome.INCONCLUSIVE,
+      nextStep: InspectionNextStep.REINSPECTION,
+    },
+  });
+
+  // VIOLATION_FOUND: hay infraccion pero el acta todavia no se emitio.
+  const conInfraccion = await denuncia(
+    EnvironmentalReportStatus.VIOLATION_FOUND,
+    EnvironmentalReportType.ILLEGAL_DUMPSITE,
+    'Nicaragua 4500',
+    { priority: Severity.HIGH },
+  );
+  await prisma.environmentalInspection.create({
+    data: {
+      reportId: conInfraccion.id,
+      inspectorId: 'usr-m1-0601',
+      inspectedAt: momento(-1, 11),
+      findings: 'Descarga de escombros sobre la vereda. Se identifico al responsable.',
+      outcome: InspectionOutcome.VIOLATION_FOUND,
+      nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
+    },
+  });
+
+  /** Denuncia + inspeccion + acta, que es lo que hace falta para una resolucion de M4. */
+  const expediente = async (
+    status: EnvironmentalReportStatus,
+    address: string,
+    noticeNumber: string,
+    violationType: ViolationType,
+    dias: number,
+  ) => {
+    const rep = await denuncia(status, EnvironmentalReportType.ILLEGAL_DUMPSITE, address, {
+      priority: Severity.HIGH,
+    });
+    const insp = await prisma.environmentalInspection.create({
+      data: {
+        reportId: rep.id,
+        inspectorId: 'usr-m1-0601',
+        inspectedAt: momento(dias, 10),
+        findings: 'Infraccion constatada en el domicilio, con registro fotografico.',
+        outcome: InspectionOutcome.VIOLATION_FOUND,
+        nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
+      },
+    });
+    return prisma.violationNotice.create({
+      data: {
+        noticeNumber,
+        inspectionId: insp.id,
+        issuedAt: momento(dias + 1, 9),
+        establishmentId: 'est-m4-4' + noticeNumber.slice(-4),
+        violationType,
+        severity: Severity.HIGH,
+        suggestedAction: SuggestedAction.FINE,
+        priorNoticeCount: 0,
+      },
+    });
+  };
+
+  // Acta emitida, esperando que M4 resuelva. Es el estado en el que el
+  // expediente queda parado y el barrido horario lo cierra si vence.
+  await expediente(
+    EnvironmentalReportStatus.NOTICE_ISSUED,
+    'Av. Dorrego 1500',
+    'ACT-2026-000401',
+    ViolationType.ILLEGAL_DUMPING,
+    -3,
+  );
+
+  // Las tres resoluciones de M4 que faltaban.
+  const actaClausura = await expediente(
+    EnvironmentalReportStatus.SANCTIONED,
+    'Guatemala 5400',
+    'ACT-2026-000402',
+    ViolationType.NO_WASTE_MANAGEMENT,
+    -20,
+  );
+  await prisma.sanctionOutcome.create({
+    data: {
+      violationNoticeId: actaClausura.id,
+      decision: SanctionDecision.CLOSURE_ORDERED,
+      decidedAt: momento(-14, 12),
+      externalRef: 'M4-CLA-2026-00088',
+    },
+  });
+
+  const actaApercibimiento = await expediente(
+    EnvironmentalReportStatus.SANCTIONED,
+    'Costa Rica 4700',
+    'ACT-2026-000403',
+    ViolationType.HAZARDOUS_WASTE,
+    -18,
+  );
+  await prisma.sanctionOutcome.create({
+    data: {
+      violationNoticeId: actaApercibimiento.id,
+      decision: SanctionDecision.FORMAL_NOTICE_ISSUED,
+      decidedAt: momento(-11, 10),
+      externalRef: 'M4-APE-2026-00134',
+    },
+  });
+
+  // CLOSED con la sancion desestimada: M4 no le dio curso y el expediente
+  // termino igual. Cerrado no quiere decir sancionado.
+  const actaDesestimada = await expediente(
+    EnvironmentalReportStatus.CLOSED,
+    'Fitz Roy 2100',
+    'ACT-2026-000404',
+    ViolationType.ILLEGAL_DUMPING,
+    -30,
+  );
+  await prisma.sanctionOutcome.create({
+    data: {
+      violationNoticeId: actaDesestimada.id,
+      decision: SanctionDecision.DISMISSED,
+      decidedAt: momento(-22, 16),
+      externalRef: 'M4-DES-2026-00051',
+    },
+  });
+
+  // ── Outbox ───────────────────────────────────────────────
+  //
+  // Los tres estados de la cola de salida. El PENDING es a proposito: al
+  // levantar la app, el despachador lo toma en la barrida siguiente y lo pasa
+  // a SENT. Ver esa transicion es la forma mas rapida de comprobar que el
+  // outbox esta vivo.
+  await prisma.outboxEvent.createMany({
+    data: [
+      {
+        eventType: 'urbanServiceScheduled',
+        aggregateType: 'Service',
+        aggregateId: ctx.servicioParaEventos,
+        payload: { serviceId: ctx.servicioParaEventos, nota: 'fila de demostracion del outbox' },
+        status: OutboxEventStatus.PENDING,
+      },
+      {
+        eventType: 'updateTicketStatus',
+        aggregateType: 'Service',
+        aggregateId: ctx.servicioParaEventos,
+        payload: { serviceId: ctx.servicioParaEventos, updateType: 'PROGRESS' },
+        status: OutboxEventStatus.SENT,
+        publishedAt: momento(-2, 9, 15),
+      },
+      {
+        eventType: 'environmentalViolationDetected',
+        aggregateType: 'ViolationNotice',
+        aggregateId: actaDesestimada.id,
+        payload: { noticeNumber: 'ACT-2026-000404' },
+        status: OutboxEventStatus.FAILED,
+        attempts: 5,
+        lastError: 'No hay broker configurado (KAFKA_BROKERS vacio): se agotaron los 5 intentos.',
+      },
+    ],
+  });
 }
 
 async function resumen() {

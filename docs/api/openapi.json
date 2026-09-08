@@ -12336,12 +12336,12 @@
           "zoneCode": {
             "type": "string",
             "description": "Código de la zona operativa",
-            "example": "Z-BEL-C"
+            "example": "Z-BEL"
           },
           "zoneName": {
             "type": "string",
             "description": "Nombre de la zona operativa",
-            "example": "Belgrano C y Barrio Chino"
+            "example": "Belgrano"
           },
           "estimatedDurationMin": {
             "type": "number",
