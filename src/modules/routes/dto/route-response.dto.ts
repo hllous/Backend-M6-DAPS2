@@ -14,12 +14,12 @@ export class RouteStopResponseDto {
   })
   zoneId: string;
 
-  @ApiProperty({ description: 'Código de la zona operativa', example: 'Z-BEL-C' })
+  @ApiProperty({ description: 'Código de la zona operativa', example: 'Z-BEL' })
   zoneCode: string;
 
   @ApiProperty({
     description: 'Nombre de la zona operativa',
-    example: 'Belgrano C y Barrio Chino',
+    example: 'Belgrano',
   })
   zoneName: string;
 
