@@ -14,6 +14,15 @@ export class RouteStopResponseDto {
   })
   zoneId: string;
 
+  @ApiProperty({ description: 'Código de la zona operativa', example: 'Z-BEL' })
+  zoneCode: string;
+
+  @ApiProperty({
+    description: 'Nombre de la zona operativa',
+    example: 'Belgrano',
+  })
+  zoneName: string;
+
   @ApiProperty({ description: 'Duración estimada de la parada, en minutos', example: 90 })
   estimatedDurationMin: number;
 }

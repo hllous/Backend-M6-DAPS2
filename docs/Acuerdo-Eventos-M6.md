@@ -63,19 +63,19 @@ Los campos que terminan en `At` son **fecha y hora**; `scheduledDate` es solo el
 
 ---
 
-**1. `updateTicketStatus` → M2** · *el payload lo define M2 en su contrato v1.5*
+**1. `updateTicketStatus` → M2** · *el payload lo define M2 en su contrato v1.6*
 
 ```
 ticketId, updateType,
 publicMessage?, internalMessage?, progress?, details?,
-attachments[]?, updatedBy, statusChangedAt
+attachments[]?, updatedBy, updateOccurredAt
 
 updateType: STARTED | PROGRESS | INFORMATION_REQUIRED |
             RETURNED | RESOLVED | REJECTED
-updatedBy:  { type: AREA_USER, id }
+updatedBy:  { type: EXTERNAL_USER, id } | { type: SYSTEM, id: null }
 ```
 
-No lleva `status`: informamos el hecho y **M2 decide el estado**. Tampoco lleva `sourceRef` — su contrato prohíbe mandarles IDs de nuestras entidades internas, así que la correlación `ticketId ↔ serviceId` la guardamos de nuestro lado. `publicId` y `expectedTicketVersion` salieron del contrato en la v1.5: la correlación es solo por `ticketId`. El detalle de cada variante está en 1.2.
+No lleva `status`: informamos el hecho y **M2 decide el estado**. Tampoco lleva `sourceRef` — su contrato prohíbe mandarles IDs de nuestras entidades internas, así que la correlación `ticketId ↔ serviceId` la guardamos de nuestro lado. `publicId` y `expectedTicketVersion` salieron del contrato en la v1.5: la correlación es solo por `ticketId`. El sobre que lo transporta lleva `subject: tickets/{ticketId}`. El detalle de cada variante está en 1.2.
 
 **2. `urbanServiceScheduled` → M7**
 
@@ -171,20 +171,22 @@ Antes de la unificación, M7 recibía este evento con forma distinta según el o
 
 ### `updateTicketStatus` — el único, con el contrato de M2
 
-Leímos el contrato, ahora en su **v1.5** (reemplazó la v1.2 sobre la que habíamos escrito esto), y **adoptamos su payload tal cual**. No pedimos campos nuevos ni proponemos alternativas: nos adaptamos a lo que ya definieron.
+Leímos el contrato, ahora en su **v1.6** (reemplazó la v1.5, que a su vez había reemplazado la v1.2 sobre la que habíamos escrito esto), y **adoptamos su payload tal cual**. No pedimos campos nuevos ni proponemos alternativas: nos adaptamos a lo que ya definieron.
 
 ```
 ticketId, updateType,
 publicMessage?, internalMessage?, progress?, details?,
-attachments[]?, updatedBy, statusChangedAt
+attachments[]?, updatedBy, updateOccurredAt
 ```
 
-🔄 **Cambió respecto de la v1.2:** `publicId` y `expectedTicketVersion` salieron del contrato (nunca fueron parte del canal máquina-a-máquina); `message` se partió en `publicMessage`/`internalMessage`; `updatedAt` se renombró a `statusChangedAt`; y `progress` pasó a ser un campo común de tipo `Int` (porcentaje), no el objeto `progress.estimatedCompletionAt` que usábamos para la fecha agendada — ver más abajo.
+🔄 **Cambió respecto de la v1.2:** `publicId` y `expectedTicketVersion` salieron del contrato (nunca fueron parte del canal máquina-a-máquina); `message` se partió en `publicMessage`/`internalMessage`; y `progress` pasó a ser un campo común de tipo `Int` (porcentaje), no el objeto `progress.estimatedCompletionAt` que usábamos para la fecha agendada — ver más abajo.
+
+🔄 **Y cambió otra vez en la v1.6:** `statusChangedAt` se renombró a `updateOccurredAt`; el actor `AREA_USER` **no existe** en su enum y una persona que actúa desde otro módulo va como `EXTERNAL_USER`, un proceso automático como `SYSTEM`; el adjunto perdió `attachmentId`; y `resolution.type` cambió `INFORMATION_PROVIDED` por `INQUIRY_ANSWERED`.
 
 Tres cosas que nos cambian la implementación y conviene dejar dichas:
 
 - **No mandamos el estado, mandamos el hecho.** `updateType` dice qué pasó y M2 decide la transición. Nuestro modelo no vuelve a nombrar estados de M2 en ningún lado.
-- **No hace falta guardar `publicId` ni `ticketVersion`.** La v1.5 confirmó que la correlación es solo por `ticketId`; no hay versión que devolver.
+- **No hace falta guardar `publicId` ni `ticketVersion`.** La correlación es solo por `ticketId`; no hay versión que devolver.
 - **No mandamos `sourceRef`.** Su contrato prohíbe transportar IDs de entidades internas de otros módulos, así que la correlación `ticketId ↔ serviceId ↔ inspectionId` queda en una tabla nuestra.
 
 ### De qué hecho nuestro sale cada `updateType`
@@ -193,7 +195,7 @@ Esta es la tabla con la que lo implementamos. La columna izquierda son **hechos 
 
 | Hecho nuestro | `updateType` | Qué mandamos |
 |---|---|---|
-| `urbanServiceScheduled` | `PROGRESS` | fecha y franja agendadas — **sin campo definido en la v1.5, ver pedido nuevo abajo** |
+| `urbanServiceScheduled` | `PROGRESS` | fecha y franja agendadas — **sin campo definido, ver pedido abajo** |
 | `urbanServiceStarted` | `STARTED` | vacío; `publicMessage` para el vecino |
 | `urbanServiceDelayed` | `PROGRESS` | nueva estimación y motivo en `publicMessage`/`internalMessage` — la fecha en sí sigue sin campo definido |
 | `urbanServiceCompleted` | `RESOLVED` | `details.resolution.type` + `publicMessage`, y la foto del trabajo en `attachments[]` |
@@ -204,7 +206,7 @@ Esta es la tabla con la que lo implementamos. La columna izquierda son **hechos 
 | El reclamo no es de nuestra área | `RETURNED` | `details.returnInfo.reasonCode`. Vuelve a M2 para que lo re-derive, en vez de cancelárselo al vecino |
 | El inspector necesita un dato del vecino | `INFORMATION_REQUIRED` | `details.informationRequest.messageForCitizen` (+ `requiredBy` opcional) |
 
-Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode` ya están publicados en la v1.5 (antes no estaban enumerados) — están detallados en la ficha `M6-por-modulo/M6-para-M2.md`, en el repositorio de documentación.
+Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode` están publicados desde la v1.5 (antes no estaban enumerados; en la v1.6 `resolution.type` usa `INQUIRY_ANSWERED` en lugar de `INFORMATION_PROVIDED`) — están detallados en la ficha `M6-por-modulo/M6-para-M2.md`, en el repositorio de documentación.
 
 Los otros dos no tienen una traducción directa, y conviene que quede escrito por qué:
 
@@ -215,7 +217,7 @@ Los otros dos no tienen una traducción directa, y conviene que quede escrito po
 
 Tres cosas que teníamos anotadas como problema dejaron de serlo:
 
-- **`detail` ya no es todo el canal.** Era nuestra objeción principal: el vecino iba a ver solo prosa. Con `resolution.type` el cierre tiene un texto propio en `publicMessage` y con `attachments[]` podemos mandar la foto del trabajo terminado. Lo único que sigue sin resolver es la **fecha agendada**: el campo común `progress` de la v1.5 es un `Int` (porcentaje), no una fecha, y no hay estructura de `details` definida para `STARTED`/`PROGRESS`. Lo dejamos como pedido nuevo.
+- **`detail` ya no es todo el canal.** Era nuestra objeción principal: el vecino iba a ver solo prosa. Con `resolution.type` el cierre tiene un texto propio en `publicMessage` y con `attachments[]` podemos mandar la foto del trabajo terminado. Lo único que sigue sin resolver es la **fecha agendada**: el campo común `progress` es un `Int` (porcentaje), no una fecha, y ni la v1.5 ni la v1.6 definen estructura de `details` para `STARTED`/`PROGRESS`. Sigue como pedido abierto.
 - **Podemos pedirle información al ciudadano.** `INFORMATION_REQUIRED` era el canal que dábamos por perdido cuando desapareció `additionalInfoRequired`. No desapareció: se convirtió en una variante. El inspector que necesita una referencia más precisa o una foto nocturna ya tiene por dónde pedirla. La v1.5 ya no correlaciona por `informationRequestId` (ese campo nunca llegó a existir formalmente): la respuesta siempre corresponde a la única solicitud activa que puede haber por ticket.
 - **`RETURNED` es mejor que rechazar.** Cuando un reclamo no es nuestro, devolverlo a M2 para que lo re-derive es distinto de cancelárselo al vecino. Antes teníamos un solo `REJECTED` para las dos cosas.
 
@@ -305,7 +307,7 @@ Abajo, módulo por módulo, están los campos sin los cuales el flujo no funcion
 
 ## M2 — Atención ciudadana
 
-Leímos el contrato completo, ahora en su **v1.5** (reemplazó la v1.2). **Adoptamos su modelo sin pedir eventos nuevos ni cambios de forma**, y la v1.5 resolvió por su cuenta tres de los pedidos que teníamos anotados abajo. De sus dos eventos publicados escuchamos uno solo:
+Leímos el contrato completo, ahora en su **v1.6**. **Adoptamos su modelo sin pedir eventos nuevos ni cambios de forma**, y entre la v1.5 y la v1.6 resolvieron por su cuenta cuatro de los pedidos que teníamos anotados abajo. De sus dos eventos publicados escuchamos uno solo:
 
 | Evento | Qué hacemos con él |
 |---|---|
@@ -317,7 +319,7 @@ Los `updateType` que nos importan:
 | `updateType` | Qué hacemos |
 |---|---|
 | `ROUTED` | **Abrimos el expediente ambiental o el servicio puntual.** Es nuestro único disparador de entrada |
-| `INFORMATION_PROVIDED` | Sumamos al expediente lo que el vecino respondió. La v1.5 ya no usa ID: como máximo hay una solicitud activa por ticket |
+| `INFORMATION_PROVIDED` | Sumamos al expediente lo que el vecino respondió. No usa ID: como máximo hay una solicitud activa por ticket |
 | `CANCELLED` | Cancelamos el servicio o la inspección ya programados |
 | `REOPENED` | Reabrimos: el vecino rechazó la solución y vuelve a gestión |
 | `PRIORITY_CHANGED` | Reordenamos la cola de la cuadrilla |
@@ -325,26 +327,31 @@ Los `updateType` que nos importan:
 
 `STATUS_CHANGED`, `RESOLVED` y `CLOSED` los escuchamos pero no hacemos nada con ellos: en esos casos el cierre lo originamos nosotros.
 
-**Campos que necesitamos de `ticketUpdated / ROUTED`** (actualizado a v1.5):
+**Campos que necesitamos de `ticketUpdated / ROUTED`** (actualizado a v1.6):
 
 ```
 comunes:  ticketId, citizenId, isAnonymous, responsibleAreaId, updateType,
-          currentStatus, currentPriority, publicMessage?, attachments[]?, updatedAt
-details.routing:  requestType (catalogRef), ticketType, summary, description,
+          currentStatus, currentPriority, progress?, publicMessage?,
+          attachments[]?, updatedAt
+details.routing:  requestType (string), ticketType, summary, description,
                    formData?, location?, resolutionDueAt?, escalation?
 ```
 
-✅ **Cómo sabemos que un `ROUTED` es nuestro — resuelto por la v1.5.** `responsibleAreaId` ahora viaja como campo común de todo `ticketUpdated`. Ya no hace falta catálogo de `requestTypeId` ni adivinar entre las ocho áreas.
+✅ **Cómo sabemos que un `ROUTED` es nuestro — resuelto desde la v1.5.** `responsibleAreaId` viaja como campo común de todo `ticketUpdated`. Ya no hace falta catálogo de `requestTypeId` ni adivinar entre las ocho áreas.
 
-✅ **`location` ya tiene estructura — resuelto por la v1.5.** Ahora viene como `addressLine, street, streetNumber, neighborhoodId, latitude, longitude, reference`. Ya tenemos `neighborhoodId` para rutear por zona.
+✅ **`citizenId` — resuelto desde la v1.5, mejor de lo pedido.** Es campo común de todo `ticketUpdated`, no solo de `details` en `ROUTED`. Junto con `isAnonymous`, también común.
 
-✅ **`citizenId` — resuelto por la v1.5, mejor de lo pedido.** Ahora es campo común de todo `ticketUpdated`, no solo de `details` en `ROUTED`. Junto con `isAnonymous`, también común.
+⚠️ **La v1.6 devolvió el snapshot a `details.routing`.** `requestType`, `summary`, `description` y `location` habían pasado a campos comunes en la v1.5; la v1.6 los sacó de esa tabla (§7.1) y los dejó solo dentro de `details.routing` (§7.4). Nos adaptamos y leemos las dos formas, pero conviene que quede fijo: es el segundo cambio de lugar de los mismos cuatro campos.
 
-✅ **`RESOLVED` directo desde `ROUTED` — decidimos no pedirlo.** La v1.5 permite saltar `STARTED` para los Request Types que M2 marque como "admite resolución directa", pero no publicaron el catálogo. En vez de esperar la confirmación, publicamos siempre `STARTED` inmediatamente antes de `RESOLVED` —incluso para los servicios que se resuelven por una ruta ya agendada, como una recolección de la ruta del día que además cierra un reclamo—: es válido en cualquier caso y no depende de su catálogo.
+⚠️ **`location` ya no trae coordenadas.** La v1.5 la definía con `latitude`/`longitude`; la v1.6 (§5.4) las quitó y deja `addressLine, street, streetNumber, neighborhoodId, reference`. Georreferenciamos desde la dirección. `neighborhoodId` sigue estando, que es lo que necesitamos para rutear por zona.
 
-🔴 **Nuevo: `progress` no sirve para nuestra fecha agendada.** El campo común `progress` de `updateTicketStatus` (lo que nosotros publicamos) es un `Int` (porcentaje), no una fecha, y la v1.5 no define ninguna estructura de `details` para `STARTED`/`PROGRESS`. Necesitamos saber cómo mandar la fecha/franja agendada del servicio.
+⚠️ **`requestType` es un string plano y no hay IDs.** La v1.6 (§5.5) lo serializa como nombre visible y explicita que no expone IDs internos de Category/Subcategory/RequestType. Clasificamos por texto: el mapeo por ID que esperábamos hacer cuando publicaran el catálogo ya no es posible.
 
-✅ **Lo que ya no preguntamos.** `ticketInfoProvided` y `additionalInfoRequired` no desaparecieron: se convirtieron en `ticketUpdated / INFORMATION_PROVIDED` y `updateTicketStatus / INFORMATION_REQUIRED`. La cancelación tampoco se perdió: es `ticketUpdated / CANCELLED`. Y `targetArea` en `ticketCreated` dejó de tener sentido, porque ese evento no es para nosotros. Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode`, que antes no estaban enumerados, ya están publicados en la v1.5.
+✅ **`RESOLVED` directo desde `ROUTED` — resuelto por la v1.6.** §8.2 dice que M2 **no** mantiene una configuración por RequestType para habilitar o impedir la resolución directa, y que `STARTED`/`PROGRESS` son hechos opcionales. Ya no hay catálogo que esperar. Mantenemos igual la costumbre de publicar `STARTED` antes de `RESOLVED` porque refleja el hecho real, no porque haga falta.
+
+🔴 **Sigue abierto: `progress` no sirve para nuestra fecha agendada.** Tercera versión seguida. El campo común `progress` de `updateTicketStatus` (lo que nosotros publicamos) es un `Int` (porcentaje), no una fecha, y §8.2 sigue sin definir estructura de `details` para `STARTED`/`PROGRESS`. Necesitamos saber cómo mandar la fecha/franja agendada del servicio.
+
+✅ **Lo que ya no preguntamos.** `ticketInfoProvided` y `additionalInfoRequired` no desaparecieron: se convirtieron en `ticketUpdated / INFORMATION_PROVIDED` y `updateTicketStatus / INFORMATION_REQUIRED`. La cancelación tampoco se perdió: es `ticketUpdated / CANCELLED`. Y `targetArea` en `ticketCreated` dejó de tener sentido, porque ese evento no es para nosotros. Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode`, que antes no estaban enumerados, están publicados desde la v1.5.
 
 ## M3 — Obras públicas
 
@@ -434,7 +441,7 @@ streetClosureEnded
 
 | # | Qué pasa | Con quién |
 |---|---|---|
-| 1 | **M2 publicó su contrato (ahora v1.5) y ningún otro módulo está escrito contra él.** M1, M4, M5 y M8 siguen publicando `ticketInProgress`, `ticketUpdate`, `ticketCompleted` y `ticketRejected`, que M2 no consume: lo suyo va por `updateTicketStatus` con `updateType`. Y los seis eventos de ciclo de vida que M1, M3, M5, M7 y M8 esperan son hoy variantes de `ticketUpdated`, no eventos. **Los cinco tienen que releer el contrato** | M1, M3, M4, M5, M8 |
+| 1 | **M2 publicó su contrato (ahora v1.6) y ningún otro módulo está escrito contra él.** M1, M4, M5 y M8 siguen publicando `ticketInProgress`, `ticketUpdate`, `ticketCompleted` y `ticketRejected`, que M2 no consume: lo suyo va por `updateTicketStatus` con `updateType`. Y los seis eventos de ciclo de vida que M1, M3, M5, M7 y M8 esperan son hoy variantes de `ticketUpdated`, no eventos. **Los cinco tienen que releer el contrato** | M1, M3, M4, M5, M8 |
 | 2 | **`commercialFineGenerated` figura rotulado solo hacia Rentas**, pero nosotros lo necesitamos para cerrar el expediente | M4 |
 | 3 | **M4 declara consumir `updateTicketStatus`.** Es el canal de entrada de M2 desde las áreas operativas: ningún otro módulo tendría que escucharlo | M4 |
 | 4 | **`workOrderScheduled` reemplazó a `workOrderCreated`** y no significan lo mismo. Hay que confirmar cuándo se dispara | M3 |

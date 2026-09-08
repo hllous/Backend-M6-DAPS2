@@ -42,7 +42,8 @@ export class KafkaEventPublisher extends EventPublisher implements OnModuleDestr
           headers: {
             eventId: envelope.eventId,
             eventType: envelope.eventType,
-            producer: envelope.producer,
+            // El header va plano: desde la v1.6 `producer` es un objeto.
+            producer: envelope.producer.moduleId,
           },
         },
       ],

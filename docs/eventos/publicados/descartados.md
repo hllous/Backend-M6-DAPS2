@@ -32,7 +32,7 @@ serviceId, delayType, delayMinutes,
 reason, newEstimatedEnd, detectedAt
 ```
 
-Se publicaría **una sola vez por servicio**. `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o `IN_PROGRESS`. `delayType` es `DelayType` — ver [enumeraciones.md](../../enumeraciones.md).
+Se publicaría cada vez que se levanta un aviso: el modelo los acumula, uno nuevo reemplaza al vigente (ver [service.md](../../entidades/service.md)). `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o `IN_PROGRESS`. `delayType` es `DelayType` — ver [enumeraciones.md](../../enumeraciones.md).
 
 Dispara `updateTicketStatus / PROGRESS` con la nueva estimación.
 
