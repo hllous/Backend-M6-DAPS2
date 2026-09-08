@@ -860,62 +860,136 @@ const GREEN_SPACES = [
     name: 'Barrancas de Belgrano',
     spaceType: GreenSpaceType.PARK,
     zone: 'Z-BEL-C',
+    lat: -34.5583,
+    lng: -58.4506,
     areaM2: 54000,
   },
   {
     name: 'Plaza Manuel Belgrano',
     spaceType: GreenSpaceType.SQUARE,
     zone: 'Z-BEL-C',
+    lat: -34.5617,
+    lng: -58.457,
     areaM2: 9800,
   },
-  { name: 'Plaza Noruega', spaceType: GreenSpaceType.SQUARE, zone: 'Z-BEL-R', areaM2: 4200 },
-  { name: 'Plaza Castelli', spaceType: GreenSpaceType.SQUARE, zone: 'Z-BEL-R', areaM2: 3100 },
+  {
+    name: 'Plaza Noruega',
+    spaceType: GreenSpaceType.SQUARE,
+    zone: 'Z-BEL-R',
+    lat: -34.5726,
+    lng: -58.461,
+    areaM2: 4200,
+  },
+  {
+    name: 'Plaza Castelli',
+    spaceType: GreenSpaceType.SQUARE,
+    zone: 'Z-BEL-R',
+    lat: -34.5697,
+    lng: -58.4676,
+    areaM2: 3100,
+  },
   {
     name: 'Parque Tres de Febrero (Bosques de Palermo)',
     spaceType: GreenSpaceType.PARK,
     zone: 'Z-PAL-P',
+    lat: -34.572,
+    lng: -58.416,
     areaM2: 3900000,
   },
   {
     name: 'Jardín Botánico Carlos Thays',
     spaceType: GreenSpaceType.PARK,
     zone: 'Z-PAL-P',
+    lat: -34.5822,
+    lng: -58.4172,
     areaM2: 69800,
   },
-  { name: 'Plaza Italia', spaceType: GreenSpaceType.SQUARE, zone: 'Z-PAL-P', areaM2: 7600 },
+  {
+    name: 'Plaza Italia',
+    spaceType: GreenSpaceType.SQUARE,
+    zone: 'Z-PAL-P',
+    lat: -34.5806,
+    lng: -58.4206,
+    areaM2: 7600,
+  },
   {
     name: 'El Rosedal de Palermo',
     spaceType: GreenSpaceType.PARK,
     zone: 'Z-PAL-P',
+    lat: -34.5715,
+    lng: -58.4185,
     areaM2: 34000,
   },
   {
     name: 'Plazoleta Julio Cortázar (Plaza Serrano)',
     spaceType: GreenSpaceType.SQUARE,
     zone: 'Z-PAL-S',
+    lat: -34.5885,
+    lng: -58.43,
     areaM2: 2400,
   },
-  { name: 'Plaza Güemes', spaceType: GreenSpaceType.SQUARE, zone: 'Z-PAL-S', areaM2: 12500 },
+  {
+    name: 'Plaza Güemes',
+    spaceType: GreenSpaceType.SQUARE,
+    zone: 'Z-PAL-S',
+    lat: -34.5895,
+    lng: -58.4116,
+    areaM2: 12500,
+  },
   {
     name: 'Cantero central Av. Dorrego',
     spaceType: GreenSpaceType.MEDIAN,
     zone: 'Z-PAL-H',
+    lat: -34.58,
+    lng: -58.431,
     areaM2: 3400,
   },
-  { name: 'Parque Las Heras', spaceType: GreenSpaceType.PARK, zone: 'Z-REC', areaM2: 124000 },
-  { name: 'Plaza Francia', spaceType: GreenSpaceType.SQUARE, zone: 'Z-REC', areaM2: 18000 },
-  { name: 'Plaza Vicente López', spaceType: GreenSpaceType.SQUARE, zone: 'Z-REC', areaM2: 21000 },
-  { name: 'Plaza San Martín', spaceType: GreenSpaceType.PARK, zone: 'Z-RET', areaM2: 62000 },
+  {
+    name: 'Parque Las Heras',
+    spaceType: GreenSpaceType.PARK,
+    zone: 'Z-REC',
+    lat: -34.5852,
+    lng: -58.4059,
+    areaM2: 124000,
+  },
+  {
+    name: 'Plaza Francia',
+    spaceType: GreenSpaceType.SQUARE,
+    zone: 'Z-REC',
+    lat: -34.586,
+    lng: -58.3925,
+    areaM2: 18000,
+  },
+  {
+    name: 'Plaza Vicente López',
+    spaceType: GreenSpaceType.SQUARE,
+    zone: 'Z-REC',
+    lat: -34.5931,
+    lng: -58.3893,
+    areaM2: 21000,
+  },
+  {
+    name: 'Plaza San Martín',
+    spaceType: GreenSpaceType.PARK,
+    zone: 'Z-RET',
+    lat: -34.5928,
+    lng: -58.3752,
+    areaM2: 62000,
+  },
   {
     name: 'Plaza Fuerza Aérea Argentina',
     spaceType: GreenSpaceType.SQUARE,
     zone: 'Z-RET',
+    lat: -34.5919,
+    lng: -58.3739,
     areaM2: 15000,
   },
   {
     name: 'Paseo Av. del Libertador — Catalinas',
     spaceType: GreenSpaceType.PROMENADE,
     zone: 'Z-RET',
+    lat: -34.5945,
+    lng: -58.372,
     areaM2: 8900,
   },
 ];
@@ -1064,10 +1138,19 @@ async function main() {
 
   // GreenSpace tampoco tiene clave natural: se busca por nombre, que en la
   // práctica no se repite entre plazas de la Ciudad.
+  //
+  // Si ya existe se actualiza, no se saltea. Con un `create` a secas, una base
+  // sembrada antes de que GreenSpace tuviera coordenadas se quedaba sin ellas
+  // para siempre, que es justo el caso de la base desplegada.
   for (const gs of GREEN_SPACES) {
     const { zone, ...datos } = gs;
     const existing = await prisma.greenSpace.findFirst({ where: { name: gs.name } });
-    if (!existing) {
+    if (existing) {
+      await prisma.greenSpace.update({
+        where: { id: existing.id },
+        data: { ...datos, zoneId: zoneId(zone) },
+      });
+    } else {
       await prisma.greenSpace.create({ data: { ...datos, zoneId: zoneId(zone) } });
     }
   }

@@ -12333,6 +12333,16 @@
             "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
             "format": "uuid"
           },
+          "zoneCode": {
+            "type": "string",
+            "description": "Código de la zona operativa",
+            "example": "Z-BEL-C"
+          },
+          "zoneName": {
+            "type": "string",
+            "description": "Nombre de la zona operativa",
+            "example": "Belgrano C y Barrio Chino"
+          },
           "estimatedDurationMin": {
             "type": "number",
             "description": "Duración estimada de la parada, en minutos",
@@ -12343,6 +12353,8 @@
           "id",
           "sequence",
           "zoneId",
+          "zoneCode",
+          "zoneName",
           "estimatedDurationMin"
         ]
       },
@@ -13789,6 +13801,16 @@
             "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
             "format": "uuid"
           },
+          "lat": {
+            "type": "number",
+            "description": "Latitud",
+            "example": -34.5724
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitud",
+            "example": -58.4166
+          },
           "areaM2": {
             "type": "number",
             "description": "Superficie en metros cuadrados",
@@ -13840,6 +13862,18 @@
             "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
             "format": "uuid"
           },
+          "lat": {
+            "type": "object",
+            "description": "Latitud",
+            "example": -34.5724,
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "description": "Longitud",
+            "example": -58.4166,
+            "nullable": true
+          },
           "areaM2": {
             "type": "object",
             "description": "Superficie en metros cuadrados",
@@ -13887,6 +13921,16 @@
             "description": "UUID de la zona operativa",
             "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
             "format": "uuid"
+          },
+          "lat": {
+            "type": "number",
+            "description": "Latitud",
+            "example": -34.5724
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitud",
+            "example": -58.4166
           },
           "areaM2": {
             "type": "number",

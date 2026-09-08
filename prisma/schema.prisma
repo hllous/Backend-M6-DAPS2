@@ -731,6 +731,10 @@ model GreenSpace {
   name      String
   spaceType GreenSpaceType @map("space_type")
   zoneId    String         @map("zone_id") @db.Uuid
+  // Un punto, no el contorno del parque: alcanza para ubicarlo en el mapa y
+  // no nos mete en guardar geometria, que no es de este modulo.
+  lat       Decimal?       @db.Decimal(10, 7)
+  lng       Decimal?       @db.Decimal(10, 7)
   areaM2    Decimal?       @map("area_m2") @db.Decimal(10, 2)
   active    Boolean        @default(true)
   createdAt DateTime       @default(now()) @map("created_at")

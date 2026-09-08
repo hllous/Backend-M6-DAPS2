@@ -7,6 +7,8 @@ import {
   IsBoolean,
   IsNumber,
   IsUUID,
+  IsLatitude,
+  IsLongitude,
   Min,
   MaxLength,
 } from 'class-validator';
@@ -38,6 +40,16 @@ export class CreateGreenSpaceDto {
   })
   @IsUUID()
   zoneId: string;
+
+  @ApiPropertyOptional({ description: 'Latitud', example: -34.5724 })
+  @IsOptional()
+  @IsLatitude()
+  lat?: number;
+
+  @ApiPropertyOptional({ description: 'Longitud', example: -58.4166 })
+  @IsOptional()
+  @IsLongitude()
+  lng?: number;
 
   @ApiPropertyOptional({
     description: 'Superficie en metros cuadrados',
