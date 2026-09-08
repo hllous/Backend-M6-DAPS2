@@ -34,7 +34,7 @@ export type ConsumedEventName = (typeof ConsumedEvent)[keyof typeof ConsumedEven
 /**
  * Los `updateType` de `ticketUpdated` que disparan acción.
  *
- * La v1.5 define trece; los otros siete se ignoran **a propósito** y el doc
+ * La v1.6 define trece; los otros siete se ignoran **a propósito** y el doc
  * pide explícitamente no implementarles handler
  * (docs/eventos/consumidos/ticketUpdated.md).
  */

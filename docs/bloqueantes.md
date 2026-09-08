@@ -2,14 +2,17 @@
 
 > **Fuente única.** Este archivo reemplaza el estado que estaba duplicado en [`LEEME.md`](../LEEME.md) y, en el repositorio de documentación, en `Eventos.txt` y `fuentes/alcance-entregable.md` §7. Si algo de eso dice otra cosa, vale lo que dice acá.
 >
-> Última revisión general: **2 sep 2026**. Se resolvieron las divergencias de enums por [ADR-003](decisiones/adr-003-divergencias-enums.md) —manda el catálogo, se corrige el acuerdo— y quedan tres avisos pendientes a M3, M4 y M7. M7 volvió con un cruce que confirma `streetClosureRequested` y `treePruningScheduled` campo por campo, pero se contradice a sí mismo sobre `requestingModule` vs `sourceModule`. M1 compartió su catálogo v2: M1 emite el JWT de usuario y M6 lo valida; su contrato criptográfico todavía no está publicado. **El bloqueante del JWT estaba fichado bajo M9 por la ambigüedad del enunciado: se movió a M1, que es a quien hay que reclamárselo.** M9 sigue siendo el dueño del bus y del catálogo de barrios. Antes, el 30 ago 2026: M7 actualizó su documento de referencia: `streetClosureEnded` ya trae `closureRequestId` (cierra la asimetría que tenía) y propuso unificar `streetClosureRequested` con el payload de M3, propuesta que aceptamos. Antes, el 25 ago: M2 publicó la v1.5 (reemplaza la v1.2), M4 publicó `Modulo_4_Eventos.docx`, y M3 confirmó `sourceRequestId`. Se edita a medida que cada grupo contesta — actualizá la fila y su fecha, no reescribas el archivo.
+> Última revisión general: **8 sep 2026** — M2 publicó la **v1.6**, que reemplaza la v1.5 y **revierte** los campos comunes de `ticketUpdated` que dábamos por cerrados (ver la sección de M2). Antes, el 2 sep 2026: Se resolvieron las divergencias de enums por [ADR-003](decisiones/adr-003-divergencias-enums.md) —manda el catálogo, se corrige el acuerdo— y quedan tres avisos pendientes a M3, M4 y M7. M7 volvió con un cruce que confirma `streetClosureRequested` y `treePruningScheduled` campo por campo, pero se contradice a sí mismo sobre `requestingModule` vs `sourceModule`. M1 compartió su catálogo v2: M1 emite el JWT de usuario y M6 lo valida; su contrato criptográfico todavía no está publicado. **El bloqueante del JWT estaba fichado bajo M9 por la ambigüedad del enunciado: se movió a M1, que es a quien hay que reclamárselo.** M9 sigue siendo el dueño del bus y del catálogo de barrios. Antes, el 30 ago 2026: M7 actualizó su documento de referencia: `streetClosureEnded` ya trae `closureRequestId` (cierra la asimetría que tenía) y propuso unificar `streetClosureRequested` con el payload de M3, propuesta que aceptamos. Antes, el 25 ago: M2 publicó la v1.5 (reemplaza la v1.2), M4 publicó `Modulo_4_Eventos.docx`, y M3 confirmó `sourceRequestId`. Se edita a medida que cada grupo contesta — actualizá la fila y su fecha, no reescribas el archivo.
 
 ## Tablero
 
 | Con quién | Qué falta | Estado | Última act. |
 |---|---|---|---|
-| **M2** | `responsibleAreaId`, `citizenId`, `isAnonymous` y `location` estructurada (`neighborhoodId`, `street`, `streetNumber`, `latitude`, `longitude`) ahora son campos comunes de `ticketUpdated` en la v1.5 | ✅ Cerrado | 25 ago 2026 |
-| **M2** | `progress` de `updateTicketStatus` en la v1.5 es un `Int` (porcentaje), no la fecha/franja agendada que necesitamos mandar. No hay estructura de `details` definida para `STARTED`/`PROGRESS` | 🔴 Bloqueante | 25 ago 2026 |
+| **M2** | `responsibleAreaId`, `citizenId` e `isAnonymous` siguen siendo campos comunes de `ticketUpdated` en la v1.6 | ✅ Cerrado | 8 sep 2026 |
+| **M2** | **La v1.6 revirtió `requestType`, `summary`, `description` y `location`**: dejaron de ser comunes y viven solo en `details.routing` (§7.4). Además `requestType` es string plano sin ID (§5.5) y `location` perdió `latitude`/`longitude` (§5.4) | ✅ Resuelto de nuestro lado (Issue #128), avisar que nos afectó | 8 sep 2026 |
+| **M2** | `progress` de `updateTicketStatus` sigue siendo un `Int` (porcentaje), no la fecha/franja agendada. **Tercera versión seguida sin estructura de `details` para `STARTED`/`PROGRESS`** (§8.2, "details obligatorio: Ninguno") | 🔴 Bloqueante | 8 sep 2026 |
+| **M2** | La v1.6 renombró `statusChangedAt`→`updateOccurredAt`, eliminó `AREA_USER` del enum de actor (§5.2), sacó `attachmentId` del adjunto (§5.3), cambió `resolution.type` `INFORMATION_PROVIDED`→`INQUIRY_ANSWERED` y exige `subject: tickets/{ticketId}` (§4) | ✅ Adoptado (Issue #128) | 8 sep 2026 |
+| **M2** | `RESOLVED` directo desde `ROUTED` ya no depende de ningún catálogo: §8.2 dice que M2 no mantiene configuración por RequestType y que `STARTED`/`PROGRESS` son opcionales | ✅ Cerrado a nuestro favor | 8 sep 2026 |
 | **M9** | Ausente de la recopilación. Falta la lista de eventos del Core | 🔴 Bloqueante | 17 ago 2026 |
 | **M1** | Contrato técnico del JWT sin publicar: `alg`, `iss`, `aud`, claves/JWKS, claims y TTL. M1 publicó endpoints v2 (`/api/v1/auth/login`, `/refresh`, `/logout`). Frontend definió sesión BFF sellada (ADR-0004); Backend mantiene guard global HS256 provisorio ([ADR-002](decisiones/adr-002-auth-provisoria.md)) hasta recibir la firma real | 🔴 Bloqueante — el principal del proyecto | 3 sep 2026 |
 | **Frontend / Seguridad** | Revisión de seguridad del frontend (Backend Issue #90, Frontend ADR-0006): Backend debe validar adjuntos autoritativamente (magic bytes, EXIF strip, máx 10 MB en `/evidence`), registrar auditoría de lecturas de datos Tier 2 (denuncias, actas) y aplicar allowlist en exports | ⚠️ Requerimiento registrado para producción | 3 sep 2026 |
@@ -33,7 +36,7 @@
 | **M7** | Payloads de `urbanServiceScheduled` y `treeRiskDetected`: preguntaron si los teníamos definidos. Ya estaban — se les compartió el documento completo con los 8 eventos que publicamos | ✅ Cerrado | 30 ago 2026 |
 | **M1** | Catálogo v2 recibido: tiene endpoints y eventos de identidad, pero M6 no consume ninguno en su alcance actual | ✅ Sin dependencia actual | 1 sep 2026 |
 | **M1** | Decidir si el acta ambiental va al expediente digital. Nuestra postura: no — el hecho les llega vía M4 | ⚠️ A definir | 17 ago 2026 |
-| **Cohorte** | Fijar el sobre común. M2 ya formalizó el suyo en la v1.5 (`specVersion`, `eventId`, `eventType`, `occurredAt`, `producer`, `subject`, `data`) — sigue siendo el único envelope escrito de la cohorte | ⚠️ A definir | 25 ago 2026 |
+| **Cohorte** | Fijar el sobre común. M2 lo actualizó en la v1.6 (§4): `specVersion` es constante `"1.0"`, `producer` pasó a ser objeto `{moduleId, service}` y **`eventVersion` desapareció**. Sigue siendo el único envelope escrito de la cohorte | ⚠️ A definir | 8 sep 2026 |
 | **Interno** | Los enums del [acuerdo publicado](Acuerdo-Eventos-M6.md) no coincidían con el catálogo en seis casos. Decidido por [ADR-003](decisiones/adr-003-divergencias-enums.md): manda el catálogo, se corrige el acuerdo | ✅ Cerrado | 2 sep 2026 |
 | **Interno** | Regenerar el acuerdo publicado con los enums corregidos y volver a circularlo | ⚠️ Pendiente | 2 sep 2026 |
 | **M7** | Avisar que `ServiceOrigin` tiene 5 valores (`PLANNED`/`MANUAL`/`WEATHER_ALERT`, no `SCHEDULED`/`INTERNAL`), que `TreeHealthStatus` no colapsa en `DECLINING` y que `TreeInterventionType` distingue las dos podas y usa `REMOVAL`, no `FELLING` | ⚠️ Aviso pendiente | 2 sep 2026 |
@@ -47,21 +50,24 @@
 
 ## El detalle, por contraparte
 
-### M2 — Atención ciudadana 🔴 (un bloqueante nuevo, tres cerrados)
+### M2 — Atención ciudadana 🔴 (un bloqueante que no se mueve, una regresión)
 
-Publicaron **la v1.5**, que reemplaza la v1.2 que habíamos adoptado. Sigue siendo sobre común, JSON Schema, matriz de transiciones, idempotencia y DLQ — el documento de integración más completo de la cohorte y el único que define un envelope.
+Publicaron **la v1.6**, que reemplaza la v1.5. Sigue siendo el documento de integración más completo de la cohorte y el único que define un envelope. No es un pulido: mueve campos, renombra dos y revierte una mejora.
 
-**Lo que enviamos cambió de forma respecto de la v1.2.** El evento sigue siendo uno solo, [`updateTicketStatus`](eventos/publicados/updateTicketStatus.md), pero: `publicId` y `expectedTicketVersion` salieron del contrato (la correlación es solo por `ticketId`, no hace falta devolver versión de nada), `message` se partió en `publicMessage`/`internalMessage`, `updatedAt` se renombró a `statusChangedAt`, y `progress` pasó a ser un campo común de tipo `Int` (porcentaje), no el objeto con la fecha agendada que usábamos.
+**🔴 La regresión, que es lo más caro.** En la v1.5, `requestType`, `summary`, `description` y `location` eran **campos comunes** de todo `ticketUpdated`. La v1.6 (§7.1) los sacó de la tabla de comunes y los dejó **solo dentro de `details.routing`** (§7.4). Nuestro consumer los leía del nivel raíz: con un `ROUTED` v1.6 abría el expediente **sin dirección, sin coordenadas y con el `reportType` por defecto**, en silencio. Corregido en el Issue #128, leyendo `details.routing` con fallback a la raíz.
 
-**Ese último cambio abrió un bloqueante nuevo:** no hay ninguna estructura de `details` definida para `STARTED`/`PROGRESS` en la v1.5 ("details obligatorio: Ninguno"), así que no sabemos cómo mandar la fecha/franja agendada de un servicio. Hay que preguntarles si va como texto en `publicMessage` o si van a definir algo tipo `details.schedule`.
+Dos agravantes del mismo cambio:
 
-**Lo que recibimos se destrabó del todo.** Los tres campos que bloqueaban [`ticketUpdated`](eventos/consumidos/ticketUpdated.md) ahora son campos comunes del evento, no solo de `details` en `ROUTED`:
+- **`requestType` es un string plano** (§5.5) y el contrato explicita que **no expone IDs internos** de Category/Subcategory/RequestType. El mapeo por `requestType.id` que esperábamos hacer cuando publicaran el catálogo ya no va a ser posible nunca: clasificamos por nombre visible.
+- **`location` perdió `latitude` y `longitude`** (§5.4). Quedan `addressLine, street, streetNumber, neighborhoodId, reference`. Los `lat`/`lng` del expediente van a estar siempre en null.
 
-- **`responsibleAreaId`** dice a qué módulo va cada `ROUTED`. Ya no hace falta el catálogo de `requestTypeId` ni adivinar.
-- **`location`** viene estructurada: `addressLine, street, streetNumber, neighborhoodId, latitude, longitude, reference`. Podemos rutear por zona.
-- **`citizenId`** e **`isAnonymous`** viajan en cualquier actualización, no solo la primera.
+**Lo que sí sigue común**, y es lo que sostiene el ruteo: `responsibleAreaId`, `citizenId`, `isAnonymous` y `currentPriority`.
 
-Además: `informationRequestId` desapareció — la v1.5 lo reemplaza por una invariante de "como máximo una `InformationRequest` activa por ticket", así que la correlación no necesita ID. Y los tres enums que faltaban (`resolution.type`, `returnInfo.reasonCode`, `cancellation.reasonCode`) ya están publicados.
+**Lo que enviamos cambió en cinco puntos**, todos adoptados en el Issue #128: `statusChangedAt`→`updateOccurredAt` (§8.1); `AREA_USER` **no existe** en el enum de actor y una persona que actúa desde otro módulo es `EXTERNAL_USER`, un proceso automático `SYSTEM` (§5.2); el adjunto perdió `attachmentId` (§5.3); `resolution.type` cambió `INFORMATION_PROVIDED` por `INQUIRY_ANSWERED` (§8.5); y el sobre exige `subject: tickets/{ticketId}` (§4). Los últimos dos importan más de lo que parecen porque §13 fija `additionalProperties: false`: un campo de más es rechazo del evento, no un campo que se ignora.
+
+**🔴 El bloqueante de la fecha agendada no se movió.** Tercera versión seguida: `progress` sigue siendo un `Int` de porcentaje y §8.2 mantiene "details obligatorio: Ninguno" para `STARTED`/`PROGRESS`. Hay que preguntarles si va como texto en `publicMessage` o si van a definir algo tipo `details.schedule`. Encima la v1.6 suma una validación: un `PROGRESS` ahora debe aportar al menos uno de `progress`, `publicMessage`, `internalMessage` o `attachments`.
+
+**✅ Dos cosas se destrabaron.** `RESOLVED` directo desde `ROUTED` ya no depende de ningún catálogo — §8.2 dice que M2 **no** mantiene configuración por RequestType y que `STARTED`/`PROGRESS` son hechos opcionales; nuestra regla de mandar siempre `STARTED` antes pasó de defensa a decisión de contenido. Y `CONTENT_UPDATED` ahora **sí** tiene `details.content` (§7.7), aunque lo seguimos ignorando: §7.3 aclara que la clasificación queda bloqueada una vez que el ticket fue `ROUTED`.
 
 **Decisión propia, 04/09/2026 — qué hacemos con un `ticketUpdated` que llega sobre un expediente ya cerrado.** No estaba decidido, estaba implícito en el código. Queda así:
 
@@ -180,15 +186,15 @@ Sin integración, confirmado de los dos lados. De M5: nuestra acta les llega con
 
 **Colisión de nombres con M4.** Ellos publican `inspectionScheduled` / `inspectionCompleted` / `inspectionFailed` sin prefijo; son inspecciones *comerciales*. Los nuestros van prefijados (`environmental…`), así que de nuestro lado está bien, pero M2 es destinatario de los dos. Conviene que el catálogo del Core registre el módulo de origen, o que M4 prefije los suyos.
 
-**El sobre común.** M2 definió `specVersion`, `eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `subject` y `data`. Es el único envelope escrito que existe. M9 tendría que adoptarlo o publicar el suyo — hoy cada módulo asume uno distinto.
+**El sobre común.** M2 define `specVersion`, `eventId`, `eventType`, `occurredAt`, `producer`, `subject` y `data`. Es el único envelope escrito que existe. **La v1.6 lo cambió**: `eventVersion` desapareció, `producer` pasó de string a objeto `{moduleId, service}` y `specVersion` es constante `"1.0"` —la versión del contrato de integración, no la del documento—. M9 tendría que adoptarlo o publicar el suyo; hoy cada módulo asume uno distinto, así que nuestro inbox es tolerante a propósito y acepta `producer` en las dos formas.
 
-**Los adjuntos se llaman distinto.** M2 usa `attachment { attachmentId, fileName, contentType, url, sizeBytes }`; nosotros veníamos con `{ url, mimeType, description }`. Nos alineamos al suyo en lo que va hacia M2; conviene unificarlo en toda la cohorte antes de implementar.
+**Los adjuntos se llaman distinto.** M2 usa `attachment { fileName, contentType, url, sizeBytes }` —sin `attachmentId` desde la v1.6—; nosotros veníamos con `{ url, mimeType, description }`. Nos alineamos al suyo en lo que va hacia M2; conviene unificarlo en toda la cohorte antes de implementar.
 
 **Dónde viven los archivos: resuelto internamente el 02/09, implementado el mismo día (Issue #64).** El equipo eligió **Cloudflare R2**, con el backend subiendo al bucket y guardando en `Attachment` la URL pública que devuelve, más el nombre del archivo. `POST /evidence` y `GET /evidence` ya existen, genéricos por `ownerType`/`ownerId` (Container, Service, ZoneResult, Inspection). Es lo que hace que el `url` del contrato sea un enlace que se pueda abrir sin pedirnos nada.
 
 **Hacia M4 ya viaja (04/09).** `environmentalViolationDetected` lleva `evidence[]` con los adjuntos de la inspección, en la forma `{url, mimeType}` que define `_shared.schema.json`.
 
-**Hacia M2 sigue pendiente**, y no es el mismo trabajo: `updateTicketStatus.attachments[]` usa el shape de ellos —`{attachmentId, fileName, contentType, url, sizeBytes}`— y antes de mandarlo hay que decidir **qué adjuntos ve el vecino**. Las fotos de una inspección son internas, por el mismo criterio que deja afuera `findings` y el contenido del acta.
+**Hacia M2 sigue pendiente**, y no es el mismo trabajo: `updateTicketStatus.attachments[]` usa el shape de ellos —`{fileName, contentType, url, sizeBytes?}`— y antes de mandarlo hay que decidir **qué adjuntos ve el vecino**. Las fotos de una inspección son internas, por el mismo criterio que deja afuera `findings` y el contenido del acta.
 
 **Huérfanos ajenos** (alguien los espera y nadie los publica): el par `paymentRegistered` / `debtSettled` es el más caro — rompe el cierre financiero de M4 y M7 con Rentas, porque M5 los publica como `paymentRecorded` y `debtCancelled`. La lista completa está en [`Cruce-Eventos-M6.md`](Cruce-Eventos-M6.md) Parte 3; no la duplicamos acá porque no nos toca mantenerla.
 

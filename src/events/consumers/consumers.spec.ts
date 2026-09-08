@@ -184,7 +184,43 @@ describe('consumidores de eventos', () => {
       prisma.environmentalReport.findFirst.mockResolvedValue(null);
     });
 
-    it('ROUTED abre el expediente y deduce el tipo del texto', async () => {
+    /**
+     * La forma de la v1.6: `requestType`, `summary` y `location` viven dentro
+     * de `details.routing` (§7.4) y `requestType` es un string plano (§5.5).
+     *
+     * Es el caso que rompía: leyéndolos del nivel raíz —como pedía la v1.5—
+     * el expediente se abría sin dirección y con el tipo por defecto, sin
+     * error ni log que lo delatara.
+     */
+    it('ROUTED lee el snapshot de details.routing y deduce el tipo del texto', async () => {
+      await h({
+        ticketId: 'TCK-1',
+        updateType: 'ROUTED',
+        currentPriority: 'HIGH',
+        isAnonymous: false,
+        citizenId: 'cit-1',
+        details: {
+          routing: {
+            requestType: 'Ruidos molestos',
+            summary: 'Bar con música fuerte',
+            location: { addressLine: 'Rivadavia 100' },
+          },
+        },
+      });
+
+      const [[args]] = prisma.environmentalReport.create.mock.calls;
+      expect(args.data.reportType).toBe('NOISE');
+      expect(args.data.address).toBe('Rivadavia 100');
+      expect(args.data.priority).toBe(Severity.HIGH);
+      expect(args.data.reporterSnapshot).toEqual({ isAnonymous: false, citizenId: 'cit-1' });
+    });
+
+    /**
+     * El contrato ya cambió de opinión una vez sobre dónde viven estos campos,
+     * así que aceptamos las dos formas: es gratis y nos deja indiferentes a
+     * cuál terminen publicando.
+     */
+    it('ROUTED sigue aceptando la forma v1.5, con los campos en la raíz', async () => {
       await h({
         ticketId: 'TCK-1',
         updateType: 'ROUTED',
@@ -198,8 +234,32 @@ describe('consumidores de eventos', () => {
 
       const [[args]] = prisma.environmentalReport.create.mock.calls;
       expect(args.data.reportType).toBe('NOISE');
+      expect(args.data.address).toBe('Rivadavia 100');
+      expect(args.data.lat).toBe(-34.6);
       expect(args.data.priority).toBe(Severity.HIGH);
-      expect(args.data.reporterSnapshot).toEqual({ isAnonymous: false, citizenId: 'cit-1' });
+    });
+
+    /**
+     * La v1.6 (§5.4) sacó `latitude`/`longitude` de `location` y parte la
+     * dirección en `street` + `streetNumber`. Guardar la calle sin la altura
+     * dejaría el expediente sin poder ubicarse en el mapa ni en la calle.
+     */
+    it('ROUTED recompone la dirección cuando no viene addressLine', async () => {
+      await h({
+        ticketId: 'TCK-1',
+        updateType: 'ROUTED',
+        details: {
+          routing: {
+            requestType: 'Ruidos molestos',
+            location: { street: 'Rivadavia', streetNumber: '100' },
+          },
+        },
+      });
+
+      const [[args]] = prisma.environmentalReport.create.mock.calls;
+      expect(args.data.address).toBe('Rivadavia 100');
+      expect(args.data.lat).toBeNull();
+      expect(args.data.lng).toBeNull();
     });
 
     it('un ROUTED anonimo no guarda identidad', async () => {
