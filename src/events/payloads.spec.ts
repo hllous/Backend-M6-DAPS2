@@ -484,14 +484,39 @@ describe('payloads de los eventos publicados', () => {
       );
     });
 
-    it('updatedBy va siempre como AREA_USER', () => {
+    // §5.2 de la v1.6: una persona que actúa desde otro módulo es EXTERNAL_USER
+    // cualquiera sea su rol acá. El AREA_USER de la v1.5 no existe en su enum.
+    it('una persona va como EXTERNAL_USER', () => {
       const p = payloads.updateTicketStatus({
         ticketId: 'TCK-1',
         updateType: 'PROGRESS',
         updatedById: 'user-009',
       });
 
-      expect(p.updatedBy).toEqual({ type: 'AREA_USER', id: 'user-009' });
+      expect(p.updatedBy).toEqual({ type: 'EXTERNAL_USER', id: 'user-009' });
+    });
+
+    it('un hecho automático va como SYSTEM, con id null', () => {
+      const p = payloads.updateTicketStatus({
+        ticketId: 'TCK-1',
+        updateType: 'PROGRESS',
+        updatedById: 'sistema',
+      });
+
+      expect(p.updatedBy).toEqual({ type: 'SYSTEM', id: null });
+    });
+
+    // El rename de la v1.6 (§8.1). Se testea porque un campo con el nombre
+    // viejo pasa el schema de tipos y lo rechaza M2 en runtime.
+    it('el timestamp viaja como updateOccurredAt', () => {
+      const p = payloads.updateTicketStatus({
+        ticketId: 'TCK-1',
+        updateType: 'STARTED',
+        updatedById: 'user-009',
+      });
+
+      expect(p.updateOccurredAt).toEqual(expect.any(String));
+      expect(p.statusChangedAt).toBeUndefined();
     });
   });
 });

@@ -1031,7 +1031,7 @@ export class ServicesService {
    * Un servicio planificado —la recoleccion de todos los martes— no proyecta
    * nada: sin ticketId no sale nada hacia M2 (docs/entidades/service.md).
    *
-   * La fecha y la franja agendadas NO viajan: `progress` en la v1.5 de M2 es un
+   * La fecha y la franja agendadas NO viajan: `progress` en el contrato de M2 es un
    * entero de porcentaje y no hay estructura de `details` para STARTED ni
    * PROGRESS. Es un bloqueante abierto con ellos.
    */

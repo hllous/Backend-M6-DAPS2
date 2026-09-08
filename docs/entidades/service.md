@@ -27,7 +27,7 @@ Referencias a otras entidades: `serviceTypeId` → [`ServiceType`](configuracion
 
 Enums: `mode` es `ServiceMode`, `status` es `ServiceStatus`, `origin` es `ServiceOrigin`, `ZoneResult.status` es `ZoneResultStatus`, `ZoneResult.reason` es `NotServicedReason`, `wasteType` es `WasteType`, `siteType` es `DisposalSiteType` — ver [enumeraciones.md](../enumeraciones.md).
 
-`ticketId` es de M2 y viaja solo cuando `origin = TICKET`. Es lo único que necesitamos guardar para correlacionar: la v1.5 sacó `publicId` y `expectedTicketVersion` del contrato, así que no hace falta persistir `ticketVersion` (ver [`updateTicketStatus`](../eventos/publicados/updateTicketStatus.md)).
+`ticketId` es de M2 y viaja solo cuando `origin = TICKET`. Es lo único que necesitamos guardar para correlacionar: M2 sacó `publicId` y `expectedTicketVersion` de su contrato en la v1.5, así que no hace falta persistir `ticketVersion` (ver [`updateTicketStatus`](../eventos/publicados/updateTicketStatus.md)).
 
 ## Estados
 

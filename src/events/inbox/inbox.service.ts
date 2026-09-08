@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { EventEnvelope } from '../envelope';
+import { InboundEnvelope } from '../envelope';
 
 /**
  * Un handler de evento entrante. Recibe el `data` del sobre.
@@ -46,7 +46,7 @@ export class InboxService {
     return [...this.handlers.keys()].sort();
   }
 
-  async ingest(envelope: EventEnvelope): Promise<IngestResult> {
+  async ingest(envelope: InboundEnvelope): Promise<IngestResult> {
     const messageId = envelope.eventId;
 
     // El unique de messageId es lo que decide si es duplicado: dejamos que

@@ -4,6 +4,7 @@ import { OutboxEvent, OutboxEventStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventPublisher } from '../publishers/event-publisher.port';
 import { buildEnvelope } from '../envelope';
+import { EventType } from '../event-types';
 
 /** Cuántas filas se toman por barrida. */
 export const BATCH_SIZE = 50;
@@ -24,6 +25,29 @@ export const MAX_ATTEMPTS = 5;
  * una réplica hace falta un `SELECT ... FOR UPDATE SKIP LOCKED` o publicar
  * desde un solo worker, o dos instancias publican el mismo evento dos veces.
  */
+/**
+ * El `subject` del sobre, que no es el mismo dato para todos los eventos.
+ *
+ * Para los nuestros es el id del agregado —el servicio, el contenedor, el
+ * árbol—, que es lo que además particiona en Kafka. Pero **M2 exige el formato
+ * `tickets/{ticketId}`** (§4 de su v1.6) y valida el sobre antes de mirar el
+ * payload, así que `updateTicketStatus` es la excepción: mandarle el id de
+ * nuestro `Service` hace que rechace el evento entero.
+ *
+ * El `ticketId` sale del payload y no del `aggregateId` justamente porque el
+ * agregado es nuestro y el ticket es de ellos.
+ */
+export function subjectFor(
+  event: Pick<OutboxEvent, 'eventType' | 'aggregateId' | 'payload'>,
+): string {
+  if (event.eventType !== EventType.UPDATE_TICKET_STATUS) return event.aggregateId;
+
+  const payload = (event.payload ?? {}) as Record<string, unknown>;
+  const ticketId = payload.ticketId;
+
+  return typeof ticketId === 'string' && ticketId ? `tickets/${ticketId}` : event.aggregateId;
+}
+
 @Injectable()
 export class OutboxDispatcher {
   private readonly logger = new Logger(OutboxDispatcher.name);
@@ -58,7 +82,7 @@ export class OutboxDispatcher {
           eventId: event.id,
           eventType: event.eventType,
           occurredAt: event.occurredAt,
-          subject: event.aggregateId,
+          subject: subjectFor(event),
           data: event.payload,
         }),
       );
