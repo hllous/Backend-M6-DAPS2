@@ -10,7 +10,7 @@ import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent, TicketUpdateType } from '../inbox/consumed-events';
 import { REPORT_TRANSITIONS } from '../../modules/environmental-reports/environmental-reports.service';
 
-/** El `requestType.name` de M2 mapeado a nuestro catálogo de denuncias. */
+/** El nombre visible del Request Type de M2, mapeado a nuestro catálogo. */
 const TIPO_POR_PALABRA: [RegExp, EnvironmentalReportType][] = [
   [/ruido|sonor/i, EnvironmentalReportType.NOISE],
   [/basural|microbasural/i, EnvironmentalReportType.ILLEGAL_DUMPSITE],
@@ -33,7 +33,7 @@ const PRIORIDAD: Record<string, Severity> = {
  * `ticketUpdated` de M2, el único evento suyo que escuchamos y **nuestro único
  * disparador de entrada**.
  *
- * La v1.5 define trece `updateType`. Seis disparan acción y **siete se ignoran
+ * La v1.6 define trece `updateType`. Seis disparan acción y **siete se ignoran
  * a propósito**: el doc pide explícitamente no implementarles handler, y están
  * enumerados en su tabla para que quede escrito que la omisión es deliberada y
  * no haya que volver a auditarla contra el contrato.
@@ -77,7 +77,7 @@ export class TicketsConsumer implements OnModuleInit {
       case TicketUpdateType.ESCALATION_CHANGED:
         return this.escalationChanged(ticketId, data);
       default:
-        // Los siete restantes de la v1.5 se descartan a propósito.
+        // Los siete restantes se descartan a propósito.
         this.logger.log(`ticketUpdated/${updateType}: sin efecto operativo, se descarta`);
     }
   }
@@ -85,9 +85,10 @@ export class TicketsConsumer implements OnModuleInit {
   /**
    * La entrada. Abre el expediente ambiental.
    *
-   * **`responsibleAreaId` dice si el ROUTED es nuestro**, y desde la v1.5 es un
-   * campo común: ya no hay que adivinar ni necesitar el catálogo de
-   * `requestTypeId`.
+   * **`responsibleAreaId` dice si el ROUTED es nuestro**, y sigue siendo campo
+   * común en la v1.6: no hay que adivinar ni necesitar el catálogo de
+   * `requestTypeId`. El snapshot operativo, en cambio, se lee de
+   * `details.routing` — ver `routing()`.
    *
    * ponytail: abre siempre un expediente, nunca un `Service` puntual. Abrir un
    * servicio directo necesitaría el catálogo de Request Types que M2 no
@@ -101,15 +102,17 @@ export class TicketsConsumer implements OnModuleInit {
       return;
     }
 
-    const location = (data.location ?? {}) as Record<string, unknown>;
-    const requestType = (data.requestType ?? {}) as Record<string, unknown>;
-    const nombre = `${requestType.name ?? ''} ${data.summary ?? ''}`;
+    const routing = this.routing(data);
+    const location = (routing.location ?? {}) as Record<string, unknown>;
+    const nombre = `${this.requestTypeName(routing.requestType)} ${routing.summary ?? ''}`;
 
     const report = await this.prisma.environmentalReport.create({
       data: {
         ticketId,
         reportType: this.tipoDeDenuncia(nombre),
-        address: (location.addressLine as string) ?? (location.street as string) ?? null,
+        address: this.direccion(location),
+        // La v1.6 sacó latitude/longitude de `location` (§5.4): quedan en null
+        // salvo que M2 las mande igual. Se georreferencia por `address`.
         lat: location.latitude != null ? Number(location.latitude) : null,
         lng: location.longitude != null ? Number(location.longitude) : null,
         priority: this.prioridad(data.currentPriority),
@@ -184,7 +187,7 @@ export class TicketsConsumer implements OnModuleInit {
   /**
    * Lo que el vecino respondió a nuestra solicitud de información.
    *
-   * La v1.5 no usa ID de correlación: impone como máximo una solicitud activa
+   * El contrato no usa ID de correlación: impone como máximo una solicitud activa
    * por ticket, así que la respuesta siempre corresponde a la nuestra.
    *
    * **Se acepta aunque el expediente esté cerrado**: perder lo que el vecino
@@ -258,6 +261,59 @@ export class TicketsConsumer implements OnModuleInit {
   }
 
   // ─── Helpers ──────────────────────────────────────
+
+  /**
+   * El snapshot operativo del `ROUTED`.
+   *
+   * **La v1.6 revirtió un cambio de la v1.5.** En la v1.5 `requestType`,
+   * `summary`, `description` y `location` eran campos comunes de todo
+   * `ticketUpdated`; la v1.6 (§7.1) los sacó de la tabla de comunes y los dejó
+   * solo dentro de `details.routing` (§7.4). Leerlos del nivel raíz devuelve
+   * `undefined` y abre expedientes vacíos en silencio, que es exactamente lo
+   * que hacía este consumer.
+   *
+   * Leemos `details.routing` primero y caemos al nivel raíz porque el contrato
+   * sigue WIP y ya cambió de opinión una vez: aceptar las dos formas no cuesta
+   * nada y nos deja indiferentes a cuál de las dos terminen publicando.
+   */
+  private routing(data: Record<string, unknown>): Record<string, unknown> {
+    const details = (data.details ?? {}) as Record<string, unknown>;
+    const routing = (details.routing ?? {}) as Record<string, unknown>;
+    return { ...data, ...routing };
+  }
+
+  /**
+   * El nombre visible del Request Type.
+   *
+   * La v1.6 (§5.5) lo serializa como **string plano** y aclara que no expone
+   * los IDs internos de Category/Subcategory/RequestType. La v1.5 mandaba un
+   * `catalogRef {id, name}`; se aceptan las dos formas.
+   */
+  private requestTypeName(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') {
+      return String((value as Record<string, unknown>).name ?? '');
+    }
+    return '';
+  }
+
+  /**
+   * La dirección del caso.
+   *
+   * `addressLine` es la forma completa. Si no viene, la v1.6 (§5.4) parte el
+   * dato en `street` + `streetNumber`, así que se recomponen en vez de guardar
+   * la calle sin altura.
+   */
+  private direccion(location: Record<string, unknown>): string | null {
+    const addressLine = location.addressLine as string | undefined;
+    if (addressLine) return addressLine;
+
+    const street = location.street as string | undefined;
+    if (!street) return null;
+
+    const number = location.streetNumber as string | undefined;
+    return number ? `${street} ${number}` : street;
+  }
 
   /**
    * ponytail: mapea el texto del reclamo a nuestro catálogo por palabra clave,

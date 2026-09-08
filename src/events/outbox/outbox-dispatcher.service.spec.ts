@@ -2,7 +2,7 @@ import { OutboxEventStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventPublisher } from '../publishers/event-publisher.port';
 import { EventEnvelope } from '../envelope';
-import { MAX_ATTEMPTS, OutboxDispatcher } from './outbox-dispatcher.service';
+import { MAX_ATTEMPTS, OutboxDispatcher, subjectFor } from './outbox-dispatcher.service';
 
 describe('OutboxDispatcher', () => {
   const ROW_ID = '11111111-1111-1111-1111-111111111111';
@@ -47,15 +47,47 @@ describe('OutboxDispatcher', () => {
     await dispatcher.dispatchPending();
 
     expect(publicado()).toEqual({
-      specVersion: '1.5',
+      specVersion: '1.0',
       eventId: ROW_ID,
       eventType: 'urbanServiceScheduled',
-      eventVersion: '1.0',
       occurredAt: '2026-09-02T10:00:00.000Z',
-      producer: 'M6',
+      producer: { moduleId: 'M6', service: 'urban-services-api' },
       subject: SUBJECT,
       data: { serviceId: SUBJECT },
     });
+  });
+
+  /**
+   * §4 de la v1.6: M2 valida el sobre antes de mirar el payload, así que un
+   * `subject` con el id de nuestro `Service` le hace rechazar el evento entero.
+   * Es la única excepción — el resto de los eventos particiona por agregado.
+   */
+  it('updateTicketStatus va con subject tickets/{ticketId}', async () => {
+    prisma.outboxEvent.findMany.mockResolvedValue([
+      row({ eventType: 'updateTicketStatus', payload: { ticketId: 'TCK-1' } }),
+    ]);
+
+    await dispatcher.dispatchPending();
+
+    expect(publicado().subject).toBe('tickets/TCK-1');
+  });
+
+  it('los demás eventos siguen yendo con el id del agregado', () => {
+    expect(
+      subjectFor({
+        eventType: 'urbanServiceScheduled',
+        aggregateId: SUBJECT,
+        payload: { ticketId: 'TCK-1' },
+      }),
+    ).toBe(SUBJECT);
+  });
+
+  // Sin ticketId no hay subject válido que construir; se cae al agregado en vez
+  // de mandar el string 'tickets/undefined'.
+  it('un updateTicketStatus sin ticketId cae al id del agregado', () => {
+    expect(subjectFor({ eventType: 'updateTicketStatus', aggregateId: SUBJECT, payload: {} })).toBe(
+      SUBJECT,
+    );
   });
 
   it('el eventId es el id de la fila, para que el consumidor pueda deduplicar', async () => {

@@ -18,6 +18,8 @@ describe('GreenSpacesService', () => {
     name: 'Plaza Mitre',
     spaceType: 'SQUARE',
     zoneId: 'z-centro',
+    lat: new Prisma.Decimal('-34.5583000'),
+    lng: new Prisma.Decimal('-58.4506000'),
     areaM2: new Prisma.Decimal('2400.00'),
     active: true,
     createdAt: new Date('2026-08-01T10:00:00.000Z'),
@@ -121,6 +123,25 @@ describe('GreenSpacesService', () => {
 
       prisma.greenSpace.findUnique.mockResolvedValue(espacio({ areaM2: null }));
       await expect(service.findOne(ID)).resolves.toMatchObject({ areaM2: null });
+    });
+
+    /**
+     * Es la falla silenciosa de este campo: el tipo de TypeScript dice `number`
+     * igual, asi que sin este test un Decimal serializado pasa desapercibido
+     * hasta que el mapa recibe un objeto y no puede ubicar nada.
+     */
+    it('las coordenadas salen como número, no como Decimal', async () => {
+      const espacioVerde = await service.findOne(ID);
+
+      expect(typeof espacioVerde.lat).toBe('number');
+      expect(typeof espacioVerde.lng).toBe('number');
+      expect(espacioVerde).toMatchObject({ lat: -34.5583, lng: -58.4506 });
+    });
+
+    it('un espacio verde sin ubicar sale con lat y lng en null', async () => {
+      prisma.greenSpace.findUnique.mockResolvedValue(espacio({ lat: null, lng: null }));
+
+      await expect(service.findOne(ID)).resolves.toMatchObject({ lat: null, lng: null });
     });
 
     it('una superficie en cero NO se publica como null', async () => {

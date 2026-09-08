@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from './inbox.service';
-import { EventEnvelope } from '../envelope';
+import { InboundEnvelope } from '../envelope';
 
 describe('InboxService', () => {
   const MESSAGE_ID = '646d19f5-5670-4a7b-9442-30e13b02ba11';
@@ -9,11 +9,12 @@ describe('InboxService', () => {
   let prisma: any;
   let inbox: InboxService;
 
-  const sobre = (over: Partial<EventEnvelope> = {}): EventEnvelope => ({
-    specVersion: '1.5',
+  // Un sobre entrante de M7, que todavía manda `producer` como string suelto:
+  // el inbox es tolerante a propósito y no exige la forma de la v1.6.
+  const sobre = (over: Partial<InboundEnvelope> = {}): InboundEnvelope => ({
+    specVersion: '1.0',
     eventId: MESSAGE_ID,
     eventType: 'streetClosureApproved',
-    eventVersion: '1.0',
     occurredAt: '2026-09-02T10:00:00.000Z',
     producer: 'M7',
     subject: 'abc',

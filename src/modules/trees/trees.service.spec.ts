@@ -1,5 +1,11 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  Prisma,
+  RiskLevel,
+  RiskType,
+  TreeHealthStatus,
+  TreeInterventionType,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TreesService } from './trees.service';
 
@@ -174,6 +180,87 @@ describe('TreesService', () => {
       prisma.tree.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne(ID)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('último relevamiento en la respuesta', () => {
+    const relevamiento = (over: Record<string, unknown> = {}) => ({
+      id: 'rel-1',
+      treeId: ID,
+      surveyedAt: new Date('2026-08-20T09:00:00.000Z'),
+      inspectorId: 'usr-00015',
+      healthStatus: TreeHealthStatus.WEAKENED,
+      riskLevel: RiskLevel.HIGH,
+      riskType: RiskType.FALLING_BRANCH,
+      suggestedIntervention: TreeInterventionType.SAFETY_PRUNING,
+      requiresStreetClosure: true,
+      requiresPublicWorks: false,
+      notes: 'Rama principal con fisura',
+      createdAt: new Date('2026-08-20T09:30:00.000Z'),
+      ...over,
+    });
+
+    it('publica el riesgo, para poder pintar el mapa sin pedir árbol por árbol', async () => {
+      prisma.tree.findUnique.mockResolvedValue(arbol({ surveys: [relevamiento()] }));
+
+      const dto = await service.findOne(ID);
+
+      expect(dto.lastSurvey).toEqual({
+        surveyedAt: new Date('2026-08-20T09:00:00.000Z'),
+        healthStatus: TreeHealthStatus.WEAKENED,
+        riskLevel: RiskLevel.HIGH,
+        riskType: RiskType.FALLING_BRANCH,
+        suggestedIntervention: TreeInterventionType.SAFETY_PRUNING,
+      });
+    });
+
+    /** Es un resumen para el listado, no el detalle: eso sigue en /trees/:id/surveys. */
+    it('es un resumen: no arrastra inspector, notas ni derivaciones', async () => {
+      prisma.tree.findUnique.mockResolvedValue(arbol({ surveys: [relevamiento()] }));
+
+      const dto = await service.findOne(ID);
+
+      expect(Object.keys(dto.lastSurvey!).sort()).toEqual([
+        'healthStatus',
+        'riskLevel',
+        'riskType',
+        'suggestedIntervention',
+        'surveyedAt',
+      ]);
+    });
+
+    /** El seed carga 16 árboles y 6 relevamientos: sin relevar es un estado real. */
+    it('un árbol sin relevar viaja como null, no como objeto vacío', async () => {
+      prisma.tree.findUnique.mockResolvedValue(arbol({ surveys: [] }));
+
+      expect((await service.findOne(ID)).lastSurvey).toBeNull();
+    });
+
+    it('pide el más reciente, y uno solo', async () => {
+      await service.findAll({ skip: 0, take: 20, page: 1, pageSize: 20 } as any);
+
+      expect(prisma.tree.findMany.mock.calls[0][0].include).toEqual({
+        surveys: { orderBy: { surveyedAt: 'desc' }, take: 1 },
+      });
+    });
+
+    /**
+     * Sin el include acá, editar la dirección de un árbol relevado lo devolvería
+     * con `lastSurvey: null` y el frontend lo leería como "sin relevar".
+     */
+    it('el PATCH también lo trae', async () => {
+      prisma.tree.update.mockResolvedValue(arbol({ surveys: [relevamiento()] }));
+
+      const dto = await service.update(ID, { address: 'Av. Mitre 1300' } as any);
+
+      expect(prisma.tree.update.mock.calls[0][0].include).toBeDefined();
+      expect(dto.lastSurvey?.riskLevel).toBe(RiskLevel.HIGH);
+    });
+
+    it('un árbol recién creado no tiene relevamiento', async () => {
+      expect(
+        (await service.create({ surveyCode: 'AR-9', zoneId: 'z' } as any)).lastSurvey,
+      ).toBeNull();
     });
   });
 });

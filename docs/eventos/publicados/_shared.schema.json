@@ -90,11 +90,8 @@
     },
     "m2Attachment": {
       "type": "object",
-      "description": "Adjunto en el formato del contrato v1.2 de M2. Solo para updateTicketStatus.",
+      "description": "Adjunto en el formato de M2 (v1.6 §5.3). Solo para updateTicketStatus. No lleva attachmentId: ese campo era de la v1.2 y no existe en su tabla, y como el contrato fija additionalProperties=false (§13) mandarlo es rechazo, no un campo ignorado. Nunca viaja el binario, solo la URL.",
       "properties": {
-        "attachmentId": {
-          "type": "string"
-        },
         "fileName": {
           "type": "string"
         },
@@ -111,7 +108,6 @@
         }
       },
       "required": [
-        "attachmentId",
         "fileName",
         "contentType",
         "url"
