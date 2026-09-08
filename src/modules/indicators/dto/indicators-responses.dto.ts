@@ -173,31 +173,73 @@ export class ReportStatusCountDto {
   count: number;
 }
 
+/**
+ * Los tres bloques del indicador van en clases propias y no como tipos inline.
+ *
+ * Un `@ApiProperty` sobre un tipo literal de TypeScript se emite en el OpenAPI
+ * como un `object` sin propiedades: el consumidor ve que el campo existe y no
+ * qué trae adentro. Con una clase, Swagger lo describe entero.
+ */
+export class ContainerIncidentsDto {
+  @ApiProperty({ type: [StatusCountDto], description: 'Todo el parque, por estado' })
+  byStatus: StatusCountDto[];
+
+  @ApiProperty({
+    type: [ContainersByZoneDto],
+    description: 'Ordenado de mayor a menor cantidad de incidencias',
+  })
+  byZone: ContainersByZoneDto[];
+}
+
+export class TreeIncidentsDto {
+  @ApiProperty({
+    type: [RiskCountDto],
+    description: 'Cada árbol cuenta una sola vez, por su último relevamiento',
+  })
+  byRiskLevel: RiskCountDto[];
+}
+
+export class ReportIncidentsDto {
+  @ApiProperty({ description: 'Denuncias abiertas en el período', example: 18 })
+  total: number;
+
+  @ApiProperty({ type: [ReportTypeCountDto] })
+  byType: ReportTypeCountDto[];
+
+  @ApiProperty({ type: [ReportStatusCountDto] })
+  byStatus: ReportStatusCountDto[];
+
+  @ApiProperty({
+    description:
+      'Días promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. ' +
+      '**Null si no se cerró ninguno**: es la ausencia de dato, no un cero.',
+    example: 4.3,
+    nullable: true,
+    type: Number,
+  })
+  avgResolutionDays: number | null;
+}
+
 export class IncidentsIndicatorDto {
   @ApiProperty({ type: PeriodDto })
   period: PeriodDto;
 
   @ApiProperty({
+    type: ContainerIncidentsDto,
     description:
-      'Contenedores: es una foto del estado actual del inventario, no del período. El período solo filtra las denuncias.',
+      'Foto del estado actual del inventario, no del período: el inventario no guarda historial de estados. El período solo filtra las denuncias.',
   })
-  containers: {
-    byStatus: StatusCountDto[];
-    byZone: ContainersByZoneDto[];
-  };
+  containers: ContainerIncidentsDto;
 
   @ApiProperty({
-    description: 'Árboles por nivel de riesgo, según el último relevamiento de cada uno',
+    type: TreeIncidentsDto,
+    description:
+      'Foto del estado actual del arbolado, no del período, por el mismo motivo que los contenedores.',
   })
-  trees: { byRiskLevel: RiskCountDto[] };
+  trees: TreeIncidentsDto;
 
-  @ApiProperty({ description: 'Denuncias abiertas en el período' })
-  reports: {
-    total: number;
-    byType: ReportTypeCountDto[];
-    byStatus: ReportStatusCountDto[];
-    avgResolutionDays: number | null;
-  };
+  @ApiProperty({ type: ReportIncidentsDto, description: 'Denuncias abiertas en el período' })
+  reports: ReportIncidentsDto;
 }
 
 // ─── Residuos ───────────────────────────────────────

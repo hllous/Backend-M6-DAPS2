@@ -1,6 +1,10 @@
 # Endpoints REST de M6
 
-Resumen de lo que expone el backend. La fuente de verdad interactiva es el Swagger en `/api/docs`; este archivo existe para poder ver el mapa completo sin levantar nada, y porque el [DoD](../gestion/definition-of-done.md) lo pide para cada endpoint nuevo.
+**Este archivo es un mapa, no el contrato.** Es una tabla resumen: dice qué hace cada endpoint y por qué, no la forma exacta de sus DTO.
+
+El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde el código con `npm run openapi:generate` y versionado en el repo. Ahí están los request y response completos, con required/optional, enums, formatos y ejemplos — que es lo que necesita un consumidor para generar tipos o validar con Zod. El CI falla si queda desactualizado respecto del código.
+
+El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
 > **Actualizado al 02/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero) + evidencia genérica (Issue #64). 130 rutas, agrupadas en 23 tags de Swagger.
 
@@ -109,7 +113,8 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 | GET | `/services` | Listar. Filtros: `status`, `serviceTypeId`, `mode`, `origin`, `crewId`, `vehicleId`, `zoneId`, `ticketId`, `scheduledFrom`, `scheduledTo` |
 | GET | `/services/:id` | Detalle con zonas, resultados por zona y registros de recolección |
 | PATCH | `/services/:id` | Corregir vehículo, ventana horaria y notas, **solo antes de iniciar**. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar |
-| POST | `/services/:id/assign-crew` | Asignar cuadrilla, y vehículo en la misma operación |
+| POST | `/services/:id/assign-crew` | Asignar cuadrilla, y vehículo en la misma operación. **El solapamiento avisa, no bloquea**: si la cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, devuelve 409 nombrando los servicios; con `overrideNote` (10-500 caracteres) la asignación se hace igual y la nota queda guardada con quién y cuándo |
+| GET | `/services/:id/assignment-conflicts` | Con qué se solapa asignar `crewId` / `vehicleId`, **antes** de enviar. Sin parámetros evalúa los que el servicio ya tiene. Existe para que el planificador se entere por un aviso y no por un 409 |
 
 **Máquina de estados.** Una transición inválida devuelve 409 nombrando las válidas desde el estado actual.
 
@@ -125,7 +130,12 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 
 **`RESCHEDULED` no obliga a reprogramar.** Es el estado "hay que moverlo pero todavía no sé adónde", y el sistema mete servicios ahí solo: lo hacen el rechazo de un corte de calle de M7 y la alerta meteorológica. Si el motivo es definitivo —M7 rechaza el corte porque hay obra por dos meses— **se cancela directo**, sin pasar por una fecha inventada.
 
-`DELAYED` no es un estado: es un aviso puntual, el servicio sigue en `SCHEDULED` o `IN_PROGRESS`.
+**Aviso de demora.** `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o en `IN_PROGRESS` mientras se demora, y esos son los dos únicos momentos en los que un retraso significa algo.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/services/:id/delay-notices` | Avisar que se demora. **No cambia el estado.** El tipo tiene que coincidir con el momento: `START` solo antes de arrancar, `DURATION` solo con la cuadrilla trabajando — la combinación cruzada da 400. Un aviso nuevo **reemplaza** al vigente y el anterior queda en el historial. Si el servicio nació de un reclamo sale hacia M2 como `updateTicketStatus / PROGRESS`, con el motivo como mensaje interno: al vecino se le dice que se demora, no por qué |
+| GET | `/services/:id/delay-notices` | Historial completo, del más reciente al más viejo. El vigente es el que tiene `active: true` |
 
 **Resultado y residuos.**
 
@@ -174,6 +184,10 @@ Una transición no válida devuelve 409 nombrando las que sí lo son.
 | GET | `/trees/:id` | Detalle |
 | PATCH | `/trees/:id` | Actualizar |
 | DELETE | `/trees/:id` | Baja lógica |
+
+**Toda respuesta de árbol trae `lastSurvey`**, el resumen del último relevamiento: `surveyedAt`, `healthStatus`, `riskLevel`, `riskType` y `suggestedIntervention`. Es `null` si el árbol todavía no fue relevado, que es un estado real —se censa el arbolado antes de poder recorrerlo entero— y no un error.
+
+Existe para que el listado se pueda pintar por riesgo sin pedir los relevamientos árbol por árbol: en un censo real eso serían miles de llamadas. Es un **resumen**, no el historial; el inspector, las notas y las derivaciones siguen en `GET /trees/:treeId/surveys`.
 
 ## `tree-surveys` — relevamientos de arbolado
 

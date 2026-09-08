@@ -266,12 +266,23 @@ export type TicketUpdateType =
   'STARTED' | 'PROGRESS' | 'INFORMATION_REQUIRED' | 'RETURNED' | 'RESOLVED' | 'REJECTED';
 
 /**
- * Payload del contrato v1.5 de M2, adoptado sin cambios.
+ * El actor que originó el hecho, en el vocabulario de M2 (§5.2 de la v1.6).
  *
- * La fecha y la franja agendadas **no viajan**: `progress` en la v1.5 es un
- * entero de porcentaje y no hay estructura de `details` definida para `STARTED`
- * ni `PROGRESS`. Es un bloqueante abierto con M2 — mientras tanto la
- * información va como texto en `publicMessage`.
+ * Su regla de clasificación es explícita: una persona que actúa desde otro
+ * módulo y cuyo hecho llega a M2 por integración es **`EXTERNAL_USER`**,
+ * cualquiera sea el rol que tenga acá; un hecho generado automáticamente es
+ * **`SYSTEM`**. El `AREA_USER` que usábamos con la v1.5 nunca existió en su
+ * enum.
+ */
+const ACTOR_SISTEMA = 'sistema';
+
+/**
+ * Payload del contrato v1.6 de M2, adoptado sin cambios.
+ *
+ * La fecha y la franja agendadas **siguen sin viajar**: `progress` es un entero
+ * de porcentaje y §8.2 sigue diciendo "details obligatorio: Ninguno" para
+ * `STARTED` y `PROGRESS`. Es un bloqueante abierto con M2 desde la v1.5 —
+ * mientras tanto la información va como texto en `publicMessage`.
  */
 export function updateTicketStatus(params: {
   ticketId: string;
@@ -281,13 +292,18 @@ export function updateTicketStatus(params: {
   internalMessage?: string;
   details?: Record<string, unknown>;
 }): Record<string, unknown> {
+  const esAutomatico = params.updatedById === ACTOR_SISTEMA;
+
   return compact({
     ticketId: params.ticketId,
     updateType: params.updateType,
     publicMessage: params.publicMessage,
     internalMessage: params.internalMessage,
     details: params.details,
-    updatedBy: { type: 'AREA_USER' as const, id: params.updatedById },
-    statusChangedAt: new Date().toISOString(),
+    updatedBy: esAutomatico
+      ? { type: 'SYSTEM' as const, id: null }
+      : { type: 'EXTERNAL_USER' as const, id: params.updatedById },
+    // Antes `statusChangedAt` en la v1.5. Renombrado en la v1.6 (§8.1).
+    updateOccurredAt: new Date().toISOString(),
   });
 }

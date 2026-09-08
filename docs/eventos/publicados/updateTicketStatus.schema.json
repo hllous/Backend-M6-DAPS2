@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uade.m6.grupo04/eventos/updateTicketStatus.schema.json",
   "title": "updateTicketStatus",
-  "description": "M6 → M2. Payload definido por el contrato v1.5 de M2 (reemplaza la v1.2) y adoptado sin cambios. Se publica solo cuando el Service o el EnvironmentalReport tiene ticketId. No lleva status ni sourceRef. publicId y expectedTicketVersion ya no existen en el contrato: la correlación es solo por ticketId.",
+  "description": "M6 → M2. Payload definido por el contrato v1.6 de M2 (reemplaza la v1.5) y adoptado sin cambios. Se publica solo cuando el Service o el EnvironmentalReport tiene ticketId. No lleva status ni sourceRef: M2 decide la transición (§8.1). El sobre que lo transporta debe llevar subject 'tickets/{ticketId}' (§4).",
   "type": "object",
   "properties": {
     "ticketId": { "type": "string", "description": "De M2. Único campo de correlación." },
@@ -16,11 +16,11 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 100,
-      "description": "Porcentaje estimado. NO sirve para transportar la fecha/franja agendada — ver bloqueante en updateTicketStatus.md. No confundir con el objeto progress.estimatedCompletionAt de la v1.2, que ya no existe."
+      "description": "Porcentaje estimado. NO sirve para transportar la fecha/franja agendada — ver bloqueante en updateTicketStatus.md. En PROGRESS la v1.6 (§8.2) exige aportar al menos uno de progress, publicMessage, internalMessage o attachments."
     },
     "details": {
       "type": "object",
-      "description": "La forma depende del updateType. RESOLVED lleva resolution; REJECTED lleva cancellation; RETURNED lleva returnInfo; INFORMATION_REQUIRED lleva informationRequest. STARTED y PROGRESS no tienen estructura de details definida en la v1.5 (details obligatorio: Ninguno) — es el origen del bloqueante de la fecha agendada.",
+      "description": "La forma depende del updateType. RESOLVED lleva resolution; REJECTED lleva cancellation; RETURNED lleva returnInfo; INFORMATION_REQUIRED lleva informationRequest. STARTED y PROGRESS siguen sin estructura de details en la v1.6 (§8.2, 'details obligatorio: Ninguno') — es el origen del bloqueante de la fecha agendada, abierto desde la v1.5.",
       "properties": {
         "resolution": {
           "type": "object",
@@ -30,7 +30,7 @@
               "enum": [
                 "ACTION_COMPLETED",
                 "REQUEST_FULFILLED",
-                "INFORMATION_PROVIDED",
+                "INQUIRY_ANSWERED",
                 "ACKNOWLEDGED",
                 "NO_FURTHER_ACTION_REQUIRED"
               ]
@@ -88,18 +88,19 @@
     },
     "updatedBy": {
       "type": "object",
+      "description": "Actor en el vocabulario de M2 (§5.2). Un hecho que llega desde otro módulo por integración es EXTERNAL_USER cualquiera sea el rol real; uno automático es SYSTEM, y ahí id puede ser null. El AREA_USER que usábamos con la v1.5 nunca existió en su enum.",
       "properties": {
-        "type": { "type": "string", "const": "AREA_USER" },
-        "id": { "type": "string" }
+        "type": { "type": "string", "enum": ["EXTERNAL_USER", "SYSTEM"] },
+        "id": { "type": ["string", "null"] }
       },
       "required": ["type", "id"],
       "additionalProperties": false
     },
-    "statusChangedAt": {
+    "updateOccurredAt": {
       "$ref": "_shared.schema.json#/$defs/timestamp",
-      "description": "Antes 'updatedAt' en la v1.2. Renombrado en la v1.5."
+      "description": "Momento real del hecho operativo en el productor, independiente de cuándo se publicó el evento (§8.1). Antes 'statusChangedAt' en la v1.5, y 'updatedAt' en la v1.2."
     }
   },
-  "required": ["ticketId", "updateType", "updatedBy", "statusChangedAt"],
+  "required": ["ticketId", "updateType", "updatedBy", "updateOccurredAt"],
   "additionalProperties": false
 }

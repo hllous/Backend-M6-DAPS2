@@ -34,14 +34,17 @@ export class InboxController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async ingest(@Body() dto: IngestEventDto): Promise<IngestResult> {
+    // Se pasa lo que llegó, sin rellenar. Los campos del sobre que no usamos
+    // no se inventan: un `producer: 'desconocido'` es peor que su ausencia
+    // cuando hay que auditar de dónde salió un evento.
     return this.inbox.ingest({
-      specVersion: dto.specVersion ?? '1.5',
+      specVersion: dto.specVersion,
       eventId: dto.eventId,
       eventType: dto.eventType,
-      eventVersion: dto.eventVersion ?? '1.0',
-      occurredAt: dto.occurredAt ?? new Date().toISOString(),
-      producer: dto.producer ?? 'desconocido',
-      subject: dto.subject ?? '',
+      eventVersion: dto.eventVersion,
+      occurredAt: dto.occurredAt,
+      producer: dto.producer,
+      subject: dto.subject,
       data: dto.data,
     });
   }

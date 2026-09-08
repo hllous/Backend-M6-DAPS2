@@ -199,12 +199,45 @@ describe('RoutesService — CRUD', () => {
     });
   });
 
-  it('el detalle trae las paradas en orden', async () => {
+  it('el detalle trae las paradas en orden y con su zona', async () => {
     await service.findOne(ID);
 
     expect(prisma.route.findUnique.mock.calls[0][0].include).toEqual({
-      stops: { orderBy: { sequence: 'asc' } },
+      stops: { orderBy: { sequence: 'asc' }, include: { zone: true } },
     });
+  });
+
+  /**
+   * El codigo y el nombre de la zona viajan embebidos para que quien dibuje el
+   * recorrido no tenga que pedir /zones aparte solo para traducir el UUID.
+   */
+  it('cada parada expone el codigo y el nombre de su zona', async () => {
+    prisma.route.findUnique.mockResolvedValue(
+      recorrido({
+        stops: [
+          {
+            id: 'stop-1',
+            sequence: 1,
+            zoneId: 'zona-uuid',
+            estimatedDurationMin: 90,
+            zone: { code: 'Z-BEL', name: 'Belgrano' },
+          },
+        ],
+      }),
+    );
+
+    const detalle = await service.findOne(ID);
+
+    expect(detalle.stops).toEqual([
+      {
+        id: 'stop-1',
+        sequence: 1,
+        zoneId: 'zona-uuid',
+        zoneCode: 'Z-BEL',
+        zoneName: 'Belgrano',
+        estimatedDurationMin: 90,
+      },
+    ]);
   });
 
   it('findOne da 404 si no está', async () => {

@@ -144,8 +144,9 @@ describe('EnvironmentalReportsService', () => {
       expect(encolado[0].payload).toMatchObject({
         ticketId: 'TCK-2026-004512',
         updateType: 'STARTED',
-        // M2 quiere saber si lo movió un vecino o un agente del área.
-        updatedBy: { type: 'AREA_USER', id: ACTOR },
+        // M2 quiere saber si lo movió una persona o un proceso automático.
+        // Desde otro módulo, una persona es siempre EXTERNAL_USER (§5.2).
+        updatedBy: { type: 'EXTERNAL_USER', id: ACTOR },
       });
     });
 
