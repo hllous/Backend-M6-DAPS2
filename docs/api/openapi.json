@@ -13291,6 +13291,65 @@
           "zoneId"
         ]
       },
+      "TreeLastSurveyDto": {
+        "type": "object",
+        "properties": {
+          "surveyedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fecha del relevamiento"
+          },
+          "healthStatus": {
+            "type": "string",
+            "description": "Estado sanitario",
+            "enum": [
+              "HEALTHY",
+              "WEAKENED",
+              "DISEASED",
+              "DEAD"
+            ]
+          },
+          "riskLevel": {
+            "type": "string",
+            "description": "Nivel de riesgo evaluado",
+            "enum": [
+              "NONE",
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ]
+          },
+          "riskType": {
+            "type": "string",
+            "description": "Tipo de riesgo detectado",
+            "enum": [
+              "FALLING_BRANCH",
+              "TRUNK_INSTABILITY",
+              "ROOT_UPLIFT",
+              "POWER_LINE_CONTACT",
+              "SIGN_OBSTRUCTION",
+              "PEST_INFESTATION"
+            ]
+          },
+          "suggestedIntervention": {
+            "type": "string",
+            "description": "Intervención sugerida",
+            "enum": [
+              "FORMATION_PRUNING",
+              "SAFETY_PRUNING",
+              "REMOVAL",
+              "PLANTING",
+              "TREATMENT"
+            ]
+          }
+        },
+        "required": [
+          "surveyedAt",
+          "healthStatus",
+          "riskLevel"
+        ]
+      },
       "TreeResponseDto": {
         "type": "object",
         "properties": {
@@ -13333,6 +13392,15 @@
           "updatedAt": {
             "format": "date-time",
             "type": "string"
+          },
+          "lastSurvey": {
+            "description": "Resumen del último relevamiento. `null` si el árbol todavía no fue relevado, que es un estado real y no un error: se censa el arbolado antes de poder recorrerlo entero.",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TreeLastSurveyDto"
+              }
+            ]
           }
         },
         "required": [
