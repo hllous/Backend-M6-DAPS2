@@ -1,8 +1,25 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, Tree, TreeSurvey } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTreeDto, UpdateTreeDto, QueryTreesDto, TreeResponseDto } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
+
+/**
+ * El último relevamiento de cada árbol, para que el listado pueda pintarse por
+ * riesgo sin pedir los relevamientos árbol por árbol.
+ *
+ * Va en todas las respuestas de árbol, no solo en el listado: si el PATCH
+ * devolviera el árbol sin esto, un árbol relevado saldría con `lastSurvey: null`
+ * y el frontend lo leería como "sin relevar", que es otra cosa.
+ *
+ * El `take: 1` anidado lo resuelve Prisma con una sola consulta extra para
+ * todas las filas, no una por árbol.
+ */
+const ULTIMO_RELEVAMIENTO = {
+  surveys: { orderBy: { surveyedAt: 'desc' }, take: 1 },
+} satisfies Prisma.TreeInclude;
+
+type ArbolConRelevamiento = Tree & { surveys?: TreeSurvey[] };
 
 @Injectable()
 export class TreesService {
@@ -23,6 +40,7 @@ export class TreesService {
           diameterCm: dto.diameterCm ?? null,
           active: dto.active ?? true,
         },
+        include: ULTIMO_RELEVAMIENTO,
       });
       this.logger.log(`Árbol registrado: ${tree.surveyCode} (${tree.id})`);
       return this.toResponseDto(tree);
@@ -53,6 +71,7 @@ export class TreesService {
         skip: query.skip,
         take: query.take,
         orderBy: { surveyCode: 'asc' },
+        include: ULTIMO_RELEVAMIENTO,
       }),
       this.prisma.tree.count({ where }),
     ]);
@@ -65,7 +84,10 @@ export class TreesService {
   }
 
   async findOne(id: string): Promise<TreeResponseDto> {
-    const tree = await this.prisma.tree.findUnique({ where: { id } });
+    const tree = await this.prisma.tree.findUnique({
+      where: { id },
+      include: ULTIMO_RELEVAMIENTO,
+    });
     if (!tree) throw new NotFoundException(`Árbol con id '${id}' no encontrado`);
     return this.toResponseDto(tree);
   }
@@ -85,6 +107,7 @@ export class TreesService {
           ...(dto.diameterCm !== undefined && { diameterCm: dto.diameterCm }),
           ...(dto.active !== undefined && { active: dto.active }),
         },
+        include: ULTIMO_RELEVAMIENTO,
       });
       this.logger.log(`Árbol actualizado: ${tree.surveyCode} (${tree.id})`);
       return this.toResponseDto(tree);
@@ -107,7 +130,8 @@ export class TreesService {
     if (!exists) throw new NotFoundException(`Árbol con id '${id}' no encontrado`);
   }
 
-  private toResponseDto(tree: any): TreeResponseDto {
+  private toResponseDto(tree: ArbolConRelevamiento): TreeResponseDto {
+    const ultimo = tree.surveys?.[0];
     return {
       id: tree.id,
       surveyCode: tree.surveyCode,
@@ -121,6 +145,15 @@ export class TreesService {
       active: tree.active,
       createdAt: tree.createdAt,
       updatedAt: tree.updatedAt,
+      lastSurvey: ultimo
+        ? {
+            surveyedAt: ultimo.surveyedAt,
+            healthStatus: ultimo.healthStatus,
+            riskLevel: ultimo.riskLevel,
+            riskType: ultimo.riskType,
+            suggestedIntervention: ultimo.suggestedIntervention,
+          }
+        : null,
     };
   }
 }

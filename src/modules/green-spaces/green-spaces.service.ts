@@ -136,6 +136,10 @@ export class GreenSpacesService {
       name: greenSpace.name,
       spaceType: greenSpace.spaceType,
       zoneId: greenSpace.zoneId,
+      // Number() y no el Decimal crudo: sin esto el JSON lleva un objeto y el
+      // consumidor recibe algo que no puede usar como coordenada.
+      lat: greenSpace.lat === null ? null : Number(greenSpace.lat),
+      lng: greenSpace.lng === null ? null : Number(greenSpace.lng),
       areaM2: greenSpace.areaM2 === null ? null : Number(greenSpace.areaM2),
       active: greenSpace.active,
       createdAt: greenSpace.createdAt,
