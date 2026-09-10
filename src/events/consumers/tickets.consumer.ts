@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent, TicketUpdateType } from '../inbox/consumed-events';
 import { REPORT_TRANSITIONS } from '../../modules/environmental-reports/environmental-reports.service';
+import { PRODUCER } from '../envelope';
 
 /** El nombre visible del Request Type de M2, mapeado a nuestro catálogo. */
 const TIPO_POR_PALABRA: [RegExp, EnvironmentalReportType][] = [
@@ -60,6 +61,19 @@ export class TicketsConsumer implements OnModuleInit {
 
     if (!ticketId) {
       this.logger.warn('ticketUpdated sin ticketId: no se puede correlacionar, se descarta');
+      return;
+    }
+
+    // ticketUpdated es un broadcast logico (§2): llega a todos los modulos y
+    // responsibleAreaId es quien de negocio le toca actuar, no un target
+    // tecnico. El propio contrato lo dice explicito — "la correccion del
+    // sistema no depende de ese filtrado" — asi que el filtro es nuestro, no
+    // de la infraestructura. Sin esto, un reclamo derivado a cualquier otro
+    // modulo abriria igual un expediente de este lado.
+    if (data.responsibleAreaId !== PRODUCER.moduleId) {
+      this.logger.log(
+        `ticketUpdated/${updateType}: responsibleAreaId=${data.responsibleAreaId ?? '(ausente)'} no es nuestro, se descarta`,
+      );
       return;
     }
 

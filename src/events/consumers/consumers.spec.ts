@@ -195,6 +195,7 @@ describe('consumidores de eventos', () => {
     it('ROUTED lee el snapshot de details.routing y deduce el tipo del texto', async () => {
       await h({
         ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
         updateType: 'ROUTED',
         currentPriority: 'HIGH',
         isAnonymous: false,
@@ -223,6 +224,7 @@ describe('consumidores de eventos', () => {
     it('ROUTED sigue aceptando la forma v1.5, con los campos en la raíz', async () => {
       await h({
         ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
         updateType: 'ROUTED',
         requestType: { name: 'Ruidos molestos' },
         summary: 'Bar con música fuerte',
@@ -247,6 +249,7 @@ describe('consumidores de eventos', () => {
     it('ROUTED recompone la dirección cuando no viene addressLine', async () => {
       await h({
         ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
         updateType: 'ROUTED',
         details: {
           routing: {
@@ -263,7 +266,13 @@ describe('consumidores de eventos', () => {
     });
 
     it('un ROUTED anonimo no guarda identidad', async () => {
-      await h({ ticketId: 'TCK-1', updateType: 'ROUTED', isAnonymous: true, citizenId: 'cit-1' });
+      await h({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'ROUTED',
+        isAnonymous: true,
+        citizenId: 'cit-1',
+      });
 
       const [[args]] = prisma.environmentalReport.create.mock.calls;
       expect(args.data.reporterSnapshot).toEqual({ isAnonymous: true });
@@ -272,13 +281,33 @@ describe('consumidores de eventos', () => {
     it('un ROUTED repetido no abre un segundo expediente', async () => {
       prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'ya-existe' });
 
-      await h({ ticketId: 'TCK-1', updateType: 'ROUTED' });
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'ROUTED' });
 
       expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
     });
 
+    /**
+     * ticketUpdated es un broadcast: llega a todos los modulos, y
+     * responsibleAreaId dice a quien le toca (§2). Sin este filtro, un
+     * reclamo derivado a M3 o M7 abriria igual un expediente de este lado.
+     */
+    it.each(['M3', 'M7', undefined])(
+      'un ROUTED con responsibleAreaId=%s no nos pertenece, se descarta',
+      async (area) => {
+        await h({ ticketId: 'TCK-1', responsibleAreaId: area, updateType: 'ROUTED' });
+
+        expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+      },
+    );
+
+    it('el filtro de responsibleAreaId tambien protege a los updateType que actuan sobre un expediente ya abierto', async () => {
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M3', updateType: 'CANCELLED' });
+
+      expect(prisma.service.updateMany).not.toHaveBeenCalled();
+    });
+
     it('CANCELLED cancela los servicios programados del reclamo', async () => {
-      await h({ ticketId: 'TCK-1', updateType: 'CANCELLED' });
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'CANCELLED' });
 
       const [[args]] = prisma.service.updateMany.mock.calls;
       expect(args.data.status).toBe(ServiceStatus.CANCELLED);
@@ -292,7 +321,7 @@ describe('consumidores de eventos', () => {
      * API rechaza.
      */
     it('CANCELLED solo toca los estados desde los que se puede cancelar', async () => {
-      await h({ ticketId: 'TCK-1', updateType: 'CANCELLED' });
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'CANCELLED' });
 
       const [[args]] = prisma.service.updateMany.mock.calls;
       expect(args.where.status).toEqual({
@@ -313,7 +342,7 @@ describe('consumidores de eventos', () => {
     ])('%s se acepta aunque el expediente esté cerrado', async (updateType, extra, campo) => {
       prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'rep-1', status: S.CLOSED });
 
-      await h({ ticketId: 'TCK-1', updateType, ...extra });
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType, ...extra });
 
       const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
       expect(args.where).toEqual({ ticketId: 'TCK-1' });
@@ -326,7 +355,7 @@ describe('consumidores de eventos', () => {
         status: S.SANCTIONED,
       });
 
-      await h({ ticketId: 'TCK-1', updateType: 'REOPENED' });
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'REOPENED' });
 
       expect(prisma.environmentalReport.update).not.toHaveBeenCalled();
     });
@@ -334,7 +363,7 @@ describe('consumidores de eventos', () => {
     it('REOPENED sí reabre desde CLOSED', async () => {
       prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'rep-1', status: S.CLOSED });
 
-      await h({ ticketId: 'TCK-1', updateType: 'REOPENED' });
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'REOPENED' });
 
       expect(prisma.environmentalReport.update).toHaveBeenCalledWith({
         where: { id: 'rep-1' },
@@ -350,7 +379,7 @@ describe('consumidores de eventos', () => {
       'RESOLVED',
       'CLOSED',
     ])('%s se descarta a proposito, sin efecto', async (updateType) => {
-      await h({ ticketId: 'TCK-1', updateType });
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType });
 
       expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
       expect(prisma.environmentalReport.update).not.toHaveBeenCalled();
