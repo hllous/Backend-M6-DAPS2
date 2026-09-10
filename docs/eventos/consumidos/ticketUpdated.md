@@ -45,6 +45,8 @@ En la v1.5, `requestType`, `summary`, `description` y `location` eran campos **c
 
 **Lo que sí sigue común, y es lo que importa para rutear:** `responsibleAreaId` (nos dice si el `ROUTED` es nuestro), `citizenId`, `isAnonymous` y `currentPriority`.
 
+> ⚠️ **`ticketUpdated` es un broadcast lógico (§2): llega a todos los módulos, no solo al que le toca.** El consumer filtra por `responsibleAreaId` **antes** de mirar `updateType`, para los trece valores — no solo `ROUTED`. Sin el filtro, un reclamo derivado a M3 o M7 abriría igual un expediente de este lado, y una `CANCELLED`/`PRIORITY_CHANGED`/etc. sobre un ticket ajeno terminaría actuando sobre cualquier expediente nuestro que compartiera el mismo `ticketId` por coincidencia. El propio contrato lo dice explícito: *"la corrección del sistema no depende de ese filtrado"* de infraestructura.
+
 > El consumer lee `details.routing` primero y **cae al nivel raíz** si no está. El contrato ya cambió de opinión una vez sobre dónde viven estos campos; aceptar las dos formas no cuesta nada y nos deja indiferentes a cuál terminen publicando.
 
 | Campo | Por qué lo necesitamos |
