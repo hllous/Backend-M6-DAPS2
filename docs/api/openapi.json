@@ -8907,9 +8907,19 @@
             "name": "ticketId",
             "required": false,
             "in": "query",
-            "description": "Filtrar por el reclamo de M2 que lo originó",
+            "description": "Filtrar por el reclamo de M2 que lo originó (UUID)",
             "schema": {
-              "example": "TCK-2026-004821",
+              "example": "550e8400-e29b-41d4-a716-446655440000",
+              "type": "string"
+            }
+          },
+          {
+            "name": "publicId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por la referencia humana del reclamo de M2 (coincidencia exacta)",
+            "schema": {
+              "example": "TK-2026-000123",
               "type": "string"
             }
           },
@@ -10896,15 +10906,15 @@
       "get": {
         "operationId": "CitizenPortalController_findReport",
         "summary": "Seguir una denuncia ambiental por número de reclamo",
-        "description": "Estado del trámite para el vecino, buscado por el número de reclamo de Atención Ciudadana (M2), que es el único identificador que él tiene. Devuelve la etapa del trámite, no el estado interno del expediente, y nunca la identidad del inspector, los hallazgos, el checklist ni el contenido del acta.",
+        "description": "Estado del trámite para el vecino, buscado por el `ticketId` (UUID) del reclamo de Atención Ciudadana (M2). Devuelve la etapa del trámite, no el estado interno del expediente, y nunca la identidad del inspector, los hallazgos, el checklist ni el contenido del acta. No acepta el `publicId` (TK-…): es correlativo y el contrato de M2 prohíbe usarlo como credencial, así que buscar por él en un endpoint público permitiría recorrer denuncias ajenas.",
         "parameters": [
           {
             "name": "ticketId",
             "required": true,
             "in": "path",
-            "description": "Número de reclamo de M2",
+            "description": "ticketId (UUID) del reclamo de M2",
             "schema": {
-              "example": "TCK-2026-004512",
+              "example": "550e8400-e29b-41d4-a716-446655440000",
               "type": "string"
             }
           }
@@ -15169,6 +15179,12 @@
             "description": "Reclamo de M2 que lo originó. Null si es una detección de oficio.",
             "nullable": true
           },
+          "publicId": {
+            "type": "object",
+            "description": "Referencia humana del reclamo de M2, la que conoce el vecino. Solo para mostrar y buscar: no es credencial. Null en detecciones de oficio y en expedientes anteriores a la v1.70.",
+            "example": "TK-2026-000123",
+            "nullable": true
+          },
           "priority": {
             "type": "string",
             "description": "Prioridad",
@@ -15962,8 +15978,14 @@
         "properties": {
           "ticketId": {
             "type": "string",
-            "description": "Número de reclamo de M2",
-            "example": "TCK-2026-004512"
+            "description": "Reclamo de M2 (UUID)",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "publicId": {
+            "type": "object",
+            "description": "Referencia humana del reclamo de M2, para mostrar. Null si M2 no la envió",
+            "example": "TK-2026-000123",
+            "nullable": true
           },
           "reportType": {
             "type": "string",

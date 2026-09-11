@@ -8,7 +8,7 @@ La denuncia ambiental tal como la tramitamos nosotros: ruidos, vertidos, microba
 
 | Entidad | Campos principales |
 |---|---|
-| `EnvironmentalReport` | `reportType`, `location`, `ticketId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `deadlineAt` |
+| `EnvironmentalReport` | `reportType`, `location`, `ticketId`, `publicId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `deadlineAt` |
 
 Enums: `reportType` es `EnvironmentalReportType`, `status` es `EnvironmentalReportStatus` — ver [enumeraciones.md](../enumeraciones.md).
 
