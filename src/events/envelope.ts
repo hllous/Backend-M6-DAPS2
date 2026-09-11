@@ -77,7 +77,8 @@ export interface EventProducer {
  * Versión del contrato de integración, no la del documento de M2.
  *
  * §4 la declara `const "1.0"`. Mandábamos `'1.5'` por confundir una cosa con la
- * otra: la guía va por la v1.6 y el `specVersion` sigue siendo `"1.0"`.
+ * otra: la guía va por la v1.70 y el `specVersion` sigue siendo `"1.0"`
+ * (§13: mientras siga WIP, los cambios se consolidan bajo 1.0).
  */
 export const SPEC_VERSION = '1.0';
 

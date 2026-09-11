@@ -26,6 +26,14 @@ export class EnvironmentalReportResponseDto {
   })
   ticketId: string | null;
 
+  @ApiPropertyOptional({
+    description:
+      'Referencia humana del reclamo de M2, la que conoce el vecino. Solo para mostrar y buscar: no es credencial. Null en detecciones de oficio y en expedientes anteriores a la v1.70.',
+    example: 'TK-2026-000123',
+    nullable: true,
+  })
+  publicId: string | null;
+
   @ApiPropertyOptional({ description: 'Prioridad', enum: Severity, nullable: true })
   priority: Severity | null;
 

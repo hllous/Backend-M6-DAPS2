@@ -44,7 +44,7 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 
 **No lleva `sourceRef`.** Su contrato prohíbe transportar IDs de entidades internas de otros módulos, así que la correlación `ticketId ↔ serviceId ↔ inspectionId` queda en una tabla nuestra.
 
-**No guardamos `publicId` ni `ticketVersion`.** No hacen falta desde la v1.5: solo correlacionamos por `ticketId`.
+**No mandamos `publicId`.** La v1.70 lo volvió a publicar en `ticketCreated`/`ticketUpdated` como referencia humana, pero §8.1 aclara que `updateTicketStatus` *"no necesita incluir publicId: ticketId UUID sigue siendo la referencia técnica suficiente"*, y el schema tiene `additionalProperties: false`. Lo guardamos en el expediente solo para mostrarlo y buscarlo (#145); la correlación sigue siendo por `ticketId`. `ticketVersion` no existe desde la v1.5.
 
 `updateType` no usa nuestro enum `TicketStatusUpdate`, que [ADR-003](../../decisiones/adr-003-divergencias-enums.md) eliminó del catálogo: el vocabulario lo define M2 y lo adoptamos tal cual.
 

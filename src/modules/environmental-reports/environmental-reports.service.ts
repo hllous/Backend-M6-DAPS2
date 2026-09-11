@@ -83,6 +83,7 @@ export class EnvironmentalReportsService {
     if (query.reportType) where.reportType = query.reportType;
     if (query.priority) where.priority = query.priority;
     if (query.ticketId) where.ticketId = query.ticketId;
+    if (query.publicId) where.publicId = query.publicId;
     if (query.search) {
       where.address = { contains: query.search, mode: 'insensitive' };
     }
@@ -287,6 +288,7 @@ export class EnvironmentalReportsService {
       lat: toNumber(report.lat),
       lng: toNumber(report.lng),
       ticketId: report.ticketId,
+      publicId: report.publicId,
       priority: report.priority,
       deadlineAt: report.deadlineAt,
       createdAt: report.createdAt,

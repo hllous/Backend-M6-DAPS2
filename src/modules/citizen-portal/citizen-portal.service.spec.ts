@@ -44,6 +44,8 @@ describe('CitizenPortalService', () => {
         'inspectedAt',
         'lastUpdateAt',
         'openedAt',
+        // #145: referencia humana de M2, se muestra; no es credencial.
+        'publicId',
         'reportType',
         'stage',
         'stageLabel',

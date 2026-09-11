@@ -8,11 +8,11 @@ La denuncia ambiental tal como la tramitamos nosotros: ruidos, vertidos, microba
 
 | Entidad | Campos principales |
 |---|---|
-| `EnvironmentalReport` | `reportType`, `location`, `ticketId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `deadlineAt` |
+| `EnvironmentalReport` | `reportType`, `location`, `ticketId`, `publicId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `deadlineAt` |
 
 Enums: `reportType` es `EnvironmentalReportType`, `status` es `EnvironmentalReportStatus` — ver [enumeraciones.md](../enumeraciones.md).
 
-**`escalated` y `citizenResponse` los escribe M2, no nosotros.** Llegan por `ticketUpdated`: `ESCALATION_CHANGED` marca el expediente como escalado para que lo vea el supervisor, e `INFORMATION_PROVIDED` trae lo que el vecino respondió a nuestro pedido de información. El contrato de M2 no usa ID de correlación —impone como máximo una solicitud activa por ticket—, así que la respuesta siempre corresponde a la nuestra.
+**`escalated` y `citizenResponse` los escribe M2, no nosotros.** Llegan por `ticketUpdated`: `ESCALATION_CHANGED` marca o desmarca el expediente como escalado (`details.escalation.active`) para que lo vea el supervisor, y el `ROUTED` ya trae el valor inicial. `INFORMATION_PROVIDED` trae lo que el vecino respondió a nuestro pedido de información: `citizenResponse` guarda `details.informationResponse.message` y, debajo, una línea `fileName: url` por adjunto. El expediente no tiene campo de adjuntos, y la URL de M2 puede ser temporal. El contrato de M2 no usa ID de correlación —impone como máximo una solicitud activa por ticket—, así que la respuesta siempre corresponde a la nuestra.
 
 **`deadlineAt` es el plazo que le damos a M4** para resolver el acta antes de cerrar el expediente por vencimiento. Se configura con `SANCTION_DEADLINE_DAYS`.
 
