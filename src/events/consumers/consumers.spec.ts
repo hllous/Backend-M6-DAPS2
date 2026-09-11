@@ -336,17 +336,111 @@ describe('consumidores de eventos', () => {
      * que guardarlos tarde. Ver bloqueantes.md.
      */
     it.each([
-      ['ESCALATION_CHANGED', { escalation: { escalated: true } }, 'escalated'],
-      ['INFORMATION_PROVIDED', { publicMessage: 'El ruido sigue' }, 'citizenResponse'],
-      ['PRIORITY_CHANGED', { currentPriority: 'CRITICAL' }, 'priority'],
-    ])('%s se acepta aunque el expediente esté cerrado', async (updateType, extra, campo) => {
-      prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'rep-1', status: S.CLOSED });
+      ['ESCALATION_CHANGED', { details: { escalation: { active: true } } }, 'escalated', true],
+      [
+        'INFORMATION_PROVIDED',
+        { details: { informationResponse: { message: 'El ruido sigue' } } },
+        'citizenResponse',
+        'El ruido sigue',
+      ],
+      ['PRIORITY_CHANGED', { currentPriority: 'CRITICAL' }, 'priority', Severity.CRITICAL],
+    ])(
+      '%s se acepta aunque el expediente esté cerrado',
+      async (updateType, extra, campo, valor) => {
+        prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'rep-1', status: S.CLOSED });
 
-      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType, ...extra });
+        await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType, ...extra });
+
+        const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+        expect(args.where).toEqual({ ticketId: 'TCK-1' });
+        expect(args.data[campo]).toEqual(valor);
+      },
+    );
+
+    // ─── #144: la forma del contrato, con el valor y no solo la clave ──
+
+    it('ESCALATION_CHANGED con active=false desmarca el escalado', async () => {
+      await h({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'ESCALATION_CHANGED',
+        details: { escalation: { active: false, reasonCode: null, escalatedAt: null } },
+      });
 
       const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
-      expect(args.where).toEqual({ ticketId: 'TCK-1' });
-      expect(args.data).toHaveProperty(campo);
+      expect(args.data).toEqual({ escalated: false });
+    });
+
+    it('ESCALATION_CHANGED sin details.escalation.active no toca el flag', async () => {
+      await h({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'ESCALATION_CHANGED',
+        escalation: { escalated: true },
+      });
+
+      expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('ROUTED toma el escalamiento del snapshot', async () => {
+      await h({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'ROUTED',
+        details: {
+          routing: {
+            requestType: 'Ruidos molestos',
+            escalation: {
+              active: true,
+              reasonCode: 'CRITICAL_PRIORITY',
+              escalatedAt: '2026-09-11T10:00:00Z',
+            },
+          },
+        },
+      });
+
+      const [[args]] = prisma.environmentalReport.create.mock.calls;
+      expect(args.data.escalated).toBe(true);
+    });
+
+    it('INFORMATION_PROVIDED guarda lo que contestó el vecino, no la glosa de M2', async () => {
+      await h({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'INFORMATION_PROVIDED',
+        publicMessage: 'El ciudadano aportó la información solicitada.',
+        details: { informationResponse: { message: 'Frente al 1240, de noche' } },
+      });
+
+      const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+      expect(args.data.citizenResponse).toBe('Frente al 1240, de noche');
+    });
+
+    it('INFORMATION_PROVIDED con solo adjuntos se registra sin romper', async () => {
+      await h({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'INFORMATION_PROVIDED',
+        publicMessage: null,
+        details: { informationResponse: { message: null } },
+        attachments: [
+          { fileName: 'foto-nocturna.jpg', contentType: 'image/jpeg', url: 'https://m2/adj/955' },
+        ],
+      });
+
+      const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+      expect(args.data.citizenResponse).toBe('foto-nocturna.jpg: https://m2/adj/955');
+    });
+
+    it('INFORMATION_PROVIDED sin message ni adjuntos se descarta', async () => {
+      await h({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'INFORMATION_PROVIDED',
+        publicMessage: 'El ciudadano aportó la información solicitada.',
+      });
+
+      expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
     });
 
     it('REOPENED no reabre un expediente que no admite la transicion', async () => {

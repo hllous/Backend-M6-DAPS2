@@ -11,11 +11,11 @@ Depende del discriminador `updateType`. La v1.6 define trece valores posibles (�
 | `updateType` | Qué hacemos |
 |---|---|
 | `ROUTED` | **Abrimos el [expediente ambiental](../../entidades/environmental-report.md) o el [servicio](../../entidades/service.md) puntual.** Es la entrada |
-| `INFORMATION_PROVIDED` | Sumamos al expediente lo que el vecino respondió. No hay ID de correlación: como máximo hay una solicitud activa por ticket, así que la respuesta siempre corresponde a la nuestra. Viene en `details.informationResponse.message`, en `attachments[]`, o en ambos — §7.6 garantiza al menos uno de los dos |
+| `INFORMATION_PROVIDED` | Sumamos al expediente lo que el vecino respondió. No hay ID de correlación: como máximo hay una solicitud activa por ticket, así que la respuesta siempre corresponde a la nuestra. Viene en `details.informationResponse.message`, en `attachments[]`, o en ambos — §7.6 garantiza al menos uno de los dos. `citizenResponse` guarda el `message` y una línea `fileName: url` por adjunto. `publicMessage` es la glosa de M2 y no se usa |
 | `CANCELLED` | Cancelamos el servicio o la inspección ya programados |
 | `REOPENED` | Reabrimos: el vecino rechazó la solución y vuelve a gestión |
 | `PRIORITY_CHANGED` | Reordenamos la cola de la cuadrilla |
-| `ESCALATION_CHANGED` | Lo marcamos como escalado y se lo mostramos al supervisor |
+| `ESCALATION_CHANGED` | Marcamos **o desmarcamos** `escalated` según `details.escalation.active` (§5.6, §7.7) y se lo mostramos al supervisor. Sin un `active` booleano no tocamos el flag. El `ROUTED` también lo trae, en `details.routing.escalation`: un ticket derivado ya escalado nace escalado |
 | `CONTENT_UPDATED` | **Nada, decisión propia — pero por otro motivo que antes.** La v1.6 **sí** define `details.content` (§7.7) con `requestType, category, subcategory, ticketType, summary, description, formData, resolutionDueAt`, así que el argumento de "no hay campo del que copiar" caducó. Lo seguimos ignorando porque §7.3 aclara que la clasificación **queda bloqueada una vez que el ticket fue `ROUTED`**: un `CONTENT_UPDATED` que nos llegue es casi siempre anterior a que exista expediente nuestro, y si llega después no puede haber cambiado la clasificación. Si trae `publicMessage`, lo dejamos en el registro de mensajes para trazabilidad |
 | `PROGRESS` | **Nada.** Es el eco público de un `updateTicketStatus/PROGRESS` que en general originamos nosotros mismos |
 | `DUPLICATE_LINKED` | **Nada.** Gestión de vinculación que hace M2; no genera trabajo operativo propio |
