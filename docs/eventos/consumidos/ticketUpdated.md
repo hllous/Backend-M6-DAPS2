@@ -29,7 +29,7 @@ La cancelación llega por acá: no hace falta un `ticketCancelled`, que es uno d
 ## Campos que necesitamos de `ROUTED` (v1.6)
 
 ```
-comunes:  ticketId, citizenId, isAnonymous, responsibleAreaId, updateType,
+comunes:  ticketId, publicId, citizenId, isAnonymous, responsibleAreaId, updateType,
           currentStatus, currentPriority, progress?, publicMessage?,
           attachments[]?, updatedAt
 details.routing:  requestType (string), ticketType, summary, description,

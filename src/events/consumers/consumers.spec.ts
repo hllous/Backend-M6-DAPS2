@@ -195,6 +195,7 @@ describe('consumidores de eventos', () => {
     it('ROUTED lee el snapshot de details.routing y deduce el tipo del texto', async () => {
       await h({
         ticketId: 'TCK-1',
+        publicId: 'TK-2026-000123',
         responsibleAreaId: 'M6',
         updateType: 'ROUTED',
         currentPriority: 'HIGH',
@@ -210,6 +211,8 @@ describe('consumidores de eventos', () => {
       });
 
       const [[args]] = prisma.environmentalReport.create.mock.calls;
+      expect(args.data.ticketId).toBe('TCK-1');
+      expect(args.data.publicId).toBe('TK-2026-000123');
       expect(args.data.reportType).toBe('NOISE');
       expect(args.data.address).toBe('Rivadavia 100');
       expect(args.data.priority).toBe(Severity.HIGH);

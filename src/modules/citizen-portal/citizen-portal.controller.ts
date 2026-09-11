@@ -36,12 +36,12 @@ export class CitizenPortalController {
   @ApiOperation({
     summary: 'Seguir una denuncia ambiental por número de reclamo',
     description:
-      'Estado del trámite para el vecino, buscado por el número de reclamo de Atención Ciudadana (M2), que es el único identificador que él tiene. Devuelve la etapa del trámite, no el estado interno del expediente, y nunca la identidad del inspector, los hallazgos, el checklist ni el contenido del acta.',
+      'Estado del trámite para el vecino, buscado por el `ticketId` (UUID) del reclamo de Atención Ciudadana (M2). Devuelve la etapa del trámite, no el estado interno del expediente, y nunca la identidad del inspector, los hallazgos, el checklist ni el contenido del acta. No acepta el `publicId` (TK-…): es correlativo y el contrato de M2 prohíbe usarlo como credencial, así que buscar por él en un endpoint público permitiría recorrer denuncias ajenas.',
   })
   @ApiParam({
     name: 'ticketId',
-    description: 'Número de reclamo de M2',
-    example: 'TCK-2026-004512',
+    description: 'ticketId (UUID) del reclamo de M2',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiResponse({ status: 200, description: 'Estado del trámite', type: PublicReportResponseDto })
   @ApiResponse({

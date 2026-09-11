@@ -260,7 +260,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | Método | Ruta | Qué hace |
 |---|---|---|
 | POST | `/environmental-reports` | Abrir expediente. Nace en `RECEIVED` |
-| GET | `/environmental-reports` | Listar. Filtros: `status`, `reportType`, `priority`, `ticketId`, `search` |
+| GET | `/environmental-reports` | Listar. Filtros: `status`, `reportType`, `priority`, `ticketId`, `publicId` (TK-…, exacto), `search` |
 | GET | `/environmental-reports/:id` | Detalle, con su plazo de vencimiento si lo tiene |
 | POST | `/environmental-reports/:id/start-review` | `RECEIVED → UNDER_REVIEW` |
 | POST | `/environmental-reports/:id/forward` | `UNDER_REVIEW → FORWARDED`. Hacia M2 sale como **`RETURNED`**, no `REJECTED`: devolver lo que no es de nuestra área es distinto de desestimarlo |
@@ -348,7 +348,7 @@ Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran p
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| GET | `/public/reports/:ticketId` | **Público.** Seguimiento de la denuncia por el número de reclamo de M2, que es lo único que el vecino tiene en la mano. 404 exista o no el ticket |
+| GET | `/public/reports/:ticketId` | **Público.** Seguimiento de la denuncia por el `ticketId` (UUID) del reclamo de M2; devuelve también `publicId` para mostrarlo. **No acepta el `publicId` (TK-…)**: es correlativo y el contrato de M2 prohíbe usarlo como credencial (#145). 404 exista o no el ticket |
 | GET | `/public/services` | **Público.** Cuándo pasa el servicio. Filtros: `zoneId`, `serviceTypeId`, `from`, `to`. Sin fechas, los próximos 30 días |
 | GET | `/public/green-points` | **Público.** Puntos verdes activos con su ubicación y qué residuos recibe cada uno. Filtro: `zoneId` |
 | GET | `/public/zones` | **Público.** Zonas activas, para que el frontend arme el filtro de los otros dos. Sin paginar |

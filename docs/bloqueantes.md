@@ -52,6 +52,8 @@
 
 ### M2 — Atención ciudadana 🔴 (un bloqueante que no se mueve, una regresión)
 
+**Actualización 11/09 — v1.70.** Reemplaza a la v1.69 WIP. Contra la v1.6 que adoptamos, el único cambio que nos toca es que **vuelve `publicId`** como campo común de `ticketUpdated` (§7.1), como referencia humana que *"no funciona como credencial"*. Lo guardamos en el expediente para mostrarlo y buscarlo con auth, no en el portal público (#145). Al cruzarla aparecieron tres bugs previos: el escalado que nunca se apagaba y la respuesta del vecino mal leída (#144), y dos `updateTicketStatus` que M2 rechaza por estado (#146). **El bloqueante de la fecha agendada sigue igual: cuarta versión seguida.**
+
 Publicaron **la v1.6**, que reemplaza la v1.5. Sigue siendo el documento de integración más completo de la cohorte y el único que define un envelope. No es un pulido: mueve campos, renombra dos y revierte una mejora.
 
 **🔴 La regresión, que es lo más caro.** En la v1.5, `requestType`, `summary`, `description` y `location` eran **campos comunes** de todo `ticketUpdated`. La v1.6 (§7.1) los sacó de la tabla de comunes y los dejó **solo dentro de `details.routing`** (§7.4). Nuestro consumer los leía del nivel raíz: con un `ROUTED` v1.6 abría el expediente **sin dirección, sin coordenadas y con el `reportType` por defecto**, en silencio. Corregido en el Issue #128, leyendo `details.routing` con fallback a la raíz.

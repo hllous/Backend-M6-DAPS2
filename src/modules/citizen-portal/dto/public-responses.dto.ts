@@ -19,8 +19,18 @@ export enum PublicReportStage {
 }
 
 export class PublicReportResponseDto {
-  @ApiProperty({ description: 'Número de reclamo de M2', example: 'TCK-2026-004512' })
+  @ApiProperty({
+    description: 'Reclamo de M2 (UUID)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
   ticketId: string;
+
+  @ApiPropertyOptional({
+    description: 'Referencia humana del reclamo de M2, para mostrar. Null si M2 no la envió',
+    example: 'TK-2026-000123',
+    nullable: true,
+  })
+  publicId: string | null;
 
   @ApiProperty({ enum: EnvironmentalReportType, description: 'Tipo de denuncia ambiental' })
   reportType: EnvironmentalReportType;

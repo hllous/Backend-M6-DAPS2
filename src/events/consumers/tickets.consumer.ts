@@ -123,6 +123,9 @@ export class TicketsConsumer implements OnModuleInit {
     const report = await this.prisma.environmentalReport.create({
       data: {
         ticketId,
+        // Campo común desde la v1.70 (§7.1). Solo para mostrar y buscar: la
+        // correlación sigue siendo por ticketId.
+        publicId: typeof data.publicId === 'string' ? data.publicId : null,
         reportType: this.tipoDeDenuncia(nombre),
         address: this.direccion(location),
         // La v1.6 sacó latitude/longitude de `location` (§5.4): quedan en null
