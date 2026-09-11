@@ -45,6 +45,6 @@ stateDiagram-v2
 ## Qué publica y qué consume
 
 - Al emitirse el acta: [`environmentalViolationDetected`](../eventos/publicados/environmentalViolationDetected.md) → M4.
-- Si hay `ticketId`, cada tramo dispara un [`updateTicketStatus`](../eventos/publicados/updateTicketStatus.md) → M2. La transición a `DISMISSED` sale como `REJECTED`; un reclamo que no es de nuestra área sale como `RETURNED`, que es distinto.
+- Si hay `ticketId`, cada tramo dispara un [`updateTicketStatus`](../eventos/publicados/updateTicketStatus.md) → M2. La transición a `DISMISSED` sale como `REJECTED`; un reclamo que no es de nuestra área sale como `RETURNED`, que es distinto. El cierre posterior de un expediente `FORWARDED` o `DISMISSED` **no** vuelve a proyectar: M2 ya lo sacó de gestión y un `RESOLVED` sería rechazado (#146).
 - Pasa a `SANCTIONED` al recibir [`commercialFineGenerated`](../eventos/consumidos/commercialFineGenerated.md), [`closureOrdered`](../eventos/consumidos/closureOrdered.md) o [`closureLifted`](../eventos/consumidos/closureLifted.md) de M4.
 - `INSPECTION_SCHEDULED` e `INSPECTED` **no** se publican: eran los descartados `environmentalInspectionScheduled` y `environmentalInspectionCompleted`.

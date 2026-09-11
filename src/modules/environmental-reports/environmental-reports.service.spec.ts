@@ -189,6 +189,21 @@ describe('EnvironmentalReportsService', () => {
     });
 
     /**
+     * #146: `RETURNED` dejó el ticket en `IN_REVIEW` y `REJECTED` en `CANCELLED`.
+     * §8.2 solo acepta `RESOLVED` desde `ROUTED` o `IN_PROGRESS`: M2 lo
+     * rechazaría, y al vecino le diría "fue cerrada" después de "no corresponde".
+     */
+    it.each([S.FORWARDED, S.DISMISSED])(
+      'close desde %s cierra sin volver a proyectar a M2',
+      async (desde) => {
+        const { escrito, encolado } = await transicionar(desde, (s) => s.close(ID, ACTOR));
+
+        expect(escrito.data.status).toBe(S.CLOSED);
+        expect(encolado).toEqual([]);
+      },
+    );
+
+    /**
      * `SANCTIONED` es el único cierre que no se reabre: eso ya lo resolvió M4 y
      * no es nuestro para revertir. Desde `CLOSED` sí se puede, que es lo que
      * permite la reapertura por `ticketUpdated/REOPENED`.
