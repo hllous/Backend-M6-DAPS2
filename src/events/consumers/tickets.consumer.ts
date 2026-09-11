@@ -130,6 +130,9 @@ export class TicketsConsumer implements OnModuleInit {
         lat: location.latitude != null ? Number(location.latitude) : null,
         lng: location.longitude != null ? Number(location.longitude) : null,
         priority: this.prioridad(data.currentPriority),
+        // El snapshot trae el escalamiento vigente (§7.4). Si M2 lo escaló antes
+        // de derivar, no va a llegar un ESCALATION_CHANGED que lo marque.
+        escalated: this.escalado(routing.escalation) ?? false,
         // Solo lo que el vecino aceptó exponer: si es anónimo no guardamos
         // identidad.
         reporterSnapshot: data.isAnonymous
@@ -212,10 +215,30 @@ export class TicketsConsumer implements OnModuleInit {
     ticketId: string,
     data: Record<string, unknown>,
   ): Promise<void> {
-    const respuesta =
-      (data.publicMessage as string) ??
-      ((data.details as Record<string, unknown>)?.informationResponse as string);
-    if (!respuesta) return;
+    // Lo que contestó el vecino está en `details.informationResponse.message`
+    // (§7.6). `publicMessage` es la glosa de M2 ("El ciudadano aportó la
+    // información solicitada."), no la respuesta: no se usa de respaldo.
+    const details = (data.details ?? {}) as Record<string, unknown>;
+    const message = (details.informationResponse as Record<string, unknown> | undefined)?.message;
+    // ponytail: los adjuntos quedan como texto porque el expediente no tiene
+    // dónde guardarlos, y la url puede ser temporal (§5.3). Campo propio si hay
+    // que conservar el archivo.
+    const adjuntos = Array.isArray(data.attachments)
+      ? (data.attachments as Record<string, unknown>[])
+          .filter((a) => a?.url)
+          .map((a) => `${a.fileName ?? 'adjunto'}: ${a.url}`)
+      : [];
+    const respuesta = [typeof message === 'string' ? message.trim() : '', ...adjuntos]
+      .filter(Boolean)
+      .join('\n');
+
+    // §7.6 garantiza al menos uno de los dos: sin ninguno, el evento es inválido.
+    if (!respuesta) {
+      this.logger.warn(
+        `ticketUpdated/INFORMATION_PROVIDED sin message ni attachments para ${ticketId}: se descarta`,
+      );
+      return;
+    }
 
     const { count } = await this.prisma.environmentalReport.updateMany({
       where: { ticketId },
@@ -262,9 +285,18 @@ export class TicketsConsumer implements OnModuleInit {
    * trámite. Decisión del 04/09/2026, ver bloqueantes.md.
    */
   private async escalationChanged(ticketId: string, data: Record<string, unknown>): Promise<void> {
-    const escalated = Boolean(
-      (data.escalation as Record<string, unknown>)?.escalated ?? data.escalated ?? true,
-    );
+    // §7.7: el objeto completo viaja en `details.escalation`, y §5.6 lo llama
+    // `active`. Sin un booleano no se toca el flag: adivinar `true` era lo que
+    // dejaba el escalado encendido para siempre.
+    const details = (data.details ?? {}) as Record<string, unknown>;
+    const escalated = this.escalado(details.escalation);
+    if (escalated === null) {
+      this.logger.warn(
+        `ticketUpdated/ESCALATION_CHANGED sin details.escalation.active para ${ticketId}: se descarta`,
+      );
+      return;
+    }
+
     const { count } = await this.prisma.environmentalReport.updateMany({
       where: { ticketId },
       data: { escalated },
@@ -340,6 +372,12 @@ export class TicketsConsumer implements OnModuleInit {
       if (patron.test(texto)) return tipo;
     }
     return EnvironmentalReportType.OTHER;
+  }
+
+  /** `escalation.active` (§5.6), o null si no viene un booleano. */
+  private escalado(escalation: unknown): boolean | null {
+    const active = (escalation as Record<string, unknown> | null | undefined)?.active;
+    return typeof active === 'boolean' ? active : null;
   }
 
   private prioridad(value: unknown): Severity | null {
