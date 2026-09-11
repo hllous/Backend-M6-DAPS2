@@ -74,7 +74,7 @@ Esta es la tabla con la que se implementa. **La columna izquierda son hechos int
 |---|---|---|
 | `urbanServiceScheduled` | `PROGRESS` | fecha y franja agendadas — **sin campo definido, ver bloqueante arriba** |
 | `urbanServiceStarted` | `STARTED` | vacío |
-| `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage` |
+| `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage`. **Solo con el servicio `IN_PROGRESS`**: antes de arrancar el ticket sigue `ROUTED` y §8.2 rechaza `PROGRESS` (#146) |
 | `urbanServiceCompleted` | `RESOLVED` | `details.resolution.type` + `publicMessage`, y la foto del trabajo en `attachments[]` |
 | `environmentalInspectionScheduled` | `STARTED` | vacío |
 | `environmentalInspectionCompleted`, sin irregularidad | `RESOLVED` | `details.resolution.type` + `publicMessage`: "no se encontraron irregularidades" |

@@ -416,9 +416,11 @@ describe('ServicesService — demora y doble reserva', () => {
      * interno, igual que `findings` en la inspección.
      */
     it('un servicio nacido de un reclamo avisa a M2, con el motivo como interno', async () => {
-      prisma.service.findUnique.mockResolvedValue(servicio({ ticketId: 'TCK-1' }));
+      prisma.service.findUnique.mockResolvedValue(
+        servicio({ ticketId: 'TCK-1', status: ServiceStatus.IN_PROGRESS }),
+      );
 
-      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
 
       const [[, eventos]] = outbox.enqueueMany.mock.calls;
       expect(eventos).toHaveLength(1);
@@ -428,6 +430,19 @@ describe('ServicesService — demora y doble reserva', () => {
         internalMessage: 'Corte de calle imprevisto',
       });
       expect(eventos[0].payload.publicMessage).not.toContain('Corte de calle');
+    });
+
+    /**
+     * #146: antes de arrancar, el ticket sigue `ROUTED` en M2 y §8.2 solo
+     * acepta `PROGRESS` desde `IN_PROGRESS`. El aviso se registra igual.
+     */
+    it('una demora antes de arrancar se registra pero no se proyecta a M2', async () => {
+      prisma.service.findUnique.mockResolvedValue(servicio({ ticketId: 'TCK-1' }));
+
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.START }), ACTOR);
+
+      expect(prisma.serviceDelayNotice.create).toHaveBeenCalled();
+      expect(outbox.enqueueMany).toHaveBeenCalledWith(prisma, []);
     });
 
     it('una detección de oficio no avisa a nadie', async () => {
