@@ -161,7 +161,65 @@ describe('CitizenPortalService', () => {
     });
   });
 
+  // ─── #152: las ramas de los filtros, que no tocaba ningún caso ──
+
+  describe('filtros del calendario público', () => {
+    it('con from y to explícitos respeta esas fechas', async () => {
+      await portal.findServices({
+        page: 1,
+        pageSize: 20,
+        from: '2026-10-01',
+        to: '2026-10-05',
+      } as any);
+
+      const { scheduledDate } = prisma.service.findMany.mock.calls[0][0].where;
+      expect(scheduledDate.gte).toEqual(new Date('2026-10-01'));
+      expect(scheduledDate.lte).toEqual(new Date('2026-10-05'));
+    });
+
+    it('filtra por tipo de servicio y por zona', async () => {
+      await portal.findServices({
+        page: 1,
+        pageSize: 20,
+        serviceTypeId: 'st-1',
+        zoneId: 'z-1',
+      } as any);
+
+      const { where } = prisma.service.findMany.mock.calls[0][0];
+      expect(where.serviceTypeId).toBe('st-1');
+      expect(where.zones).toEqual({ some: { zoneId: 'z-1' } });
+    });
+
+    it('un servicio sin ventana horaria la publica nula, no rompe', async () => {
+      prisma.service.findMany.mockResolvedValue([
+        {
+          id: 'srv-2',
+          scheduledDate: new Date('2026-09-15T00:00:00.000Z'),
+          windowFrom: null,
+          windowTo: null,
+          status: ServiceStatus.SCHEDULED,
+          serviceType: { name: 'Barrido', category: 'STREET_CLEANING' },
+          zones: [],
+        },
+      ]);
+      prisma.service.count.mockResolvedValue(1);
+
+      const { data } = await portal.findServices({ page: 1, pageSize: 20 } as any);
+
+      expect(data[0]).toMatchObject({ windowFrom: null, windowTo: null, stage: 'PROGRAMADO' });
+    });
+  });
+
   describe('puntos verdes', () => {
+    it('filtra por zona cuando se la pide', async () => {
+      await portal.findGreenPoints({ page: 1, pageSize: 20, zoneId: 'z-1' } as any);
+
+      expect(prisma.greenPoint.findMany.mock.calls[0][0].where).toEqual({
+        active: true,
+        zoneId: 'z-1',
+      });
+    });
+
     it('solo los activos, con los residuos que recibe cada uno', async () => {
       prisma.greenPoint.findMany.mockResolvedValue([
         {

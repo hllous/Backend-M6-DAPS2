@@ -99,6 +99,38 @@
       "!config/**",
       "!prisma/**"
     ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 61,
+        "branches": 77,
+        "functions": 56,
+        "lines": 62
+      },
+      "**/services/services.service.ts": {
+        "statements": 85,
+        "branches": 85,
+        "functions": 85,
+        "lines": 85
+      },
+      "**/citizen-portal/citizen-portal.service.ts": {
+        "statements": 85,
+        "branches": 85,
+        "functions": 85,
+        "lines": 85
+      },
+      "**/environmental-reports/environmental-reports.service.ts": {
+        "statements": 85,
+        "branches": 85,
+        "functions": 85,
+        "lines": 85
+      },
+      "**/consumers/tickets.consumer.ts": {
+        "statements": 85,
+        "branches": 85,
+        "functions": 85,
+        "lines": 85
+      }
+    },
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
