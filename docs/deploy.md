@@ -125,11 +125,13 @@ No hay que hacer nada manual en el día a día.
   | Proceso | Qué hace | Dormido |
   |---|---|---|
   | `@Interval(10s)` | Despacha el outbox | Los eventos quedan `PENDING`; se recupera solo al despertar |
-  | `@Cron(EVERY_HOUR)` | Cierra expedientes vencidos | **Se pierde el barrido entero** |
+  | `@Cron(EVERY_HOUR)` | Cierra expedientes vencidos | Se atrasa hasta despertar; **también barre al arrancar**, así que se pone al día solo |
 
-  El segundo no se recupera: `ReportDeadlineSweeper` es el único camino por el que un expediente pasa de `NOTICE_ISSUED` a `CLOSED` cuando M4 nunca contesta, y con la instancia dormida puede quedar abierto pasado su plazo sin que nadie se entere.
+  `ReportDeadlineSweeper` es el único camino por el que un expediente pasa de `NOTICE_ISSUED` a `CLOSED` cuando M4 nunca contesta. Como el barrido es idempotente (`updateMany` sobre los vencidos) y desde #150 corre **también en `onModuleInit`**, dormirse retrasa el cierre pero no lo pierde: al despertar, el primer arranque ya cierra lo vencido.
 
-  Por eso existe el workflow [`keepalive.yml`](../.github/workflows/keepalive.yml), que pega a `/health` cada 10 minutos. **Necesita la variable de repositorio `RENDER_HEALTH_URL`** (Settings › Secrets and variables › Actions › Variables) con `https://m6-backend-m64k.onrender.com/health`. Sin ella el workflow avisa y sale sin fallar.
+  El workflow [`keepalive.yml`](../.github/workflows/keepalive.yml) pega a `/health` para tener el servicio tibio. **Necesita la variable de repositorio `RENDER_HEALTH_URL`** (Settings › Secrets and variables › Actions › Variables) con `https://m6-backend-m64k.onrender.com/health`. Sin ella el workflow avisa y sale sin fallar.
+
+  > ⚠️ **El keepalive no evita el spin-down.** Pide el cron cada 10 minutos, pero GitHub descarta la mayoría de las ejecuciones programadas: en la práctica corre **cada 2-3 horas** (7-8 veces por día). Por eso el barrido al arrancar es lo que sostiene el cierre por vencimiento, y no este ping. El `--max-time` del ping es de 180 s porque el arranque en frío corre `prisma migrate deploy` antes de escuchar y con 90 s fallaba por timeout sin que nada estuviera roto.
 - **Health Check Path de Render**: dejarlo **vacío**. Un path de health check mal configurado produce `==> Timed Out` en el deploy aunque la app arranque bien.
 - **Bind `0.0.0.0`**: el backend escucha en `0.0.0.0:PORT` (no `localhost`), que es lo que Render espera. No cambiar esto.
 - **Postgres free tier**: 256 MB de storage y retención de 90 días (los datos viejos se purgan). Suficiente para el TPO.
