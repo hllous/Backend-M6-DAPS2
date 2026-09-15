@@ -2,7 +2,7 @@
 
 > **Fuente única.** Este archivo reemplaza el estado que estaba duplicado en [`LEEME.md`](../LEEME.md) y, en el repositorio de documentación, en `Eventos.txt` y `fuentes/alcance-entregable.md` §7. Si algo de eso dice otra cosa, vale lo que dice acá.
 >
-> Última revisión general: **8 sep 2026** — M2 publicó la **v1.6**, que reemplaza la v1.5 y **revierte** los campos comunes de `ticketUpdated` que dábamos por cerrados (ver la sección de M2). Antes, el 2 sep 2026: Se resolvieron las divergencias de enums por [ADR-003](decisiones/adr-003-divergencias-enums.md) —manda el catálogo, se corrige el acuerdo— y quedan tres avisos pendientes a M3, M4 y M7. M7 volvió con un cruce que confirma `streetClosureRequested` y `treePruningScheduled` campo por campo, pero se contradice a sí mismo sobre `requestingModule` vs `sourceModule`. M1 compartió su catálogo v2: M1 emite el JWT de usuario y M6 lo valida; su contrato criptográfico todavía no está publicado. **El bloqueante del JWT estaba fichado bajo M9 por la ambigüedad del enunciado: se movió a M1, que es a quien hay que reclamárselo.** M9 sigue siendo el dueño del bus y del catálogo de barrios. Antes, el 30 ago 2026: M7 actualizó su documento de referencia: `streetClosureEnded` ya trae `closureRequestId` (cierra la asimetría que tenía) y propuso unificar `streetClosureRequested` con el payload de M3, propuesta que aceptamos. Antes, el 25 ago: M2 publicó la v1.5 (reemplaza la v1.2), M4 publicó `Modulo_4_Eventos.docx`, y M3 confirmó `sourceRequestId`. Se edita a medida que cada grupo contesta — actualizá la fila y su fecha, no reescribas el archivo.
+> Última revisión general: **14 sep 2026** — M2 publicó la **v1.70**, que reemplaza la v1.69 WIP. Contra la v1.6 que teníamos adoptada, lo único que nos toca es que **vuelve `publicId`** como campo común de `ticketUpdated` (§7.1), como referencia humana que no es credencial: adoptado en #145. Al cruzarla aparecieron tres bugs previos, ya corregidos (#144, #146). Antes, el 8 sep 2026: M2 publicó la **v1.6**, que reemplaza la v1.5 y **revierte** los campos comunes de `ticketUpdated` que dábamos por cerrados (ver la sección de M2). Antes, el 2 sep 2026: Se resolvieron las divergencias de enums por [ADR-003](decisiones/adr-003-divergencias-enums.md) —manda el catálogo, se corrige el acuerdo— y quedan tres avisos pendientes a M3, M4 y M7. M7 volvió con un cruce que confirma `streetClosureRequested` y `treePruningScheduled` campo por campo, pero se contradice a sí mismo sobre `requestingModule` vs `sourceModule`. M1 compartió su catálogo v2: M1 emite el JWT de usuario y M6 lo valida; su contrato criptográfico todavía no está publicado. **El bloqueante del JWT estaba fichado bajo M9 por la ambigüedad del enunciado: se movió a M1, que es a quien hay que reclamárselo.** M9 sigue siendo el dueño del bus y del catálogo de barrios. Antes, el 30 ago 2026: M7 actualizó su documento de referencia: `streetClosureEnded` ya trae `closureRequestId` (cierra la asimetría que tenía) y propuso unificar `streetClosureRequested` con el payload de M3, propuesta que aceptamos. Antes, el 25 ago: M2 publicó la v1.5 (reemplaza la v1.2), M4 publicó `Modulo_4_Eventos.docx`, y M3 confirmó `sourceRequestId`. Se edita a medida que cada grupo contesta — actualizá la fila y su fecha, no reescribas el archivo.
 
 ## Tablero
 
@@ -10,9 +10,12 @@
 |---|---|---|---|
 | **M2** | `responsibleAreaId`, `citizenId` e `isAnonymous` siguen siendo campos comunes de `ticketUpdated` en la v1.6 | ✅ Cerrado | 8 sep 2026 |
 | **M2** | **La v1.6 revirtió `requestType`, `summary`, `description` y `location`**: dejaron de ser comunes y viven solo en `details.routing` (§7.4). Además `requestType` es string plano sin ID (§5.5) y `location` perdió `latitude`/`longitude` (§5.4) | ✅ Resuelto de nuestro lado (Issue #128), avisar que nos afectó | 8 sep 2026 |
-| **M2** | `progress` de `updateTicketStatus` sigue siendo un `Int` (porcentaje), no la fecha/franja agendada. **Tercera versión seguida sin estructura de `details` para `STARTED`/`PROGRESS`** (§8.2, "details obligatorio: Ninguno") | 🔴 Bloqueante | 8 sep 2026 |
+| **M2** | `progress` de `updateTicketStatus` sigue siendo un `Int` (porcentaje), no la fecha/franja agendada. **Cuarta versión seguida sin estructura de `details` para `STARTED`/`PROGRESS`** (§8.2 de la v1.70, "details obligatorio: Ninguno"). Hay que reclamarlo explícitamente en vez de esperar la v1.71 — aviso redactado abajo | 🔴 Bloqueante | 14 sep 2026 |
 | **M2** | La v1.6 renombró `statusChangedAt`→`updateOccurredAt`, eliminó `AREA_USER` del enum de actor (§5.2), sacó `attachmentId` del adjunto (§5.3), cambió `resolution.type` `INFORMATION_PROVIDED`→`INQUIRY_ANSWERED` y exige `subject: tickets/{ticketId}` (§4) | ✅ Adoptado (Issue #128) | 8 sep 2026 |
 | **M2** | `RESOLVED` directo desde `ROUTED` ya no depende de ningún catálogo: §8.2 dice que M2 no mantiene configuración por RequestType y que `STARTED`/`PROGRESS` son opcionales | ✅ Cerrado a nuestro favor | 8 sep 2026 |
+| **M2** | **La v1.70 devuelve `publicId`** a `ticketCreated`/`ticketUpdated` (§7.1) como referencia humana estable; §8.1 aclara que `updateTicketStatus` no lo lleva, y el recuadro de §4 que **no es credencial**. Lo persistimos y lo exponemos con auth; el portal público sigue buscando por `ticketId` UUID | ✅ Adoptado (Issue #145) | 14 sep 2026 |
+| **M2** | Cruzando la v1.70 aparecieron dos bugs nuestros contra la v1.6: `ESCALATION_CHANGED` leía `data.escalation.escalated` con respaldo en `true` (el escalado nunca se apagaba) e `INFORMATION_PROVIDED` guardaba `publicMessage` en vez de `details.informationResponse.message` | ✅ Corregido (Issue #144) | 14 sep 2026 |
+| **M2** | Emitíamos `updateTicketStatus` que M2 rechaza por estado (§8.2): `PROGRESS` por demora con el servicio aún en `SCHEDULED`, y `RESOLVED` al cerrar un expediente ya devuelto o desestimado | ✅ Corregido (Issue #146) | 14 sep 2026 |
 | **M9** | Ausente de la recopilación. Falta la lista de eventos del Core | 🔴 Bloqueante | 17 ago 2026 |
 | **M1** | Contrato técnico del JWT sin publicar: `alg`, `iss`, `aud`, claves/JWKS, claims y TTL. M1 publicó endpoints v2 (`/api/v1/auth/login`, `/refresh`, `/logout`). Frontend definió sesión BFF sellada (ADR-0004); Backend mantiene guard global HS256 provisorio ([ADR-002](decisiones/adr-002-auth-provisoria.md)) hasta recibir la firma real | 🔴 Bloqueante — el principal del proyecto | 3 sep 2026 |
 | **Frontend / Seguridad** | Revisión de seguridad del frontend (Backend Issue #90, Frontend ADR-0006): Backend debe validar adjuntos autoritativamente (magic bytes, EXIF strip, máx 10 MB en `/evidence`), registrar auditoría de lecturas de datos Tier 2 (denuncias, actas) y aplicar allowlist en exports | ⚠️ Requerimiento registrado para producción | 3 sep 2026 |
@@ -47,6 +50,30 @@
 | **M3 y M7** | Avisar que `location.neighborhoodId` llega vacío hasta que M9 publique su catálogo, y que `location.street` lleva la dirección sin partir en calle y número | ⚠️ Aviso pendiente | 2 sep 2026 |
 | **M9** | Sin broker Kafka expuesto, los eventos quedan en el outbox y solo se registran en el log. El circuito está implementado y listo para enchufar | 🔴 Bloqueante | 2 sep 2026 |
 | **M7** | `treePruningScheduled` exige `crewId` y `timeWindow`, que en nuestro modelo son opcionales hasta que se asignan. Implica que el evento no puede salir al programar, sino recién con cuadrilla y ventana cargadas | ⚠️ A resolver de nuestro lado | 2 sep 2026 |
+
+## Avisos redactados, listos para enviar
+
+Las filas ⚠️ de arriba que dicen "aviso pendiente" son estas. El texto está escrito para copiar y pegar en el canal de la cohorte; **enviarlos y anotar la fecha en la fila correspondiente es trabajo de una persona, no del repo.**
+
+**→ M2 (Atención Ciudadana)**
+
+> Adoptamos la v1.70 completa: `publicId` ya viaja en nuestro modelo como referencia humana y respetamos que no es credencial (no lo usamos para autorizar ni lo aceptamos en el seguimiento público). Nos queda un pedido que ya va por la cuarta versión: **necesitamos mandarles la fecha y la franja horaria agendadas de un servicio**, y hoy no hay campo. `progress` es un `Int` de porcentaje y §8.2 mantiene "details obligatorio: Ninguno" para `STARTED`/`PROGRESS`. ¿Lo mandamos como texto dentro de `publicMessage`, o definen algo tipo `details.schedule { scheduledDate, windowFrom, windowTo }`? Con cualquiera de las dos respuestas cerramos el tema; lo que no podemos es seguir sin lugar donde ponerlo.
+
+**→ M7 (Obras / Espacio público)**
+
+> Tres diferencias de enums entre su documento y nuestro catálogo, que mandan nuestros valores (ADR-003): `ServiceOrigin` tiene cinco valores (`PLANNED`, `TICKET`, `WEATHER_ALERT`, `INSPECTION`, `MANUAL`), no `SCHEDULED`/`INTERNAL`; `TreeHealthStatus` conserva `WEAKENED` y `DISEASED` separados, no los colapsa en `DECLINING`; y `TreeInterventionType` distingue `FORMATION_PRUNING` de `SAFETY_PRUNING` y usa `REMOVAL`, no `FELLING`. Además, en `streetClosureRequested` mandamos `sourceModule: "M6"`, siguiendo su tabla de campos: su prosa decía `requestingModule` y nos quedamos con la tabla. Si prefieren al revés, avisen y lo cambiamos.
+
+**→ M3 (Infraestructura)**
+
+> En `treeRiskDetected`, `TreeHealthStatus` conserva `WEAKENED` y `DISEASED` como valores separados; no existe `DECLINING` de nuestro lado (ADR-003).
+
+**→ M3 y M7, juntos**
+
+> Aviso operativo: `location.neighborhoodId` les va a llegar **vacío** hasta que M9 publique el catálogo de barrios. El campo pasó a opcional y viaja ausente. Mientras tanto, `location.street` lleva la dirección completa sin partir en calle y número, porque así la guarda nuestro modelo.
+
+**→ Interno**
+
+> Regenerar el acuerdo publicado (`Acuerdo-Eventos-M6.md` → PDF) con los enums corregidos por ADR-003 y volver a circularlo a la cohorte. Es lo que las contrapartes tienen en la mano hoy, y todavía muestra los valores viejos.
 
 ## El detalle, por contraparte
 

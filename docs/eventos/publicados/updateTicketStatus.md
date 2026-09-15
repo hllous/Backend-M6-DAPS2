@@ -1,6 +1,6 @@
 # `updateTicketStatus` → M2
 
-El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — v1.6, reemplaza la v1.5 — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
+El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — v1.70, que reemplaza la v1.69 WIP y no cambia este evento respecto de la v1.6 — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
 
 Schema: [`updateTicketStatus.schema.json`](updateTicketStatus.schema.json).
 
@@ -10,7 +10,7 @@ Cuando cambia el estado de un [`Service`](../../entidades/service.md) o de una i
 
 > **La regla:** proyectamos si y solo si el `Service` o el [`EnvironmentalReport`](../../entidades/environmental-report.md) tiene `ticketId`. Sin esta regla, M2 recibe eventos de tickets que no existen.
 
-## Payload (v1.6)
+## Payload (v1.70, sin cambios desde la v1.6)
 
 ```
 ticketId, updateType,
