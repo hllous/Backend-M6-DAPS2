@@ -6,7 +6,7 @@ No consumimos `ticketCreated`: va hacia M1 con los datos mínimos del registro d
 
 ## Qué hace M6 al recibirlo
 
-Depende del discriminador `updateType`. La v1.6 define trece valores posibles (§7.2), los mismos que la v1.5 — **la tabla de abajo cubre los trece**, no solo los que nos interesan: seis disparan acción, siete se ignoran a propósito.
+Depende del discriminador `updateType`. La v1.70 —vigente, reemplaza la v1.69 WIP— define trece valores posibles (§7.2), los mismos que la v1.6 y la v1.5 — **la tabla de abajo cubre los trece**, no solo los que nos interesan: seis disparan acción, siete se ignoran a propósito.
 
 | `updateType` | Qué hacemos |
 |---|---|
@@ -26,7 +26,7 @@ Depende del discriminador `updateType`. La v1.6 define trece valores posibles (�
 
 La cancelación llega por acá: no hace falta un `ticketCancelled`, que es uno de los huérfanos de la cohorte.
 
-## Campos que necesitamos de `ROUTED` (v1.6)
+## Campos que necesitamos de `ROUTED` (v1.70)
 
 ```
 comunes:  ticketId, publicId, citizenId, isAnonymous, responsibleAreaId, updateType,
