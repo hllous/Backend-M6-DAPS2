@@ -30,6 +30,11 @@ const FORBIDDEN = {
   description: 'Sin permisos sobre derivaciones',
   type: ErrorResponseDto,
 };
+const CONFLICT = {
+  status: 409,
+  description: 'Transición de estado inválida desde el estado actual',
+  type: ErrorResponseDto,
+};
 const SERVER = { status: 500, description: 'Error interno del servidor', type: ErrorResponseDto };
 
 @ApiTags('repair-requests')
@@ -95,6 +100,7 @@ export class RepairRequestsController {
   @ApiResponse(AUTH)
   @ApiResponse(FORBIDDEN)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
+  @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
   async start(
     @Param('id', ParseUUIDPipe) id: string,
@@ -115,6 +121,7 @@ export class RepairRequestsController {
   @ApiResponse(AUTH)
   @ApiResponse(FORBIDDEN)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
+  @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
   async close(@Param('id', ParseUUIDPipe) id: string): Promise<RepairRequestResponseDto> {
     return this.service.closeRepair(id);
@@ -199,6 +206,7 @@ export class StreetClosureRequestsController {
   @ApiResponse(AUTH)
   @ApiResponse(FORBIDDEN)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
+  @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
   async approve(
     @Param('id', ParseUUIDPipe) id: string,
@@ -224,6 +232,7 @@ export class StreetClosureRequestsController {
   @ApiResponse(AUTH)
   @ApiResponse(FORBIDDEN)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
+  @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
   async reject(
     @Param('id', ParseUUIDPipe) id: string,
@@ -248,6 +257,7 @@ export class StreetClosureRequestsController {
   @ApiResponse(AUTH)
   @ApiResponse(FORBIDDEN)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
+  @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
   async end(@Param('id', ParseUUIDPipe) id: string): Promise<StreetClosureRequestResponseDto> {
     return this.service.endClosure(id);

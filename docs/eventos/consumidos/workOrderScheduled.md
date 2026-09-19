@@ -20,3 +20,7 @@ Pasa la [`RepairRequest`](../../entidades/derivaciones.md#repairrequest--m3) cor
 Si es lo segundo, entre que mandamos la solicitud y ellos la agendan **no tenemos ninguna señal**, y no podemos distinguir "todavía no la vieron" de "la están por hacer". Ver [bloqueantes.md](../../bloqueantes.md#m3--obras-públicas--con-una-pregunta).
 
 Es el único evento consumido nuevo respecto del diseño original: se agrega recién cuando esto se confirme.
+
+## Evento tardío o repetido
+
+Solo aplica si la solicitud sigue en `REQUESTED`. Si ya está en curso o cerrada (evento repetido, o `workOrderCompleted` que llegó antes), se descarta con un `warn`, sin error: el inbox lo responde `processed`.
