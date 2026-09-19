@@ -756,13 +756,16 @@ model EnvironmentalReport {
   lat              Decimal?                  @db.Decimal(10, 7)
   lng              Decimal?                  @db.Decimal(10, 7)
   ticketId         String?                   @map("ticket_id") // EXT M2
+  // EXT M2, referencia humana (TK-2026-000123) desde la v1.70. No es credencial:
+  // se muestra y se busca con auth, nunca reemplaza al ticketId.
+  publicId         String?                   @map("public_id")
   reporterSnapshot Json?                     @map("reporter_snapshot")
   status           EnvironmentalReportStatus @default(RECEIVED)
   priority         Severity?
   // ticketUpdated/ESCALATION_CHANGED: se lo mostramos al supervisor.
   escalated        Boolean                   @default(false)
-  // ticketUpdated/INFORMATION_PROVIDED: lo que el vecino respondio. La v1.5 de
-  // M2 no usa ID de correlacion — hay como maximo una solicitud activa por
+  // ticketUpdated/INFORMATION_PROVIDED: lo que el vecino respondio. El contrato
+  // de M2 no usa ID de correlacion — hay como maximo una solicitud activa por
   // ticket, asi que la respuesta siempre corresponde a la nuestra.
   citizenResponse  String?                   @map("citizen_response")
   deadlineAt       DateTime?                 @map("deadline_at") // cierre por vencimiento

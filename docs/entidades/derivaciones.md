@@ -39,3 +39,21 @@ El corte de calle que necesita un servicio o una poda. `sourceRef` apunta al [`S
 | Llega [`streetClosureEnded`](../eventos/consumidos/streetClosureEnded.md) | Se libera la dependencia |
 
 Las tres respuestas traen `closureRequestId` y `requestingModule` (nombres de M7, no los que pedimos, pero el mismo dato) — confirmado desde el 25/08, y desde el 30/08 también en `streetClosureEnded`, que antes era la excepción.
+
+## Transiciones válidas
+
+Toda transición pasa por una tabla (`outbound-requests.transitions.ts`). Los endpoints manuales responden **409** si el destino no es válido desde el estado actual; los consumers de M3 y M7 descartan con `warn` (sin error) el evento que no aplica.
+
+| Entidad | Desde | Hacia |
+|---|---|---|
+| `RepairRequest` | `REQUESTED` | `IN_PROGRESS`, `CLOSED` |
+| `RepairRequest` | `IN_PROGRESS` | `CLOSED` |
+| `RepairRequest` | `CLOSED` | terminal |
+| `StreetClosureRequest` | `REQUESTED` | `APPROVED`, `REJECTED`, `ENDED` |
+| `StreetClosureRequest` | `APPROVED` | `ENDED` |
+| `StreetClosureRequest` | `REJECTED`, `ENDED` | terminales |
+
+Dos saltos son válidos a propósito, porque los eventos de M3 y M7 viajan por topics distintos y Kafka no garantiza el orden entre ellos:
+
+- **`REQUESTED → CLOSED`**: `workOrderCompleted` puede llegar sin que hayamos visto `workOrderScheduled`, y M3 todavía no confirmó cuándo lo dispara.
+- **`REQUESTED → ENDED`**: `streetClosureEnded` puede adelantarse a `streetClosureApproved`. Como la tabla es una sola, el endpoint manual `POST /street-closure-requests/:id/end` también lo admite desde `REQUESTED`.

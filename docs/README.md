@@ -47,11 +47,11 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 
 ## Mapa de esta carpeta
 
-- [api/](api/) — estándar Swagger y 130 endpoints REST del backend
+- [api/](api/) — estándar Swagger y 133 endpoints REST del backend
 - [entidades/](entidades/) — modelo conceptual de datos y máquinas de estados
 - [DER.md](DER.md) — modelo relacional entidad-relación (diagrama Mermaid y reglas de esquema)
 - [eventos/publicados/](eventos/publicados/) — los 8 eventos que este módulo emite (con sus `.schema.json`)
-- [eventos/consumidos/](eventos/consumidos/) — los 11 eventos que este módulo escucha
+- [eventos/consumidos/](eventos/consumidos/) — los 10 eventos que este módulo escucha
 - [bloqueantes.md](bloqueantes.md) — estado vivo de la integración inter-módulo (fuente única)
 - [enumeraciones.md](enumeraciones.md) — catálogo de valores cerrados
 - [decisiones/](decisiones/) — ADRs (decisiones técnicas de arquitectura)

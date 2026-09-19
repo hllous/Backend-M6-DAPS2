@@ -20,12 +20,20 @@ export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
   priority?: Severity;
 
   @ApiPropertyOptional({
-    description: 'Filtrar por el reclamo de M2 que lo originó',
-    example: 'TCK-2026-004821',
+    description: 'Filtrar por el reclamo de M2 que lo originó (UUID)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsOptional()
   @IsString()
   ticketId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filtrar por la referencia humana del reclamo de M2 (coincidencia exacta)',
+    example: 'TK-2026-000123',
+  })
+  @IsOptional()
+  @IsString()
+  publicId?: string;
 
   @ApiPropertyOptional({
     description: 'Buscar por dirección (parcial, case-insensitive)',

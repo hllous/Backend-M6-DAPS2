@@ -6,9 +6,11 @@ Schema: [`urbanServiceScheduled.schema.json`](urbanServiceScheduled.schema.json)
 
 ## Cuándo se dispara
 
-Al agendar un [`Service`](../../entidades/service.md) con fecha, zona y cuadrilla. Sale siempre, tenga o no `ticketId`.
+Al crear el [`Service`](../../entidades/service.md) (`POST /services`), con fecha y zona. Sale siempre, tenga o no `ticketId`, y **aunque todavía no tenga cuadrilla asignada** — `crewId` es opcional al programar.
 
-Si además el servicio nació de un reclamo, el mismo hecho dispara un [`updateTicketStatus / PROGRESS`](updateTicketStatus.md) hacia M2 con la fecha agendada. Son dos eventos distintos con dos destinatarios distintos.
+**No se reemite.** Asignar cuadrilla (`POST /services/:id/assign-crew`) o reprogramar (`reschedule` / `confirm-reschedule`) no vuelve a publicar este evento: sale una sola vez, al crear.
+
+**No dispara nada hacia M2.** A pesar de que el diseño original preveía un [`updateTicketStatus / PROGRESS`](updateTicketStatus.md) con la fecha agendada, hoy `POST /services` no proyecta nada hacia M2 — ver el bloqueante en `updateTicketStatus.md`.
 
 ## Payload
 

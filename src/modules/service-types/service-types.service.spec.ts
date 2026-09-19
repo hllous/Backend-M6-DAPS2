@@ -2,6 +2,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma, ServiceCategory, ServiceMode } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ServiceTypesService } from './service-types.service';
+import { QueryServiceTypesDto } from './dto/query-service-types.dto';
 
 describe('ServiceTypesService', () => {
   let prisma: {
@@ -72,10 +73,70 @@ describe('ServiceTypesService', () => {
     ).rejects.toThrow(ConflictException);
   });
 
+  it('findOne devuelve el tipo encontrado', async () => {
+    const result = await service.findOne(row.id);
+    expect(result.code).toBe('REC-DOM');
+  });
+
   it('devuelve 404 cuando el tipo no existe', async () => {
     prisma.serviceType.findUnique.mockResolvedValue(null);
 
     await expect(service.findOne(row.id)).rejects.toThrow(NotFoundException);
+  });
+
+  it('un error de prisma que no es P2002 se relanza tal cual', async () => {
+    const error = new Prisma.PrismaClientKnownRequestError('otro', {
+      code: 'P2025',
+      clientVersion: '5.22.0',
+    });
+    prisma.serviceType.create.mockRejectedValue(error);
+
+    await expect(
+      service.create({
+        code: 'X',
+        name: 'x',
+        category: ServiceCategory.WASTE_COLLECTION,
+        mode: ServiceMode.ROUTE,
+      }),
+    ).rejects.toBe(error);
+  });
+
+  it('update lanza 404 si el tipo no existe', async () => {
+    prisma.serviceType.findUnique.mockResolvedValue(null);
+    await expect(service.update('no-existe', {})).rejects.toThrow(NotFoundException);
+  });
+
+  it('update sin cambios no pisa ningun campo', async () => {
+    await service.update(row.id, {});
+
+    const [[args]] = prisma.serviceType.update.mock.calls;
+    expect(args.data).toEqual({});
+  });
+
+  it('update con todos los campos los aplica', async () => {
+    await service.update(row.id, { name: 'Nuevo', requiresVehicle: false, active: false });
+
+    const [[args]] = prisma.serviceType.update.mock.calls;
+    expect(args.data).toEqual({ name: 'Nuevo', requiresVehicle: false, active: false });
+  });
+
+  it('remove lanza 404 si el tipo no existe', async () => {
+    prisma.serviceType.findUnique.mockResolvedValue(null);
+    await expect(service.remove('no-existe')).rejects.toThrow(NotFoundException);
+  });
+
+  it('findAll sin filtros deja el where vacío', async () => {
+    await service.findAll({} as QueryServiceTypesDto);
+
+    const [[args]] = prisma.serviceType.findMany.mock.calls;
+    expect(args.where).toEqual({});
+  });
+
+  it('findAll filtra por active y mode', async () => {
+    await service.findAll({ active: true, mode: ServiceMode.POINT } as QueryServiceTypesDto);
+
+    const [[args]] = prisma.serviceType.findMany.mock.calls;
+    expect(args.where).toEqual({ active: true, mode: ServiceMode.POINT });
   });
 
   it('la baja es logica: marca active=false, no borra', async () => {

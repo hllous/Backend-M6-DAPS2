@@ -20,7 +20,9 @@ Además de lo general:
 
 - [ ] El código compila sin errores.
 - [ ] Los tests unitarios pasan localmente.
-- [ ] **Cobertura de tests ≥ 85%** en los archivos modificados (requisito del TPO).
+- [ ] **Cobertura de tests ≥ 85%** en los archivos modificados (requisito del TPO). Desde #152 **lo verifica el CI**: el job `test` corre `npm run test:cov` y los umbrales viven en `jest.coverageThreshold` (`package.json`). Si tocás un archivo que todavía no tiene umbral propio y lo dejás sobre 85, agregale su entrada ahí para que no vuelva a bajar.
+
+  > ⚠️ **El número `global` del umbral no es la cobertura del proyecto.** Jest **resta** del cómputo global todo archivo con umbral propio, así que al agregar una entrada por archivo el porcentaje global *baja* aunque no se haya roto nada: quedan solo los archivos sin umbral, que son los menos cubiertos. Es el comportamiento documentado de `coverageThreshold`; hay que recalibrar el bloque `global` cuando se suma un archivo. Para ver la cobertura real del proyecto entero, mirar el total del reporte, no el umbral.
 - [ ] El linter no arroja errores ni warnings nuevos.
 - [ ] No hay código comentado ni `console.log` de debug olvidados.
 - [ ] Ninguna variable sensible (secretos, tokens, credenciales, URLs privadas) quedó hardcodeada.

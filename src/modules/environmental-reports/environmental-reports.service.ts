@@ -83,6 +83,7 @@ export class EnvironmentalReportsService {
     if (query.reportType) where.reportType = query.reportType;
     if (query.priority) where.priority = query.priority;
     if (query.ticketId) where.ticketId = query.ticketId;
+    if (query.publicId) where.publicId = query.publicId;
     if (query.search) {
       where.address = { contains: query.search, mode: 'insensitive' };
     }
@@ -159,16 +160,29 @@ export class EnvironmentalReportsService {
     ]);
   }
 
-  /** Cierre manual desde cualquier estado terminal previo. */
+  /**
+   * Cierre manual desde cualquier estado terminal previo.
+   *
+   * Desde `FORWARDED` o `DISMISSED` no sale nada hacia M2: el hecho ya se
+   * informó con `RETURNED` o `REJECTED`, que dejaron el ticket en `IN_REVIEW` o
+   * `CANCELLED`, y §8.2 solo acepta `RESOLVED` desde `ROUTED` o `IN_PROGRESS`.
+   * Además le diría "fue cerrada" al vecino después de "no corresponde" (#146).
+   */
   async close(id: string, actorId: string): Promise<EnvironmentalReportResponseDto> {
     const report = await this.getReport(id);
-    return this.transition(report, S.CLOSED, {}, [
-      ...this.ticketEvents(report, actorId, {
-        updateType: 'RESOLVED',
-        publicMessage: 'Su denuncia ambiental fue cerrada.',
-        details: { resolution: { type: 'ACTION_COMPLETED' } },
-      }),
-    ]);
+    const yaInformado = report.status === S.FORWARDED || report.status === S.DISMISSED;
+    return this.transition(
+      report,
+      S.CLOSED,
+      {},
+      yaInformado
+        ? []
+        : this.ticketEvents(report, actorId, {
+            updateType: 'RESOLVED',
+            publicMessage: 'Su denuncia ambiental fue cerrada.',
+            details: { resolution: { type: 'ACTION_COMPLETED' } },
+          }),
+    );
   }
 
   // ─── Transiciones que disparan otros módulos ──────
@@ -274,6 +288,7 @@ export class EnvironmentalReportsService {
       lat: toNumber(report.lat),
       lng: toNumber(report.lng),
       ticketId: report.ticketId,
+      publicId: report.publicId,
       priority: report.priority,
       deadlineAt: report.deadlineAt,
       createdAt: report.createdAt,
