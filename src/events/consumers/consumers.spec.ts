@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   EnvironmentalReportStatus as S,
   RepairRequestStatus,
@@ -86,11 +87,27 @@ describe('consumidores de eventos', () => {
         sourceId: 'srv-1',
       });
 
-      await h('streetClosureRejected')({ closureRequestId: ID, reason: 'se superpone' });
+      await h('streetClosureRejected')({
+        closureRequestId: ID,
+        rejectionReason: 'se superpone',
+      });
 
       const [[args]] = prisma.service.updateMany.mock.calls;
       expect(args.data.status).toBe(ServiceStatus.RESCHEDULED);
       expect(args.data.statusReason).toContain('se superpone');
+    });
+
+    it('el rechazo del corte tolera el nombre viejo `reason`', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({
+        id: ID,
+        sourceType: 'SERVICE',
+        sourceId: 'srv-1',
+      });
+
+      await h('streetClosureRejected')({ closureRequestId: ID, reason: 'fuera de horario' });
+
+      const [[args]] = prisma.service.updateMany.mock.calls;
+      expect(args.data.statusReason).toContain('fuera de horario');
     });
 
     it('el corte aprobado guarda el identificador de M7', async () => {
@@ -102,6 +119,98 @@ describe('consumidores de eventos', () => {
         where: { id: ID },
         data: { status: StreetClosureRequestStatus.APPROVED, closureId: 'CL-1' },
       });
+    });
+
+    it('el corte aprobado acepta closureId como alias de streetClosureId', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, sourceType: 'SERVICE' });
+
+      await h('streetClosureApproved')({ closureRequestId: ID, closureId: 'CL-2' });
+
+      const [[args]] = prisma.streetClosureRequest.update.mock.calls;
+      expect(args.data.closureId).toBe('CL-2');
+    });
+
+    it('el corte aprobado sin ningun identificador de M7 guarda null', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, sourceType: 'SERVICE' });
+
+      await h('streetClosureApproved')({ closureRequestId: ID });
+
+      const [[args]] = prisma.streetClosureRequest.update.mock.calls;
+      expect(args.data.closureId).toBeNull();
+    });
+
+    it('workOrderCompleted cierra la solicitud cuando la correlaciona', async () => {
+      prisma.repairRequest.findUnique.mockResolvedValue({ id: ID });
+
+      await h('workOrderCompleted')({ sourceRequestId: ID });
+
+      expect(prisma.repairRequest.update).toHaveBeenCalledWith({
+        where: { id: ID },
+        data: { status: RepairRequestStatus.CLOSED },
+      });
+    });
+
+    it('closureEnded libera la dependencia', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, sourceType: 'SERVICE' });
+
+      await h('streetClosureEnded')({ closureRequestId: ID });
+
+      expect(prisma.streetClosureRequest.update).toHaveBeenCalledWith({
+        where: { id: ID },
+        data: { status: StreetClosureRequestStatus.ENDED },
+      });
+    });
+
+    it('un closureRequestId que no es nuestro se descarta sin fallar', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue(null);
+
+      await expect(h('streetClosureEnded')({ closureRequestId: 'ajeno' })).resolves.toBeUndefined();
+      expect(prisma.streetClosureRequest.update).not.toHaveBeenCalled();
+    });
+
+    it('un evento de M7 sin id de correlacion se descarta sin fallar', async () => {
+      await expect(h('streetClosureEnded')({})).resolves.toBeUndefined();
+      expect(prisma.streetClosureRequest.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('el rechazo de un corte que no viene de un Service no toca ningun servicio', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({
+        id: ID,
+        sourceType: 'TREE_INTERVENTION',
+        sourceId: 'ti-1',
+      });
+
+      await h('streetClosureRejected')({ closureRequestId: ID });
+
+      expect(prisma.service.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('el rechazo sin motivo no agrega el detalle al statusReason', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({
+        id: ID,
+        sourceType: 'SERVICE',
+        sourceId: 'srv-1',
+      });
+
+      await h('streetClosureRejected')({ closureRequestId: ID });
+
+      const [[args]] = prisma.service.updateMany.mock.calls;
+      expect(args.data.statusReason).toBe('M7 rechazó el corte de calle solicitado');
+    });
+
+    it('si el servicio ya no está SCHEDULED, el rechazo no lo reprograma', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({
+        id: ID,
+        sourceType: 'SERVICE',
+        sourceId: 'srv-1',
+      });
+      prisma.service.updateMany.mockResolvedValue({ count: 0 });
+      const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+      await expect(h('streetClosureRejected')({ closureRequestId: ID })).resolves.toBeUndefined();
+
+      expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('marcado para reprogramar'));
+      logSpy.mockRestore();
     });
   });
 
@@ -512,6 +621,42 @@ describe('consumidores de eventos', () => {
       await h({ alertType: 'LLUVIA', severity: 'LOW', zoneIds: ['z1'] });
 
       expect(prisma.service.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('una alerta severa sin ventana from/to se descarta: no reprograma todas las fechas', async () => {
+      await h({ severity: 'CRITICAL', zoneIds: ['z1'], from: '2026-10-01T00:00:00.000Z' });
+      await h({ severity: 'CRITICAL', zoneIds: ['z1'], to: '2026-10-02T00:00:00.000Z' });
+      await h({ severity: 'CRITICAL', zoneIds: ['z1'], from: 'mañana', to: 'pasado' });
+
+      expect(prisma.service.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('la ventana acota los servicios por scheduledDate', async () => {
+      await h({
+        severity: 'HIGH',
+        zoneIds: ['z1'],
+        from: '2026-10-01T00:00:00.000Z',
+        to: '2026-10-02T00:00:00.000Z',
+      });
+
+      const [[args]] = prisma.service.updateMany.mock.calls;
+      expect(args.where.scheduledDate).toEqual({
+        gte: new Date('2026-10-01T00:00:00.000Z'),
+        lte: new Date('2026-10-02T00:00:00.000Z'),
+      });
+    });
+
+    it.each([
+      ['hora distinta de 00:00', '2026-10-01T06:00:00.000Z', '2026-10-02T18:30:00.000Z'],
+      ['offset -03:00', '2026-10-01T10:00:00-03:00', '2026-10-02T20:00:00-03:00'],
+    ])('la ventana se trunca al día (%s): entra el servicio del 1/10', async (_, from, to) => {
+      await h({ severity: 'CRITICAL', zoneIds: ['z1'], from, to });
+
+      const [[args]] = prisma.service.updateMany.mock.calls;
+      expect(args.where.scheduledDate).toEqual({
+        gte: new Date('2026-10-01T00:00:00.000Z'),
+        lte: new Date('2026-10-02T00:00:00.000Z'),
+      });
     });
 
     it('sin zonas no hay a que aplicarlo', async () => {

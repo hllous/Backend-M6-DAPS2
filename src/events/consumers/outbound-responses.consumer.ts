@@ -97,6 +97,9 @@ export class OutboundResponsesConsumer implements OnModuleInit {
       data: { status: StreetClosureRequestStatus.REJECTED },
     });
 
+    // `rejectionReason` es el campo del contrato de M7; `reason` se tolera por
+    // si llega un sobre armado a mano con el nombre viejo.
+    const motivo = data.rejectionReason ?? data.reason;
     if (request.sourceType === 'SERVICE') {
       // El `where` acota a SCHEDULED, que es el único estado desde el que
       // VALID_TRANSITIONS admite RESCHEDULED. `updateMany` no pasa por
@@ -105,9 +108,7 @@ export class OutboundResponsesConsumer implements OnModuleInit {
         where: { id: request.sourceId, status: ServiceStatus.SCHEDULED },
         data: {
           status: ServiceStatus.RESCHEDULED,
-          statusReason: `M7 rechazó el corte de calle solicitado${
-            data.reason ? `: ${String(data.reason)}` : ''
-          }`,
+          statusReason: `M7 rechazó el corte de calle solicitado${motivo ? `: ${String(motivo)}` : ''}`,
         },
       });
       if (count > 0) {

@@ -18,6 +18,7 @@ import {
   ZoneResultStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { toDateOnly } from '../../common/utils/date-only';
 import { CONTAINER_TRANSITIONS } from '../containers/containers.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
@@ -88,11 +89,6 @@ const SERVICE_INCLUDE = {
 } satisfies Prisma.ServiceInclude;
 
 type ServiceWithRelations = Prisma.ServiceGetPayload<{ include: typeof SERVICE_INCLUDE }>;
-
-/** Fecha sin hora: scheduledDate es @db.Date y comparar con hora produce off-by-one. */
-function toDateOnly(value: string | Date): Date {
-  return new Date(`${new Date(value).toISOString().slice(0, 10)}T00:00:00.000Z`);
-}
 
 /** windowFrom/windowTo son @db.Time; Prisma los maneja como DateTime sobre la época. */
 function toTime(hhmm?: string | null): Date | null {
