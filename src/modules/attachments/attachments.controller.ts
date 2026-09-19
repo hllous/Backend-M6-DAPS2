@@ -21,6 +21,7 @@ import {
 import { AttachmentsService } from './attachments.service';
 import { UploadEvidenceDto, EvidenceResponseDto, QueryEvidenceDto } from './dto';
 import { AttachmentOwnerType } from './attachment-owner-type';
+import { MAX_EVIDENCE_SIZE_BYTES } from './evidence-mime';
 import { ErrorResponseDto } from '../../common/dto';
 
 @ApiTags('evidence')
@@ -30,7 +31,11 @@ export class AttachmentsController {
   constructor(private readonly attachmentsService: AttachmentsService) {}
 
   @Post()
-  @UseInterceptors(FileInterceptor('file'))
+  // Sin límite, multer bufferea en memoria lo que venga antes de que el
+  // service pueda rechazarlo por tamaño.
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_EVIDENCE_SIZE_BYTES, files: 1 } }),
+  )
   @ApiOperation({
     summary: 'Subir evidencia (foto/PDF) para un recurso existente',
     description:
@@ -59,13 +64,19 @@ export class AttachmentsController {
   @ApiResponse({ status: 201, description: 'Evidencia subida', type: EvidenceResponseDto })
   @ApiResponse({
     status: 400,
-    description: 'Archivo faltante, tipo no permitido, tamaño excedido o falta Idempotency-Key',
+    description:
+      'Archivo faltante, tipo no permitido, más de un archivo en la llamada o falta Idempotency-Key',
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({
     status: 404,
     description: 'El recurso referenciado por ownerType/ownerId no existe',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 413,
+    description: 'El archivo supera los 10 MB (lo corta multer antes de terminar de recibirlo)',
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })

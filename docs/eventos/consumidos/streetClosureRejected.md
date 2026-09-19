@@ -6,9 +6,9 @@ M7 no autorizó el corte de calle que pedimos.
 
 ## Qué hace M6 al recibirlo
 
-Marca la [`StreetClosureRequest`](../../entidades/derivaciones.md#streetclosurerequest--m7) como rechazada y **reprograma o cancela** el [`Service`](../../entidades/service.md) dependiente.
+Marca la [`StreetClosureRequest`](../../entidades/derivaciones.md#streetclosurerequest--m7) como rechazada y **marca para reprogramar** (`SCHEDULED → RESCHEDULED`) el [`Service`](../../entidades/service.md) dependiente.
 
-Cuál de las dos depende del trabajo: una poda de seguridad se reprograma, un servicio que ya no tiene sentido se cancela. Si el trabajo nació de un reclamo, el cambio se le informa al vecino con un [`updateTicketStatus`](../publicados/updateTicketStatus.md).
+Cancelarlo en vez de reprogramarlo (un servicio que sin el corte ya no tiene sentido) queda a criterio del operador; el consumer no cancela nada.
 
 ## Payload confirmado
 
@@ -26,5 +26,7 @@ streetClosureRejected
 ## Notas
 
 `rejectionReason` es lo que separa "esta calle no se puede cortar" de "no en ese horario". Del primero no se reintenta; del segundo sí, con otra ventana.
+
+M6 copia `rejectionReason` al `statusReason` del servicio marcado para reprogramar, así el operador ve el motivo. Si llega un sobre con el nombre viejo `reason` también se toma.
 
 Los campos de origen llegaron con otro nombre del que pedimos (`closureRequestId`/`requestingModule`), pero el dato está — igual que en [`streetClosureEnded`](streetClosureEnded.md) desde el 30/08.

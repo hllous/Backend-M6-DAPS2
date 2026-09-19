@@ -290,7 +290,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key` |
+| POST | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key`. Un archivo mayor a `MAX_EVIDENCE_SIZE_BYTES` (10 MB) da **413**: multer lo corta antes de llegar al service |
 | GET | `/evidence` | Lista la evidencia de un `ownerType`/`ownerId`, por query params |
 
 **Genérico por diseño (Issue #64).** Un solo módulo sirve a los cuatro tipos de recurso en vez de reimplementar la subida por cada uno — el modelo `Attachment` ya era polimórfico en el schema, esto le agrega el endpoint que faltaba.

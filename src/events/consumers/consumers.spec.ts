@@ -86,11 +86,27 @@ describe('consumidores de eventos', () => {
         sourceId: 'srv-1',
       });
 
-      await h('streetClosureRejected')({ closureRequestId: ID, reason: 'se superpone' });
+      await h('streetClosureRejected')({
+        closureRequestId: ID,
+        rejectionReason: 'se superpone',
+      });
 
       const [[args]] = prisma.service.updateMany.mock.calls;
       expect(args.data.status).toBe(ServiceStatus.RESCHEDULED);
       expect(args.data.statusReason).toContain('se superpone');
+    });
+
+    it('el rechazo del corte tolera el nombre viejo `reason`', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({
+        id: ID,
+        sourceType: 'SERVICE',
+        sourceId: 'srv-1',
+      });
+
+      await h('streetClosureRejected')({ closureRequestId: ID, reason: 'fuera de horario' });
+
+      const [[args]] = prisma.service.updateMany.mock.calls;
+      expect(args.data.statusReason).toContain('fuera de horario');
     });
 
     it('el corte aprobado guarda el identificador de M7', async () => {
@@ -512,6 +528,42 @@ describe('consumidores de eventos', () => {
       await h({ alertType: 'LLUVIA', severity: 'LOW', zoneIds: ['z1'] });
 
       expect(prisma.service.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('una alerta severa sin ventana from/to se descarta: no reprograma todas las fechas', async () => {
+      await h({ severity: 'CRITICAL', zoneIds: ['z1'], from: '2026-10-01T00:00:00.000Z' });
+      await h({ severity: 'CRITICAL', zoneIds: ['z1'], to: '2026-10-02T00:00:00.000Z' });
+      await h({ severity: 'CRITICAL', zoneIds: ['z1'], from: 'mañana', to: 'pasado' });
+
+      expect(prisma.service.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('la ventana acota los servicios por scheduledDate', async () => {
+      await h({
+        severity: 'HIGH',
+        zoneIds: ['z1'],
+        from: '2026-10-01T00:00:00.000Z',
+        to: '2026-10-02T00:00:00.000Z',
+      });
+
+      const [[args]] = prisma.service.updateMany.mock.calls;
+      expect(args.where.scheduledDate).toEqual({
+        gte: new Date('2026-10-01T00:00:00.000Z'),
+        lte: new Date('2026-10-02T00:00:00.000Z'),
+      });
+    });
+
+    it.each([
+      ['hora distinta de 00:00', '2026-10-01T06:00:00.000Z', '2026-10-02T18:30:00.000Z'],
+      ['offset -03:00', '2026-10-01T10:00:00-03:00', '2026-10-02T20:00:00-03:00'],
+    ])('la ventana se trunca al día (%s): entra el servicio del 1/10', async (_, from, to) => {
+      await h({ severity: 'CRITICAL', zoneIds: ['z1'], from, to });
+
+      const [[args]] = prisma.service.updateMany.mock.calls;
+      expect(args.where.scheduledDate).toEqual({
+        gte: new Date('2026-10-01T00:00:00.000Z'),
+        lte: new Date('2026-10-02T00:00:00.000Z'),
+      });
     });
 
     it('sin zonas no hay a que aplicarlo', async () => {

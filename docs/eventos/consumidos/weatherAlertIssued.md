@@ -6,9 +6,9 @@
 
 ## Qué hace M6 al recibirlo
 
-Marca las zonas afectadas y **dispara la reprogramación masiva** de los [`Service`](../../entidades/service.md) agendados en ellas.
+Si la severidad es `HIGH` o `CRITICAL`, **marca para reprogramar** (`SCHEDULED → RESCHEDULED`) los [`Service`](../../entidades/service.md) de las zonas afectadas cuya `scheduledDate` cae dentro de la ventana `from`–`to`, comparando por día. El motivo queda en `statusReason`; la fecha nueva la pone después el operador. Con severidad menor solo se loguea.
 
-Los servicios reprogramados por este camino llevan `origin = WEATHER_ALERT`.
+No se marca nada sobre las zonas en sí, y el `origin` de los servicios no cambia: sigue siendo el que tenían.
 
 ## Campos que necesita el simulador
 
@@ -18,8 +18,10 @@ Al no haber contraparte, la forma la definimos nosotros. Lo mínimo para que la 
 |---|---|
 | `alertType` | Qué fenómeno |
 | `severity` | Decide si se reprograma o solo se avisa |
-| `zoneIds[]` o `neighborhoodIds[]` | Qué zonas se ven afectadas |
-| `from`, `to` | Ventana de la alerta: qué servicios caen adentro |
+| `zoneIds[]` | Qué zonas se ven afectadas. `neighborhoodIds[]` no se lee |
+| `from`, `to` | **Obligatorios para `HIGH`/`CRITICAL`.** Ventana de la alerta (ISO 8601): qué servicios caen adentro |
+
+Una alerta `HIGH`/`CRITICAL` sin `from` o sin `to` (o con fechas que no se pueden leer) **se descarta con un warn** y no reprograma nada: sin ventana, el filtro por zona movería todos los servicios agendados de esas zonas, en cualquier fecha. Las alertas de severidad menor no reprograman, así que para ellas la ventana no se valida.
 
 ## Por qué queda así
 

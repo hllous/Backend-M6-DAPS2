@@ -11252,7 +11252,7 @@
             }
           },
           "400": {
-            "description": "Archivo faltante, tipo no permitido, tamaño excedido o falta Idempotency-Key",
+            "description": "Archivo faltante, tipo no permitido, más de un archivo en la llamada o falta Idempotency-Key",
             "content": {
               "application/json": {
                 "schema": {
@@ -11273,6 +11273,16 @@
           },
           "404": {
             "description": "El recurso referenciado por ownerType/ownerId no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El archivo supera los 10 MB (lo corta multer antes de terminar de recibirlo)",
             "content": {
               "application/json": {
                 "schema": {
@@ -11831,7 +11841,7 @@
           "specVersion": {
             "type": "string",
             "description": "Versión del sobre",
-            "example": "1.5"
+            "example": "1.0"
           },
           "eventVersion": {
             "type": "string",
@@ -11844,9 +11854,34 @@
             "format": "date-time"
           },
           "producer": {
-            "type": "string",
-            "description": "Módulo que lo publica",
-            "example": "M7"
+            "description": "Quién lo publica. Objeto `{ moduleId, service }` (sobre v1.6/v1.70) o string suelto (v1.5)",
+            "oneOf": [
+              {
+                "type": "string",
+                "example": "M7"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "moduleId",
+                  "service"
+                ],
+                "properties": {
+                  "moduleId": {
+                    "type": "string",
+                    "example": "M2"
+                  },
+                  "service": {
+                    "type": "string",
+                    "example": "tickets-service"
+                  }
+                }
+              }
+            ],
+            "example": {
+              "moduleId": "M2",
+              "service": "tickets-service"
+            }
           },
           "subject": {
             "type": "string",
