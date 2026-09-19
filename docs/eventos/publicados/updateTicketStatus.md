@@ -1,6 +1,6 @@
 # `updateTicketStatus` → M2
 
-El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — v1.70, que reemplaza la v1.69 WIP y no cambia este evento respecto de la v1.6 — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
+El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — v1.73 (WIP), que reemplaza a la v1.72 WIP y no cambia este evento respecto de la v1.6; la v1.71 y la v1.72 nunca se cruzaron — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
 
 Schema: [`updateTicketStatus.schema.json`](updateTicketStatus.schema.json).
 
@@ -10,7 +10,7 @@ Cuando cambia el estado de un [`Service`](../../entidades/service.md) o de una i
 
 > **La regla:** proyectamos si y solo si el `Service` o el [`EnvironmentalReport`](../../entidades/environmental-report.md) tiene `ticketId`. Sin esta regla, M2 recibe eventos de tickets que no existen.
 
-## Payload (v1.70, sin cambios desde la v1.6)
+## Payload (v1.73, sin cambios desde la v1.6)
 
 ```
 ticketId, updateType,
@@ -50,7 +50,7 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 
 ### 🔴 Bloqueante: `progress` no sirve para la fecha agendada
 
-**Tercera versión seguida sin resolverse.** El campo común `progress` es un `Int` (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.6 mantiene "details obligatorio: Ninguno". Necesitamos saber cómo mandar la fecha/franja agendada del servicio: ¿va como texto en `publicMessage`, o van a definir una estructura tipo `details.schedule`? Ver [bloqueantes.md](../../bloqueantes.md#tablero).
+**Quinta versión seguida sin resolverse.** El campo común `progress` es un `Int` 0..100 (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.73 mantiene "details obligatorio: Ninguno". Necesitamos saber cómo mandar la fecha/franja agendada del servicio: ¿va como texto en `publicMessage`, o van a definir una estructura tipo `details.schedule`? Ver [bloqueantes.md](../../bloqueantes.md#tablero).
 
 ⚠️ **Validación nueva en `PROGRESS`.** La v1.6 (§8.2) exige que aporte al menos uno de `progress`, `publicMessage`, `internalMessage` o `attachments`. Un `PROGRESS` vacío ahora es inválido: afectaría sobre todo al fan-out de `zoneNotServiced` si se implementa (hoy no lo está, ver más abajo).
 
@@ -92,7 +92,9 @@ Los otros dos hechos no tienen traducción directa:
 
 ## La respuesta vuelve por `ticketUpdated`
 
-`INFORMATION_REQUIRED` se correlaciona sin ID: desde la v1.5 no hay `informationRequestId`, sino una invariante de "como máximo una `InformationRequest` activa por ticket a la vez", así que la respuesta del vecino siempre corresponde a la nuestra. La v1.6 (§9) agrega qué pasa si mandamos un segundo pedido con uno activo: **M2 no abre una interacción paralela**, lo rechaza o registra conflicto. Llega como [`ticketUpdated / INFORMATION_PROVIDED`](../consumidos/ticketUpdated.md).
+`INFORMATION_REQUIRED` se correlaciona sin ID: desde la v1.5 no hay `informationRequestId`, sino una invariante de "como máximo una `InformationRequest` activa por ticket a la vez", así que la respuesta del vecino siempre corresponde a la nuestra. Llega como [`ticketUpdated / INFORMATION_PROVIDED`](../consumidos/ticketUpdated.md).
+
+**§9 de la v1.73: un Ticket tiene como máximo UNA solicitud de información activa.** Un segundo `INFORMATION_REQUIRED` mientras hay una pendiente **no abre una interacción paralela**: M2 lo rechaza o registra conflicto. El flujo: publicamos `INFORMATION_REQUIRED`; M2 pasa el ticket a `PENDING_INFORMATION` y pausa el SLA; el vecino responde; M2 restaura el estado anterior y publica `ticketUpdated / INFORMATION_PROVIDED`. En el ejemplo de M2 el sobre lleva `producer: { moduleId: "M6", service: "urban-services-api" }`, igual que el nuestro. **Hoy no emitimos `INFORMATION_REQUIRED`** (no hay call site; la propuesta abierta es el issue #169), así que el riesgo de mandar un segundo pedido con uno activo no existe todavía, pero hay que resolverlo al implementarlo.
 
 ## Un hecho, dos eventos, un solo efecto
 
