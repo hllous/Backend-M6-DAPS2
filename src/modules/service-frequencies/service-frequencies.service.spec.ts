@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ServiceMode, Shift } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ServiceFrequenciesService } from './service-frequencies.service';
+import { QueryServiceFrequenciesDto } from './dto/query-service-frequencies.dto';
 
 describe('ServiceFrequenciesService', () => {
   const id = '44444444-4444-4444-4444-444444444444';
@@ -9,7 +10,13 @@ describe('ServiceFrequenciesService', () => {
   const routeId = '66666666-6666-6666-6666-666666666666';
 
   let prisma: {
-    serviceFrequency: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
+    serviceFrequency: {
+      create: jest.Mock;
+      findUnique: jest.Mock;
+      update: jest.Mock;
+      findMany: jest.Mock;
+      count: jest.Mock;
+    };
     serviceType: { findUnique: jest.Mock };
     route: { findUnique: jest.Mock };
   };
@@ -34,6 +41,8 @@ describe('ServiceFrequenciesService', () => {
         create: jest.fn().mockResolvedValue(row()),
         findUnique: jest.fn().mockResolvedValue(row()),
         update: jest.fn().mockResolvedValue(row()),
+        findMany: jest.fn().mockResolvedValue([row()]),
+        count: jest.fn().mockResolvedValue(1),
       },
       serviceType: {
         findUnique: jest.fn().mockResolvedValue({ id: serviceTypeId, mode: ServiceMode.ROUTE }),
@@ -105,6 +114,97 @@ describe('ServiceFrequenciesService', () => {
     expect(args.data.weekdays).toEqual({
       deleteMany: {},
       createMany: { data: [{ weekday: 1 }, { weekday: 3 }] },
+    });
+  });
+
+  it('devuelve 404 si el tipo de servicio referenciado no existe', async () => {
+    prisma.serviceType.findUnique.mockResolvedValue(null);
+
+    await expect(service.create(validDto)).rejects.toThrow(NotFoundException);
+  });
+
+  it('findOne devuelve la frecuencia encontrada', async () => {
+    const result = await service.findOne(id);
+    expect(result.id).toBe(id);
+  });
+
+  it('findOne lanza 404 si no existe', async () => {
+    prisma.serviceFrequency.findUnique.mockResolvedValue(null);
+    await expect(service.findOne('no-existe')).rejects.toThrow(NotFoundException);
+  });
+
+  it('update lanza 404 si la frecuencia no existe', async () => {
+    prisma.serviceFrequency.findUnique.mockResolvedValue(null);
+    await expect(service.update(id, {})).rejects.toThrow(NotFoundException);
+  });
+
+  it('update rechaza un periodo invalido combinando lo actual con lo nuevo', async () => {
+    await expect(service.update(id, { validTo: '2026-08-01' })).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('update sin cambios no pisa ningun campo', async () => {
+    await service.update(id, {});
+
+    const [[args]] = prisma.serviceFrequency.update.mock.calls;
+    expect(args.data).toEqual({});
+  });
+
+  it('update con shift y validFrom nuevos los aplica', async () => {
+    await service.update(id, { shift: Shift.AFTERNOON, validFrom: '2026-10-01' });
+
+    const [[args]] = prisma.serviceFrequency.update.mock.calls;
+    expect(args.data.shift).toBe(Shift.AFTERNOON);
+    expect(args.data.validFrom.toISOString().slice(0, 10)).toBe('2026-10-01');
+  });
+
+  it('update con validTo nuevo lo aplica', async () => {
+    await service.update(id, { validTo: '2026-12-31' });
+
+    const [[args]] = prisma.serviceFrequency.update.mock.calls;
+    expect(args.data.validTo.toISOString().slice(0, 10)).toBe('2026-12-31');
+  });
+
+  it('remove lanza 404 si la frecuencia no existe', async () => {
+    prisma.serviceFrequency.findUnique.mockResolvedValue(null);
+    await expect(service.remove('no-existe')).rejects.toThrow(NotFoundException);
+  });
+
+  describe('findAll', () => {
+    it('sin filtros deja el where vacío', async () => {
+      await service.findAll({} as QueryServiceFrequenciesDto);
+
+      const [[args]] = prisma.serviceFrequency.findMany.mock.calls;
+      expect(args.where).toEqual({});
+    });
+
+    it('filtra por serviceTypeId, routeId, shift y weekday', async () => {
+      await service.findAll({
+        serviceTypeId,
+        routeId,
+        shift: Shift.MORNING,
+        weekday: 2,
+      } as QueryServiceFrequenciesDto);
+
+      const [[args]] = prisma.serviceFrequency.findMany.mock.calls;
+      expect(args.where).toEqual({
+        serviceTypeId,
+        routeId,
+        shift: Shift.MORNING,
+        weekdays: { some: { weekday: 2 } },
+      });
+    });
+
+    it('filtra por vigencia en una fecha dada', async () => {
+      await service.findAll({ validOn: '2026-09-15' } as QueryServiceFrequenciesDto);
+
+      const [[args]] = prisma.serviceFrequency.findMany.mock.calls;
+      expect(args.where.validFrom).toEqual({ lte: new Date('2026-09-15T00:00:00.000Z') });
+      expect(args.where.OR).toEqual([
+        { validTo: null },
+        { validTo: { gte: new Date('2026-09-15T00:00:00.000Z') } },
+      ]);
     });
   });
 });

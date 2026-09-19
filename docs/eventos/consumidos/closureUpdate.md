@@ -13,6 +13,8 @@ Depende de `status`:
 | `ORDERED` | Registra el [`SanctionOutcome`](../../entidades/control-ambiental.md#sanctionoutcome) con la clausura como resolución, pasa el [`EnvironmentalReport`](../../entidades/environmental-report.md) a `SANCTIONED` y lo cierra |
 | `LIFTED` | Registra el levantamiento en el `SanctionOutcome` y cierra el `EnvironmentalReport` |
 
+⚠️ **Pendiente: un `LIFTED` posterior a un `ORDERED` ya registrado se descarta hoy.** `SanctionOutcome` es 1:1 con el acta: si el `ORDERED` ya creó el registro, el `LIFTED` que levanta esa misma clausura encuentra `sanctionOutcome` ya cargado y se descarta con log, en vez de actualizar la resolución existente.
+
 ## Campos imprescindibles
 
 | Campo | Nota |

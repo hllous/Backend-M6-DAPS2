@@ -23,6 +23,11 @@ import {
   StreetClosureRequestResponseDto,
 } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
+import {
+  assertTransition,
+  CLOSURE_TRANSITIONS,
+  REPAIR_TRANSITIONS,
+} from './outbound-requests.transitions';
 
 type ClosureWithStreets = StreetClosureRequest & { streets: ClosureStreet[] };
 
@@ -112,7 +117,8 @@ export class OutboundRequestsService {
    * no haya bus.
    */
   async startRepair(id: string, dto: StartRepairDto): Promise<RepairRequestResponseDto> {
-    await this.getRepairRequest(id);
+    const current = await this.getRepairRequest(id);
+    assertTransition(REPAIR_TRANSITIONS, current.status, RepairRequestStatus.IN_PROGRESS);
     const row = await this.prisma.repairRequest.update({
       where: { id },
       data: {
@@ -128,7 +134,8 @@ export class OutboundRequestsService {
 
   /** Cierra la solicitud. Normalmente lo dispara `workOrderCompleted` de M3. */
   async closeRepair(id: string): Promise<RepairRequestResponseDto> {
-    await this.getRepairRequest(id);
+    const current = await this.getRepairRequest(id);
+    assertTransition(REPAIR_TRANSITIONS, current.status, RepairRequestStatus.CLOSED);
     const row = await this.prisma.repairRequest.update({
       where: { id },
       data: { status: RepairRequestStatus.CLOSED },
@@ -223,8 +230,9 @@ export class OutboundRequestsService {
 
   /** Normalmente lo dispara `streetClosureRejected` de M7. */
   async rejectClosure(id: string, reason: string): Promise<StreetClosureRequestResponseDto> {
+    const row = await this.updateClosure(id, StreetClosureRequestStatus.REJECTED);
     this.logger.log(`Corte ${id}: rechazado por M7 — ${reason}`);
-    return this.updateClosure(id, StreetClosureRequestStatus.REJECTED);
+    return row;
   }
 
   /** Normalmente lo dispara `streetClosureEnded` de M7. */
@@ -254,7 +262,8 @@ export class OutboundRequestsService {
     status: StreetClosureRequestStatus,
     data: Prisma.StreetClosureRequestUpdateInput = {},
   ): Promise<StreetClosureRequestResponseDto> {
-    await this.getClosureRequest(id);
+    const current = await this.getClosureRequest(id);
+    assertTransition(CLOSURE_TRANSITIONS, current.status, status);
     const row = await this.prisma.streetClosureRequest.update({
       where: { id },
       data: { status, ...data },

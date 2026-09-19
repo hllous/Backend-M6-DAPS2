@@ -266,7 +266,7 @@ export type TicketUpdateType =
   'STARTED' | 'PROGRESS' | 'INFORMATION_REQUIRED' | 'RETURNED' | 'RESOLVED' | 'REJECTED';
 
 /**
- * El actor que originó el hecho, en el vocabulario de M2 (§5.2 de la v1.6).
+ * El actor que originó el hecho, en el vocabulario de M2 (§5.2, vigente en la v1.73).
  *
  * Su regla de clasificación es explícita: una persona que actúa desde otro
  * módulo y cuyo hecho llega a M2 por integración es **`EXTERNAL_USER`**,
@@ -277,12 +277,12 @@ export type TicketUpdateType =
 const ACTOR_SISTEMA = 'sistema';
 
 /**
- * Payload del contrato v1.6 de M2, adoptado sin cambios.
+ * Payload del contrato v1.73 de M2 (sin cambios desde la v1.6), adoptado tal cual.
  *
  * La fecha y la franja agendadas **siguen sin viajar**: `progress` es un entero
  * de porcentaje y §8.2 sigue diciendo "details obligatorio: Ninguno" para
- * `STARTED` y `PROGRESS`. Es un bloqueante abierto con M2 desde la v1.5 —
- * mientras tanto la información va como texto en `publicMessage`.
+ * `STARTED` y `PROGRESS`. Es un bloqueante abierto con M2 desde la v1.5
+ * (sigue igual en la v1.73; ver el conteo en docs/bloqueantes.md) — mientras tanto la información va como texto en `publicMessage`.
  */
 export function updateTicketStatus(params: {
   ticketId: string;

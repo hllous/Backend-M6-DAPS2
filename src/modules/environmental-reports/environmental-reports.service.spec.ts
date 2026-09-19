@@ -133,6 +133,72 @@ describe('EnvironmentalReportsService', () => {
     });
   });
 
+  // ─── #152: alta y listado, que no tocaba ningún caso ──
+
+  describe('alta y listado', () => {
+    it('un expediente de oficio nace en RECEIVED y sin reclamo', async () => {
+      await service.create({ reportType: 'NOISE' } as any);
+
+      expect(prisma.environmentalReport.create.mock.calls[0][0].data).toMatchObject({
+        reportType: 'NOISE',
+        status: S.RECEIVED,
+        ticketId: null,
+        address: null,
+      });
+    });
+
+    it('un expediente nacido de un reclamo guarda el ticketId', async () => {
+      await service.create({
+        reportType: 'NOISE',
+        ticketId: 'TCK-1',
+        address: 'Rivadavia 100',
+        priority: 'HIGH',
+      } as any);
+
+      expect(prisma.environmentalReport.create.mock.calls[0][0].data).toMatchObject({
+        ticketId: 'TCK-1',
+        address: 'Rivadavia 100',
+        priority: 'HIGH',
+      });
+    });
+
+    it('sin filtros no arma ningún where', async () => {
+      await service.findAll({ page: 1, pageSize: 20, skip: 0, take: 20 } as any);
+
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual({});
+    });
+
+    it('traduce cada filtro a su campo, y la búsqueda va contra la dirección', async () => {
+      await service.findAll({
+        page: 1,
+        pageSize: 20,
+        skip: 0,
+        take: 20,
+        status: S.UNDER_REVIEW,
+        reportType: 'NOISE',
+        priority: 'HIGH',
+        ticketId: 'TCK-1',
+        publicId: 'TK-2026-000123',
+        search: 'Rivadavia',
+      } as any);
+
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual({
+        status: S.UNDER_REVIEW,
+        reportType: 'NOISE',
+        priority: 'HIGH',
+        ticketId: 'TCK-1',
+        publicId: 'TK-2026-000123',
+        address: { contains: 'Rivadavia', mode: 'insensitive' },
+      });
+    });
+
+    it('findOne de un id inexistente da 404', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne(ID)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
   // ─── Las acciones ───────────────────────────────────
 
   describe('acciones del expediente', () => {
@@ -187,6 +253,21 @@ describe('EnvironmentalReportsService', () => {
         details: { resolution: { type: 'ACTION_COMPLETED' } },
       });
     });
+
+    /**
+     * #146: `RETURNED` dejó el ticket en `IN_REVIEW` y `REJECTED` en `CANCELLED`.
+     * §8.2 solo acepta `RESOLVED` desde `ROUTED` o `IN_PROGRESS`: M2 lo
+     * rechazaría, y al vecino le diría "fue cerrada" después de "no corresponde".
+     */
+    it.each([S.FORWARDED, S.DISMISSED])(
+      'close desde %s cierra sin volver a proyectar a M2',
+      async (desde) => {
+        const { escrito, encolado } = await transicionar(desde, (s) => s.close(ID, ACTOR));
+
+        expect(escrito.data.status).toBe(S.CLOSED);
+        expect(encolado).toEqual([]);
+      },
+    );
 
     /**
      * `SANCTIONED` es el único cierre que no se reabre: eso ya lo resolvió M4 y

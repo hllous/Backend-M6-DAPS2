@@ -6,18 +6,18 @@ El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde e
 
 El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
-> **Actualizado al 02/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero) + evidencia genérica (Issue #64). 130 rutas, agrupadas en 23 tags de Swagger.
+> **Actualizado al 18/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero) + evidencia genérica (Issue #64). 133 rutas, agrupadas en 23 tags de Swagger.
 
 ## Convenciones
 
 Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo para leer esta tabla:
 
 - **Autenticación**: todo exige `Authorization: Bearer <JWT>` salvo lo marcado como público. El `JwtAuthGuard` está registrado como guard global, así que un endpoint nuevo nace protegido; los públicos se marcan explícitamente con `@Public()`. Ver [ADR-002](../decisiones/adr-002-auth-provisoria.md).
-- **Autorización por rol**: todavía no existe. Cualquier usuario autenticado puede llamar cualquier endpoint — pendiente de que M1 publique su taxonomía de roles ([bloqueantes.md](../bloqueantes.md)).
+- **Autorización por rol**: todavía no existe. Cualquier usuario autenticado puede llamar cualquier endpoint — pendiente de que M1 publique su taxonomía de roles ([bloqueantes.md](../bloqueantes.md)). No aplica a los `@Public()` (`health` y los cuatro de `citizen-portal`): esos ni siquiera piden JWT, autenticado o no.
 - **Listados**: paginados con `?page` (default 1) y `?pageSize` (default 20, máx 100). Devuelven `{ data: [...], meta: { total, page, pageSize, totalPages } }`.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
 - **CORS**: los orígenes permitidos salen de `CORS_ORIGINS`. Sin esa variable se acepta cualquiera, que es lo que hace falta en desarrollo. El JWT viaja en un header y no en una cookie, así que esto no cierra un CSRF — es higiene, no un límite de seguridad.
-- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 22 tags están declarados en `main.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
+- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 23 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
 
 ---
@@ -220,6 +220,8 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 
 Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin `processedAt` y con el error, para poder reintentarla.
 
+**El inbox no guarda contenido de negocio ajeno.** Un evento sin handler, o un `ticketUpdated` cuyo `responsibleAreaId` no es M6 (§2 y §11 del contrato de M2), deja la fila con `messageId`, `eventType` y `processedAt` —lo justo para la idempotencia— y un `payload` reemplazado por un marcador `{ "redacted": ... }`. El `ticketUpdated` de M6 conserva el payload completo, incluso los `updateType` que se descartan a propósito.
+
 > Este endpoint existe **porque M9 nunca expuso un bus**: sin él no hay forma de ejercitar los consumidores. Cuando haya broker, el consumidor de Kafka llama al mismo `ingest()`.
 
 ## `repair-requests` — reparaciones derivadas a M3
@@ -231,8 +233,8 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 | POST | `/repair-requests` | Crear y publicar `infrastructureRepairRequested` → M3. Si el daño salió de un servicio nacido de un reclamo, el `ticketId` viaja en el evento |
 | GET | `/repair-requests` | Listar. Filtros: `status`, `damageType`, `severity`, `detectedInId` |
 | GET | `/repair-requests/:id` | Detalle, con la orden de trabajo de M3 si la informaron |
-| POST | `/repair-requests/:id/start` | → `IN_PROGRESS`. **Normalmente lo dispara `workOrderScheduled`** (Fase 6) |
-| POST | `/repair-requests/:id/close` | → `CLOSED`. **Normalmente lo dispara `workOrderCompleted`** |
+| POST | `/repair-requests/:id/start` | → `IN_PROGRESS`. **Normalmente lo dispara `workOrderScheduled`** (Fase 6). **409** si la transición no es válida desde el estado actual |
+| POST | `/repair-requests/:id/close` | → `CLOSED`. **Normalmente lo dispara `workOrderCompleted`**. **409** si la transición no es válida desde el estado actual |
 
 **Tres estados, no una máquina**: pedida, en curso, cerrada. Alcanza con eso, y por eso no consumimos `workOrderUpdated`.
 
@@ -245,9 +247,9 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 | POST | `/street-closure-requests` | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío |
 | GET | `/street-closure-requests` | Listar. Filtros: `status`, `sourceId` |
 | GET | `/street-closure-requests/:id` | Detalle con sus tramos |
-| POST | `/street-closure-requests/:id/approve` | → `APPROVED`, guarda el `closureId` de M7. **Normalmente lo dispara `streetClosureApproved`** |
-| POST | `/street-closure-requests/:id/reject` | → `REJECTED`. **Normalmente lo dispara `streetClosureRejected`** |
-| POST | `/street-closure-requests/:id/end` | → `ENDED`. **Normalmente lo dispara `streetClosureEnded`** |
+| POST | `/street-closure-requests/:id/approve` | → `APPROVED`, guarda el `closureId` de M7. **Normalmente lo dispara `streetClosureApproved`**. **409** si la transición no es válida desde el estado actual |
+| POST | `/street-closure-requests/:id/reject` | → `REJECTED`. **Normalmente lo dispara `streetClosureRejected`**. **409** si la transición no es válida desde el estado actual |
+| POST | `/street-closure-requests/:id/end` | → `ENDED`. **Normalmente lo dispara `streetClosureEnded`**. **409** si la transición no es válida desde el estado actual |
 
 `sourceRef` apunta al `Service` o a la `TreeIntervention` que origina el corte: es lo que hace que la respuesta de M7 se pueda aplicar sobre el trabajo correcto.
 
@@ -260,7 +262,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | Método | Ruta | Qué hace |
 |---|---|---|
 | POST | `/environmental-reports` | Abrir expediente. Nace en `RECEIVED` |
-| GET | `/environmental-reports` | Listar. Filtros: `status`, `reportType`, `priority`, `ticketId`, `search` |
+| GET | `/environmental-reports` | Listar. Filtros: `status`, `reportType`, `priority`, `ticketId`, `publicId` (TK-…, exacto), `search` |
 | GET | `/environmental-reports/:id` | Detalle, con su plazo de vencimiento si lo tiene |
 | POST | `/environmental-reports/:id/start-review` | `RECEIVED → UNDER_REVIEW` |
 | POST | `/environmental-reports/:id/forward` | `UNDER_REVIEW → FORWARDED`. Hacia M2 sale como **`RETURNED`**, no `REJECTED`: devolver lo que no es de nuestra área es distinto de desestimarlo |
@@ -290,7 +292,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key` |
+| POST | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key`. Un archivo mayor a `MAX_EVIDENCE_SIZE_BYTES` (10 MB) da **413**: multer lo corta antes de llegar al service |
 | GET | `/evidence` | Lista la evidencia de un `ownerType`/`ownerId`, por query params |
 
 **Genérico por diseño (Issue #64).** Un solo módulo sirve a los cuatro tipos de recurso en vez de reimplementar la subida por cada uno — el modelo `Attachment` ya era polimórfico en el schema, esto le agrega el endpoint que faltaba.
@@ -344,11 +346,11 @@ Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran p
 
 ## `citizen-portal` — vista pública
 
-**Los únicos endpoints del módulo que se sirven sin JWT.** El `@Public()` va endpoint por endpoint y no a nivel de clase: el guard global hace que todo endpoint nuevo nazca protegido, y abrir la clase entera haría que el próximo `GET` de acá salga público sin que nadie lo decida.
+**Los únicos endpoints de dominio que se sirven sin JWT, junto con `/health`.** El `@Public()` va endpoint por endpoint y no a nivel de clase: el guard global hace que todo endpoint nuevo nazca protegido, y abrir la clase entera haría que el próximo `GET` de acá salga público sin que nadie lo decida.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| GET | `/public/reports/:ticketId` | **Público.** Seguimiento de la denuncia por el número de reclamo de M2, que es lo único que el vecino tiene en la mano. 404 exista o no el ticket |
+| GET | `/public/reports/:ticketId` | **Público.** Seguimiento de la denuncia por el `ticketId` (UUID) del reclamo de M2; devuelve también `publicId` para mostrarlo. **No acepta el `publicId` (TK-…)**: es correlativo y el contrato de M2 prohíbe usarlo como credencial (#145). 404 exista o no el ticket |
 | GET | `/public/services` | **Público.** Cuándo pasa el servicio. Filtros: `zoneId`, `serviceTypeId`, `from`, `to`. Sin fechas, los próximos 30 días |
 | GET | `/public/green-points` | **Público.** Puntos verdes activos con su ubicación y qué residuos recibe cada uno. Filtro: `zoneId` |
 | GET | `/public/zones` | **Público.** Zonas activas, para que el frontend arme el filtro de los otros dos. Sin paginar |
@@ -366,8 +368,6 @@ No hay límite global: también alcanzaría a un operador municipal en su turno,
 
 ## Lo que todavía no existe
 
-Por fase del plan de implementación:
-
-| Fase | Qué falta |
+| Qué falta | Detalle |
 |---|---|
-| 3.5 | Adjuntos y evidencia — hoy `evidence` viaja vacío en el acta. El equipo definió **Cloudflare R2** y lo toma otra persona: el backend guarda en `Attachment` la URL pública que devuelve el bucket, más el nombre del archivo |
+| Autorización por rol | Cualquier usuario autenticado puede llamar cualquier endpoint (salvo los `@Public()` — `health` y los cuatro de `citizen-portal` —, que ni siquiera piden JWT). Diferida hasta que M1 publique su taxonomía de roles — ver [bloqueantes.md](../bloqueantes.md) |

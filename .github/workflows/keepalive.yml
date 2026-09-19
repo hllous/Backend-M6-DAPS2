@@ -5,11 +5,18 @@
 # mientras duerme NO corren los dos procesos de fondo:
 #
 #   @Interval(10s)    despacha el outbox      → se recupera solo al despertar
-#   @Cron(EVERY_HOUR) cierra vencimientos     → SE PIERDE EL BARRIDO
+#   @Cron(EVERY_HOUR) cierra vencimientos     → se atrasa hasta despertar
 #
 # El segundo es el que importa: ReportDeadlineSweeper es el único camino por
 # el que un expediente pasa de NOTICE_ISSUED a CLOSED cuando M4 nunca
 # contesta. No hay endpoint para eso, es a propósito.
+#
+# OJO, lo que este workflow NO logra (#150): pedimos el cron cada 10 minutos,
+# pero GitHub descarta la mayoría de las ejecuciones programadas y termina
+# corriendo cada 2-3 horas. El servicio duerme igual. Por eso el barrido
+# también corre al arrancar (ReportDeadlineSweeper.onModuleInit) y es
+# idempotente: despertar alcanza para ponerse al día. Este ping ayuda a que
+# el servicio esté tibio para una demo, pero nada depende de él.
 #
 # Se hace desde acá y no desde UptimeRobot o cron-job.org porque así queda
 # versionado y a la vista: un alta manual en un servicio de terceros es algo
@@ -54,9 +61,12 @@ jobs:
             exit 0
           fi
 
-          # --max-time 90: el primer request tras dormirse tarda 30-60 s,
-          # que es justamente el caso que este workflow existe para cubrir.
-          codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 --retry 2 --retry-delay 15 "$HEALTH_URL")
+          # --max-time 180: el primer request tras dormirse tarda 30-60 s, pero
+          # el contenedor corre `prisma migrate deploy` antes de escuchar y la
+          # base free también despierta, así que pasar de 90 s es normal. Con
+          # 90 s este job falló dos veces por timeout sin que el servicio
+          # tuviera nada roto (#150).
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 180 --retry 2 --retry-delay 15 "$HEALTH_URL")
 
           echo "GET $HEALTH_URL → $codigo"
           if [ "$codigo" != "200" ]; then

@@ -30,3 +30,7 @@ streetClosureEnded
 ## El typo, ya resuelto
 
 **En la lista anterior de M7 figuraba como `streetClousureEnded`**, con una `u` de más. El documento de referencia (25/08) ya lo escribe bien: **`streetClosureEnded`**, coincidiendo con lo que usamos nosotros y M3.
+
+## Evento tardío o repetido
+
+Se acepta desde `APPROVED` y también desde `REQUESTED`: los eventos viajan por topics distintos sin orden garantizado, así que `streetClosureEnded` puede adelantarse a `streetClosureApproved`. En ese caso se guarda el `streetClosureId` como `closureId` si no lo teníamos, y el `streetClosureApproved` que llegue después se descarta (`ENDED` es terminal). Desde `REJECTED` o `ENDED` se descarta con un `warn`, sin error: el inbox responde `processed`.

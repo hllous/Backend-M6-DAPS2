@@ -82,7 +82,7 @@ Todo cambio entra por PR. La rama de integración es `develop`: ahí apuntan los
 ### Checklist mínima antes de mergear
 
 - [ ] El código compila y los tests pasan localmente
-- [ ] Cobertura de tests ≥ 85% en los archivos tocados
+- [ ] Cobertura de tests ≥ 85% en los archivos tocados (la verifica el CI con `npm run test:cov`; umbrales en `jest.coverageThreshold`)
 - [ ] Si es un endpoint: cumple el [estándar Swagger](docs/api/estandar-swagger.md)
 - [ ] Si es un evento nuevo o cambia un payload: `docs/eventos/` actualizada y schema JSON actualizado
 - [ ] Si es una decisión técnica: hay un ADR en [`docs/decisiones/`](docs/decisiones/)

@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent, TicketUpdateType } from '../inbox/consumed-events';
 import { REPORT_TRANSITIONS } from '../../modules/environmental-reports/environmental-reports.service';
+import { PRODUCER } from '../envelope';
 
 /** El nombre visible del Request Type de M2, mapeado a nuestro catálogo. */
 const TIPO_POR_PALABRA: [RegExp, EnvironmentalReportType][] = [
@@ -51,7 +52,16 @@ export class TicketsConsumer implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.inbox.register(ConsumedEvent.TICKET_UPDATED, (d) => this.handle(d));
+    // §2 y §11 del contrato de M2: el ticket de otro módulo se ignora y no se
+    // persiste su contenido, tampoco en el inbox. La regla es la misma que filtra
+    // en handle().
+    this.inbox.register(ConsumedEvent.TICKET_UPDATED, (d) => this.handle(d), {
+      persistPayload: (d) => this.esNuestro(d),
+    });
+  }
+
+  private esNuestro(data: Record<string, unknown>): boolean {
+    return data.responsibleAreaId === PRODUCER.moduleId;
   }
 
   private async handle(data: Record<string, unknown>): Promise<void> {
@@ -60,6 +70,19 @@ export class TicketsConsumer implements OnModuleInit {
 
     if (!ticketId) {
       this.logger.warn('ticketUpdated sin ticketId: no se puede correlacionar, se descarta');
+      return;
+    }
+
+    // ticketUpdated es un broadcast logico (§2): llega a todos los modulos y
+    // responsibleAreaId es quien de negocio le toca actuar, no un target
+    // tecnico. El propio contrato lo dice explicito — "la correccion del
+    // sistema no depende de ese filtrado" — asi que el filtro es nuestro, no
+    // de la infraestructura. Sin esto, un reclamo derivado a cualquier otro
+    // modulo abriria igual un expediente de este lado.
+    if (!this.esNuestro(data)) {
+      this.logger.log(
+        `ticketUpdated/${updateType}: responsibleAreaId=${String(data.responsibleAreaId ?? '(ausente)').slice(0, 32)} no es nuestro, se descarta`,
+      );
       return;
     }
 
@@ -109,6 +132,9 @@ export class TicketsConsumer implements OnModuleInit {
     const report = await this.prisma.environmentalReport.create({
       data: {
         ticketId,
+        // Campo común desde la v1.70 (§7.1). Solo para mostrar y buscar: la
+        // correlación sigue siendo por ticketId.
+        publicId: typeof data.publicId === 'string' ? data.publicId : null,
         reportType: this.tipoDeDenuncia(nombre),
         address: this.direccion(location),
         // La v1.6 sacó latitude/longitude de `location` (§5.4): quedan en null
@@ -116,6 +142,9 @@ export class TicketsConsumer implements OnModuleInit {
         lat: location.latitude != null ? Number(location.latitude) : null,
         lng: location.longitude != null ? Number(location.longitude) : null,
         priority: this.prioridad(data.currentPriority),
+        // El snapshot trae el escalamiento vigente (§7.4). Si M2 lo escaló antes
+        // de derivar, no va a llegar un ESCALATION_CHANGED que lo marque.
+        escalated: this.escalado(routing.escalation) ?? false,
         // Solo lo que el vecino aceptó exponer: si es anónimo no guardamos
         // identidad.
         reporterSnapshot: data.isAnonymous
@@ -198,10 +227,30 @@ export class TicketsConsumer implements OnModuleInit {
     ticketId: string,
     data: Record<string, unknown>,
   ): Promise<void> {
-    const respuesta =
-      (data.publicMessage as string) ??
-      ((data.details as Record<string, unknown>)?.informationResponse as string);
-    if (!respuesta) return;
+    // Lo que contestó el vecino está en `details.informationResponse.message`
+    // (§7.6). `publicMessage` es la glosa de M2 ("El ciudadano aportó la
+    // información solicitada."), no la respuesta: no se usa de respaldo.
+    const details = (data.details ?? {}) as Record<string, unknown>;
+    const message = (details.informationResponse as Record<string, unknown> | undefined)?.message;
+    // ponytail: los adjuntos quedan como texto porque el expediente no tiene
+    // dónde guardarlos, y la url puede ser temporal (§5.3). Campo propio si hay
+    // que conservar el archivo.
+    const adjuntos = Array.isArray(data.attachments)
+      ? (data.attachments as Record<string, unknown>[])
+          .filter((a) => a?.url)
+          .map((a) => `${a.fileName ?? 'adjunto'}: ${a.url}`)
+      : [];
+    const respuesta = [typeof message === 'string' ? message.trim() : '', ...adjuntos]
+      .filter(Boolean)
+      .join('\n');
+
+    // §7.6 garantiza al menos uno de los dos: sin ninguno, el evento es inválido.
+    if (!respuesta) {
+      this.logger.warn(
+        `ticketUpdated/INFORMATION_PROVIDED sin message ni attachments para ${ticketId}: se descarta`,
+      );
+      return;
+    }
 
     const { count } = await this.prisma.environmentalReport.updateMany({
       where: { ticketId },
@@ -248,9 +297,18 @@ export class TicketsConsumer implements OnModuleInit {
    * trámite. Decisión del 04/09/2026, ver bloqueantes.md.
    */
   private async escalationChanged(ticketId: string, data: Record<string, unknown>): Promise<void> {
-    const escalated = Boolean(
-      (data.escalation as Record<string, unknown>)?.escalated ?? data.escalated ?? true,
-    );
+    // §7.7: el objeto completo viaja en `details.escalation`, y §5.6 lo llama
+    // `active`. Sin un booleano no se toca el flag: adivinar `true` era lo que
+    // dejaba el escalado encendido para siempre.
+    const details = (data.details ?? {}) as Record<string, unknown>;
+    const escalated = this.escalado(details.escalation);
+    if (escalated === null) {
+      this.logger.warn(
+        `ticketUpdated/ESCALATION_CHANGED sin details.escalation.active para ${ticketId}: se descarta`,
+      );
+      return;
+    }
+
     const { count } = await this.prisma.environmentalReport.updateMany({
       where: { ticketId },
       data: { escalated },
@@ -326,6 +384,12 @@ export class TicketsConsumer implements OnModuleInit {
       if (patron.test(texto)) return tipo;
     }
     return EnvironmentalReportType.OTHER;
+  }
+
+  /** `escalation.active` (§5.6), o null si no viene un booleano. */
+  private escalado(escalation: unknown): boolean | null {
+    const active = (escalation as Record<string, unknown> | null | undefined)?.active;
+    return typeof active === 'boolean' ? active : null;
   }
 
   private prioridad(value: unknown): Severity | null {

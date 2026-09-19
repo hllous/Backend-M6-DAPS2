@@ -81,6 +81,7 @@ export class CitizenPortalService {
       orderBy: { createdAt: 'desc' },
       select: {
         ticketId: true,
+        publicId: true,
         reportType: true,
         status: true,
         address: true,
@@ -104,6 +105,7 @@ export class CitizenPortalService {
     const stage = ETAPA[report.status];
     return {
       ticketId: report.ticketId as string,
+      publicId: report.publicId,
       reportType: report.reportType,
       stage,
       stageLabel: ETAPA_TEXTO[stage],

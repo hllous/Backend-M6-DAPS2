@@ -7486,7 +7486,7 @@
       "post": {
         "operationId": "ServicesController_addDelayNotice",
         "summary": "Avisar que el servicio se demora",
-        "description": "**No cambia el estado del servicio.** `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o `IN_PROGRESS` mientras se demora. El tipo tiene que coincidir con el momento — `START` antes de arrancar, `DURATION` con la cuadrilla trabajando. Un aviso nuevo reemplaza al vigente; el anterior queda en el historial y no se borra. Si el servicio nació de un reclamo, sale hacia M2 como `updateTicketStatus / PROGRESS`: el motivo viaja como mensaje interno, no se le muestra al vecino.",
+        "description": "**No cambia el estado del servicio.** `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o `IN_PROGRESS` mientras se demora. El tipo tiene que coincidir con el momento — `START` antes de arrancar, `DURATION` con la cuadrilla trabajando. Un aviso nuevo reemplaza al vigente; el anterior queda en el historial y no se borra. Si el servicio nació de un reclamo y ya arrancó (`IN_PROGRESS`), sale hacia M2 como `updateTicketStatus / PROGRESS`: el motivo viaja como mensaje interno, no se le muestra al vecino. Una demora en `SCHEDULED` no se proyecta, porque M2 solo acepta `PROGRESS` con el ticket en gestión.",
         "parameters": [
           {
             "name": "id",
@@ -8907,9 +8907,19 @@
             "name": "ticketId",
             "required": false,
             "in": "query",
-            "description": "Filtrar por el reclamo de M2 que lo originó",
+            "description": "Filtrar por el reclamo de M2 que lo originó (UUID)",
             "schema": {
-              "example": "TCK-2026-004821",
+              "example": "550e8400-e29b-41d4-a716-446655440000",
+              "type": "string"
+            }
+          },
+          {
+            "name": "publicId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por la referencia humana del reclamo de M2 (coincidencia exacta)",
+            "schema": {
+              "example": "TK-2026-000123",
               "type": "string"
             }
           },
@@ -10290,6 +10300,16 @@
               }
             }
           },
+          "409": {
+            "description": "Transición de estado inválida desde el estado actual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10361,6 +10381,16 @@
           },
           "404": {
             "description": "Solicitud no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Transición de estado inválida desde el estado actual",
             "content": {
               "application/json": {
                 "schema": {
@@ -10693,6 +10723,16 @@
               }
             }
           },
+          "409": {
+            "description": "Transición de estado inválida desde el estado actual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10792,6 +10832,16 @@
               }
             }
           },
+          "409": {
+            "description": "Transición de estado inválida desde el estado actual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10871,6 +10921,16 @@
               }
             }
           },
+          "409": {
+            "description": "Transición de estado inválida desde el estado actual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10896,15 +10956,15 @@
       "get": {
         "operationId": "CitizenPortalController_findReport",
         "summary": "Seguir una denuncia ambiental por número de reclamo",
-        "description": "Estado del trámite para el vecino, buscado por el número de reclamo de Atención Ciudadana (M2), que es el único identificador que él tiene. Devuelve la etapa del trámite, no el estado interno del expediente, y nunca la identidad del inspector, los hallazgos, el checklist ni el contenido del acta.",
+        "description": "Estado del trámite para el vecino, buscado por el `ticketId` (UUID) del reclamo de Atención Ciudadana (M2). Devuelve la etapa del trámite, no el estado interno del expediente, y nunca la identidad del inspector, los hallazgos, el checklist ni el contenido del acta. No acepta el `publicId` (TK-…): es correlativo y el contrato de M2 prohíbe usarlo como credencial, así que buscar por él en un endpoint público permitiría recorrer denuncias ajenas.",
         "parameters": [
           {
             "name": "ticketId",
             "required": true,
             "in": "path",
-            "description": "Número de reclamo de M2",
+            "description": "ticketId (UUID) del reclamo de M2",
             "schema": {
-              "example": "TCK-2026-004512",
+              "example": "550e8400-e29b-41d4-a716-446655440000",
               "type": "string"
             }
           }
@@ -11242,7 +11302,7 @@
             }
           },
           "400": {
-            "description": "Archivo faltante, tipo no permitido, tamaño excedido o falta Idempotency-Key",
+            "description": "Archivo faltante, tipo no permitido, más de un archivo en la llamada o falta Idempotency-Key",
             "content": {
               "application/json": {
                 "schema": {
@@ -11263,6 +11323,16 @@
           },
           "404": {
             "description": "El recurso referenciado por ownerType/ownerId no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El archivo supera los 10 MB (lo corta multer antes de terminar de recibirlo)",
             "content": {
               "application/json": {
                 "schema": {
@@ -11821,7 +11891,7 @@
           "specVersion": {
             "type": "string",
             "description": "Versión del sobre",
-            "example": "1.5"
+            "example": "1.0"
           },
           "eventVersion": {
             "type": "string",
@@ -11834,9 +11904,34 @@
             "format": "date-time"
           },
           "producer": {
-            "type": "string",
-            "description": "Módulo que lo publica",
-            "example": "M7"
+            "description": "Quién lo publica. Objeto `{ moduleId, service }` (sobre v1.6/v1.70) o string suelto (v1.5)",
+            "oneOf": [
+              {
+                "type": "string",
+                "example": "M7"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "moduleId",
+                  "service"
+                ],
+                "properties": {
+                  "moduleId": {
+                    "type": "string",
+                    "example": "M2"
+                  },
+                  "service": {
+                    "type": "string",
+                    "example": "tickets-service"
+                  }
+                }
+              }
+            ],
+            "example": {
+              "moduleId": "M2",
+              "service": "tickets-service"
+            }
           },
           "subject": {
             "type": "string",
@@ -15169,6 +15264,12 @@
             "description": "Reclamo de M2 que lo originó. Null si es una detección de oficio.",
             "nullable": true
           },
+          "publicId": {
+            "type": "object",
+            "description": "Referencia humana del reclamo de M2, la que conoce el vecino. Solo para mostrar y buscar: no es credencial. Null en detecciones de oficio y en expedientes anteriores a la v1.70.",
+            "example": "TK-2026-000123",
+            "nullable": true
+          },
           "priority": {
             "type": "string",
             "description": "Prioridad",
@@ -15962,8 +16063,14 @@
         "properties": {
           "ticketId": {
             "type": "string",
-            "description": "Número de reclamo de M2",
-            "example": "TCK-2026-004512"
+            "description": "Reclamo de M2 (UUID)",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "publicId": {
+            "type": "object",
+            "description": "Referencia humana del reclamo de M2, para mostrar. Null si M2 no la envió",
+            "example": "TK-2026-000123",
+            "nullable": true
           },
           "reportType": {
             "type": "string",
