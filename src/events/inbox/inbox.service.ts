@@ -12,6 +12,20 @@ import { InboundEnvelope } from '../envelope';
  */
 export type InboxHandler = (data: Record<string, unknown>) => Promise<void>;
 
+export interface InboxHandlerOptions {
+  /**
+   * Decide si el `data` se guarda en `inbox_event.payload`. Sin esta opción se
+   * guarda siempre. Si devuelve false queda solo un marcador: la fila sigue
+   * dando la idempotencia (`messageId`, `eventType`, `processedAt`) pero sin
+   * contenido de negocio. La regla la aporta el módulo dueño del evento para
+   * que el inbox no conozca contratos ajenos.
+   */
+  persistPayload?: (data: Record<string, unknown>) => boolean;
+}
+
+/** Lo que queda en la columna (NO nula) cuando no corresponde guardar el payload. */
+export const REDACTED_PAYLOAD = Object.freeze({ redacted: 'contenido no persistido' });
+
 export interface IngestResult {
   status: 'processed' | 'duplicate' | 'ignored' | 'failed';
   detail?: string;
@@ -31,15 +45,17 @@ export interface IngestResult {
 export class InboxService {
   private readonly logger = new Logger(InboxService.name);
   private readonly handlers = new Map<string, InboxHandler>();
+  private readonly options = new Map<string, InboxHandlerOptions>();
 
   constructor(private readonly prisma: PrismaService) {}
 
   /** Cada módulo registra los suyos en su `onModuleInit`. */
-  register(eventType: string, handler: InboxHandler): void {
+  register(eventType: string, handler: InboxHandler, options?: InboxHandlerOptions): void {
     if (this.handlers.has(eventType)) {
       throw new Error(`Ya hay un handler registrado para '${eventType}'`);
     }
     this.handlers.set(eventType, handler);
+    if (options) this.options.set(eventType, options);
   }
 
   registeredTypes(): string[] {
@@ -48,6 +64,13 @@ export class InboxService {
 
   async ingest(envelope: InboundEnvelope): Promise<IngestResult> {
     const messageId = envelope.eventId;
+    const data = (envelope.data ?? {}) as Record<string, unknown>;
+
+    // Sin handler o con una regla que dice que no es nuestro, el contenido de
+    // negocio (ticketUpdated de otros módulos: ubicación, citizenId, etc.) no se
+    // persiste. Un ticketUpdated nuestro con updateType descartado a propósito sí
+    // se guarda: la regla mira el dueño, no la acción.
+    const persist = this.debePersistir(envelope.eventType, data);
 
     // El unique de messageId es lo que decide si es duplicado: dejamos que
     // falle el insert en vez de consultar antes, porque entre la consulta y el
@@ -57,7 +80,7 @@ export class InboxService {
         data: {
           messageId,
           eventType: envelope.eventType,
-          payload: envelope.data as Prisma.InputJsonObject,
+          payload: (persist ? envelope.data : REDACTED_PAYLOAD) as Prisma.InputJsonObject,
         },
       });
     } catch (error) {
@@ -73,7 +96,8 @@ export class InboxService {
     const handler = this.handlers.get(envelope.eventType);
     if (!handler) {
       // No es un error: hay eventos de la cohorte que nos llegan y no nos
-      // tocan. Queda la fila para poder ver qué llegó.
+      // tocan. Queda la fila con eventType, messageId y el error 'sin handler
+      // registrado', pero no el contenido.
       await this.markProcessed(messageId, 'sin handler registrado');
       this.logger.warn(
         `${envelope.eventType} (${messageId}) no tiene handler: se registra y se descarta`,
@@ -82,7 +106,7 @@ export class InboxService {
     }
 
     try {
-      await handler((envelope.data ?? {}) as Record<string, unknown>);
+      await handler(data);
       await this.markProcessed(messageId);
       this.logger.log(`${envelope.eventType} (${messageId}) procesado`);
       return { status: 'processed' };
@@ -94,6 +118,22 @@ export class InboxService {
       });
       this.logger.error(`${envelope.eventType} (${messageId}) falló: ${message}`);
       return { status: 'failed', detail: message };
+    }
+  }
+
+  private debePersistir(eventType: string, data: Record<string, unknown>): boolean {
+    if (!this.handlers.has(eventType)) return false;
+    try {
+      // El default es guardar (fail-open para un futuro consumer que olvide la
+      // opción): todo consumer que maneje contenido de terceros debe declarar
+      // `persistPayload`.
+      return this.options.get(eventType)?.persistPayload?.(data) ?? true;
+    } catch (error) {
+      // Una regla defectuosa no debe romper el ingest ni perder el mensaje: ante
+      // la duda se redacta. No se interpola `data`, que es contenido de terceros.
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`${eventType}: persistPayload falló (${message}), se redacta el payload`);
+      return false;
     }
   }
 

@@ -450,6 +450,44 @@ describe('consumidores de eventos', () => {
       prisma.environmentalReport.findFirst.mockResolvedValue(null);
     });
 
+    describe('qué payload guarda el inbox', () => {
+      const ingerir = async (data: Record<string, unknown>) => {
+        prisma.inboxEvent = {
+          create: jest.fn().mockResolvedValue({}),
+          update: jest.fn().mockResolvedValue({}),
+        };
+        await inbox.ingest({
+          specVersion: '1.0',
+          eventId: '646d19f5-5670-4a7b-9442-30e13b02ba11',
+          eventType: 'ticketUpdated',
+          occurredAt: '2026-09-02T10:00:00.000Z',
+          producer: 'M2',
+          subject: 'TCK-1',
+          data,
+        } as unknown as Parameters<InboxService['ingest']>[0]);
+        return prisma.inboxEvent.create.mock.calls[0][0].data.payload;
+      };
+
+      it.each([
+        ['M3', { responsibleAreaId: 'M3' }],
+        ['ausente', {}],
+        ['null', { responsibleAreaId: null }],
+        ['número', { responsibleAreaId: 6 }],
+        ["'m6'", { responsibleAreaId: 'm6' }],
+        ["'M6 '", { responsibleAreaId: 'M6 ' }],
+      ])('redacta el ticket con responsibleAreaId %s', async (_n, extra) => {
+        const payload = await ingerir({ ticketId: 'TCK-1', updateType: 'ROUTED', ...extra });
+
+        expect(payload).toEqual({ redacted: expect.any(String) });
+      });
+
+      it('conserva el payload completo de M6, incluso con un updateType descartado', async () => {
+        const data = { ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'CLOSED' };
+
+        expect(await ingerir(data)).toEqual(data);
+      });
+    });
+
     /**
      * La forma de la v1.6: `requestType`, `summary` y `location` viven dentro
      * de `details.routing` (§7.4) y `requestType` es un string plano (§5.5).
