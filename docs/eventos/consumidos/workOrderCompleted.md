@@ -27,3 +27,7 @@ Si el daño estaba en un [`Container`](../../entidades/container.md), es tambié
 El nombre coincide exacto de los dos lados: no hubo que renombrar nada.
 
 ⚠️ **Nombre de campo a confirmar: `evidence` vs. `attachments[]`.** Nuestro diseño tentativo esperaba `attachments[]`; lo que confirmaron es `evidence`. Probablemente el mismo dato con otro nombre — conviene que lo confirmen antes de fijar el parser.
+
+## Evento tardío o repetido
+
+Se acepta desde `REQUESTED` (cierre directo: M3 todavía no confirmó cuándo dispara `workOrderScheduled`, ver [bloqueantes.md](../../bloqueantes.md)) y desde `IN_PROGRESS`. Sobre una solicitud ya `CLOSED` se descarta con un `warn`, sin error: el inbox lo responde `processed`.

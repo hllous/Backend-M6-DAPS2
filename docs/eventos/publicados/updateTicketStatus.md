@@ -1,6 +1,6 @@
 # `updateTicketStatus` → M2
 
-El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — v1.6, reemplaza la v1.5 — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
+El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — v1.73 (WIP), que reemplaza a la v1.72 WIP y no cambia este evento respecto de la v1.6; la v1.71 y la v1.72 nunca se cruzaron — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
 
 Schema: [`updateTicketStatus.schema.json`](updateTicketStatus.schema.json).
 
@@ -10,7 +10,7 @@ Cuando cambia el estado de un [`Service`](../../entidades/service.md) o de una i
 
 > **La regla:** proyectamos si y solo si el `Service` o el [`EnvironmentalReport`](../../entidades/environmental-report.md) tiene `ticketId`. Sin esta regla, M2 recibe eventos de tickets que no existen.
 
-## Payload (v1.6)
+## Payload (v1.73, sin cambios desde la v1.6)
 
 ```
 ticketId, updateType,
@@ -44,15 +44,15 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 
 **No lleva `sourceRef`.** Su contrato prohíbe transportar IDs de entidades internas de otros módulos, así que la correlación `ticketId ↔ serviceId ↔ inspectionId` queda en una tabla nuestra.
 
-**No guardamos `publicId` ni `ticketVersion`.** No hacen falta desde la v1.5: solo correlacionamos por `ticketId`.
+**No mandamos `publicId`.** La v1.70 lo volvió a publicar en `ticketCreated`/`ticketUpdated` como referencia humana, pero §8.1 aclara que `updateTicketStatus` *"no necesita incluir publicId: ticketId UUID sigue siendo la referencia técnica suficiente"*, y el schema tiene `additionalProperties: false`. Lo guardamos en el expediente solo para mostrarlo y buscarlo (#145); la correlación sigue siendo por `ticketId`. `ticketVersion` no existe desde la v1.5.
 
 `updateType` no usa nuestro enum `TicketStatusUpdate`, que [ADR-003](../../decisiones/adr-003-divergencias-enums.md) eliminó del catálogo: el vocabulario lo define M2 y lo adoptamos tal cual.
 
 ### 🔴 Bloqueante: `progress` no sirve para la fecha agendada
 
-**Tercera versión seguida sin resolverse.** El campo común `progress` es un `Int` (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.6 mantiene "details obligatorio: Ninguno". Necesitamos saber cómo mandar la fecha/franja agendada del servicio: ¿va como texto en `publicMessage`, o van a definir una estructura tipo `details.schedule`? Ver [bloqueantes.md](../../bloqueantes.md#tablero).
+**Quinta versión seguida sin resolverse.** El campo común `progress` es un `Int` 0..100 (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.73 mantiene "details obligatorio: Ninguno". Necesitamos saber cómo mandar la fecha/franja agendada del servicio: ¿va como texto en `publicMessage`, o van a definir una estructura tipo `details.schedule`? Ver [bloqueantes.md](../../bloqueantes.md#tablero).
 
-⚠️ **Validación nueva en `PROGRESS`.** La v1.6 (§8.2) exige que aporte al menos uno de `progress`, `publicMessage`, `internalMessage` o `attachments`. Un `PROGRESS` vacío ahora es inválido: afecta sobre todo al fan-out de `zoneNotServiced`, que emite uno por cada reclamo abierto de la zona.
+⚠️ **Validación nueva en `PROGRESS`.** La v1.6 (§8.2) exige que aporte al menos uno de `progress`, `publicMessage`, `internalMessage` o `attachments`. Un `PROGRESS` vacío ahora es inválido: afectaría sobre todo al fan-out de `zoneNotServiced` si se implementa (hoy no lo está, ver más abajo).
 
 ### `STARTED` antes de `RESOLVED` dejó de ser necesario
 
@@ -72,25 +72,29 @@ Esta es la tabla con la que se implementa. **La columna izquierda son hechos int
 
 | Hecho nuestro | `updateType` | Qué mandamos |
 |---|---|---|
-| `urbanServiceScheduled` | `PROGRESS` | fecha y franja agendadas — **sin campo definido, ver bloqueante arriba** |
+| `urbanServiceScheduled` | *(ninguno)* | **No se emite hoy.** Agendar un servicio solo dispara `urbanServiceScheduled` hacia M7; la fecha/franja agendada no tiene campo definido en el contrato de M2 — ver el bloqueante arriba |
 | `urbanServiceStarted` | `STARTED` | vacío |
-| `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage` |
-| `urbanServiceCompleted` | `RESOLVED` | `details.resolution.type` + `publicMessage`, y la foto del trabajo en `attachments[]` |
+| `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage`. **Solo con el servicio `IN_PROGRESS`**: antes de arrancar el ticket sigue `ROUTED` y §8.2 rechaza `PROGRESS`, así que un aviso de demora antes de arrancar (`delayType: START`) queda registrado pero no se proyecta (#146) |
+| `urbanServiceCompleted` | `RESOLVED` | `details.resolution.type` + `publicMessage`. **`attachments[]` no se manda**: el payload no lleva evidencia hoy, pendiente de decidir qué adjuntos ve el vecino — ver [bloqueantes.md](../../bloqueantes.md) |
 | `environmentalInspectionScheduled` | `STARTED` | vacío |
 | `environmentalInspectionCompleted`, sin irregularidad | `RESOLVED` | `details.resolution.type` + `publicMessage`: "no se encontraron irregularidades" |
 | `environmentalInspectionCompleted`, con acta | `PROGRESS` | El caso sigue en M4. **Nunca el contenido del acta** |
 | Se desestima el reporte | `REJECTED` | `details.cancellation.reasonCode` + `publicMessage`/`internalMessage` |
 | El reclamo no es de nuestra área | `RETURNED` | `details.returnInfo.reasonCode` + `publicMessage`/`internalMessage`. Vuelve a M2 para que lo re-derive, en vez de cancelárselo al vecino |
-| El inspector necesita un dato del vecino | `INFORMATION_REQUIRED` | `details.informationRequest.messageForCitizen` (+ `requiredBy` opcional) |
+| El inspector necesita un dato del vecino | `INFORMATION_REQUIRED` | **Diseñado, sin implementar.** No hay call site que lo dispare hoy: `details.informationRequest.messageForCitizen` (+ `requiredBy` opcional) es el payload previsto, no uno que salga |
+
+🔴 **Pendiente conocido: el cierre por sanción de M4 no emite `RESOLVED`.** Cuando `closureUpdate` o `commercialFineGenerated` cierran el expediente (ver [`closureUpdate`](../consumidos/closureUpdate.md)), el consumidor pasa el `EnvironmentalReport` a `SANCTIONED` y después a `CLOSED` sin publicar nada hacia M2: el vecino no se entera de ese cierre por acá.
 
 Los otros dos hechos no tienen traducción directa:
 
-- **`zoneNotServiced` no es un reclamo, es una zona.** Cuando un recorrido deja una zona sin atender no hay un `ticketId`, hay *n*. Lo que sale es **un `updateTicketStatus` con `PROGRESS` por cada reclamo abierto de esa zona**: el abanico lo abrimos nosotros, a partir de un hecho que del lado de M2 no tiene forma de representarse entero.
+- **`zoneNotServiced` no es un reclamo, es una zona.** Cuando un recorrido deja una zona sin atender no hay un `ticketId`, hay *n*. El diseño es **un `updateTicketStatus` con `PROGRESS` por cada reclamo abierto de esa zona**, pero **hoy no está implementado**: `POST /services/:id/zone-results` no publica nada hacia M2. El abanico lo abriríamos nosotros, a partir de un hecho que del lado de M2 no tiene forma de representarse entero.
 - **`containerOverflowed` depende del origen.** Si el desborde lo reportó un vecino hay `ticketId` y sale el evento. Si lo detectamos en la recorrida, no hay reclamo al que contestarle y no sale nada.
 
 ## La respuesta vuelve por `ticketUpdated`
 
-`INFORMATION_REQUIRED` se correlaciona sin ID: desde la v1.5 no hay `informationRequestId`, sino una invariante de "como máximo una `InformationRequest` activa por ticket a la vez", así que la respuesta del vecino siempre corresponde a la nuestra. La v1.6 (§9) agrega qué pasa si mandamos un segundo pedido con uno activo: **M2 no abre una interacción paralela**, lo rechaza o registra conflicto. Llega como [`ticketUpdated / INFORMATION_PROVIDED`](../consumidos/ticketUpdated.md).
+`INFORMATION_REQUIRED` se correlaciona sin ID: desde la v1.5 no hay `informationRequestId`, sino una invariante de "como máximo una `InformationRequest` activa por ticket a la vez", así que la respuesta del vecino siempre corresponde a la nuestra. Llega como [`ticketUpdated / INFORMATION_PROVIDED`](../consumidos/ticketUpdated.md).
+
+**§9 de la v1.73: un Ticket tiene como máximo UNA solicitud de información activa.** Un segundo `INFORMATION_REQUIRED` mientras hay una pendiente **no abre una interacción paralela**: M2 lo rechaza o registra conflicto. El flujo: publicamos `INFORMATION_REQUIRED`; M2 pasa el ticket a `PENDING_INFORMATION` y pausa el SLA; el vecino responde; M2 restaura el estado anterior y publica `ticketUpdated / INFORMATION_PROVIDED`. En el ejemplo de M2 el sobre lleva `producer: { moduleId: "M6", service: "urban-services-api" }`, igual que el nuestro. **Hoy no emitimos `INFORMATION_REQUIRED`** (no hay call site; la propuesta abierta es el issue #169), así que el riesgo de mandar un segundo pedido con uno activo no existe todavía, pero hay que resolverlo al implementarlo.
 
 ## Un hecho, dos eventos, un solo efecto
 

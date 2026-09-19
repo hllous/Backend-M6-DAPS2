@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uade.m6.grupo04/eventos/updateTicketStatus.schema.json",
   "title": "updateTicketStatus",
-  "description": "M6 → M2. Payload definido por el contrato v1.6 de M2 (reemplaza la v1.5) y adoptado sin cambios. Se publica solo cuando el Service o el EnvironmentalReport tiene ticketId. No lleva status ni sourceRef: M2 decide la transición (§8.1). El sobre que lo transporta debe llevar subject 'tickets/{ticketId}' (§4).",
+  "description": "M6 → M2. Payload definido por el contrato v1.73 de M2 (WIP, reemplaza a la v1.72; este evento no cambió desde la v1.6) y adoptado sin cambios. No lleva publicId: §8.1 dice que ticketId UUID es referencia suficiente, y additionalProperties es false. Se publica solo cuando el Service o el EnvironmentalReport tiene ticketId. No lleva status ni sourceRef: M2 decide la transición (§8.1). El sobre que lo transporta debe llevar subject 'tickets/{ticketId}' (§4).",
   "type": "object",
   "properties": {
     "ticketId": { "type": "string", "description": "De M2. Único campo de correlación." },

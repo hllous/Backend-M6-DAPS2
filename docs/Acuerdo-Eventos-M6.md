@@ -75,7 +75,7 @@ updateType: STARTED | PROGRESS | INFORMATION_REQUIRED |
 updatedBy:  { type: EXTERNAL_USER, id } | { type: SYSTEM, id: null }
 ```
 
-No lleva `status`: informamos el hecho y **M2 decide el estado**. Tampoco lleva `sourceRef` — su contrato prohíbe mandarles IDs de nuestras entidades internas, así que la correlación `ticketId ↔ serviceId` la guardamos de nuestro lado. `publicId` y `expectedTicketVersion` salieron del contrato en la v1.5: la correlación es solo por `ticketId`. El sobre que lo transporta lleva `subject: tickets/{ticketId}`. El detalle de cada variante está en 1.2.
+No lleva `status`: informamos el hecho y **M2 decide el estado**. Tampoco lleva `sourceRef` — su contrato prohíbe mandarles IDs de nuestras entidades internas, así que la correlación `ticketId ↔ serviceId` la guardamos de nuestro lado. `expectedTicketVersion` salió del contrato en la v1.5 y `publicId` no viaja en este evento (§8.1 de la v1.70): la correlación es solo por `ticketId`. El sobre que lo transporta lleva `subject: tickets/{ticketId}`. El detalle de cada variante está en 1.2.
 
 **2. `urbanServiceScheduled` → M7**
 
@@ -179,14 +179,14 @@ publicMessage?, internalMessage?, progress?, details?,
 attachments[]?, updatedBy, updateOccurredAt
 ```
 
-🔄 **Cambió respecto de la v1.2:** `publicId` y `expectedTicketVersion` salieron del contrato (nunca fueron parte del canal máquina-a-máquina); `message` se partió en `publicMessage`/`internalMessage`; y `progress` pasó a ser un campo común de tipo `Int` (porcentaje), no el objeto `progress.estimatedCompletionAt` que usábamos para la fecha agendada — ver más abajo.
+🔄 **Cambió respecto de la v1.2:** `publicId` y `expectedTicketVersion` salieron del contrato (nunca fueron parte del canal máquina-a-máquina; `publicId` volvió en la v1.70, pero solo en lo que publica M2); `message` se partió en `publicMessage`/`internalMessage`; y `progress` pasó a ser un campo común de tipo `Int` (porcentaje), no el objeto `progress.estimatedCompletionAt` que usábamos para la fecha agendada — ver más abajo.
 
 🔄 **Y cambió otra vez en la v1.6:** `statusChangedAt` se renombró a `updateOccurredAt`; el actor `AREA_USER` **no existe** en su enum y una persona que actúa desde otro módulo va como `EXTERNAL_USER`, un proceso automático como `SYSTEM`; el adjunto perdió `attachmentId`; y `resolution.type` cambió `INFORMATION_PROVIDED` por `INQUIRY_ANSWERED`.
 
 Tres cosas que nos cambian la implementación y conviene dejar dichas:
 
 - **No mandamos el estado, mandamos el hecho.** `updateType` dice qué pasó y M2 decide la transición. Nuestro modelo no vuelve a nombrar estados de M2 en ningún lado.
-- **No hace falta guardar `publicId` ni `ticketVersion`.** La correlación es solo por `ticketId`; no hay versión que devolver.
+- **La correlación es solo por `ticketId`.** La v1.70 volvió a publicar `publicId` en `ticketUpdated` como referencia humana: lo guardamos en el expediente para mostrarlo y buscarlo, pero no viaja en `updateTicketStatus` (§8.1) ni es credencial. No hay versión que devolver.
 - **No mandamos `sourceRef`.** Su contrato prohíbe transportar IDs de entidades internas de otros módulos, así que la correlación `ticketId ↔ serviceId ↔ inspectionId` queda en una tabla nuestra.
 
 ### De qué hecho nuestro sale cada `updateType`

@@ -130,8 +130,6 @@ package "Ejecución" #FDF3E7 {
       status_reason : varchar
     * origin : enum <<ServiceOrigin>>
       ticket_id : varchar <<EXT M2>>
-      public_id : varchar <<EXT M2>>
-      ticket_version : int <<EXT M2>>
       notes : text
       assignment_override_note : text ' solo si se asigno sobre un solapamiento
       assignment_override_by : varchar <<EXT M1>>
@@ -307,6 +305,7 @@ package "Control ambiental" #FBEEF0 {
       lat : numeric
       lng : numeric
       ticket_id : varchar <<EXT M2>>
+      public_id : varchar <<EXT M2 — referencia humana, no credencial>>
       reporter_snapshot : jsonb
     * status : enum <<EnvironmentalReportStatus>>
       priority : enum <<Severity>>
@@ -495,7 +494,7 @@ end note
 note as N_externos
   **IDs externos** <<EXT>> — viven en otra base, van con índice y sin FK
   M1 · ""organization_id"", ""leader_user_id"", ""user_id"", ""inspector_id""
-  M2 · ""ticket_id"", ""public_id"", ""ticket_version""
+  M2 · ""ticket_id"" (service, environmental_report), ""public_id"" (environmental_report)
   M3 · ""work_order_id""
   M4 · ""establishment_id"", ""external_ref""
   M7 · ""closure_id""
@@ -506,7 +505,7 @@ note as N_convenciones
   **Convenciones**
   · Toda tabla lleva ""created_at"", ""updated_at"", ""created_by"" (no se dibujan)
   · ""*"" = NOT NULL
-  · Los 32 enums viven en el código, no en tablas de catálogo:
+  · Los 33 enums viven en el código, no en tablas de catálogo:
     son valores cerrados versionados, no configurables por el municipio
   · ""service_zone"" es un **snapshot** copiado al programar:
     editar un ""route"" no altera lo ya ejecutado

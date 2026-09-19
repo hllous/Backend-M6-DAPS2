@@ -14,7 +14,6 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 | `ServiceMode` | `ROUTE`, `POINT` |
 | `ServiceStatus` | `SCHEDULED`, `RESCHEDULED`, `IN_PROGRESS`, `SUSPENDED`, `COMPLETED`, `PARTIALLY_COMPLETED`, `CANCELLED` |
 | `ServiceOrigin` | `PLANNED`, `TICKET`, `WEATHER_ALERT`, `INSPECTION`, `MANUAL` |
-| `TicketStatusUpdate` | `IN_PROGRESS`, `UPDATED`, `COMPLETED`, `REJECTED` — **obsoleto**, ver divergencia 1 |
 | `DelayType` | `START`, `DURATION` |
 | `ZoneResultStatus` | `SERVICED`, `PARTIAL`, `NOT_SERVICED` |
 | `NotServicedReason` | `VEHICLE_BREAKDOWN`, `CREW_UNAVAILABLE`, `BLOCKED_ACCESS`, `STREET_CLOSURE`, `WEATHER`, `EXCESS_VOLUME`, `SECURITY_INCIDENT`, `OTHER` |
@@ -41,9 +40,11 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 | `VehicleType` | `COMPACTOR_TRUCK`, `DUMP_TRUCK`, `SWEEPER`, `WATER_TANKER`, `CRANE_TRUCK`, `VAN` |
 | `Shift` | `MORNING`, `AFTERNOON`, `NIGHT` |
 | `RepairDamageType` | `BROKEN_PAVEMENT`, `BROKEN_SIDEWALK`, `BROKEN_STREETLIGHT`, `BLOCKED_DRAIN`, `DAMAGED_STRUCTURE` |
+| `RepairRequestStatus` | `REQUESTED`, `IN_PROGRESS`, `CLOSED` |
 | `StreetClosureType` | `TOTAL`, `PARTIAL` |
+| `StreetClosureRequestStatus` | `REQUESTED`, `APPROVED`, `REJECTED`, `ENDED` |
 
-Son 32. `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
+Son 33. `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
 
 ## Divergencias con el acuerdo publicado — resueltas
 

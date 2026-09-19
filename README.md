@@ -54,12 +54,12 @@ Para orientarse en el repo, el punto de entrada recomendado es [`AGENTS.md`](AGE
 ```
 .
 ├── docs/                    documentación técnica y de gestión
-├── src/                     código NestJS: 128 rutas en 18 módulos de dominio
+├── src/                     código NestJS: 133 rutas en 19 módulos (18 con endpoints; weather-alerts está vacío)
 │   ├── auth/                validación del JWT que emite M1
 │   ├── common/              guards, filtros, interceptores y DTOs compartidos
 │   ├── events/              outbox, inbox, consumidores y publishers
 │   └── modules/             un módulo por recurso
-├── prisma/                  schema (34 modelos), migraciones y seed
+├── prisma/                  schema (35 modelos), migraciones y seed
 └── test/                    e2e (vacío — ver DoD: cobertura ≥ 85%)
 ```
 
@@ -72,7 +72,7 @@ El pipeline de documentación que genera los entregables para la cátedra —`fu
 M6 se comunica con el resto de la plataforma **por eventos asincrónicos** vía el bus del Core (M9). REST síncrono se usa solo para casos justificados (búsqueda de establecimiento a M4, catálogo de barrios a M9).
 
 - Publicamos **8 eventos**, todos con consumidor confirmado.
-- Consumimos **10 eventos** de M2, M3, M4, M7 y M9, más una alerta meteorológica simulada internamente.
+- Consumimos **9 eventos** de M2, M3, M4, M7 y M9, más una alerta meteorológica simulada internamente — 10 en total.
 
 Ver detalle en [`docs/eventos/`](docs/eventos/) y estado vivo en [`docs/bloqueantes.md`](docs/bloqueantes.md).
 

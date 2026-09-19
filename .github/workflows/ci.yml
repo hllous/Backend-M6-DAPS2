@@ -73,8 +73,11 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
+      # Con cobertura: el DoD exige >= 85% en los archivos tocados y hasta #152
+      # no lo verificaba nadie. Los umbrales viven en jest.coverageThreshold
+      # (package.json); si la cobertura baja, este paso falla y no se deploya.
       - name: Run tests
-        run: npm run test
+        run: npm run test:cov
 
   # ──────────────────────────────────────────────────────────────
   # deploy — Dispara el deploy en Render (solo push a develop).

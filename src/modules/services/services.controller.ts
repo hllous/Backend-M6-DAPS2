@@ -212,7 +212,7 @@ export class ServicesController {
       '**No cambia el estado del servicio.** `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o `IN_PROGRESS` mientras se demora. ' +
       'El tipo tiene que coincidir con el momento — `START` antes de arrancar, `DURATION` con la cuadrilla trabajando. ' +
       'Un aviso nuevo reemplaza al vigente; el anterior queda en el historial y no se borra. ' +
-      'Si el servicio nació de un reclamo, sale hacia M2 como `updateTicketStatus / PROGRESS`: el motivo viaja como mensaje interno, no se le muestra al vecino.',
+      'Si el servicio nació de un reclamo y ya arrancó (`IN_PROGRESS`), sale hacia M2 como `updateTicketStatus / PROGRESS`: el motivo viaja como mensaje interno, no se le muestra al vecino. Una demora en `SCHEDULED` no se proyecta, porque M2 solo acepta `PROGRESS` con el ticket en gestión.',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 201, description: 'Aviso registrado', type: DelayNoticeResponseDto })

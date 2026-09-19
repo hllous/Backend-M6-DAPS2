@@ -6,8 +6,8 @@
  * vez de inventar uno propio, para que el día que el Core fije un estándar la
  * diferencia sea mínima.
  *
- * Actualizado a la **v1.6** (§4), que cambió tres cosas respecto de lo que
- * teníamos: `producer` pasó a ser un objeto, `eventVersion` desapareció de la
+ * Vigente en la **v1.73** (§4), sin cambios desde la v1.6, que cambió tres
+ * cosas respecto de lo que teníamos: `producer` pasó a ser un objeto, `eventVersion` desapareció de la
  * tabla y `specVersion` es la versión del contrato de integración —constante
  * `"1.0"`—, no la del documento de M2. Importa porque §13 fija
  * `additionalProperties: false`: un campo de más es rechazo, no se ignora.
@@ -77,7 +77,8 @@ export interface EventProducer {
  * Versión del contrato de integración, no la del documento de M2.
  *
  * §4 la declara `const "1.0"`. Mandábamos `'1.5'` por confundir una cosa con la
- * otra: la guía va por la v1.6 y el `specVersion` sigue siendo `"1.0"`.
+ * otra: la guía va por la v1.73 y el `specVersion` sigue siendo `"1.0"`
+ * (§13: mientras siga WIP, los cambios se consolidan bajo 1.0).
  */
 export const SPEC_VERSION = '1.0';
 
