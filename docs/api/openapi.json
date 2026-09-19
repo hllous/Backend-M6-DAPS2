@@ -10300,6 +10300,16 @@
               }
             }
           },
+          "409": {
+            "description": "Transición de estado inválida desde el estado actual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10371,6 +10381,16 @@
           },
           "404": {
             "description": "Solicitud no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Transición de estado inválida desde el estado actual",
             "content": {
               "application/json": {
                 "schema": {
@@ -10703,6 +10723,16 @@
               }
             }
           },
+          "409": {
+            "description": "Transición de estado inválida desde el estado actual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10802,6 +10832,16 @@
               }
             }
           },
+          "409": {
+            "description": "Transición de estado inválida desde el estado actual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10873,6 +10913,16 @@
           },
           "404": {
             "description": "Solicitud no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Transición de estado inválida desde el estado actual",
             "content": {
               "application/json": {
                 "schema": {
