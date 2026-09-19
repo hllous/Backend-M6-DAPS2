@@ -1,7 +1,8 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import {
   EnvironmentalReportStatus as S,
   InspectionOutcome,
+  ServiceMode,
   Severity,
   SuggestedAction,
   ViolationType,
@@ -9,6 +10,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { EnvironmentalReportsService } from '../environmental-reports/environmental-reports.service';
 import { EnvironmentalInspectionsService } from './environmental-inspections.service';
+import { CompleteInspectionDto, CreateInspectionDto } from './dto';
 
 describe('EnvironmentalInspectionsService', () => {
   const INSPECTION_ID = '11111111-1111-1111-1111-111111111111';
@@ -61,6 +63,7 @@ describe('EnvironmentalInspectionsService', () => {
     prisma = {
       environmentalInspection: {
         findUnique: jest.fn().mockResolvedValue(inspection()),
+        findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
       },
@@ -73,7 +76,9 @@ describe('EnvironmentalInspectionsService', () => {
         count: jest.fn().mockResolvedValue(2),
         create: jest.fn((args) => ({ ...args.data, id: 'notice-1', createdAt: new Date() })),
       },
-      service: { findUnique: jest.fn() },
+      service: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'svc-1', mode: ServiceMode.POINT }),
+      },
       attachment: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
@@ -286,6 +291,148 @@ describe('EnvironmentalInspectionsService', () => {
           outcome: InspectionOutcome.NO_VIOLATION,
         }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('con checklist, reemplaza los items existentes', async () => {
+      await service.complete(INSPECTION_ID, {
+        inspectedAt: '2026-09-10T11:30:00.000Z',
+        outcome: InspectionOutcome.NO_VIOLATION,
+        checklist: [{ itemCode: 'C1', label: 'Ventilación', result: true }],
+      } as CompleteInspectionDto);
+
+      const [[args]] = prisma.environmentalInspection.update.mock.calls;
+      expect(args.data.checklistItems.deleteMany).toEqual({});
+      expect(args.data.checklistItems.createMany.data).toEqual([
+        { itemCode: 'C1', label: 'Ventilación', result: true, observations: null },
+      ]);
+    });
+
+    it('sin checklist, no toca los items existentes', async () => {
+      await service.complete(INSPECTION_ID, {
+        inspectedAt: '2026-09-10T11:30:00.000Z',
+        outcome: InspectionOutcome.NO_VIOLATION,
+      });
+
+      const [[args]] = prisma.environmentalInspection.update.mock.calls;
+      expect(args.data).not.toHaveProperty('checklistItems');
+    });
+  });
+
+  describe('create', () => {
+    beforeEach(() => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(report({ status: S.UNDER_REVIEW }));
+      prisma.environmentalInspection.create.mockResolvedValue(inspection({ outcome: null }));
+    });
+
+    it('programa la inspección y lleva el expediente a INSPECTION_SCHEDULED', async () => {
+      const result = await service.create(REPORT_ID, {});
+
+      expect(result.id).toBe(INSPECTION_ID);
+      const [[args]] = prisma.environmentalReport.update.mock.calls;
+      expect(args.data.status).toBe(S.INSPECTION_SCHEDULED);
+      // environmentalInspectionScheduled se descartó a propósito (ver ADR):
+      // una regresión que lo reintroduzca no debería pasar en silencio.
+      expect(outbox.enqueue).not.toHaveBeenCalled();
+    });
+
+    it('con serviceId, valida que el servicio sea de modo POINT', async () => {
+      await service.create(REPORT_ID, { serviceId: 'svc-1' } as CreateInspectionDto);
+
+      expect(prisma.service.findUnique).toHaveBeenCalledWith({
+        where: { id: 'svc-1' },
+        select: { id: true, mode: true },
+      });
+      const [[args]] = prisma.environmentalInspection.create.mock.calls;
+      expect(args.data.serviceId).toBe('svc-1');
+    });
+
+    it('rechaza un serviceId inexistente', async () => {
+      prisma.service.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.create(REPORT_ID, { serviceId: 'svc-x' } as CreateInspectionDto),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rechaza un servicio que no es de modo POINT', async () => {
+      prisma.service.findUnique.mockResolvedValue({ id: 'svc-1', mode: ServiceMode.ROUTE });
+
+      await expect(
+        service.create(REPORT_ID, { serviceId: 'svc-1' } as CreateInspectionDto),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('sin serviceId no consulta el servicio', async () => {
+      await service.create(REPORT_ID, {});
+      expect(prisma.service.findUnique).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('consultas', () => {
+    it('findByReport valida que el expediente exista y lista sus inspecciones', async () => {
+      prisma.environmentalInspection.findMany.mockResolvedValue([inspection()]);
+
+      const result = await service.findByReport(REPORT_ID);
+
+      expect(prisma.environmentalReport.findUnique).toHaveBeenCalledWith({
+        where: { id: REPORT_ID },
+      });
+      expect(result[0].id).toBe(INSPECTION_ID);
+    });
+
+    it('findByReport lanza 404 si el expediente no existe', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(null);
+
+      await expect(service.findByReport('no-existe')).rejects.toThrow(NotFoundException);
+      expect(prisma.environmentalInspection.findMany).not.toHaveBeenCalled();
+    });
+
+    it('findOne devuelve la inspección', async () => {
+      const result = await service.findOne(INSPECTION_ID);
+      expect(result.id).toBe(INSPECTION_ID);
+    });
+
+    it('findOne lanza 404 si no existe', async () => {
+      prisma.environmentalInspection.findUnique.mockResolvedValue(null);
+      await expect(service.findOne('no-existe')).rejects.toThrow(NotFoundException);
+    });
+
+    it('findOne mapea el checklist relevado', async () => {
+      prisma.environmentalInspection.findUnique.mockResolvedValue(
+        inspection({
+          checklistItems: [
+            { id: 'ci-1', itemCode: 'C1', label: 'Ventilación', result: 'OK', observations: null },
+          ],
+        }),
+      );
+
+      const result = await service.findOne(INSPECTION_ID);
+      expect(result.checklistItems).toEqual([
+        { id: 'ci-1', itemCode: 'C1', label: 'Ventilación', result: 'OK', observations: null },
+      ]);
+    });
+
+    it('findNotice devuelve el acta de la inspección', async () => {
+      prisma.violationNotice.findUnique.mockResolvedValue({
+        id: 'notice-1',
+        noticeNumber: 'ACTA-2026-000001',
+        inspectionId: INSPECTION_ID,
+        issuedAt: new Date(),
+        establishmentId: null,
+        violationType: ViolationType.UNTREATED_DISCHARGE,
+        severity: Severity.HIGH,
+        suggestedAction: SuggestedAction.FINE,
+        priorNoticeCount: 0,
+        createdAt: new Date(),
+      });
+
+      const result = await service.findNotice(INSPECTION_ID);
+      expect(result.noticeNumber).toBe('ACTA-2026-000001');
+    });
+
+    it('findNotice lanza 404 si la inspección no tiene acta', async () => {
+      prisma.violationNotice.findUnique.mockResolvedValue(null);
+      await expect(service.findNotice(INSPECTION_ID)).rejects.toThrow(NotFoundException);
     });
   });
 });
