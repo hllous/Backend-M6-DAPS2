@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import {
   RepairDamageType,
   RepairRequestStatus,
@@ -180,17 +180,59 @@ describe('OutboundRequestsService', () => {
       });
     });
 
-    it('rechazar y finalizar mueven el estado', async () => {
+    const closureAt = (status: StreetClosureRequestStatus) =>
+      prisma.streetClosureRequest.findUnique.mockResolvedValue(closureRow({ status }));
+
+    it('rechazar desde REQUESTED pasa a REJECTED', async () => {
       await service.rejectClosure(REQUEST_ID, 'Se superpone con otro corte');
+
+      const [[args]] = prisma.streetClosureRequest.update.mock.calls;
+      expect(args.data.status).toBe(StreetClosureRequestStatus.REJECTED);
+    });
+
+    it('finalizar desde APPROVED pasa a ENDED', async () => {
+      closureAt(StreetClosureRequestStatus.APPROVED);
+
       await service.endClosure(REQUEST_ID);
 
-      const estados = prisma.streetClosureRequest.update.mock.calls.map(
-        ([a]: [{ data: { status: string } }]) => a.data.status,
-      );
-      expect(estados).toEqual([
-        StreetClosureRequestStatus.REJECTED,
-        StreetClosureRequestStatus.ENDED,
-      ]);
+      const [[args]] = prisma.streetClosureRequest.update.mock.calls;
+      expect(args.data.status).toBe(StreetClosureRequestStatus.ENDED);
+    });
+
+    it.each([
+      ['approve', StreetClosureRequestStatus.APPROVED],
+      ['approve', StreetClosureRequestStatus.REJECTED],
+      ['approve', StreetClosureRequestStatus.ENDED],
+      ['reject', StreetClosureRequestStatus.APPROVED],
+      ['reject', StreetClosureRequestStatus.REJECTED],
+      ['reject', StreetClosureRequestStatus.ENDED],
+      ['end', StreetClosureRequestStatus.REJECTED],
+      ['end', StreetClosureRequestStatus.ENDED],
+    ])('%s desde %s es una transición inválida: 409 y no escribe', async (op, from) => {
+      closureAt(from);
+      const run = {
+        approve: () => service.approveClosure(REQUEST_ID, {}),
+        reject: () => service.rejectClosure(REQUEST_ID, 'x'),
+        end: () => service.endClosure(REQUEST_ID),
+      }[op as 'approve' | 'reject' | 'end']();
+
+      await expect(run).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.streetClosureRequest.update).not.toHaveBeenCalled();
+    });
+
+    it('el 409 lista las transiciones válidas', async () => {
+      closureAt(StreetClosureRequestStatus.REQUESTED);
+      await expect(service.approveClosure(REQUEST_ID, {})).resolves.toBeDefined();
+
+      closureAt(StreetClosureRequestStatus.APPROVED);
+      await expect(service.approveClosure(REQUEST_ID, {})).rejects.toThrow(/\[ENDED\]/);
+    });
+
+    it('finalizar desde REQUESTED es válido: streetClosureEnded puede adelantarse a Approved', async () => {
+      await service.endClosure(REQUEST_ID);
+
+      const [[args]] = prisma.streetClosureRequest.update.mock.calls;
+      expect(args.data.status).toBe(StreetClosureRequestStatus.ENDED);
     });
 
     it('sin closureType, se guarda null', async () => {
@@ -326,12 +368,36 @@ describe('OutboundRequestsService', () => {
       await expect(service.startRepair('no-existe', {})).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('closeRepair cierra la solicitud', async () => {
-      await service.closeRepair(REQUEST_ID);
+    it.each([RepairRequestStatus.REQUESTED, RepairRequestStatus.IN_PROGRESS])(
+      'closeRepair cierra la solicitud desde %s',
+      async (from) => {
+        prisma.repairRequest.findUnique.mockResolvedValue(repairRow({ status: from }));
 
-      const [[args]] = prisma.repairRequest.update.mock.calls;
-      expect(args.data.status).toBe(RepairRequestStatus.CLOSED);
+        await service.closeRepair(REQUEST_ID);
+
+        const [[args]] = prisma.repairRequest.update.mock.calls;
+        expect(args.data.status).toBe(RepairRequestStatus.CLOSED);
+      },
+    );
+
+    it('closeRepair sobre una solicitud ya CLOSED es 409 y no escribe', async () => {
+      prisma.repairRequest.findUnique.mockResolvedValue(
+        repairRow({ status: RepairRequestStatus.CLOSED }),
+      );
+
+      await expect(service.closeRepair(REQUEST_ID)).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.repairRequest.update).not.toHaveBeenCalled();
     });
+
+    it.each([RepairRequestStatus.IN_PROGRESS, RepairRequestStatus.CLOSED])(
+      'startRepair desde %s es 409: una CLOSED no se reabre ni una en curso se re-agenda',
+      async (from) => {
+        prisma.repairRequest.findUnique.mockResolvedValue(repairRow({ status: from }));
+
+        await expect(service.startRepair(REQUEST_ID, {})).rejects.toThrow(/Transiciones válidas/);
+        expect(prisma.repairRequest.update).not.toHaveBeenCalled();
+      },
+    );
 
     it('ticketOfOrigin no encuentra el servicio: no rompe, ticketId queda undefined', async () => {
       prisma.service.findUnique.mockResolvedValue(null);
