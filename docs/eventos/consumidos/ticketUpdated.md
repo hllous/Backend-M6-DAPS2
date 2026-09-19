@@ -10,11 +10,11 @@ Depende del discriminador `updateType`. La v1.70 —vigente, reemplaza la v1.69 
 
 | `updateType` | Qué hacemos |
 |---|---|
-| `ROUTED` | **Abrimos el [expediente ambiental](../../entidades/environmental-report.md) o el [servicio](../../entidades/service.md) puntual.** Es la entrada |
+| `ROUTED` | **Abrimos el [expediente ambiental](../../entidades/environmental-report.md).** Es la entrada. **Nunca abre un `Service` directamente**: eso necesitaría el catálogo de Request Types que M2 no publicó. De acá sale la inspección — que no crea un servicio, se engancha a un `Service` `POINT` ya existente (`assertPointService`) |
 | `INFORMATION_PROVIDED` | Sumamos al expediente lo que el vecino respondió. No hay ID de correlación: como máximo hay una solicitud activa por ticket, así que la respuesta siempre corresponde a la nuestra. Viene en `details.informationResponse.message`, en `attachments[]`, o en ambos — §7.6 garantiza al menos uno de los dos. `citizenResponse` guarda el `message` y una línea `fileName: url` por adjunto. `publicMessage` es la glosa de M2 y no se usa |
-| `CANCELLED` | Cancelamos el servicio o la inspección ya programados |
+| `CANCELLED` | Cancelamos los `Service` `SCHEDULED`/`RESCHEDULED` que tengan este `ticketId`. La inspección no se toca — `EnvironmentalInspection` es un modelo propio, sin `ticketId` — y su servicio solo cae si se programó con `origin = TICKET`. Si el expediente está en `UNDER_REVIEW`, pasa a `DISMISSED`; **en cualquier otro estado no lo toca** |
 | `REOPENED` | Reabrimos: el vecino rechazó la solución y vuelve a gestión |
-| `PRIORITY_CHANGED` | Reordenamos la cola de la cuadrilla |
+| `PRIORITY_CHANGED` | Actualizamos `priority` del expediente. Hoy es el único camino por el que cambia después del alta: no existe `PATCH /environmental-reports/:id` |
 | `ESCALATION_CHANGED` | Marcamos **o desmarcamos** `escalated` según `details.escalation.active` (§5.6, §7.7) y se lo mostramos al supervisor. Sin un `active` booleano no tocamos el flag. El `ROUTED` también lo trae, en `details.routing.escalation`: un ticket derivado ya escalado nace escalado |
 | `CONTENT_UPDATED` | **Nada, decisión propia — pero por otro motivo que antes.** La v1.6 **sí** define `details.content` (§7.7) con `requestType, category, subcategory, ticketType, summary, description, formData, resolutionDueAt`, así que el argumento de "no hay campo del que copiar" caducó. Lo seguimos ignorando porque §7.3 aclara que la clasificación **queda bloqueada una vez que el ticket fue `ROUTED`**: un `CONTENT_UPDATED` que nos llegue es casi siempre anterior a que exista expediente nuestro, y si llega después no puede haber cambiado la clasificación. Si trae `publicMessage`, lo dejamos en el registro de mensajes para trazabilidad |
 | `PROGRESS` | **Nada.** Es el eco público de un `updateTicketStatus/PROGRESS` que en general originamos nosotros mismos |
@@ -54,7 +54,7 @@ En la v1.5, `requestType`, `summary`, `description` y `location` eran campos **c
 | `ticketId` | Lo guardamos en el `Service` y en el `EnvironmentalReport` |
 | `responsibleAreaId` | ✅ Nos dice si el `ROUTED` es nuestro |
 | `citizenId`, `isAnonymous` | Decide si hace falta identificar al denunciante para el expediente |
-| `details.routing.location.neighborhoodId` | ✅ Asignamos zona operativa y cuadrilla a partir del barrio |
+| `details.routing.location.neighborhoodId` | **No se usa hoy.** El plan era asignar zona operativa a partir del barrio, pero el handler no lo lee — pendiente de que M9 publique el catálogo de barrios |
 | `details.routing.requestType` | Contenido/categoría del reclamo. String, sin ID |
 | `details.routing.summary`, `.description` | Contenido del reclamo |
 
