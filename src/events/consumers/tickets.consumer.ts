@@ -52,7 +52,16 @@ export class TicketsConsumer implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.inbox.register(ConsumedEvent.TICKET_UPDATED, (d) => this.handle(d));
+    // §2 y §11 del contrato de M2: el ticket de otro módulo se ignora y no se
+    // persiste su contenido, tampoco en el inbox. La regla es la misma que filtra
+    // en handle().
+    this.inbox.register(ConsumedEvent.TICKET_UPDATED, (d) => this.handle(d), {
+      persistPayload: (d) => this.esNuestro(d),
+    });
+  }
+
+  private esNuestro(data: Record<string, unknown>): boolean {
+    return data.responsibleAreaId === PRODUCER.moduleId;
   }
 
   private async handle(data: Record<string, unknown>): Promise<void> {
@@ -70,9 +79,9 @@ export class TicketsConsumer implements OnModuleInit {
     // sistema no depende de ese filtrado" — asi que el filtro es nuestro, no
     // de la infraestructura. Sin esto, un reclamo derivado a cualquier otro
     // modulo abriria igual un expediente de este lado.
-    if (data.responsibleAreaId !== PRODUCER.moduleId) {
+    if (!this.esNuestro(data)) {
       this.logger.log(
-        `ticketUpdated/${updateType}: responsibleAreaId=${data.responsibleAreaId ?? '(ausente)'} no es nuestro, se descarta`,
+        `ticketUpdated/${updateType}: responsibleAreaId=${String(data.responsibleAreaId ?? '(ausente)').slice(0, 32)} no es nuestro, se descarta`,
       );
       return;
     }
