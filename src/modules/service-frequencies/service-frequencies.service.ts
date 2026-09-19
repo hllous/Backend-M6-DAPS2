@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { FrequencyWeekday, Prisma, ServiceFrequency, ServiceMode } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { toDateOnly } from '../../common/utils/date-only';
 import {
   CreateServiceFrequencyDto,
   QueryServiceFrequenciesDto,
@@ -10,11 +11,6 @@ import {
 import { PaginatedResponseDto } from '../../common/dto';
 
 type FrequencyWithWeekdays = ServiceFrequency & { weekdays: FrequencyWeekday[] };
-
-/** Fecha sin hora: los campos son @db.Date y comparar con hora produce off-by-one. */
-function toDateOnly(value: string | Date): Date {
-  return new Date(`${new Date(value).toISOString().slice(0, 10)}T00:00:00.000Z`);
-}
 
 @Injectable()
 export class ServiceFrequenciesService {

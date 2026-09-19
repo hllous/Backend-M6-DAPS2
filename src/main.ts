@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule } from '@nestjs/swagger';
@@ -8,9 +9,13 @@ import { HttpExceptionFilter } from './common/filters';
 import { LoggingInterceptor } from './common/interceptors';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
+
+  // Render termina el TLS en un proxy: sin esto req.ip es la IP del proxy y el
+  // ThrottlerGuard mete a todos los clientes en el mismo balde. Un solo salto.
+  app.set('trust proxy', 1);
 
   // ─── Global pipes ───────────────────────────────
   app.useGlobalPipes(

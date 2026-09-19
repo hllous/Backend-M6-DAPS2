@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ServiceStatus, Severity } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { toDateOnly } from '../../common/utils/date-only';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent } from '../inbox/consumed-events';
 
@@ -57,6 +58,15 @@ export class WeatherConsumer implements OnModuleInit {
       return;
     }
 
+    // Sin ventana completa no se reprograma: filtrar solo por zona movería
+    // todos los servicios agendados de esas zonas, en cualquier fecha.
+    if (!desde || !hasta || isNaN(desde.getTime()) || isNaN(hasta.getTime())) {
+      this.logger.warn(
+        'weatherAlertIssued sin from/to válidos: no se sabe qué fechas mover, se descarta',
+      );
+      return;
+    }
+
     // Solo SCHEDULED: es el único estado desde el que VALID_TRANSITIONS admite
     // RESCHEDULED, y `updateMany` no pasa por assertTransition. El filtro es el
     // guard. Un servicio ya iniciado no se reprograma por una alerta: lo
@@ -65,7 +75,9 @@ export class WeatherConsumer implements OnModuleInit {
       where: {
         status: ServiceStatus.SCHEDULED,
         zones: { some: { zoneId: { in: zoneIds } } },
-        ...(desde && hasta && { scheduledDate: { gte: desde, lte: hasta } }),
+        // scheduledDate es @db.Date: sin truncar, un `from` con hora deja
+        // afuera los servicios de ese mismo día.
+        scheduledDate: { gte: toDateOnly(desde), lte: toDateOnly(hasta) },
       },
       data: {
         status: ServiceStatus.RESCHEDULED,
