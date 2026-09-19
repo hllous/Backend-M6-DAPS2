@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import {
   RepairDamageType,
   RepairRequestStatus,
@@ -8,6 +9,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboundRequestsService } from './outbound-requests.service';
 import { ClosureSourceType, DetectedInType } from './dto';
+import { QueryRepairRequestsDto, QueryStreetClosureRequestsDto } from './dto/queries';
 
 describe('OutboundRequestsService', () => {
   const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
@@ -189,6 +191,160 @@ describe('OutboundRequestsService', () => {
         StreetClosureRequestStatus.REJECTED,
         StreetClosureRequestStatus.ENDED,
       ]);
+    });
+
+    it('sin closureType, se guarda null', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { closureType, ...sinTipo } = dto;
+      await service.createClosureRequest(sinTipo as typeof dto);
+
+      const [[args]] = prisma.streetClosureRequest.create.mock.calls;
+      expect(args.data.closureType).toBeNull();
+    });
+
+    it('aprobar sin closureId no lo pisa en el update', async () => {
+      await service.approveClosure(REQUEST_ID, {});
+
+      const [[args]] = prisma.streetClosureRequest.update.mock.calls;
+      expect(args.data).not.toHaveProperty('closureId');
+    });
+
+    it('findClosureRequests filtra por status y por sourceId', async () => {
+      prisma.streetClosureRequest.findMany.mockResolvedValue([]);
+      prisma.streetClosureRequest.count.mockResolvedValue(0);
+
+      await service.findClosureRequests({
+        status: StreetClosureRequestStatus.REQUESTED,
+        sourceId: SERVICE_ID,
+        page: 1,
+        pageSize: 10,
+      } as QueryStreetClosureRequestsDto);
+
+      const [[args]] = prisma.streetClosureRequest.findMany.mock.calls;
+      expect(args.where).toEqual({
+        status: StreetClosureRequestStatus.REQUESTED,
+        sourceId: SERVICE_ID,
+      });
+    });
+
+    it('findClosureRequests sin filtros deja el where vacío y mapea los resultados', async () => {
+      prisma.streetClosureRequest.findMany.mockResolvedValue([closureRow()]);
+      prisma.streetClosureRequest.count.mockResolvedValue(1);
+
+      const result = await service.findClosureRequests({
+        page: 1,
+        pageSize: 10,
+      } as QueryStreetClosureRequestsDto);
+
+      const [[args]] = prisma.streetClosureRequest.findMany.mock.calls;
+      expect(args.where).toEqual({});
+      expect(result.data[0].id).toBe(REQUEST_ID);
+    });
+
+    it('findClosureRequest lanza 404 si no existe', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue(null);
+
+      await expect(service.findClosureRequest('no-existe')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('approveClosure lanza 404 si la solicitud no existe', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue(null);
+
+      await expect(service.approveClosure('no-existe', {})).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('helpers de reparación', () => {
+    it('findRepairRequests filtra por status, damageType, severity y detectedInId', async () => {
+      prisma.repairRequest.findMany.mockResolvedValue([]);
+      prisma.repairRequest.count.mockResolvedValue(0);
+
+      await service.findRepairRequests({
+        status: RepairRequestStatus.REQUESTED,
+        damageType: RepairDamageType.BLOCKED_DRAIN,
+        severity: Severity.HIGH,
+        detectedInId: SERVICE_ID,
+        page: 1,
+        pageSize: 10,
+      } as QueryRepairRequestsDto);
+
+      const [[args]] = prisma.repairRequest.findMany.mock.calls;
+      expect(args.where).toEqual({
+        status: RepairRequestStatus.REQUESTED,
+        damageType: RepairDamageType.BLOCKED_DRAIN,
+        severity: Severity.HIGH,
+        detectedInId: SERVICE_ID,
+      });
+    });
+
+    it('findRepairRequests sin filtros deja el where vacío y mapea los resultados', async () => {
+      prisma.repairRequest.findMany.mockResolvedValue([repairRow()]);
+      prisma.repairRequest.count.mockResolvedValue(1);
+
+      const result = await service.findRepairRequests({
+        page: 1,
+        pageSize: 10,
+      } as QueryRepairRequestsDto);
+
+      const [[args]] = prisma.repairRequest.findMany.mock.calls;
+      expect(args.where).toEqual({});
+      expect(result.data[0].id).toBe(REQUEST_ID);
+    });
+
+    it('findRepairRequest lanza 404 si no existe', async () => {
+      prisma.repairRequest.findUnique.mockResolvedValue(null);
+
+      await expect(service.findRepairRequest('no-existe')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('startRepair guarda el workOrderId cuando viene', async () => {
+      await service.startRepair(REQUEST_ID, { workOrderId: 'OT-1' });
+
+      const [[args]] = prisma.repairRequest.update.mock.calls;
+      expect(args.data).toMatchObject({
+        status: RepairRequestStatus.IN_PROGRESS,
+        workOrderId: 'OT-1',
+      });
+    });
+
+    it('startRepair no pisa workOrderId cuando no viene', async () => {
+      await service.startRepair(REQUEST_ID, {});
+
+      const [[args]] = prisma.repairRequest.update.mock.calls;
+      expect(args.data).not.toHaveProperty('workOrderId');
+    });
+
+    it('startRepair lanza 404 si la solicitud no existe', async () => {
+      prisma.repairRequest.findUnique.mockResolvedValue(null);
+
+      await expect(service.startRepair('no-existe', {})).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('closeRepair cierra la solicitud', async () => {
+      await service.closeRepair(REQUEST_ID);
+
+      const [[args]] = prisma.repairRequest.update.mock.calls;
+      expect(args.data.status).toBe(RepairRequestStatus.CLOSED);
+    });
+
+    it('ticketOfOrigin no encuentra el servicio: no rompe, ticketId queda undefined', async () => {
+      prisma.service.findUnique.mockResolvedValue(null);
+
+      await service.createRepairRequest({
+        damageType: RepairDamageType.BLOCKED_DRAIN,
+        severity: Severity.HIGH,
+        publicSafetyRisk: true,
+        detectedInType: DetectedInType.SERVICE,
+        detectedInId: SERVICE_ID,
+      });
+
+      expect(enqueued().payload).not.toHaveProperty('ticketId');
     });
   });
 });

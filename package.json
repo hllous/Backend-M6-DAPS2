@@ -104,10 +104,10 @@
     ],
     "coverageThreshold": {
       "global": {
-        "statements": 61,
-        "branches": 77,
-        "functions": 56,
-        "lines": 62
+        "statements": 85,
+        "branches": 85,
+        "functions": 85,
+        "lines": 85
       },
       "**/services/services.service.ts": {
         "statements": 85,
