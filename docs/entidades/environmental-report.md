@@ -8,11 +8,11 @@ La denuncia ambiental tal como la tramitamos nosotros: ruidos, vertidos, microba
 
 | Entidad | Campos principales |
 |---|---|
-| `EnvironmentalReport` | `reportType`, `location`, `ticketId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `deadlineAt` |
+| `EnvironmentalReport` | `reportType`, `location`, `ticketId`, `publicId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `deadlineAt` |
 
 Enums: `reportType` es `EnvironmentalReportType`, `status` es `EnvironmentalReportStatus` — ver [enumeraciones.md](../enumeraciones.md).
 
-**`escalated` y `citizenResponse` los escribe M2, no nosotros.** Llegan por `ticketUpdated`: `ESCALATION_CHANGED` marca el expediente como escalado para que lo vea el supervisor, e `INFORMATION_PROVIDED` trae lo que el vecino respondió a nuestro pedido de información. El contrato de M2 no usa ID de correlación —impone como máximo una solicitud activa por ticket—, así que la respuesta siempre corresponde a la nuestra.
+**`escalated` y `citizenResponse` los escribe M2, no nosotros.** Llegan por `ticketUpdated`: `ESCALATION_CHANGED` marca o desmarca el expediente como escalado (`details.escalation.active`) para que lo vea el supervisor, y el `ROUTED` ya trae el valor inicial. `INFORMATION_PROVIDED` trae lo que el vecino respondió a nuestro pedido de información: `citizenResponse` guarda `details.informationResponse.message` y, debajo, una línea `fileName: url` por adjunto. El expediente no tiene campo de adjuntos, y la URL de M2 puede ser temporal. El contrato de M2 no usa ID de correlación —impone como máximo una solicitud activa por ticket—, así que la respuesta siempre corresponde a la nuestra.
 
 **`deadlineAt` es el plazo que le damos a M4** para resolver el acta antes de cerrar el expediente por vencimiento. Se configura con `SANCTION_DEADLINE_DAYS`.
 
@@ -40,11 +40,11 @@ stateDiagram-v2
     CLOSED --> [*]
 ```
 
-**`NOTICE_ISSUED → CLOSED` por vencimiento de plazo no es un atajo, es el diseño.** M4 no publica ningún evento cuando decide que no corresponde castigo, así que sin ese cierre el expediente quedaría abierto para siempre. Cierra sin `SanctionOutcome`: una desestimación y una demora de M4 se ven igual, y esa imprecisión se aceptó a cambio de no depender de que otro grupo agregue un evento. Ver [bloqueantes.md](../bloqueantes.md#resueltos--no-repreguntar).
+**`NOTICE_ISSUED → CLOSED` por vencimiento de plazo no es un atajo, es el diseño.** M4 no publica ningún evento cuando decide que no corresponde castigo, así que sin ese cierre el expediente quedaría abierto para siempre. Cierra sin `SanctionOutcome`: una desestimación y una demora de M4 se ven igual, y esa imprecisión se aceptó a cambio de no depender de que otro grupo agregue un evento. El barrido corre **cada hora y también al arrancar** (#150): en el free tier de Render el servicio duerme, y sin el barrido de arranque el cierre esperaba a que coincidieran el despertar y la hora en punto. Ver [bloqueantes.md](../bloqueantes.md#resueltos--no-repreguntar).
 
 ## Qué publica y qué consume
 
 - Al emitirse el acta: [`environmentalViolationDetected`](../eventos/publicados/environmentalViolationDetected.md) → M4.
-- Si hay `ticketId`, cada tramo dispara un [`updateTicketStatus`](../eventos/publicados/updateTicketStatus.md) → M2. La transición a `DISMISSED` sale como `REJECTED`; un reclamo que no es de nuestra área sale como `RETURNED`, que es distinto.
+- Si hay `ticketId`, cada tramo dispara un [`updateTicketStatus`](../eventos/publicados/updateTicketStatus.md) → M2. La transición a `DISMISSED` sale como `REJECTED`; un reclamo que no es de nuestra área sale como `RETURNED`, que es distinto. El cierre posterior de un expediente `FORWARDED` o `DISMISSED` **no** vuelve a proyectar: M2 ya lo sacó de gestión y un `RESOLVED` sería rechazado (#146).
 - Pasa a `SANCTIONED` al recibir [`commercialFineGenerated`](../eventos/consumidos/commercialFineGenerated.md), [`closureOrdered`](../eventos/consumidos/closureOrdered.md) o [`closureLifted`](../eventos/consumidos/closureLifted.md) de M4.
 - `INSPECTION_SCHEDULED` e `INSPECTED` **no** se publican: eran los descartados `environmentalInspectionScheduled` y `environmentalInspectionCompleted`.

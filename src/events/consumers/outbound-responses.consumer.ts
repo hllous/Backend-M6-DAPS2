@@ -3,6 +3,11 @@ import { RepairRequestStatus, ServiceStatus, StreetClosureRequestStatus } from '
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent } from '../inbox/consumed-events';
+import {
+  CLOSURE_TRANSITIONS,
+  REPAIR_TRANSITIONS,
+  sourcesOf,
+} from '../../modules/outbound-requests/outbound-requests.transitions';
 
 /**
  * Las respuestas de M3 y M7 a lo que les derivamos.
@@ -45,25 +50,38 @@ export class OutboundResponsesConsumer implements OnModuleInit {
     const request = await this.findRepairRequest(data);
     if (!request) return;
 
-    await this.prisma.repairRequest.update({
-      where: { id: request.id },
+    // `updateMany` no pasa por assertTransition: el filtro por estado de origen
+    // es el guard, y además es atómico frente a un evento repetido o tardío.
+    const { count } = await this.prisma.repairRequest.updateMany({
+      where: {
+        id: request.id,
+        status: { in: sourcesOf(REPAIR_TRANSITIONS, RepairRequestStatus.IN_PROGRESS) },
+      },
       data: {
         status: RepairRequestStatus.IN_PROGRESS,
         workOrderId: (data.workOrderId as string) ?? request.workOrderId,
       },
     });
-    this.logger.log(`Reparación ${request.id}: M3 la agendó`);
+    if (this.applied(count, `Reparación ${request.id}`, 'workOrderScheduled')) {
+      this.logger.log(`Reparación ${request.id}: M3 la agendó`);
+    }
   }
 
   private async workOrderCompleted(data: Record<string, unknown>): Promise<void> {
     const request = await this.findRepairRequest(data);
     if (!request) return;
 
-    await this.prisma.repairRequest.update({
-      where: { id: request.id },
+    // Guard por estado de origen, mismo criterio que workOrderScheduled.
+    const { count } = await this.prisma.repairRequest.updateMany({
+      where: {
+        id: request.id,
+        status: { in: sourcesOf(REPAIR_TRANSITIONS, RepairRequestStatus.CLOSED) },
+      },
       data: { status: RepairRequestStatus.CLOSED },
     });
-    this.logger.log(`Reparación ${request.id}: M3 la completó`);
+    if (this.applied(count, `Reparación ${request.id}`, 'workOrderCompleted')) {
+      this.logger.log(`Reparación ${request.id}: M3 la completó`);
+    }
   }
 
   // ─── M7 ───────────────────────────────────────────
@@ -73,14 +91,20 @@ export class OutboundResponsesConsumer implements OnModuleInit {
     const request = await this.findClosureRequest(data);
     if (!request) return;
 
-    await this.prisma.streetClosureRequest.update({
-      where: { id: request.id },
+    // Guard por estado de origen: un "aprobado" tardío no pisa un corte ya rechazado o terminado.
+    const { count } = await this.prisma.streetClosureRequest.updateMany({
+      where: {
+        id: request.id,
+        status: { in: sourcesOf(CLOSURE_TRANSITIONS, StreetClosureRequestStatus.APPROVED) },
+      },
       data: {
         status: StreetClosureRequestStatus.APPROVED,
         closureId: (data.streetClosureId as string) ?? (data.closureId as string) ?? null,
       },
     });
-    this.logger.log(`Corte ${request.id}: aprobado por M7, el trabajo queda habilitado`);
+    if (this.applied(count, `Corte ${request.id}`, 'streetClosureApproved')) {
+      this.logger.log(`Corte ${request.id}: aprobado por M7, el trabajo queda habilitado`);
+    }
   }
 
   /**
@@ -92,42 +116,78 @@ export class OutboundResponsesConsumer implements OnModuleInit {
     const request = await this.findClosureRequest(data);
     if (!request) return;
 
-    await this.prisma.streetClosureRequest.update({
-      where: { id: request.id },
-      data: { status: StreetClosureRequestStatus.REJECTED },
-    });
+    // `rejectionReason` es el campo del contrato de M7; `reason` se tolera por
+    // si llega un sobre armado a mano con el nombre viejo.
+    const motivo = data.rejectionReason ?? data.reason;
 
-    if (request.sourceType === 'SERVICE') {
-      // El `where` acota a SCHEDULED, que es el único estado desde el que
-      // VALID_TRANSITIONS admite RESCHEDULED. `updateMany` no pasa por
-      // assertTransition: el filtro es el guard.
-      const { count } = await this.prisma.service.updateMany({
-        where: { id: request.sourceId, status: ServiceStatus.SCHEDULED },
-        data: {
-          status: ServiceStatus.RESCHEDULED,
-          statusReason: `M7 rechazó el corte de calle solicitado${
-            data.reason ? `: ${String(data.reason)}` : ''
-          }`,
+    // Las dos escrituras van juntas: si la del servicio falla, el corte vuelve
+    // a REQUESTED y el reintento del inbox completa todo. Sin transacción, el
+    // reintento vería el corte ya REJECTED, lo descartaría y el servicio
+    // quedaría SCHEDULED para siempre.
+    const applied = await this.prisma.$transaction(async (tx) => {
+      // Guard por estado de origen. Si no aplicó, tampoco se toca el servicio:
+      // un rechazo tardío sobre un corte aprobado no debe reprogramar el trabajo.
+      const { count: rejected } = await tx.streetClosureRequest.updateMany({
+        where: {
+          id: request.id,
+          status: { in: sourcesOf(CLOSURE_TRANSITIONS, StreetClosureRequestStatus.REJECTED) },
         },
+        data: { status: StreetClosureRequestStatus.REJECTED },
       });
-      if (count > 0) {
-        this.logger.log(
-          `Servicio ${request.sourceId}: marcado para reprogramar por el rechazo del corte`,
-        );
+      if (rejected === 0) return false;
+
+      if (request.sourceType === 'SERVICE') {
+        // El `where` acota a SCHEDULED, que es el único estado desde el que
+        // VALID_TRANSITIONS admite RESCHEDULED. `updateMany` no pasa por
+        // assertTransition: el filtro es el guard.
+        const { count } = await tx.service.updateMany({
+          where: { id: request.sourceId, status: ServiceStatus.SCHEDULED },
+          data: {
+            status: ServiceStatus.RESCHEDULED,
+            statusReason: `M7 rechazó el corte de calle solicitado${motivo ? `: ${String(motivo)}` : ''}`,
+          },
+        });
+        if (count > 0) {
+          this.logger.log(
+            `Servicio ${request.sourceId}: marcado para reprogramar por el rechazo del corte`,
+          );
+        }
       }
+      return true;
+    });
+    if (this.applied(applied ? 1 : 0, `Corte ${request.id}`, 'streetClosureRejected')) {
+      this.logger.log(`Corte ${request.id}: rechazado por M7`);
     }
-    this.logger.log(`Corte ${request.id}: rechazado por M7`);
   }
 
   private async closureEnded(data: Record<string, unknown>): Promise<void> {
     const request = await this.findClosureRequest(data);
     if (!request) return;
 
-    await this.prisma.streetClosureRequest.update({
-      where: { id: request.id },
-      data: { status: StreetClosureRequestStatus.ENDED },
+    // Guard por estado de origen. Se acepta desde REQUESTED porque este evento
+    // puede adelantarse a streetClosureApproved (topics distintos, sin orden);
+    // en ese caso el id de cierre de M7 se guarda acá, si no lo teníamos.
+    const closureId = (data.streetClosureId as string) ?? (data.closureId as string);
+    const { count } = await this.prisma.streetClosureRequest.updateMany({
+      where: {
+        id: request.id,
+        status: { in: sourcesOf(CLOSURE_TRANSITIONS, StreetClosureRequestStatus.ENDED) },
+      },
+      data: {
+        status: StreetClosureRequestStatus.ENDED,
+        ...(closureId && !request.closureId && { closureId }),
+      },
     });
-    this.logger.log(`Corte ${request.id}: finalizado, dependencia liberada`);
+    if (this.applied(count, `Corte ${request.id}`, 'streetClosureEnded')) {
+      this.logger.log(`Corte ${request.id}: finalizado, dependencia liberada`);
+    }
+  }
+
+  /** Si el update no aplicó, el evento llegó tarde o repetido: se descarta con log, sin error. */
+  private applied(count: number, what: string, event: string): boolean {
+    if (count > 0) return true;
+    this.logger.warn(`${what}: ${event} descartado, el estado actual no admite la transición`);
+    return false;
   }
 
   // ─── Correlación ──────────────────────────────────

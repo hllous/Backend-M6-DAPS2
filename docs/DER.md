@@ -5,7 +5,7 @@ Modelo relacional derivado de `docs/entidades/` del Módulo 6. Convenciones apli
 - **Atributos multivaluados → tablas asociativas.** `zoneIds[]`, `neighborhoodIds[]`, `memberUserIds[]`, `acceptedWasteTypes[]`, `treeIds[]`, `weekdays[]`, `streets[]`, `checklist[]` y `attachments[]` no existen como columnas: cada uno es su propia tabla.
 - **IDs externos no son FK.** `ticketId` (M2), `establishmentId` (M4), `organizationId` / `leaderUserId` / `memberUserIds` (M1), `neighborhoodId` (M9) se guardan como referencias sin integridad referencial: viven en otra base. Van marcados `EXT` y con índice, no con `FOREIGN KEY`.
 - **Referencias polimórficas** (`targetRef`, `sourceRef`, `detectedIn`) se modelan como par `*_type` + `*_id`, porque apuntan a tablas distintas según el caso.
-- **Enums** = los 32 de `enumeraciones.md`. Se implementan como tipo enumerado o `VARCHAR` + `CHECK`, no como tabla de catálogo (son valores cerrados de código, no configurables por el usuario).
+- **Enums** = los 33 de `enumeraciones.md`. Se implementan como tipo enumerado o `VARCHAR` + `CHECK`, no como tabla de catálogo (son valores cerrados de código, no configurables por el usuario).
 - Toda tabla lleva `id UUID PK` y auditoría (`created_at`, `updated_at`, `created_by`); la auditoría no se repite en el diagrama para no ensuciarlo.
 
 ## Diagrama
@@ -97,9 +97,10 @@ erDiagram
         varchar status_reason
         enum origin "ServiceOrigin"
         varchar ticket_id "EXT M2"
-        varchar public_id "EXT M2"
-        int ticket_version "EXT M2"
         text notes
+        text assignment_override_note "solo si se asigno sobre un solapamiento"
+        varchar assignment_override_by "EXT M1"
+        timestamp assignment_override_at
     }
     SERVICE_ZONE {
         uuid service_id PK
@@ -131,6 +132,18 @@ erDiagram
         varchar name
         enum site_type "DisposalSiteType"
         boolean active
+    }
+    SERVICE_DELAY_NOTICE {
+        uuid id PK
+        uuid service_id FK
+        enum delay_type "DelayType"
+        int delay_minutes
+        text reason
+        timestamp new_estimated_end
+        enum service_status "ServiceStatus - copia al momento del aviso"
+        varchar reported_by "EXT M1"
+        timestamp detected_at
+        uuid superseded_by_id FK "null en el aviso vigente"
     }
     ATTACHMENT {
         uuid id PK
@@ -231,6 +244,7 @@ erDiagram
         numeric lat
         numeric lng
         varchar ticket_id "EXT M2"
+        varchar public_id "EXT M2 - referencia humana, no credencial"
         jsonb reporter_snapshot
         enum status "EnvironmentalReportStatus"
         enum priority "Severity"
@@ -352,6 +366,8 @@ erDiagram
     SERVICE           ||--o{ COLLECTION_RECORD : registra
     ZONE_RESULT       ||--o{ COLLECTION_RECORD : detalla
     DISPOSAL_SITE     ||--o{ COLLECTION_RECORD : recibe
+    SERVICE           ||--o{ SERVICE_DELAY_NOTICE : acumula
+    SERVICE_DELAY_NOTICE ||--o| SERVICE_DELAY_NOTICE : reemplaza
 
     ZONE              ||--o{ CONTAINER : ubica
     ZONE              ||--o{ GREEN_POINT : ubica
@@ -383,8 +399,8 @@ erDiagram
 | 5 | `SANCTION_OUTCOME` separado del acta | Es espejo de solo lectura de lo que decide M4. Separarlo deja explícito que ese registro no lo escribe nuestro dominio sino el consumidor de eventos |
 | 6 | `ENVIRONMENTAL_REPORT.deadline_at` (campo agregado) | El paso `NOTICE_ISSUED → CLOSED` por vencimiento de plazo es diseño explícito, no atajo. Necesita una fecha materializada para que un job la barra; no está en el doc porque el doc modela el *qué*, no el *cómo* |
 | 7 | `damage_type`, `severity`, `requires_public_works` como columnas nullables en `CONTAINER` | Solo se llenan en `DAMAGED`. La alternativa (tabla `CONTAINER_DAMAGE` con historial) es mejor si se quiere saber cuántas veces se rompió un contenedor: hoy el doc no lo pide |
-| 8 | `OUTBOX_EVENT` / `INBOX_EVENT` | No son dominio, pero el módulo publica 8 eventos y consume 12. Sin outbox transaccional, un commit que falla al publicar deja el estado y el bus desincronizados; sin inbox con `message_id` único, un evento reentregado por M4 duplica el `SANCTION_OUTCOME` |
-| 9 | Los enums viven en el código, no en tablas de catálogo | Son valores cerrados versionados con el código (32 en total). `SERVICE_TYPE` y `ZONE` sí son tablas: esos los configura el municipio |
+| 8 | `OUTBOX_EVENT` / `INBOX_EVENT` | No son dominio, pero el módulo publica 8 eventos y consume 10. Sin outbox transaccional, un commit que falla al publicar deja el estado y el bus desincronizados; sin inbox con `message_id` único, un evento reentregado por M4 duplica el `SANCTION_OUTCOME` |
+| 9 | Los enums viven en el código, no en tablas de catálogo | Son valores cerrados versionados con el código (33 en total). `SERVICE_TYPE` y `ZONE` sí son tablas: esos los configura el municipio |
 | 10 | `ATTACHMENT` polimórfico y genérico con idempotencia | En vez de endpoints de subida aislados por recurso, `POST /evidence` acepta `owner_type` (`SERVICE`, `ZONE_RESULT`, `INSPECTION`, `CONTAINER`), guarda el archivo en Cloudflare R2 y exige `Idempotency-Key` respaldado por índice único `(owner_type, owner_id, idempotency_key)` para reintentos seguros |
 | 11 | `REPAIR_REQUEST.public_safety_risk` independiente de `severity` | Requerido por el esquema de M3 (`infrastructureRepairRequested`). No se deriva de `severity`: un daño leve puede implicar riesgo peatonal inminente |
 

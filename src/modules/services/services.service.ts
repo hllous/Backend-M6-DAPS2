@@ -18,6 +18,7 @@ import {
   ZoneResultStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { toDateOnly } from '../../common/utils/date-only';
 import { CONTAINER_TRANSITIONS } from '../containers/containers.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
@@ -88,11 +89,6 @@ const SERVICE_INCLUDE = {
 } satisfies Prisma.ServiceInclude;
 
 type ServiceWithRelations = Prisma.ServiceGetPayload<{ include: typeof SERVICE_INCLUDE }>;
-
-/** Fecha sin hora: scheduledDate es @db.Date y comparar con hora produce off-by-one. */
-function toDateOnly(value: string | Date): Date {
-  return new Date(`${new Date(value).toISOString().slice(0, 10)}T00:00:00.000Z`);
-}
 
 /** windowFrom/windowTo son @db.Time; Prisma los maneja como DateTime sobre la época. */
 function toTime(hhmm?: string | null): Date | null {
@@ -679,7 +675,7 @@ export class ServicesService {
    * corrige, se emite otro — el mismo criterio que el acta.
    *
    * Hacia M2 sale como `updateTicketStatus / PROGRESS` con la nueva estimacion,
-   * solo si el servicio nacio de un reclamo. El motivo viaja como mensaje
+   * solo si el servicio nacio de un reclamo y ya arranco (#146). El motivo viaja como mensaje
    * interno: al vecino se le dice que se demora, no por que.
    */
   async addDelayNotice(
@@ -712,11 +708,18 @@ export class ServicesService {
     });
 
     const detectedAt = dto.detectedAt ? new Date(dto.detectedAt) : new Date();
-    const eventos = this.ticketEvents(service, actorId ?? 'sistema', {
-      updateType: 'PROGRESS',
-      publicMessage: 'El servicio se esta demorando. Estamos trabajando para normalizarlo.',
-      internalMessage: dto.reason,
-    });
+    // §8.2: M2 solo acepta PROGRESS con el ticket en IN_PROGRESS, y eso recién
+    // pasa con el STARTED de start(). Una demora antes de arrancar queda
+    // registrada acá pero no se proyecta: M2 la rechazaría y el vecino no se
+    // enteraría igual (#146).
+    const eventos =
+      service.status === ServiceStatus.IN_PROGRESS
+        ? this.ticketEvents(service, actorId ?? 'sistema', {
+            updateType: 'PROGRESS',
+            publicMessage: 'El servicio se esta demorando. Estamos trabajando para normalizarlo.',
+            internalMessage: dto.reason,
+          })
+        : [];
 
     const aviso = await this.prisma.$transaction(async (tx) => {
       const creado = await tx.serviceDelayNotice.create({

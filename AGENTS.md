@@ -7,7 +7,7 @@ TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal d
 1. [docs/README.md](docs/README.md) — qué hace el módulo + glosario propio (`Zone`, `Service`, `Crew`, etc.)
 2. [docs/entidades/](docs/entidades/) — modelo de datos, con diagramas de estado
 3. [docs/eventos/publicados/](docs/eventos/publicados/) — los 8 eventos que emite el módulo, con payload y consumidores
-4. [docs/eventos/consumidos/](docs/eventos/consumidos/) — los 11 eventos que escucha de otros módulos
+4. [docs/eventos/consumidos/](docs/eventos/consumidos/) — los 10 eventos que escucha de otros módulos
 5. [docs/bloqueantes.md](docs/bloqueantes.md) — **fuente única** del estado de integración (qué está confirmado / qué falta de cada contraparte). Leer antes de tocar cualquier evento o payload
 6. [docs/enumeraciones.md](docs/enumeraciones.md) — catálogo de valores cerrados usados en entidades y eventos
 7. [docs/api/](docs/api/) — estándar Swagger + endpoints REST del backend

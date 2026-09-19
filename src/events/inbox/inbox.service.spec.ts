@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { InboxService } from './inbox.service';
+import { InboxService, REDACTED_PAYLOAD } from './inbox.service';
 import { InboundEnvelope } from '../envelope';
 
 describe('InboxService', () => {
@@ -125,5 +125,89 @@ describe('InboxService', () => {
     prisma.inboxEvent.create.mockRejectedValue(new Error('la base se cayó'));
 
     await expect(inbox.ingest(sobre())).rejects.toThrow('la base se cayó');
+  });
+
+  describe('persistencia del payload', () => {
+    const payloadGuardado = () => prisma.inboxEvent.create.mock.calls[0][0].data.payload;
+
+    it('sin handler: redacta el payload y sigue devolviendo ignored', async () => {
+      const result = await inbox.ingest(sobre({ eventType: 'eventoAjeno' }));
+
+      expect(result.status).toBe('ignored');
+      expect(payloadGuardado()).toEqual(REDACTED_PAYLOAD);
+      expect(prisma.inboxEvent.create.mock.calls[0][0].data).toMatchObject({
+        messageId: MESSAGE_ID,
+        eventType: 'eventoAjeno',
+      });
+    });
+
+    it('con persistPayload en false: redacta pero igual ejecuta el handler', async () => {
+      const handler = jest.fn().mockResolvedValue(undefined);
+      inbox.register('ticketUpdated', handler, { persistPayload: () => false });
+
+      const result = await inbox.ingest(sobre({ eventType: 'ticketUpdated' }));
+
+      expect(result.status).toBe('processed');
+      expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' });
+      expect(payloadGuardado()).toEqual(REDACTED_PAYLOAD);
+      expect(prisma.inboxEvent.update.mock.calls[0][0].data.processedAt).toBeInstanceOf(Date);
+    });
+
+    it('con persistPayload en true: conserva el payload completo', async () => {
+      inbox.register('ticketUpdated', jest.fn(), { persistPayload: () => true });
+
+      await inbox.ingest(sobre({ eventType: 'ticketUpdated' }));
+
+      expect(payloadGuardado()).toEqual({ closureRequestId: 'xyz' });
+    });
+
+    it('persistPayload en true y handler que falla: payload completo, sin processedAt y failed', async () => {
+      inbox.register('ticketUpdated', jest.fn().mockRejectedValue(new Error('boom')), {
+        persistPayload: () => true,
+      });
+
+      const result = await inbox.ingest(sobre({ eventType: 'ticketUpdated' }));
+
+      expect(result.status).toBe('failed');
+      expect(payloadGuardado()).toEqual({ closureRequestId: 'xyz' });
+      const [[args]] = prisma.inboxEvent.update.mock.calls;
+      expect(args.data).toEqual({ error: 'boom' });
+    });
+
+    it('si persistPayload lanza, redacta y el ingest sigue', async () => {
+      const handler = jest.fn().mockResolvedValue(undefined);
+      inbox.register('ticketUpdated', handler, {
+        persistPayload: () => {
+          throw new Error('regla rota');
+        },
+      });
+
+      const result = await inbox.ingest(sobre({ eventType: 'ticketUpdated' }));
+
+      expect(result.status).toBe('processed');
+      expect(handler).toHaveBeenCalled();
+      expect(payloadGuardado()).toEqual(REDACTED_PAYLOAD);
+    });
+
+    it('el marcador es inmutable', () => {
+      expect(Object.isFrozen(REDACTED_PAYLOAD)).toBe(true);
+    });
+
+    it('sin la opción conserva el payload', async () => {
+      inbox.register('streetClosureApproved', jest.fn());
+
+      await inbox.ingest(sobre());
+
+      expect(payloadGuardado()).toEqual({ closureRequestId: 'xyz' });
+    });
+
+    it('un duplicado redactado sigue dando duplicate', async () => {
+      inbox.register('ticketUpdated', jest.fn(), { persistPayload: () => false });
+      prisma.inboxEvent.create.mockRejectedValue(duplicado());
+
+      const result = await inbox.ingest(sobre({ eventType: 'ticketUpdated' }));
+
+      expect(result.status).toBe('duplicate');
+    });
   });
 });
