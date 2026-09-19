@@ -6,18 +6,18 @@ El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde e
 
 El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
-> **Actualizado al 02/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero) + evidencia genérica (Issue #64). 130 rutas, agrupadas en 23 tags de Swagger.
+> **Actualizado al 18/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero) + evidencia genérica (Issue #64). 133 rutas, agrupadas en 23 tags de Swagger.
 
 ## Convenciones
 
 Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo para leer esta tabla:
 
 - **Autenticación**: todo exige `Authorization: Bearer <JWT>` salvo lo marcado como público. El `JwtAuthGuard` está registrado como guard global, así que un endpoint nuevo nace protegido; los públicos se marcan explícitamente con `@Public()`. Ver [ADR-002](../decisiones/adr-002-auth-provisoria.md).
-- **Autorización por rol**: todavía no existe. Cualquier usuario autenticado puede llamar cualquier endpoint — pendiente de que M1 publique su taxonomía de roles ([bloqueantes.md](../bloqueantes.md)).
+- **Autorización por rol**: todavía no existe. Cualquier usuario autenticado puede llamar cualquier endpoint — pendiente de que M1 publique su taxonomía de roles ([bloqueantes.md](../bloqueantes.md)). No aplica a los `@Public()` (`health` y los cuatro de `citizen-portal`): esos ni siquiera piden JWT, autenticado o no.
 - **Listados**: paginados con `?page` (default 1) y `?pageSize` (default 20, máx 100). Devuelven `{ data: [...], meta: { total, page, pageSize, totalPages } }`.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
 - **CORS**: los orígenes permitidos salen de `CORS_ORIGINS`. Sin esa variable se acepta cualquiera, que es lo que hace falta en desarrollo. El JWT viaja en un header y no en una cookie, así que esto no cierra un CSRF — es higiene, no un límite de seguridad.
-- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 22 tags están declarados en `main.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
+- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 23 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
 
 ---
@@ -344,7 +344,7 @@ Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran p
 
 ## `citizen-portal` — vista pública
 
-**Los únicos endpoints del módulo que se sirven sin JWT.** El `@Public()` va endpoint por endpoint y no a nivel de clase: el guard global hace que todo endpoint nuevo nazca protegido, y abrir la clase entera haría que el próximo `GET` de acá salga público sin que nadie lo decida.
+**Los únicos endpoints de dominio que se sirven sin JWT, junto con `/health`.** El `@Public()` va endpoint por endpoint y no a nivel de clase: el guard global hace que todo endpoint nuevo nazca protegido, y abrir la clase entera haría que el próximo `GET` de acá salga público sin que nadie lo decida.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
@@ -366,8 +366,6 @@ No hay límite global: también alcanzaría a un operador municipal en su turno,
 
 ## Lo que todavía no existe
 
-Por fase del plan de implementación:
-
-| Fase | Qué falta |
+| Qué falta | Detalle |
 |---|---|
-| 3.5 | Adjuntos y evidencia — hoy `evidence` viaja vacío en el acta. El equipo definió **Cloudflare R2** y lo toma otra persona: el backend guarda en `Attachment` la URL pública que devuelve el bucket, más el nombre del archivo |
+| Autorización por rol | Cualquier usuario autenticado puede llamar cualquier endpoint (salvo los `@Public()` — `health` y los cuatro de `citizen-portal` —, que ni siquiera piden JWT). Diferida hasta que M1 publique su taxonomía de roles — ver [bloqueantes.md](../bloqueantes.md) |

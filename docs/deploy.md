@@ -140,14 +140,14 @@ No hay que hacer nada manual en el día a día.
 
 ## 6. Estado de la app end-to-end
 
-> Actualizado al 03/09/2026, con las siete fases del plan de backend completadas (130 rutas en 23 tags Swagger) y diseño de arquitectura frontend alineado.
+> Actualizado al 18/09/2026, con las siete fases del plan de backend completadas (133 rutas en 23 tags Swagger) y diseño de arquitectura frontend alineado.
 
 La infraestructura está deployada, las migraciones corren solas en cada deploy y la API sirve datos reales.
 
 | # | Qué | Estado |
 |---|---|---|
 | 1 | **Migraciones de Prisma** | ✅ Resuelto (PR #49). El `CMD` del Dockerfile corre `npx prisma migrate deploy` antes de arrancar. Si la migración falla, el contenedor no levanta |
-| 2 | **Services de dominio** | ✅ Fases 1 a 7 completas (130 endpoints en 23 tags): catálogos, recursos (cuadrillas, vehículos), contenedores, arbolado, espacios verdes, `Service` (máquina de estados, ZoneResults, CollectionRecords), control ambiental (expedientes, inspecciones, actas, sanciones), derivaciones (M3 reparaciones, M7 cortes), tablero de indicadores (`/indicators`) y portal ciudadano (`/public`) |
+| 2 | **Services de dominio** | ✅ Fases 1 a 7 completas (133 endpoints en 23 tags): catálogos, recursos (cuadrillas, vehículos), contenedores, arbolado, espacios verdes, `Service` (máquina de estados, ZoneResults, CollectionRecords), control ambiental (expedientes, inspecciones, actas, sanciones), derivaciones (M3 reparaciones, M7 cortes), tablero de indicadores (`/indicators`) y portal ciudadano (`/public`) |
 | 3 | **Autenticación** | ⚠️ Provisoria. Todo endpoint exige JWT (guard global), pero la verificación es HS256 contra `JWT_SECRET` hasta que M1 publique su contrato de firma y claims. La autorización por rol server-side está diferida hasta que M1 defina su taxonomía; el frontend realiza control de permisos optimista en UI (ver [ADR-002](decisiones/adr-002-auth-provisoria.md)) |
 | 4 | **Eventos** | ✅ Outbox transaccional (Fase 3) e Inbox con handlers (Fase 6) implementados. Lo que resta es el broker provisto por M9: sin `KAFKA_BROKERS` configurado, los eventos se encolan en outbox y se registran en log. La ingesta manual puede ejercitarse vía `POST /events/inbox` |
 | 5 | **Evidencia y adjuntos** | ✅ Resuelto (Fase 7). `POST /evidence` genérico sobre Cloudflare R2 con `Idempotency-Key` obligatoria respaldada por constraint único en DB (`SERVICE`, `ZONE_RESULT`, `INSPECTION`, `CONTAINER`) |
