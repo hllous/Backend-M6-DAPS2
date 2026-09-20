@@ -29,7 +29,7 @@ export class RepairRequestResponseDto {
   @ApiProperty({ description: 'UUID del servicio o inspección de origen', format: 'uuid' })
   detectedInId: string;
 
-  @ApiPropertyOptional({ description: 'Dirección del daño', nullable: true })
+  @ApiPropertyOptional({ description: 'Dirección del daño', nullable: true, type: String })
   address: string | null;
 
   @ApiProperty({
@@ -42,6 +42,7 @@ export class RepairRequestResponseDto {
   @ApiPropertyOptional({
     description: 'Orden de trabajo de M3. Null hasta que la informan.',
     nullable: true,
+    type: String,
   })
   workOrderId: string | null;
 
@@ -85,10 +86,20 @@ export class StreetClosureRequestResponseDto {
   @ApiProperty({ description: 'Tramos afectados', type: [ClosureSectionResponseDto] })
   sections: ClosureSectionResponseDto[];
 
-  @ApiPropertyOptional({ description: 'Inicio solicitado', format: 'date-time', nullable: true })
+  @ApiPropertyOptional({
+    description: 'Inicio solicitado',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
   closureFrom: Date | null;
 
-  @ApiPropertyOptional({ description: 'Fin solicitado', format: 'date-time', nullable: true })
+  @ApiPropertyOptional({
+    description: 'Fin solicitado',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
   closureTo: Date | null;
 
   @ApiPropertyOptional({ description: 'Tipo de corte', enum: StreetClosureType, nullable: true })
@@ -103,6 +114,7 @@ export class StreetClosureRequestResponseDto {
   @ApiPropertyOptional({
     description: 'Identificador del corte que asigna M7. Null hasta que responden.',
     nullable: true,
+    type: String,
   })
   closureId: string | null;
 

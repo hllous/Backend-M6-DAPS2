@@ -290,6 +290,8 @@ export class EnvironmentalReportsService {
       ticketId: report.ticketId,
       publicId: report.publicId,
       priority: report.priority,
+      escalated: report.escalated,
+      citizenResponse: report.citizenResponse,
       deadlineAt: report.deadlineAt,
       createdAt: report.createdAt,
       updatedAt: report.updatedAt,

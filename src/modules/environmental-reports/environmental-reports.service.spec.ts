@@ -162,6 +162,20 @@ describe('EnvironmentalReportsService', () => {
       });
     });
 
+    it('el listado y el detalle devuelven escalated y citizenResponse, con sus defaults', async () => {
+      prisma.environmentalReport.findMany.mockResolvedValue([
+        expediente({ escalated: true, citizenResponse: 'Es en el 3B' }),
+        expediente(),
+      ]);
+      prisma.environmentalReport.findUnique.mockResolvedValue(expediente({ escalated: true }));
+
+      const lista = await service.findAll({ page: 1, pageSize: 20, skip: 0, take: 20 } as any);
+      expect(lista.data[0]).toMatchObject({ escalated: true, citizenResponse: 'Es en el 3B' });
+      expect(lista.data[1]).toMatchObject({ escalated: false, citizenResponse: null });
+      expect(lista.data[0]).not.toHaveProperty('reporterSnapshot');
+      expect(await service.findOne(ID)).toMatchObject({ escalated: true, citizenResponse: null });
+    });
+
     it('sin filtros no arma ningún where', async () => {
       await service.findAll({ page: 1, pageSize: 20, skip: 0, take: 20 } as any);
 

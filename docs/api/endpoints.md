@@ -267,7 +267,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | Método | Ruta | Qué hace |
 |---|---|---|
 | POST | `/environmental-reports` | Abrir expediente. Nace en `RECEIVED` |
-| GET | `/environmental-reports` | Listar. Filtros: `status`, `reportType`, `priority`, `ticketId`, `publicId` (TK-…, exacto), `search` |
+| GET | `/environmental-reports` | Listar (cada item trae `escalated` y `citizenResponse`, igual que el detalle y las respuestas de las transiciones; ver entidad). Filtros: `status`, `reportType`, `priority`, `ticketId`, `publicId` (TK-…, exacto), `search` |
 | GET | `/environmental-reports/:id` | Detalle, con su plazo de vencimiento si lo tiene |
 | POST | `/environmental-reports/:id/start-review` | `RECEIVED → UNDER_REVIEW` |
 | POST | `/environmental-reports/:id/forward` | `UNDER_REVIEW → FORWARDED`. Hacia M2 sale como **`RETURNED`**, no `REJECTED`: devolver lo que no es de nuestra área es distinto de desestimarlo |

@@ -45,4 +45,43 @@ describe('contrato OpenAPI', () => {
     );
     expect(JSON.parse(JSON.stringify(documento))).toEqual(versionado);
   });
+
+  it('ninguna propiedad de un schema queda con type object sin forma (tipo perdido)', () => {
+    // Un `string | null` sin `type` explícito se refleja como Object y sale así
+    // en el contrato (#190); el frontend no puede tipar esos campos.
+    type Prop = {
+      type?: string;
+      properties?: object;
+      additionalProperties?: unknown;
+      [k: string]: unknown;
+    };
+    // IngestEventDto.data es un objeto libre a propósito (payload del bus).
+    // EnvironmentalReportResponseDto: pendiente de #181, que reescribe ese DTO. Borrar estas
+    // seis excepciones al mergear #181 y darles tipo a esas propiedades.
+    const excepciones = new Set([
+      'IngestEventDto.data',
+      ...['address', 'lat', 'lng', 'ticketId', 'publicId', 'deadlineAt'].map(
+        (p) => `EnvironmentalReportResponseDto.${p}`,
+      ),
+    ]);
+    const perdidas: string[] = [];
+    const schemas = (documento.components?.schemas ?? {}) as Record<
+      string,
+      { properties?: Record<string, Prop> }
+    >;
+    for (const [nombre, schema] of Object.entries(schemas)) {
+      for (const [prop, def] of Object.entries(schema.properties ?? {})) {
+        const forma =
+          def.properties ??
+          def.additionalProperties ??
+          def.$ref ??
+          def.allOf ??
+          def.oneOf ??
+          def.anyOf;
+        if (def.type === 'object' && !forma && !excepciones.has(`${nombre}.${prop}`))
+          perdidas.push(`${nombre}.${prop}`);
+      }
+    }
+    expect(perdidas).toEqual([]);
+  });
 });

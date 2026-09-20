@@ -25,6 +25,8 @@ export class VehicleResponseDto {
   @ApiPropertyOptional({
     description: 'Capacidad en toneladas (null si no aplica)',
     example: 10.5,
+    type: Number,
+    nullable: true,
   })
   capacity: number | null;
 

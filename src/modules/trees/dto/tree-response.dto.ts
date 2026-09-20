@@ -23,23 +23,27 @@ export class TreeLastSurveyDto {
   @ApiProperty({ description: 'Nivel de riesgo evaluado', enum: RiskLevel })
   riskLevel: RiskLevel;
 
-  @ApiPropertyOptional({ description: 'Tipo de riesgo detectado', enum: RiskType })
+  @ApiPropertyOptional({ description: 'Tipo de riesgo detectado', enum: RiskType, nullable: true })
   riskType: RiskType | null;
 
-  @ApiPropertyOptional({ description: 'Intervención sugerida', enum: TreeInterventionType })
+  @ApiPropertyOptional({
+    description: 'Intervención sugerida',
+    enum: TreeInterventionType,
+    nullable: true,
+  })
   suggestedIntervention: TreeInterventionType | null;
 }
 
 export class TreeResponseDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() surveyCode: string;
-  @ApiPropertyOptional() species: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) species: string | null;
   @ApiProperty({ format: 'uuid' }) zoneId: string;
-  @ApiPropertyOptional() address: string | null;
-  @ApiPropertyOptional() lat: number | null;
-  @ApiPropertyOptional() lng: number | null;
-  @ApiPropertyOptional() heightM: number | null;
-  @ApiPropertyOptional() diameterCm: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) address: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) lat: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) lng: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) heightM: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) diameterCm: number | null;
   @ApiProperty() active: boolean;
   @ApiProperty({ format: 'date-time' }) createdAt: Date;
   @ApiProperty({ format: 'date-time' }) updatedAt: Date;
