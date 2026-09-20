@@ -1,6 +1,16 @@
+import { Trim } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DelayType, ServiceStatus } from '@prisma/client';
-import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  IsNotEmpty,
+} from 'class-validator';
 
 /**
  * El aviso de que un servicio va con retraso.
@@ -41,7 +51,9 @@ export class CreateDelayNoticeDto {
     maxLength: 500,
     example: 'Corte de calle imprevisto por rotura de un caño',
   })
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   reason: string;
 
   @ApiPropertyOptional({

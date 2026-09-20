@@ -9,6 +9,7 @@ import {
   Min,
   MaxLength,
   IsNotEmpty,
+  Max,
 } from 'class-validator';
 import { ToBoolean, Trim } from '../../../common/decorators';
 
@@ -52,6 +53,7 @@ export class UpdateGreenSpaceDto {
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(99999999.99)
   areaM2?: number;
 
   @ApiPropertyOptional({

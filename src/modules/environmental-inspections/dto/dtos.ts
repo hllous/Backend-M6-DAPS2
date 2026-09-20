@@ -1,3 +1,4 @@
+import { Trim } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   InspectionNextStep,
@@ -44,6 +45,7 @@ export class CreateInspectionDto {
 
 export class ChecklistItemDto {
   @ApiProperty({ description: 'Código del ítem del checklist', example: 'RES-01' })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
@@ -54,6 +56,7 @@ export class ChecklistItemDto {
     example: 'Cuenta con plan de gestión de residuos vigente',
     maxLength: 200,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)

@@ -1,5 +1,6 @@
+import { Latitude, Longitude } from '../../../common/decorators';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, IsInt, IsUUID, Min, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsUUID, Min, MaxLength, Max } from 'class-validator';
 
 export class UpdateContainerDto {
   @ApiPropertyOptional({
@@ -19,6 +20,7 @@ export class UpdateContainerDto {
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(2147483647)
   capacityLiters?: number;
 
   @ApiPropertyOptional({
@@ -36,7 +38,7 @@ export class UpdateContainerDto {
     example: -34.6037,
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({
@@ -44,6 +46,6 @@ export class UpdateContainerDto {
     example: -58.3816,
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Longitude()
   lng?: number;
 }
