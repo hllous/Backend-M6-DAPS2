@@ -10926,6 +10926,16 @@
               }
             }
           },
+          "409": {
+            "description": "La intervención de origen no está en estado AUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -11853,6 +11863,16 @@
           },
           "500": {
             "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage de evidencia (R2) no configurado en el servidor. No se persiste nada: el reintento con la misma Idempotency-Key es seguro",
             "content": {
               "application/json": {
                 "schema": {

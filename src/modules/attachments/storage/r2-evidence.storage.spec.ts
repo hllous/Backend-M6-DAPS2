@@ -1,4 +1,4 @@
-import { InternalServerErrorException } from '@nestjs/common';
+import { InternalServerErrorException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { S3Client } from '@aws-sdk/client-s3';
 import { R2EvidenceStorage } from './r2-evidence.storage';
@@ -65,12 +65,12 @@ describe('R2EvidenceStorage', () => {
     expect(S3Client).toHaveBeenCalledWith(expect.objectContaining({ endpoint: undefined }));
   });
 
-  it('rechaza con 500 si falta bucket o publicUrlBase', async () => {
+  it('rechaza con 503 si falta bucket o publicUrlBase', async () => {
     const storage = new R2EvidenceStorage(configured({ 'r2.bucket': undefined }));
 
     await expect(
       storage.upload({ buffer: Buffer.from('x'), key: 'k1', contentType: 'image/png' }),
-    ).rejects.toBeInstanceOf(InternalServerErrorException);
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(sendMock).not.toHaveBeenCalled();
   });
 

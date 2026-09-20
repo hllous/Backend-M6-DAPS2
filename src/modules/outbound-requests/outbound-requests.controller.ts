@@ -162,6 +162,11 @@ export class StreetClosureRequestsController {
     description: 'El servicio o la intervención de origen no existe',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 409,
+    description: 'La intervención de origen no está en estado AUTHORIZED',
+    type: ErrorResponseDto,
+  })
   @ApiResponse(AUTH)
   @ApiResponse(FORBIDDEN)
   @ApiResponse(SERVER)

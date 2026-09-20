@@ -249,7 +249,7 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/street-closure-requests` | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío. 400 si `requestedTo` es anterior a `requestedFrom`. 404 si el servicio o la intervención de origen no existe |
+| POST | `/street-closure-requests` | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío. 400 si `requestedTo` es anterior a `requestedFrom`. 404 si el servicio o la intervención de origen no existe. **409** si la intervención de origen no está `AUTHORIZED` |
 | GET | `/street-closure-requests` | Listar. Filtros: `status`, `sourceId` |
 | GET | `/street-closure-requests/:id` | Detalle con sus tramos |
 | POST | `/street-closure-requests/:id/approve` | → `APPROVED`, guarda el `closureId` de M7. **Normalmente lo dispara `streetClosureApproved`**. **409** si la transición no es válida desde el estado actual |
@@ -297,7 +297,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key`. Un archivo mayor a `MAX_EVIDENCE_SIZE_BYTES` (10 MB) da **413**: multer lo corta antes de llegar al service |
+| POST | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key`. Un archivo mayor a `MAX_EVIDENCE_SIZE_BYTES` (10 MB) da **413**: multer lo corta antes de llegar al service. Sin `R2_BUCKET` / `R2_PUBLIC_URL_BASE` configurados, el camino válido responde **503** (no 500) y no persiste nada |
 | GET | `/evidence` | Lista la evidencia de un `ownerType`/`ownerId`, por query params |
 
 **Genérico por diseño (Issue #64).** Un solo módulo sirve a los cuatro tipos de recurso en vez de reimplementar la subida por cada uno — el modelo `Attachment` ya era polimórfico en el schema, esto le agrega el endpoint que faltaba.
