@@ -37,6 +37,23 @@ export class EnvironmentalReportResponseDto {
   @ApiPropertyOptional({ description: 'Prioridad', enum: Severity, nullable: true })
   priority: Severity | null;
 
+  @ApiProperty({
+    description:
+      'Si M2 escaló el reclamo (al enrutar el reclamo o por un cambio de escalamiento posterior). Es para que lo vea el supervisor; M6 no lo modifica.',
+    type: Boolean,
+    example: false,
+  })
+  escalated: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Respuesta del vecino a nuestro pedido de información (ticketUpdated/INFORMATION_PROVIDED): el mensaje y, debajo, una línea `nombre: url` por adjunto. Null mientras no respondió.',
+    type: String,
+    example: 'El ruido es del local de planta baja, después de las 23 h.',
+    nullable: true,
+  })
+  citizenResponse: string | null;
+
   @ApiPropertyOptional({
     description:
       'Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.',
