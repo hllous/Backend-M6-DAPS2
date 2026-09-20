@@ -47,7 +47,7 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 
 ## Mapa de esta carpeta
 
-- [api/](api/) — estándar Swagger y 133 endpoints REST del backend
+- [api/](api/) — estándar Swagger y 134 endpoints REST del backend
 - [entidades/](entidades/) — modelo conceptual de datos y máquinas de estados
 - [DER.md](DER.md) — modelo relacional entidad-relación (diagrama Mermaid y reglas de esquema)
 - [eventos/publicados/](eventos/publicados/) — los 8 eventos que este módulo emite (con sus `.schema.json`)
