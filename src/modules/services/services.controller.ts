@@ -71,6 +71,12 @@ export class ServicesController {
       'El tipo de servicio, el recorrido, el objetivo, la cuadrilla o el vehículo no existe',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 409,
+    description:
+      'La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa y falta `overrideNote`',
+    type: ErrorResponseDto,
+  })
   @ApiResponse(SERVER)
   async create(
     @Body() dto: CreateServiceDto,

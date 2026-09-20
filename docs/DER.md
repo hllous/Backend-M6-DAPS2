@@ -98,7 +98,7 @@ erDiagram
         enum origin "ServiceOrigin"
         varchar ticket_id "EXT M2"
         text notes
-        text assignment_override_note "solo si se asigno sobre un solapamiento"
+        text assignment_override_note "solo si se asigno o programo sobre un solapamiento"
         varchar assignment_override_by "EXT M1"
         timestamp assignment_override_at
     }

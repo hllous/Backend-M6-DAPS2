@@ -114,7 +114,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/services` | Programar. El **modo se copia del `ServiceType`**, no se elige. Un `ROUTE` exige recorrido y copia sus zonas como snapshot; un `POINT` se ubica por el bien del inventario (`targetType` + `targetId`) o por una `zoneId` suelta. `origin = TICKET` exige `ticketId`, y ningún otro origen lo admite. Nace en `SCHEDULED` |
+| POST | `/services` | Programar. El **modo se copia del `ServiceType`**, no se elige. Un `ROUTE` exige recorrido y copia sus zonas como snapshot; un `POINT` se ubica por el bien del inventario (`targetType` + `targetId`) o por una `zoneId` suelta. `origin = TICKET` exige `ticketId`, y ningún otro origen lo admite. Si trae `crewId`/`vehicleId` ya tomados ese día en una franja que se pisa, **409** salvo que venga `overrideNote` (mismo criterio que `assign-crew`). Nace en `SCHEDULED` |
 | GET | `/services` | Listar. Filtros: `status`, `serviceTypeId`, `mode`, `origin`, `crewId`, `vehicleId`, `zoneId`, `ticketId`, `scheduledFrom`, `scheduledTo` (400 si `scheduledFrom` es posterior) |
 | GET | `/services/:id` | Detalle con zonas, resultados por zona y registros de recolección |
 | PATCH | `/services/:id` | Corregir vehículo, ventana horaria y notas, **solo antes de iniciar**. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar |

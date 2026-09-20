@@ -193,6 +193,20 @@ export class ServicesService {
 
     await this.assertResourcesExist(dto.crewId, dto.vehicleId);
 
+    // Mismo criterio que assign-crew: programar con recursos ya tomados no se
+    // puede en silencio. Va antes de la transaccion: no hay lock, asi que dos
+    // altas concurrentes pueden pasar las dos; meterlo en la tx no lo evita.
+    const conflictos = await this.findAssignmentConflicts(
+      {
+        scheduledDate: toDateOnly(dto.scheduledDate),
+        windowFrom: toTime(dto.windowFrom),
+        windowTo: toTime(dto.windowTo),
+      },
+      dto.crewId,
+      dto.vehicleId,
+    );
+    this.assertOverrideNote(conflictos, dto.overrideNote);
+
     const service = await this.prisma.$transaction(async (tx) => {
       const created = await tx.service.create({
         data: {
@@ -211,6 +225,12 @@ export class ServicesService {
           ticketId: dto.ticketId ?? null,
           notes: dto.notes ?? null,
           createdBy: createdBy ?? null,
+          ...(conflictos.length > 0 &&
+            dto.overrideNote && {
+              assignmentOverrideNote: dto.overrideNote,
+              assignmentOverrideBy: createdBy ?? null,
+              assignmentOverrideAt: new Date(),
+            }),
           // Snapshot: se copia al programar y no se recalcula, para que editar un
           // recorrido no altere lo ya ejecutado (docs/entidades/service.md).
           zones: { createMany: { data: zones } },
@@ -330,13 +350,7 @@ export class ServicesService {
     await this.assertResourcesExist(dto.crewId, dto.vehicleId);
 
     const conflictos = await this.findAssignmentConflicts(current, dto.crewId, dto.vehicleId);
-    if (conflictos.length > 0 && !dto.overrideNote) {
-      throw new ConflictException(
-        `La asignacion se solapa con ${conflictos.length} servicio/s ya programado/s: ${conflictos
-          .map((c) => `${c.resourceName} en ${c.serviceId}`)
-          .join('; ')}. Se puede asignar igual, pero hace falta 'overrideNote' explicando por que.`,
-      );
-    }
+    this.assertOverrideNote(conflictos, dto.overrideNote);
 
     const service = await this.prisma.service.update({
       where: { id },
@@ -388,8 +402,19 @@ export class ServicesService {
     return { serviceId: id, hasConflicts: conflicts.length > 0, conflicts };
   }
 
+  private assertOverrideNote(conflictos: AssignmentConflictDto[], overrideNote?: string): void {
+    if (conflictos.length > 0 && !overrideNote) {
+      throw new ConflictException(
+        `La asignacion se solapa con ${conflictos.length} servicio/s ya programado/s: ${conflictos
+          .map((c) => `${c.resourceName} en ${c.serviceId}`)
+          .join('; ')}. Se puede asignar igual, pero hace falta 'overrideNote' explicando por que.`,
+      );
+    }
+  }
+
+  /** `id` es undefined al programar: el servicio todavia no existe. */
   private async findAssignmentConflicts(
-    service: Service,
+    service: Pick<Service, 'scheduledDate' | 'windowFrom' | 'windowTo'> & { id?: string },
     crewId?: string,
     vehicleId?: string,
   ): Promise<AssignmentConflictDto[]> {
@@ -401,7 +426,7 @@ export class ServicesService {
 
     const candidatos = await this.prisma.service.findMany({
       where: {
-        id: { not: service.id },
+        ...(service.id && { id: { not: service.id } }),
         scheduledDate: service.scheduledDate,
         status: { in: OCUPAN_RECURSO },
         OR: [...(crewId ? [{ crewId }] : []), ...(vehicleId ? [{ vehicleId }] : [])],
