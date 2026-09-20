@@ -25,6 +25,11 @@ export class IndicatorsController {
   })
   @ApiResponse({ status: 200, description: 'Indicador de cobertura', type: CoverageIndicatorDto })
   @ApiResponse({
+    status: 400,
+    description: 'Período inválido: from posterior a to',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
     type: ErrorResponseDto,
@@ -44,6 +49,11 @@ export class IndicatorsController {
     status: 200,
     description: 'Indicador de cumplimiento',
     type: ComplianceIndicatorDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Período inválido: from posterior a to',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 401,
@@ -67,6 +77,11 @@ export class IndicatorsController {
     type: IncidentsIndicatorDto,
   })
   @ApiResponse({
+    status: 400,
+    description: 'Período inválido: from posterior a to',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
     type: ErrorResponseDto,
@@ -83,6 +98,11 @@ export class IndicatorsController {
       'Kilos y metros cúbicos por tipo de residuo y por sitio de disposición, y el porcentaje desviado del relleno hacia planta de reciclado o de compostaje. La fecha del residuo es la del servicio que lo recolectó.',
   })
   @ApiResponse({ status: 200, description: 'Indicador de residuos', type: WasteIndicatorDto })
+  @ApiResponse({
+    status: 400,
+    description: 'Período inválido: from posterior a to',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',

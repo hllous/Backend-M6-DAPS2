@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import {
   RepairDamageType,
   RepairRequestStatus,
@@ -147,6 +147,17 @@ describe('OutboundRequestsService', () => {
       requestedTo: '2026-10-05T13:00:00.000Z',
       closureType: StreetClosureType.PARTIAL,
     };
+
+    it('un corte que termina antes de empezar se rechaza', async () => {
+      await expect(
+        service.createClosureRequest({
+          ...dto,
+          requestedFrom: '2026-10-05T13:00:00.000Z',
+          requestedTo: '2026-10-05T07:00:00.000Z',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.streetClosureRequest.create).not.toHaveBeenCalled();
+    });
 
     it('sourceModule viaja como M6, que es lo que dice la tabla de M7', async () => {
       await service.createClosureRequest(dto);

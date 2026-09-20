@@ -88,7 +88,8 @@ export class CompleteInspectionDto {
   outcome: InspectionOutcome;
 
   @ApiPropertyOptional({
-    description: 'Qué corresponde hacer después',
+    description:
+      'Qué corresponde hacer después. **Obligatorio si el resultado es VIOLATION_FOUND.**',
     enum: InspectionNextStep,
     example: InspectionNextStep.NOTICE_TO_BE_ISSUED,
   })

@@ -18,7 +18,7 @@ import {
   ZoneResultStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { toDateOnly } from '../../common/utils/date-only';
+import { toDateOnly, todayArgentina } from '../../common/utils/date-only';
 import { CONTAINER_TRANSITIONS } from '../containers/containers.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
@@ -246,6 +246,15 @@ export class ServicesService {
     if (query.ticketId) where.ticketId = query.ticketId;
     if (query.zoneId) where.zones = { some: { zoneId: query.zoneId } };
 
+    if (
+      query.scheduledFrom &&
+      query.scheduledTo &&
+      toDateOnly(query.scheduledFrom) > toDateOnly(query.scheduledTo)
+    ) {
+      throw new BadRequestException(
+        `'scheduledFrom' (${query.scheduledFrom}) no puede ser posterior a 'scheduledTo' (${query.scheduledTo})`,
+      );
+    }
     if (query.scheduledFrom || query.scheduledTo) {
       where.scheduledDate = {
         ...(query.scheduledFrom && { gte: toDateOnly(query.scheduledFrom) }),
@@ -646,9 +655,16 @@ export class ServicesService {
   async confirmReschedule(id: string, dto: ConfirmRescheduleDto): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     this.assertWindowOrder(dto.windowFrom, dto.windowTo);
+    const scheduledDate = toDateOnly(dto.scheduledDate);
+    // Se compara contra el "hoy" argentino: la fecha de hoy sigue siendo válida.
+    if (scheduledDate < todayArgentina()) {
+      throw new BadRequestException(
+        `La fecha reprogramada (${dto.scheduledDate.slice(0, 10)}) no puede ser anterior a hoy`,
+      );
+    }
 
     return this.transition(current, ServiceStatus.SCHEDULED, {
-      scheduledDate: toDateOnly(dto.scheduledDate),
+      scheduledDate,
       ...(dto.windowFrom !== undefined && { windowFrom: toTime(dto.windowFrom) }),
       ...(dto.windowTo !== undefined && { windowTo: toTime(dto.windowTo) }),
     });

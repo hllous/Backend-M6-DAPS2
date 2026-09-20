@@ -1,5 +1,11 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { FrequencyWeekday, Prisma, ServiceFrequency, ServiceMode } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { FrequencyWeekday, Prisma, ServiceFrequency, ServiceMode, Shift } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { toDateOnly } from '../../common/utils/date-only';
 import {
@@ -24,6 +30,7 @@ export class ServiceFrequenciesService {
 
     this.assertValidPeriod(validFrom, validTo);
     await this.assertReferencesExist(dto.serviceTypeId, dto.routeId);
+    await this.assertNoOverlap({ ...dto, validFrom, validTo });
 
     const frequency = await this.prisma.serviceFrequency.create({
       data: {
@@ -104,6 +111,17 @@ export class ServiceFrequenciesService {
     const validFrom = dto.validFrom ? toDateOnly(dto.validFrom) : current.validFrom;
     const validTo = dto.validTo !== undefined ? toDateOnly(dto.validTo) : current.validTo;
     this.assertValidPeriod(validFrom, validTo);
+    await this.assertNoOverlap(
+      {
+        serviceTypeId: current.serviceTypeId,
+        routeId: current.routeId,
+        shift: dto.shift ?? current.shift,
+        weekdays: dto.weekdays ?? current.weekdays.map((w) => w.weekday),
+        validFrom,
+        validTo,
+      },
+      id,
+    );
 
     const frequency = await this.prisma.serviceFrequency.update({
       where: { id },
@@ -160,6 +178,44 @@ export class ServiceFrequenciesService {
   }
 
   /**
+   * Dos reglas del mismo recorrido, tipo y turno que comparten algún día y cuya
+   * vigencia se superpone generarían el mismo servicio dos veces. `validTo` nulo
+   * es una vigencia abierta.
+   *
+   * Limitación conocida: es un chequeo previo sin restricción en la base (ver
+   * docs/api/endpoints.md), así que dos requests concurrentes podrían pasar los dos.
+   */
+  private async assertNoOverlap(
+    rule: {
+      serviceTypeId: string;
+      routeId: string;
+      shift: Shift;
+      weekdays: number[];
+      validFrom: Date;
+      validTo: Date | null;
+    },
+    excludeId?: string,
+  ): Promise<void> {
+    const clash = await this.prisma.serviceFrequency.findFirst({
+      where: {
+        ...(excludeId && { id: { not: excludeId } }),
+        serviceTypeId: rule.serviceTypeId,
+        routeId: rule.routeId,
+        shift: rule.shift,
+        weekdays: { some: { weekday: { in: rule.weekdays } } },
+        ...(rule.validTo && { validFrom: { lte: rule.validTo } }),
+        OR: [{ validTo: null }, { validTo: { gte: rule.validFrom } }],
+      },
+      select: { id: true },
+    });
+    if (clash) {
+      throw new ConflictException(
+        `Ya existe una frecuencia (${clash.id}) para el mismo recorrido, tipo de servicio y turno que comparte algún día y se superpone en la vigencia`,
+      );
+    }
+  }
+
+  /**
    * El tipo de servicio tiene que ser de modo ROUTE: una frecuencia genera
    * servicios sobre un recorrido, y un tipo POINT no se ejecuta sobre uno.
    */
@@ -185,8 +241,11 @@ export class ServiceFrequenciesService {
     }
   }
 
-  private async getFrequency(id: string): Promise<ServiceFrequency> {
-    const frequency = await this.prisma.serviceFrequency.findUnique({ where: { id } });
+  private async getFrequency(id: string): Promise<FrequencyWithWeekdays> {
+    const frequency = await this.prisma.serviceFrequency.findUnique({
+      where: { id },
+      include: { weekdays: true },
+    });
     if (!frequency) {
       throw new NotFoundException(`Frecuencia con id '${id}' no encontrada`);
     }

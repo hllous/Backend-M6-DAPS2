@@ -112,7 +112,12 @@ export class EnvironmentalInspectionsController {
   })
   @ApiParam({ name: 'id', description: 'UUID de la inspección', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Inspección cerrada', type: InspectionResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos inválidos', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Datos inválidos, inspectedAt en el futuro, o resultado VIOLATION_FOUND sin nextStep',
+    type: ErrorResponseDto,
+  })
   @ApiResponse(AUTH)
   @ApiResponse(FORBIDDEN)
   @ApiResponse(NOT_FOUND)

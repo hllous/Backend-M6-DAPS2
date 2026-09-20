@@ -87,6 +87,17 @@ export class EnvironmentalInspectionsService {
    * inspección.
    */
   async complete(id: string, dto: CompleteInspectionDto): Promise<InspectionResponseDto> {
+    // Margen de 5 minutos por desfase de reloj entre el dispositivo del inspector y el servidor.
+    if (new Date(dto.inspectedAt).getTime() > Date.now() + 5 * 60_000) {
+      throw new BadRequestException(
+        `'inspectedAt' (${dto.inspectedAt}) no puede estar en el futuro`,
+      );
+    }
+    if (dto.outcome === InspectionOutcome.VIOLATION_FOUND && !dto.nextStep) {
+      throw new BadRequestException(
+        "Un resultado VIOLATION_FOUND necesita 'nextStep' (NOTICE_TO_BE_ISSUED, REINSPECTION o CASE_CLOSED)",
+      );
+    }
     const inspection = await this.getInspection(id);
     if (inspection.outcome) {
       throw new ConflictException(
