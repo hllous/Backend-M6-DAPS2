@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 /** El código no es mutable. Las paradas se editan con PUT /routes/:id/stops. */
 export class UpdateRouteDto {
@@ -18,6 +19,6 @@ export class UpdateRouteDto {
     example: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

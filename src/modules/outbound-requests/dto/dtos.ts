@@ -5,7 +5,6 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
-  IsBoolean,
   IsDateString,
   IsEnum,
   IsNotEmpty,
@@ -15,6 +14,7 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 /** De dónde salió la detección. `Attachment.ownerType` usa el mismo criterio. */
 export enum DetectedInType {
@@ -46,7 +46,7 @@ export class CreateRepairRequestDto {
       'Si el daño representa un riesgo para la seguridad pública. M3 prioriza con esto, y no se deriva de la gravedad: son dos cosas distintas.',
     example: true,
   })
-  @IsBoolean()
+  @ToBoolean()
   publicSafetyRisk: boolean;
 
   @ApiProperty({

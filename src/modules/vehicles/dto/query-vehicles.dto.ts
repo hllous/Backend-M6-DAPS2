@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsEnum, IsOptional } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 import { VehicleType } from '@prisma/client';
 import { PaginationQueryDto } from '../../../common/dto';
 
@@ -10,12 +10,7 @@ export class QueryVehiclesDto extends PaginationQueryDto {
     example: true,
   })
   @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   active?: boolean;
 
   @ApiPropertyOptional({

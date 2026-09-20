@@ -4,7 +4,6 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
-  IsBoolean,
   IsEnum,
   IsLatitude,
   IsLongitude,
@@ -14,6 +13,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 export class CreateGreenPointDto {
   @ApiProperty({
@@ -82,6 +82,6 @@ export class CreateGreenPointDto {
     default: true,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

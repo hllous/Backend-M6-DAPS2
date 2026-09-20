@@ -4,11 +4,11 @@ import {
   IsNotEmpty,
   IsEnum,
   IsOptional,
-  IsBoolean,
   IsNumber,
   Min,
   MaxLength,
 } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 import { VehicleType } from '@prisma/client';
 
 export class CreateVehicleDto {
@@ -46,6 +46,6 @@ export class CreateVehicleDto {
     default: true,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

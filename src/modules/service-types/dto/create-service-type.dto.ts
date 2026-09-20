@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ServiceCategory, ServiceMode } from '@prisma/client';
-import { IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 export class CreateServiceTypeDto {
   @ApiProperty({
@@ -46,7 +47,7 @@ export class CreateServiceTypeDto {
     default: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   requiresVehicle?: boolean;
 
   @ApiPropertyOptional({
@@ -55,6 +56,6 @@ export class CreateServiceTypeDto {
     default: true,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

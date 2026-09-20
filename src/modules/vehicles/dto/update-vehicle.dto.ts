@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsNumber, Min, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min, MaxLength } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 export class UpdateVehicleDto {
   @ApiPropertyOptional({
@@ -27,6 +28,6 @@ export class UpdateVehicleDto {
     example: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

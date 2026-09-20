@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsBoolean, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 export class UpdateZoneDto {
   @ApiPropertyOptional({
@@ -17,6 +18,6 @@ export class UpdateZoneDto {
     example: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

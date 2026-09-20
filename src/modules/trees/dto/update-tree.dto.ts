@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsNumber, IsUUID, Min, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsUUID, Min, MaxLength } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 export class UpdateTreeDto {
   @ApiPropertyOptional({ description: 'UUID de la zona operativa', format: 'uuid' })
@@ -43,6 +44,6 @@ export class UpdateTreeDto {
 
   @ApiPropertyOptional({ description: 'Si el árbol está activo' })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

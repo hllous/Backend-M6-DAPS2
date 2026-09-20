@@ -2,13 +2,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsOptional,
-  IsBoolean,
   IsString,
   IsArray,
   IsUUID,
   ArrayNotEmpty,
   MaxLength,
 } from 'class-validator';
+import { ToBoolean } from '../../../../common/decorators';
 import { TreeInterventionType, Severity } from '@prisma/client';
 
 export class CreateTreeInterventionDto {
@@ -46,7 +46,7 @@ export class CreateTreeInterventionDto {
     default: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   requiresStreetClosure?: boolean;
 
   @ApiPropertyOptional({
