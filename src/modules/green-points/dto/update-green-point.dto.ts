@@ -6,15 +6,13 @@ import {
   ArrayUnique,
   IsArray,
   IsEnum,
-  IsLatitude,
-  IsLongitude,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
   IsNotEmpty,
 } from 'class-validator';
-import { ToBoolean, Trim, MAX_LIST_SIZE } from '../../../common/decorators';
+import { ToBoolean, Trim, MAX_LIST_SIZE, Latitude, Longitude } from '../../../common/decorators';
 
 /** El código no es mutable: identifica al punto verde en la vía pública. */
 export class UpdateGreenPointDto {
@@ -58,12 +56,12 @@ export class UpdateGreenPointDto {
 
   @ApiPropertyOptional({ description: 'Latitud', example: -34.6037 })
   @IsOptional()
-  @IsLatitude()
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Longitud', example: -58.3816 })
   @IsOptional()
-  @IsLongitude()
+  @Longitude()
   lng?: number;
 
   @ApiPropertyOptional({ description: 'Si está habilitado', example: false })

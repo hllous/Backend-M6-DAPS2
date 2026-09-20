@@ -17,7 +17,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **Listados**: paginados con `?page` (default 1) y `?pageSize` (default 20, máx 100). Devuelven `{ data: [...], meta: { total, page, pageSize, totalPages } }`.
 - **Booleanos**: en filtros (`?active=`) y en bodies se acepta `true` o `false`, sin distinguir mayúsculas. Cualquier otro valor (`0`, `1`, vacío, `maybe`) da 400.
 - **Textos**: `code`, `name`, `plate` y `surveyCode` se recortan (bordes) antes de validar y guardar. Un valor que quede vacío (solo espacios) da 400. Lo mismo vale para los textos obligatorios de motivo y dirección (`reason`, `address` de reubicación, `streetName`, `fromCross`, `toCross`, `itemCode`, `label`). Cualquier string con el carácter nulo (`\u0000`) en body o query, a cualquier profundidad, da 400 (Postgres no lo acepta).
-- **Rangos numéricos**: todo número de entrada tiene tope según su columna, y fuera de rango da 400 con el mensaje del campo. `lat` va de -90 a 90 y `lng` de -180 a 180; `capacityLiters` hasta 2.147.483.647; `capacity`, `areaM2`, `weightKg` y `volumeM3` hasta 99.999.999,99; `heightM` hasta 999,99; `diameterCm` hasta 9999,9; `page` hasta 10.000.000. Pesos y capacidades no pueden ser negativos.
+- **Rangos numéricos**: todo número de entrada tiene tope según su columna, y fuera de rango da 400 con el mensaje del campo. `lat` va de -90 a 90 y `lng` de -180 a 180, y ambos admiten hasta 7 decimales (con más da 400); `capacityLiters` hasta 2.147.483.647; `capacity`, `areaM2`, `weightKg` y `volumeM3` hasta 99.999.999,99; `heightM` hasta 999,99; `diameterCm` hasta 9999,9; `page` hasta 10.000.000. Pesos y capacidades no pueden ser negativos. Los mismos rangos figuran como `minimum`/`maximum` en el swagger (`openapi.json`); un test falla si un campo con `@Min`/`@Max` no los declara.
 - **Tope de tamaño**: `search` admite hasta 100 caracteres; los ids externos (`ticketId`, `publicId`, `leaderUserId`, `organizationId`, `authorizedByUserId`, `inspectorId`, `eventId`, `eventType` y cada elemento de `userIds` y `neighborhoodIds`) hasta 100; `reason` de un aviso de demora hasta 500 y `notes` de un servicio hasta 2000. Los arrays (`userIds`, `neighborhoodIds`, `treeIds`, `wasteTypes`) admiten hasta 100 elementos. Pasarse da 400.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
 - **CORS**: los orígenes permitidos salen de `CORS_ORIGINS`. Sin esa variable se acepta cualquiera, que es lo que hace falta en desarrollo. El JWT viaja en un header y no en una cookie, así que esto no cierra un CSRF — es higiene, no un límite de seguridad.
@@ -28,168 +28,168 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 
 ## `health`
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| GET | `/health` | Health check. **Público**, no requiere JWT. |
+| Método | Ruta      | Qué hace                                    |
+| ------ | --------- | ------------------------------------------- |
+| GET    | `/health` | Health check. **Público**, no requiere JWT. |
 
 ## `zones` — zonas operativas
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/zones` | Crear zona operativa |
-| GET | `/zones` | Listar. Filtros: `active`, `search` (nombre) |
-| GET | `/zones/:id` | Detalle, con los barrios asignados |
-| PATCH | `/zones/:id` | Actualizar nombre y estado. El código es inmutable |
-| DELETE | `/zones/:id` | Baja lógica |
-| POST | `/zones/:id/neighborhoods` | Asignar barrios (catálogo de M9). Ignora duplicados |
-| DELETE | `/zones/:id/neighborhoods/:neighborhoodId` | Quitar un barrio |
+| Método | Ruta                                       | Qué hace                                            |
+| ------ | ------------------------------------------ | --------------------------------------------------- |
+| POST   | `/zones`                                   | Crear zona operativa                                |
+| GET    | `/zones`                                   | Listar. Filtros: `active`, `search` (nombre)        |
+| GET    | `/zones/:id`                               | Detalle, con los barrios asignados                  |
+| PATCH  | `/zones/:id`                               | Actualizar nombre y estado. El código es inmutable  |
+| DELETE | `/zones/:id`                               | Baja lógica                                         |
+| POST   | `/zones/:id/neighborhoods`                 | Asignar barrios (catálogo de M9). Ignora duplicados |
+| DELETE | `/zones/:id/neighborhoods/:neighborhoodId` | Quitar un barrio                                    |
 
 ## `routes` — recorridos
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/routes` | Crear recorrido. Nace sin paradas |
-| GET | `/routes` | Listar. Filtros: `active`, `zoneId` (recorridos que pasan por la zona), `search` |
-| GET | `/routes/:id` | Detalle con la secuencia de paradas, en orden |
-| PATCH | `/routes/:id` | Actualizar nombre y estado |
-| DELETE | `/routes/:id` | Baja lógica |
-| PUT | `/routes/:id/stops` | **Reemplaza la secuencia completa de paradas.** Cubre alta, baja y reordenamiento en una sola llamada atómica: el orden del array es el orden del recorrido. Una zona no puede repetirse (400) — rompería `ServiceZone` cuando un servicio copie el recorrido. Array vacío deja el recorrido sin paradas |
+| Método | Ruta                | Qué hace                                                                                                                                                                                                                                                                                                 |
+| ------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/routes`           | Crear recorrido. Nace sin paradas                                                                                                                                                                                                                                                                        |
+| GET    | `/routes`           | Listar. Filtros: `active`, `zoneId` (recorridos que pasan por la zona), `search`                                                                                                                                                                                                                         |
+| GET    | `/routes/:id`       | Detalle con la secuencia de paradas, en orden                                                                                                                                                                                                                                                            |
+| PATCH  | `/routes/:id`       | Actualizar nombre y estado                                                                                                                                                                                                                                                                               |
+| DELETE | `/routes/:id`       | Baja lógica                                                                                                                                                                                                                                                                                              |
+| PUT    | `/routes/:id/stops` | **Reemplaza la secuencia completa de paradas.** Cubre alta, baja y reordenamiento en una sola llamada atómica: el orden del array es el orden del recorrido. Una zona no puede repetirse (400) — rompería `ServiceZone` cuando un servicio copie el recorrido. Array vacío deja el recorrido sin paradas |
 
 ## `service-frequencies` — frecuencias
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/service-frequencies` | Crear la regla que genera los servicios planificados. El tipo de servicio tiene que ser de modo `ROUTE` (400 si no). **409** si se superpone con otra regla del mismo recorrido, tipo y turno que comparta algún día y vigencia |
-| GET | `/service-frequencies` | Listar. Filtros: `serviceTypeId`, `routeId`, `shift`, `weekday` (1=Lunes…7=Domingo), `validOn` (reglas vigentes en esa fecha) |
-| GET | `/service-frequencies/:id` | Detalle, con los días de la semana |
-| PATCH | `/service-frequencies/:id` | Actualizar días, turno y vigencia. El array de días reemplaza el conjunto completo. El tipo y el recorrido son inmutables. **409** si el cambio la superpone con otra regla |
-| DELETE | `/service-frequencies/:id` | **Cierra la vigencia** (`validTo = hoy`), no marca `active`: el modelo no tiene esa columna y el dominio ya expresa la baja con `validTo`. Si la regla todavía no empezó a regir, se cierra en su `validFrom` |
+| Método | Ruta                       | Qué hace                                                                                                                                                                                                                        |
+| ------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/service-frequencies`     | Crear la regla que genera los servicios planificados. El tipo de servicio tiene que ser de modo `ROUTE` (400 si no). **409** si se superpone con otra regla del mismo recorrido, tipo y turno que comparta algún día y vigencia |
+| GET    | `/service-frequencies`     | Listar. Filtros: `serviceTypeId`, `routeId`, `shift`, `weekday` (1=Lunes…7=Domingo), `validOn` (reglas vigentes en esa fecha)                                                                                                   |
+| GET    | `/service-frequencies/:id` | Detalle, con los días de la semana                                                                                                                                                                                              |
+| PATCH  | `/service-frequencies/:id` | Actualizar días, turno y vigencia. El array de días reemplaza el conjunto completo. El tipo y el recorrido son inmutables. **409** si el cambio la superpone con otra regla                                                     |
+| DELETE | `/service-frequencies/:id` | **Cierra la vigencia** (`validTo = hoy`), no marca `active`: el modelo no tiene esa columna y el dominio ya expresa la baja con `validTo`. Si la regla todavía no empezó a regir, se cierra en su `validFrom`                   |
 
 > **Limitación conocida.** El chequeo de solapamiento se hace en el service (`assertNoOverlap`) y no hay una restricción en la base que lo respalde: es un rango de fechas y un `@unique` no lo expresa. Dos requests simultáneos que crean o modifican reglas que se pisan podrían pasar los dos. Cerrarlo requiere una migración con una restricción de exclusión (`EXCLUDE USING gist`) o un bloqueo por recorrido; queda pendiente hasta que sea un problema real.
 
 ## `service-types` — catálogo de tipos de servicio
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/service-types` | Crear tipo de servicio |
-| GET | `/service-types` | Listar. Filtros: `active`, `category`, `mode`, `search` |
-| GET | `/service-types/:id` | Detalle |
-| PATCH | `/service-types/:id` | Actualizar nombre, `requiresVehicle` y estado. `code`, `category` y `mode` son inmutables: hay servicios ya programados que los copiaron |
-| DELETE | `/service-types/:id` | Baja lógica |
+| Método | Ruta                 | Qué hace                                                                                                                                 |
+| ------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/service-types`     | Crear tipo de servicio                                                                                                                   |
+| GET    | `/service-types`     | Listar. Filtros: `active`, `category`, `mode`, `search`                                                                                  |
+| GET    | `/service-types/:id` | Detalle                                                                                                                                  |
+| PATCH  | `/service-types/:id` | Actualizar nombre, `requiresVehicle` y estado. `code`, `category` y `mode` son inmutables: hay servicios ya programados que los copiaron |
+| DELETE | `/service-types/:id` | Baja lógica                                                                                                                              |
 
 ## `disposal-sites` — sitios de disposición final
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/disposal-sites` | Crear sitio de disposición final |
-| GET | `/disposal-sites` | Listar. Filtros: `active`, `siteType`, `search` |
-| GET | `/disposal-sites/:id` | Detalle |
-| PATCH | `/disposal-sites/:id` | Actualizar nombre, tipo y estado |
+| Método | Ruta                  | Qué hace                                                       |
+| ------ | --------------------- | -------------------------------------------------------------- |
+| POST   | `/disposal-sites`     | Crear sitio de disposición final                               |
+| GET    | `/disposal-sites`     | Listar. Filtros: `active`, `siteType`, `search`                |
+| GET    | `/disposal-sites/:id` | Detalle                                                        |
+| PATCH  | `/disposal-sites/:id` | Actualizar nombre, tipo y estado                               |
 | DELETE | `/disposal-sites/:id` | Baja lógica. Los `CollectionRecord` ya cargados lo referencian |
 
 ## `crews` — cuadrillas
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/crews` | Crear cuadrilla |
-| GET | `/crews` | Listar. Filtros: `active`, `crewType`, `defaultShift` |
-| GET | `/crews/:id` | Detalle, con los integrantes |
-| PATCH | `/crews/:id` | Actualizar |
-| DELETE | `/crews/:id` | Baja lógica |
-| POST | `/crews/:id/members` | Agregar integrantes |
-| DELETE | `/crews/:id/members/:userId` | Quitar un integrante |
+| Método | Ruta                         | Qué hace                                              |
+| ------ | ---------------------------- | ----------------------------------------------------- |
+| POST   | `/crews`                     | Crear cuadrilla                                       |
+| GET    | `/crews`                     | Listar. Filtros: `active`, `crewType`, `defaultShift` |
+| GET    | `/crews/:id`                 | Detalle, con los integrantes                          |
+| PATCH  | `/crews/:id`                 | Actualizar                                            |
+| DELETE | `/crews/:id`                 | Baja lógica                                           |
+| POST   | `/crews/:id/members`         | Agregar integrantes                                   |
+| DELETE | `/crews/:id/members/:userId` | Quitar un integrante                                  |
 
 ## `vehicles` — vehículos
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/vehicles` | Registrar vehículo |
-| GET | `/vehicles` | Listar. Filtros: `active`, `vehicleType` |
-| GET | `/vehicles/:id` | Detalle |
-| PATCH | `/vehicles/:id` | Actualizar |
-| DELETE | `/vehicles/:id` | Baja lógica |
+| Método | Ruta            | Qué hace                                 |
+| ------ | --------------- | ---------------------------------------- |
+| POST   | `/vehicles`     | Registrar vehículo                       |
+| GET    | `/vehicles`     | Listar. Filtros: `active`, `vehicleType` |
+| GET    | `/vehicles/:id` | Detalle                                  |
+| PATCH  | `/vehicles/:id` | Actualizar                               |
+| DELETE | `/vehicles/:id` | Baja lógica                              |
 
 ## `services` — programación y ejecución
 
 `Service` es la unidad de trabajo programable del módulo: recolección, barrido, lavado, vaciado de contenedor, poda y riego son todos un servicio. Lo que varía es sobre qué se ejecuta — un recorrido de zonas (`ROUTE`) o un objetivo puntual (`POINT`).
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/services` | Programar. El **modo se copia del `ServiceType`**, no se elige. Un `ROUTE` exige recorrido y copia sus zonas como snapshot; un `POINT` se ubica por el bien del inventario (`targetType` + `targetId`) o por una `zoneId` suelta. `origin = TICKET` exige `ticketId`, y ningún otro origen lo admite. Si trae `crewId`/`vehicleId` ya tomados ese día en una franja que se pisa, **409** salvo que venga `overrideNote` (mismo criterio que `assign-crew`). Nace en `SCHEDULED` |
-| GET | `/services` | Listar. Filtros: `status`, `serviceTypeId`, `mode`, `origin`, `crewId`, `vehicleId`, `zoneId`, `ticketId`, `scheduledFrom`, `scheduledTo` (400 si `scheduledFrom` es posterior) |
-| GET | `/services/:id` | Detalle con zonas, resultados por zona y registros de recolección |
-| PATCH | `/services/:id` | Corregir vehículo, ventana horaria y notas, **solo antes de iniciar**. Si el vehículo o la ventana nuevos se solapan con otro servicio de la misma cuadrilla o vehículo ese día, devuelve 409; con `overrideNote` (10-500 caracteres) se acepta y queda guardada con quién y cuándo (mismo criterio que `assign-crew`). El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar |
-| POST | `/services/:id/assign-crew` | Asignar cuadrilla, y vehículo en la misma operación. **El solapamiento avisa, no bloquea**: si la cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, devuelve 409 nombrando los servicios; con `overrideNote` (10-500 caracteres) la asignación se hace igual y la nota queda guardada con quién y cuándo |
-| GET | `/services/:id/assignment-conflicts` | Con qué se solapa asignar `crewId` / `vehicleId`, **antes** de enviar. Sin parámetros evalúa los que el servicio ya tiene. Existe para que el planificador se entere por un aviso y no por un 409 |
+| Método | Ruta                                 | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/services`                          | Programar. El **modo se copia del `ServiceType`**, no se elige. Un `ROUTE` exige recorrido y copia sus zonas como snapshot; un `POINT` se ubica por el bien del inventario (`targetType` + `targetId`) o por una `zoneId` suelta. `origin = TICKET` exige `ticketId`, y ningún otro origen lo admite. Si trae `crewId`/`vehicleId` ya tomados ese día en una franja que se pisa, **409** salvo que venga `overrideNote` (mismo criterio que `assign-crew`). Nace en `SCHEDULED` |
+| GET    | `/services`                          | Listar. Filtros: `status`, `serviceTypeId`, `mode`, `origin`, `crewId`, `vehicleId`, `zoneId`, `ticketId`, `scheduledFrom`, `scheduledTo` (400 si `scheduledFrom` es posterior)                                                                                                                                                                                                                                                                                                 |
+| GET    | `/services/:id`                      | Detalle con zonas, resultados por zona y registros de recolección                                                                                                                                                                                                                                                                                                                                                                                                               |
+| PATCH  | `/services/:id`                      | Corregir vehículo, ventana horaria y notas, **solo antes de iniciar**. Si el vehículo o la ventana nuevos se solapan con otro servicio de la misma cuadrilla o vehículo ese día, devuelve 409; con `overrideNote` (10-500 caracteres) se acepta y queda guardada con quién y cuándo (mismo criterio que `assign-crew`). El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar                                                                       |
+| POST   | `/services/:id/assign-crew`          | Asignar cuadrilla, y vehículo en la misma operación. **El solapamiento avisa, no bloquea**: si la cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, devuelve 409 nombrando los servicios; con `overrideNote` (10-500 caracteres) la asignación se hace igual y la nota queda guardada con quién y cuándo                                                                                                                                              |
+| GET    | `/services/:id/assignment-conflicts` | Con qué se solapa asignar `crewId` / `vehicleId`, **antes** de enviar. Sin parámetros evalúa los que el servicio ya tiene. Existe para que el planificador se entere por un aviso y no por un 409                                                                                                                                                                                                                                                                               |
 
 **Máquina de estados.** Una transición inválida devuelve 409 nombrando las válidas desde el estado actual.
 
-| Método | Ruta | Transición |
-|---|---|---|
-| POST | `/services/:id/start` | `SCHEDULED → IN_PROGRESS`. **409 sin cuadrilla asignada**, o sin vehículo si el `ServiceType` lo exige |
-| POST | `/services/:id/suspend` | `IN_PROGRESS → SUSPENDED`. Motivo obligatorio |
-| POST | `/services/:id/resume` | `SUSPENDED → IN_PROGRESS`. Limpia el motivo |
-| POST | `/services/:id/complete` | `IN_PROGRESS → COMPLETED` o `PARTIALLY_COMPLETED`. **El estado final se calcula**, no se elige: parcial si alguna zona quedó `NOT_SERVICED` o `PARTIAL`. 409 si falta el resultado de alguna zona. Si el servicio atiende un contenedor y cierra `COMPLETED`, **el contenedor transiciona en la misma transacción** (ver [container.md](../entidades/container.md)); si está en `RELOCATING` hace falta `containerLocation` en el body o da 400. 409 también si el servicio o el contenedor cambiaron de estado durante el cierre (nada se escribe) |
-| POST | `/services/:id/cancel` | `SCHEDULED`, `RESCHEDULED` o `SUSPENDED` → `CANCELLED`. Motivo obligatorio. **`IN_PROGRESS` no se cancela**: hay que suspenderlo o cerrarlo |
-| POST | `/services/:id/reschedule` | `SCHEDULED → RESCHEDULED`. Deja el servicio a la espera de fecha nueva, con el motivo. Es donde caen los servicios ante una alerta meteorológica o el rechazo de un corte |
-| POST | `/services/:id/confirm-reschedule` | `RESCHEDULED → SCHEDULED` con la fecha y ventana nuevas. 400 si la fecha es anterior a hoy (día argentino) |
+| Método | Ruta                               | Transición                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/services/:id/start`              | `SCHEDULED → IN_PROGRESS`. **409 sin cuadrilla asignada**, o sin vehículo si el `ServiceType` lo exige                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| POST   | `/services/:id/suspend`            | `IN_PROGRESS → SUSPENDED`. Motivo obligatorio                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| POST   | `/services/:id/resume`             | `SUSPENDED → IN_PROGRESS`. Limpia el motivo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| POST   | `/services/:id/complete`           | `IN_PROGRESS → COMPLETED` o `PARTIALLY_COMPLETED`. **El estado final se calcula**, no se elige: parcial si alguna zona quedó `NOT_SERVICED` o `PARTIAL`. 409 si falta el resultado de alguna zona. Si el servicio atiende un contenedor y cierra `COMPLETED`, **el contenedor transiciona en la misma transacción** (ver [container.md](../entidades/container.md)); si está en `RELOCATING` hace falta `containerLocation` en el body o da 400. 409 también si el servicio o el contenedor cambiaron de estado durante el cierre (nada se escribe) |
+| POST   | `/services/:id/cancel`             | `SCHEDULED`, `RESCHEDULED` o `SUSPENDED` → `CANCELLED`. Motivo obligatorio. **`IN_PROGRESS` no se cancela**: hay que suspenderlo o cerrarlo                                                                                                                                                                                                                                                                                                                                                                                                         |
+| POST   | `/services/:id/reschedule`         | `SCHEDULED → RESCHEDULED`. Deja el servicio a la espera de fecha nueva, con el motivo. Es donde caen los servicios ante una alerta meteorológica o el rechazo de un corte                                                                                                                                                                                                                                                                                                                                                                           |
+| POST   | `/services/:id/confirm-reschedule` | `RESCHEDULED → SCHEDULED` con la fecha y ventana nuevas. 400 si la fecha es anterior a hoy (día argentino)                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 **`RESCHEDULED` no obliga a reprogramar.** Es el estado "hay que moverlo pero todavía no sé adónde", y el sistema mete servicios ahí solo: lo hacen el rechazo de un corte de calle de M7 y la alerta meteorológica. Si el motivo es definitivo —M7 rechaza el corte porque hay obra por dos meses— **se cancela directo**, sin pasar por una fecha inventada.
 
 **Aviso de demora.** `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o en `IN_PROGRESS` mientras se demora, y esos son los dos únicos momentos en los que un retraso significa algo.
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/services/:id/delay-notices` | Avisar que se demora. **No cambia el estado.** El tipo tiene que coincidir con el momento: `START` solo antes de arrancar, `DURATION` solo con la cuadrilla trabajando — la combinación cruzada da 400. Un aviso nuevo **reemplaza** al vigente y el anterior queda en el historial. Si el servicio nació de un reclamo sale hacia M2 como `updateTicketStatus / PROGRESS`, con el motivo como mensaje interno: al vecino se le dice que se demora, no por qué |
-| GET | `/services/:id/delay-notices` | Historial completo, del más reciente al más viejo. El vigente es el que tiene `active: true` |
+| Método | Ruta                          | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/services/:id/delay-notices` | Avisar que se demora. **No cambia el estado.** El tipo tiene que coincidir con el momento: `START` solo antes de arrancar, `DURATION` solo con la cuadrilla trabajando — la combinación cruzada da 400. Un aviso nuevo **reemplaza** al vigente y el anterior queda en el historial. Si el servicio nació de un reclamo sale hacia M2 como `updateTicketStatus / PROGRESS`, con el motivo como mensaje interno: al vecino se le dice que se demora, no por qué |
+| GET    | `/services/:id/delay-notices` | Historial completo, del más reciente al más viejo. El vigente es el que tiene `active: true`                                                                                                                                                                                                                                                                                                                                                                   |
 
 **Resultado y residuos.**
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/services/:id/zone-results` | Informar cómo quedó una zona. Solo con el servicio en `IN_PROGRESS`, una vez por zona, y sobre una zona del servicio. `reason` **obligatorio** si no quedó `SERVICED`, y rechazado si sí |
-| GET | `/services/:id/zone-results` | Resultados informados, en orden de registro |
-| POST | `/services/:id/collection-records` | Registrar residuos: tipo, volumen, peso y destino final. Solo sobre servicios iniciados o cerrados, contra un sitio de disposición activo |
-| GET | `/services/:id/collection-records` | Registros del servicio |
+| Método | Ruta                               | Qué hace                                                                                                                                                                                 |
+| ------ | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/services/:id/zone-results`       | Informar cómo quedó una zona. Solo con el servicio en `IN_PROGRESS`, una vez por zona, y sobre una zona del servicio. `reason` **obligatorio** si no quedó `SERVICED`, y rechazado si sí |
+| GET    | `/services/:id/zone-results`       | Resultados informados, en orden de registro                                                                                                                                              |
+| POST   | `/services/:id/collection-records` | Registrar residuos: tipo, volumen, peso y destino final. Solo sobre servicios iniciados o cerrados, contra un sitio de disposición activo                                                |
+| GET    | `/services/:id/collection-records` | Registros del servicio                                                                                                                                                                   |
 
 ## `containers` — contenedores
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/containers` | Registrar contenedor. Nace en `ACTIVE` |
-| GET | `/containers` | Listar. Filtros: `status`, `containerType`, `zoneId`, `search` |
-| GET | `/containers/:id` | Detalle |
-| PATCH | `/containers/:id` | Actualizar zona, capacidad y ubicación |
-| POST | `/containers/:id/report-overflow` | `ACTIVE → OVERFLOWED` |
-| POST | `/containers/:id/empty` | `OVERFLOWED → ACTIVE` |
-| POST | `/containers/:id/report-damage` | `ACTIVE → DAMAGED`. Registra tipo de daño, severidad y `requiresPublicWorks` |
-| POST | `/containers/:id/start-repair` | `DAMAGED → UNDER_REPAIR` |
-| POST | `/containers/:id/complete-repair` | `UNDER_REPAIR → ACTIVE` |
-| POST | `/containers/:id/relocate` | `ACTIVE → RELOCATING` |
-| POST | `/containers/:id/confirm-relocation` | `RELOCATING → ACTIVE` con la nueva ubicación |
-| POST | `/containers/:id/remove` | `DAMAGED → REMOVED`. Solo desde `DAMAGED` — ver [container.md](../entidades/container.md) |
+| Método | Ruta                                 | Qué hace                                                                                  |
+| ------ | ------------------------------------ | ----------------------------------------------------------------------------------------- |
+| POST   | `/containers`                        | Registrar contenedor. Nace en `ACTIVE`                                                    |
+| GET    | `/containers`                        | Listar. Filtros: `status`, `containerType`, `zoneId`, `search`                            |
+| GET    | `/containers/:id`                    | Detalle                                                                                   |
+| PATCH  | `/containers/:id`                    | Actualizar zona, capacidad y ubicación                                                    |
+| POST   | `/containers/:id/report-overflow`    | `ACTIVE → OVERFLOWED`                                                                     |
+| POST   | `/containers/:id/empty`              | `OVERFLOWED → ACTIVE`                                                                     |
+| POST   | `/containers/:id/report-damage`      | `ACTIVE → DAMAGED`. Registra tipo de daño, severidad y `requiresPublicWorks`              |
+| POST   | `/containers/:id/start-repair`       | `DAMAGED → UNDER_REPAIR`                                                                  |
+| POST   | `/containers/:id/complete-repair`    | `UNDER_REPAIR → ACTIVE`                                                                   |
+| POST   | `/containers/:id/relocate`           | `ACTIVE → RELOCATING`                                                                     |
+| POST   | `/containers/:id/confirm-relocation` | `RELOCATING → ACTIVE` con la nueva ubicación                                              |
+| POST   | `/containers/:id/remove`             | `DAMAGED → REMOVED`. Solo desde `DAMAGED` — ver [container.md](../entidades/container.md) |
 
 Una transición no válida devuelve 409 nombrando las que sí lo son.
 
 ## `green-points` — puntos verdes
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/green-points` | Registrar punto verde de entrega voluntaria |
-| GET | `/green-points` | Listar. Filtros: `active`, `zoneId`, `wasteType`, `search` (nombre o dirección) |
-| GET | `/green-points/:id` | Detalle, con los tipos de residuo aceptados |
-| PATCH | `/green-points/:id` | Actualizar. El array de tipos de residuo reemplaza el conjunto completo |
-| DELETE | `/green-points/:id` | Baja lógica |
+| Método | Ruta                | Qué hace                                                                        |
+| ------ | ------------------- | ------------------------------------------------------------------------------- |
+| POST   | `/green-points`     | Registrar punto verde de entrega voluntaria                                     |
+| GET    | `/green-points`     | Listar. Filtros: `active`, `zoneId`, `wasteType`, `search` (nombre o dirección) |
+| GET    | `/green-points/:id` | Detalle, con los tipos de residuo aceptados                                     |
+| PATCH  | `/green-points/:id` | Actualizar. El array de tipos de residuo reemplaza el conjunto completo         |
+| DELETE | `/green-points/:id` | Baja lógica                                                                     |
 
 ## `trees` — arbolado urbano
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/trees` | Registrar árbol en el censo |
-| GET | `/trees` | Listar. Filtros: `active`, `zoneId`, `search` (especie o dirección) |
-| GET | `/trees/:id` | Detalle |
-| PATCH | `/trees/:id` | Actualizar |
-| DELETE | `/trees/:id` | Baja lógica |
+| Método | Ruta         | Qué hace                                                            |
+| ------ | ------------ | ------------------------------------------------------------------- |
+| POST   | `/trees`     | Registrar árbol en el censo                                         |
+| GET    | `/trees`     | Listar. Filtros: `active`, `zoneId`, `search` (especie o dirección) |
+| GET    | `/trees/:id` | Detalle                                                             |
+| PATCH  | `/trees/:id` | Actualizar                                                          |
+| DELETE | `/trees/:id` | Baja lógica                                                         |
 
 **Toda respuesta de árbol trae `lastSurvey`**, el resumen del último relevamiento: `surveyedAt`, `healthStatus`, `riskLevel`, `riskType` y `suggestedIntervention`. Es `null` si el árbol todavía no fue relevado, que es un estado real —se censa el arbolado antes de poder recorrerlo entero— y no un error.
 
@@ -197,30 +197,30 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 
 ## `tree-surveys` — relevamientos de arbolado
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/trees/:treeId/surveys` | Cargar un relevamiento. 400 si `surveyedAt` es posterior a hoy (huso Argentina) o si `riskLevel` es HIGH/CRITICAL sin `riskType` |
-| GET | `/trees/:treeId/surveys` | Historial de relevamientos. Filtros: `healthStatus`, `riskLevel` |
-| GET | `/trees/:treeId/surveys/:surveyId` | Detalle de un relevamiento |
+| Método | Ruta                               | Qué hace                                                                                                                         |
+| ------ | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/trees/:treeId/surveys`           | Cargar un relevamiento. 400 si `surveyedAt` es posterior a hoy (huso Argentina) o si `riskLevel` es HIGH/CRITICAL sin `riskType` |
+| GET    | `/trees/:treeId/surveys`           | Historial de relevamientos. Filtros: `healthStatus`, `riskLevel`                                                                 |
+| GET    | `/trees/:treeId/surveys/:surveyId` | Detalle de un relevamiento                                                                                                       |
 
 ## `tree-interventions` — podas, extracciones, plantaciones y tratamientos
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/tree-interventions` | Crear intervención sobre uno o más árboles |
-| GET | `/tree-interventions` | Listar. Filtros: `interventionType`, `status` |
-| GET | `/tree-interventions/:id` | Detalle |
-| POST | `/tree-interventions/:id/submit-for-authorization` | `REQUESTED → PENDING_AUTHORIZATION`. Solo para `REMOVAL` |
-| POST | `/tree-interventions/:id/authorize` | `→ AUTHORIZED`. Una `REMOVAL` en `REQUESTED` da 409: tiene que pasar por `PENDING_AUTHORIZATION` |
-| POST | `/tree-interventions/:id/reject` | `PENDING_AUTHORIZATION → REJECTED` |
-| POST | `/tree-interventions/:id/assign-service` | Asociar la intervención al `Service` que la ejecuta. La intervención guarda **qué** hay que hacer; el servicio, **cuándo, con qué cuadrilla y cómo terminó**. Solo una intervención `AUTHORIZED`, contra un servicio `POINT` que no ejecute ya otra |
+| Método | Ruta                                               | Qué hace                                                                                                                                                                                                                                            |
+| ------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/tree-interventions`                              | Crear intervención sobre uno o más árboles                                                                                                                                                                                                          |
+| GET    | `/tree-interventions`                              | Listar. Filtros: `interventionType`, `status`                                                                                                                                                                                                       |
+| GET    | `/tree-interventions/:id`                          | Detalle                                                                                                                                                                                                                                             |
+| POST   | `/tree-interventions/:id/submit-for-authorization` | `REQUESTED → PENDING_AUTHORIZATION`. Solo para `REMOVAL`                                                                                                                                                                                            |
+| POST   | `/tree-interventions/:id/authorize`                | `→ AUTHORIZED`. Una `REMOVAL` en `REQUESTED` da 409: tiene que pasar por `PENDING_AUTHORIZATION`                                                                                                                                                    |
+| POST   | `/tree-interventions/:id/reject`                   | `PENDING_AUTHORIZATION → REJECTED`                                                                                                                                                                                                                  |
+| POST   | `/tree-interventions/:id/assign-service`           | Asociar la intervención al `Service` que la ejecuta. La intervención guarda **qué** hay que hacer; el servicio, **cuándo, con qué cuadrilla y cómo terminó**. Solo una intervención `AUTHORIZED`, contra un servicio `POINT` que no ejecute ya otra |
 
 ## `events` — ingesta de eventos entrantes
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/events/inbox` | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. 400 si `occurredAt` no es ISO 8601 |
-| GET | `/events/handlers` | Los tipos de evento con handler registrado |
+| Método | Ruta               | Qué hace                                                                                                                                              |
+| ------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/events/inbox`    | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. 400 si `occurredAt` no es ISO 8601 |
+| GET    | `/events/handlers` | Los tipos de evento con handler registrado                                                                                                            |
 
 **La idempotencia es por `eventId`** y vive en el inbox, no en cada handler: un mensaje ya recibido se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. La decide el `@unique` de `InboxEvent.messageId`, no una consulta previa que podría correr en paralelo con otra igual.
 
@@ -234,13 +234,13 @@ Un evento sin handler se registra y se descarta sin romper. Si el handler falla,
 
 El daño de infraestructura que detectamos pero que no nos corresponde arreglar. La solicitud existe para **poder seguir el pedido**: publicar el evento no alcanza, porque la respuesta de M3 vuelve asincrónica.
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/repair-requests` | Crear y publicar `infrastructureRepairRequested` → M3. Si el daño salió de un servicio nacido de un reclamo, el `ticketId` viaja en el evento. 404 si el servicio o la inspección de origen no existe |
-| GET | `/repair-requests` | Listar. Filtros: `status`, `damageType`, `severity`, `detectedInId` |
-| GET | `/repair-requests/:id` | Detalle, con la orden de trabajo de M3 si la informaron |
-| POST | `/repair-requests/:id/start` | → `IN_PROGRESS`. **Normalmente lo dispara `workOrderScheduled`** (Fase 6). **409** si la transición no es válida desde el estado actual |
-| POST | `/repair-requests/:id/close` | → `CLOSED`. **Normalmente lo dispara `workOrderCompleted`**. **409** si la transición no es válida desde el estado actual |
+| Método | Ruta                         | Qué hace                                                                                                                                                                                              |
+| ------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/repair-requests`           | Crear y publicar `infrastructureRepairRequested` → M3. Si el daño salió de un servicio nacido de un reclamo, el `ticketId` viaja en el evento. 404 si el servicio o la inspección de origen no existe |
+| GET    | `/repair-requests`           | Listar. Filtros: `status`, `damageType`, `severity`, `detectedInId`                                                                                                                                   |
+| GET    | `/repair-requests/:id`       | Detalle, con la orden de trabajo de M3 si la informaron                                                                                                                                               |
+| POST   | `/repair-requests/:id/start` | → `IN_PROGRESS`. **Normalmente lo dispara `workOrderScheduled`** (Fase 6). **409** si la transición no es válida desde el estado actual                                                               |
+| POST   | `/repair-requests/:id/close` | → `CLOSED`. **Normalmente lo dispara `workOrderCompleted`**. **409** si la transición no es válida desde el estado actual                                                                             |
 
 **Tres estados, no una máquina**: pedida, en curso, cerrada. Alcanza con eso, y por eso no consumimos `workOrderUpdated`.
 
@@ -248,14 +248,14 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 
 ## `street-closure-requests` — cortes derivados a M7
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/street-closure-requests` | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío. 400 si `requestedTo` es anterior a `requestedFrom`. 404 si el servicio o la intervención de origen no existe. **409** si la intervención de origen no está `AUTHORIZED` |
-| GET | `/street-closure-requests` | Listar. Filtros: `status`, `sourceId` |
-| GET | `/street-closure-requests/:id` | Detalle con sus tramos |
-| POST | `/street-closure-requests/:id/approve` | → `APPROVED`, guarda el `closureId` de M7. **Normalmente lo dispara `streetClosureApproved`**. **409** si la transición no es válida desde el estado actual |
-| POST | `/street-closure-requests/:id/reject` | → `REJECTED`. **Normalmente lo dispara `streetClosureRejected`**. **409** si la transición no es válida desde el estado actual |
-| POST | `/street-closure-requests/:id/end` | → `ENDED`. **Normalmente lo dispara `streetClosureEnded`**. **409** si la transición no es válida desde el estado actual |
+| Método | Ruta                                   | Qué hace                                                                                                                                                                                                                                                                                                                  |
+| ------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/street-closure-requests`             | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío. 400 si `requestedTo` es anterior a `requestedFrom`. 404 si el servicio o la intervención de origen no existe. **409** si la intervención de origen no está `AUTHORIZED` |
+| GET    | `/street-closure-requests`             | Listar. Filtros: `status`, `sourceId`                                                                                                                                                                                                                                                                                     |
+| GET    | `/street-closure-requests/:id`         | Detalle con sus tramos                                                                                                                                                                                                                                                                                                    |
+| POST   | `/street-closure-requests/:id/approve` | → `APPROVED`, guarda el `closureId` de M7. **Normalmente lo dispara `streetClosureApproved`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                               |
+| POST   | `/street-closure-requests/:id/reject`  | → `REJECTED`. **Normalmente lo dispara `streetClosureRejected`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                                                            |
+| POST   | `/street-closure-requests/:id/end`     | → `ENDED`. **Normalmente lo dispara `streetClosureEnded`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                                                                  |
 
 `sourceRef` apunta al `Service` o a la `TreeIntervention` que origina el corte: es lo que hace que la respuesta de M7 se pueda aplicar sobre el trabajo correcto.
 
@@ -265,28 +265,28 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 
 El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emisiones—, con su máquina de 11 estados. Puede nacer de un reclamo de M2 (`ticketId`) o de una **detección de oficio**, que es el camino que no depende de ningún otro módulo.
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/environmental-reports` | Abrir expediente. Nace en `RECEIVED` |
-| GET | `/environmental-reports` | Listar (cada item trae `escalated` y `citizenResponse`, igual que el detalle y las respuestas de las transiciones; ver entidad). Filtros: `status`, `reportType`, `priority`, `ticketId`, `publicId` (TK-…, exacto), `search` |
-| GET | `/environmental-reports/:id` | Detalle, con su plazo de vencimiento si lo tiene |
-| POST | `/environmental-reports/:id/start-review` | `RECEIVED → UNDER_REVIEW` |
-| POST | `/environmental-reports/:id/forward` | `UNDER_REVIEW → FORWARDED`. Hacia M2 sale como **`RETURNED`**, no `REJECTED`: devolver lo que no es de nuestra área es distinto de desestimarlo |
-| POST | `/environmental-reports/:id/dismiss` | `UNDER_REVIEW → DISMISSED`. Hacia M2 sale como `REJECTED` |
-| POST | `/environmental-reports/:id/close` | Cierre manual |
+| Método | Ruta                                      | Qué hace                                                                                                                                                                                                                      |
+| ------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/environmental-reports`                  | Abrir expediente. Nace en `RECEIVED`                                                                                                                                                                                          |
+| GET    | `/environmental-reports`                  | Listar (cada item trae `escalated` y `citizenResponse`, igual que el detalle y las respuestas de las transiciones; ver entidad). Filtros: `status`, `reportType`, `priority`, `ticketId`, `publicId` (TK-…, exacto), `search` |
+| GET    | `/environmental-reports/:id`              | Detalle, con su plazo de vencimiento si lo tiene                                                                                                                                                                              |
+| POST   | `/environmental-reports/:id/start-review` | `RECEIVED → UNDER_REVIEW`                                                                                                                                                                                                     |
+| POST   | `/environmental-reports/:id/forward`      | `UNDER_REVIEW → FORWARDED`. Hacia M2 sale como **`RETURNED`**, no `REJECTED`: devolver lo que no es de nuestra área es distinto de desestimarlo                                                                               |
+| POST   | `/environmental-reports/:id/dismiss`      | `UNDER_REVIEW → DISMISSED`. Hacia M2 sale como `REJECTED`                                                                                                                                                                     |
+| POST   | `/environmental-reports/:id/close`        | Cierre manual                                                                                                                                                                                                                 |
 
 **Cierre por vencimiento.** `NOTICE_ISSUED → CLOSED` lo hace el sistema solo cuando pasa `deadlineAt`, sin endpoint. No es un atajo: M4 no publica nada cuando decide que no corresponde castigo, así que sin ese cierre el expediente quedaría abierto para siempre. El plazo se configura con `SANCTION_DEADLINE_DAYS`.
 
 ## `environmental-inspections` — inspecciones y actas
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/environmental-reports/:reportId/inspections` | Programar. Lleva el expediente a `INSPECTION_SCHEDULED`. Se ejecuta como un `Service` de modo `POINT` |
-| GET | `/environmental-reports/:reportId/inspections` | Inspecciones del expediente |
-| GET | `/environmental-inspections/:id` | Detalle con checklist y hallazgos |
-| POST | `/environmental-inspections/:id/complete` | Cierra con su `outcome`. Lleva el expediente a `INSPECTED` y de ahí, en la misma operación, a `NO_VIOLATION` o `VIOLATION_FOUND`. Un `INCONCLUSIVE` lo deja en `INSPECTED`. 400 si `inspectedAt` está en el futuro o si `VIOLATION_FOUND` no trae `nextStep` |
-| POST | `/environmental-inspections/:id/violation-notice` | **Emitir el acta.** Solo sobre una inspección `VIOLATION_FOUND` |
-| GET | `/environmental-inspections/:id/violation-notice` | El acta emitida |
+| Método | Ruta                                              | Qué hace                                                                                                                                                                                                                                                     |
+| ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| POST   | `/environmental-reports/:reportId/inspections`    | Programar. Lleva el expediente a `INSPECTION_SCHEDULED`. Se ejecuta como un `Service` de modo `POINT`                                                                                                                                                        |
+| GET    | `/environmental-reports/:reportId/inspections`    | Inspecciones del expediente                                                                                                                                                                                                                                  |
+| GET    | `/environmental-inspections/:id`                  | Detalle con checklist y hallazgos                                                                                                                                                                                                                            |
+| POST   | `/environmental-inspections/:id/complete`         | Cierra con su `outcome`. Lleva el expediente a `INSPECTED` y de ahí, en la misma operación, a `NO_VIOLATION` o `VIOLATION_FOUND`. Un `INCONCLUSIVE` lo deja en `INSPECTED`. 400 si `inspectedAt` está en el futuro o si `VIOLATION_FOUND` no trae `nextStep` |
+| POST   | `/environmental-inspections/:id/violation-notice` | **Emitir el acta.** Solo sobre una inspección `VIOLATION_FOUND`                                                                                                                                                                                              |
+| GET    | `/environmental-inspections/:id/violation-notice` | El acta emitida                                                                                                                                                                                                                                              |
 
 **`checklist[]`, `findings` e `inspectorId` son internos: nunca salen hacia M2.**
 
@@ -296,10 +296,10 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 ## `evidence` — adjuntos (foto/PDF)
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key`. Un archivo mayor a `MAX_EVIDENCE_SIZE_BYTES` (10 MB) da **413**: multer lo corta antes de llegar al service. Sin `R2_BUCKET` / `R2_PUBLIC_URL_BASE` configurados, el camino válido responde **503** (no 500) y no persiste nada |
-| GET | `/evidence` | Lista la evidencia de un `ownerType`/`ownerId`, por query params |
+| Método | Ruta        | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| POST   | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key`. Un archivo mayor a `MAX_EVIDENCE_SIZE_BYTES` (10 MB) da **413**: multer lo corta antes de llegar al service. Sin `R2_BUCKET` / `R2_PUBLIC_URL_BASE` configurados, el camino válido responde **503** (no 500) y no persiste nada |
+| GET    | `/evidence` | Lista la evidencia de un `ownerType`/`ownerId`, por query params                                                                                                                                                                                                                                                                                                                                                                     |
 
 **Genérico por diseño (Issue #64).** Un solo módulo sirve a los cuatro tipos de recurso en vez de reimplementar la subida por cada uno — el modelo `Attachment` ya era polimórfico en el schema, esto le agrega el endpoint que faltaba.
 
@@ -319,13 +319,13 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 ## `green-spaces` — espacios verdes
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/green-spaces` | Registrar plaza, parque, cantero o rambla |
-| GET | `/green-spaces` | Listar. Filtros: `active`, `spaceType`, `zoneId` |
-| GET | `/green-spaces/:id` | Detalle |
-| PATCH | `/green-spaces/:id` | Actualizar |
-| DELETE | `/green-spaces/:id` | Baja lógica |
+| Método | Ruta                | Qué hace                                         |
+| ------ | ------------------- | ------------------------------------------------ |
+| POST   | `/green-spaces`     | Registrar plaza, parque, cantero o rambla        |
+| GET    | `/green-spaces`     | Listar. Filtros: `active`, `spaceType`, `zoneId` |
+| GET    | `/green-spaces/:id` | Detalle                                          |
+| PATCH  | `/green-spaces/:id` | Actualizar                                       |
+| DELETE | `/green-spaces/:id` | Baja lógica                                      |
 
 ---
 
@@ -333,12 +333,12 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran por período con `from` y `to`; sin ellos, los últimos 30 días.
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| GET | `/indicators/coverage` | Objetivos atendidos sobre programados, con desglose por zona y por tipo de servicio. Filtros extra: `zoneId`, `serviceTypeId`. En todos los indicadores, `from` posterior a `to` da 400 |
-| GET | `/indicators/compliance` | Finalizados en término contra demorados, y ranking de zonas no atendidas con sus motivos. Filtros extra: `zoneId`, `serviceTypeId` |
-| GET | `/indicators/incidents` | Contenedores desbordados y dañados por zona, árboles por nivel de riesgo, y denuncias por tipo y estado con el tiempo medio de resolución |
-| GET | `/indicators/waste` | Kg y m³ por tipo de residuo y por destino, y porcentaje desviado del relleno |
+| Método | Ruta                     | Qué hace                                                                                                                                                                                |
+| ------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/indicators/coverage`   | Objetivos atendidos sobre programados, con desglose por zona y por tipo de servicio. Filtros extra: `zoneId`, `serviceTypeId`. En todos los indicadores, `from` posterior a `to` da 400 |
+| GET    | `/indicators/compliance` | Finalizados en término contra demorados, y ranking de zonas no atendidas con sus motivos. Filtros extra: `zoneId`, `serviceTypeId`                                                      |
+| GET    | `/indicators/incidents`  | Contenedores desbordados y dañados por zona, árboles por nivel de riesgo, y denuncias por tipo y estado con el tiempo medio de resolución                                               |
+| GET    | `/indicators/waste`      | Kg y m³ por tipo de residuo y por destino, y porcentaje desviado del relleno                                                                                                            |
 
 **La unidad de cobertura es el par (servicio, zona), no el servicio.** Un recorrido que pasa por cuatro zonas y atiende tres no es "un servicio a medias": son tres objetivos cumplidos y uno no. `ServiceZone` ya es ese par y `ZoneResult` es su resultado, así que el desglose por zona sale del mismo dato que el total.
 
@@ -354,12 +354,12 @@ Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran p
 
 **Los únicos endpoints de dominio que se sirven sin JWT, junto con `/health`.** El `@Public()` va endpoint por endpoint y no a nivel de clase: el guard global hace que todo endpoint nuevo nazca protegido, y abrir la clase entera haría que el próximo `GET` de acá salga público sin que nadie lo decida.
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| GET | `/public/reports/:ticketId` | **Público.** Seguimiento de la denuncia por el `ticketId` (UUID) del reclamo de M2; devuelve también `publicId` para mostrarlo. **No acepta el `publicId` (TK-…)**: es correlativo y el contrato de M2 prohíbe usarlo como credencial (#145). 404 exista o no el ticket |
-| GET | `/public/services` | **Público.** Cuándo pasa el servicio. Filtros: `zoneId`, `serviceTypeId`, `from`, `to`. Sin fechas, los próximos 30 días |
-| GET | `/public/green-points` | **Público.** Puntos verdes activos con su ubicación y qué residuos recibe cada uno. Filtro: `zoneId` |
-| GET | `/public/zones` | **Público.** Zonas activas, para que el frontend arme el filtro de los otros dos. Sin paginar |
+| Método | Ruta                        | Qué hace                                                                                                                                                                                                                                                                |
+| ------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/public/reports/:ticketId` | **Público.** Seguimiento de la denuncia por el `ticketId` (UUID) del reclamo de M2; devuelve también `publicId` para mostrarlo. **No acepta el `publicId` (TK-…)**: es correlativo y el contrato de M2 prohíbe usarlo como credencial (#145). 404 exista o no el ticket |
+| GET    | `/public/services`          | **Público.** Cuándo pasa el servicio. Filtros: `zoneId`, `serviceTypeId`, `from`, `to`. Sin fechas, los próximos 30 días                                                                                                                                                |
+| GET    | `/public/green-points`      | **Público.** Puntos verdes activos con su ubicación y qué residuos recibe cada uno. Filtro: `zoneId`                                                                                                                                                                    |
+| GET    | `/public/zones`             | **Público.** Zonas activas, para que el frontend arme el filtro de los otros dos. Sin paginar                                                                                                                                                                           |
 
 **Límite de tasa, y solo acá.** Al no exigir token, esta es la única superficie que cualquiera en internet puede pegar: **60 consultas por minuto por dirección**, y **20 en `/public/reports/:ticketId`**, que es más estricto porque deja probar números de reclamo de a uno para averiguar cuáles tienen expediente ambiental. Devolver el mismo 404 exista o no el ticket evita confirmar uno puntual; el límite evita insistir. Pasado el límite, 429.
 
@@ -374,6 +374,6 @@ No hay límite global: también alcanzaría a un operador municipal en su turno,
 
 ## Lo que todavía no existe
 
-| Qué falta | Detalle |
-|---|---|
+| Qué falta            | Detalle                                                                                                                                                                                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Autorización por rol | Cualquier usuario autenticado puede llamar cualquier endpoint (salvo los `@Public()` — `health` y los cuatro de `citizen-portal` —, que ni siquiera piden JWT). Diferida hasta que M1 publique su taxonomía de roles — ver [bloqueantes.md](../bloqueantes.md) |

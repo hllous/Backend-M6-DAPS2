@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EnvironmentalReportType, Severity } from '@prisma/client';
-import { IsEnum, IsLatitude, IsLongitude, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Latitude, Longitude } from '../../../common/decorators';
 
 export class CreateEnvironmentalReportDto {
   @ApiProperty({
@@ -23,12 +24,12 @@ export class CreateEnvironmentalReportDto {
 
   @ApiPropertyOptional({ description: 'Latitud', example: -34.7 })
   @IsOptional()
-  @IsLatitude()
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Longitud', example: -58.5 })
   @IsOptional()
-  @IsLongitude()
+  @Longitude()
   lng?: number;
 
   @ApiPropertyOptional({

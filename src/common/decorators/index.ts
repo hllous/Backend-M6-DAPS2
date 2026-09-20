@@ -13,3 +13,13 @@ export {
   MAX_REASON_LENGTH,
   MAX_LIST_SIZE,
 } from './text-limits';
+export {
+  MAX_INT32,
+  MAX_DECIMAL_10_2,
+  MAX_TREE_HEIGHT_M,
+  MAX_TREE_DIAMETER_CM,
+  MAX_PAGE,
+  MAX_PAGE_SIZE,
+  MIN_WEEKDAY,
+  MAX_WEEKDAY,
+} from './numeric-limits';

@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { ToBoolean, Trim } from '../../../common/decorators';
 import { VehicleType } from '@prisma/client';
+import { MAX_DECIMAL_10_2 } from '../../../common/decorators/numeric-limits';
 
 export class CreateVehicleDto {
   @ApiProperty({
@@ -36,11 +37,12 @@ export class CreateVehicleDto {
     description: 'Capacidad del vehículo en toneladas (ej. 10.50)',
     example: 10.5,
     minimum: 0,
+    maximum: MAX_DECIMAL_10_2,
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  @Max(99999999.99)
+  @Max(MAX_DECIMAL_10_2)
   capacity?: number;
 
   @ApiPropertyOptional({

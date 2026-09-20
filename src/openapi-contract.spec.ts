@@ -1,6 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { DECORATORS } from '@nestjs/swagger/dist/constants';
 import { SwaggerModule } from '@nestjs/swagger';
+import { getMetadataStorage } from 'class-validator';
 import { Test } from '@nestjs/testing';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
@@ -76,5 +78,64 @@ describe('contrato OpenAPI', () => {
       }
     }
     expect(perdidas).toEqual([]);
+  });
+
+  it('todo campo con @Min/@Max/@IsLatitude/@IsLongitude declara minimum/maximum en el swagger', () => {
+    // El repo no usa el plugin de Swagger: el rango validado no se refleja solo
+    // y un cliente generado no lo ve (#196). Se leen los DTO reales.
+    const archivos: string[] = [];
+    const recorrer = (dir: string): void => {
+      for (const nombre of readdirSync(dir)) {
+        const ruta = join(dir, nombre);
+        if (statSync(ruta).isDirectory()) recorrer(ruta);
+        else if (/\.dto\.ts$/.test(nombre)) archivos.push(ruta);
+      }
+    };
+    recorrer(__dirname);
+
+    // Valor esperado por validacion: min/max lo llevan en constraints[0]; las
+    // coordenadas de class-validator tienen rango fijo. Se compara igualdad y no
+    // solo presencia: `@Max(50)` con `maximum: 100` tambien es un contrato roto.
+    type Esperado = { clave: 'minimum' | 'maximum'; valor: (c: unknown[]) => number };
+    const rango: Record<string, Esperado[]> = {
+      min: [{ clave: 'minimum', valor: (c) => Number(c[0]) }],
+      max: [{ clave: 'maximum', valor: (c) => Number(c[0]) }],
+      isLatitude: [
+        { clave: 'minimum', valor: () => -90 },
+        { clave: 'maximum', valor: () => 90 },
+      ],
+      isLongitude: [
+        { clave: 'minimum', valor: () => -180 },
+        { clave: 'maximum', valor: () => 180 },
+      ],
+    };
+    const faltan = new Set<string>();
+    for (const archivo of archivos) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const modulo = require(archivo) as Record<string, unknown>;
+      for (const clase of Object.values(modulo)) {
+        if (typeof clase !== 'function') continue;
+        const metas = getMetadataStorage().getTargetValidationMetadatas(clase, '', false, false);
+        for (const m of metas) {
+          const esperados = rango[m.name ?? ''];
+          if (!esperados) continue;
+          // En arrays (`each`) Swagger vuelca el rango dentro de `items`.
+          const swagger = Reflect.getMetadata(
+            DECORATORS.API_MODEL_PROPERTIES,
+            clase.prototype,
+            m.propertyName,
+          ) as Record<string, unknown> | undefined;
+          for (const { clave, valor } of esperados) {
+            const esperado = valor(m.constraints ?? []);
+            if (swagger?.[clave] !== esperado) {
+              faltan.add(
+                `${clase.name}.${m.propertyName}: ${clave} es ${String(swagger?.[clave])}, la validacion exige ${esperado}`,
+              );
+            }
+          }
+        }
+      }
+    }
+    expect([...faltan].sort()).toEqual([]);
   });
 });
