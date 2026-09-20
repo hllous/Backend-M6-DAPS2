@@ -305,7 +305,7 @@ export class ServicesService {
     return this.toResponseDto(await this.getService(id));
   }
 
-  async update(id: string, dto: UpdateServiceDto): Promise<ServiceResponseDto> {
+  async update(id: string, dto: UpdateServiceDto, actorId?: string): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     this.assertEditable(current);
 
@@ -317,9 +317,43 @@ export class ServicesService {
       dto.windowTo ?? fromTime(current.windowTo),
     );
 
+    // Mismo criterio que assign-crew y create. Se evalua con los valores
+    // vigentes mezclados con los nuevos: un PATCH parcial no puede saltearse el
+    // chequeo. Si solo cambia el vehiculo no se revisa la cuadrilla, que no se
+    // toco: un solapamiento previo de ella no debe trabar esta correccion.
+    // `vehicleId: null` quita el vehiculo: no hay nada que chequear, y caer al
+    // vigente daria un 409 falso al desvincularlo. Igual que en create, el
+    // chequeo va antes de escribir y sin lock: dos PATCH o asignaciones
+    // concurrentes pueden pasar los dos.
+    const ventanaCambia = dto.windowFrom !== undefined || dto.windowTo !== undefined;
+    const vehiculoCambia = dto.vehicleId !== undefined;
+    const conflictos =
+      ventanaCambia || vehiculoCambia
+        ? await this.findAssignmentConflicts(
+            {
+              id,
+              scheduledDate: current.scheduledDate,
+              windowFrom:
+                dto.windowFrom !== undefined ? toTime(dto.windowFrom) : current.windowFrom,
+              windowTo: dto.windowTo !== undefined ? toTime(dto.windowTo) : current.windowTo,
+            },
+            ventanaCambia ? (current.crewId ?? undefined) : undefined,
+            dto.vehicleId === undefined
+              ? (current.vehicleId ?? undefined)
+              : (dto.vehicleId ?? undefined),
+          )
+        : [];
+    this.assertOverrideNote(conflictos, dto.overrideNote);
+
     const service = await this.prisma.service.update({
       where: { id },
       data: {
+        ...(conflictos.length > 0 &&
+          dto.overrideNote && {
+            assignmentOverrideNote: dto.overrideNote,
+            assignmentOverrideBy: actorId ?? null,
+            assignmentOverrideAt: new Date(),
+          }),
         ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
         ...(dto.windowFrom !== undefined && { windowFrom: toTime(dto.windowFrom) }),
         ...(dto.windowTo !== undefined && { windowTo: toTime(dto.windowTo) }),

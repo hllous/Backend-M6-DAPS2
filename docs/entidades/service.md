@@ -59,9 +59,11 @@ Los avisos se acumulan. Uno nuevo **reemplaza** al vigente (`supersededById`) en
 
 ## Asignar sobre un solapamiento
 
-El mismo criterio rige al programar con `crewId`/`vehicleId` en `POST /services` (acepta `overrideNote`).
+El mismo criterio rige al programar con `crewId`/`vehicleId` en `POST /services` (acepta `overrideNote`) y al cambiar el vehículo o la ventana con `PATCH /services/:id`, que evalúa los valores vigentes mezclados con los nuevos y no consulta nada si solo cambian las notas.
 
 Que la cuadrilla esté tomada ese día en una franja que se pisa **avisa, no bloquea**. La realidad de la calle gana: a veces la misma cuadrilla hace dos cosas y quien planifica lo sabe. Sin `overrideNote` la asignación rebota con 409 nombrando los servicios en conflicto; con la nota se hace igual y queda registrado quién decidió y cuándo.
+
+En `PATCH /services/:id`: un PATCH de solo `vehicleId` **no** revisa la cuadrilla vigente (a propósito, para que un solapamiento previo de la cuadrilla no trabe una corrección de vehículo); un PATCH que cambia la ventana revisa la cuadrilla y el vehículo vigentes; `vehicleId: null` quita el vehículo sin chequeo. El chequeo va antes de escribir y sin lock: dos operaciones concurrentes podrían pasar las dos.
 
 La nota se guarda **solo si hubo solapamiento**. Guardarla siempre dejaría rastro de un override que nunca ocurrió.
 
