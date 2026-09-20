@@ -20,7 +20,7 @@ export class ChecklistItemResponseDto {
   @ApiProperty({ description: 'Si el ítem se cumple' })
   result: boolean;
 
-  @ApiPropertyOptional({ description: 'Observaciones', nullable: true })
+  @ApiPropertyOptional({ description: 'Observaciones', nullable: true, type: String })
   observations: string | null;
 }
 
@@ -35,12 +35,14 @@ export class InspectionResponseDto {
     description: 'Servicio que la ejecuta. Null hasta que se asocia.',
     format: 'uuid',
     nullable: true,
+    type: String,
   })
   serviceId: string | null;
 
   @ApiPropertyOptional({
     description: 'Inspector asignado. **Interno: nunca sale hacia M2.**',
     nullable: true,
+    type: String,
   })
   inspectorId: string | null;
 
@@ -48,12 +50,14 @@ export class InspectionResponseDto {
     description: 'Cuándo se realizó',
     format: 'date-time',
     nullable: true,
+    type: String,
   })
   inspectedAt: Date | null;
 
   @ApiPropertyOptional({
     description: 'Qué encontró el inspector. **Interno: nunca sale hacia M2.**',
     nullable: true,
+    type: String,
   })
   findings: string | null;
 
@@ -96,6 +100,7 @@ export class ViolationNoticeResponseDto {
     description:
       'Establecimiento de M4. Si es null el acta no se derivó y el expediente cierra de nuestro lado.',
     nullable: true,
+    type: String,
   })
   establishmentId: string | null;
 

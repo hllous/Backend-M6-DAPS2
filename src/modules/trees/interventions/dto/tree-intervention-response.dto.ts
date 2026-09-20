@@ -35,12 +35,16 @@ export class TreeInterventionResponseDto {
   @ApiPropertyOptional({
     description: 'UUID del servicio programado (null hasta que se programe)',
     format: 'uuid',
+    type: String,
+    nullable: true,
   })
   serviceId: string | null;
 
   @ApiPropertyOptional({
     description: 'Dirección de referencia',
     example: 'Av. del Libertador 4200',
+    type: String,
+    nullable: true,
   })
   address: string | null;
 
@@ -53,22 +57,29 @@ export class TreeInterventionResponseDto {
   @ApiPropertyOptional({
     description: 'Prioridad',
     enum: Severity,
+    nullable: true,
   })
   priority: Severity | null;
 
   @ApiPropertyOptional({
     description: 'ID del usuario que autorizó (solo REMOVAL)',
+    type: String,
+    nullable: true,
   })
   authorizedByUserId: string | null;
 
   @ApiPropertyOptional({
     description: 'Fecha de autorización (solo REMOVAL)',
     format: 'date-time',
+    type: String,
+    nullable: true,
   })
   authorizedAt: Date | null;
 
   @ApiPropertyOptional({
     description: 'Justificación',
+    type: String,
+    nullable: true,
   })
   justification: string | null;
 

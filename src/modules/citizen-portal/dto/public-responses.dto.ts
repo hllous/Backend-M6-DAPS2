@@ -29,6 +29,7 @@ export class PublicReportResponseDto {
     description: 'Referencia humana del reclamo de M2, para mostrar. Null si M2 no la envió',
     example: 'TK-2026-000123',
     nullable: true,
+    type: String,
   })
   publicId: string | null;
 
@@ -44,7 +45,12 @@ export class PublicReportResponseDto {
   })
   stageLabel: string;
 
-  @ApiPropertyOptional({ description: 'Dirección denunciada', example: 'Av. Rivadavia 4500' })
+  @ApiPropertyOptional({
+    description: 'Dirección denunciada',
+    example: 'Av. Rivadavia 4500',
+    type: String,
+    nullable: true,
+  })
   address: string | null;
 
   @ApiProperty({ description: 'Cuándo se abrió el expediente' })
@@ -55,6 +61,8 @@ export class PublicReportResponseDto {
 
   @ApiPropertyOptional({
     description: 'Fecha de la inspección, si ya se realizó. Sin hallazgos ni inspector',
+    type: String,
+    nullable: true,
   })
   inspectedAt: Date | null;
 
@@ -75,10 +83,20 @@ export class PublicServiceResponseDto {
   @ApiProperty({ description: 'Fecha programada', example: '2026-09-15' })
   scheduledDate: Date;
 
-  @ApiPropertyOptional({ description: 'Desde qué hora', example: '06:00' })
+  @ApiPropertyOptional({
+    description: 'Desde qué hora',
+    example: '06:00',
+    type: String,
+    nullable: true,
+  })
   windowFrom: string | null;
 
-  @ApiPropertyOptional({ description: 'Hasta qué hora', example: '10:00' })
+  @ApiPropertyOptional({
+    description: 'Hasta qué hora',
+    example: '10:00',
+    type: String,
+    nullable: true,
+  })
   windowTo: string | null;
 
   @ApiProperty({
@@ -101,13 +119,13 @@ export class PublicGreenPointResponseDto {
   @ApiProperty({ example: 'Punto Verde Plaza Mitre' })
   name: string;
 
-  @ApiPropertyOptional({ example: 'Av. Mitre 1200' })
+  @ApiPropertyOptional({ example: 'Av. Mitre 1200', type: String, nullable: true })
   address: string | null;
 
-  @ApiPropertyOptional({ example: -34.6037 })
+  @ApiPropertyOptional({ example: -34.6037, type: Number, nullable: true })
   lat: number | null;
 
-  @ApiPropertyOptional({ example: -58.3816 })
+  @ApiPropertyOptional({ example: -58.3816, type: Number, nullable: true })
   lng: number | null;
 
   @ApiProperty({ description: 'Zona operativa', example: 'Centro' })

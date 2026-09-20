@@ -45,10 +45,11 @@ export class ZoneResultResponseDto {
     description: 'Fecha propuesta para reintentar',
     format: 'date-time',
     nullable: true,
+    type: String,
   })
   proposedDate: Date | null;
 
-  @ApiPropertyOptional({ description: 'Notas de la cuadrilla', nullable: true })
+  @ApiPropertyOptional({ description: 'Notas de la cuadrilla', nullable: true, type: String })
   notes: string | null;
 
   @ApiProperty({ description: 'Cuándo se registró', format: 'date-time' })
@@ -69,13 +70,24 @@ export class CollectionRecordResponseDto {
     description: 'Resultado de zona al que corresponde. Null en los servicios POINT.',
     format: 'uuid',
     nullable: true,
+    type: String,
   })
   zoneResultId: string | null;
 
-  @ApiPropertyOptional({ description: 'Volumen en m³', example: 12.5, nullable: true })
+  @ApiPropertyOptional({
+    description: 'Volumen en m³',
+    example: 12.5,
+    nullable: true,
+    type: Number,
+  })
   volumeM3: number | null;
 
-  @ApiPropertyOptional({ description: 'Peso en kg', example: 3400.75, nullable: true })
+  @ApiPropertyOptional({
+    description: 'Peso en kg',
+    example: 3400.75,
+    nullable: true,
+    type: Number,
+  })
   weightKg: number | null;
 }
 
@@ -99,6 +111,7 @@ export class ServiceResponseDto {
   @ApiPropertyOptional({
     description: 'Motivo del último cambio de estado (suspensión, cancelación, reprogramación)',
     nullable: true,
+    type: String,
   })
   statusReason: string | null;
 
@@ -109,6 +122,7 @@ export class ServiceResponseDto {
     description: 'Recorrido ejecutado. Null en los servicios POINT.',
     format: 'uuid',
     nullable: true,
+    type: String,
   })
   routeId: string | null;
 
@@ -119,31 +133,55 @@ export class ServiceResponseDto {
   })
   targetType: string | null;
 
-  @ApiPropertyOptional({ description: 'UUID del bien', format: 'uuid', nullable: true })
+  @ApiPropertyOptional({
+    description: 'UUID del bien',
+    format: 'uuid',
+    nullable: true,
+    type: String,
+  })
   targetId: string | null;
 
   @ApiProperty({ description: 'Fecha agendada', format: 'date-time' })
   scheduledDate: Date;
 
-  @ApiPropertyOptional({ description: 'Inicio de la ventana horaria (HH:mm)', nullable: true })
+  @ApiPropertyOptional({
+    description: 'Inicio de la ventana horaria (HH:mm)',
+    nullable: true,
+    type: String,
+  })
   windowFrom: string | null;
 
-  @ApiPropertyOptional({ description: 'Fin de la ventana horaria (HH:mm)', nullable: true })
+  @ApiPropertyOptional({
+    description: 'Fin de la ventana horaria (HH:mm)',
+    nullable: true,
+    type: String,
+  })
   windowTo: string | null;
 
-  @ApiPropertyOptional({ description: 'Cuadrilla asignada', format: 'uuid', nullable: true })
+  @ApiPropertyOptional({
+    description: 'Cuadrilla asignada',
+    format: 'uuid',
+    nullable: true,
+    type: String,
+  })
   crewId: string | null;
 
-  @ApiPropertyOptional({ description: 'Vehículo asignado', format: 'uuid', nullable: true })
+  @ApiPropertyOptional({
+    description: 'Vehículo asignado',
+    format: 'uuid',
+    nullable: true,
+    type: String,
+  })
   vehicleId: string | null;
 
   @ApiPropertyOptional({
     description: 'Reclamo de M2 que lo originó. Solo cuando origin = TICKET.',
     nullable: true,
+    type: String,
   })
   ticketId: string | null;
 
-  @ApiPropertyOptional({ description: 'Notas internas', nullable: true })
+  @ApiPropertyOptional({ description: 'Notas internas', nullable: true, type: String })
   notes: string | null;
 
   @ApiProperty({
@@ -165,7 +203,7 @@ export class ServiceResponseDto {
   })
   collectionRecords?: CollectionRecordResponseDto[];
 
-  @ApiPropertyOptional({ description: 'Usuario que lo programó', nullable: true })
+  @ApiPropertyOptional({ description: 'Usuario que lo programó', nullable: true, type: String })
   createdBy: string | null;
 
   @ApiProperty({ description: 'Fecha de creación', format: 'date-time' })
