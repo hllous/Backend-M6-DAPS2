@@ -3,11 +3,19 @@ import { RepairRequestStatus, ServiceStatus, StreetClosureRequestStatus } from '
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent } from '../inbox/consumed-events';
+import { Data, esUuid, requerido } from '../inbox/payload-validation';
+
 import {
   CLOSURE_TRANSITIONS,
   REPAIR_TRANSITIONS,
   sourcesOf,
 } from '../../modules/outbound-requests/outbound-requests.transitions';
+
+// Sin el id de correlación no se sabe de qué solicitud nuestra habla el evento.
+const validarM3 = (d: Data): string[] =>
+  requerido(d, ['sourceRequestId', 'requestId'], 'uuid', esUuid);
+const validarM7 = (d: Data): string[] =>
+  requerido(d, ['closureRequestId', 'sourceRequestId'], 'uuid', esUuid);
 
 /**
  * Las respuestas de M3 y M7 a lo que les derivamos.
@@ -30,11 +38,13 @@ export class OutboundResponsesConsumer implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.inbox.register(ConsumedEvent.WORK_ORDER_SCHEDULED, (d) => this.workOrderScheduled(d));
-    this.inbox.register(ConsumedEvent.WORK_ORDER_COMPLETED, (d) => this.workOrderCompleted(d));
-    this.inbox.register(ConsumedEvent.STREET_CLOSURE_APPROVED, (d) => this.closureApproved(d));
-    this.inbox.register(ConsumedEvent.STREET_CLOSURE_REJECTED, (d) => this.closureRejected(d));
-    this.inbox.register(ConsumedEvent.STREET_CLOSURE_ENDED, (d) => this.closureEnded(d));
+    const m3 = { validate: validarM3 };
+    const m7 = { validate: validarM7 };
+    this.inbox.register(ConsumedEvent.WORK_ORDER_SCHEDULED, (d) => this.workOrderScheduled(d), m3);
+    this.inbox.register(ConsumedEvent.WORK_ORDER_COMPLETED, (d) => this.workOrderCompleted(d), m3);
+    this.inbox.register(ConsumedEvent.STREET_CLOSURE_APPROVED, (d) => this.closureApproved(d), m7);
+    this.inbox.register(ConsumedEvent.STREET_CLOSURE_REJECTED, (d) => this.closureRejected(d), m7);
+    this.inbox.register(ConsumedEvent.STREET_CLOSURE_ENDED, (d) => this.closureEnded(d), m7);
   }
 
   // ─── M3 ───────────────────────────────────────────

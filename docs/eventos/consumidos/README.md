@@ -36,7 +36,20 @@ Nueve de la cohorte, de cinco módulos, más uno simulado (`closureOrdered` + `c
 | `weatherAlertIssued` | ✅ | Reprogramación masiva por zona. **Simulado internamente** |
 | `notificationSent` | ❌ **sin handler** | **Nadie lo publica en toda la cohorte.** Implementarlo sería escribir código para un evento que no existe |
 
-Toda la correlación es por el id que mandamos y nos devuelven: `sourceRequestId` (M3), `closureRequestId` (M7) y `sourceViolationId` (M4). Un id que no corresponde a nada nuestro se descarta con log, no falla: puede ser una solicitud de Obras que nos rutean por error.
+Toda la correlación es por el id que mandamos y nos devuelven: `sourceRequestId` (M3), `closureRequestId` (M7) y `sourceViolationId` (M4). Un id bien formado (uuid) que no corresponde a nada nuestro se descarta con log, no falla (un id malformado da 400, ver más abajo): puede ser una solicitud de Obras que nos rutean por error.
+
+## Validación del payload
+
+Para los eventos con handler, `POST /events/inbox` valida `data` **antes de guardar**. Si falta un campo obligatorio o tiene el tipo equivocado responde **400** (`Payload inválido para <evento>. Campos faltantes o con tipo incorrecto: ...`, sin volcar el contenido). El evento rechazado **no se guarda**: no ocupa el `eventId` y el emisor puede reenviarlo corregido con el mismo. Se toleran los campos extra; un evento sin handler sigue `ignored` (200) sin validar `data`. Un duplicado (`eventId` ya guardado) con payload inválido también se rechaza con 400, porque la validación corre antes que la detección de duplicados. Un `closureRequestId`/`requestId` que no fuera uuid antes terminaba `failed` (Prisma fallaba al consultar); ahora da 400.
+
+| Evento | Obligatorios |
+|---|---|
+| `ticketUpdated` | `ticketId` y `updateType` (string). Si es nuestro (`responsibleAreaId: M6`): `PRIORITY_CHANGED` exige `currentPriority`; `ESCALATION_CHANGED` exige `details.escalation.active` (boolean). `responsibleAreaId` no se exige: sin él el ticket simplemente no es nuestro |
+| `workOrderScheduled`, `workOrderCompleted` | `sourceRequestId` (o `requestId`), uuid |
+| `commercialFineGenerated` | `sourceViolationId` (o `violationId`), uuid |
+| `closureUpdate` | `sourceViolationId` (o `violationId`), uuid; `status`: `ORDERED` o `LIFTED` |
+| `streetClosureApproved`, `streetClosureRejected`, `streetClosureEnded` | `closureRequestId` (o `sourceRequestId`), uuid |
+| `weatherAlertIssued` | `severity` (string), `zoneIds` (array no vacío); si la severidad es `HIGH` o `CRITICAL`, además cada zona uuid y `from`/`to` (fecha ISO 8601) |
 
 ## No llevan schema
 

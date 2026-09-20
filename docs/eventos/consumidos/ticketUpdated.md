@@ -53,7 +53,7 @@ En la v1.5, `requestType`, `summary`, `description` y `location` eran campos **c
 
 | Campo | Por qué lo necesitamos |
 |---|---|
-| `ticketId` | Lo guardamos en el `Service` y en el `EnvironmentalReport` |
+| `ticketId` | Lo guardamos en el `Service` y en el `EnvironmentalReport`. **Obligatorio junto con `updateType`: sin ellos `POST /events/inbox` responde 400 y no se guarda** |
 | `responsibleAreaId` | ✅ Nos dice si el `ROUTED` es nuestro |
 | `citizenId`, `isAnonymous` | Decide si hace falta identificar al denunciante para el expediente |
 | `details.routing.location.neighborhoodId` | **No se usa hoy.** El plan era asignar zona operativa a partir del barrio, pero el handler no lo lee — pendiente de que M9 publique el catálogo de barrios |
