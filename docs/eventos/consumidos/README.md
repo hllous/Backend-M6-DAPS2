@@ -21,6 +21,8 @@ Nueve de la cohorte, de cinco módulos, más uno simulado (`closureOrdered` + `c
 
 **Nueve de los diez tienen handler.** Entran por `POST /events/inbox` —o por Kafka cuando haya broker— y la idempotencia es por `eventId`, resuelta en el inbox y no en cada handler.
 
+`eventId` y `eventType` no pueden superar 100 caracteres (400 si se pasan). Los ids de M1, M2 y M9 miden hoy hasta ~24 caracteres (un UUID mide 36), así que entran holgados.
+
 | Evento | Handler | Efecto |
 |---|---|---|
 | `ticketUpdated` | ✅ | Seis `updateType` disparan acción; **los otros siete se descartan a propósito** |

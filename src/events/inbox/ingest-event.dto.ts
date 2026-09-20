@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsISO8601, IsNotEmpty, IsObject, IsOptional, IsString, ValidateBy } from 'class-validator';
+import {
+  IsISO8601,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateBy,
+} from 'class-validator';
+import { MAX_EXTERNAL_ID_LENGTH } from '../../common/decorators';
 import { EventProducer } from '../envelope';
 
 const noVacio = (v: unknown): boolean => typeof v === 'string' && v.trim().length > 0;
@@ -28,20 +37,24 @@ function IsProducer(): PropertyDecorator {
 /** El sobre de la cohorte, tal como lo recibiría del bus. */
 export class IngestEventDto {
   @ApiProperty({
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
     description:
       'Identificador único del mensaje. **Es la clave de idempotencia**: repetirlo descarta el evento sin volver a aplicarlo.',
     example: '646d19f5-5670-4a7b-9442-30e13b02ba11',
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   eventId: string;
 
   @ApiProperty({
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
     description: 'Nombre del evento en camelCase',
     example: 'streetClosureApproved',
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   eventType: string;
 
   @ApiProperty({

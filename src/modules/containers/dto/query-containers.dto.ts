@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { SearchText } from '../../../common/decorators';
+import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { ContainerType, ContainerStatus } from '@prisma/client';
 import { PaginationQueryDto } from '../../../common/dto';
 
@@ -36,6 +37,6 @@ export class QueryContainersDto extends PaginationQueryDto {
     example: 'Rivadavia',
   })
   @IsOptional()
-  @IsString()
+  @SearchText()
   search?: string;
 }

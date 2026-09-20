@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { SearchText, ToBoolean } from '../../../common/decorators';
 import { GreenSpaceType } from '@prisma/client';
 import { PaginationQueryDto } from '../../../common/dto';
 
@@ -36,6 +36,6 @@ export class QueryGreenSpacesDto extends PaginationQueryDto {
     example: 'Miserere',
   })
   @IsOptional()
-  @IsString()
+  @SearchText()
   search?: string;
 }

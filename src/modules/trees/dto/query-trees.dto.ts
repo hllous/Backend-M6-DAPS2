@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { IsOptional, IsUUID } from 'class-validator';
+import { SearchText, ToBoolean } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryTreesDto extends PaginationQueryDto {
@@ -16,6 +16,6 @@ export class QueryTreesDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({ description: 'Buscar por especie o dirección' })
   @IsOptional()
-  @IsString()
+  @SearchText()
   search?: string;
 }
