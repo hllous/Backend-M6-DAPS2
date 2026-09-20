@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import {
+  Prisma,
   ServiceMode,
   ServiceOrigin,
   ServiceStatus,
@@ -315,6 +316,38 @@ describe('ServicesService', () => {
           }),
         }),
       );
+    });
+
+    it.each([
+      ServiceStatus.SCHEDULED,
+      ServiceStatus.RESCHEDULED,
+      ServiceStatus.IN_PROGRESS,
+      ServiceStatus.COMPLETED,
+      ServiceStatus.CANCELLED,
+    ])('reanudar desde %s da 409 y no escribe (no saltea el chequeo de start)', async (status) => {
+      prisma.service.findUnique.mockResolvedValue(serviceRow({ status }));
+
+      await expect(service.resume(SERVICE_ID)).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.service.update).not.toHaveBeenCalled();
+    });
+
+    it('reanudar escribe condicionado al estado leído', async () => {
+      prisma.service.findUnique.mockResolvedValue(serviceRow({ status: ServiceStatus.SUSPENDED }));
+
+      await service.resume(SERVICE_ID);
+
+      expect(prisma.service.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: SERVICE_ID, status: ServiceStatus.SUSPENDED } }),
+      );
+    });
+
+    it('si el estado cambió entre la lectura y la escritura da 409', async () => {
+      prisma.service.findUnique.mockResolvedValue(serviceRow({ status: ServiceStatus.SUSPENDED }));
+      prisma.service.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5.22.0' }),
+      );
+
+      await expect(service.resume(SERVICE_ID)).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('reanudar limpia el motivo de la suspension', async () => {
