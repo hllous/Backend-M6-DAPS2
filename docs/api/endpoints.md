@@ -249,7 +249,7 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/street-closure-requests` | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío. 400 si `requestedTo` es anterior a `requestedFrom`. 404 si el servicio o la intervención de origen no existe |
+| POST | `/street-closure-requests` | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío. 400 si `requestedTo` es anterior a `requestedFrom`. 404 si el servicio o la intervención de origen no existe. **409** si la intervención de origen no está `AUTHORIZED` |
 | GET | `/street-closure-requests` | Listar. Filtros: `status`, `sourceId` |
 | GET | `/street-closure-requests/:id` | Detalle con sus tramos |
 | POST | `/street-closure-requests/:id/approve` | → `APPROVED`, guarda el `closureId` de M7. **Normalmente lo dispara `streetClosureApproved`**. **409** si la transición no es válida desde el estado actual |

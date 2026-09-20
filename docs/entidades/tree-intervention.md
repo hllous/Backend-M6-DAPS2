@@ -32,4 +32,4 @@ Los campos de auditoría de autorización (`authorizedByUserId`, `authorizedAt`)
 ## Qué publica
 
 - Al programarse la poda: [`treePruningScheduled`](../eventos/publicados/treePruningScheduled.md) → M7.
-- Si `requiresStreetClosure = true`, además sale [`streetClosureRequested`](../eventos/publicados/streetClosureRequested.md) → M7, con `sourceRef` apuntando a esta intervención. M7 recibe primero el aviso de la poda y después la solicitud de corte.
+- Si `requiresStreetClosure = true`, el corte no sale solo: se pide aparte con `POST /street-closure-requests` (`sourceType = TREE_INTERVENTION`), que exige la intervención en `AUTHORIZED` y publica [`streetClosureRequested`](../eventos/publicados/streetClosureRequested.md) → M7 con `sourceRef` apuntando a esta intervención.
