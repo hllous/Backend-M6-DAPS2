@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   ClosureStreet,
   Prisma,
@@ -6,6 +12,7 @@ import {
   RepairRequestStatus,
   StreetClosureRequest,
   StreetClosureRequestStatus,
+  TreeInterventionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
@@ -288,7 +295,8 @@ export class OutboundRequestsService {
 
   /**
    * Falla antes de crear nada: el evento hacia M7 no puede salir con un origen
-   * que no existe. Igual que en repair, el chequeo es previo a escribir y sin
+   * que no existe (404) ni de una intervención que no está autorizada (409).
+   * Igual que en repair, el chequeo es previo a escribir y sin
    * FK polimórfica ni lock (carrera aceptada).
    */
   private async assertClosureSourceExists(type: ClosureSourceType, id: string): Promise<void> {
@@ -299,11 +307,23 @@ export class OutboundRequestsService {
           throw new NotFoundException(`Servicio con id '${id}' no encontrado`);
         }
         return;
-      case ClosureSourceType.TREE_INTERVENTION:
-        if (!(await this.prisma.treeIntervention.findUnique(args))) {
+      case ClosureSourceType.TREE_INTERVENTION: {
+        const intervention = await this.prisma.treeIntervention.findUnique({
+          where: { id },
+          select: { id: true, status: true },
+        });
+        if (!intervention) {
           throw new NotFoundException(`Intervención con id '${id}' no encontrada`);
         }
+        // Solo una intervención autorizada tiene el trabajo confirmado;
+        // antes, M7 recibiría un corte de algo que puede no hacerse.
+        if (intervention.status !== TreeInterventionStatus.AUTHORIZED) {
+          throw new ConflictException(
+            `La intervención '${id}' está en estado ${intervention.status}: solo se puede pedir un corte de una intervención autorizada`,
+          );
+        }
         return;
+      }
       default:
         return assertNever(type);
     }

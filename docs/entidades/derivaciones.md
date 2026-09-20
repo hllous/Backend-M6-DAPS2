@@ -29,7 +29,7 @@ Un [`Container`](container.md) con `requiresPublicWorks = true` también le lleg
 
 ## `StreetClosureRequest` → M7
 
-El corte de calle que necesita un servicio o una poda. `sourceRef` apunta al [`Service`](service.md) o a la [`TreeIntervention`](tree-intervention.md) que lo origina, y es lo que hace que la respuesta de M7 se pueda aplicar sobre el trabajo correcto. El `sourceId` de tipo `SERVICE` o `TREE_INTERVENTION` tiene que existir (404 si no).
+El corte de calle que necesita un servicio o una poda. `sourceRef` apunta al [`Service`](service.md) o a la [`TreeIntervention`](tree-intervention.md) que lo origina, y es lo que hace que la respuesta de M7 se pueda aplicar sobre el trabajo correcto. El `sourceId` de tipo `SERVICE` o `TREE_INTERVENTION` tiene que existir (404 si no). Si es `TREE_INTERVENTION`, además la intervención tiene que estar `AUTHORIZED` (409 si no).
 
 | Momento | Qué pasa |
 |---|---|

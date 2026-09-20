@@ -5,6 +5,7 @@ import {
   Severity,
   StreetClosureRequestStatus,
   StreetClosureType,
+  TreeInterventionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboundRequestsService } from './outbound-requests.service';
@@ -71,7 +72,9 @@ describe('OutboundRequestsService', () => {
         count: jest.fn(),
       },
       service: { findUnique: jest.fn().mockResolvedValue({ ticketId: null }) },
-      treeIntervention: { findUnique: jest.fn().mockResolvedValue({ id: SERVICE_ID }) },
+      treeIntervention: {
+        findUnique: jest.fn().mockResolvedValue({ id: SERVICE_ID, status: 'AUTHORIZED' }),
+      },
       environmentalInspection: { findUnique: jest.fn().mockResolvedValue({ id: SERVICE_ID }) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
@@ -225,6 +228,31 @@ describe('OutboundRequestsService', () => {
         expect(outbox.enqueue).not.toHaveBeenCalled();
       },
     );
+
+    it('intervención AUTHORIZED: se crea y se encola', async () => {
+      await service.createClosureRequest(dto);
+
+      expect(prisma.treeIntervention.findUnique).toHaveBeenCalledWith({
+        where: { id: SERVICE_ID },
+        select: { id: true, status: true },
+      });
+      expect(outbox.enqueue).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(
+      Object.values(TreeInterventionStatus).filter((s) => s !== TreeInterventionStatus.AUTHORIZED),
+    )('intervención en %s: 409 y no se crea ni se encola nada', async (status) => {
+      prisma.treeIntervention.findUnique.mockResolvedValue({ id: SERVICE_ID, status });
+
+      await expect(service.createClosureRequest(dto)).rejects.toThrow(
+        new ConflictException(
+          `La intervención '${SERVICE_ID}' está en estado ${status}: solo se puede pedir un corte de una intervención autorizada`,
+        ),
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.streetClosureRequest.create).not.toHaveBeenCalled();
+      expect(outbox.enqueue).not.toHaveBeenCalled();
+    });
 
     it('origen SERVICE existente: se crea y se encola', async () => {
       await service.createClosureRequest({ ...dto, sourceType: ClosureSourceType.SERVICE });
