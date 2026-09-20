@@ -198,7 +198,7 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/trees/:treeId/surveys` | Cargar un relevamiento |
+| POST | `/trees/:treeId/surveys` | Cargar un relevamiento. 400 si `surveyedAt` es posterior a hoy (huso Argentina) o si `riskLevel` es HIGH/CRITICAL sin `riskType` |
 | GET | `/trees/:treeId/surveys` | Historial de relevamientos. Filtros: `healthStatus`, `riskLevel` |
 | GET | `/trees/:treeId/surveys/:surveyId` | Detalle de un relevamiento |
 

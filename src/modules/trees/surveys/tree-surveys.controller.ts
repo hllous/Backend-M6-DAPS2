@@ -23,7 +23,11 @@ export class TreeSurveysController {
     description: 'Relevamiento registrado exitosamente',
     type: TreeSurveyResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos inválidos, fecha posterior a hoy o riesgo HIGH/CRITICAL sin riskType',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({
     status: 403,
