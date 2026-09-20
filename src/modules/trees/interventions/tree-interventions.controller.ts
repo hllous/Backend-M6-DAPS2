@@ -19,6 +19,7 @@ import {
   AssignInterventionServiceDto,
 } from './dto';
 import { ErrorResponseDto } from '../../../common/dto';
+import { ApiPaginatedResponse } from '../../../common/decorators';
 
 @ApiTags('tree-interventions')
 @ApiBearerAuth('JWT-auth')
@@ -60,7 +61,7 @@ export class TreeInterventionsController {
     description:
       'Retorna un listado paginado de intervenciones. Se puede filtrar por tipo y estado.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de intervenciones' })
+  @ApiPaginatedResponse(TreeInterventionResponseDto, 'Listado paginado de intervenciones')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findAll(@Query() query: QueryTreeInterventionsDto) {

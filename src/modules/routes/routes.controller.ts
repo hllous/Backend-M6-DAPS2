@@ -22,6 +22,7 @@ import {
   UpdateRouteDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('routes')
 @ApiBearerAuth('JWT-auth')
@@ -63,7 +64,7 @@ export class RoutesController {
     description:
       'Retorna un listado paginado. Se puede filtrar por estado, por zona por la que pasa el recorrido, y buscar por nombre. No incluye las paradas: para eso, el GET por ID.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de recorridos' })
+  @ApiPaginatedResponse(RouteResponseDto, 'Listado paginado de recorridos')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findAll(@Query() query: QueryRoutesDto) {

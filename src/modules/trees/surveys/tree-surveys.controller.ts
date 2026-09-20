@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { TreeSurveysService } from './tree-surveys.service';
 import { CreateTreeSurveyDto, TreeSurveyResponseDto, QueryTreeSurveysDto } from './dto';
 import { ErrorResponseDto } from '../../../common/dto';
+import { ApiPaginatedResponse } from '../../../common/decorators';
 
 @ApiTags('tree-surveys')
 @ApiBearerAuth('JWT-auth')
@@ -45,7 +46,7 @@ export class TreeSurveysController {
       'Retorna un listado paginado de relevamientos fitosanitarios, ordenados del más reciente al más antiguo.',
   })
   @ApiParam({ name: 'treeId', description: 'UUID del árbol', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Listado paginado de relevamientos' })
+  @ApiPaginatedResponse(TreeSurveyResponseDto, 'Listado paginado de relevamientos')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Árbol no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })

@@ -31,7 +31,7 @@ import {
   ZoneResultResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { CurrentUser } from '../../common/decorators';
+import { ApiPaginatedResponse, CurrentUser } from '../../common/decorators';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
 const FORBIDDEN = {
@@ -85,7 +85,7 @@ export class ServicesController {
     description:
       'Listado paginado. Filtros por estado, tipo, modo, origen, cuadrilla, vehículo, zona cubierta, reclamo de M2 y rango de fechas agendadas.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de servicios' })
+  @ApiPaginatedResponse(ServiceResponseDto, 'Listado paginado de servicios')
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
   async findAll(@Query() query: QueryServicesDto) {

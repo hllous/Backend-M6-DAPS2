@@ -20,6 +20,7 @@ import {
   UpdateServiceFrequencyDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('service-frequencies')
 @ApiBearerAuth('JWT-auth')
@@ -66,7 +67,7 @@ export class ServiceFrequenciesController {
     description:
       'Retorna un listado paginado. Se puede filtrar por tipo de servicio, recorrido, turno, día de la semana, y por vigencia en una fecha dada con validOn.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de frecuencias' })
+  @ApiPaginatedResponse(ServiceFrequencyResponseDto, 'Listado paginado de frecuencias')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findAll(@Query() query: QueryServiceFrequenciesDto) {

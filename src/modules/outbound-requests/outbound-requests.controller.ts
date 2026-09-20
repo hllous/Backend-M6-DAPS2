@@ -23,6 +23,7 @@ import {
   StreetClosureRequestResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
 const FORBIDDEN = {
@@ -67,7 +68,7 @@ export class RepairRequestsController {
     summary: 'Listar solicitudes de reparación',
     description: 'Listado paginado. Filtros por estado, tipo de daño, gravedad y origen.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado' })
+  @ApiPaginatedResponse(RepairRequestResponseDto, 'Listado paginado')
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
   async findAll(@Query() query: QueryRepairRequestsDto) {
@@ -164,7 +165,7 @@ export class StreetClosureRequestsController {
     summary: 'Listar solicitudes de corte',
     description: 'Listado paginado. Filtros por estado y por el trabajo que las origina.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado' })
+  @ApiPaginatedResponse(StreetClosureRequestResponseDto, 'Listado paginado')
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
   async findAll(@Query() query: QueryStreetClosureRequestsDto) {

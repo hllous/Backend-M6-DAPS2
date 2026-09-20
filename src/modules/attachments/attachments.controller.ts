@@ -83,7 +83,7 @@ export class AttachmentsController {
   async upload(
     @Body() dto: UploadEvidenceDto,
     @UploadedFile() file: Express.Multer.File,
-    @Headers('idempotency-key') idempotencyKey: string,
+    @Headers('Idempotency-Key') idempotencyKey: string,
   ): Promise<EvidenceResponseDto> {
     return this.attachmentsService.upload(dto, file, idempotencyKey);
   }

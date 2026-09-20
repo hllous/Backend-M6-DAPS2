@@ -9,7 +9,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Servicio activo"
+            "description": "Servicio activo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -35,7 +42,14 @@
         },
         "responses": {
           "200": {
-            "description": "Resultado de la ingesta: processed, duplicate (ya recibido), ignored (sin handler) o failed"
+            "description": "Resultado de la ingesta: processed, duplicate (ya recibido), ignored (sin handler) o failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResultDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Sobre inválido",
@@ -86,7 +100,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Tipos de evento con handler"
+            "description": "Tipos de evento con handler",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredHandlersDto"
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -257,7 +278,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de zonas"
+            "description": "Listado paginado de zonas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ZoneResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -876,7 +919,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de tipos de servicio"
+            "description": "Listado paginado de tipos de servicio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServiceTypeResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -1299,7 +1364,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de sitios de disposición"
+            "description": "Listado paginado de sitios de disposición",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DisposalSiteResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -1717,7 +1804,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de recorridos"
+            "description": "Listado paginado de recorridos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RouteResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -2263,7 +2372,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de frecuencias"
+            "description": "Listado paginado de frecuencias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServiceFrequencyResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -2680,7 +2811,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de cuadrillas"
+            "description": "Listado paginado de cuadrillas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CrewResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -3275,7 +3428,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de vehículos"
+            "description": "Listado paginado de vehículos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VehicleResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -3737,7 +3912,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de contenedores"
+            "description": "Listado paginado de contenedores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ContainerResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -4764,7 +4961,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de árboles"
+            "description": "Listado paginado de árboles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TreeResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -5205,7 +5424,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de relevamientos"
+            "description": "Listado paginado de relevamientos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TreeSurveyResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -5478,7 +5719,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de intervenciones"
+            "description": "Listado paginado de intervenciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TreeInterventionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -6112,7 +6375,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de espacios verdes"
+            "description": "Listado paginado de espacios verdes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GreenSpaceResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -6556,7 +6841,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de puntos verdes"
+            "description": "Listado paginado de puntos verdes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GreenPointResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -7065,7 +7372,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de servicios"
+            "description": "Listado paginado de servicios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServiceResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -8936,7 +9265,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de expedientes"
+            "description": "Listado paginado de expedientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EnvironmentalReportResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -10130,7 +10481,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado"
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RepairRequestResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -10553,7 +10926,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado"
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StreetClosureRequestResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -11088,7 +11483,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de servicios programados"
+            "description": "Listado paginado de servicios programados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PublicServiceResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "429": {
             "description": "Demasiadas consultas desde la misma dirección",
@@ -11158,7 +11575,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de puntos verdes"
+            "description": "Listado paginado de puntos verdes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PublicGreenPointResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "429": {
             "description": "Demasiadas consultas desde la misma dirección",
@@ -11239,18 +11678,10 @@
         "description": "Endpoint genérico de evidencia — un archivo por llamada, atado a un ownerType/ownerId que ya debe existir (Container, Service, ZoneResult o EnvironmentalInspection). Requiere el header Idempotency-Key para identificar reintentos.",
         "parameters": [
           {
-            "name": "idempotency-key",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "Idempotency-Key",
+            "required": true,
             "in": "header",
             "description": "UUID generado por el cliente, único por intento de subida. Reenviar el mismo valor en un reintento evita crear evidencia duplicada.",
-            "required": true,
             "schema": {
               "type": "string"
             }
@@ -11867,6 +12298,31 @@
       }
     },
     "schemas": {
+      "HealthResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "description": "Siempre \"ok\" si el servicio responde"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-09-19T15:30:00.000Z",
+            "description": "Hora del servidor (ISO 8601)"
+          },
+          "service": {
+            "type": "string",
+            "example": "m6-ambiente-backend",
+            "description": "Identificador del servicio"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "service"
+        ]
+      },
       "IngestEventDto": {
         "type": "object",
         "properties": {
@@ -11944,6 +12400,30 @@
           "data"
         ]
       },
+      "IngestResultDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "processed",
+              "duplicate",
+              "ignored",
+              "failed"
+            ],
+            "example": "processed",
+            "description": "Qué hizo M6 con el evento"
+          },
+          "detail": {
+            "type": "string",
+            "example": "sin handler registrado",
+            "description": "Motivo o error, cuando hay algo que aclarar"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
       "ErrorResponseDto": {
         "type": "object",
         "properties": {
@@ -11974,6 +12454,25 @@
           "error",
           "timestamp",
           "path"
+        ]
+      },
+      "RegisteredHandlersDto": {
+        "type": "object",
+        "properties": {
+          "eventTypes": {
+            "example": [
+              "ticketUpdated",
+              "weatherAlertIssued"
+            ],
+            "description": "Tipos de evento con handler registrado",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "eventTypes"
         ]
       },
       "CreateZoneDto": {
@@ -12067,6 +12566,37 @@
           "active",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 142,
+            "description": "Total de registros"
+          },
+          "page": {
+            "type": "number",
+            "example": 1,
+            "description": "Página actual (1-indexed)"
+          },
+          "pageSize": {
+            "type": "number",
+            "example": 20,
+            "description": "Registros por página"
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 8,
+            "description": "Total de páginas"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "pageSize",
+          "totalPages"
         ]
       },
       "UpdateZoneDto": {
@@ -16136,6 +16666,122 @@
           "openedAt",
           "lastUpdateAt",
           "closed"
+        ]
+      },
+      "PublicServiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serviceTypeName": {
+            "type": "string",
+            "description": "Tipo de servicio",
+            "example": "Recolección domiciliaria"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "WASTE_COLLECTION",
+              "STREET_CLEANING",
+              "CONTAINERS",
+              "TREES",
+              "GREEN_SPACES",
+              "ENVIRONMENTAL_CONTROL"
+            ]
+          },
+          "scheduledDate": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fecha programada",
+            "example": "2026-09-15"
+          },
+          "windowFrom": {
+            "type": "object",
+            "description": "Desde qué hora",
+            "example": "06:00"
+          },
+          "windowTo": {
+            "type": "object",
+            "description": "Hasta qué hora",
+            "example": "10:00"
+          },
+          "stage": {
+            "type": "string",
+            "description": "Estado en lenguaje del vecino: PROGRAMADO, EN_CURSO, REALIZADO o REPROGRAMADO",
+            "example": "PROGRAMADO"
+          },
+          "zones": {
+            "description": "Zonas por las que pasa",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "serviceTypeName",
+          "category",
+          "scheduledDate",
+          "stage",
+          "zones"
+        ]
+      },
+      "PublicGreenPointResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "PV-014"
+          },
+          "name": {
+            "type": "string",
+            "example": "Punto Verde Plaza Mitre"
+          },
+          "address": {
+            "type": "object",
+            "example": "Av. Mitre 1200"
+          },
+          "lat": {
+            "type": "object",
+            "example": -34.6037
+          },
+          "lng": {
+            "type": "object",
+            "example": -58.3816
+          },
+          "zoneName": {
+            "type": "string",
+            "description": "Zona operativa",
+            "example": "Centro"
+          },
+          "wasteTypes": {
+            "type": "array",
+            "description": "Qué residuos recibe",
+            "items": {
+              "type": "string",
+              "enum": [
+                "HOUSEHOLD",
+                "RECYCLABLE",
+                "BULKY",
+                "GREEN",
+                "MIXED"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "zoneName",
+          "wasteTypes"
         ]
       },
       "PublicZoneResponseDto": {

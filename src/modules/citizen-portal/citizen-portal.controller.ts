@@ -1,10 +1,12 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Public } from '../../common/decorators';
+import { ApiPaginatedResponse, Public } from '../../common/decorators';
 import { CitizenPortalService } from './citizen-portal.service';
 import {
+  PublicGreenPointResponseDto,
   PublicReportResponseDto,
+  PublicServiceResponseDto,
   PublicZoneResponseDto,
   QueryPublicGreenPointsDto,
   QueryPublicServicesDto,
@@ -66,7 +68,7 @@ export class CitizenPortalController {
     description:
       'Listado paginado de servicios programados, por zona y tipo. Sin `from` ni `to` devuelve los próximos 30 días. No expone cuadrilla, vehículo, notas ni el motivo interno de una reprogramación.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de servicios programados' })
+  @ApiPaginatedResponse(PublicServiceResponseDto, 'Listado paginado de servicios programados')
   @ApiResponse({
     status: 429,
     description: 'Demasiadas consultas desde la misma dirección',
@@ -84,7 +86,7 @@ export class CitizenPortalController {
     description:
       'Listado paginado de puntos verdes activos, con su ubicación y qué tipos de residuo recibe cada uno.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de puntos verdes' })
+  @ApiPaginatedResponse(PublicGreenPointResponseDto, 'Listado paginado de puntos verdes')
   @ApiResponse({
     status: 429,
     description: 'Demasiadas consultas desde la misma dirección',
