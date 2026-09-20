@@ -10,6 +10,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
+import { Trim } from '../../../common/decorators';
 import { ContainerType } from '@prisma/client';
 
 export class CreateContainerDto {
@@ -18,6 +19,7 @@ export class CreateContainerDto {
     example: 'CT-0442',
     maxLength: 20,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)

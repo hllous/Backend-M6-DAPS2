@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { DisposalSiteType } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { IsEnum, IsOptional, IsString, MaxLength, IsNotEmpty } from 'class-validator';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 /** El código no es mutable: identifica al sitio en los registros de recolección ya cargados. */
 export class UpdateDisposalSiteDto {
@@ -11,7 +11,9 @@ export class UpdateDisposalSiteDto {
     maxLength: 100,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   name?: string;
 

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 export class CreateZoneDto {
   @ApiProperty({
@@ -8,6 +8,7 @@ export class CreateZoneDto {
     example: 'ZN-NORTE-01',
     maxLength: 20,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
@@ -18,6 +19,7 @@ export class CreateZoneDto {
     example: 'Zona Norte - Sector 1',
     maxLength: 100,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)

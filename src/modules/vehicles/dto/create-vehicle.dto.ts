@@ -8,7 +8,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ToBoolean, Trim } from '../../../common/decorators';
 import { VehicleType } from '@prisma/client';
 
 export class CreateVehicleDto {
@@ -17,6 +17,7 @@ export class CreateVehicleDto {
     example: 'AB 123 CD',
     maxLength: 15,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(15)

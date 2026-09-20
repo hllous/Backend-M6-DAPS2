@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 export class CreateRouteDto {
   @ApiProperty({
@@ -8,6 +8,7 @@ export class CreateRouteDto {
     example: 'R-03',
     maxLength: 20,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
@@ -18,6 +19,7 @@ export class CreateRouteDto {
     example: 'Recorrido troncal Norte-Centro',
     maxLength: 100,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
