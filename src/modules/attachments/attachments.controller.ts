@@ -80,6 +80,12 @@ export class AttachmentsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 503,
+    description:
+      'Storage de evidencia (R2) no configurado en el servidor. No se persiste nada: el reintento con la misma Idempotency-Key es seguro',
+    type: ErrorResponseDto,
+  })
   async upload(
     @Body() dto: UploadEvidenceDto,
     @UploadedFile() file: Express.Multer.File,

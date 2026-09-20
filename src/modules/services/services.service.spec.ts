@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import {
+  ContainerStatus,
   Prisma,
   ServiceMode,
   ServiceOrigin,
@@ -643,6 +644,96 @@ describe('ServicesService', () => {
 
       await expect(service.complete(SERVICE_ID)).rejects.toThrow(ConflictException);
       expect(prisma.service.update).not.toHaveBeenCalled();
+    });
+
+    describe('contenedor al cerrar (#199)', () => {
+      const closable = () =>
+        serviceRow({
+          status: ServiceStatus.IN_PROGRESS,
+          mode: ServiceMode.POINT,
+          routeId: null,
+          targetType: ServiceTargetType.CONTAINER,
+          targetId: CONTAINER_ID,
+          zones: [{ zoneId: ZONE_A, sequence: 1 }],
+          zoneResults: [{ id: 'r1', zoneId: ZONE_A, status: ZoneResultStatus.SERVICED }],
+        });
+      const containerIn = (status: ContainerStatus) => ({
+        id: CONTAINER_ID,
+        code: 'C-1',
+        status,
+      });
+
+      it.each([ContainerStatus.OVERFLOWED, ContainerStatus.UNDER_REPAIR])(
+        'escribe el contenedor condicionado por el estado leído (%s)',
+        async (status) => {
+          prisma.service.findUnique.mockResolvedValue(closable());
+          prisma.container.findUnique.mockResolvedValue(containerIn(status));
+
+          await service.complete(SERVICE_ID);
+
+          expect(prisma.container.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+              where: { id: CONTAINER_ID, status },
+              data: expect.objectContaining({ status: ContainerStatus.ACTIVE }),
+            }),
+          );
+        },
+      );
+
+      it('en RELOCATING también condiciona por el estado leído', async () => {
+        prisma.service.findUnique.mockResolvedValue(closable());
+        prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.RELOCATING));
+
+        await service.complete(SERVICE_ID, { containerLocation: { address: 'Av. Nueva 100' } });
+
+        expect(prisma.container.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: CONTAINER_ID, status: ContainerStatus.RELOCATING },
+          }),
+        );
+      });
+
+      it('da 409 y no encola eventos si el contenedor cambió de estado', async () => {
+        prisma.service.findUnique.mockResolvedValue(closable());
+        prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
+        prisma.container.update.mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5.22.0' }),
+        );
+
+        await expect(service.complete(SERVICE_ID)).rejects.toThrow(ConflictException);
+        expect(outbox.enqueueMany).not.toHaveBeenCalled();
+      });
+
+      it('el service.update del cierre lleva el estado leído en el where', async () => {
+        prisma.service.findUnique.mockResolvedValue(closable());
+        prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
+
+        await service.complete(SERVICE_ID);
+
+        expect(prisma.service.update).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { id: SERVICE_ID, status: ServiceStatus.IN_PROGRESS } }),
+        );
+      });
+
+      it('da 409 y no toca el contenedor si el P2025 viene del service.update', async () => {
+        prisma.service.findUnique.mockResolvedValue(closable());
+        prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
+        prisma.service.update.mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5.22.0' }),
+        );
+
+        await expect(service.complete(SERVICE_ID)).rejects.toThrow(ConflictException);
+        expect(prisma.container.update).not.toHaveBeenCalled();
+        expect(outbox.enqueueMany).not.toHaveBeenCalled();
+      });
+
+      it('no traduce a 409 los errores que no son P2025', async () => {
+        prisma.service.findUnique.mockResolvedValue(closable());
+        prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
+        prisma.container.update.mockRejectedValue(new Error('db caída'));
+
+        await expect(service.complete(SERVICE_ID)).rejects.toThrow('db caída');
+      });
     });
   });
 

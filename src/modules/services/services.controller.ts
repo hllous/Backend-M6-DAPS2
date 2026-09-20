@@ -359,7 +359,8 @@ export class ServicesController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Transición inválida, o faltan resultados de alguna zona',
+    description:
+      'Transición inválida, faltan resultados de alguna zona, o el servicio o su contenedor cambiaron de estado durante el cierre',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
