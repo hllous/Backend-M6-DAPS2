@@ -1,3 +1,4 @@
+import { Trim } from '../../../common/decorators';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
@@ -8,6 +9,7 @@ export class ReportStatusChangeDto {
     example: 'El hecho denunciado corresponde a Obras Públicas, no a Ambiente.',
     maxLength: 500,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(500)

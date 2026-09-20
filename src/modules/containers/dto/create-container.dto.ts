@@ -1,3 +1,4 @@
+import { Latitude, Longitude } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
@@ -5,10 +6,10 @@ import {
   IsEnum,
   IsOptional,
   IsInt,
-  IsNumber,
   IsUUID,
   Min,
   MaxLength,
+  Max,
 } from 'class-validator';
 import { Trim } from '../../../common/decorators';
 import { ContainerType } from '@prisma/client';
@@ -48,6 +49,7 @@ export class CreateContainerDto {
   })
   @IsInt()
   @Min(1)
+  @Max(2147483647)
   capacityLiters: number;
 
   @ApiPropertyOptional({
@@ -65,7 +67,7 @@ export class CreateContainerDto {
     example: -34.6037,
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({
@@ -73,6 +75,6 @@ export class CreateContainerDto {
     example: -58.3816,
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Longitude()
   lng?: number;
 }

@@ -18,6 +18,17 @@ import { CreateVehicleDto } from '../../modules/vehicles/dto/create-vehicle.dto'
 import { UpdateVehicleDto } from '../../modules/vehicles/dto/update-vehicle.dto';
 import { CreateZoneDto } from '../../modules/zones/dto/create-zone.dto';
 import { UpdateZoneDto } from '../../modules/zones/dto/update-zone.dto';
+import { ConfirmRelocationDto } from '../../modules/containers/dto/confirm-relocation.dto';
+import { ContainerRelocationDto } from '../../modules/services/dto/complete-service.dto';
+import { ReportStatusChangeDto } from '../../modules/environmental-reports/dto/status-change.dto';
+import { CreateDelayNoticeDto } from '../../modules/services/dto/delay-notice.dto';
+import { StatusChangeDto } from '../../modules/services/dto/status-change.dto';
+import {
+  ClosureSectionDto,
+  CreateStreetClosureRequestDto,
+  RejectClosureDto,
+} from '../../modules/outbound-requests/dto/dtos';
+import { ChecklistItemDto } from '../../modules/environmental-inspections/dto/dtos';
 
 // Cada campo que lleva @Trim tiene que rechazar los espacios solos: si alguien
 // saca el decorador de un DTO, el campo vuelve a aceptar "   " y este test falla.
@@ -45,6 +56,18 @@ const CAMPOS: Array<[string, new () => object, string]> = [
   ['CreateZoneDto', CreateZoneDto, 'code'],
   ['CreateZoneDto', CreateZoneDto, 'name'],
   ['UpdateZoneDto', UpdateZoneDto, 'name'],
+  ['ConfirmRelocationDto', ConfirmRelocationDto, 'address'],
+  ['ContainerRelocationDto', ContainerRelocationDto, 'address'],
+  ['ReportStatusChangeDto', ReportStatusChangeDto, 'reason'],
+  ['CreateDelayNoticeDto', CreateDelayNoticeDto, 'reason'],
+  ['StatusChangeDto', StatusChangeDto, 'reason'],
+  ['ClosureSectionDto', ClosureSectionDto, 'streetName'],
+  ['ClosureSectionDto', ClosureSectionDto, 'fromCross'],
+  ['ClosureSectionDto', ClosureSectionDto, 'toCross'],
+  ['CreateStreetClosureRequestDto', CreateStreetClosureRequestDto, 'reason'],
+  ['RejectClosureDto', RejectClosureDto, 'reason'],
+  ['ChecklistItemDto', ChecklistItemDto, 'itemCode'],
+  ['ChecklistItemDto', ChecklistItemDto, 'label'],
 ];
 
 describe('@Trim en los DTO de entrada', () => {

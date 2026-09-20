@@ -1,3 +1,4 @@
+import { Latitude, Longitude } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
@@ -7,6 +8,7 @@ import {
   IsUUID,
   Min,
   MaxLength,
+  Max,
 } from 'class-validator';
 import { ToBoolean, Trim } from '../../../common/decorators';
 
@@ -52,24 +54,26 @@ export class CreateTreeDto {
 
   @ApiPropertyOptional({ description: 'Latitud', example: -34.5754 })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Longitud', example: -58.4109 })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Longitude()
   lng?: number;
 
   @ApiPropertyOptional({ description: 'Altura en metros', example: 12.5, minimum: 0 })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(999.99)
   heightM?: number;
 
   @ApiPropertyOptional({ description: 'Diámetro del tronco en cm', example: 45.0, minimum: 0 })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0)
+  @Max(9999.9)
   diameterCm?: number;
 
   @ApiPropertyOptional({ description: 'Si el árbol está activo', example: true, default: true })

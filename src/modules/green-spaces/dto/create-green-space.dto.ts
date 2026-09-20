@@ -10,6 +10,7 @@ import {
   IsLongitude,
   Min,
   MaxLength,
+  Max,
 } from 'class-validator';
 import { ToBoolean, Trim } from '../../../common/decorators';
 import { GreenSpaceType } from '@prisma/client';
@@ -60,6 +61,7 @@ export class CreateGreenSpaceDto {
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(99999999.99)
   areaM2?: number;
 
   @ApiPropertyOptional({

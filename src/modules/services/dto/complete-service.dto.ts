@@ -1,6 +1,7 @@
+import { Trim, Latitude, Longitude } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { IsOptional, IsString, MaxLength, ValidateNested, IsNotEmpty } from 'class-validator';
 
 export class ContainerRelocationDto {
   @ApiProperty({
@@ -8,18 +9,20 @@ export class ContainerRelocationDto {
     example: 'Av. Santa Fe 2800, esquina Anchorena',
     maxLength: 200,
   })
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(200)
   address: string;
 
   @ApiPropertyOptional({ description: 'Nueva latitud', example: -34.5955 })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Nueva longitud', example: -58.4016 })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Longitude()
   lng?: number;
 }
 

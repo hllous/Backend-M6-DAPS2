@@ -1,3 +1,4 @@
+import { Trim } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { RepairDamageType, Severity, StreetClosureType } from '@prisma/client';
 import { Type } from 'class-transformer';
@@ -89,12 +90,14 @@ export class StartRepairDto {
 
 export class ClosureSectionDto {
   @ApiProperty({ description: 'Calle afectada', example: 'Rivadavia', maxLength: 100 })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   streetName: string;
 
   @ApiProperty({ description: 'Cruce donde empieza el tramo', example: 'Mitre', maxLength: 100 })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
@@ -105,6 +108,7 @@ export class ClosureSectionDto {
     example: 'San Martín',
     maxLength: 100,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
@@ -133,6 +137,7 @@ export class CreateStreetClosureRequestDto {
     example: 'Extracción de ejemplar con riesgo de caída sobre la calzada',
     maxLength: 500,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(500)
@@ -196,6 +201,7 @@ export class RejectClosureDto {
     example: 'Se superpone con un corte de Obras en la misma cuadra',
     maxLength: 500,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(500)

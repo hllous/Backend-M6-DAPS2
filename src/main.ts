@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import { NoNullCharsPipe } from './common/pipes/no-null-chars.pipe';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -19,6 +20,7 @@ async function bootstrap() {
 
   // ─── Global pipes ───────────────────────────────
   app.useGlobalPipes(
+    new NoNullCharsPipe(),
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,

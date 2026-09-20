@@ -7,6 +7,7 @@ import {
   IsNumber,
   Min,
   MaxLength,
+  Max,
 } from 'class-validator';
 import { ToBoolean, Trim } from '../../../common/decorators';
 import { VehicleType } from '@prisma/client';
@@ -39,6 +40,7 @@ export class CreateVehicleDto {
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(99999999.99)
   capacity?: number;
 
   @ApiPropertyOptional({

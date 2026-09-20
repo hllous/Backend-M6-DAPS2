@@ -7,11 +7,18 @@ import { IsInt, IsOptional, Max, Min } from 'class-validator';
  * Se extiende en los Query DTOs de cada módulo.
  */
 export class PaginationQueryDto {
-  @ApiPropertyOptional({ default: 1, minimum: 1, description: 'Página (1-indexed)' })
+  @ApiPropertyOptional({
+    default: 1,
+    minimum: 1,
+    maximum: 10000000,
+    description: 'Página (1-indexed)',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  // 10.000.000 x pageSize (100) queda dentro del Int32 de `skip` de Prisma.
+  @Max(10000000)
   page: number = 1;
 
   @ApiPropertyOptional({
