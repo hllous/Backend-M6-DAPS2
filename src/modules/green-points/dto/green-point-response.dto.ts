@@ -30,13 +30,14 @@ export class GreenPointResponseDto {
     description: 'Dirección del emplazamiento',
     example: 'Av. Mitre 1200',
     nullable: true,
+    type: String,
   })
   address: string | null;
 
-  @ApiPropertyOptional({ description: 'Latitud', example: -34.6037, nullable: true })
+  @ApiPropertyOptional({ description: 'Latitud', example: -34.6037, nullable: true, type: Number })
   lat: number | null;
 
-  @ApiPropertyOptional({ description: 'Longitud', example: -58.3816, nullable: true })
+  @ApiPropertyOptional({ description: 'Longitud', example: -58.3816, nullable: true, type: Number })
   lng: number | null;
 
   @ApiProperty({ description: 'Si está habilitado', example: true })

@@ -32,18 +32,24 @@ export class ContainerResponseDto {
   @ApiPropertyOptional({
     description: 'Dirección del contenedor',
     example: 'Av. Rivadavia 4500, esquina Medrano',
+    type: String,
+    nullable: true,
   })
   address: string | null;
 
   @ApiPropertyOptional({
     description: 'Latitud',
     example: -34.6037,
+    type: Number,
+    nullable: true,
   })
   lat: number | null;
 
   @ApiPropertyOptional({
     description: 'Longitud',
     example: -58.3816,
+    type: Number,
+    nullable: true,
   })
   lng: number | null;
 
@@ -64,6 +70,7 @@ export class ContainerResponseDto {
     description: 'Tipo de daño (solo cuando status = DAMAGED)',
     enum: DamageType,
     example: DamageType.LID_BROKEN,
+    nullable: true,
   })
   damageType: DamageType | null;
 
@@ -71,12 +78,15 @@ export class ContainerResponseDto {
     description: 'Severidad del daño (solo cuando status = DAMAGED)',
     enum: Severity,
     example: Severity.MEDIUM,
+    nullable: true,
   })
   severity: Severity | null;
 
   @ApiPropertyOptional({
     description: 'Si requiere derivación a Obras Públicas (solo cuando status = DAMAGED)',
     example: false,
+    type: Boolean,
+    nullable: true,
   })
   requiresPublicWorks: boolean | null;
 

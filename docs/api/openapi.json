@@ -13314,7 +13314,7 @@
             "example": "2026-09-01"
           },
           "validTo": {
-            "type": "object",
+            "type": "string",
             "description": "Fecha hasta la que rige. Null si no tiene vencimiento.",
             "example": "2026-12-31",
             "format": "date-time",
@@ -13483,14 +13483,16 @@
             "example": "MORNING"
           },
           "leaderUserId": {
-            "type": "object",
+            "type": "string",
             "description": "ID del usuario líder",
-            "example": "usr-00001"
+            "example": "usr-00001",
+            "nullable": true
           },
           "organizationId": {
-            "type": "object",
+            "type": "string",
             "description": "ID de la organización (cooperativa/contratista)",
-            "example": "org-coop-recicladores"
+            "example": "org-coop-recicladores",
+            "nullable": true
           },
           "active": {
             "type": "boolean",
@@ -13651,9 +13653,10 @@
             "example": "COMPACTOR_TRUCK"
           },
           "capacity": {
-            "type": "object",
+            "type": "number",
             "description": "Capacidad en toneladas (null si no aplica)",
-            "example": 10.5
+            "example": 10.5,
+            "nullable": true
           },
           "active": {
             "type": "boolean",
@@ -13792,19 +13795,22 @@
             "format": "uuid"
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección del contenedor",
-            "example": "Av. Rivadavia 4500, esquina Medrano"
+            "example": "Av. Rivadavia 4500, esquina Medrano",
+            "nullable": true
           },
           "lat": {
-            "type": "object",
+            "type": "number",
             "description": "Latitud",
-            "example": -34.6037
+            "example": -34.6037,
+            "nullable": true
           },
           "lng": {
-            "type": "object",
+            "type": "number",
             "description": "Longitud",
-            "example": -58.3816
+            "example": -58.3816,
+            "nullable": true
           },
           "capacityLiters": {
             "type": "number",
@@ -13835,7 +13841,8 @@
               "VANDALIZED",
               "MISSING"
             ],
-            "example": "LID_BROKEN"
+            "example": "LID_BROKEN",
+            "nullable": true
           },
           "severity": {
             "type": "string",
@@ -13846,12 +13853,14 @@
               "HIGH",
               "CRITICAL"
             ],
-            "example": "MEDIUM"
+            "example": "MEDIUM",
+            "nullable": true
           },
           "requiresPublicWorks": {
-            "type": "object",
+            "type": "boolean",
             "description": "Si requiere derivación a Obras Públicas (solo cuando status = DAMAGED)",
-            "example": false
+            "example": false,
+            "nullable": true
           },
           "createdAt": {
             "format": "date-time",
@@ -14074,7 +14083,8 @@
               "POWER_LINE_CONTACT",
               "SIGN_OBSTRUCTION",
               "PEST_INFESTATION"
-            ]
+            ],
+            "nullable": true
           },
           "suggestedIntervention": {
             "type": "string",
@@ -14085,7 +14095,8 @@
               "REMOVAL",
               "PLANTING",
               "TREATMENT"
-            ]
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -14105,26 +14116,32 @@
             "type": "string"
           },
           "species": {
-            "type": "object"
+            "type": "string",
+            "nullable": true
           },
           "zoneId": {
             "type": "string",
             "format": "uuid"
           },
           "address": {
-            "type": "object"
+            "type": "string",
+            "nullable": true
           },
           "lat": {
-            "type": "object"
+            "type": "number",
+            "nullable": true
           },
           "lng": {
-            "type": "object"
+            "type": "number",
+            "nullable": true
           },
           "heightM": {
-            "type": "object"
+            "type": "number",
+            "nullable": true
           },
           "diameterCm": {
-            "type": "object"
+            "type": "number",
+            "nullable": true
           },
           "active": {
             "type": "boolean"
@@ -14306,9 +14323,10 @@
             "example": "2026-08-15T09:30:00.000Z"
           },
           "inspectorId": {
-            "type": "object",
+            "type": "string",
             "description": "ID del inspector",
-            "example": "usr-00015"
+            "example": "usr-00015",
+            "nullable": true
           },
           "healthStatus": {
             "type": "string",
@@ -14343,7 +14361,8 @@
               "POWER_LINE_CONTACT",
               "SIGN_OBSTRUCTION",
               "PEST_INFESTATION"
-            ]
+            ],
+            "nullable": true
           },
           "suggestedIntervention": {
             "type": "string",
@@ -14354,7 +14373,8 @@
               "REMOVAL",
               "PLANTING",
               "TREATMENT"
-            ]
+            ],
+            "nullable": true
           },
           "requiresStreetClosure": {
             "type": "boolean",
@@ -14367,8 +14387,9 @@
             "example": false
           },
           "notes": {
-            "type": "object",
-            "description": "Notas del inspector"
+            "type": "string",
+            "description": "Notas del inspector",
+            "nullable": true
           },
           "createdAt": {
             "format": "date-time",
@@ -14493,14 +14514,16 @@
             "example": "REQUESTED"
           },
           "serviceId": {
-            "type": "object",
+            "type": "string",
             "description": "UUID del servicio programado (null hasta que se programe)",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección de referencia",
-            "example": "Av. del Libertador 4200"
+            "example": "Av. del Libertador 4200",
+            "nullable": true
           },
           "requiresStreetClosure": {
             "type": "boolean",
@@ -14515,20 +14538,24 @@
               "MEDIUM",
               "HIGH",
               "CRITICAL"
-            ]
+            ],
+            "nullable": true
           },
           "authorizedByUserId": {
-            "type": "object",
-            "description": "ID del usuario que autorizó (solo REMOVAL)"
+            "type": "string",
+            "description": "ID del usuario que autorizó (solo REMOVAL)",
+            "nullable": true
           },
           "authorizedAt": {
-            "type": "object",
+            "type": "string",
             "description": "Fecha de autorización (solo REMOVAL)",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true
           },
           "justification": {
-            "type": "object",
-            "description": "Justificación"
+            "type": "string",
+            "description": "Justificación",
+            "nullable": true
           },
           "trees": {
             "description": "Árboles incluidos en la intervención",
@@ -14675,21 +14702,22 @@
             "format": "uuid"
           },
           "lat": {
-            "type": "object",
+            "type": "number",
             "description": "Latitud",
             "example": -34.5724,
             "nullable": true
           },
           "lng": {
-            "type": "object",
+            "type": "number",
             "description": "Longitud",
             "example": -58.4166,
             "nullable": true
           },
           "areaM2": {
-            "type": "object",
+            "type": "number",
             "description": "Superficie en metros cuadrados",
-            "example": 12500.5
+            "example": 12500.5,
+            "nullable": true
           },
           "active": {
             "type": "boolean",
@@ -14869,19 +14897,19 @@
             }
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección del emplazamiento",
             "example": "Av. Mitre 1200",
             "nullable": true
           },
           "lat": {
-            "type": "object",
+            "type": "number",
             "description": "Latitud",
             "example": -34.6037,
             "nullable": true
           },
           "lng": {
-            "type": "object",
+            "type": "number",
             "description": "Longitud",
             "example": -58.3816,
             "nullable": true
@@ -15130,13 +15158,13 @@
             "nullable": true
           },
           "proposedDate": {
-            "type": "object",
+            "type": "string",
             "description": "Fecha propuesta para reintentar",
             "format": "date-time",
             "nullable": true
           },
           "notes": {
-            "type": "object",
+            "type": "string",
             "description": "Notas de la cuadrilla",
             "nullable": true
           },
@@ -15179,19 +15207,19 @@
             "format": "uuid"
           },
           "zoneResultId": {
-            "type": "object",
+            "type": "string",
             "description": "Resultado de zona al que corresponde. Null en los servicios POINT.",
             "format": "uuid",
             "nullable": true
           },
           "volumeM3": {
-            "type": "object",
+            "type": "number",
             "description": "Volumen en m³",
             "example": 12.5,
             "nullable": true
           },
           "weightKg": {
-            "type": "object",
+            "type": "number",
             "description": "Peso en kg",
             "example": 3400.75,
             "nullable": true
@@ -15239,7 +15267,7 @@
             ]
           },
           "statusReason": {
-            "type": "object",
+            "type": "string",
             "description": "Motivo del último cambio de estado (suspensión, cancelación, reprogramación)",
             "nullable": true
           },
@@ -15255,7 +15283,7 @@
             ]
           },
           "routeId": {
-            "type": "object",
+            "type": "string",
             "description": "Recorrido ejecutado. Null en los servicios POINT.",
             "format": "uuid",
             "nullable": true
@@ -15272,7 +15300,7 @@
             "nullable": true
           },
           "targetId": {
-            "type": "object",
+            "type": "string",
             "description": "UUID del bien",
             "format": "uuid",
             "nullable": true
@@ -15283,34 +15311,34 @@
             "description": "Fecha agendada"
           },
           "windowFrom": {
-            "type": "object",
+            "type": "string",
             "description": "Inicio de la ventana horaria (HH:mm)",
             "nullable": true
           },
           "windowTo": {
-            "type": "object",
+            "type": "string",
             "description": "Fin de la ventana horaria (HH:mm)",
             "nullable": true
           },
           "crewId": {
-            "type": "object",
+            "type": "string",
             "description": "Cuadrilla asignada",
             "format": "uuid",
             "nullable": true
           },
           "vehicleId": {
-            "type": "object",
+            "type": "string",
             "description": "Vehículo asignado",
             "format": "uuid",
             "nullable": true
           },
           "ticketId": {
-            "type": "object",
+            "type": "string",
             "description": "Reclamo de M2 que lo originó. Solo cuando origin = TICKET.",
             "nullable": true
           },
           "notes": {
-            "type": "object",
+            "type": "string",
             "description": "Notas internas",
             "nullable": true
           },
@@ -15336,7 +15364,7 @@
             }
           },
           "createdBy": {
-            "type": "object",
+            "type": "string",
             "description": "Usuario que lo programó",
             "nullable": true
           },
@@ -16026,7 +16054,7 @@
             "description": "Si el ítem se cumple"
           },
           "observations": {
-            "type": "object",
+            "type": "string",
             "description": "Observaciones",
             "nullable": true
           }
@@ -16052,24 +16080,24 @@
             "format": "uuid"
           },
           "serviceId": {
-            "type": "object",
+            "type": "string",
             "description": "Servicio que la ejecuta. Null hasta que se asocia.",
             "format": "uuid",
             "nullable": true
           },
           "inspectorId": {
-            "type": "object",
+            "type": "string",
             "description": "Inspector asignado. **Interno: nunca sale hacia M2.**",
             "nullable": true
           },
           "inspectedAt": {
-            "type": "object",
+            "type": "string",
             "description": "Cuándo se realizó",
             "format": "date-time",
             "nullable": true
           },
           "findings": {
-            "type": "object",
+            "type": "string",
             "description": "Qué encontró el inspector. **Interno: nunca sale hacia M2.**",
             "nullable": true
           },
@@ -16272,7 +16300,7 @@
             "description": "Cuándo se emitió"
           },
           "establishmentId": {
-            "type": "object",
+            "type": "string",
             "description": "Establecimiento de M4. Si es null el acta no se derivó y el expediente cierra de nuestro lado.",
             "nullable": true
           },
@@ -16436,7 +16464,7 @@
             "format": "uuid"
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección del daño",
             "nullable": true
           },
@@ -16450,7 +16478,7 @@
             ]
           },
           "workOrderId": {
-            "type": "object",
+            "type": "string",
             "description": "Orden de trabajo de M3. Null hasta que la informan.",
             "nullable": true
           },
@@ -16644,13 +16672,13 @@
             }
           },
           "closureFrom": {
-            "type": "object",
+            "type": "string",
             "description": "Inicio solicitado",
             "format": "date-time",
             "nullable": true
           },
           "closureTo": {
-            "type": "object",
+            "type": "string",
             "description": "Fin solicitado",
             "format": "date-time",
             "nullable": true
@@ -16675,7 +16703,7 @@
             ]
           },
           "closureId": {
-            "type": "object",
+            "type": "string",
             "description": "Identificador del corte que asigna M7. Null hasta que responden.",
             "nullable": true
           },
@@ -16735,7 +16763,7 @@
             "example": "550e8400-e29b-41d4-a716-446655440000"
           },
           "publicId": {
-            "type": "object",
+            "type": "string",
             "description": "Referencia humana del reclamo de M2, para mostrar. Null si M2 no la envió",
             "example": "TK-2026-000123",
             "nullable": true
@@ -16773,9 +16801,10 @@
             "example": "Un inspector ya visitó el lugar y estamos evaluando lo que encontró."
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección denunciada",
-            "example": "Av. Rivadavia 4500"
+            "example": "Av. Rivadavia 4500",
+            "nullable": true
           },
           "openedAt": {
             "format": "date-time",
@@ -16788,8 +16817,9 @@
             "description": "Última novedad del expediente"
           },
           "inspectedAt": {
-            "type": "object",
-            "description": "Fecha de la inspección, si ya se realizó. Sin hallazgos ni inspector"
+            "type": "string",
+            "description": "Fecha de la inspección, si ya se realizó. Sin hallazgos ni inspector",
+            "nullable": true
           },
           "closed": {
             "type": "boolean",
@@ -16836,14 +16866,16 @@
             "example": "2026-09-15"
           },
           "windowFrom": {
-            "type": "object",
+            "type": "string",
             "description": "Desde qué hora",
-            "example": "06:00"
+            "example": "06:00",
+            "nullable": true
           },
           "windowTo": {
-            "type": "object",
+            "type": "string",
             "description": "Hasta qué hora",
-            "example": "10:00"
+            "example": "10:00",
+            "nullable": true
           },
           "stage": {
             "type": "string",
@@ -16883,16 +16915,19 @@
             "example": "Punto Verde Plaza Mitre"
           },
           "address": {
-            "type": "object",
-            "example": "Av. Mitre 1200"
+            "type": "string",
+            "example": "Av. Mitre 1200",
+            "nullable": true
           },
           "lat": {
-            "type": "object",
-            "example": -34.6037
+            "type": "number",
+            "example": -34.6037,
+            "nullable": true
           },
           "lng": {
-            "type": "object",
-            "example": -58.3816
+            "type": "number",
+            "example": -58.3816,
+            "nullable": true
           },
           "zoneName": {
             "type": "string",
@@ -17170,7 +17205,8 @@
               "EXCESS_VOLUME",
               "SECURITY_INCIDENT",
               "OTHER"
-            ]
+            ],
+            "nullable": true
           },
           "count": {
             "type": "number",

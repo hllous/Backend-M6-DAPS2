@@ -37,6 +37,7 @@ export class ServiceFrequencyResponseDto {
     example: '2026-12-31',
     format: 'date-time',
     nullable: true,
+    type: String,
   })
   validTo: Date | null;
 

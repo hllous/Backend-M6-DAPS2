@@ -26,6 +26,8 @@ export class TreeSurveyResponseDto {
   @ApiPropertyOptional({
     description: 'ID del inspector',
     example: 'usr-00015',
+    type: String,
+    nullable: true,
   })
   inspectorId: string | null;
 
@@ -46,12 +48,14 @@ export class TreeSurveyResponseDto {
   @ApiPropertyOptional({
     description: 'Tipo de riesgo detectado',
     enum: RiskType,
+    nullable: true,
   })
   riskType: RiskType | null;
 
   @ApiPropertyOptional({
     description: 'Intervención sugerida',
     enum: TreeInterventionType,
+    nullable: true,
   })
   suggestedIntervention: TreeInterventionType | null;
 
@@ -61,7 +65,7 @@ export class TreeSurveyResponseDto {
   @ApiProperty({ description: 'Si requiere derivación a Obras Públicas', example: false })
   requiresPublicWorks: boolean;
 
-  @ApiPropertyOptional({ description: 'Notas del inspector' })
+  @ApiPropertyOptional({ description: 'Notas del inspector', type: String, nullable: true })
   notes: string | null;
 
   @ApiProperty({ description: 'Fecha de creación del registro', format: 'date-time' })
