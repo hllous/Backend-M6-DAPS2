@@ -245,6 +245,139 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
         ConflictException,
       );
     });
+
+    describe('solapamiento', () => {
+      const t = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
+      const OTHER = '99999999-9999-9999-9999-999999999999';
+      const NOTA = 'Lo coordiné con el jefe de cuadrilla por radio';
+      /** Servicio propio con cuadrilla y franja 13-15; el otro ocupa 08-10. */
+      const propio = (over: Record<string, unknown> = {}) =>
+        serviceRow({ crewId: CREW_ID, windowFrom: t('13:00'), windowTo: t('15:00'), ...over });
+      const otro = (from: string, to: string, over: Record<string, unknown> = {}) => ({
+        id: OTHER,
+        status: ServiceStatus.SCHEDULED,
+        scheduledDate: new Date('2026-09-15T00:00:00.000Z'),
+        crewId: CREW_ID,
+        vehicleId: null,
+        windowFrom: t(from),
+        windowTo: t(to),
+        serviceType: { name: 'Barrido' },
+        crew: { name: 'Norte' },
+        vehicle: null,
+        ...over,
+      });
+
+      beforeEach(() => {
+        prisma.service.findUnique.mockResolvedValue(propio());
+        prisma.service.findMany.mockResolvedValue([otro('08:00', '10:00')]);
+      });
+
+      it('ventana que pisa a otro servicio de la cuadrilla da 409 y no escribe', async () => {
+        await expect(
+          service.update(SERVICE_ID, { windowFrom: '09:00', windowTo: '11:00' }),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect(prisma.service.update).not.toHaveBeenCalled();
+      });
+
+      it('parcial: solo windowTo usa windowFrom y cuadrilla vigentes', async () => {
+        prisma.service.findUnique.mockResolvedValue(propio({ windowFrom: t('08:30') }));
+
+        await expect(service.update(SERVICE_ID, { windowTo: '11:00' })).rejects.toBeInstanceOf(
+          ConflictException,
+        );
+        const { where } = prisma.service.findMany.mock.calls[0][0];
+        expect(where.id).toEqual({ not: SERVICE_ID });
+        expect(where.OR).toEqual([{ crewId: CREW_ID }]);
+      });
+
+      it('solo el vehículo a uno ocupado da 409', async () => {
+        prisma.service.findMany.mockResolvedValue([
+          otro('13:00', '15:00', {
+            crewId: null,
+            vehicleId: VEHICLE_ID,
+            vehicle: { plate: 'AA1' },
+          }),
+        ]);
+
+        await expect(service.update(SERVICE_ID, { vehicleId: VEHICLE_ID })).rejects.toBeInstanceOf(
+          ConflictException,
+        );
+        expect(prisma.service.findMany.mock.calls[0][0].where.OR).toEqual([
+          { vehicleId: VEHICLE_ID },
+        ]);
+      });
+
+      it('franja contigua no es solapamiento', async () => {
+        await service.update(SERVICE_ID, { windowFrom: '10:00', windowTo: '12:00' });
+
+        expect(prisma.service.update).toHaveBeenCalledTimes(1);
+        expect(prisma.service.update.mock.calls[0][0].data.assignmentOverrideNote).toBeUndefined();
+      });
+
+      it('con overrideNote acepta y guarda nota, autor y fecha', async () => {
+        await service.update(
+          SERVICE_ID,
+          { windowFrom: '09:00', windowTo: '11:00', overrideNote: NOTA },
+          'user-1',
+        );
+
+        const { data } = prisma.service.update.mock.calls[0][0];
+        expect(data.assignmentOverrideNote).toBe(NOTA);
+        expect(data.assignmentOverrideBy).toBe('user-1');
+        expect(data.assignmentOverrideAt).toBeInstanceOf(Date);
+      });
+
+      it('sin solapamiento la overrideNote no se guarda', async () => {
+        await service.update(SERVICE_ID, { windowFrom: '10:00', overrideNote: NOTA });
+
+        expect(prisma.service.update.mock.calls[0][0].data.assignmentOverrideNote).toBeUndefined();
+      });
+
+      it('vehicleId null quita el vehículo sin chequearlo', async () => {
+        prisma.service.findUnique.mockResolvedValue(propio({ vehicleId: VEHICLE_ID }));
+        prisma.service.findMany.mockResolvedValue([
+          otro('13:00', '15:00', { crewId: null, vehicleId: VEHICLE_ID }),
+        ]);
+
+        await service.update(SERVICE_ID, { vehicleId: null } as never);
+
+        expect(prisma.service.findMany.mock.calls[0]?.[0].where.OR ?? []).not.toContainEqual({
+          vehicleId: VEHICLE_ID,
+        });
+        expect(prisma.service.update).toHaveBeenCalledTimes(1);
+      });
+
+      it('sin vehicleId en el body usa el vehículo vigente', async () => {
+        prisma.service.findUnique.mockResolvedValue(propio({ vehicleId: VEHICLE_ID }));
+
+        await expect(
+          service.update(SERVICE_ID, { windowFrom: '09:00', windowTo: '11:00' }),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect(prisma.service.findMany.mock.calls[0][0].where.OR).toEqual([
+          { crewId: CREW_ID },
+          { vehicleId: VEHICLE_ID },
+        ]);
+      });
+
+      it('sin franja vigente cuenta como todo el día al cambiar solo el vehículo', async () => {
+        prisma.service.findUnique.mockResolvedValue(
+          serviceRow({ windowFrom: null, windowTo: null }),
+        );
+        prisma.service.findMany.mockResolvedValue([
+          otro('08:00', '10:00', { crewId: null, vehicleId: VEHICLE_ID }),
+        ]);
+
+        await expect(service.update(SERVICE_ID, { vehicleId: VEHICLE_ID })).rejects.toBeInstanceOf(
+          ConflictException,
+        );
+      });
+
+      it('un PATCH de solo notas no consulta conflictos', async () => {
+        await service.update(SERVICE_ID, { notes: 'x' });
+
+        expect(prisma.service.findMany).not.toHaveBeenCalled();
+      });
+    });
   });
 
   // ─── Registro de recolección ──────────────────────

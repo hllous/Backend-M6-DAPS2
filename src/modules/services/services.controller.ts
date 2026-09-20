@@ -122,7 +122,7 @@ export class ServicesController {
   @ApiOperation({
     summary: 'Corregir la programación de un servicio',
     description:
-      'Actualiza vehículo, ventana horaria y notas, solo mientras el servicio no arrancó. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar. La fecha se mueve con reschedule y confirm-reschedule, que dejan rastro del motivo.',
+      'Actualiza vehículo, ventana horaria y notas, solo mientras el servicio no arrancó. Si el cambio de vehículo o ventana lo solapa con otro servicio de la misma cuadrilla o vehículo ese día, avisa con 409 y hace falta `overrideNote` (10 a 500 caracteres), igual que en assign-crew. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar. La fecha se mueve con reschedule y confirm-reschedule, que dejan rastro del motivo.',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Servicio actualizado', type: ServiceResponseDto })
@@ -136,15 +136,17 @@ export class ServicesController {
   })
   @ApiResponse({
     status: 409,
-    description: 'El servicio ya arrancó o cerró y no admite edición',
+    description:
+      'El servicio ya arrancó o cerró y no admite edición, o el vehículo o la ventana nuevos se solapan con otro servicio de la misma cuadrilla o vehículo y falta `overrideNote`',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateServiceDto,
+    @CurrentUser('userId') userId?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.update(id, dto);
+    return this.servicesService.update(id, dto, userId);
   }
 
   @Post(':id/assign-crew')

@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, Matches } from 'class-validator';
+import { IsOptional, IsString, IsUUID, MaxLength, Matches, MinLength } from 'class-validator';
 
 const TIME_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -37,4 +37,17 @@ export class UpdateServiceDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Por qué se acepta igual un vehículo o ventana que se pisa con otro servicio de la misma cuadrilla o vehículo ese día. **Obligatorio si hay solapamiento**, igual que en `assign-crew`; sin solapamiento se ignora.',
+    minLength: 10,
+    maxLength: 500,
+    example: 'La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla.',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(10)
+  @MaxLength(500)
+  overrideNote?: string;
 }

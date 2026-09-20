@@ -7552,7 +7552,7 @@
       "patch": {
         "operationId": "ServicesController_update",
         "summary": "Corregir la programación de un servicio",
-        "description": "Actualiza vehículo, ventana horaria y notas, solo mientras el servicio no arrancó. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar. La fecha se mueve con reschedule y confirm-reschedule, que dejan rastro del motivo.",
+        "description": "Actualiza vehículo, ventana horaria y notas, solo mientras el servicio no arrancó. Si el cambio de vehículo o ventana lo solapa con otro servicio de la misma cuadrilla o vehículo ese día, avisa con 409 y hace falta `overrideNote` (10 a 500 caracteres), igual que en assign-crew. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar. La fecha se mueve con reschedule y confirm-reschedule, que dejan rastro del motivo.",
         "parameters": [
           {
             "name": "id",
@@ -7627,7 +7627,7 @@
             }
           },
           "409": {
-            "description": "El servicio ya arrancó o cerró y no admite edición",
+            "description": "El servicio ya arrancó o cerró y no admite edición, o el vehículo o la ventana nuevos se solapan con otro servicio de la misma cuadrilla o vehículo y falta `overrideNote`",
             "content": {
               "application/json": {
                 "schema": {
@@ -15414,6 +15414,13 @@
             "type": "string",
             "description": "Notas internas",
             "example": "La cuadrilla entra por Rivadavia, la otra calle está cortada."
+          },
+          "overrideNote": {
+            "type": "string",
+            "description": "Por qué se acepta igual un vehículo o ventana que se pisa con otro servicio de la misma cuadrilla o vehículo ese día. **Obligatorio si hay solapamiento**, igual que en `assign-crew`; sin solapamiento se ignora.",
+            "minLength": 10,
+            "maxLength": 500,
+            "example": "La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla."
           }
         }
       },
