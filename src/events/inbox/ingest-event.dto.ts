@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsObject, IsOptional, IsString, ValidateBy } from 'class-validator';
+import { IsISO8601, IsNotEmpty, IsObject, IsOptional, IsString, ValidateBy } from 'class-validator';
 import { EventProducer } from '../envelope';
 
 const noVacio = (v: unknown): boolean => typeof v === 'string' && v.trim().length > 0;
@@ -64,7 +64,7 @@ export class IngestEventDto {
 
   @ApiPropertyOptional({ description: 'Cuándo ocurrió el hecho', format: 'date-time' })
   @IsOptional()
-  @IsString()
+  @IsISO8601({ strict: true }, { message: 'occurredAt debe ser una fecha ISO 8601' })
   occurredAt?: string;
 
   @ApiPropertyOptional({

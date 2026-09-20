@@ -113,6 +113,13 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
   // ─── Listado ──────────────────────────────────────
 
   describe('findAll', () => {
+    it('scheduledFrom posterior a scheduledTo da 400', async () => {
+      await expect(
+        service.findAll(query({ scheduledFrom: '2026-12-01', scheduledTo: '2026-01-01' })),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.service.findMany).not.toHaveBeenCalled();
+    });
+
     it('sin filtros no arma ningún where', async () => {
       await service.findAll(query());
 

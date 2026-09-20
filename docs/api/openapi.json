@@ -2261,6 +2261,16 @@
               }
             }
           },
+          "409": {
+            "description": "Ya existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -2564,6 +2574,16 @@
           },
           "404": {
             "description": "Frecuencia no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)",
             "content": {
               "application/json": {
                 "schema": {
@@ -7396,6 +7416,16 @@
               }
             }
           },
+          "400": {
+            "description": "Filtros inválidos: scheduledFrom posterior a scheduledTo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -8643,7 +8673,7 @@
             }
           },
           "400": {
-            "description": "Fecha inválida o ventana horaria invertida",
+            "description": "Fecha inválida o anterior a hoy, o ventana horaria invertida",
             "content": {
               "application/json": {
                 "schema": {
@@ -10072,7 +10102,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos, inspectedAt en el futuro, o resultado VIOLATION_FOUND sin nextStep",
             "content": {
               "application/json": {
                 "schema": {
@@ -10821,7 +10851,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos, o la solicitud no tiene tramos",
+            "description": "Datos inválidos, la solicitud no tiene tramos o requestedTo es anterior a requestedFrom",
             "content": {
               "application/json": {
                 "schema": {
@@ -11928,6 +11958,16 @@
               }
             }
           },
+          "400": {
+            "description": "Período inválido: from posterior a to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -12017,6 +12057,16 @@
               }
             }
           },
+          "400": {
+            "description": "Período inválido: from posterior a to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -12086,6 +12136,16 @@
               }
             }
           },
+          "400": {
+            "description": "Período inválido: from posterior a to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -12151,6 +12211,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WasteIndicatorDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Período inválido: from posterior a to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -16032,7 +16102,7 @@
           },
           "nextStep": {
             "type": "string",
-            "description": "Qué corresponde hacer después",
+            "description": "Qué corresponde hacer después. **Obligatorio si el resultado es VIOLATION_FOUND.**",
             "enum": [
               "NOTICE_TO_BE_ISSUED",
               "REINSPECTION",

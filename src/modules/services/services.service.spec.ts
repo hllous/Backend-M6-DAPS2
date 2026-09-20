@@ -339,11 +339,33 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.RESCHEDULED }),
       );
 
-      await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2026-09-22' });
+      await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' });
 
       const { data } = prisma.service.update.mock.calls[0][0];
       expect(data.status).toBe(ServiceStatus.SCHEDULED);
-      expect(data.scheduledDate.toISOString().slice(0, 10)).toBe('2026-09-22');
+      expect(data.scheduledDate.toISOString().slice(0, 10)).toBe('2099-09-22');
+    });
+
+    it('confirmar con una fecha pasada da 400 y no transiciona', async () => {
+      prisma.service.findUnique.mockResolvedValue(
+        serviceRow({ status: ServiceStatus.RESCHEDULED }),
+      );
+
+      await expect(
+        service.confirmReschedule(SERVICE_ID, { scheduledDate: '2020-01-01' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.service.update).not.toHaveBeenCalled();
+    });
+
+    it('confirmar con la fecha de hoy (Argentina) es válido', async () => {
+      prisma.service.findUnique.mockResolvedValue(
+        serviceRow({ status: ServiceStatus.RESCHEDULED }),
+      );
+      const hoy = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10);
+
+      await service.confirmReschedule(SERVICE_ID, { scheduledDate: hoy });
+
+      expect(prisma.service.update).toHaveBeenCalled();
     });
 
     /**

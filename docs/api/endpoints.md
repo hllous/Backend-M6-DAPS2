@@ -57,11 +57,13 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/service-frequencies` | Crear la regla que genera los servicios planificados. El tipo de servicio tiene que ser de modo `ROUTE` (400 si no) |
+| POST | `/service-frequencies` | Crear la regla que genera los servicios planificados. El tipo de servicio tiene que ser de modo `ROUTE` (400 si no). **409** si se superpone con otra regla del mismo recorrido, tipo y turno que comparta algún día y vigencia |
 | GET | `/service-frequencies` | Listar. Filtros: `serviceTypeId`, `routeId`, `shift`, `weekday` (1=Lunes…7=Domingo), `validOn` (reglas vigentes en esa fecha) |
 | GET | `/service-frequencies/:id` | Detalle, con los días de la semana |
-| PATCH | `/service-frequencies/:id` | Actualizar días, turno y vigencia. El array de días reemplaza el conjunto completo. El tipo y el recorrido son inmutables |
+| PATCH | `/service-frequencies/:id` | Actualizar días, turno y vigencia. El array de días reemplaza el conjunto completo. El tipo y el recorrido son inmutables. **409** si el cambio la superpone con otra regla |
 | DELETE | `/service-frequencies/:id` | **Cierra la vigencia** (`validTo = hoy`), no marca `active`: el modelo no tiene esa columna y el dominio ya expresa la baja con `validTo`. Si la regla todavía no empezó a regir, se cierra en su `validFrom` |
+
+> **Limitación conocida.** El chequeo de solapamiento se hace en el service (`assertNoOverlap`) y no hay una restricción en la base que lo respalde: es un rango de fechas y un `@unique` no lo expresa. Dos requests simultáneos que crean o modifican reglas que se pisan podrían pasar los dos. Cerrarlo requiere una migración con una restricción de exclusión (`EXCLUDE USING gist`) o un bloqueo por recorrido; queda pendiente hasta que sea un problema real.
 
 ## `service-types` — catálogo de tipos de servicio
 
@@ -112,7 +114,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 | Método | Ruta | Qué hace |
 |---|---|---|
 | POST | `/services` | Programar. El **modo se copia del `ServiceType`**, no se elige. Un `ROUTE` exige recorrido y copia sus zonas como snapshot; un `POINT` se ubica por el bien del inventario (`targetType` + `targetId`) o por una `zoneId` suelta. `origin = TICKET` exige `ticketId`, y ningún otro origen lo admite. Nace en `SCHEDULED` |
-| GET | `/services` | Listar. Filtros: `status`, `serviceTypeId`, `mode`, `origin`, `crewId`, `vehicleId`, `zoneId`, `ticketId`, `scheduledFrom`, `scheduledTo` |
+| GET | `/services` | Listar. Filtros: `status`, `serviceTypeId`, `mode`, `origin`, `crewId`, `vehicleId`, `zoneId`, `ticketId`, `scheduledFrom`, `scheduledTo` (400 si `scheduledFrom` es posterior) |
 | GET | `/services/:id` | Detalle con zonas, resultados por zona y registros de recolección |
 | PATCH | `/services/:id` | Corregir vehículo, ventana horaria y notas, **solo antes de iniciar**. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar |
 | POST | `/services/:id/assign-crew` | Asignar cuadrilla, y vehículo en la misma operación. **El solapamiento avisa, no bloquea**: si la cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, devuelve 409 nombrando los servicios; con `overrideNote` (10-500 caracteres) la asignación se hace igual y la nota queda guardada con quién y cuándo |
@@ -128,7 +130,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 | POST | `/services/:id/complete` | `IN_PROGRESS → COMPLETED` o `PARTIALLY_COMPLETED`. **El estado final se calcula**, no se elige: parcial si alguna zona quedó `NOT_SERVICED` o `PARTIAL`. 409 si falta el resultado de alguna zona. Si el servicio atiende un contenedor y cierra `COMPLETED`, **el contenedor transiciona en la misma transacción** (ver [container.md](../entidades/container.md)); si está en `RELOCATING` hace falta `containerLocation` en el body o da 400 |
 | POST | `/services/:id/cancel` | `SCHEDULED`, `RESCHEDULED` o `SUSPENDED` → `CANCELLED`. Motivo obligatorio. **`IN_PROGRESS` no se cancela**: hay que suspenderlo o cerrarlo |
 | POST | `/services/:id/reschedule` | `SCHEDULED → RESCHEDULED`. Deja el servicio a la espera de fecha nueva, con el motivo. Es donde caen los servicios ante una alerta meteorológica o el rechazo de un corte |
-| POST | `/services/:id/confirm-reschedule` | `RESCHEDULED → SCHEDULED` con la fecha y ventana nuevas |
+| POST | `/services/:id/confirm-reschedule` | `RESCHEDULED → SCHEDULED` con la fecha y ventana nuevas. 400 si la fecha es anterior a hoy (día argentino) |
 
 **`RESCHEDULED` no obliga a reprogramar.** Es el estado "hay que moverlo pero todavía no sé adónde", y el sistema mete servicios ahí solo: lo hacen el rechazo de un corte de calle de M7 y la alerta meteorológica. Si el motivo es definitivo —M7 rechaza el corte porque hay obra por dos meses— **se cancela directo**, sin pasar por una fecha inventada.
 
@@ -215,7 +217,7 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/events/inbox` | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed` |
+| POST | `/events/inbox` | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. 400 si `occurredAt` no es ISO 8601 |
 | GET | `/events/handlers` | Los tipos de evento con handler registrado |
 
 **La idempotencia es por `eventId`** y vive en el inbox, no en cada handler: un mensaje ya recibido se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. La decide el `@unique` de `InboxEvent.messageId`, no una consulta previa que podría correr en paralelo con otra igual.
@@ -246,7 +248,7 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/street-closure-requests` | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío |
+| POST | `/street-closure-requests` | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío. 400 si `requestedTo` es anterior a `requestedFrom` |
 | GET | `/street-closure-requests` | Listar. Filtros: `status`, `sourceId` |
 | GET | `/street-closure-requests/:id` | Detalle con sus tramos |
 | POST | `/street-closure-requests/:id/approve` | → `APPROVED`, guarda el `closureId` de M7. **Normalmente lo dispara `streetClosureApproved`**. **409** si la transición no es válida desde el estado actual |
@@ -280,7 +282,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | POST | `/environmental-reports/:reportId/inspections` | Programar. Lleva el expediente a `INSPECTION_SCHEDULED`. Se ejecuta como un `Service` de modo `POINT` |
 | GET | `/environmental-reports/:reportId/inspections` | Inspecciones del expediente |
 | GET | `/environmental-inspections/:id` | Detalle con checklist y hallazgos |
-| POST | `/environmental-inspections/:id/complete` | Cierra con su `outcome`. Lleva el expediente a `INSPECTED` y de ahí, en la misma operación, a `NO_VIOLATION` o `VIOLATION_FOUND`. Un `INCONCLUSIVE` lo deja en `INSPECTED` |
+| POST | `/environmental-inspections/:id/complete` | Cierra con su `outcome`. Lleva el expediente a `INSPECTED` y de ahí, en la misma operación, a `NO_VIOLATION` o `VIOLATION_FOUND`. Un `INCONCLUSIVE` lo deja en `INSPECTED`. 400 si `inspectedAt` está en el futuro o si `VIOLATION_FOUND` no trae `nextStep` |
 | POST | `/environmental-inspections/:id/violation-notice` | **Emitir el acta.** Solo sobre una inspección `VIOLATION_FOUND` |
 | GET | `/environmental-inspections/:id/violation-notice` | El acta emitida |
 
@@ -331,7 +333,7 @@ Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran p
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| GET | `/indicators/coverage` | Objetivos atendidos sobre programados, con desglose por zona y por tipo de servicio. Filtros extra: `zoneId`, `serviceTypeId` |
+| GET | `/indicators/coverage` | Objetivos atendidos sobre programados, con desglose por zona y por tipo de servicio. Filtros extra: `zoneId`, `serviceTypeId`. En todos los indicadores, `from` posterior a `to` da 400 |
 | GET | `/indicators/compliance` | Finalizados en término contra demorados, y ranking de zonas no atendidas con sus motivos. Filtros extra: `zoneId`, `serviceTypeId` |
 | GET | `/indicators/incidents` | Contenedores desbordados y dañados por zona, árboles por nivel de riesgo, y denuncias por tipo y estado con el tiempo medio de resolución |
 | GET | `/indicators/waste` | Kg y m³ por tipo de residuo y por destino, y porcentaje desviado del relleno |

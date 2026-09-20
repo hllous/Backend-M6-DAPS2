@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   ClosureStreet,
   Prisma,
@@ -149,6 +149,11 @@ export class OutboundRequestsService {
   async createClosureRequest(
     dto: CreateStreetClosureRequestDto,
   ): Promise<StreetClosureRequestResponseDto> {
+    if (new Date(dto.requestedTo) < new Date(dto.requestedFrom)) {
+      throw new BadRequestException(
+        `'requestedTo' (${dto.requestedTo}) no puede ser anterior a 'requestedFrom' (${dto.requestedFrom})`,
+      );
+    }
     const request = await this.prisma.$transaction(async (tx) => {
       const row = await tx.streetClosureRequest.create({
         data: {

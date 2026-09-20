@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { ServiceMode, Shift } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ServiceFrequenciesService } from './service-frequencies.service';
@@ -16,6 +16,7 @@ describe('ServiceFrequenciesService', () => {
       update: jest.Mock;
       findMany: jest.Mock;
       count: jest.Mock;
+      findFirst: jest.Mock;
     };
     serviceType: { findUnique: jest.Mock };
     route: { findUnique: jest.Mock };
@@ -43,6 +44,7 @@ describe('ServiceFrequenciesService', () => {
         update: jest.fn().mockResolvedValue(row()),
         findMany: jest.fn().mockResolvedValue([row()]),
         count: jest.fn().mockResolvedValue(1),
+        findFirst: jest.fn().mockResolvedValue(null),
       },
       serviceType: {
         findUnique: jest.fn().mockResolvedValue({ id: serviceTypeId, mode: ServiceMode.ROUTE }),
@@ -205,6 +207,52 @@ describe('ServiceFrequenciesService', () => {
         { validTo: null },
         { validTo: { gte: new Date('2026-09-15T00:00:00.000Z') } },
       ]);
+    });
+  });
+
+  describe('solapamiento de vigencias', () => {
+    it('crear con una regla superpuesta da 409 y no escribe', async () => {
+      prisma.serviceFrequency.findFirst.mockResolvedValue({ id: 'otra' });
+
+      await expect(service.create(validDto)).rejects.toThrow(ConflictException);
+      expect(prisma.serviceFrequency.create).not.toHaveBeenCalled();
+    });
+
+    it('el filtro busca mismo recorrido, tipo, turno, algún día y vigencia superpuesta', async () => {
+      await service.create({ ...validDto, validTo: '2026-12-31' });
+
+      const [[args]] = prisma.serviceFrequency.findFirst.mock.calls;
+      expect(args.where).toMatchObject({
+        serviceTypeId,
+        routeId,
+        shift: Shift.MORNING,
+        weekdays: { some: { weekday: { in: [2, 5] } } },
+        validFrom: { lte: new Date('2026-12-31T00:00:00.000Z') },
+        OR: [{ validTo: null }, { validTo: { gte: new Date('2026-09-01T00:00:00.000Z') } }],
+      });
+      expect(prisma.serviceFrequency.create).toHaveBeenCalled();
+    });
+
+    it('con vigencia abierta no limita por validFrom de la otra regla', async () => {
+      await service.create(validDto);
+
+      const [[args]] = prisma.serviceFrequency.findFirst.mock.calls;
+      expect(args.where).not.toHaveProperty('validFrom');
+    });
+
+    it('al actualizar se excluye a sí misma y usa los días vigentes', async () => {
+      await service.update(id, { validTo: '2026-12-31' });
+
+      const [[args]] = prisma.serviceFrequency.findFirst.mock.calls;
+      expect(args.where.id).toEqual({ not: id });
+      expect(args.where.weekdays).toEqual({ some: { weekday: { in: [5, 2] } } });
+    });
+
+    it('actualizar hacia una superposición da 409', async () => {
+      prisma.serviceFrequency.findFirst.mockResolvedValue({ id: 'otra' });
+
+      await expect(service.update(id, { weekdays: [1] })).rejects.toThrow(ConflictException);
+      expect(prisma.serviceFrequency.update).not.toHaveBeenCalled();
     });
   });
 });

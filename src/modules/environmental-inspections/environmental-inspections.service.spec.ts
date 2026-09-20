@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import {
   EnvironmentalReportStatus as S,
+  InspectionNextStep,
   InspectionOutcome,
   ServiceMode,
   Severity,
@@ -250,12 +251,32 @@ describe('EnvironmentalInspectionsService', () => {
       await service.complete(INSPECTION_ID, {
         inspectedAt: '2026-09-10T11:30:00.000Z',
         outcome: InspectionOutcome.VIOLATION_FOUND,
+        nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
       });
 
       const estados = prisma.environmentalReport.update.mock.calls.map(
         ([a]: [{ data: { status: string } }]) => a.data.status,
       );
       expect(estados).toEqual([S.INSPECTED, S.VIOLATION_FOUND]);
+    });
+
+    it('inspectedAt en el futuro da 400', async () => {
+      await expect(
+        service.complete(INSPECTION_ID, {
+          inspectedAt: '2030-01-01T00:00:00.000Z',
+          outcome: InspectionOutcome.NO_VIOLATION,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.environmentalInspection.update).not.toHaveBeenCalled();
+    });
+
+    it('VIOLATION_FOUND sin nextStep da 400', async () => {
+      await expect(
+        service.complete(INSPECTION_ID, {
+          inspectedAt: '2026-09-10T11:30:00.000Z',
+          outcome: InspectionOutcome.VIOLATION_FOUND,
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('NO_VIOLATION lleva el expediente hasta NO_VIOLATION', async () => {

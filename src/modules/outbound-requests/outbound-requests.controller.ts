@@ -148,7 +148,8 @@ export class StreetClosureRequestsController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos inválidos, o la solicitud no tiene tramos',
+    description:
+      'Datos inválidos, la solicitud no tiene tramos o requestedTo es anterior a requestedFrom',
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)

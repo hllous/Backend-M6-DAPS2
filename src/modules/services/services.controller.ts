@@ -86,6 +86,11 @@ export class ServicesController {
       'Listado paginado. Filtros por estado, tipo, modo, origen, cuadrilla, vehículo, zona cubierta, reclamo de M2 y rango de fechas agendadas.',
   })
   @ApiPaginatedResponse(ServiceResponseDto, 'Listado paginado de servicios')
+  @ApiResponse({
+    status: 400,
+    description: 'Filtros inválidos: scheduledFrom posterior a scheduledTo',
+    type: ErrorResponseDto,
+  })
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
   async findAll(@Query() query: QueryServicesDto) {
@@ -419,7 +424,7 @@ export class ServicesController {
   @ApiResponse({ status: 200, description: 'Servicio reprogramado', type: ServiceResponseDto })
   @ApiResponse({
     status: 400,
-    description: 'Fecha inválida o ventana horaria invertida',
+    description: 'Fecha inválida o anterior a hoy, o ventana horaria invertida',
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)

@@ -56,6 +56,12 @@ export class ServiceFrequenciesController {
     description: 'El tipo de servicio o el recorrido referenciado no existe',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Ya existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async create(@Body() dto: CreateServiceFrequencyDto): Promise<ServiceFrequencyResponseDto> {
     return this.serviceFrequenciesService.create(dto);
@@ -116,6 +122,12 @@ export class ServiceFrequenciesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Frecuencia no encontrada', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Ya existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async update(
     @Param('id', ParseUUIDPipe) id: string,

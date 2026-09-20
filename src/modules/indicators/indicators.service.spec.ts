@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Prisma, ServiceStatus, ZoneResultStatus as Z } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IndicatorsService } from './indicators.service';
@@ -329,6 +330,17 @@ describe('IndicatorsService', () => {
         divertedPct: 0,
       });
       expect(result.records).toBe(0);
+    });
+  });
+
+  describe('período invertido', () => {
+    it('los cuatro indicadores rechazan from posterior a to', async () => {
+      const q = { from: '2026-12-01', to: '2026-01-01' };
+
+      await expect(indicators.coverage(q)).rejects.toThrow(BadRequestException);
+      await expect(indicators.compliance(q)).rejects.toThrow(BadRequestException);
+      await expect(indicators.incidents(q)).rejects.toThrow(BadRequestException);
+      await expect(indicators.waste(q)).rejects.toThrow(BadRequestException);
     });
   });
 });
