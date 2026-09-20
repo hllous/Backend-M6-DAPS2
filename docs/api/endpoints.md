@@ -218,10 +218,10 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 
 ## `events` — ingesta de eventos entrantes
 
-| Método | Ruta               | Qué hace                                                                                                                                              |
-| ------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/events/inbox`    | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. 400 si `occurredAt` no es ISO 8601 |
-| GET    | `/events/handlers` | Los tipos de evento con handler registrado                                                                                                            |
+| Método | Ruta               | Qué hace                                                                                                                                                                                                                                                                                        |
+| ------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/events/inbox`    | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. 400 si `occurredAt` no es ISO 8601 o si el `data` de un evento con handler no trae sus campos obligatorios (no se guarda; ver [consumidos](../eventos/consumidos/README.md)) |
+| GET    | `/events/handlers` | Los tipos de evento con handler registrado                                                                                                                                                                                                                                                      |
 
 **La idempotencia es por `eventId`** y vive en el inbox, no en cada handler: un mensaje ya recibido se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. La decide el `@unique` de `InboxEvent.messageId`, no una consulta previa que podría correr en paralelo con otra igual.
 

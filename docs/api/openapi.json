@@ -85,7 +85,7 @@
             }
           },
           "400": {
-            "description": "Sobre inválido",
+            "description": "Sobre inválido, o data sin los campos obligatorios de un evento con handler (no se guarda: se puede reenviar corregido con el mismo eventId)",
             "content": {
               "application/json": {
                 "schema": {

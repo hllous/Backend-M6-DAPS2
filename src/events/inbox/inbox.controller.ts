@@ -32,7 +32,12 @@ export class InboxController {
     description:
       'Resultado de la ingesta: processed, duplicate (ya recibido), ignored (sin handler) o failed',
   })
-  @ApiResponse({ status: 400, description: 'Sobre inválido', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Sobre inválido, o data sin los campos obligatorios de un evento con handler (no se guarda: se puede reenviar corregido con el mismo eventId)',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async ingest(@Body() dto: IngestEventDto): Promise<IngestResult> {
