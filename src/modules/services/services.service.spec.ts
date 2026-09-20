@@ -265,6 +265,150 @@ describe('ServicesService', () => {
     });
   });
 
+  describe('solapamiento al programar (#179)', () => {
+    const at = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
+    const dtoConRecursos = {
+      ...baseDto,
+      scheduledDate: '2026-09-30',
+      windowFrom: '09:00',
+      windowTo: '11:00',
+      crewId: CREW_ID,
+      vehicleId: VEHICLE_ID,
+    };
+    const otro = (over: Record<string, unknown> = {}) => ({
+      id: 'other-1',
+      status: ServiceStatus.SCHEDULED,
+      scheduledDate: new Date('2026-09-30T00:00:00.000Z'),
+      windowFrom: at('08:00'),
+      windowTo: at('12:00'),
+      crewId: CREW_ID,
+      vehicleId: null,
+      serviceType: { name: 'Recolección' },
+      crew: { name: 'Norte' },
+      vehicle: null,
+      ...over,
+    });
+
+    it('sin solapamiento crea el servicio', async () => {
+      await service.create(dtoConRecursos);
+
+      expect(prisma.service.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.service.create).toHaveBeenCalled();
+    });
+
+    it('rechaza con 409 si la cuadrilla se solapa, sin crear ni encolar', async () => {
+      prisma.service.findMany.mockResolvedValue([otro()]);
+
+      await expect(service.create(dtoConRecursos)).rejects.toThrow(ConflictException);
+      await expect(service.create(dtoConRecursos)).rejects.toThrow(/se solapa con 1 servicio/);
+      expect(prisma.service.create).not.toHaveBeenCalled();
+      expect(outbox.enqueue).not.toHaveBeenCalled();
+    });
+
+    it('rechaza con 409 si el vehículo se solapa', async () => {
+      prisma.service.findMany.mockResolvedValue([otro({ crewId: null, vehicleId: VEHICLE_ID })]);
+
+      await expect(service.create({ ...dtoConRecursos, crewId: undefined })).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prisma.service.create).not.toHaveBeenCalled();
+    });
+
+    it('no cuenta una franja que no se pisa', async () => {
+      prisma.service.findMany.mockResolvedValue([
+        otro({ windowFrom: at('12:00'), windowTo: at('14:00') }),
+      ]);
+
+      await service.create(dtoConRecursos);
+
+      expect(prisma.service.create).toHaveBeenCalled();
+    });
+
+    it('solo consulta servicios que ocupan recursos (no cancelados ni completados)', async () => {
+      await service.create(dtoConRecursos);
+
+      const { where } = prisma.service.findMany.mock.calls[0][0];
+      expect([...where.status.in].sort()).toEqual(
+        [
+          ServiceStatus.SCHEDULED,
+          ServiceStatus.RESCHEDULED,
+          ServiceStatus.IN_PROGRESS,
+          ServiceStatus.SUSPENDED,
+        ].sort(),
+      );
+    });
+
+    it.each([
+      ['posterior', '11:00', '13:00'],
+      ['anterior', '07:00', '09:00'],
+    ])('una franja contigua %s no es solapamiento', async (_n, from, to) => {
+      prisma.service.findMany.mockResolvedValue([otro({ windowFrom: at(from), windowTo: at(to) })]);
+
+      await service.create(dtoConRecursos);
+
+      expect(prisma.service.create).toHaveBeenCalled();
+    });
+
+    it('un dto sin franja se asume todo el día y choca con un servicio con franja', async () => {
+      prisma.service.findMany.mockResolvedValue([otro()]);
+
+      await expect(
+        service.create({ ...dtoConRecursos, windowFrom: undefined, windowTo: undefined }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it.each([
+      ['windowFrom', { windowFrom: null }],
+      ['windowTo', { windowTo: null }],
+    ])('un servicio existente sin %s se asume todo el día', async (_n, over) => {
+      prisma.service.findMany.mockResolvedValue([otro(over)]);
+
+      await expect(service.create(dtoConRecursos)).rejects.toThrow(ConflictException);
+    });
+
+    it('filtra por la fecha del dto y al crear no excluye ningún id', async () => {
+      await service.create(dtoConRecursos);
+
+      const { where } = prisma.service.findMany.mock.calls[0][0];
+      expect(where.scheduledDate).toEqual(new Date('2026-09-30T00:00:00.000Z'));
+      expect(where.id).toBeUndefined();
+    });
+
+    it('assignCrew sí excluye el propio servicio', async () => {
+      await service.assignCrew(SERVICE_ID, { crewId: CREW_ID });
+
+      const { where } = prisma.service.findMany.mock.calls[0][0];
+      expect(where.id).toEqual({ not: SERVICE_ID });
+    });
+
+    it('con overrideNote crea igual y guarda la nota', async () => {
+      prisma.service.findMany.mockResolvedValue([otro()]);
+
+      await service.create(
+        { ...dtoConRecursos, overrideNote: 'Lo coordiné con el jefe de cuadrilla' },
+        'user-1',
+      );
+
+      const { data } = prisma.service.create.mock.calls[0][0];
+      expect(data.assignmentOverrideNote).toBe('Lo coordiné con el jefe de cuadrilla');
+      expect(data.assignmentOverrideBy).toBe('user-1');
+      expect(data.assignmentOverrideAt).toBeInstanceOf(Date);
+    });
+
+    it('overrideNote sin solapamiento no deja rastro', async () => {
+      await service.create({ ...dtoConRecursos, overrideNote: 'por las dudas, nota' });
+
+      const { data } = prisma.service.create.mock.calls[0][0];
+      expect(data.assignmentOverrideNote).toBeUndefined();
+    });
+
+    it('sin crewId ni vehicleId no consulta conflictos', async () => {
+      await service.create(baseDto);
+
+      expect(prisma.service.findMany).not.toHaveBeenCalled();
+    });
+  });
+
   // ─── Máquina de estados ──────────────────────────
 
   describe('máquina de estados', () => {

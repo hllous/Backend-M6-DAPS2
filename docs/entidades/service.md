@@ -17,7 +17,7 @@ Las podas y las inspecciones ambientales también son servicios: [`TreeIntervent
 
 | Entidad | Campos principales |
 |---|---|
-| `Service` | `serviceTypeId`, `mode`, `zoneIds[]`, `routeId` \| `targetRef`, `scheduledDate`, `timeWindow`, `crewId`, `vehicleId`, `status`, `statusReason`, `origin`, `ticketId`, `attachments[]`, `notes`. `crewId` es opcional hasta que se asigna la cuadrilla. `assignmentOverrideNote` / `By` / `At` solo se llenan si la asignación se hizo **sobre un solapamiento** |
+| `Service` | `serviceTypeId`, `mode`, `zoneIds[]`, `routeId` \| `targetRef`, `scheduledDate`, `timeWindow`, `crewId`, `vehicleId`, `status`, `statusReason`, `origin`, `ticketId`, `attachments[]`, `notes`. `crewId` es opcional hasta que se asigna la cuadrilla. `assignmentOverrideNote` / `By` / `At` solo se llenan si la asignación o la programación se hizo **sobre un solapamiento** |
 | `ServiceDelayNotice` | Hijo de un `Service`, uno por aviso de demora. `delayType`, `delayMinutes`, `reason`, `newEstimatedEnd`, `serviceStatus`, `reportedBy`, `detectedAt`, `supersededById`. El vigente es el que no fue reemplazado |
 | `ZoneResult` | Hijo de un `Service` con `mode = ROUTE`, uno por zona. `zoneId`, `status`, `reason`, `proposedDate`, `notes`, `attachments[]`, `recordedAt` |
 | `CollectionRecord` | `wasteType`, `volumeM3`, `weightKg`, `disposalSiteId` |
@@ -59,9 +59,13 @@ Los avisos se acumulan. Uno nuevo **reemplaza** al vigente (`supersededById`) en
 
 ## Asignar sobre un solapamiento
 
+El mismo criterio rige al programar con `crewId`/`vehicleId` en `POST /services` (acepta `overrideNote`).
+
 Que la cuadrilla esté tomada ese día en una franja que se pisa **avisa, no bloquea**. La realidad de la calle gana: a veces la misma cuadrilla hace dos cosas y quien planifica lo sabe. Sin `overrideNote` la asignación rebota con 409 nombrando los servicios en conflicto; con la nota se hace igual y queda registrado quién decidió y cuándo.
 
 La nota se guarda **solo si hubo solapamiento**. Guardarla siempre dejaría rastro de un override que nunca ocurrió.
+
+`assignmentOverrideNote` / `By` / `At` son campos de auditoría: se guardan en la base pero **no se exponen** en `ServiceResponseDto` (por ahora).
 
 Una franja horaria ausente se trata como **todo el día**: es lo único honesto cuando no sabemos cuándo empieza, y suponer lo contrario haría desaparecer el aviso justo donde menos información hay. `GET /services/:id/assignment-conflicts` existe para poder avisar antes de enviar — el 409 es la red, no el camino.
 
