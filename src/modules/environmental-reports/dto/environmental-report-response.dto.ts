@@ -11,17 +11,18 @@ export class EnvironmentalReportResponseDto {
   @ApiProperty({ description: 'Estado del expediente', enum: EnvironmentalReportStatus })
   status: EnvironmentalReportStatus;
 
-  @ApiPropertyOptional({ description: 'Dirección denunciada', nullable: true })
+  @ApiPropertyOptional({ description: 'Dirección denunciada', type: String, nullable: true })
   address: string | null;
 
-  @ApiPropertyOptional({ description: 'Latitud', nullable: true })
+  @ApiPropertyOptional({ description: 'Latitud', type: Number, nullable: true })
   lat: number | null;
 
-  @ApiPropertyOptional({ description: 'Longitud', nullable: true })
+  @ApiPropertyOptional({ description: 'Longitud', type: Number, nullable: true })
   lng: number | null;
 
   @ApiPropertyOptional({
     description: 'Reclamo de M2 que lo originó. Null si es una detección de oficio.',
+    type: String,
     nullable: true,
   })
   ticketId: string | null;
@@ -30,6 +31,7 @@ export class EnvironmentalReportResponseDto {
     description:
       'Referencia humana del reclamo de M2, la que conoce el vecino. Solo para mostrar y buscar: no es credencial. Null en detecciones de oficio y en expedientes anteriores a la v1.70.',
     example: 'TK-2026-000123',
+    type: String,
     nullable: true,
   })
   publicId: string | null;
@@ -57,6 +59,7 @@ export class EnvironmentalReportResponseDto {
   @ApiPropertyOptional({
     description:
       'Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.',
+    type: String,
     format: 'date-time',
     nullable: true,
   })
