@@ -21,6 +21,7 @@ import {
   AddNeighborhoodsDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('zones')
 @ApiBearerAuth('JWT-auth')
@@ -76,10 +77,7 @@ export class ZonesController {
     description:
       'Retorna un listado paginado de zonas operativas. Se puede filtrar por estado activo/inactivo y buscar por nombre.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Listado paginado de zonas',
-  })
+  @ApiPaginatedResponse(ZoneResponseDto, 'Listado paginado de zonas')
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',

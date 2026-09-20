@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/commo
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { InboxService, IngestResult } from './inbox.service';
 import { IngestEventDto } from './ingest-event.dto';
+import { IngestResultDto, RegisteredHandlersDto } from './inbox-response.dto';
 import { ErrorResponseDto } from '../../common/dto';
 
 /**
@@ -27,6 +28,7 @@ export class InboxController {
   })
   @ApiResponse({
     status: 200,
+    type: IngestResultDto,
     description:
       'Resultado de la ingesta: processed, duplicate (ya recibido), ignored (sin handler) o failed',
   })
@@ -55,10 +57,14 @@ export class InboxController {
     description:
       'Los tipos con handler registrado. Sirve para verificar qué está conectado sin leer el código.',
   })
-  @ApiResponse({ status: 200, description: 'Tipos de evento con handler' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tipos de evento con handler',
+    type: RegisteredHandlersDto,
+  })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async handlers(): Promise<{ eventTypes: string[] }> {
+  async handlers(): Promise<RegisteredHandlersDto> {
     return { eventTypes: this.inbox.registeredTypes() };
   }
 }
