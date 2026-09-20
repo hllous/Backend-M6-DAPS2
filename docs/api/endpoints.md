@@ -6,7 +6,7 @@ El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde e
 
 El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
-> **Actualizado al 18/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero) + evidencia genérica (Issue #64). 133 rutas, agrupadas en 23 tags de Swagger.
+> **Actualizado al 18/09/2026** — Fase 7 del plan de implementación (vista pública e indicadores del tablero) + evidencia genérica (Issue #64). 134 rutas, agrupadas en 23 tags de Swagger.
 
 ## Convenciones
 
@@ -28,9 +28,10 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 
 ## `health`
 
-| Método | Ruta      | Qué hace                                    |
-| ------ | --------- | ------------------------------------------- |
-| GET    | `/health` | Health check. **Público**, no requiere JWT. |
+| Método | Ruta            | Qué hace                                                                                                                     |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/health`       | Liveness: el proceso responde. **Público**, no consulta la base (lo usa el keepalive).                                       |
+| GET    | `/health/ready` | Readiness: `SELECT 1` con timeout de 3 s. **Público**. 200 `database: up` o 503 si la base no responde; usar para monitoreo. |
 
 ## `zones` — zonas operativas
 

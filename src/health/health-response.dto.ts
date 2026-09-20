@@ -10,3 +10,8 @@ export class HealthResponseDto {
   @ApiProperty({ example: 'm6-ambiente-backend', description: 'Identificador del servicio' })
   service: string;
 }
+
+export class ReadinessResponseDto extends HealthResponseDto {
+  @ApiProperty({ example: 'up', description: 'Estado de la conexión a la base' })
+  database: string;
+}

@@ -4,8 +4,8 @@
     "/health": {
       "get": {
         "operationId": "HealthController_check",
-        "summary": "Health check",
-        "description": "Devuelve OK si el servicio está corriendo.",
+        "summary": "Health check (liveness)",
+        "description": "Devuelve OK si el proceso está corriendo. No consulta la base: para eso está /health/ready.",
         "parameters": [],
         "responses": {
           "200": {
@@ -14,6 +14,39 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "summary": "Readiness: verifica la conexión a la base",
+        "description": "Ejecuta un SELECT 1 con un timeout de 3 s. Responde 503 si la base no contesta; es el endpoint para monitoreo.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Servicio y base disponibles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "La base no responde",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -12474,6 +12507,69 @@
           "service"
         ]
       },
+      "ReadinessResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "description": "Siempre \"ok\" si el servicio responde"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-09-19T15:30:00.000Z",
+            "description": "Hora del servidor (ISO 8601)"
+          },
+          "service": {
+            "type": "string",
+            "example": "m6-ambiente-backend",
+            "description": "Identificador del servicio"
+          },
+          "database": {
+            "type": "string",
+            "example": "up",
+            "description": "Estado de la conexión a la base"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "service",
+          "database"
+        ]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 404
+          },
+          "message": {
+            "type": "string",
+            "example": "Container with id 123e4567-... not found"
+          },
+          "error": {
+            "type": "string",
+            "example": "Not Found"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-08-20T10:00:00.000Z"
+          },
+          "path": {
+            "type": "string",
+            "example": "/containers/123e4567-e89b-12d3-a456-426614174000"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "error",
+          "timestamp",
+          "path"
+        ]
+      },
       "IngestEventDto": {
         "type": "object",
         "properties": {
@@ -12575,38 +12671,6 @@
         },
         "required": [
           "status"
-        ]
-      },
-      "ErrorResponseDto": {
-        "type": "object",
-        "properties": {
-          "statusCode": {
-            "type": "number",
-            "example": 404
-          },
-          "message": {
-            "type": "string",
-            "example": "Container with id 123e4567-... not found"
-          },
-          "error": {
-            "type": "string",
-            "example": "Not Found"
-          },
-          "timestamp": {
-            "type": "string",
-            "example": "2026-08-20T10:00:00.000Z"
-          },
-          "path": {
-            "type": "string",
-            "example": "/containers/123e4567-e89b-12d3-a456-426614174000"
-          }
-        },
-        "required": [
-          "statusCode",
-          "message",
-          "error",
-          "timestamp",
-          "path"
         ]
       },
       "RegisteredHandlersDto": {

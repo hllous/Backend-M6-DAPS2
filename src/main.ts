@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 import { buildSwaggerConfig } from './swagger-config';
 import { HttpExceptionFilter } from './common/filters';
 import { LoggingInterceptor } from './common/interceptors';
+import { securityHeaders } from './common/middleware/security-headers.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -17,6 +18,10 @@ async function bootstrap() {
   // Render termina el TLS en un proxy: sin esto req.ip es la IP del proxy y el
   // ThrottlerGuard mete a todos los clientes en el mismo balde. Un solo salto.
   app.set('trust proxy', 1);
+
+  // No anunciar el framework y agregar las cabeceras de seguridad básicas.
+  app.disable('x-powered-by');
+  app.use(securityHeaders);
 
   // ─── Global pipes ───────────────────────────────
   app.useGlobalPipes(
