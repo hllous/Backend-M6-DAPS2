@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AttachmentsService } from './attachments.service';
 import { AttachmentOwnerType } from './attachment-owner-type';
@@ -312,6 +316,40 @@ describe('AttachmentsService', () => {
         ),
       ).rejects.toThrow(BadRequestException);
       expect(storage.upload).not.toHaveBeenCalled();
+    });
+
+    describe('con el storage sin configurar', () => {
+      const owner = { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID };
+
+      beforeEach(() => {
+        storage.upload.mockRejectedValue(new ServiceUnavailableException('sin R2'));
+      });
+
+      it('el camino válido responde 503 y no persiste nada (la Idempotency-Key queda libre)', async () => {
+        await expect(service.upload(owner, jpegFile(), IDEMPOTENCY_KEY)).rejects.toThrow(
+          ServiceUnavailableException,
+        );
+        expect(prisma.attachment.create).not.toHaveBeenCalled();
+      });
+
+      it('las validaciones previas siguen dando 400/404 y no llegan al storage', async () => {
+        await expect(
+          service.upload(owner, jpegFile({ size: 999_999_999 }), IDEMPOTENCY_KEY),
+        ).rejects.toThrow(BadRequestException);
+        await expect(
+          service.upload(
+            owner,
+            jpegFile({ mimetype: 'text/plain', buffer: Buffer.from('hola') }),
+            IDEMPOTENCY_KEY,
+          ),
+        ).rejects.toThrow(BadRequestException);
+        await expect(service.upload(owner, jpegFile(), '')).rejects.toThrow(BadRequestException);
+        prisma.container.count.mockResolvedValue(0);
+        await expect(service.upload(owner, jpegFile(), IDEMPOTENCY_KEY)).rejects.toThrow(
+          NotFoundException,
+        );
+        expect(storage.upload).not.toHaveBeenCalled();
+      });
     });
   });
 

@@ -1,4 +1,9 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { EvidenceStorage, UploadedObject } from './evidence-storage.interface';
@@ -37,7 +42,9 @@ export class R2EvidenceStorage implements EvidenceStorage {
     contentType: string;
   }): Promise<UploadedObject> {
     if (!this.bucket || !this.publicUrlBase) {
-      throw new InternalServerErrorException(
+      // Es un problema de configuración y no un fallo del código: 503 indica que el servicio de
+      // evidencia no está disponible hasta que se configure R2.
+      throw new ServiceUnavailableException(
         'Storage de evidencia no configurado (faltan R2_BUCKET / R2_PUBLIC_URL_BASE)',
       );
     }
