@@ -11870,6 +11870,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Storage de evidencia (R2) no configurado en el servidor. No se persiste nada: el reintento con la misma Idempotency-Key es seguro",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
