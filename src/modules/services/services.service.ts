@@ -484,6 +484,13 @@ export class ServicesService {
   /** SUSPENDED → IN_PROGRESS */
   async resume(id: string): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
+    // IN_PROGRESS también se alcanza desde SCHEDULED, pero eso es `start` (que
+    // exige cuadrilla y vehículo): `resume` solo retoma lo que se suspendió.
+    if (current.status !== ServiceStatus.SUSPENDED) {
+      throw new ConflictException(
+        `No se puede pasar de '${current.status}' a '${ServiceStatus.IN_PROGRESS}'. Transiciones válidas desde '${current.status}': [${VALID_TRANSITIONS[current.status].join(', ') || 'ninguna, es un estado final'}]. resume solo aplica desde '${ServiceStatus.SUSPENDED}'`,
+      );
+    }
     return this.transition(current, ServiceStatus.IN_PROGRESS, { statusReason: null });
   }
 
@@ -1030,15 +1037,26 @@ export class ServicesService {
   ): Promise<ServiceResponseDto> {
     this.assertTransition(current.status, targetStatus);
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.service.update({
-        where: { id: current.id },
-        data: { status: targetStatus, ...additionalData },
-        include: SERVICE_INCLUDE,
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        // El estado leído va en el where: si otro request lo movió en el medio
+        // (p. ej. dos resume), el segundo falla en vez de repetir la acción.
+        const row = await tx.service.update({
+          where: { id: current.id, status: current.status },
+          data: { status: targetStatus, ...additionalData },
+          include: SERVICE_INCLUDE,
+        });
+        await this.outbox.enqueueMany(tx, events);
+        return row;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          throw new ConflictException(
+            `El servicio '${current.id}' cambió de estado mientras se procesaba la acción; reintentar`,
+          );
+        }
+        throw error;
       });
-      await this.outbox.enqueueMany(tx, events);
-      return row;
-    });
 
     this.logger.log(`Servicio ${current.id}: ${current.status} → ${targetStatus}`);
     return this.toResponseDto(updated);
