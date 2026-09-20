@@ -56,6 +56,11 @@ export class RepairRequestsController {
     type: RepairRequestResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Datos inválidos', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 404,
+    description: 'El servicio o la inspección de origen no existe',
+    type: ErrorResponseDto,
+  })
   @ApiResponse(AUTH)
   @ApiResponse(FORBIDDEN)
   @ApiResponse(SERVER)
@@ -150,6 +155,11 @@ export class StreetClosureRequestsController {
     status: 400,
     description:
       'Datos inválidos, la solicitud no tiene tramos o requestedTo es anterior a requestedFrom',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'El servicio o la intervención de origen no existe',
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)

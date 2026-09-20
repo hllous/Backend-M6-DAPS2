@@ -10420,6 +10420,16 @@
               }
             }
           },
+          "404": {
+            "description": "El servicio o la inspección de origen no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10888,6 +10898,16 @@
           },
           "403": {
             "description": "Sin permisos sobre derivaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El servicio o la intervención de origen no existe",
             "content": {
               "application/json": {
                 "schema": {

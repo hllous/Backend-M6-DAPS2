@@ -37,6 +37,16 @@ export const CONTAINER_TRANSITIONS: Record<ContainerStatus, ContainerStatus[]> =
   REMOVED: [],
 };
 
+/**
+ * Origen propio de las acciones cuyo destino (ACTIVE) se alcanza desde varios
+ * estados: sin esto, `empty` cancelaría una reubicación o `confirm-relocation`
+ * "sanaría" un contenedor desbordado. Las demás acciones tienen un único origen
+ * posible y CONTAINER_TRANSITIONS ya lo valida.
+ */
+const EMPTY_FROM = [ContainerStatus.OVERFLOWED];
+const COMPLETE_REPAIR_FROM = [ContainerStatus.UNDER_REPAIR];
+const CONFIRM_RELOCATION_FROM = [ContainerStatus.RELOCATING];
+
 @Injectable()
 export class ContainersService {
   private readonly logger = new Logger(ContainersService.name);
@@ -158,12 +168,18 @@ export class ContainersService {
 
   /** OVERFLOWED → ACTIVE */
   async empty(id: string): Promise<ContainerResponseDto> {
-    return this.transition(id, ContainerStatus.ACTIVE, {
+    return this.transition(
+      id,
+      ContainerStatus.ACTIVE,
       // Limpiar campos de daño por si viniera de un flujo anterior
-      damageType: null,
-      severity: null,
-      requiresPublicWorks: null,
-    });
+      {
+        damageType: null,
+        severity: null,
+        requiresPublicWorks: null,
+      },
+      undefined,
+      EMPTY_FROM,
+    );
   }
 
   /** ACTIVE → DAMAGED */
@@ -193,11 +209,13 @@ export class ContainersService {
 
   /** UNDER_REPAIR → ACTIVE */
   async completeRepair(id: string): Promise<ContainerResponseDto> {
-    return this.transition(id, ContainerStatus.ACTIVE, {
-      damageType: null,
-      severity: null,
-      requiresPublicWorks: null,
-    });
+    return this.transition(
+      id,
+      ContainerStatus.ACTIVE,
+      { damageType: null, severity: null, requiresPublicWorks: null },
+      undefined,
+      COMPLETE_REPAIR_FROM,
+    );
   }
 
   /** ACTIVE → RELOCATING */
@@ -207,11 +225,13 @@ export class ContainersService {
 
   /** RELOCATING → ACTIVE (con nueva ubicación) */
   async confirmRelocation(id: string, dto: ConfirmRelocationDto): Promise<ContainerResponseDto> {
-    return this.transition(id, ContainerStatus.ACTIVE, {
-      address: dto.address,
-      lat: dto.lat ?? null,
-      lng: dto.lng ?? null,
-    });
+    return this.transition(
+      id,
+      ContainerStatus.ACTIVE,
+      { address: dto.address, lat: dto.lat ?? null, lng: dto.lng ?? null },
+      undefined,
+      CONFIRM_RELOCATION_FROM,
+    );
   }
 
   /** DAMAGED → REMOVED (no admite reparación) */
@@ -232,6 +252,8 @@ export class ContainersService {
     // Si viene, la fila del outbox se escribe en la MISMA transaccion que el
     // cambio de estado: o quedan los dos, o no queda ninguno.
     event?: (container: Container) => OutboxEntry,
+    // Orígenes propios de la acción cuando el destino se alcanza desde varios.
+    from?: ContainerStatus[],
   ): Promise<ContainerResponseDto> {
     const container = await this.prisma.container.findUnique({
       where: { id },
@@ -242,23 +264,35 @@ export class ContainersService {
     }
 
     const allowed = CONTAINER_TRANSITIONS[container.status] ?? [];
-    if (!allowed.includes(targetStatus)) {
+    if (!allowed.includes(targetStatus) || (from && !from.includes(container.status))) {
       throw new ConflictException(
-        `No se puede pasar de '${container.status}' a '${targetStatus}'. Transiciones válidas desde '${container.status}': [${allowed.join(', ')}]`,
+        `No se puede pasar de '${container.status}' a '${targetStatus}'. Transiciones válidas desde '${container.status}': [${allowed.join(', ')}]` +
+          (from ? `. Esta acción solo aplica desde: [${from.join(', ')}]` : ''),
       );
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.container.update({
-        where: { id },
-        data: {
-          status: targetStatus,
-          ...additionalData,
-        },
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        // El estado leído va en el where: si otro request lo cambió en el medio,
+        // no se pisa (P2025 → 409) en vez de aplicar la acción sobre un origen viejo.
+        const row = await tx.container.update({
+          where: { id, status: container.status },
+          data: {
+            status: targetStatus,
+            ...additionalData,
+          },
+        });
+        if (event) await this.outbox.enqueue(tx, event(row));
+        return row;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          throw new ConflictException(
+            `El contenedor '${container.code}' cambió de estado mientras se procesaba la acción; reintentar`,
+          );
+        }
+        throw error;
       });
-      if (event) await this.outbox.enqueue(tx, event(row));
-      return row;
-    });
 
     this.logger.log(`Contenedor ${container.code}: ${container.status} → ${targetStatus}`);
     return this.toResponseDto(updated);
