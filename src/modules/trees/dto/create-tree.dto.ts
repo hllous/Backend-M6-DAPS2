@@ -8,7 +8,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 export class CreateTreeDto {
   @ApiProperty({
@@ -16,6 +16,7 @@ export class CreateTreeDto {
     example: 'ARB-00442',
     maxLength: 20,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)

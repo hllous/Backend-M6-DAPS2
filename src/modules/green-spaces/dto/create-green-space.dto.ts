@@ -11,7 +11,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ToBoolean, Trim } from '../../../common/decorators';
 import { GreenSpaceType } from '@prisma/client';
 
 export class CreateGreenSpaceDto {
@@ -20,6 +20,7 @@ export class CreateGreenSpaceDto {
     example: 'Plaza Miserere',
     maxLength: 150,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(150)

@@ -11,8 +11,9 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  IsNotEmpty,
 } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 /** El código no es mutable: identifica al punto verde en la vía pública. */
 export class UpdateGreenPointDto {
@@ -22,7 +23,9 @@ export class UpdateGreenPointDto {
     maxLength: 100,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   name?: string;
 

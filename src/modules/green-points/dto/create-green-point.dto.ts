@@ -13,7 +13,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 export class CreateGreenPointDto {
   @ApiProperty({
@@ -21,6 +21,7 @@ export class CreateGreenPointDto {
     example: 'GP-0012',
     maxLength: 20,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
@@ -31,6 +32,7 @@ export class CreateGreenPointDto {
     example: 'Punto verde Plaza Mitre',
     maxLength: 100,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)

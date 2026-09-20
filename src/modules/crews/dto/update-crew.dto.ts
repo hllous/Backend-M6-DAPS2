@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEnum, MaxLength } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { IsString, IsOptional, IsEnum, MaxLength, IsNotEmpty } from 'class-validator';
+import { ToBoolean, Trim } from '../../../common/decorators';
 import { Shift } from '@prisma/client';
 
 export class UpdateCrewDto {
@@ -10,7 +10,9 @@ export class UpdateCrewDto {
     maxLength: 100,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   name?: string;
 

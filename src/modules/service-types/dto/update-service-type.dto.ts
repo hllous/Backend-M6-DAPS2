@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { IsOptional, IsString, MaxLength, IsNotEmpty } from 'class-validator';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 /**
  * `code`, `category` y `mode` no son mutables: hay servicios ya programados
@@ -14,7 +14,9 @@ export class UpdateServiceTypeDto {
     maxLength: 100,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   name?: string;
 

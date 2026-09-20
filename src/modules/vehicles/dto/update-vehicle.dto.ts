@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, Min, MaxLength } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { IsString, IsOptional, IsNumber, Min, MaxLength, IsNotEmpty } from 'class-validator';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 export class UpdateVehicleDto {
   @ApiPropertyOptional({
@@ -9,7 +9,9 @@ export class UpdateVehicleDto {
     maxLength: 15,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(15)
   plate?: string;
 

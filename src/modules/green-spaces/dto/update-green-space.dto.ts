@@ -8,8 +8,9 @@ import {
   IsLongitude,
   Min,
   MaxLength,
+  IsNotEmpty,
 } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 export class UpdateGreenSpaceDto {
   @ApiPropertyOptional({
@@ -18,7 +19,9 @@ export class UpdateGreenSpaceDto {
     maxLength: 150,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(150)
   name?: string;
 
