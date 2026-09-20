@@ -4,7 +4,6 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
-  IsBoolean,
   IsEnum,
   IsLatitude,
   IsLongitude,
@@ -13,6 +12,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 /** El código no es mutable: identifica al punto verde en la vía pública. */
 export class UpdateGreenPointDto {
@@ -62,6 +62,6 @@ export class UpdateGreenPointDto {
 
   @ApiPropertyOptional({ description: 'Si está habilitado', example: false })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

@@ -15,6 +15,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **Autenticación**: todo exige `Authorization: Bearer <JWT>` salvo lo marcado como público. El `JwtAuthGuard` está registrado como guard global, así que un endpoint nuevo nace protegido; los públicos se marcan explícitamente con `@Public()`. Ver [ADR-002](../decisiones/adr-002-auth-provisoria.md).
 - **Autorización por rol**: todavía no existe. Cualquier usuario autenticado puede llamar cualquier endpoint — pendiente de que M1 publique su taxonomía de roles ([bloqueantes.md](../bloqueantes.md)). No aplica a los `@Public()` (`health` y los cuatro de `citizen-portal`): esos ni siquiera piden JWT, autenticado o no.
 - **Listados**: paginados con `?page` (default 1) y `?pageSize` (default 20, máx 100). Devuelven `{ data: [...], meta: { total, page, pageSize, totalPages } }`.
+- **Booleanos**: en filtros (`?active=`) y en bodies se acepta `true` o `false`, sin distinguir mayúsculas. Cualquier otro valor (`0`, `1`, vacío, `maybe`) da 400.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
 - **CORS**: los orígenes permitidos salen de `CORS_ORIGINS`. Sin esa variable se acepta cualquiera, que es lo que hace falta en desarrollo. El JWT viaja en un header y no en una cookie, así que esto no cierra un CSRF — es higiene, no un límite de seguridad.
 - **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 23 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.

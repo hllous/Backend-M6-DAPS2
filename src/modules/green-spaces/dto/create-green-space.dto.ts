@@ -4,7 +4,6 @@ import {
   IsNotEmpty,
   IsEnum,
   IsOptional,
-  IsBoolean,
   IsNumber,
   IsUUID,
   IsLatitude,
@@ -12,6 +11,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 import { GreenSpaceType } from '@prisma/client';
 
 export class CreateGreenSpaceDto {
@@ -67,6 +67,6 @@ export class CreateGreenSpaceDto {
     default: true,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

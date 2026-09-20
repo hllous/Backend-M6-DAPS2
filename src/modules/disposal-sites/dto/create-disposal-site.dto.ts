@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DisposalSiteType } from '@prisma/client';
-import { IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 export class CreateDisposalSiteDto {
   @ApiProperty({
@@ -37,6 +38,6 @@ export class CreateDisposalSiteDto {
     default: true,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

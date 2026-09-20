@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsBoolean, IsString, IsDateString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsDateString, MaxLength } from 'class-validator';
+import { ToBoolean } from '../../../../common/decorators';
 import { TreeHealthStatus, RiskLevel, RiskType, TreeInterventionType } from '@prisma/client';
 
 export class CreateTreeSurveyDto {
@@ -59,7 +60,7 @@ export class CreateTreeSurveyDto {
     default: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   requiresStreetClosure?: boolean;
 
   @ApiPropertyOptional({
@@ -68,7 +69,7 @@ export class CreateTreeSurveyDto {
     default: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   requiresPublicWorks?: boolean;
 
   @ApiPropertyOptional({

@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsOptional, IsString } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryZonesDto extends PaginationQueryDto {
@@ -9,12 +9,7 @@ export class QueryZonesDto extends PaginationQueryDto {
     example: true,
   })
   @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   active?: boolean;
 
   @ApiPropertyOptional({

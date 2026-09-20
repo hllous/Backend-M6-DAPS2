@@ -3,12 +3,12 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsBoolean,
   IsNumber,
   IsUUID,
   Min,
   MaxLength,
 } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 export class CreateTreeDto {
   @ApiProperty({
@@ -73,6 +73,6 @@ export class CreateTreeDto {
 
   @ApiPropertyOptional({ description: 'Si el árbol está activo', example: true, default: true })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

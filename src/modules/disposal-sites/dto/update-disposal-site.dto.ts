@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { DisposalSiteType } from '@prisma/client';
-import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 
 /** El código no es mutable: identifica al sitio en los registros de recolección ya cargados. */
 export class UpdateDisposalSiteDto {
@@ -25,6 +26,6 @@ export class UpdateDisposalSiteDto {
 
   @ApiPropertyOptional({ description: 'Si el sitio está operativo', example: false })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

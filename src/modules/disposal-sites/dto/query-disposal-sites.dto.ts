@@ -1,18 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { DisposalSiteType } from '@prisma/client';
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryDisposalSitesDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filtrar por estado operativo', example: true })
   @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   active?: boolean;
 
   @ApiPropertyOptional({

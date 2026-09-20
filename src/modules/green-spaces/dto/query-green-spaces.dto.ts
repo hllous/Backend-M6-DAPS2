@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 import { GreenSpaceType } from '@prisma/client';
 import { PaginationQueryDto } from '../../../common/dto';
 
@@ -10,12 +10,7 @@ export class QueryGreenSpacesDto extends PaginationQueryDto {
     example: true,
   })
   @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   active?: boolean;
 
   @ApiPropertyOptional({
