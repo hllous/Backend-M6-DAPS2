@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsEnum, IsOptional, MaxLength } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ToBoolean, Trim } from '../../../common/decorators';
 import { CrewType, Shift } from '@prisma/client';
 
 export class CreateCrewDto {
@@ -9,6 +9,7 @@ export class CreateCrewDto {
     example: 'Cuadrilla Norte - Turno Mañana',
     maxLength: 100,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)

@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ServiceCategory, ServiceMode } from '@prisma/client';
 import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 export class CreateServiceTypeDto {
   @ApiProperty({
@@ -9,6 +9,7 @@ export class CreateServiceTypeDto {
     example: 'REC-DOM',
     maxLength: 20,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
@@ -19,6 +20,7 @@ export class CreateServiceTypeDto {
     example: 'Recolección domiciliaria',
     maxLength: 100,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
