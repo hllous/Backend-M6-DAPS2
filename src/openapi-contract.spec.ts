@@ -56,14 +56,7 @@ describe('contrato OpenAPI', () => {
       [k: string]: unknown;
     };
     // IngestEventDto.data es un objeto libre a propósito (payload del bus).
-    // EnvironmentalReportResponseDto: pendiente de #181, que reescribe ese DTO. Borrar estas
-    // seis excepciones al mergear #181 y darles tipo a esas propiedades.
-    const excepciones = new Set([
-      'IngestEventDto.data',
-      ...['address', 'lat', 'lng', 'ticketId', 'publicId', 'deadlineAt'].map(
-        (p) => `EnvironmentalReportResponseDto.${p}`,
-      ),
-    ]);
+    const excepciones = new Set(['IngestEventDto.data']);
     const perdidas: string[] = [];
     const schemas = (documento.components?.schemas ?? {}) as Record<
       string,

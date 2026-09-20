@@ -15936,27 +15936,27 @@
             ]
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección denunciada",
             "nullable": true
           },
           "lat": {
-            "type": "object",
+            "type": "number",
             "description": "Latitud",
             "nullable": true
           },
           "lng": {
-            "type": "object",
+            "type": "number",
             "description": "Longitud",
             "nullable": true
           },
           "ticketId": {
-            "type": "object",
+            "type": "string",
             "description": "Reclamo de M2 que lo originó. Null si es una detección de oficio.",
             "nullable": true
           },
           "publicId": {
-            "type": "object",
+            "type": "string",
             "description": "Referencia humana del reclamo de M2, la que conoce el vecino. Solo para mostrar y buscar: no es credencial. Null en detecciones de oficio y en expedientes anteriores a la v1.70.",
             "example": "TK-2026-000123",
             "nullable": true
@@ -15984,7 +15984,7 @@
             "nullable": true
           },
           "deadlineAt": {
-            "type": "object",
+            "type": "string",
             "description": "Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.",
             "format": "date-time",
             "nullable": true
