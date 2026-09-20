@@ -592,16 +592,28 @@ export class ServicesService {
       details: { resolution: { type: 'ACTION_COMPLETED' } },
     });
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.service.update({
-        where: { id: current.id },
-        data: { status: target },
-        include: SERVICE_INCLUDE,
+    // Ambos where llevan el estado leído: si otro request movió el servicio o el
+    // contenedor en el medio, el P2025 aborta la transacción entera (el servicio
+    // no se cierra y no se encola nada) y sale como 409.
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        const row = await tx.service.update({
+          where: { id: current.id, status: current.status },
+          data: { status: target },
+          include: SERVICE_INCLUDE,
+        });
+        if (containerUpdate) await tx.container.update(containerUpdate);
+        await this.outbox.enqueueMany(tx, events);
+        return row;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          throw new ConflictException(
+            `El servicio '${current.id}' o el contenedor que atiende cambió de estado mientras se cerraba; reintentar`,
+          );
+        }
+        throw error;
       });
-      if (containerUpdate) await tx.container.update(containerUpdate);
-      await this.outbox.enqueueMany(tx, events);
-      return row;
-    });
 
     this.logger.log(`Servicio ${current.id}: ${current.status} -> ${target}`);
     if (containerUpdate) {
@@ -651,7 +663,7 @@ export class ServicesService {
       );
     }
 
-    return { where: { id: container.id }, data };
+    return { where: { id: container.id, status: container.status }, data };
   }
 
   private containerTransitionData(
