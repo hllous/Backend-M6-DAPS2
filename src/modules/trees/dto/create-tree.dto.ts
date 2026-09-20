@@ -11,6 +11,7 @@ import {
   Max,
 } from 'class-validator';
 import { ToBoolean, Trim } from '../../../common/decorators';
+import { MAX_TREE_DIAMETER_CM, MAX_TREE_HEIGHT_M } from '../../../common/decorators/numeric-limits';
 
 export class CreateTreeDto {
   @ApiProperty({
@@ -62,18 +63,28 @@ export class CreateTreeDto {
   @Longitude()
   lng?: number;
 
-  @ApiPropertyOptional({ description: 'Altura en metros', example: 12.5, minimum: 0 })
+  @ApiPropertyOptional({
+    description: 'Altura en metros',
+    example: 12.5,
+    minimum: 0,
+    maximum: MAX_TREE_HEIGHT_M,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  @Max(999.99)
+  @Max(MAX_TREE_HEIGHT_M)
   heightM?: number;
 
-  @ApiPropertyOptional({ description: 'Diámetro del tronco en cm', example: 45.0, minimum: 0 })
+  @ApiPropertyOptional({
+    description: 'Diámetro del tronco en cm',
+    example: 45.0,
+    minimum: 0,
+    maximum: MAX_TREE_DIAMETER_CM,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0)
-  @Max(9999.9)
+  @Max(MAX_TREE_DIAMETER_CM)
   diameterCm?: number;
 
   @ApiPropertyOptional({ description: 'Si el árbol está activo', example: true, default: true })

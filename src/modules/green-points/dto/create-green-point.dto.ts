@@ -6,15 +6,13 @@ import {
   ArrayUnique,
   IsArray,
   IsEnum,
-  IsLatitude,
-  IsLongitude,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
 } from 'class-validator';
-import { ToBoolean, Trim, MAX_LIST_SIZE } from '../../../common/decorators';
+import { ToBoolean, Trim, MAX_LIST_SIZE, Latitude, Longitude } from '../../../common/decorators';
 
 export class CreateGreenPointDto {
   @ApiProperty({
@@ -73,12 +71,12 @@ export class CreateGreenPointDto {
 
   @ApiPropertyOptional({ description: 'Latitud', example: -34.6037 })
   @IsOptional()
-  @IsLatitude()
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Longitud', example: -58.3816 })
   @IsOptional()
-  @IsLongitude()
+  @Longitude()
   lng?: number;
 
   @ApiPropertyOptional({
