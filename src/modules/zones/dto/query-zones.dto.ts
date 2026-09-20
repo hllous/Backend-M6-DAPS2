@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { IsOptional } from 'class-validator';
+import { SearchText, ToBoolean } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryZonesDto extends PaginationQueryDto {
@@ -17,6 +17,6 @@ export class QueryZonesDto extends PaginationQueryDto {
     example: 'Norte',
   })
   @IsOptional()
-  @IsString()
+  @SearchText()
   search?: string;
 }

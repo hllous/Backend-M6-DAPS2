@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { WasteType } from '@prisma/client';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
@@ -13,7 +14,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
-import { ToBoolean, Trim } from '../../../common/decorators';
+import { ToBoolean, Trim, MAX_LIST_SIZE } from '../../../common/decorators';
 
 export class CreateGreenPointDto {
   @ApiProperty({
@@ -47,6 +48,7 @@ export class CreateGreenPointDto {
   zoneId: string;
 
   @ApiProperty({
+    maxItems: MAX_LIST_SIZE,
     description: 'Tipos de residuo que el punto verde acepta',
     enum: WasteType,
     isArray: true,
@@ -54,6 +56,7 @@ export class CreateGreenPointDto {
   })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_LIST_SIZE)
   @ArrayUnique()
   @IsEnum(WasteType, { each: true })
   wasteTypes: WasteType[];

@@ -272,6 +272,7 @@
             "in": "query",
             "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "Norte",
               "type": "string"
             }
@@ -914,6 +915,7 @@
             "in": "query",
             "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "recolección",
               "type": "string"
             }
@@ -1360,6 +1362,7 @@
             "in": "query",
             "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "relleno",
               "type": "string"
             }
@@ -1801,6 +1804,7 @@
             "in": "query",
             "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "troncal",
               "type": "string"
             }
@@ -3933,6 +3937,7 @@
             "in": "query",
             "description": "Buscar por dirección (coincidencia parcial)",
             "schema": {
+              "maxLength": 100,
               "example": "Rivadavia",
               "type": "string"
             }
@@ -4984,6 +4989,7 @@
             "in": "query",
             "description": "Buscar por especie o dirección",
             "schema": {
+              "maxLength": 100,
               "type": "string"
             }
           }
@@ -6400,6 +6406,7 @@
             "in": "query",
             "description": "Buscar por nombre (coincidencia parcial)",
             "schema": {
+              "maxLength": 100,
               "example": "Miserere",
               "type": "string"
             }
@@ -6867,6 +6874,7 @@
             "in": "query",
             "description": "Buscar por nombre o dirección (parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "Mitre",
               "type": "string"
             }
@@ -7387,6 +7395,7 @@
             "in": "query",
             "description": "Filtrar por el reclamo de M2 que lo originó",
             "schema": {
+              "maxLength": 100,
               "example": "TCK-2026-004821",
               "type": "string"
             }
@@ -9293,6 +9302,7 @@
             "in": "query",
             "description": "Filtrar por el reclamo de M2 que lo originó (UUID)",
             "schema": {
+              "maxLength": 100,
               "example": "550e8400-e29b-41d4-a716-446655440000",
               "type": "string"
             }
@@ -9303,6 +9313,7 @@
             "in": "query",
             "description": "Filtrar por la referencia humana del reclamo de M2 (coincidencia exacta)",
             "schema": {
+              "maxLength": 100,
               "example": "TK-2026-000123",
               "type": "string"
             }
@@ -9313,6 +9324,7 @@
             "in": "query",
             "description": "Buscar por dirección (parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "Cintura",
               "type": "string"
             }
@@ -12467,11 +12479,13 @@
         "properties": {
           "eventId": {
             "type": "string",
+            "maxLength": 100,
             "description": "Identificador único del mensaje. **Es la clave de idempotencia**: repetirlo descarta el evento sin volver a aplicarlo.",
             "example": "646d19f5-5670-4a7b-9442-30e13b02ba11"
           },
           "eventType": {
             "type": "string",
+            "maxLength": 100,
             "description": "Nombre del evento en camelCase",
             "example": "streetClosureApproved"
           },
@@ -12758,15 +12772,17 @@
         "type": "object",
         "properties": {
           "neighborhoodIds": {
+            "type": "array",
             "description": "IDs de barrios a asignar a la zona (catálogo de M9)",
             "example": [
               "barrio-palermo",
               "barrio-belgrano"
             ],
-            "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "maxLength": 100
+            },
+            "maxItems": 100
           }
         },
         "required": [
@@ -13434,11 +13450,13 @@
           },
           "leaderUserId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID del usuario líder de la cuadrilla (usuario interno de M6)",
             "example": "usr-00001"
           },
           "organizationId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID de la organización (para cuadrillas de cooperativa o contratista)",
             "example": "org-coop-recicladores"
           },
@@ -13570,11 +13588,13 @@
           },
           "leaderUserId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID del usuario líder de la cuadrilla",
             "example": "usr-00002"
           },
           "organizationId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID de la organización",
             "example": "org-coop-recicladores"
           },
@@ -13589,16 +13609,18 @@
         "type": "object",
         "properties": {
           "userIds": {
+            "type": "array",
             "description": "IDs de usuarios a agregar como miembros de la cuadrilla (usuarios internos de M6)",
             "example": [
               "usr-00010",
               "usr-00011",
               "usr-00012"
             ],
-            "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "maxLength": 100
+            },
+            "maxItems": 100
           }
         },
         "required": [
@@ -14294,6 +14316,7 @@
           },
           "inspectorId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID del inspector que realizó el relevamiento (usuario interno M6)",
             "example": "usr-00015"
           },
@@ -14444,6 +14467,7 @@
             "example": "SAFETY_PRUNING"
           },
           "treeIds": {
+            "maxItems": 100,
             "description": "UUIDs de los árboles incluidos en esta intervención",
             "example": [
               "f6a7b8c9-d0e1-2345-fghi-678901234567"
@@ -14609,6 +14633,7 @@
         "properties": {
           "authorizedByUserId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID del usuario que autoriza la extracción",
             "example": "usr-00003"
           },
@@ -14828,6 +14853,7 @@
           },
           "wasteTypes": {
             "type": "array",
+            "maxItems": 100,
             "description": "Tipos de residuo que el punto verde acepta",
             "example": [
               "RECYCLABLE",
@@ -14979,6 +15005,7 @@
           },
           "wasteTypes": {
             "type": "array",
+            "maxItems": 100,
             "description": "Tipos de residuo aceptados. Reemplaza el conjunto completo.",
             "example": [
               "RECYCLABLE"
@@ -15103,6 +15130,7 @@
           },
           "notes": {
             "type": "string",
+            "maxLength": 2000,
             "description": "Notas internas de la programación",
             "example": "Coordinar con la cooperativa antes de las 7."
           },
@@ -15432,6 +15460,7 @@
           },
           "notes": {
             "type": "string",
+            "maxLength": 2000,
             "description": "Notas internas",
             "example": "La cuadrilla entra por Rivadavia, la otra calle está cortada."
           },
@@ -15589,8 +15618,8 @@
           },
           "reason": {
             "type": "string",
-            "description": "Por qué se demora. Viaja hacia M2 como mensaje interno, no se le muestra al vecino.",
             "maxLength": 500,
+            "description": "Por qué se demora. Viaja hacia M2 como mensaje interno, no se le muestra al vecino.",
             "example": "Corte de calle imprevisto por rotura de un caño"
           },
           "newEstimatedEnd": {

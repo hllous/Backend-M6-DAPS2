@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString, IsDateString, MaxLength } from 'class-validator';
-import { ToBoolean } from '../../../../common/decorators';
+import { ToBoolean, MAX_EXTERNAL_ID_LENGTH } from '../../../../common/decorators';
 import { TreeHealthStatus, RiskLevel, RiskType, TreeInterventionType } from '@prisma/client';
 
 export class CreateTreeSurveyDto {
@@ -49,11 +49,13 @@ export class CreateTreeSurveyDto {
   suggestedIntervention?: TreeInterventionType;
 
   @ApiPropertyOptional({
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
     description: 'ID del inspector que realizó el relevamiento (usuario interno M6)',
     example: 'usr-00015',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   inspectorId?: string;
 
   @ApiPropertyOptional({

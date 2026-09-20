@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { IsOptional, IsUUID } from 'class-validator';
+import { SearchText, ToBoolean } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryRoutesDto extends PaginationQueryDto {
@@ -23,6 +23,6 @@ export class QueryRoutesDto extends PaginationQueryDto {
     example: 'troncal',
   })
   @IsOptional()
-  @IsString()
+  @SearchText()
   search?: string;
 }

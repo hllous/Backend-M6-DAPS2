@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { WasteType } from '@prisma/client';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
@@ -13,7 +14,7 @@ import {
   MaxLength,
   IsNotEmpty,
 } from 'class-validator';
-import { ToBoolean, Trim } from '../../../common/decorators';
+import { ToBoolean, Trim, MAX_LIST_SIZE } from '../../../common/decorators';
 
 /** El código no es mutable: identifica al punto verde en la vía pública. */
 export class UpdateGreenPointDto {
@@ -35,6 +36,7 @@ export class UpdateGreenPointDto {
   zoneId?: string;
 
   @ApiPropertyOptional({
+    maxItems: MAX_LIST_SIZE,
     description: 'Tipos de residuo aceptados. Reemplaza el conjunto completo.',
     enum: WasteType,
     isArray: true,
@@ -43,6 +45,7 @@ export class UpdateGreenPointDto {
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_LIST_SIZE)
   @ArrayUnique()
   @IsEnum(WasteType, { each: true })
   wasteTypes?: WasteType[];

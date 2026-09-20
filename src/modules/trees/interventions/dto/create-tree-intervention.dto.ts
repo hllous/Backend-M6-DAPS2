@@ -5,10 +5,11 @@ import {
   IsString,
   IsArray,
   IsUUID,
+  ArrayMaxSize,
   ArrayNotEmpty,
   MaxLength,
 } from 'class-validator';
-import { ToBoolean } from '../../../../common/decorators';
+import { ToBoolean, MAX_LIST_SIZE } from '../../../../common/decorators';
 import { TreeInterventionType, Severity } from '@prisma/client';
 
 export class CreateTreeInterventionDto {
@@ -21,12 +22,14 @@ export class CreateTreeInterventionDto {
   interventionType: TreeInterventionType;
 
   @ApiProperty({
+    maxItems: MAX_LIST_SIZE,
     description: 'UUIDs de los árboles incluidos en esta intervención',
     example: ['f6a7b8c9-d0e1-2345-fghi-678901234567'],
     type: [String],
   })
   @IsArray()
   @ArrayNotEmpty()
+  @ArrayMaxSize(MAX_LIST_SIZE)
   @IsUUID('4', { each: true })
   treeIds: string[];
 

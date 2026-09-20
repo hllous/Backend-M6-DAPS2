@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { MAX_NOTES_LENGTH } from '../../../common/decorators';
 import { ServiceOrigin } from '@prisma/client';
 import {
   IsDateString,
@@ -138,11 +139,13 @@ export class CreateServiceDto {
   ticketId?: string;
 
   @ApiPropertyOptional({
+    maxLength: MAX_NOTES_LENGTH,
     description: 'Notas internas de la programación',
     example: 'Coordinar con la cooperativa antes de las 7.',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_NOTES_LENGTH)
   notes?: string;
 
   @ApiPropertyOptional({

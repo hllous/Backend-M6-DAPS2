@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { MAX_EXTERNAL_ID_LENGTH } from '../../../../common/decorators';
 
 /**
  * DTO para autorizar una extracción (REMOVAL).
@@ -7,11 +8,13 @@ import { IsOptional, IsString, MaxLength } from 'class-validator';
  */
 export class AuthorizeInterventionDto {
   @ApiPropertyOptional({
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
     description: 'ID del usuario que autoriza la extracción',
     example: 'usr-00003',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   authorizedByUserId?: string;
 
   @ApiPropertyOptional({

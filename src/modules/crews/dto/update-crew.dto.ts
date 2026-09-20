@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsEnum, MaxLength, IsNotEmpty } from 'class-validator';
-import { ToBoolean, Trim } from '../../../common/decorators';
+import { ToBoolean, Trim, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
 import { Shift } from '@prisma/client';
 
 export class UpdateCrewDto {
@@ -26,19 +26,23 @@ export class UpdateCrewDto {
   defaultShift?: Shift;
 
   @ApiPropertyOptional({
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
     description: 'ID del usuario líder de la cuadrilla',
     example: 'usr-00002',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   leaderUserId?: string;
 
   @ApiPropertyOptional({
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
     description: 'ID de la organización',
     example: 'org-coop-recicladores',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   organizationId?: string;
 
   @ApiPropertyOptional({

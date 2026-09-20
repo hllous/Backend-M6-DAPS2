@@ -1,4 +1,4 @@
-import { Trim } from '../../../common/decorators';
+import { Trim, MAX_REASON_LENGTH } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DelayType, ServiceStatus } from '@prisma/client';
 import {
@@ -10,6 +10,7 @@ import {
   Max,
   Min,
   IsNotEmpty,
+  MaxLength,
 } from 'class-validator';
 
 /**
@@ -46,14 +47,15 @@ export class CreateDelayNoticeDto {
   delayMinutes: number;
 
   @ApiProperty({
+    maxLength: MAX_REASON_LENGTH,
     description:
       'Por qué se demora. Viaja hacia M2 como mensaje interno, no se le muestra al vecino.',
-    maxLength: 500,
     example: 'Corte de calle imprevisto por rotura de un caño',
   })
   @Trim()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(MAX_REASON_LENGTH)
   reason: string;
 
   @ApiPropertyOptional({

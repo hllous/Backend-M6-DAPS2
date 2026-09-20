@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { DisposalSiteType } from '@prisma/client';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { IsEnum, IsOptional } from 'class-validator';
+import { SearchText, ToBoolean } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryDisposalSitesDto extends PaginationQueryDto {
@@ -24,6 +24,6 @@ export class QueryDisposalSitesDto extends PaginationQueryDto {
     example: 'relleno',
   })
   @IsOptional()
-  @IsString()
+  @SearchText()
   search?: string;
 }
