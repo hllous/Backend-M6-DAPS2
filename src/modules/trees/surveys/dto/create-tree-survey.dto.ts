@@ -5,7 +5,8 @@ import { TreeHealthStatus, RiskLevel, RiskType, TreeInterventionType } from '@pr
 
 export class CreateTreeSurveyDto {
   @ApiProperty({
-    description: 'Fecha y hora del relevamiento fitosanitario',
+    description:
+      'Fecha y hora del relevamiento fitosanitario (no puede ser posterior a hoy en huso Argentina)',
     example: '2026-08-15T09:30:00.000Z',
     format: 'date-time',
   })
@@ -29,7 +30,8 @@ export class CreateTreeSurveyDto {
   riskLevel: RiskLevel;
 
   @ApiPropertyOptional({
-    description: 'Tipo de riesgo detectado (requerido si riskLevel >= HIGH)',
+    description:
+      'Tipo de riesgo detectado (obligatorio si riskLevel es HIGH o CRITICAL, si no responde 400)',
     enum: RiskType,
     example: RiskType.FALLING_BRANCH,
   })

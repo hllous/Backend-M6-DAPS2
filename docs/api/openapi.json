@@ -5320,7 +5320,7 @@
             }
           },
           "400": {
-            "description": "Datos de entrada inválidos",
+            "description": "Datos inválidos, fecha posterior a hoy o riesgo HIGH/CRITICAL sin riskType",
             "content": {
               "application/json": {
                 "schema": {
@@ -14193,7 +14193,7 @@
         "properties": {
           "surveyedAt": {
             "type": "string",
-            "description": "Fecha y hora del relevamiento fitosanitario",
+            "description": "Fecha y hora del relevamiento fitosanitario (no puede ser posterior a hoy en huso Argentina)",
             "example": "2026-08-15T09:30:00.000Z",
             "format": "date-time"
           },
@@ -14222,7 +14222,7 @@
           },
           "riskType": {
             "type": "string",
-            "description": "Tipo de riesgo detectado (requerido si riskLevel >= HIGH)",
+            "description": "Tipo de riesgo detectado (obligatorio si riskLevel es HIGH o CRITICAL, si no responde 400)",
             "enum": [
               "FALLING_BRANCH",
               "TRUNK_INSTABILITY",

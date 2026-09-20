@@ -6,7 +6,7 @@ Schema: [`treeRiskDetected.schema.json`](treeRiskDetected.schema.json).
 
 ## Cuándo se dispara
 
-Cuando un [`TreeSurvey`](../../entidades/inventario-urbano.md#tree-y-treesurvey--el-censo) arroja `riskLevel` en **`HIGH` o `CRITICAL`**. Con cualquier otro valor no sale nada.
+Cuando un [`TreeSurvey`](../../entidades/inventario-urbano.md#tree-y-treesurvey--el-censo) arroja `riskLevel` en **`HIGH` o `CRITICAL`**. Con cualquier otro valor no sale nada. Con esos niveles `riskType` es obligatorio (400 si falta) y `surveyedAt` no puede ser posterior a hoy (huso Argentina).
 
 ## Payload
 
