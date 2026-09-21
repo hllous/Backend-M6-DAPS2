@@ -14,6 +14,14 @@ export class EnvironmentalReportResponseDto {
   @ApiPropertyOptional({ description: 'Dirección denunciada', type: String, nullable: true })
   address: string | null;
 
+  @ApiPropertyOptional({
+    description:
+      'Descripción del hallazgo. Null si no se cargó (los expedientes que abre M2 no la traen).',
+    type: String,
+    nullable: true,
+  })
+  description: string | null;
+
   @ApiPropertyOptional({ description: 'Latitud', type: Number, nullable: true })
   lat: number | null;
 

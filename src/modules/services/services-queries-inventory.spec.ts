@@ -107,7 +107,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
       ),
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    service = new ServicesService(prisma as unknown as PrismaService, outbox);
+    service = new ServicesService(prisma as unknown as PrismaService, outbox, {} as never);
   });
 
   // ─── Listado ──────────────────────────────────────

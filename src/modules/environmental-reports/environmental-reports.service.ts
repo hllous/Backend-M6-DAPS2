@@ -58,6 +58,7 @@ export class EnvironmentalReportsService {
       data: {
         reportType: dto.reportType,
         address: dto.address ?? null,
+        description: dto.description || null,
         lat: dto.lat ?? null,
         lng: dto.lng ?? null,
         ticketId: dto.ticketId ?? null,
@@ -285,6 +286,7 @@ export class EnvironmentalReportsService {
       reportType: report.reportType,
       status: report.status,
       address: report.address,
+      description: report.description,
       lat: toNumber(report.lat),
       lng: toNumber(report.lng),
       ticketId: report.ticketId,

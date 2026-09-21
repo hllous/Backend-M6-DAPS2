@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ServicesService } from './services.service';
+import { EnvironmentalInspectionsService } from '../environmental-inspections/environmental-inspections.service';
 import { ServiceTargetType } from './dto';
 
 const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
@@ -21,6 +22,7 @@ const SITE_ID = '66666666-6666-6666-6666-666666666666';
 const ZONE_A = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const ZONE_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const CONTAINER_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+const INSPECTION_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 
 describe('ServicesService', () => {
   let prisma: any;
@@ -43,6 +45,7 @@ describe('ServicesService', () => {
     crewId: null,
     vehicleId: null,
     ticketId: null,
+    weatherAlertId: null,
     notes: null,
     createdBy: null,
     createdAt: new Date(),
@@ -103,6 +106,10 @@ describe('ServicesService', () => {
         count: jest.fn().mockResolvedValue(0),
       },
       outboxEvent: { create: jest.fn(), createMany: jest.fn() },
+      environmentalInspection: {
+        findUnique: jest.fn().mockResolvedValue({ serviceId: null, outcome: null }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
       // El $transaction real acepta un array de operaciones o un callback.
       $transaction: jest.fn((arg: unknown) =>
         typeof arg === 'function'
@@ -122,7 +129,15 @@ describe('ServicesService', () => {
       },
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    service = new ServicesService(prisma as unknown as PrismaService, outbox);
+    // La regla del vínculo vive en el módulo de inspecciones: se usa la real
+    // sobre el mismo prisma mockeado; reports y config no se tocan en el alta.
+    const inspections = new EnvironmentalInspectionsService(
+      prisma as unknown as PrismaService,
+      outbox as never,
+      {} as never,
+      {} as never,
+    );
+    service = new ServicesService(prisma as unknown as PrismaService, outbox, inspections);
   });
 
   const baseDto = {
@@ -237,6 +252,137 @@ describe('ServicesService', () => {
       await expect(
         service.create({ ...baseDto, origin: ServiceOrigin.PLANNED, ticketId: 'TCK-1' }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    describe('vínculo con la inspección y la alerta (#218)', () => {
+      const pointType = () =>
+        prisma.serviceType.findUnique.mockResolvedValue({
+          id: TYPE_ID,
+          code: 'AMB-INSP',
+          mode: ServiceMode.POINT,
+          requiresVehicle: false,
+          active: true,
+        });
+      const inspeccionDto = {
+        ...baseDto,
+        routeId: undefined,
+        zoneId: ZONE_A,
+        origin: ServiceOrigin.INSPECTION,
+        inspectionId: INSPECTION_ID,
+      };
+
+      it.each([
+        ['inspectionId', { inspectionId: INSPECTION_ID }],
+        ['weatherAlertId', { weatherAlertId: 'ALERTA-1' }],
+      ])('rechaza %s con un origen que no le corresponde', async (_campo, extra) => {
+        await expect(service.create({ ...baseDto, ...extra })).rejects.toThrow(BadRequestException);
+        expect(prisma.service.create).not.toHaveBeenCalled();
+      });
+
+      it('con origin = INSPECTION o WEATHER_ALERT el id no es obligatorio', async () => {
+        await service.create({ ...baseDto, origin: ServiceOrigin.WEATHER_ALERT });
+        await service.create({ ...baseDto, origin: ServiceOrigin.INSPECTION });
+        expect(prisma.service.create).toHaveBeenCalledTimes(2);
+        expect(prisma.environmentalInspection.updateMany).not.toHaveBeenCalled();
+      });
+
+      it('guarda weatherAlertId y lo devuelve', async () => {
+        prisma.service.create.mockResolvedValue(
+          serviceRow({ origin: ServiceOrigin.WEATHER_ALERT, weatherAlertId: 'ALERTA-1' }),
+        );
+
+        const res = await service.create({
+          ...baseDto,
+          origin: ServiceOrigin.WEATHER_ALERT,
+          weatherAlertId: 'ALERTA-1',
+        });
+
+        expect(prisma.service.create.mock.calls[0][0].data.weatherAlertId).toBe('ALERTA-1');
+        expect(res.weatherAlertId).toBe('ALERTA-1');
+        expect(res.inspectionId).toBeNull();
+      });
+
+      it('fija el vínculo en la inspección, en la misma transacción, y lo devuelve', async () => {
+        pointType();
+
+        const res = await service.create(inspeccionDto);
+
+        expect(prisma.environmentalInspection.updateMany).toHaveBeenCalledWith({
+          where: { id: INSPECTION_ID, serviceId: null, outcome: null },
+          data: { serviceId: SERVICE_ID },
+        });
+        expect(prisma.service.create.mock.calls[0][0].data).not.toHaveProperty('inspectionId');
+        expect(res.inspectionId).toBe(INSPECTION_ID);
+      });
+
+      it('404 si la inspección no existe', async () => {
+        pointType();
+        prisma.environmentalInspection.findUnique.mockResolvedValue(null);
+
+        await expect(service.create(inspeccionDto)).rejects.toThrow(NotFoundException);
+        expect(prisma.service.create).not.toHaveBeenCalled();
+      });
+
+      it('409 si la inspección ya tiene servicio', async () => {
+        pointType();
+        prisma.environmentalInspection.findUnique.mockResolvedValue({
+          serviceId: 'otro',
+          outcome: null,
+        });
+
+        await expect(service.create(inspeccionDto)).rejects.toThrow(ConflictException);
+        expect(prisma.service.create).not.toHaveBeenCalled();
+      });
+
+      it('409 si la inspección ya fue cerrada, aunque no tenga servicio', async () => {
+        pointType();
+        prisma.environmentalInspection.findUnique.mockResolvedValue({
+          serviceId: null,
+          outcome: 'NO_VIOLATION',
+        });
+
+        await expect(service.create(inspeccionDto)).rejects.toThrow(/ya fue cerrada/);
+        expect(prisma.service.create).not.toHaveBeenCalled();
+      });
+
+      it('guarda un weatherAlertId o ticketId vacío como null', async () => {
+        await service.create({
+          ...baseDto,
+          origin: ServiceOrigin.WEATHER_ALERT,
+          weatherAlertId: '',
+        });
+        await service.create({ ...baseDto, origin: ServiceOrigin.PLANNED, ticketId: '' });
+
+        expect(prisma.service.create.mock.calls[0][0].data.weatherAlertId).toBeNull();
+        expect(prisma.service.create.mock.calls[1][0].data.ticketId).toBeNull();
+      });
+
+      it('409 si otra alta tomó la inspección entre el chequeo y la transacción', async () => {
+        pointType();
+        prisma.environmentalInspection.updateMany.mockResolvedValue({ count: 0 });
+
+        await expect(service.create(inspeccionDto)).rejects.toThrow(ConflictException);
+        expect(outbox.enqueue).not.toHaveBeenCalled();
+      });
+
+      it('400 si el tipo de servicio es ROUTE', async () => {
+        await expect(
+          service.create({
+            ...baseDto,
+            origin: ServiceOrigin.INSPECTION,
+            inspectionId: INSPECTION_ID,
+          }),
+        ).rejects.toThrow(BadRequestException);
+        expect(prisma.service.create).not.toHaveBeenCalled();
+      });
+
+      it('el detalle lee inspectionId del lado de la inspección', async () => {
+        prisma.service.findUnique.mockResolvedValue(
+          serviceRow({ inspection: { id: INSPECTION_ID } }),
+        );
+
+        expect((await service.findOne(SERVICE_ID)).inspectionId).toBe(INSPECTION_ID);
+      });
     });
 
     it('rechaza una ventana horaria invertida', async () => {

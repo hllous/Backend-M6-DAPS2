@@ -1,7 +1,15 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { OutboxEventStatus } from '@prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { Api, createTestApp, tokenFor, truncateAll } from './helpers';
+import {
+  Api,
+  crearTipoServicio,
+  crearZona,
+  createTestApp,
+  hoy,
+  tokenFor,
+  truncateAll,
+} from './helpers';
 
 /**
  * El expediente ambiental de punta a punta: denuncia → análisis → inspección →
@@ -37,12 +45,16 @@ describe('Flujo del expediente ambiental (e2e)', () => {
       .post('/environmental-reports', {
         reportType: 'WATER_DISCHARGE',
         address: 'Camino de Cintura 4500',
+        description: '  Vuelco de efluentes al pluvial.  ',
         priority: 'HIGH',
       })
       .expect(201);
 
     reportId = creado.body.id;
     expect(creado.body.status).toBe('RECEIVED');
+    expect(creado.body.description).toBe('Vuelco de efluentes al pluvial.');
+    const detalle = await api.get(`/environmental-reports/${reportId}`).expect(200);
+    expect(detalle.body.description).toBe('Vuelco de efluentes al pluvial.');
 
     const enAnalisis = await api
       .post(`/environmental-reports/${reportId}/start-review`)
@@ -61,6 +73,38 @@ describe('Flujo del expediente ambiental (e2e)', () => {
       where: { id: reportId },
     });
     expect(expediente.status).toBe('INSPECTION_SCHEDULED');
+  });
+
+  it('programa el servicio de la inspección y el vínculo queda en la inspección (#218)', async () => {
+    const zona = await crearZona(api);
+    const tipo = await crearTipoServicio(api, { category: 'ENVIRONMENTAL_CONTROL', mode: 'POINT' });
+
+    const res = await api
+      .post('/services', {
+        serviceTypeId: tipo.id,
+        scheduledDate: hoy(),
+        origin: 'INSPECTION',
+        zoneId: zona.id,
+        inspectionId,
+      })
+      .expect(201);
+
+    expect(res.body.inspectionId).toBe(inspectionId);
+    const inspeccion = await prisma.environmentalInspection.findUniqueOrThrow({
+      where: { id: inspectionId },
+    });
+    expect(inspeccion.serviceId).toBe(res.body.id);
+
+    // Una segunda alta sobre la misma inspección no le pisa el servicio.
+    await api
+      .post('/services', {
+        serviceTypeId: tipo.id,
+        scheduledDate: hoy(),
+        origin: 'INSPECTION',
+        zoneId: zona.id,
+        inspectionId,
+      })
+      .expect(409);
   });
 
   it('cierra la inspección con infracción y lleva el expediente a VIOLATION_FOUND', async () => {
@@ -133,5 +177,68 @@ describe('Flujo del expediente ambiental (e2e)', () => {
     });
 
     expect(res.status).toBe(409);
+  });
+
+  describe('vínculo servicio → inspección (#218)', () => {
+    /** Expediente nuevo con una inspección abierta y sin servicio. */
+    const inspeccionAbierta = async (): Promise<string> => {
+      const r = await api.post('/environmental-reports', { reportType: 'NOISE' }).expect(201);
+      await api.post(`/environmental-reports/${r.body.id}/start-review`).expect(200);
+      const insp = await api.post(`/environmental-reports/${r.body.id}/inspections`).expect(201);
+      return insp.body.id;
+    };
+
+    const altaInspeccion = async (id: string) => {
+      const zona = await crearZona(api);
+      const tipo = await crearTipoServicio(api, {
+        category: 'ENVIRONMENTAL_CONTROL',
+        mode: 'POINT',
+      });
+      return {
+        serviceTypeId: tipo.id,
+        scheduledDate: hoy(),
+        origin: 'INSPECTION',
+        zoneId: zona.id,
+        inspectionId: id,
+      };
+    };
+
+    it('no programa un servicio para una inspección ya cerrada', async () => {
+      const id = await inspeccionAbierta();
+      await api
+        .post(`/environmental-inspections/${id}/complete`, {
+          inspectedAt: new Date().toISOString(),
+          outcome: 'NO_VIOLATION',
+        })
+        .expect(200);
+
+      const res = await api.post('/services', await altaInspeccion(id)).expect(409);
+
+      expect(res.body.message).toMatch(/cerrada/);
+      const inspeccion = await prisma.environmentalInspection.findUniqueOrThrow({ where: { id } });
+      expect(inspeccion.serviceId).toBeNull();
+    });
+
+    it('con altas concurrentes sobre la misma inspección gana una sola', async () => {
+      const id = await inspeccionAbierta();
+      const body = await altaInspeccion(id);
+      const servicios0 = await prisma.service.count();
+      const eventos = () =>
+        prisma.outboxEvent.count({ where: { eventType: 'urbanServiceScheduled' } });
+      const eventos0 = await eventos();
+
+      // Todas pasan el chequeo previo a la vez: lo que decide es el updateMany
+      // condicionado dentro de la transacción de cada alta.
+      const res = await Promise.all(Array.from({ length: 12 }, () => api.post('/services', body)));
+      const codigos = res.map((r) => r.status);
+
+      expect(codigos.filter((c) => c === 201)).toHaveLength(1);
+      expect(codigos.filter((c) => c === 409)).toHaveLength(11);
+      expect(await prisma.service.count()).toBe(servicios0 + 1);
+      expect(await eventos()).toBe(eventos0 + 1);
+      const ganador = res.find((r) => r.status === 201)!;
+      const inspeccion = await prisma.environmentalInspection.findUniqueOrThrow({ where: { id } });
+      expect(inspeccion.serviceId).toBe(ganador.body.id);
+    });
   });
 });

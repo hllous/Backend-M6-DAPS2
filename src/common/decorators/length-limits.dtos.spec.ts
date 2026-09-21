@@ -6,6 +6,7 @@ import { AddCrewMembersDto } from '../../modules/crews/dto/add-crew-members.dto'
 import { CreateCrewDto } from '../../modules/crews/dto/create-crew.dto';
 import { UpdateCrewDto } from '../../modules/crews/dto/update-crew.dto';
 import { QueryDisposalSitesDto } from '../../modules/disposal-sites/dto/query-disposal-sites.dto';
+import { CreateEnvironmentalReportDto } from '../../modules/environmental-reports/dto/create-environmental-report.dto';
 import { QueryEnvironmentalReportsDto } from '../../modules/environmental-reports/dto/query-environmental-reports.dto';
 import { CreateGreenPointDto } from '../../modules/green-points/dto/create-green-point.dto';
 import { QueryGreenPointsDto } from '../../modules/green-points/dto/query-green-points.dto';
@@ -49,6 +50,8 @@ const TEXTOS: Array<[string, new () => object, string, number]> = [
   ['QueryServicesDto', QueryServicesDto, 'ticketId', 100],
   ['CreateDelayNoticeDto', CreateDelayNoticeDto, 'reason', 500],
   ['CreateServiceDto', CreateServiceDto, 'notes', 2000],
+  ['CreateServiceDto', CreateServiceDto, 'weatherAlertId', 100],
+  ['CreateEnvironmentalReportDto', CreateEnvironmentalReportDto, 'description', 2000],
   ['UpdateServiceDto', UpdateServiceDto, 'notes', 2000],
   ['CreateCrewDto', CreateCrewDto, 'leaderUserId', 100],
   ['CreateCrewDto', CreateCrewDto, 'organizationId', 100],
