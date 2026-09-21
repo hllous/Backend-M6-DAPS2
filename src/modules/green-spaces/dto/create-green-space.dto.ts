@@ -6,8 +6,6 @@ import {
   IsOptional,
   IsNumber,
   IsUUID,
-  IsLatitude,
-  IsLongitude,
   Min,
   MaxLength,
   Max,
