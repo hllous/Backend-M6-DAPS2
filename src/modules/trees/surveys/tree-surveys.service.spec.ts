@@ -1,11 +1,26 @@
-import { NotFoundException } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma, RiskLevel } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { OutboxService } from '../../../events/outbox/outbox.service';
 import { TreeSurveysService } from './tree-surveys.service';
 
+// Los schemas declaran draft 2020-12; el export por defecto de ajv es draft-07.
+import Ajv2020 from 'ajv/dist/2020';
+import addFormats from 'ajv-formats';
+
 const TREE = '55555555-5555-5555-5555-555555555555';
 const SURVEY = '66666666-6666-6666-6666-666666666666';
+
+const leerSchema = (f: string) =>
+  JSON.parse(
+    fs.readFileSync(path.join(__dirname, '../../../../docs/eventos/publicados', f), 'utf8'),
+  );
+const ajv = new Ajv2020({ strict: false });
+addFormats(ajv);
+ajv.addSchema(leerSchema('_shared.schema.json'), '_shared.schema.json');
+const validarTreeRiskDetected = ajv.compile(leerSchema('treeRiskDetected.schema.json'));
 
 describe('TreeSurveysService', () => {
   let prisma: any;
@@ -45,6 +60,10 @@ describe('TreeSurveysService', () => {
       riskLevel: RiskLevel.LOW,
       ...over,
     }) as any;
+
+  // Los riesgos que salen al bus exigen riskType: el schema del evento lo pide.
+  const dtoAlto = (over: Record<string, unknown> = {}) =>
+    dto({ riskLevel: RiskLevel.HIGH, riskType: 'FALLING_BRANCH', ...over });
 
   beforeEach(() => {
     prisma = {
@@ -86,12 +105,63 @@ describe('TreeSurveysService', () => {
       });
     });
 
+    describe('surveyedAt y el día en Argentina', () => {
+      // Solo se falsea Date: el resto de los timers reales mantiene andando las promesas.
+      const reloj = (iso: string) =>
+        jest.useFakeTimers({
+          now: new Date(iso),
+          doNotFake: ['nextTick', 'setImmediate', 'setTimeout', 'setInterval', 'queueMicrotask'],
+        });
+      afterEach(() => jest.useRealTimers());
+
+      it.each([
+        ['mañana en Argentina', '2026-09-20T05:59:00.000Z', '2026-09-21T03:00:00.000Z'],
+        ['dentro de 2 días', '2026-09-20T05:59:00.000Z', '2026-09-22T12:00:00.000Z'],
+        ['00:00 local del día siguiente', '2026-09-21T02:59:00.000Z', '2026-09-21T03:00:00.000Z'],
+      ])('%s da 400 sin escribir nada', async (_n, ahora, surveyedAt) => {
+        reloj(ahora);
+
+        await expect(service.create(TREE, dto({ surveyedAt }))).rejects.toBeInstanceOf(
+          BadRequestException,
+        );
+        expect(prisma.treeSurvey.create).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['T12:00Z de hoy a las 06:00 UTC', '2026-09-20T06:00:00.000Z', '2026-09-20T12:00:00.000Z'],
+        ['más tarde del mismo día local', '2026-09-20T05:59:00.000Z', '2026-09-20T23:59:00.000Z'],
+        ['20/09 21:00 local, aún hoy', '2026-09-21T02:59:00.000Z', '2026-09-21T02:00:00.000Z'],
+      ])('%s da 201', async (_n, ahora, surveyedAt) => {
+        reloj(ahora);
+
+        await expect(service.create(TREE, dto({ surveyedAt }))).resolves.toBeDefined();
+      });
+    });
+
+    it.each([RiskLevel.HIGH, RiskLevel.CRITICAL])(
+      'un riesgo %s sin riskType da 400 sin escribir nada',
+      async (riskLevel) => {
+        await expect(service.create(TREE, dto({ riskLevel }))).rejects.toBeInstanceOf(
+          BadRequestException,
+        );
+        expect(prisma.treeSurvey.create).not.toHaveBeenCalled();
+        expect(outbox.enqueue).not.toHaveBeenCalled();
+      },
+    );
+
+    it('el payload publicado cumple el schema del evento', async () => {
+      await service.create(TREE, dtoAlto({ healthStatus: 'DISEASED' }));
+
+      const [, entrada] = outbox.enqueue.mock.calls[0];
+      expect(validarTreeRiskDetected(entrada.payload)).toBe(true);
+    });
+
     // ─── El umbral que decide si sale al bus ─────────
 
     it.each([RiskLevel.HIGH, RiskLevel.CRITICAL])(
       'un riesgo %s publica treeRiskDetected',
       async (riskLevel) => {
-        await service.create(TREE, dto({ riskLevel }));
+        await service.create(TREE, dtoAlto({ riskLevel }));
 
         expect(outbox.enqueue).toHaveBeenCalledTimes(1);
         const [, entrada] = outbox.enqueue.mock.calls[0];
@@ -118,7 +188,7 @@ describe('TreeSurveysService', () => {
     );
 
     it('el evento y el relevamiento van en la misma transacción', async () => {
-      await service.create(TREE, dto({ riskLevel: RiskLevel.CRITICAL }));
+      await service.create(TREE, dtoAlto({ riskLevel: RiskLevel.CRITICAL }));
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       const [tx] = outbox.enqueue.mock.calls[0];
@@ -130,7 +200,7 @@ describe('TreeSurveysService', () => {
      * planilla. El dispatcher barre en orden de ocurrencia.
      */
     it('el evento ocurre en la fecha del relevamiento, no en la de carga', async () => {
-      await service.create(TREE, dto({ riskLevel: RiskLevel.HIGH }));
+      await service.create(TREE, dtoAlto());
 
       const [, entrada] = outbox.enqueue.mock.calls[0];
       expect(entrada.occurredAt).toEqual(new Date('2026-08-20T10:00:00.000Z'));

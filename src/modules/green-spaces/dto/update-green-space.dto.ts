@@ -2,14 +2,15 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsOptional,
-  IsBoolean,
   IsNumber,
   IsUUID,
-  IsLatitude,
-  IsLongitude,
   Min,
   MaxLength,
+  IsNotEmpty,
+  Max,
 } from 'class-validator';
+import { ToBoolean, Trim, Latitude, Longitude } from '../../../common/decorators';
+import { MAX_DECIMAL_10_2 } from '../../../common/decorators/numeric-limits';
 
 export class UpdateGreenSpaceDto {
   @ApiPropertyOptional({
@@ -18,7 +19,9 @@ export class UpdateGreenSpaceDto {
     maxLength: 150,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(150)
   name?: string;
 
@@ -33,22 +36,24 @@ export class UpdateGreenSpaceDto {
 
   @ApiPropertyOptional({ description: 'Latitud', example: -34.5724 })
   @IsOptional()
-  @IsLatitude()
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Longitud', example: -58.4166 })
   @IsOptional()
-  @IsLongitude()
+  @Longitude()
   lng?: number;
 
   @ApiPropertyOptional({
     description: 'Superficie en metros cuadrados',
     example: 13000.0,
     minimum: 0,
+    maximum: MAX_DECIMAL_10_2,
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(MAX_DECIMAL_10_2)
   areaM2?: number;
 
   @ApiPropertyOptional({
@@ -56,6 +61,6 @@ export class UpdateGreenSpaceDto {
     example: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

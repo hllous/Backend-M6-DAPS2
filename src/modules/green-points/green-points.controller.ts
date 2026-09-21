@@ -20,6 +20,7 @@ import {
   UpdateGreenPointDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('green-points')
 @ApiBearerAuth('JWT-auth')
@@ -66,7 +67,7 @@ export class GreenPointsController {
     description:
       'Retorna un listado paginado. Se puede filtrar por estado, zona y tipo de residuo aceptado, y buscar por nombre o dirección.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de puntos verdes' })
+  @ApiPaginatedResponse(GreenPointResponseDto, 'Listado paginado de puntos verdes')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findAll(@Query() query: QueryGreenPointsDto) {

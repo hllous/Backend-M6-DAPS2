@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import {
   EnvironmentalReportStatus as S,
+  InspectionNextStep,
   InspectionOutcome,
   ServiceMode,
   Severity,
@@ -47,6 +48,10 @@ describe('EnvironmentalInspectionsService', () => {
     findings: 'Vertido sin tratar',
     outcome: InspectionOutcome.VIOLATION_FOUND,
     nextStep: null,
+    conclusion: null,
+    violationType: null,
+    severity: null,
+    suggestedAction: null,
     checklistItems: [],
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -250,12 +255,32 @@ describe('EnvironmentalInspectionsService', () => {
       await service.complete(INSPECTION_ID, {
         inspectedAt: '2026-09-10T11:30:00.000Z',
         outcome: InspectionOutcome.VIOLATION_FOUND,
+        nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
       });
 
       const estados = prisma.environmentalReport.update.mock.calls.map(
         ([a]: [{ data: { status: string } }]) => a.data.status,
       );
       expect(estados).toEqual([S.INSPECTED, S.VIOLATION_FOUND]);
+    });
+
+    it('inspectedAt en el futuro da 400', async () => {
+      await expect(
+        service.complete(INSPECTION_ID, {
+          inspectedAt: '2030-01-01T00:00:00.000Z',
+          outcome: InspectionOutcome.NO_VIOLATION,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.environmentalInspection.update).not.toHaveBeenCalled();
+    });
+
+    it('VIOLATION_FOUND sin nextStep da 400', async () => {
+      await expect(
+        service.complete(INSPECTION_ID, {
+          inspectedAt: '2026-09-10T11:30:00.000Z',
+          outcome: InspectionOutcome.VIOLATION_FOUND,
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('NO_VIOLATION lleva el expediente hasta NO_VIOLATION', async () => {
@@ -315,6 +340,43 @@ describe('EnvironmentalInspectionsService', () => {
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
       expect(args.data).not.toHaveProperty('checklistItems');
+    });
+
+    // #217: se perdían porque el DTO no los aceptaba.
+    it('guarda y devuelve conclusion, violationType, severity y suggestedAction', async () => {
+      const cierre = {
+        conclusion: 'Vertido confirmado en el fondo del predio.',
+        violationType: ViolationType.UNTREATED_DISCHARGE,
+        severity: Severity.HIGH,
+        suggestedAction: SuggestedAction.FINE,
+      };
+      prisma.environmentalInspection.update.mockResolvedValue(inspection(cierre));
+
+      const res = await service.complete(INSPECTION_ID, {
+        inspectedAt: '2026-09-10T11:30:00.000Z',
+        outcome: InspectionOutcome.VIOLATION_FOUND,
+        nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
+        ...cierre,
+      });
+
+      const [[args]] = prisma.environmentalInspection.update.mock.calls;
+      expect(args.data).toMatchObject(cierre);
+      expect(res).toMatchObject(cierre);
+    });
+
+    it('sin los campos de cierre, los guarda en null', async () => {
+      await service.complete(INSPECTION_ID, {
+        inspectedAt: '2026-09-10T11:30:00.000Z',
+        outcome: InspectionOutcome.INCONCLUSIVE,
+      });
+
+      const [[args]] = prisma.environmentalInspection.update.mock.calls;
+      expect(args.data).toMatchObject({
+        conclusion: null,
+        violationType: null,
+        severity: null,
+        suggestedAction: null,
+      });
     });
   });
 

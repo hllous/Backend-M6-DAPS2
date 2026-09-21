@@ -18,11 +18,12 @@ import {
   ZoneResultStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { toDateOnly } from '../../common/utils/date-only';
+import { toDateOnly, todayArgentina } from '../../common/utils/date-only';
 import { CONTAINER_TRANSITIONS } from '../containers/containers.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
+import { EnvironmentalInspectionsService } from '../environmental-inspections/environmental-inspections.service';
 import {
   AssignCrewDto,
   AssignmentConflictDto,
@@ -86,6 +87,8 @@ const SERVICE_INCLUDE = {
   zones: { orderBy: { sequence: 'asc' } },
   zoneResults: { orderBy: { recordedAt: 'asc' } },
   collectionRecords: true,
+  // El vinculo con la inspeccion vive en EnvironmentalInspection.serviceId.
+  inspection: { select: { id: true } },
 } satisfies Prisma.ServiceInclude;
 
 type ServiceWithRelations = Prisma.ServiceGetPayload<{ include: typeof SERVICE_INCLUDE }>;
@@ -163,6 +166,7 @@ export class ServicesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly inspections: EnvironmentalInspectionsService,
   ) {}
 
   // ─── Programación ─────────────────────────────────
@@ -181,6 +185,7 @@ export class ServicesService {
     }
 
     this.assertTicketConsistency(dto);
+    this.assertOriginLinks(dto);
     this.assertWindowOrder(dto.windowFrom, dto.windowTo);
 
     // El modo lo manda el tipo de servicio, no el DTO: un tipo ROUTE no se
@@ -192,6 +197,21 @@ export class ServicesService {
         : await this.resolvePointZone(dto);
 
     await this.assertResourcesExist(dto.crewId, dto.vehicleId);
+    if (dto.inspectionId) await this.inspections.assertLinkable(dto.inspectionId, mode);
+
+    // Mismo criterio que assign-crew: programar con recursos ya tomados no se
+    // puede en silencio. Va antes de la transaccion: no hay lock, asi que dos
+    // altas concurrentes pueden pasar las dos; meterlo en la tx no lo evita.
+    const conflictos = await this.findAssignmentConflicts(
+      {
+        scheduledDate: toDateOnly(dto.scheduledDate),
+        windowFrom: toTime(dto.windowFrom),
+        windowTo: toTime(dto.windowTo),
+      },
+      dto.crewId,
+      dto.vehicleId,
+    );
+    this.assertOverrideNote(conflictos, dto.overrideNote);
 
     const service = await this.prisma.$transaction(async (tx) => {
       const created = await tx.service.create({
@@ -208,15 +228,28 @@ export class ServicesService {
           windowTo: toTime(dto.windowTo),
           crewId: dto.crewId ?? null,
           vehicleId: dto.vehicleId ?? null,
-          ticketId: dto.ticketId ?? null,
+          // || y no ??: un id vacío ("" tras el Trim) es lo mismo que no mandarlo.
+          ticketId: dto.ticketId || null,
+          weatherAlertId: dto.weatherAlertId || null,
           notes: dto.notes ?? null,
           createdBy: createdBy ?? null,
+          ...(conflictos.length > 0 &&
+            dto.overrideNote && {
+              assignmentOverrideNote: dto.overrideNote,
+              assignmentOverrideBy: createdBy ?? null,
+              assignmentOverrideAt: new Date(),
+            }),
           // Snapshot: se copia al programar y no se recalcula, para que editar un
           // recorrido no altere lo ya ejecutado (docs/entidades/service.md).
           zones: { createMany: { data: zones } },
         },
         include: SERVICE_INCLUDE,
       });
+
+      if (dto.inspectionId) {
+        await this.inspections.linkService(tx, dto.inspectionId, created.id);
+        created.inspection = { id: dto.inspectionId };
+      }
 
       await this.outbox.enqueue(tx, {
         eventType: EventType.URBAN_SERVICE_SCHEDULED,
@@ -246,6 +279,15 @@ export class ServicesService {
     if (query.ticketId) where.ticketId = query.ticketId;
     if (query.zoneId) where.zones = { some: { zoneId: query.zoneId } };
 
+    if (
+      query.scheduledFrom &&
+      query.scheduledTo &&
+      toDateOnly(query.scheduledFrom) > toDateOnly(query.scheduledTo)
+    ) {
+      throw new BadRequestException(
+        `'scheduledFrom' (${query.scheduledFrom}) no puede ser posterior a 'scheduledTo' (${query.scheduledTo})`,
+      );
+    }
     if (query.scheduledFrom || query.scheduledTo) {
       where.scheduledDate = {
         ...(query.scheduledFrom && { gte: toDateOnly(query.scheduledFrom) }),
@@ -276,7 +318,7 @@ export class ServicesService {
     return this.toResponseDto(await this.getService(id));
   }
 
-  async update(id: string, dto: UpdateServiceDto): Promise<ServiceResponseDto> {
+  async update(id: string, dto: UpdateServiceDto, actorId?: string): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     this.assertEditable(current);
 
@@ -288,9 +330,43 @@ export class ServicesService {
       dto.windowTo ?? fromTime(current.windowTo),
     );
 
+    // Mismo criterio que assign-crew y create. Se evalua con los valores
+    // vigentes mezclados con los nuevos: un PATCH parcial no puede saltearse el
+    // chequeo. Si solo cambia el vehiculo no se revisa la cuadrilla, que no se
+    // toco: un solapamiento previo de ella no debe trabar esta correccion.
+    // `vehicleId: null` quita el vehiculo: no hay nada que chequear, y caer al
+    // vigente daria un 409 falso al desvincularlo. Igual que en create, el
+    // chequeo va antes de escribir y sin lock: dos PATCH o asignaciones
+    // concurrentes pueden pasar los dos.
+    const ventanaCambia = dto.windowFrom !== undefined || dto.windowTo !== undefined;
+    const vehiculoCambia = dto.vehicleId !== undefined;
+    const conflictos =
+      ventanaCambia || vehiculoCambia
+        ? await this.findAssignmentConflicts(
+            {
+              id,
+              scheduledDate: current.scheduledDate,
+              windowFrom:
+                dto.windowFrom !== undefined ? toTime(dto.windowFrom) : current.windowFrom,
+              windowTo: dto.windowTo !== undefined ? toTime(dto.windowTo) : current.windowTo,
+            },
+            ventanaCambia ? (current.crewId ?? undefined) : undefined,
+            dto.vehicleId === undefined
+              ? (current.vehicleId ?? undefined)
+              : (dto.vehicleId ?? undefined),
+          )
+        : [];
+    this.assertOverrideNote(conflictos, dto.overrideNote);
+
     const service = await this.prisma.service.update({
       where: { id },
       data: {
+        ...(conflictos.length > 0 &&
+          dto.overrideNote && {
+            assignmentOverrideNote: dto.overrideNote,
+            assignmentOverrideBy: actorId ?? null,
+            assignmentOverrideAt: new Date(),
+          }),
         ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
         ...(dto.windowFrom !== undefined && { windowFrom: toTime(dto.windowFrom) }),
         ...(dto.windowTo !== undefined && { windowTo: toTime(dto.windowTo) }),
@@ -321,13 +397,7 @@ export class ServicesService {
     await this.assertResourcesExist(dto.crewId, dto.vehicleId);
 
     const conflictos = await this.findAssignmentConflicts(current, dto.crewId, dto.vehicleId);
-    if (conflictos.length > 0 && !dto.overrideNote) {
-      throw new ConflictException(
-        `La asignacion se solapa con ${conflictos.length} servicio/s ya programado/s: ${conflictos
-          .map((c) => `${c.resourceName} en ${c.serviceId}`)
-          .join('; ')}. Se puede asignar igual, pero hace falta 'overrideNote' explicando por que.`,
-      );
-    }
+    this.assertOverrideNote(conflictos, dto.overrideNote);
 
     const service = await this.prisma.service.update({
       where: { id },
@@ -379,8 +449,19 @@ export class ServicesService {
     return { serviceId: id, hasConflicts: conflicts.length > 0, conflicts };
   }
 
+  private assertOverrideNote(conflictos: AssignmentConflictDto[], overrideNote?: string): void {
+    if (conflictos.length > 0 && !overrideNote) {
+      throw new ConflictException(
+        `La asignacion se solapa con ${conflictos.length} servicio/s ya programado/s: ${conflictos
+          .map((c) => `${c.resourceName} en ${c.serviceId}`)
+          .join('; ')}. Se puede asignar igual, pero hace falta 'overrideNote' explicando por que.`,
+      );
+    }
+  }
+
+  /** `id` es undefined al programar: el servicio todavia no existe. */
   private async findAssignmentConflicts(
-    service: Service,
+    service: Pick<Service, 'scheduledDate' | 'windowFrom' | 'windowTo'> & { id?: string },
     crewId?: string,
     vehicleId?: string,
   ): Promise<AssignmentConflictDto[]> {
@@ -392,7 +473,7 @@ export class ServicesService {
 
     const candidatos = await this.prisma.service.findMany({
       where: {
-        id: { not: service.id },
+        ...(service.id && { id: { not: service.id } }),
         scheduledDate: service.scheduledDate,
         status: { in: OCUPAN_RECURSO },
         OR: [...(crewId ? [{ crewId }] : []), ...(vehicleId ? [{ vehicleId }] : [])],
@@ -475,6 +556,13 @@ export class ServicesService {
   /** SUSPENDED → IN_PROGRESS */
   async resume(id: string): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
+    // IN_PROGRESS también se alcanza desde SCHEDULED, pero eso es `start` (que
+    // exige cuadrilla y vehículo): `resume` solo retoma lo que se suspendió.
+    if (current.status !== ServiceStatus.SUSPENDED) {
+      throw new ConflictException(
+        `No se puede pasar de '${current.status}' a '${ServiceStatus.IN_PROGRESS}'. Transiciones válidas desde '${current.status}': [${VALID_TRANSITIONS[current.status].join(', ') || 'ninguna, es un estado final'}]. resume solo aplica desde '${ServiceStatus.SUSPENDED}'`,
+      );
+    }
     return this.transition(current, ServiceStatus.IN_PROGRESS, { statusReason: null });
   }
 
@@ -517,16 +605,28 @@ export class ServicesService {
       details: { resolution: { type: 'ACTION_COMPLETED' } },
     });
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.service.update({
-        where: { id: current.id },
-        data: { status: target },
-        include: SERVICE_INCLUDE,
+    // Ambos where llevan el estado leído: si otro request movió el servicio o el
+    // contenedor en el medio, el P2025 aborta la transacción entera (el servicio
+    // no se cierra y no se encola nada) y sale como 409.
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        const row = await tx.service.update({
+          where: { id: current.id, status: current.status },
+          data: { status: target },
+          include: SERVICE_INCLUDE,
+        });
+        if (containerUpdate) await tx.container.update(containerUpdate);
+        await this.outbox.enqueueMany(tx, events);
+        return row;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          throw new ConflictException(
+            `El servicio '${current.id}' o el contenedor que atiende cambió de estado mientras se cerraba; reintentar`,
+          );
+        }
+        throw error;
       });
-      if (containerUpdate) await tx.container.update(containerUpdate);
-      await this.outbox.enqueueMany(tx, events);
-      return row;
-    });
 
     this.logger.log(`Servicio ${current.id}: ${current.status} -> ${target}`);
     if (containerUpdate) {
@@ -576,7 +676,7 @@ export class ServicesService {
       );
     }
 
-    return { where: { id: container.id }, data };
+    return { where: { id: container.id, status: container.status }, data };
   }
 
   private containerTransitionData(
@@ -646,9 +746,16 @@ export class ServicesService {
   async confirmReschedule(id: string, dto: ConfirmRescheduleDto): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     this.assertWindowOrder(dto.windowFrom, dto.windowTo);
+    const scheduledDate = toDateOnly(dto.scheduledDate);
+    // Se compara contra el "hoy" argentino: la fecha de hoy sigue siendo válida.
+    if (scheduledDate < todayArgentina()) {
+      throw new BadRequestException(
+        `La fecha reprogramada (${dto.scheduledDate.slice(0, 10)}) no puede ser anterior a hoy`,
+      );
+    }
 
     return this.transition(current, ServiceStatus.SCHEDULED, {
-      scheduledDate: toDateOnly(dto.scheduledDate),
+      scheduledDate,
       ...(dto.windowFrom !== undefined && { windowFrom: toTime(dto.windowFrom) }),
       ...(dto.windowTo !== undefined && { windowTo: toTime(dto.windowTo) }),
     });
@@ -888,6 +995,20 @@ export class ServicesService {
     }
   }
 
+  /** Misma idea que ticketId, pero opcionales: hay servicios INSPECTION y WEATHER_ALERT sin id. */
+  private assertOriginLinks(dto: CreateServiceDto): void {
+    if (dto.inspectionId && dto.origin !== ServiceOrigin.INSPECTION) {
+      throw new BadRequestException(
+        `'inspectionId' solo corresponde con origin = INSPECTION (este es ${dto.origin})`,
+      );
+    }
+    if (dto.weatherAlertId && dto.origin !== ServiceOrigin.WEATHER_ALERT) {
+      throw new BadRequestException(
+        `'weatherAlertId' solo corresponde con origin = WEATHER_ALERT (este es ${dto.origin})`,
+      );
+    }
+  }
+
   private assertWindowOrder(from?: string | null, to?: string | null): void {
     if (from && to && from >= to) {
       throw new BadRequestException(
@@ -1014,15 +1135,26 @@ export class ServicesService {
   ): Promise<ServiceResponseDto> {
     this.assertTransition(current.status, targetStatus);
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.service.update({
-        where: { id: current.id },
-        data: { status: targetStatus, ...additionalData },
-        include: SERVICE_INCLUDE,
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        // El estado leído va en el where: si otro request lo movió en el medio
+        // (p. ej. dos resume), el segundo falla en vez de repetir la acción.
+        const row = await tx.service.update({
+          where: { id: current.id, status: current.status },
+          data: { status: targetStatus, ...additionalData },
+          include: SERVICE_INCLUDE,
+        });
+        await this.outbox.enqueueMany(tx, events);
+        return row;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          throw new ConflictException(
+            `El servicio '${current.id}' cambió de estado mientras se procesaba la acción; reintentar`,
+          );
+        }
+        throw error;
       });
-      await this.outbox.enqueueMany(tx, events);
-      return row;
-    });
 
     this.logger.log(`Servicio ${current.id}: ${current.status} → ${targetStatus}`);
     return this.toResponseDto(updated);
@@ -1111,6 +1243,8 @@ export class ServicesService {
       crewId: service.crewId,
       vehicleId: service.vehicleId,
       ticketId: service.ticketId,
+      inspectionId: service.inspection?.id ?? null,
+      weatherAlertId: service.weatherAlertId,
       notes: service.notes,
       zones: service.zones.map((z) => ({ zoneId: z.zoneId, sequence: z.sequence })),
       zoneResults: service.zoneResults.map((r) => this.toZoneResultDto(r)),

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboundEnvelope } from '../envelope';
@@ -21,6 +21,13 @@ export interface InboxHandlerOptions {
    * que el inbox no conozca contratos ajenos.
    */
   persistPayload?: (data: Record<string, unknown>) => boolean;
+  /**
+   * Devuelve los campos obligatorios que faltan o tienen el tipo equivocado
+   * (vacío = válido). Se evalúa antes de guardar: un payload sin lo que el
+   * handler necesita no tiene efecto, y marcarlo `processed` ocultaría el error
+   * del emisor. Los campos extra se toleran.
+   */
+  validate?: (data: Record<string, unknown>) => string[];
 }
 
 /** Lo que queda en la columna (NO nula) cuando no corresponde guardar el payload. */
@@ -62,9 +69,26 @@ export class InboxService {
     return [...this.handlers.keys()].sort();
   }
 
+  /**
+   * Lanza `BadRequestException` si el `data` de un evento con handler no trae
+   * sus campos obligatorios; no queda fila guardada. Hoy solo lo llama el
+   * controller HTTP. Un consumidor Kafka futuro debe capturarla y mandar el
+   * mensaje a DLQ o commitear el offset: si no, entra en reintento infinito.
+   */
   async ingest(envelope: InboundEnvelope): Promise<IngestResult> {
     const messageId = envelope.eventId;
     const data = (envelope.data ?? {}) as Record<string, unknown>;
+
+    // Se rechaza antes del insert: sin fila, el emisor puede reenviar el corregido
+    // con el mismo eventId (el 400 ya le dice qué corregir). Sin handler no hay
+    // contrato que validar y sigue `ignored`.
+    const invalidos = this.validar(envelope.eventType, data);
+    if (invalidos.length) {
+      this.logger.warn(`${envelope.eventType} (${messageId}) rechazado: payload inválido`);
+      throw new BadRequestException(
+        `Payload inválido para ${envelope.eventType}. Campos faltantes o con tipo incorrecto: ${invalidos.join(', ')}`,
+      );
+    }
 
     // Sin handler o con una regla que dice que no es nuestro, el contenido de
     // negocio (ticketUpdated de otros módulos: ubicación, citizenId, etc.) no se
@@ -118,6 +142,18 @@ export class InboxService {
       });
       this.logger.error(`${envelope.eventType} (${messageId}) falló: ${message}`);
       return { status: 'failed', detail: message };
+    }
+  }
+
+  private validar(eventType: string, data: Record<string, unknown>): string[] {
+    try {
+      return this.options.get(eventType)?.validate?.(data) ?? [];
+    } catch (error) {
+      // Fail-open: un validador defectuoso no debe dar 500 a todos los eventos
+      // de ese tipo. No se interpola `data`, que es contenido de terceros.
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`${eventType}: validate falló (${message}), se procesa sin validar`);
+      return [];
     }
   }
 

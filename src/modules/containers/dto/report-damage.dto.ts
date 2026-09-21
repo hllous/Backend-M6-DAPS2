@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsBoolean } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators';
 import { DamageType, Severity } from '@prisma/client';
 
 /**
@@ -32,6 +33,6 @@ export class ReportDamageDto {
     default: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   requiresPublicWorks?: boolean;
 }

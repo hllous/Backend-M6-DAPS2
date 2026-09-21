@@ -18,7 +18,7 @@ import {
   ReportStatusChangeDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { CurrentUser } from '../../common/decorators';
+import { ApiPaginatedResponse, CurrentUser } from '../../common/decorators';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
 const FORBIDDEN = {
@@ -61,7 +61,7 @@ export class EnvironmentalReportsController {
     description:
       'Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen y búsqueda por dirección.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de expedientes' })
+  @ApiPaginatedResponse(EnvironmentalReportResponseDto, 'Listado paginado de expedientes')
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
   async findAll(@Query() query: QueryEnvironmentalReportsDto) {

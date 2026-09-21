@@ -20,6 +20,7 @@ import {
   UpdateServiceFrequencyDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('service-frequencies')
 @ApiBearerAuth('JWT-auth')
@@ -55,6 +56,12 @@ export class ServiceFrequenciesController {
     description: 'El tipo de servicio o el recorrido referenciado no existe',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Ya existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async create(@Body() dto: CreateServiceFrequencyDto): Promise<ServiceFrequencyResponseDto> {
     return this.serviceFrequenciesService.create(dto);
@@ -66,7 +73,7 @@ export class ServiceFrequenciesController {
     description:
       'Retorna un listado paginado. Se puede filtrar por tipo de servicio, recorrido, turno, día de la semana, y por vigencia en una fecha dada con validOn.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de frecuencias' })
+  @ApiPaginatedResponse(ServiceFrequencyResponseDto, 'Listado paginado de frecuencias')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findAll(@Query() query: QueryServiceFrequenciesDto) {
@@ -115,6 +122,12 @@ export class ServiceFrequenciesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Frecuencia no encontrada', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Ya existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async update(
     @Param('id', ParseUUIDPipe) id: string,

@@ -31,7 +31,7 @@ import {
   ZoneResultResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { CurrentUser } from '../../common/decorators';
+import { ApiPaginatedResponse, CurrentUser } from '../../common/decorators';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
 const FORBIDDEN = {
@@ -60,7 +60,7 @@ export class ServicesController {
   @ApiResponse({
     status: 400,
     description:
-      'Datos inválidos: falta routeId en un ROUTE, falta objetivo o zona en un POINT, recorrido sin paradas, ticketId inconsistente con el origen, ventana horaria invertida, o recurso dado de baja',
+      'Datos inválidos: falta routeId en un ROUTE, falta objetivo o zona en un POINT, recorrido sin paradas, ticketId inconsistente con el origen, inspectionId sin origin = INSPECTION o weatherAlertId sin origin = WEATHER_ALERT, inspectionId con un tipo de servicio que no es POINT, ventana horaria invertida, o recurso dado de baja',
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
@@ -68,7 +68,13 @@ export class ServicesController {
   @ApiResponse({
     status: 404,
     description:
-      'El tipo de servicio, el recorrido, el objetivo, la cuadrilla o el vehículo no existe',
+      'El tipo de servicio, el recorrido, el objetivo, la cuadrilla, el vehículo o la inspección (inspectionId) no existe',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description:
+      'La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
@@ -85,7 +91,12 @@ export class ServicesController {
     description:
       'Listado paginado. Filtros por estado, tipo, modo, origen, cuadrilla, vehículo, zona cubierta, reclamo de M2 y rango de fechas agendadas.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de servicios' })
+  @ApiPaginatedResponse(ServiceResponseDto, 'Listado paginado de servicios')
+  @ApiResponse({
+    status: 400,
+    description: 'Filtros inválidos: scheduledFrom posterior a scheduledTo',
+    type: ErrorResponseDto,
+  })
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
   async findAll(@Query() query: QueryServicesDto) {
@@ -111,7 +122,7 @@ export class ServicesController {
   @ApiOperation({
     summary: 'Corregir la programación de un servicio',
     description:
-      'Actualiza vehículo, ventana horaria y notas, solo mientras el servicio no arrancó. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar. La fecha se mueve con reschedule y confirm-reschedule, que dejan rastro del motivo.',
+      'Actualiza vehículo, ventana horaria y notas, solo mientras el servicio no arrancó. Si el cambio de vehículo o ventana lo solapa con otro servicio de la misma cuadrilla o vehículo ese día, avisa con 409 y hace falta `overrideNote` (10 a 500 caracteres), igual que en assign-crew. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar. La fecha se mueve con reschedule y confirm-reschedule, que dejan rastro del motivo.',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Servicio actualizado', type: ServiceResponseDto })
@@ -125,15 +136,17 @@ export class ServicesController {
   })
   @ApiResponse({
     status: 409,
-    description: 'El servicio ya arrancó o cerró y no admite edición',
+    description:
+      'El servicio ya arrancó o cerró y no admite edición, o el vehículo o la ventana nuevos se solapan con otro servicio de la misma cuadrilla o vehículo y falta `overrideNote`',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateServiceDto,
+    @CurrentUser('userId') userId?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.update(id, dto);
+    return this.servicesService.update(id, dto, userId);
   }
 
   @Post(':id/assign-crew')
@@ -346,7 +359,8 @@ export class ServicesController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Transición inválida, o faltan resultados de alguna zona',
+    description:
+      'Transición inválida, faltan resultados de alguna zona, o el servicio o su contenedor cambiaron de estado durante el cierre',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
@@ -419,7 +433,7 @@ export class ServicesController {
   @ApiResponse({ status: 200, description: 'Servicio reprogramado', type: ServiceResponseDto })
   @ApiResponse({
     status: 400,
-    description: 'Fecha inválida o ventana horaria invertida',
+    description: 'Fecha inválida o anterior a hoy, o ventana horaria invertida',
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)

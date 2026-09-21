@@ -94,11 +94,11 @@ No hay que hacer nada manual en el día a día.
 | `JWT_EXPIRATION` | `3600` | No (default 3600s) |
 | `NODE_ENV` | `production` | ✅ Sí |
 | `SANCTION_DEADLINE_DAYS` | `30` | No (default 30 días para cierre de expediente ambiental sin resolución M4) |
-| `R2_ACCOUNT_ID` | Account ID de Cloudflare R2 | Para subida de adjuntos (`/evidence`) |
+| `R2_ACCOUNT_ID` | Account ID de Cloudflare R2 | Para subida de adjuntos (`/evidence`). Sin esta variable, `POST /evidence` responde 503 |
 | `R2_ACCESS_KEY_ID` | Key ID de API de Cloudflare R2 | Para subida de adjuntos (`/evidence`) |
 | `R2_SECRET_ACCESS_KEY` | Secret de API de Cloudflare R2 | Para subida de adjuntos (`/evidence`) |
 | `R2_BUCKET` | Nombre del bucket R2, p. ej. `m6-evidence` | Para subida de adjuntos (`/evidence`) |
-| `R2_PUBLIC_URL_BASE` | Dominio público del bucket, p. ej. `https://pub-xxxx.r2.dev` (sin barra final) | Para devolver URLs directas en `/evidence` |
+| `R2_PUBLIC_URL_BASE` | Dominio público del bucket, p. ej. `https://pub-xxxx.r2.dev` (sin barra final) | Para devolver URLs directas en `/evidence`. Sin esta variable, `POST /evidence` responde 503 |
 | `KAFKA_BROKERS` | Lista de brokers (ej. `localhost:9092`) | Opcional hasta que M9 provea broker |
 | `KAFKA_CLIENT_ID` | `m6-backend` | Opcional |
 | `KAFKA_GROUP_ID` | `m6-backend-group` | Opcional |
@@ -109,10 +109,12 @@ No hay que hacer nada manual en el día a día.
 
 | Variable | Valor |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | `https://m6-backend-m64k.onrender.com` |
-| `M6_SESSION_SEAL_KEY` | Clave secreta para sellar la cookie JWE de sesión en el Next.js BFF (ADR-0004) |
+| `M6_AUTH_MODE` | `backend-development` (demo contra el backend real) |
+| `M6_BACKEND_ORIGIN` | `https://m6-backend-m64k.onrender.com` |
+| `M6_DEV_JWT` | JWT firmado con el `JWT_SECRET` del backend (payload `{ sub, exp }`) |
+| `M6_SESSION_SECRET` | Clave secreta para sellar la cookie de sesión del Next.js BFF |
 
-> `NEXT_PUBLIC_*` se inyecta en **build time** (client-side). Si el backend cambia de URL, hay que actualizar la variable y redeployar.
+> `M6_AUTH_MODE=backend-development` reenvía cada petición del BFF al backend con `M6_DEV_JWT` como Bearer. `M6_BACKEND_ORIGIN`, `M6_DEV_JWT` y `M6_SESSION_SECRET` se leen en runtime (server-side), así que se pueden cambiar sin rebuild. `NEXT_PUBLIC_API_URL` quedó obsoleto: el código actual no lo usa.
 
 ---
 
@@ -133,6 +135,7 @@ No hay que hacer nada manual en el día a día.
 
   > ⚠️ **El keepalive no evita el spin-down.** Pide el cron cada 10 minutos, pero GitHub descarta la mayoría de las ejecuciones programadas: en la práctica corre **cada 2-3 horas** (7-8 veces por día). Por eso el barrido al arrancar es lo que sostiene el cierre por vencimiento, y no este ping. El `--max-time` del ping es de 180 s porque el arranque en frío corre `prisma migrate deploy` antes de escuchar y con 90 s fallaba por timeout sin que nada estuviera roto.
 - **Health Check Path de Render**: dejarlo **vacío**. Un path de health check mal configurado produce `==> Timed Out` en el deploy aunque la app arranque bien.
+- **Monitoreo**: `GET /health/ready` devuelve 503 si la base no responde; `/health` es solo liveness (keepalive) y sigue en 200 aunque la base esté caída. Con la base inalcanzable al arrancar el servidor ni empieza a escuchar (Prisma falla en `onModuleInit`): `/health/ready` solo detecta una base que se cae con el proceso ya arriba.
 - **Bind `0.0.0.0`**: el backend escucha en `0.0.0.0:PORT` (no `localhost`), que es lo que Render espera. No cambiar esto.
 - **Postgres free tier**: 256 MB de storage y retención de 90 días (los datos viejos se purgan). Suficiente para el TPO.
 
@@ -140,14 +143,14 @@ No hay que hacer nada manual en el día a día.
 
 ## 6. Estado de la app end-to-end
 
-> Actualizado al 18/09/2026, con las siete fases del plan de backend completadas (133 rutas en 23 tags Swagger) y diseño de arquitectura frontend alineado.
+> Actualizado al 18/09/2026, con las siete fases del plan de backend completadas (134 rutas en 23 tags Swagger) y diseño de arquitectura frontend alineado.
 
 La infraestructura está deployada, las migraciones corren solas en cada deploy y la API sirve datos reales.
 
 | # | Qué | Estado |
 |---|---|---|
 | 1 | **Migraciones de Prisma** | ✅ Resuelto (PR #49). El `CMD` del Dockerfile corre `npx prisma migrate deploy` antes de arrancar. Si la migración falla, el contenedor no levanta |
-| 2 | **Services de dominio** | ✅ Fases 1 a 7 completas (133 endpoints en 23 tags): catálogos, recursos (cuadrillas, vehículos), contenedores, arbolado, espacios verdes, `Service` (máquina de estados, ZoneResults, CollectionRecords), control ambiental (expedientes, inspecciones, actas, sanciones), derivaciones (M3 reparaciones, M7 cortes), tablero de indicadores (`/indicators`) y portal ciudadano (`/public`) |
+| 2 | **Services de dominio** | ✅ Fases 1 a 7 completas (134 endpoints en 23 tags): catálogos, recursos (cuadrillas, vehículos), contenedores, arbolado, espacios verdes, `Service` (máquina de estados, ZoneResults, CollectionRecords), control ambiental (expedientes, inspecciones, actas, sanciones), derivaciones (M3 reparaciones, M7 cortes), tablero de indicadores (`/indicators`) y portal ciudadano (`/public`) |
 | 3 | **Autenticación** | ⚠️ Provisoria. Todo endpoint exige JWT (guard global), pero la verificación es HS256 contra `JWT_SECRET` hasta que M1 publique su contrato de firma y claims. La autorización por rol server-side está diferida hasta que M1 defina su taxonomía; el frontend realiza control de permisos optimista en UI (ver [ADR-002](decisiones/adr-002-auth-provisoria.md)) |
 | 4 | **Eventos** | ✅ Outbox transaccional (Fase 3) e Inbox con handlers (Fase 6) implementados. Lo que resta es el broker provisto por M9: sin `KAFKA_BROKERS` configurado, los eventos se encolan en outbox y se registran en log. La ingesta manual puede ejercitarse vía `POST /events/inbox` |
 | 5 | **Evidencia y adjuntos** | ✅ Resuelto (Fase 7). `POST /evidence` genérico sobre Cloudflare R2 con `Idempotency-Key` obligatoria respaldada por constraint único en DB (`SERVICE`, `ZONE_RESULT`, `INSPECTION`, `CONTAINER`) |

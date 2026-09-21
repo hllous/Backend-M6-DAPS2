@@ -80,6 +80,64 @@ jobs:
         run: npm run test:cov
 
   # ──────────────────────────────────────────────────────────────
+  # e2e — La app completa contra un Postgres de verdad.
+  #
+  # NO es check obligatorio de la branch protection (ahí solo están "build" y
+  # "test"): los e2e tardan y dependen de un servicio externo, y bloquear el
+  # merge por un contenedor que no levantó no aporta. Se mira igual.
+  #
+  # La base es descartable y las suites truncan todas las tablas. El helper de
+  # test/ se niega a correr si DATABASE_URL no apunta a localhost.
+  # ──────────────────────────────────────────────────────────────
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+
+    # No usa el GITHUB_TOKEN: sin permisos.
+    permissions: {}
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: m6
+          POSTGRES_PASSWORD: m6
+          POSTGRES_DB: m6_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U m6 -d m6_e2e"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # Sin JWT_SECRET: test/helpers.ts lo pisa con uno de juguete igual.
+    env:
+      DATABASE_URL: postgresql://m6:m6@localhost:5432/m6_e2e?schema=public
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      # Las migraciones las aplica test/global-setup.ts, después del guard.
+      # Sin cobertura: el 85% del DoD se mide con los unitarios (job "test").
+      # Mezclar los dos reportes es una mejora posterior, no un requisito.
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+  # ──────────────────────────────────────────────────────────────
   # deploy — Dispara el deploy en Render (solo push a develop).
   # Depende de build+test: si el CI falla, no se deploya.
   # ──────────────────────────────────────────────────────────────

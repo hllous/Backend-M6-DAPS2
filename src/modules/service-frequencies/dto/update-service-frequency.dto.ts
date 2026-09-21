@@ -12,6 +12,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { MAX_WEEKDAY, MIN_WEEKDAY } from '../../../common/decorators/numeric-limits';
 
 /**
  * `serviceTypeId` y `routeId` no son mutables: cambiarlos convierte la regla
@@ -22,6 +23,8 @@ export class UpdateServiceFrequencyDto {
     description: 'Días de la semana. Reemplaza el conjunto completo. 1 = Lunes … 7 = Domingo.',
     example: [1, 3, 5],
     type: [Number],
+    minimum: MIN_WEEKDAY,
+    maximum: MAX_WEEKDAY,
   })
   @IsOptional()
   @IsArray()
@@ -29,8 +32,8 @@ export class UpdateServiceFrequencyDto {
   @ArrayMaxSize(7)
   @ArrayUnique()
   @IsInt({ each: true })
-  @Min(1, { each: true })
-  @Max(7, { each: true })
+  @Min(MIN_WEEKDAY, { each: true })
+  @Max(MAX_WEEKDAY, { each: true })
   weekdays?: number[];
 
   @ApiPropertyOptional({ description: 'Turno de ejecución', enum: Shift, example: Shift.AFTERNOON })

@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   ClosureStreet,
   Prisma,
@@ -6,6 +12,7 @@ import {
   RepairRequestStatus,
   StreetClosureRequest,
   StreetClosureRequestStatus,
+  TreeInterventionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
@@ -13,6 +20,7 @@ import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
 import {
   ApproveClosureDto,
+  ClosureSourceType,
   CreateRepairRequestDto,
   CreateStreetClosureRequestDto,
   DetectedInType,
@@ -28,6 +36,11 @@ import {
   CLOSURE_TRANSITIONS,
   REPAIR_TRANSITIONS,
 } from './outbound-requests.transitions';
+
+/** Rompe la compilación si un tipo de origen nuevo queda sin verificar. */
+function assertNever(value: never): never {
+  throw new Error(`Tipo de origen no soportado: ${String(value)}`);
+}
 
 type ClosureWithStreets = StreetClosureRequest & { streets: ClosureStreet[] };
 
@@ -45,7 +58,7 @@ export class OutboundRequestsService {
   async createRepairRequest(dto: CreateRepairRequestDto): Promise<RepairRequestResponseDto> {
     // Si el daño salió de un servicio nacido de un reclamo, el ticket viaja
     // para que M3 pueda correlacionarlo con lo que el vecino reportó.
-    const ticketId = await this.ticketOfOrigin(dto.detectedInType, dto.detectedInId);
+    const ticketId = await this.resolveRepairOrigin(dto.detectedInType, dto.detectedInId);
 
     const request = await this.prisma.$transaction(async (tx) => {
       const row = await tx.repairRequest.create({
@@ -149,6 +162,12 @@ export class OutboundRequestsService {
   async createClosureRequest(
     dto: CreateStreetClosureRequestDto,
   ): Promise<StreetClosureRequestResponseDto> {
+    if (new Date(dto.requestedTo) < new Date(dto.requestedFrom)) {
+      throw new BadRequestException(
+        `'requestedTo' (${dto.requestedTo}) no puede ser anterior a 'requestedFrom' (${dto.requestedFrom})`,
+      );
+    }
+    await this.assertClosureSourceExists(dto.sourceType, dto.sourceId);
     const request = await this.prisma.$transaction(async (tx) => {
       const row = await tx.streetClosureRequest.create({
         data: {
@@ -243,18 +262,71 @@ export class OutboundRequestsService {
   // ─── Helpers ──────────────────────────────────────
 
   /**
-   * El reclamo de M2 detrás de la detección, si lo hay.
+   * Verifica que el origen de la detección exista y devuelve el reclamo de M2
+   * detrás de él, si lo hay. Es una sola consulta por tipo: el ticket sale de la
+   * misma lectura que prueba la existencia.
    *
-   * Solo aplica cuando el daño salió de un `Service`: una inspección ambiental
-   * cuelga de un expediente, no de un ticket directo.
+   * Solo un `Service` puede traer ticket: una inspección ambiental cuelga de un
+   * expediente. El chequeo es previo a escribir; no hay FK polimórfica ni lock,
+   * así que la carrera con un borrado concurrente queda aceptada.
    */
-  private async ticketOfOrigin(type: DetectedInType, id: string): Promise<string | undefined> {
-    if (type !== DetectedInType.SERVICE) return undefined;
-    const service = await this.prisma.service.findUnique({
-      where: { id },
-      select: { ticketId: true },
-    });
-    return service?.ticketId ?? undefined;
+  private async resolveRepairOrigin(type: DetectedInType, id: string): Promise<string | undefined> {
+    switch (type) {
+      case DetectedInType.SERVICE: {
+        const service = await this.prisma.service.findUnique({
+          where: { id },
+          select: { ticketId: true },
+        });
+        if (!service) throw new NotFoundException(`Servicio con id '${id}' no encontrado`);
+        return service.ticketId ?? undefined;
+      }
+      case DetectedInType.INSPECTION: {
+        const inspection = await this.prisma.environmentalInspection.findUnique({
+          where: { id },
+          select: { id: true },
+        });
+        if (!inspection) throw new NotFoundException(`Inspección con id '${id}' no encontrada`);
+        return undefined;
+      }
+      default:
+        return assertNever(type);
+    }
+  }
+
+  /**
+   * Falla antes de crear nada: el evento hacia M7 no puede salir con un origen
+   * que no existe (404) ni de una intervención que no está autorizada (409).
+   * Igual que en repair, el chequeo es previo a escribir y sin
+   * FK polimórfica ni lock (carrera aceptada).
+   */
+  private async assertClosureSourceExists(type: ClosureSourceType, id: string): Promise<void> {
+    const args = { where: { id }, select: { id: true } };
+    switch (type) {
+      case ClosureSourceType.SERVICE:
+        if (!(await this.prisma.service.findUnique(args))) {
+          throw new NotFoundException(`Servicio con id '${id}' no encontrado`);
+        }
+        return;
+      case ClosureSourceType.TREE_INTERVENTION: {
+        const intervention = await this.prisma.treeIntervention.findUnique({
+          where: { id },
+          select: { id: true, status: true },
+        });
+        if (!intervention) {
+          throw new NotFoundException(`Intervención con id '${id}' no encontrada`);
+        }
+        // Solo una intervención autorizada tiene el trabajo confirmado;
+        // antes, M7 recibiría un corte de algo que puede no hacerse.
+        if (intervention.status !== TreeInterventionStatus.AUTHORIZED) {
+          throw new ConflictException(
+            `La intervención '${id}' está en estado ${intervention.status}: solo se puede pedir un corte de una intervención autorizada`,
+          );
+        }
+        return;
+      }
+      default:
+        return assertNever(type);
+    }
   }
 
   private async updateClosure(

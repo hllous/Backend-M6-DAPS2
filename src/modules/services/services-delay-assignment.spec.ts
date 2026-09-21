@@ -86,6 +86,7 @@ describe('ServicesService — demora y doble reserva', () => {
     service = new ServicesService(
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,
+      {} as never,
     );
   });
 

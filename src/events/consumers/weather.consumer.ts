@@ -4,9 +4,31 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { toDateOnly } from '../../common/utils/date-only';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent } from '../inbox/consumed-events';
+import { Data, esFecha, esTexto, esUuid, requerido } from '../inbox/payload-validation';
 
 /** Con menos que esto se avisa, no se reprograma. */
 const SEVERIDAD_QUE_REPROGRAMA: Severity[] = [Severity.HIGH, Severity.CRITICAL];
+
+function validar(d: Data): string[] {
+  const problemas = requerido(d, ['severity'], 'string', esTexto);
+  const reprograma = SEVERIDAD_QUE_REPROGRAMA.includes(
+    String(d.severity ?? '').toUpperCase() as Severity,
+  );
+  // Los uuid solo se exigen si la alerta reprograma: es donde el handler usa los
+  // zoneIds en el updateMany. El catálogo de zonas de M9 sigue abierto, así que
+  // para una alerta leve alcanza con que haya zonas.
+  const zonas = Array.isArray(d.zoneIds) ? d.zoneIds : [];
+  if (zonas.length === 0 || (reprograma && !zonas.every(esUuid))) {
+    problemas.push(reprograma ? 'zoneIds (array no vacío de uuid)' : 'zoneIds (array no vacío)');
+  }
+  if (reprograma) {
+    problemas.push(
+      ...requerido(d, ['from'], 'fecha ISO 8601', esFecha),
+      ...requerido(d, ['to'], 'fecha ISO 8601', esFecha),
+    );
+  }
+  return problemas;
+}
 
 /**
  * La alerta meteorológica, **simulada internamente**.
@@ -30,7 +52,9 @@ export class WeatherConsumer implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.inbox.register(ConsumedEvent.WEATHER_ALERT_ISSUED, (d) => this.handle(d));
+    this.inbox.register(ConsumedEvent.WEATHER_ALERT_ISSUED, (d) => this.handle(d), {
+      validate: validar,
+    });
   }
 
   /**

@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { MAX_EXTERNAL_ID_LENGTH, MAX_NOTES_LENGTH, Trim } from '../../../common/decorators';
 import { ServiceOrigin } from '@prisma/client';
 import {
   IsDateString,
@@ -8,6 +9,7 @@ import {
   IsUUID,
   Matches,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 
 /**
@@ -45,7 +47,8 @@ export class CreateServiceDto {
   scheduledDate: string;
 
   @ApiProperty({
-    description: 'Origen de la programación. TICKET exige ticketId; el resto no lo admite.',
+    description:
+      'Origen de la programación. TICKET exige ticketId; el resto no lo admite. inspectionId solo se admite con INSPECTION y weatherAlertId solo con WEATHER_ALERT, pero no son obligatorios.',
     enum: ServiceOrigin,
     example: ServiceOrigin.PLANNED,
   })
@@ -132,15 +135,53 @@ export class CreateServiceDto {
     maxLength: 64,
   })
   @IsOptional()
+  @Trim()
   @IsString()
   @MaxLength(64)
   ticketId?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Inspección ambiental que va a ejecutar este servicio. Solo con origin = INSPECTION, y el tipo de servicio tiene que ser POINT. La inspección tiene que existir (404), seguir abierta y no tener otro servicio (409). El vínculo se guarda en la inspección, igual que al programarla con `serviceId`.',
+    example: '0b1c2d3e-4f5a-6789-abcd-ef0123456789',
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  inspectionId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Alerta meteorológica que originó el servicio. Solo con origin = WEATHER_ALERT. Es una referencia externa: M6 no guarda las alertas, así que no se verifica que exista.',
+    example: 'ALERTA-SMN-2026-0915',
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
+  })
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
+  weatherAlertId?: string;
+
+  @ApiPropertyOptional({
+    maxLength: MAX_NOTES_LENGTH,
     description: 'Notas internas de la programación',
     example: 'Coordinar con la cooperativa antes de las 7.',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_NOTES_LENGTH)
   notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Por qué se programa igual con una cuadrilla o vehículo ya tomado ese día en una franja que se pisa. **Obligatorio si hay solapamiento**, igual que en `assign-crew`; sin solapamiento se ignora.',
+    minLength: 10,
+    maxLength: 500,
+    example: 'La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla.',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(10)
+  @MaxLength(500)
+  overrideNote?: string;
 }
