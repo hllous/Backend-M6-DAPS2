@@ -7234,7 +7234,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos: falta routeId en un ROUTE, falta objetivo o zona en un POINT, recorrido sin paradas, ticketId inconsistente con el origen, ventana horaria invertida, o recurso dado de baja",
+            "description": "Datos inválidos: falta routeId en un ROUTE, falta objetivo o zona en un POINT, recorrido sin paradas, ticketId inconsistente con el origen, inspectionId sin origin = INSPECTION o weatherAlertId sin origin = WEATHER_ALERT, inspectionId con un tipo de servicio que no es POINT, ventana horaria invertida, o recurso dado de baja",
             "content": {
               "application/json": {
                 "schema": {
@@ -7264,7 +7264,7 @@
             }
           },
           "404": {
-            "description": "El tipo de servicio, el recorrido, el objetivo, la cuadrilla o el vehículo no existe",
+            "description": "El tipo de servicio, el recorrido, el objetivo, la cuadrilla, el vehículo o la inspección (inspectionId) no existe",
             "content": {
               "application/json": {
                 "schema": {
@@ -7274,7 +7274,7 @@
             }
           },
           "409": {
-            "description": "La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa y falta `overrideNote`",
+            "description": "La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada",
             "content": {
               "application/json": {
                 "schema": {
@@ -9167,6 +9167,539 @@
         ]
       }
     },
+    "/environmental-reports/{reportId}/inspections": {
+      "post": {
+        "operationId": "EnvironmentalInspectionsController_create",
+        "summary": "Programar la inspección de un expediente",
+        "description": "Lleva el expediente a INSPECTION_SCHEDULED. La inspección guarda qué se va a buscar; el Service asociado, cuándo y con qué cuadrilla — el mismo patrón que TreeIntervention. Ese paso no se publica al bus: environmentalInspectionScheduled fue descartado por no tener consumidor.",
+        "parameters": [
+          {
+            "name": "reportId",
+            "required": true,
+            "in": "path",
+            "description": "UUID del expediente",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInspectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Inspección programada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El servicio asociado no es de modo POINT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos sobre inspecciones ambientales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Expediente o servicio no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El expediente no está en UNDER_REVIEW",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "EnvironmentalInspectionsController_findByReport",
+        "summary": "Listar las inspecciones de un expediente",
+        "description": "Incluye el checklist relevado, que es información interna.",
+        "parameters": [
+          {
+            "name": "reportId",
+            "required": true,
+            "in": "path",
+            "description": "UUID del expediente",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspecciones del expediente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspectionResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Expediente no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/environmental-inspections/{id}": {
+      "get": {
+        "operationId": "EnvironmentalInspectionsController_findOne",
+        "summary": "Obtener una inspección por ID",
+        "description": "Detalle completo con el checklist y los hallazgos. **Todo esto es interno y nunca sale hacia M2**: lo que el vecino ve es la proyección pública, sin identidad del inspector ni contenido del acta.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la inspección",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspección encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inspección no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/environmental-inspections/{id}/complete": {
+      "post": {
+        "operationId": "EnvironmentalInspectionsController_complete",
+        "summary": "Cerrar la inspección con su resultado",
+        "description": "Lleva el expediente a INSPECTED y de ahí, en la misma operación, a NO_VIOLATION o VIOLATION_FOUND según el outcome. Un INCONCLUSIVE lo deja en INSPECTED, a la espera de otra inspección. El checklist y los hallazgos son internos.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la inspección",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteInspectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inspección cerrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, inspectedAt en el futuro, o resultado VIOLATION_FOUND sin nextStep",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos sobre inspecciones ambientales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inspección no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La inspección ya fue cerrada, o el expediente no está en INSPECTION_SCHEDULED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/environmental-inspections/{id}/violation-notice": {
+      "post": {
+        "operationId": "EnvironmentalInspectionsController_issueNotice",
+        "summary": "Emitir el acta de constatación",
+        "description": "Emite el acta sobre una inspección con resultado VIOLATION_FOUND y lleva el expediente a NOTICE_ISSUED. **El acta es inmutable**: no hay PATCH ni DELETE, si hay un error se emite otra. Sin establishmentId el acta se registra pero **no se deriva a M4** —es lo único sobre lo que pueden actuar— y el expediente cierra de nuestro lado. Con establishmentId se publica environmentalViolationDetected, con el conteo de actas previas del mismo establecimiento.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la inspección",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueViolationNoticeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Acta emitida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViolationNoticeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "La inspección no tiene resultado VIOLATION_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos sobre inspecciones ambientales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inspección no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La inspección ya tiene acta emitida, o el expediente no está en VIOLATION_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "EnvironmentalInspectionsController_findNotice",
+        "summary": "Obtener el acta de una inspección",
+        "description": "El acta emitida, con su número correlativo y el conteo de reincidencia.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la inspección",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acta encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViolationNoticeResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La inspección no tiene acta emitida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
     "/environmental-reports": {
       "post": {
         "operationId": "EnvironmentalReportsController_create",
@@ -9877,539 +10410,6 @@
         },
         "tags": [
           "environmental-reports"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      }
-    },
-    "/environmental-reports/{reportId}/inspections": {
-      "post": {
-        "operationId": "EnvironmentalInspectionsController_create",
-        "summary": "Programar la inspección de un expediente",
-        "description": "Lleva el expediente a INSPECTION_SCHEDULED. La inspección guarda qué se va a buscar; el Service asociado, cuándo y con qué cuadrilla — el mismo patrón que TreeIntervention. Ese paso no se publica al bus: environmentalInspectionScheduled fue descartado por no tener consumidor.",
-        "parameters": [
-          {
-            "name": "reportId",
-            "required": true,
-            "in": "path",
-            "description": "UUID del expediente",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateInspectionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Inspección programada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InspectionResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "El servicio asociado no es de modo POINT",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sin permisos sobre inspecciones ambientales",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Expediente o servicio no encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "El expediente no está en UNDER_REVIEW",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      },
-      "get": {
-        "operationId": "EnvironmentalInspectionsController_findByReport",
-        "summary": "Listar las inspecciones de un expediente",
-        "description": "Incluye el checklist relevado, que es información interna.",
-        "parameters": [
-          {
-            "name": "reportId",
-            "required": true,
-            "in": "path",
-            "description": "UUID del expediente",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Inspecciones del expediente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/InspectionResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Expediente no encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      }
-    },
-    "/environmental-inspections/{id}": {
-      "get": {
-        "operationId": "EnvironmentalInspectionsController_findOne",
-        "summary": "Obtener una inspección por ID",
-        "description": "Detalle completo con el checklist y los hallazgos. **Todo esto es interno y nunca sale hacia M2**: lo que el vecino ve es la proyección pública, sin identidad del inspector ni contenido del acta.",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la inspección",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Inspección encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InspectionResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Inspección no encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      }
-    },
-    "/environmental-inspections/{id}/complete": {
-      "post": {
-        "operationId": "EnvironmentalInspectionsController_complete",
-        "summary": "Cerrar la inspección con su resultado",
-        "description": "Lleva el expediente a INSPECTED y de ahí, en la misma operación, a NO_VIOLATION o VIOLATION_FOUND según el outcome. Un INCONCLUSIVE lo deja en INSPECTED, a la espera de otra inspección. El checklist y los hallazgos son internos.",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la inspección",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CompleteInspectionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Inspección cerrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InspectionResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos inválidos, inspectedAt en el futuro, o resultado VIOLATION_FOUND sin nextStep",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sin permisos sobre inspecciones ambientales",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Inspección no encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "La inspección ya fue cerrada, o el expediente no está en INSPECTION_SCHEDULED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      }
-    },
-    "/environmental-inspections/{id}/violation-notice": {
-      "post": {
-        "operationId": "EnvironmentalInspectionsController_issueNotice",
-        "summary": "Emitir el acta de constatación",
-        "description": "Emite el acta sobre una inspección con resultado VIOLATION_FOUND y lleva el expediente a NOTICE_ISSUED. **El acta es inmutable**: no hay PATCH ni DELETE, si hay un error se emite otra. Sin establishmentId el acta se registra pero **no se deriva a M4** —es lo único sobre lo que pueden actuar— y el expediente cierra de nuestro lado. Con establishmentId se publica environmentalViolationDetected, con el conteo de actas previas del mismo establecimiento.",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la inspección",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/IssueViolationNoticeDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Acta emitida",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ViolationNoticeResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "La inspección no tiene resultado VIOLATION_FOUND",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sin permisos sobre inspecciones ambientales",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Inspección no encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "La inspección ya tiene acta emitida, o el expediente no está en VIOLATION_FOUND",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      },
-      "get": {
-        "operationId": "EnvironmentalInspectionsController_findNotice",
-        "summary": "Obtener el acta de una inspección",
-        "description": "El acta emitida, con su número correlativo y el conteo de reincidencia.",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la inspección",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Acta encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ViolationNoticeResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "La inspección no tiene acta emitida",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
         ],
         "security": [
           {
@@ -15244,7 +15244,7 @@
           },
           "inspectionId": {
             "type": "string",
-            "description": "Inspección ambiental que va a ejecutar este servicio. Solo con origin = INSPECTION, y el tipo de servicio tiene que ser POINT. La inspección tiene que existir (404) y no tener otro servicio (409). El vínculo se guarda en la inspección, igual que al programarla con `serviceId`.",
+            "description": "Inspección ambiental que va a ejecutar este servicio. Solo con origin = INSPECTION, y el tipo de servicio tiene que ser POINT. La inspección tiene que existir (404), seguir abierta y no tener otro servicio (409). El vínculo se guarda en la inspección, igual que al programarla con `serviceId`.",
             "example": "0b1c2d3e-4f5a-6789-abcd-ef0123456789",
             "format": "uuid"
           },
@@ -16032,204 +16032,6 @@
           "disposalSiteId"
         ]
       },
-      "CreateEnvironmentalReportDto": {
-        "type": "object",
-        "properties": {
-          "reportType": {
-            "type": "string",
-            "description": "Tipo de denuncia ambiental",
-            "enum": [
-              "NOISE",
-              "DUMPING",
-              "ILLEGAL_DUMPSITE",
-              "WATER_DISCHARGE",
-              "AIR_EMISSION",
-              "ODOR",
-              "PEST_INFESTATION",
-              "OTHER"
-            ],
-            "example": "ILLEGAL_DUMPSITE"
-          },
-          "address": {
-            "type": "string",
-            "description": "Dirección donde se denuncia el hecho",
-            "example": "Camino de Cintura 4500",
-            "maxLength": 200
-          },
-          "description": {
-            "type": "string",
-            "description": "Descripción del hallazgo. Opcional: los expedientes que abre un reclamo de M2 no la traen. Es interna: no se muestra en el portal ciudadano ni viaja en eventos.",
-            "example": "Acopio de escombros sobre la vereda, frente al número 4500.",
-            "maxLength": 2000
-          },
-          "lat": {
-            "type": "number",
-            "minimum": -90,
-            "maximum": 90,
-            "description": "Latitud",
-            "example": -34.7
-          },
-          "lng": {
-            "type": "number",
-            "minimum": -180,
-            "maximum": 180,
-            "description": "Longitud",
-            "example": -58.5
-          },
-          "ticketId": {
-            "type": "string",
-            "description": "Reclamo de M2 que originó el expediente. Si no viene, es una detección de oficio y no se proyecta nada hacia M2.",
-            "example": "TCK-2026-004821",
-            "maxLength": 64
-          },
-          "priority": {
-            "type": "string",
-            "description": "Prioridad asignada al expediente",
-            "enum": [
-              "LOW",
-              "MEDIUM",
-              "HIGH",
-              "CRITICAL"
-            ],
-            "example": "HIGH"
-          }
-        },
-        "required": [
-          "reportType"
-        ]
-      },
-      "EnvironmentalReportResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "UUID del expediente",
-            "format": "uuid"
-          },
-          "reportType": {
-            "type": "string",
-            "description": "Tipo de denuncia",
-            "enum": [
-              "NOISE",
-              "DUMPING",
-              "ILLEGAL_DUMPSITE",
-              "WATER_DISCHARGE",
-              "AIR_EMISSION",
-              "ODOR",
-              "PEST_INFESTATION",
-              "OTHER"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "description": "Estado del expediente",
-            "enum": [
-              "RECEIVED",
-              "UNDER_REVIEW",
-              "FORWARDED",
-              "DISMISSED",
-              "INSPECTION_SCHEDULED",
-              "INSPECTED",
-              "NO_VIOLATION",
-              "VIOLATION_FOUND",
-              "NOTICE_ISSUED",
-              "SANCTIONED",
-              "CLOSED"
-            ]
-          },
-          "address": {
-            "type": "string",
-            "description": "Dirección denunciada",
-            "nullable": true
-          },
-          "description": {
-            "type": "string",
-            "description": "Descripción del hallazgo. Null si no se cargó (los expedientes que abre M2 no la traen).",
-            "nullable": true
-          },
-          "lat": {
-            "type": "number",
-            "description": "Latitud",
-            "nullable": true
-          },
-          "lng": {
-            "type": "number",
-            "description": "Longitud",
-            "nullable": true
-          },
-          "ticketId": {
-            "type": "string",
-            "description": "Reclamo de M2 que lo originó. Null si es una detección de oficio.",
-            "nullable": true
-          },
-          "publicId": {
-            "type": "string",
-            "description": "Referencia humana del reclamo de M2, la que conoce el vecino. Solo para mostrar y buscar: no es credencial. Null en detecciones de oficio y en expedientes anteriores a la v1.70.",
-            "example": "TK-2026-000123",
-            "nullable": true
-          },
-          "priority": {
-            "type": "string",
-            "description": "Prioridad",
-            "enum": [
-              "LOW",
-              "MEDIUM",
-              "HIGH",
-              "CRITICAL"
-            ],
-            "nullable": true
-          },
-          "escalated": {
-            "type": "boolean",
-            "description": "Si M2 escaló el reclamo (al enrutar el reclamo o por un cambio de escalamiento posterior). Es para que lo vea el supervisor; M6 no lo modifica.",
-            "example": false
-          },
-          "citizenResponse": {
-            "type": "string",
-            "description": "Respuesta del vecino a nuestro pedido de información (ticketUpdated/INFORMATION_PROVIDED): el mensaje y, debajo, una línea `nombre: url` por adjunto. Null mientras no respondió.",
-            "example": "El ruido es del local de planta baja, después de las 23 h.",
-            "nullable": true
-          },
-          "deadlineAt": {
-            "type": "string",
-            "description": "Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.",
-            "format": "date-time",
-            "nullable": true
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Fecha de creación"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Fecha de última actualización"
-          }
-        },
-        "required": [
-          "id",
-          "reportType",
-          "status",
-          "escalated",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "ReportStatusChangeDto": {
-        "type": "object",
-        "properties": {
-          "reason": {
-            "type": "string",
-            "description": "Motivo del cambio de estado",
-            "example": "El hecho denunciado corresponde a Obras Públicas, no a Ambiente.",
-            "maxLength": 500
-          }
-        },
-        "required": [
-          "reason"
-        ]
-      },
       "CreateInspectionDto": {
         "type": "object",
         "properties": {
@@ -16655,6 +16457,204 @@
           "suggestedAction",
           "priorNoticeCount",
           "createdAt"
+        ]
+      },
+      "CreateEnvironmentalReportDto": {
+        "type": "object",
+        "properties": {
+          "reportType": {
+            "type": "string",
+            "description": "Tipo de denuncia ambiental",
+            "enum": [
+              "NOISE",
+              "DUMPING",
+              "ILLEGAL_DUMPSITE",
+              "WATER_DISCHARGE",
+              "AIR_EMISSION",
+              "ODOR",
+              "PEST_INFESTATION",
+              "OTHER"
+            ],
+            "example": "ILLEGAL_DUMPSITE"
+          },
+          "address": {
+            "type": "string",
+            "description": "Dirección donde se denuncia el hecho",
+            "example": "Camino de Cintura 4500",
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción del hallazgo. Opcional: los expedientes que abre un reclamo de M2 no la traen. Es interna: no se muestra en el portal ciudadano ni viaja en eventos.",
+            "example": "Acopio de escombros sobre la vereda, frente al número 4500.",
+            "maxLength": 2000
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Latitud",
+            "example": -34.7
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "description": "Longitud",
+            "example": -58.5
+          },
+          "ticketId": {
+            "type": "string",
+            "description": "Reclamo de M2 que originó el expediente. Si no viene, es una detección de oficio y no se proyecta nada hacia M2.",
+            "example": "TCK-2026-004821",
+            "maxLength": 64
+          },
+          "priority": {
+            "type": "string",
+            "description": "Prioridad asignada al expediente",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ],
+            "example": "HIGH"
+          }
+        },
+        "required": [
+          "reportType"
+        ]
+      },
+      "EnvironmentalReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID del expediente",
+            "format": "uuid"
+          },
+          "reportType": {
+            "type": "string",
+            "description": "Tipo de denuncia",
+            "enum": [
+              "NOISE",
+              "DUMPING",
+              "ILLEGAL_DUMPSITE",
+              "WATER_DISCHARGE",
+              "AIR_EMISSION",
+              "ODOR",
+              "PEST_INFESTATION",
+              "OTHER"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado del expediente",
+            "enum": [
+              "RECEIVED",
+              "UNDER_REVIEW",
+              "FORWARDED",
+              "DISMISSED",
+              "INSPECTION_SCHEDULED",
+              "INSPECTED",
+              "NO_VIOLATION",
+              "VIOLATION_FOUND",
+              "NOTICE_ISSUED",
+              "SANCTIONED",
+              "CLOSED"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "description": "Dirección denunciada",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción del hallazgo. Null si no se cargó (los expedientes que abre M2 no la traen).",
+            "nullable": true
+          },
+          "lat": {
+            "type": "number",
+            "description": "Latitud",
+            "nullable": true
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitud",
+            "nullable": true
+          },
+          "ticketId": {
+            "type": "string",
+            "description": "Reclamo de M2 que lo originó. Null si es una detección de oficio.",
+            "nullable": true
+          },
+          "publicId": {
+            "type": "string",
+            "description": "Referencia humana del reclamo de M2, la que conoce el vecino. Solo para mostrar y buscar: no es credencial. Null en detecciones de oficio y en expedientes anteriores a la v1.70.",
+            "example": "TK-2026-000123",
+            "nullable": true
+          },
+          "priority": {
+            "type": "string",
+            "description": "Prioridad",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ],
+            "nullable": true
+          },
+          "escalated": {
+            "type": "boolean",
+            "description": "Si M2 escaló el reclamo (al enrutar el reclamo o por un cambio de escalamiento posterior). Es para que lo vea el supervisor; M6 no lo modifica.",
+            "example": false
+          },
+          "citizenResponse": {
+            "type": "string",
+            "description": "Respuesta del vecino a nuestro pedido de información (ticketUpdated/INFORMATION_PROVIDED): el mensaje y, debajo, una línea `nombre: url` por adjunto. Null mientras no respondió.",
+            "example": "El ruido es del local de planta baja, después de las 23 h.",
+            "nullable": true
+          },
+          "deadlineAt": {
+            "type": "string",
+            "description": "Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fecha de creación"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fecha de última actualización"
+          }
+        },
+        "required": [
+          "id",
+          "reportType",
+          "status",
+          "escalated",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ReportStatusChangeDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo del cambio de estado",
+            "example": "El hecho denunciado corresponde a Obras Públicas, no a Ambiente.",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "CreateRepairRequestDto": {

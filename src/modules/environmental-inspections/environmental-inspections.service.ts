@@ -297,6 +297,54 @@ export class EnvironmentalInspectionsService {
     return `ACTA-${year}-${String(count + 1).padStart(6, '0')}`;
   }
 
+  // ─── Vínculo desde el alta de un servicio (POST /services con inspectionId) ───
+
+  /**
+   * Chequeo previo a la transacción del alta: la inspección existe, sigue
+   * abierta, no tiene servicio y el servicio es POINT. La garantía real la da
+   * `linkService`; esto sólo corta antes de crear nada.
+   */
+  async assertLinkable(inspectionId: string, mode: ServiceMode): Promise<void> {
+    const inspection = await this.prisma.environmentalInspection.findUnique({
+      where: { id: inspectionId },
+      select: { serviceId: true, outcome: true },
+    });
+    if (!inspection) {
+      throw new NotFoundException(`Inspección con id '${inspectionId}' no encontrada`);
+    }
+    // Una inspección cerrada ya se hizo: programarle un servicio no tiene sentido.
+    if (inspection.outcome) {
+      throw new ConflictException(
+        `La inspección '${inspectionId}' ya fue cerrada con resultado ${inspection.outcome} y no admite un servicio nuevo`,
+      );
+    }
+    if (inspection.serviceId) {
+      throw new ConflictException(`La inspección '${inspectionId}' ya tiene un servicio asignado`);
+    }
+    this.assertPointMode(mode);
+  }
+
+  /**
+   * Fija `serviceId` dentro de la transacción del alta del servicio. El filtro
+   * `serviceId: null, outcome: null` es el guard contra otra alta o un
+   * `complete` concurrentes: si no matchea, el 409 revierte todo el alta.
+   */
+  async linkService(
+    tx: Prisma.TransactionClient,
+    inspectionId: string,
+    serviceId: string,
+  ): Promise<void> {
+    const { count } = await tx.environmentalInspection.updateMany({
+      where: { id: inspectionId, serviceId: null, outcome: null },
+      data: { serviceId },
+    });
+    if (count === 0) {
+      throw new ConflictException(
+        `La inspección '${inspectionId}' ya tiene un servicio asignado o ya fue cerrada`,
+      );
+    }
+  }
+
   private async assertPointService(serviceId: string): Promise<void> {
     const service = await this.prisma.service.findUnique({
       where: { id: serviceId },
@@ -305,9 +353,13 @@ export class EnvironmentalInspectionsService {
     if (!service) {
       throw new NotFoundException(`Servicio con id '${serviceId}' no encontrado`);
     }
-    if (service.mode !== ServiceMode.POINT) {
+    this.assertPointMode(service.mode);
+  }
+
+  private assertPointMode(mode: ServiceMode): void {
+    if (mode !== ServiceMode.POINT) {
       throw new BadRequestException(
-        `Una inspección ambiental se ejecuta sobre un objetivo puntual, así que el servicio tiene que ser de modo POINT (este es ${service.mode})`,
+        `Una inspección ambiental se ejecuta sobre un objetivo puntual, así que el servicio tiene que ser de modo POINT (este es ${mode})`,
       );
     }
   }

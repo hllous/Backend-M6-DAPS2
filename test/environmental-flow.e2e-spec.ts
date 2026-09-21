@@ -178,4 +178,67 @@ describe('Flujo del expediente ambiental (e2e)', () => {
 
     expect(res.status).toBe(409);
   });
+
+  describe('vínculo servicio → inspección (#218)', () => {
+    /** Expediente nuevo con una inspección abierta y sin servicio. */
+    const inspeccionAbierta = async (): Promise<string> => {
+      const r = await api.post('/environmental-reports', { reportType: 'NOISE' }).expect(201);
+      await api.post(`/environmental-reports/${r.body.id}/start-review`).expect(200);
+      const insp = await api.post(`/environmental-reports/${r.body.id}/inspections`).expect(201);
+      return insp.body.id;
+    };
+
+    const altaInspeccion = async (id: string) => {
+      const zona = await crearZona(api);
+      const tipo = await crearTipoServicio(api, {
+        category: 'ENVIRONMENTAL_CONTROL',
+        mode: 'POINT',
+      });
+      return {
+        serviceTypeId: tipo.id,
+        scheduledDate: hoy(),
+        origin: 'INSPECTION',
+        zoneId: zona.id,
+        inspectionId: id,
+      };
+    };
+
+    it('no programa un servicio para una inspección ya cerrada', async () => {
+      const id = await inspeccionAbierta();
+      await api
+        .post(`/environmental-inspections/${id}/complete`, {
+          inspectedAt: new Date().toISOString(),
+          outcome: 'NO_VIOLATION',
+        })
+        .expect(200);
+
+      const res = await api.post('/services', await altaInspeccion(id)).expect(409);
+
+      expect(res.body.message).toMatch(/cerrada/);
+      const inspeccion = await prisma.environmentalInspection.findUniqueOrThrow({ where: { id } });
+      expect(inspeccion.serviceId).toBeNull();
+    });
+
+    it('con altas concurrentes sobre la misma inspección gana una sola', async () => {
+      const id = await inspeccionAbierta();
+      const body = await altaInspeccion(id);
+      const servicios0 = await prisma.service.count();
+      const eventos = () =>
+        prisma.outboxEvent.count({ where: { eventType: 'urbanServiceScheduled' } });
+      const eventos0 = await eventos();
+
+      // Todas pasan el chequeo previo a la vez: lo que decide es el updateMany
+      // condicionado dentro de la transacción de cada alta.
+      const res = await Promise.all(Array.from({ length: 12 }, () => api.post('/services', body)));
+      const codigos = res.map((r) => r.status);
+
+      expect(codigos.filter((c) => c === 201)).toHaveLength(1);
+      expect(codigos.filter((c) => c === 409)).toHaveLength(11);
+      expect(await prisma.service.count()).toBe(servicios0 + 1);
+      expect(await eventos()).toBe(eventos0 + 1);
+      const ganador = res.find((r) => r.status === 201)!;
+      const inspeccion = await prisma.environmentalInspection.findUniqueOrThrow({ where: { id } });
+      expect(inspeccion.serviceId).toBe(ganador.body.id);
+    });
+  });
 });

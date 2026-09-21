@@ -75,7 +75,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
       ),
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    service = new ServicesService(prisma as unknown as PrismaService, outbox);
+    service = new ServicesService(prisma as unknown as PrismaService, outbox, {} as never);
   });
 
   /** Los argumentos con los que se actualizo el contenedor. */

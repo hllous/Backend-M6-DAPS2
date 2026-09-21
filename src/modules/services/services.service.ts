@@ -23,6 +23,7 @@ import { CONTAINER_TRANSITIONS } from '../containers/containers.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
+import { EnvironmentalInspectionsService } from '../environmental-inspections/environmental-inspections.service';
 import {
   AssignCrewDto,
   AssignmentConflictDto,
@@ -165,6 +166,7 @@ export class ServicesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly inspections: EnvironmentalInspectionsService,
   ) {}
 
   // ─── Programación ─────────────────────────────────
@@ -195,7 +197,7 @@ export class ServicesService {
         : await this.resolvePointZone(dto);
 
     await this.assertResourcesExist(dto.crewId, dto.vehicleId);
-    if (dto.inspectionId) await this.assertInspectionLinkable(dto.inspectionId, mode);
+    if (dto.inspectionId) await this.inspections.assertLinkable(dto.inspectionId, mode);
 
     // Mismo criterio que assign-crew: programar con recursos ya tomados no se
     // puede en silencio. Va antes de la transaccion: no hay lock, asi que dos
@@ -226,8 +228,9 @@ export class ServicesService {
           windowTo: toTime(dto.windowTo),
           crewId: dto.crewId ?? null,
           vehicleId: dto.vehicleId ?? null,
-          ticketId: dto.ticketId ?? null,
-          weatherAlertId: dto.weatherAlertId ?? null,
+          // || y no ??: un id vacío ("" tras el Trim) es lo mismo que no mandarlo.
+          ticketId: dto.ticketId || null,
+          weatherAlertId: dto.weatherAlertId || null,
           notes: dto.notes ?? null,
           createdBy: createdBy ?? null,
           ...(conflictos.length > 0 &&
@@ -244,13 +247,7 @@ export class ServicesService {
       });
 
       if (dto.inspectionId) {
-        // Condicionado a que siga libre: si otra alta la tomo entre el chequeo
-        // y aca, se revierte todo el alta.
-        const { count } = await tx.environmentalInspection.updateMany({
-          where: { id: dto.inspectionId, serviceId: null },
-          data: { serviceId: created.id },
-        });
-        if (count === 0) throw this.inspectionTaken(dto.inspectionId);
+        await this.inspections.linkService(tx, dto.inspectionId, created.id);
         created.inspection = { id: dto.inspectionId };
       }
 
@@ -1010,27 +1007,6 @@ export class ServicesService {
         `'weatherAlertId' solo corresponde con origin = WEATHER_ALERT (este es ${dto.origin})`,
       );
     }
-  }
-
-  /** Mismas reglas que programar la inspeccion con serviceId: existe, esta libre y el servicio es POINT. */
-  private async assertInspectionLinkable(inspectionId: string, mode: ServiceMode): Promise<void> {
-    const inspection = await this.prisma.environmentalInspection.findUnique({
-      where: { id: inspectionId },
-      select: { serviceId: true },
-    });
-    if (!inspection) {
-      throw new NotFoundException(`Inspección con id '${inspectionId}' no encontrada`);
-    }
-    if (inspection.serviceId) throw this.inspectionTaken(inspectionId);
-    if (mode !== ServiceMode.POINT) {
-      throw new BadRequestException(
-        `Una inspección ambiental se ejecuta sobre un objetivo puntual, así que el servicio tiene que ser de modo POINT (este es ${mode})`,
-      );
-    }
-  }
-
-  private inspectionTaken(inspectionId: string): ConflictException {
-    return new ConflictException(`La inspección '${inspectionId}' ya tiene un servicio asignado`);
   }
 
   private assertWindowOrder(from?: string | null, to?: string | null): void {

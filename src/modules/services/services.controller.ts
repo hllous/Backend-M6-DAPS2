@@ -60,7 +60,7 @@ export class ServicesController {
   @ApiResponse({
     status: 400,
     description:
-      'Datos inválidos: falta routeId en un ROUTE, falta objetivo o zona en un POINT, recorrido sin paradas, ticketId inconsistente con el origen, ventana horaria invertida, o recurso dado de baja',
+      'Datos inválidos: falta routeId en un ROUTE, falta objetivo o zona en un POINT, recorrido sin paradas, ticketId inconsistente con el origen, inspectionId sin origin = INSPECTION o weatherAlertId sin origin = WEATHER_ALERT, inspectionId con un tipo de servicio que no es POINT, ventana horaria invertida, o recurso dado de baja',
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
@@ -68,13 +68,13 @@ export class ServicesController {
   @ApiResponse({
     status: 404,
     description:
-      'El tipo de servicio, el recorrido, el objetivo, la cuadrilla o el vehículo no existe',
+      'El tipo de servicio, el recorrido, el objetivo, la cuadrilla, el vehículo o la inspección (inspectionId) no existe',
     type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 409,
     description:
-      'La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa y falta `overrideNote`',
+      'La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)

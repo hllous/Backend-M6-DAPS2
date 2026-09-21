@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ServicesService } from './services.service';
+import { EnvironmentalInspectionsService } from '../environmental-inspections/environmental-inspections.service';
 import { ServiceTargetType } from './dto';
 
 const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
@@ -106,7 +107,7 @@ describe('ServicesService', () => {
       },
       outboxEvent: { create: jest.fn(), createMany: jest.fn() },
       environmentalInspection: {
-        findUnique: jest.fn().mockResolvedValue({ serviceId: null }),
+        findUnique: jest.fn().mockResolvedValue({ serviceId: null, outcome: null }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       // El $transaction real acepta un array de operaciones o un callback.
@@ -128,7 +129,15 @@ describe('ServicesService', () => {
       },
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    service = new ServicesService(prisma as unknown as PrismaService, outbox);
+    // La regla del vínculo vive en el módulo de inspecciones: se usa la real
+    // sobre el mismo prisma mockeado; reports y config no se tocan en el alta.
+    const inspections = new EnvironmentalInspectionsService(
+      prisma as unknown as PrismaService,
+      outbox as never,
+      {} as never,
+      {} as never,
+    );
+    service = new ServicesService(prisma as unknown as PrismaService, outbox, inspections);
   });
 
   const baseDto = {
@@ -299,7 +308,7 @@ describe('ServicesService', () => {
         const res = await service.create(inspeccionDto);
 
         expect(prisma.environmentalInspection.updateMany).toHaveBeenCalledWith({
-          where: { id: INSPECTION_ID, serviceId: null },
+          where: { id: INSPECTION_ID, serviceId: null, outcome: null },
           data: { serviceId: SERVICE_ID },
         });
         expect(prisma.service.create.mock.calls[0][0].data).not.toHaveProperty('inspectionId');
@@ -316,10 +325,36 @@ describe('ServicesService', () => {
 
       it('409 si la inspección ya tiene servicio', async () => {
         pointType();
-        prisma.environmentalInspection.findUnique.mockResolvedValue({ serviceId: 'otro' });
+        prisma.environmentalInspection.findUnique.mockResolvedValue({
+          serviceId: 'otro',
+          outcome: null,
+        });
 
         await expect(service.create(inspeccionDto)).rejects.toThrow(ConflictException);
         expect(prisma.service.create).not.toHaveBeenCalled();
+      });
+
+      it('409 si la inspección ya fue cerrada, aunque no tenga servicio', async () => {
+        pointType();
+        prisma.environmentalInspection.findUnique.mockResolvedValue({
+          serviceId: null,
+          outcome: 'NO_VIOLATION',
+        });
+
+        await expect(service.create(inspeccionDto)).rejects.toThrow(/ya fue cerrada/);
+        expect(prisma.service.create).not.toHaveBeenCalled();
+      });
+
+      it('guarda un weatherAlertId o ticketId vacío como null', async () => {
+        await service.create({
+          ...baseDto,
+          origin: ServiceOrigin.WEATHER_ALERT,
+          weatherAlertId: '',
+        });
+        await service.create({ ...baseDto, origin: ServiceOrigin.PLANNED, ticketId: '' });
+
+        expect(prisma.service.create.mock.calls[0][0].data.weatherAlertId).toBeNull();
+        expect(prisma.service.create.mock.calls[1][0].data.ticketId).toBeNull();
       });
 
       it('409 si otra alta tomó la inspección entre el chequeo y la transacción', async () => {

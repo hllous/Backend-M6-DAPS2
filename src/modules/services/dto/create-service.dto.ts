@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MAX_EXTERNAL_ID_LENGTH, MAX_NOTES_LENGTH } from '../../../common/decorators';
+import { MAX_EXTERNAL_ID_LENGTH, MAX_NOTES_LENGTH, Trim } from '../../../common/decorators';
 import { ServiceOrigin } from '@prisma/client';
 import {
   IsDateString,
@@ -135,13 +135,14 @@ export class CreateServiceDto {
     maxLength: 64,
   })
   @IsOptional()
+  @Trim()
   @IsString()
   @MaxLength(64)
   ticketId?: string;
 
   @ApiPropertyOptional({
     description:
-      'Inspección ambiental que va a ejecutar este servicio. Solo con origin = INSPECTION, y el tipo de servicio tiene que ser POINT. La inspección tiene que existir (404) y no tener otro servicio (409). El vínculo se guarda en la inspección, igual que al programarla con `serviceId`.',
+      'Inspección ambiental que va a ejecutar este servicio. Solo con origin = INSPECTION, y el tipo de servicio tiene que ser POINT. La inspección tiene que existir (404), seguir abierta y no tener otro servicio (409). El vínculo se guarda en la inspección, igual que al programarla con `serviceId`.',
     example: '0b1c2d3e-4f5a-6789-abcd-ef0123456789',
     format: 'uuid',
   })
@@ -156,6 +157,7 @@ export class CreateServiceDto {
     maxLength: MAX_EXTERNAL_ID_LENGTH,
   })
   @IsOptional()
+  @Trim()
   @IsString()
   @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   weatherAlertId?: string;
