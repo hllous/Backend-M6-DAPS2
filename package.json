@@ -99,6 +99,7 @@
       "!**/dto/**",
       "!**/index.ts",
       "!main.ts",
+      "!configure-app.ts",
       "!config/**",
       "!prisma/**"
     ],

@@ -87,6 +87,17 @@ export class EnvironmentalInspectionsService {
    * inspección.
    */
   async complete(id: string, dto: CompleteInspectionDto): Promise<InspectionResponseDto> {
+    // Margen de 5 minutos por desfase de reloj entre el dispositivo del inspector y el servidor.
+    if (new Date(dto.inspectedAt).getTime() > Date.now() + 5 * 60_000) {
+      throw new BadRequestException(
+        `'inspectedAt' (${dto.inspectedAt}) no puede estar en el futuro`,
+      );
+    }
+    if (dto.outcome === InspectionOutcome.VIOLATION_FOUND && !dto.nextStep) {
+      throw new BadRequestException(
+        "Un resultado VIOLATION_FOUND necesita 'nextStep' (NOTICE_TO_BE_ISSUED, REINSPECTION o CASE_CLOSED)",
+      );
+    }
     const inspection = await this.getInspection(id);
     if (inspection.outcome) {
       throw new ConflictException(
@@ -105,6 +116,11 @@ export class EnvironmentalInspectionsService {
           outcome: dto.outcome,
           nextStep: dto.nextStep ?? null,
           findings: dto.findings ?? null,
+          // Trim deja "" un texto de solo espacios: se guarda null, como la description del expediente.
+          conclusion: dto.conclusion || null,
+          violationType: dto.violationType ?? null,
+          severity: dto.severity ?? null,
+          suggestedAction: dto.suggestedAction ?? null,
           ...(dto.checklist && {
             checklistItems: {
               deleteMany: {},
@@ -281,6 +297,54 @@ export class EnvironmentalInspectionsService {
     return `ACTA-${year}-${String(count + 1).padStart(6, '0')}`;
   }
 
+  // ─── Vínculo desde el alta de un servicio (POST /services con inspectionId) ───
+
+  /**
+   * Chequeo previo a la transacción del alta: la inspección existe, sigue
+   * abierta, no tiene servicio y el servicio es POINT. La garantía real la da
+   * `linkService`; esto sólo corta antes de crear nada.
+   */
+  async assertLinkable(inspectionId: string, mode: ServiceMode): Promise<void> {
+    const inspection = await this.prisma.environmentalInspection.findUnique({
+      where: { id: inspectionId },
+      select: { serviceId: true, outcome: true },
+    });
+    if (!inspection) {
+      throw new NotFoundException(`Inspección con id '${inspectionId}' no encontrada`);
+    }
+    // Una inspección cerrada ya se hizo: programarle un servicio no tiene sentido.
+    if (inspection.outcome) {
+      throw new ConflictException(
+        `La inspección '${inspectionId}' ya fue cerrada con resultado ${inspection.outcome} y no admite un servicio nuevo`,
+      );
+    }
+    if (inspection.serviceId) {
+      throw new ConflictException(`La inspección '${inspectionId}' ya tiene un servicio asignado`);
+    }
+    this.assertPointMode(mode);
+  }
+
+  /**
+   * Fija `serviceId` dentro de la transacción del alta del servicio. El filtro
+   * `serviceId: null, outcome: null` es el guard contra otra alta o un
+   * `complete` concurrentes: si no matchea, el 409 revierte todo el alta.
+   */
+  async linkService(
+    tx: Prisma.TransactionClient,
+    inspectionId: string,
+    serviceId: string,
+  ): Promise<void> {
+    const { count } = await tx.environmentalInspection.updateMany({
+      where: { id: inspectionId, serviceId: null, outcome: null },
+      data: { serviceId },
+    });
+    if (count === 0) {
+      throw new ConflictException(
+        `La inspección '${inspectionId}' ya tiene un servicio asignado o ya fue cerrada`,
+      );
+    }
+  }
+
   private async assertPointService(serviceId: string): Promise<void> {
     const service = await this.prisma.service.findUnique({
       where: { id: serviceId },
@@ -289,9 +353,13 @@ export class EnvironmentalInspectionsService {
     if (!service) {
       throw new NotFoundException(`Servicio con id '${serviceId}' no encontrado`);
     }
-    if (service.mode !== ServiceMode.POINT) {
+    this.assertPointMode(service.mode);
+  }
+
+  private assertPointMode(mode: ServiceMode): void {
+    if (mode !== ServiceMode.POINT) {
       throw new BadRequestException(
-        `Una inspección ambiental se ejecuta sobre un objetivo puntual, así que el servicio tiene que ser de modo POINT (este es ${service.mode})`,
+        `Una inspección ambiental se ejecuta sobre un objetivo puntual, así que el servicio tiene que ser de modo POINT (este es ${mode})`,
       );
     }
   }
@@ -317,6 +385,10 @@ export class EnvironmentalInspectionsService {
       findings: inspection.findings,
       outcome: inspection.outcome,
       nextStep: inspection.nextStep,
+      conclusion: inspection.conclusion,
+      violationType: inspection.violationType,
+      severity: inspection.severity,
+      suggestedAction: inspection.suggestedAction,
       checklistItems: inspection.checklistItems.map((i) => ({
         id: i.id,
         itemCode: i.itemCode,

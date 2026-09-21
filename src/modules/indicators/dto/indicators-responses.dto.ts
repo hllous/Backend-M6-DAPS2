@@ -81,7 +81,7 @@ export class ComplianceFinishedDto {
 }
 
 export class ReasonCountDto {
-  @ApiProperty({ enum: NotServicedReason })
+  @ApiProperty({ enum: NotServicedReason, nullable: true })
   reason: NotServicedReason | null;
 
   @ApiProperty({ example: 4 })

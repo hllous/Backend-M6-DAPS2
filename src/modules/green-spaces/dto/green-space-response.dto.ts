@@ -29,15 +29,17 @@ export class GreenSpaceResponseDto {
   })
   zoneId: string;
 
-  @ApiPropertyOptional({ description: 'Latitud', example: -34.5724, nullable: true })
+  @ApiPropertyOptional({ description: 'Latitud', example: -34.5724, nullable: true, type: Number })
   lat: number | null;
 
-  @ApiPropertyOptional({ description: 'Longitud', example: -58.4166, nullable: true })
+  @ApiPropertyOptional({ description: 'Longitud', example: -58.4166, nullable: true, type: Number })
   lng: number | null;
 
   @ApiPropertyOptional({
     description: 'Superficie en metros cuadrados',
     example: 12500.5,
+    type: Number,
+    nullable: true,
   })
   areaM2: number | null;
 

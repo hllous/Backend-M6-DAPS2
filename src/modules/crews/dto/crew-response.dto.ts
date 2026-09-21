@@ -40,12 +40,16 @@ export class CrewResponseDto {
   @ApiPropertyOptional({
     description: 'ID del usuario líder',
     example: 'usr-00001',
+    type: String,
+    nullable: true,
   })
   leaderUserId: string | null;
 
   @ApiPropertyOptional({
     description: 'ID de la organización (cooperativa/contratista)',
     example: 'org-coop-recicladores',
+    type: String,
+    nullable: true,
   })
   organizationId: string | null;
 

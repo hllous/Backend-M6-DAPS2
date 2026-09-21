@@ -147,6 +147,53 @@ describe('ContainersService', () => {
       });
     });
 
+    it.each([
+      ['empty', [C.ACTIVE, C.RELOCATING, C.DAMAGED, C.UNDER_REPAIR, C.REMOVED]],
+      ['completeRepair', [C.ACTIVE, C.OVERFLOWED, C.RELOCATING, C.DAMAGED, C.REMOVED]],
+      ['confirmRelocation', [C.ACTIVE, C.OVERFLOWED, C.DAMAGED, C.UNDER_REPAIR, C.REMOVED]],
+    ] as const)(
+      '%s da 409 desde un origen que no es el suyo y no escribe',
+      async (accion, malos) => {
+        for (const estado of malos) {
+          desde(estado);
+          const run = () =>
+            accion === 'confirmRelocation'
+              ? service.confirmRelocation(ID, { address: 'X 1' } as any)
+              : service[accion](ID);
+          await expect(run()).rejects.toBeInstanceOf(ConflictException);
+        }
+        expect(prisma.container.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      ['empty', C.OVERFLOWED],
+      ['completeRepair', C.UNDER_REPAIR],
+    ] as const)('%s escribe condicionado al estado leído', async (accion, estado) => {
+      desde(estado);
+      await service[accion](ID);
+
+      expect(prisma.container.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: ID, status: estado } }),
+      );
+    });
+
+    it('confirmRelocation escribe condicionado al estado leído', async () => {
+      desde(C.RELOCATING);
+      await service.confirmRelocation(ID, { address: 'X 1' } as any);
+
+      expect(prisma.container.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: ID, status: C.RELOCATING } }),
+      );
+    });
+
+    it('si el estado cambió entre la lectura y la escritura da 409', async () => {
+      desde(C.OVERFLOWED);
+      prisma.container.update.mockRejectedValue(prismaError('P2025'));
+
+      await expect(service.empty(ID)).rejects.toBeInstanceOf(ConflictException);
+    });
+
     it('startRepair y remove salen los dos de DAMAGED', async () => {
       desde(C.DAMAGED);
       await expect(service.startRepair(ID)).resolves.toMatchObject({ status: C.UNDER_REPAIR });

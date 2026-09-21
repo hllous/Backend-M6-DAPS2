@@ -13,6 +13,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { MAX_WEEKDAY, MIN_WEEKDAY } from '../../../common/decorators/numeric-limits';
 
 export class CreateServiceFrequencyDto {
   @ApiProperty({
@@ -37,14 +38,16 @@ export class CreateServiceFrequencyDto {
     type: [Number],
     minItems: 1,
     maxItems: 7,
+    minimum: MIN_WEEKDAY,
+    maximum: MAX_WEEKDAY,
   })
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(7)
   @ArrayUnique()
   @IsInt({ each: true })
-  @Min(1, { each: true })
-  @Max(7, { each: true })
+  @Min(MIN_WEEKDAY, { each: true })
+  @Max(MAX_WEEKDAY, { each: true })
   weekdays: number[];
 
   @ApiProperty({ description: 'Turno de ejecución', enum: Shift, example: Shift.MORNING })

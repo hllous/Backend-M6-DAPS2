@@ -1,10 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsBoolean, IsString, IsDateString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsDateString, MaxLength } from 'class-validator';
+import { ToBoolean, MAX_EXTERNAL_ID_LENGTH } from '../../../../common/decorators';
 import { TreeHealthStatus, RiskLevel, RiskType, TreeInterventionType } from '@prisma/client';
 
 export class CreateTreeSurveyDto {
   @ApiProperty({
-    description: 'Fecha y hora del relevamiento fitosanitario',
+    description:
+      'Fecha y hora del relevamiento fitosanitario (no puede ser posterior a hoy en huso Argentina)',
     example: '2026-08-15T09:30:00.000Z',
     format: 'date-time',
   })
@@ -28,7 +30,8 @@ export class CreateTreeSurveyDto {
   riskLevel: RiskLevel;
 
   @ApiPropertyOptional({
-    description: 'Tipo de riesgo detectado (requerido si riskLevel >= HIGH)',
+    description:
+      'Tipo de riesgo detectado (obligatorio si riskLevel es HIGH o CRITICAL, si no responde 400)',
     enum: RiskType,
     example: RiskType.FALLING_BRANCH,
   })
@@ -46,11 +49,13 @@ export class CreateTreeSurveyDto {
   suggestedIntervention?: TreeInterventionType;
 
   @ApiPropertyOptional({
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
     description: 'ID del inspector que realizó el relevamiento (usuario interno M6)',
     example: 'usr-00015',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   inspectorId?: string;
 
   @ApiPropertyOptional({
@@ -59,7 +64,7 @@ export class CreateTreeSurveyDto {
     default: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   requiresStreetClosure?: boolean;
 
   @ApiPropertyOptional({
@@ -68,7 +73,7 @@ export class CreateTreeSurveyDto {
     default: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   requiresPublicWorks?: boolean;
 
   @ApiPropertyOptional({

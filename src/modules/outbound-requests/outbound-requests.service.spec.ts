@@ -1,10 +1,11 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import {
   RepairDamageType,
   RepairRequestStatus,
   Severity,
   StreetClosureRequestStatus,
   StreetClosureType,
+  TreeInterventionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboundRequestsService } from './outbound-requests.service';
@@ -71,6 +72,10 @@ describe('OutboundRequestsService', () => {
         count: jest.fn(),
       },
       service: { findUnique: jest.fn().mockResolvedValue({ ticketId: null }) },
+      treeIntervention: {
+        findUnique: jest.fn().mockResolvedValue({ id: SERVICE_ID, status: 'AUTHORIZED' }),
+      },
+      environmentalInspection: { findUnique: jest.fn().mockResolvedValue({ id: SERVICE_ID }) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
@@ -126,6 +131,44 @@ describe('OutboundRequestsService', () => {
       expect(enqueued().payload).not.toHaveProperty('ticketId');
     });
 
+    it.each([
+      [
+        'SERVICE',
+        DetectedInType.SERVICE,
+        'service',
+        `Servicio con id '${SERVICE_ID}' no encontrado`,
+      ],
+      [
+        'INSPECTION',
+        DetectedInType.INSPECTION,
+        'environmentalInspection',
+        `Inspección con id '${SERVICE_ID}' no encontrada`,
+      ],
+    ])(
+      'origen %s inexistente: 404 y no se crea ni se encola nada',
+      async (_n, type, model, message) => {
+        prisma[model].findUnique.mockResolvedValue(null);
+
+        await expect(service.createRepairRequest({ ...dto, detectedInType: type })).rejects.toThrow(
+          new NotFoundException(message),
+        );
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+        expect(prisma.repairRequest.create).not.toHaveBeenCalled();
+        expect(outbox.enqueue).not.toHaveBeenCalled();
+      },
+    );
+
+    it('origen INSPECTION existente: se crea y se encola', async () => {
+      await service.createRepairRequest({ ...dto, detectedInType: DetectedInType.INSPECTION });
+
+      expect(prisma.environmentalInspection.findUnique).toHaveBeenCalledWith({
+        where: { id: SERVICE_ID },
+        select: { id: true },
+      });
+      expect(prisma.service.findUnique).not.toHaveBeenCalled();
+      expect(outbox.enqueue).toHaveBeenCalledTimes(1);
+    });
+
     it('la fila y el evento se escriben en la misma transaccion', async () => {
       await service.createRepairRequest(dto);
 
@@ -147,6 +190,80 @@ describe('OutboundRequestsService', () => {
       requestedTo: '2026-10-05T13:00:00.000Z',
       closureType: StreetClosureType.PARTIAL,
     };
+
+    it('un corte que termina antes de empezar se rechaza', async () => {
+      await expect(
+        service.createClosureRequest({
+          ...dto,
+          requestedFrom: '2026-10-05T13:00:00.000Z',
+          requestedTo: '2026-10-05T07:00:00.000Z',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.streetClosureRequest.create).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [
+        'SERVICE',
+        ClosureSourceType.SERVICE,
+        'service',
+        `Servicio con id '${SERVICE_ID}' no encontrado`,
+      ],
+      [
+        'TREE_INTERVENTION',
+        ClosureSourceType.TREE_INTERVENTION,
+        'treeIntervention',
+        `Intervención con id '${SERVICE_ID}' no encontrada`,
+      ],
+    ])(
+      'origen %s inexistente: 404 y no se crea ni se encola nada',
+      async (_n, type, model, message) => {
+        prisma[model].findUnique.mockResolvedValue(null);
+
+        await expect(service.createClosureRequest({ ...dto, sourceType: type })).rejects.toThrow(
+          new NotFoundException(message),
+        );
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+        expect(prisma.streetClosureRequest.create).not.toHaveBeenCalled();
+        expect(outbox.enqueue).not.toHaveBeenCalled();
+      },
+    );
+
+    it('intervención AUTHORIZED: se crea y se encola', async () => {
+      await service.createClosureRequest(dto);
+
+      expect(prisma.treeIntervention.findUnique).toHaveBeenCalledWith({
+        where: { id: SERVICE_ID },
+        select: { id: true, status: true },
+      });
+      expect(outbox.enqueue).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(
+      Object.values(TreeInterventionStatus).filter((s) => s !== TreeInterventionStatus.AUTHORIZED),
+    )('intervención en %s: 409 y no se crea ni se encola nada', async (status) => {
+      prisma.treeIntervention.findUnique.mockResolvedValue({ id: SERVICE_ID, status });
+
+      await expect(service.createClosureRequest(dto)).rejects.toThrow(
+        new ConflictException(
+          `La intervención '${SERVICE_ID}' está en estado ${status}: solo se puede pedir un corte de una intervención autorizada`,
+        ),
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.streetClosureRequest.create).not.toHaveBeenCalled();
+      expect(outbox.enqueue).not.toHaveBeenCalled();
+    });
+
+    it('origen SERVICE existente: se crea y se encola', async () => {
+      await service.createClosureRequest({ ...dto, sourceType: ClosureSourceType.SERVICE });
+
+      expect(prisma.service.findUnique).toHaveBeenCalledWith({
+        where: { id: SERVICE_ID },
+        select: { id: true },
+      });
+      expect(prisma.treeIntervention.findUnique).not.toHaveBeenCalled();
+      expect(outbox.enqueue).toHaveBeenCalledTimes(1);
+    });
 
     it('sourceModule viaja como M6, que es lo que dice la tabla de M7', async () => {
       await service.createClosureRequest(dto);
@@ -398,19 +515,5 @@ describe('OutboundRequestsService', () => {
         expect(prisma.repairRequest.update).not.toHaveBeenCalled();
       },
     );
-
-    it('ticketOfOrigin no encuentra el servicio: no rompe, ticketId queda undefined', async () => {
-      prisma.service.findUnique.mockResolvedValue(null);
-
-      await service.createRepairRequest({
-        damageType: RepairDamageType.BLOCKED_DRAIN,
-        severity: Severity.HIGH,
-        publicSafetyRisk: true,
-        detectedInType: DetectedInType.SERVICE,
-        detectedInId: SERVICE_ID,
-      });
-
-      expect(enqueued().payload).not.toHaveProperty('ticketId');
-    });
   });
 });

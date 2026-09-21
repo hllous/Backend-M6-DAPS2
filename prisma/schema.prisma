@@ -460,6 +460,9 @@ model Service {
   statusReason           String?       @map("status_reason")
   origin                 ServiceOrigin
   ticketId               String?       @map("ticket_id") // EXT M2
+  // Alerta meteorologica que lo origino. No hay tabla de alertas (la alerta es
+  // simulada y no se persiste), asi que es una referencia externa sin FK.
+  weatherAlertId         String?       @map("weather_alert_id")
   notes                  String?       @db.Text
   // Por que se asigno una cuadrilla o un vehiculo que ya estaba tomado. Se
   // exige cuando hay solapamiento: la asignacion avisa y deja pasar, pero no
@@ -753,6 +756,9 @@ model EnvironmentalReport {
   id               String                    @id @default(uuid()) @db.Uuid
   reportType       EnvironmentalReportType   @map("report_type")
   address          String?
+  // Descripcion del hallazgo. Interna: puede traer datos personales, no va al
+  // portal ciudadano ni a los eventos. Null en los que llegan de M2.
+  description      String?                   @db.Text
   lat              Decimal?                  @db.Decimal(10, 7)
   lng              Decimal?                  @db.Decimal(10, 7)
   ticketId         String?                   @map("ticket_id") // EXT M2
@@ -780,16 +786,22 @@ model EnvironmentalReport {
 }
 
 model EnvironmentalInspection {
-  id          String              @id @default(uuid()) @db.Uuid
-  reportId    String              @map("report_id") @db.Uuid
-  serviceId   String?             @unique @map("service_id") @db.Uuid
-  inspectorId String?             @map("inspector_id") // EXT M1 — interno
-  inspectedAt DateTime?           @map("inspected_at")
-  findings    String?             @db.Text // interno
-  outcome     InspectionOutcome?
-  nextStep    InspectionNextStep? @map("next_step")
-  createdAt   DateTime            @default(now()) @map("created_at")
-  updatedAt   DateTime            @updatedAt @map("updated_at")
+  id              String              @id @default(uuid()) @db.Uuid
+  reportId        String              @map("report_id") @db.Uuid
+  serviceId       String?             @unique @map("service_id") @db.Uuid
+  inspectorId     String?             @map("inspector_id") // EXT M1 — interno
+  inspectedAt     DateTime?           @map("inspected_at")
+  findings        String?             @db.Text // interno
+  outcome         InspectionOutcome?
+  nextStep        InspectionNextStep? @map("next_step")
+  // Lo que el inspector deja al cerrar (#217). Los tres de infracción son
+  // orientativos: el acta los vuelve a pedir y es la que vale ante M4.
+  conclusion      String?             @db.Text // interno
+  violationType   ViolationType?      @map("violation_type")
+  severity        Severity?
+  suggestedAction SuggestedAction?    @map("suggested_action")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
 
   report          EnvironmentalReport @relation(fields: [reportId], references: [id])
   service         Service?            @relation(fields: [serviceId], references: [id])

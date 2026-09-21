@@ -1,6 +1,17 @@
+import { Trim, MAX_REASON_LENGTH } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DelayType, ServiceStatus } from '@prisma/client';
-import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  IsNotEmpty,
+  MaxLength,
+} from 'class-validator';
 
 /**
  * El aviso de que un servicio va con retraso.
@@ -36,12 +47,15 @@ export class CreateDelayNoticeDto {
   delayMinutes: number;
 
   @ApiProperty({
+    maxLength: MAX_REASON_LENGTH,
     description:
       'Por qué se demora. Viaja hacia M2 como mensaje interno, no se le muestra al vecino.',
-    maxLength: 500,
     example: 'Corte de calle imprevisto por rotura de un caño',
   })
+  @Trim()
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(MAX_REASON_LENGTH)
   reason: string;
 
   @ApiPropertyOptional({

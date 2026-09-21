@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ServiceCategory, ServiceMode } from '@prisma/client';
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsEnum, IsOptional } from 'class-validator';
+import { SearchText, ToBoolean } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryServiceTypesDto extends PaginationQueryDto {
@@ -10,12 +10,7 @@ export class QueryServiceTypesDto extends PaginationQueryDto {
     example: true,
   })
   @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   active?: boolean;
 
   @ApiPropertyOptional({
@@ -41,6 +36,6 @@ export class QueryServiceTypesDto extends PaginationQueryDto {
     example: 'recolección',
   })
   @IsOptional()
-  @IsString()
+  @SearchText()
   search?: string;
 }

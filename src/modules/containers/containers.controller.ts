@@ -21,6 +21,7 @@ import {
   ConfirmRelocationDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('containers')
 @ApiBearerAuth('JWT-auth')
@@ -81,10 +82,7 @@ export class ContainersController {
     description:
       'Retorna un listado paginado de contenedores. Se puede filtrar por estado, tipo, zona y buscar por dirección.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Listado paginado de contenedores',
-  })
+  @ApiPaginatedResponse(ContainerResponseDto, 'Listado paginado de contenedores')
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',

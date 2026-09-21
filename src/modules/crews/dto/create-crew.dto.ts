@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsEnum, IsOptional, IsBoolean, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, MaxLength } from 'class-validator';
+import { ToBoolean, Trim, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
 import { CrewType, Shift } from '@prisma/client';
 
 export class CreateCrewDto {
@@ -8,6 +9,7 @@ export class CreateCrewDto {
     example: 'Cuadrilla Norte - Turno Mañana',
     maxLength: 100,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
@@ -30,19 +32,23 @@ export class CreateCrewDto {
   defaultShift: Shift;
 
   @ApiPropertyOptional({
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
     description: 'ID del usuario líder de la cuadrilla (usuario interno de M6)',
     example: 'usr-00001',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   leaderUserId?: string;
 
   @ApiPropertyOptional({
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
     description: 'ID de la organización (para cuadrillas de cooperativa o contratista)',
     example: 'org-coop-recicladores',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   organizationId?: string;
 
   @ApiPropertyOptional({
@@ -51,6 +57,6 @@ export class CreateCrewDto {
     default: true,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

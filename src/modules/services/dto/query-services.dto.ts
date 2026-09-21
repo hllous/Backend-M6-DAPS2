@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ServiceMode, ServiceOrigin, ServiceStatus } from '@prisma/client';
-import { IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryServicesDto extends PaginationQueryDto {
@@ -55,11 +56,13 @@ export class QueryServicesDto extends PaginationQueryDto {
   zoneId?: string;
 
   @ApiPropertyOptional({
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
     description: 'Filtrar por el reclamo de M2 que lo originó',
     example: 'TCK-2026-004821',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   ticketId?: string;
 
   @ApiPropertyOptional({

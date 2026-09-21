@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { WasteType } from '@prisma/client';
-import { IsEnum, IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsUUID, Min, Max } from 'class-validator';
+import { MAX_DECIMAL_10_2 } from '../../../common/decorators/numeric-limits';
 
 export class CreateCollectionRecordDto {
   @ApiProperty({
@@ -28,15 +29,27 @@ export class CreateCollectionRecordDto {
   @IsUUID()
   zoneResultId?: string;
 
-  @ApiPropertyOptional({ description: 'Volumen recolectado en m³', example: 12.5, minimum: 0 })
+  @ApiPropertyOptional({
+    description: 'Volumen recolectado en m³',
+    example: 12.5,
+    minimum: 0,
+    maximum: MAX_DECIMAL_10_2,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(MAX_DECIMAL_10_2)
   volumeM3?: number;
 
-  @ApiPropertyOptional({ description: 'Peso recolectado en kg', example: 3400.75, minimum: 0 })
+  @ApiPropertyOptional({
+    description: 'Peso recolectado en kg',
+    example: 3400.75,
+    minimum: 0,
+    maximum: MAX_DECIMAL_10_2,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(MAX_DECIMAL_10_2)
   weightKg?: number;
 }
