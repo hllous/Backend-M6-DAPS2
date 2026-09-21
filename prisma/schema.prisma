@@ -780,16 +780,22 @@ model EnvironmentalReport {
 }
 
 model EnvironmentalInspection {
-  id          String              @id @default(uuid()) @db.Uuid
-  reportId    String              @map("report_id") @db.Uuid
-  serviceId   String?             @unique @map("service_id") @db.Uuid
-  inspectorId String?             @map("inspector_id") // EXT M1 — interno
-  inspectedAt DateTime?           @map("inspected_at")
-  findings    String?             @db.Text // interno
-  outcome     InspectionOutcome?
-  nextStep    InspectionNextStep? @map("next_step")
-  createdAt   DateTime            @default(now()) @map("created_at")
-  updatedAt   DateTime            @updatedAt @map("updated_at")
+  id              String              @id @default(uuid()) @db.Uuid
+  reportId        String              @map("report_id") @db.Uuid
+  serviceId       String?             @unique @map("service_id") @db.Uuid
+  inspectorId     String?             @map("inspector_id") // EXT M1 — interno
+  inspectedAt     DateTime?           @map("inspected_at")
+  findings        String?             @db.Text // interno
+  outcome         InspectionOutcome?
+  nextStep        InspectionNextStep? @map("next_step")
+  // Lo que el inspector deja al cerrar (#217). Los tres de infracción son
+  // orientativos: el acta los vuelve a pedir y es la que vale ante M4.
+  conclusion      String?             @db.Text // interno
+  violationType   ViolationType?      @map("violation_type")
+  severity        Severity?
+  suggestedAction SuggestedAction?    @map("suggested_action")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
 
   report          EnvironmentalReport @relation(fields: [reportId], references: [id])
   service         Service?            @relation(fields: [serviceId], references: [id])

@@ -116,6 +116,10 @@ export class EnvironmentalInspectionsService {
           outcome: dto.outcome,
           nextStep: dto.nextStep ?? null,
           findings: dto.findings ?? null,
+          conclusion: dto.conclusion ?? null,
+          violationType: dto.violationType ?? null,
+          severity: dto.severity ?? null,
+          suggestedAction: dto.suggestedAction ?? null,
           ...(dto.checklist && {
             checklistItems: {
               deleteMany: {},
@@ -328,6 +332,10 @@ export class EnvironmentalInspectionsService {
       findings: inspection.findings,
       outcome: inspection.outcome,
       nextStep: inspection.nextStep,
+      conclusion: inspection.conclusion,
+      violationType: inspection.violationType,
+      severity: inspection.severity,
+      suggestedAction: inspection.suggestedAction,
       checklistItems: inspection.checklistItems.map((i) => ({
         id: i.id,
         itemCode: i.itemCode,
