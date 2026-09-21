@@ -15,6 +15,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto, UpdateVehicleDto, VehicleResponseDto, QueryVehiclesDto } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('vehicles')
 @ApiBearerAuth('JWT-auth')
@@ -68,10 +69,7 @@ export class VehiclesController {
     description:
       'Retorna un listado paginado de vehículos. Se puede filtrar por estado activo/inactivo y por tipo de vehículo.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Listado paginado de vehículos',
-  })
+  @ApiPaginatedResponse(VehicleResponseDto, 'Listado paginado de vehículos')
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',

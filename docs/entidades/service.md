@@ -17,7 +17,7 @@ Las podas y las inspecciones ambientales también son servicios: [`TreeIntervent
 
 | Entidad | Campos principales |
 |---|---|
-| `Service` | `serviceTypeId`, `mode`, `zoneIds[]`, `routeId` \| `targetRef`, `scheduledDate`, `timeWindow`, `crewId`, `vehicleId`, `status`, `statusReason`, `origin`, `ticketId`, `attachments[]`, `notes`. `crewId` es opcional hasta que se asigna la cuadrilla. `assignmentOverrideNote` / `By` / `At` solo se llenan si la asignación se hizo **sobre un solapamiento** |
+| `Service` | `serviceTypeId`, `mode`, `zoneIds[]`, `routeId` \| `targetRef`, `scheduledDate`, `timeWindow`, `crewId`, `vehicleId`, `status`, `statusReason`, `origin`, `ticketId`, `weatherAlertId`, `attachments[]`, `notes`. `crewId` es opcional hasta que se asigna la cuadrilla. `assignmentOverrideNote` / `By` / `At` solo se llenan si la asignación o la programación se hizo **sobre un solapamiento** |
 | `ServiceDelayNotice` | Hijo de un `Service`, uno por aviso de demora. `delayType`, `delayMinutes`, `reason`, `newEstimatedEnd`, `serviceStatus`, `reportedBy`, `detectedAt`, `supersededById`. El vigente es el que no fue reemplazado |
 | `ZoneResult` | Hijo de un `Service` con `mode = ROUTE`, uno por zona. `zoneId`, `status`, `reason`, `proposedDate`, `notes`, `attachments[]`, `recordedAt` |
 | `CollectionRecord` | `wasteType`, `volumeM3`, `weightKg`, `disposalSiteId` |
@@ -28,6 +28,8 @@ Referencias a otras entidades: `serviceTypeId` → [`ServiceType`](configuracion
 Enums: `mode` es `ServiceMode`, `status` es `ServiceStatus`, `origin` es `ServiceOrigin`, `ZoneResult.status` es `ZoneResultStatus`, `ZoneResult.reason` es `NotServicedReason`, `wasteType` es `WasteType`, `siteType` es `DisposalSiteType` — ver [enumeraciones.md](../enumeraciones.md).
 
 `ticketId` es de M2 y viaja solo cuando `origin = TICKET`. Es lo único que necesitamos guardar para correlacionar. `expectedTicketVersion` salió del contrato en la v1.5. `publicId` volvió en la v1.70 como referencia humana, pero el `Service` no lo guarda: el `ticketId` entra por `POST /services` y no hay de dónde tomar el `publicId` (ver #145 y [`updateTicketStatus`](../eventos/publicados/updateTicketStatus.md)).
+
+**Vínculo con la inspección y la alerta (#218).** `POST /services` acepta `inspectionId` solo con `origin = INSPECTION` y `weatherAlertId` solo con `origin = WEATHER_ALERT`; ninguno es obligatorio, porque hay servicios de esos orígenes sin ese id (una poda que sale de un relevamiento de arbolado, o un servicio que se agenda a mano después de una alerta). El vínculo con la inspección **se guarda una sola vez, en `EnvironmentalInspection.serviceId`**: el alta con `inspectionId` escribe ese campo en la misma transacción (404 si la inspección no existe, 409 si ya tiene servicio o ya fue cerrada —una inspección con `outcome` ya se hizo—, 400 si el tipo no es `POINT`). La escritura y la regla `POINT` las hace `EnvironmentalInspectionsService` (`assertLinkable` + `linkService(tx, …)`), el dueño de la tabla, y la respuesta del servicio lo lee de ahí. `weatherAlertId` sí es una columna del servicio: la alerta es simulada y M6 no la persiste, así que es una referencia sin FK que no se verifica. Ninguno de los dos viaja en `urbanServiceScheduled`.
 
 ## Estados
 
@@ -59,9 +61,15 @@ Los avisos se acumulan. Uno nuevo **reemplaza** al vigente (`supersededById`) en
 
 ## Asignar sobre un solapamiento
 
+El mismo criterio rige al programar con `crewId`/`vehicleId` en `POST /services` (acepta `overrideNote`) y al cambiar el vehículo o la ventana con `PATCH /services/:id`, que evalúa los valores vigentes mezclados con los nuevos y no consulta nada si solo cambian las notas.
+
 Que la cuadrilla esté tomada ese día en una franja que se pisa **avisa, no bloquea**. La realidad de la calle gana: a veces la misma cuadrilla hace dos cosas y quien planifica lo sabe. Sin `overrideNote` la asignación rebota con 409 nombrando los servicios en conflicto; con la nota se hace igual y queda registrado quién decidió y cuándo.
 
+En `PATCH /services/:id`: un PATCH de solo `vehicleId` **no** revisa la cuadrilla vigente (a propósito, para que un solapamiento previo de la cuadrilla no trabe una corrección de vehículo); un PATCH que cambia la ventana revisa la cuadrilla y el vehículo vigentes; `vehicleId: null` quita el vehículo sin chequeo. El chequeo va antes de escribir y sin lock: dos operaciones concurrentes podrían pasar las dos.
+
 La nota se guarda **solo si hubo solapamiento**. Guardarla siempre dejaría rastro de un override que nunca ocurrió.
+
+`assignmentOverrideNote` / `By` / `At` son campos de auditoría: se guardan en la base pero **no se exponen** en `ServiceResponseDto` (por ahora).
 
 Una franja horaria ausente se trata como **todo el día**: es lo único honesto cuando no sabemos cuándo empieza, y suponer lo contrario haría desaparecer el aviso justo donde menos información hay. `GET /services/:id/assignment-conflicts` existe para poder avisar antes de enviar — el 409 es la red, no el camino.
 

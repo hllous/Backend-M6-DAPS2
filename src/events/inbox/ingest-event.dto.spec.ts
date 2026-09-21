@@ -40,4 +40,28 @@ describe('IngestEventDto', () => {
       await expect(validar(producer)).rejects.toBeInstanceOf(BadRequestException);
     },
   );
+
+  describe('occurredAt', () => {
+    const conFecha = (occurredAt: unknown) =>
+      pipe.transform(
+        { eventId: 'e-1', eventType: 'ticketUpdated', data: {}, occurredAt },
+        { type: 'body', metatype: IngestEventDto },
+      );
+
+    it.each([
+      ['2026-09-18T10:00:00Z'],
+      ['2026-09-18T10:00:00.123Z'],
+      ['2026-09-18T10:00:00-03:00'],
+      ['2026-09-18T10:00:00.123+00:00'],
+    ])('acepta ISO 8601: %s', async (valor) => {
+      await expect(conFecha(valor)).resolves.toMatchObject({ occurredAt: valor });
+    });
+
+    it.each([['ayer'], ['18/09/2026'], ['2026-13-45T00:00:00Z'], [42]])(
+      'rechaza un occurredAt inválido: %j',
+      async (valor) => {
+        await expect(conFecha(valor)).rejects.toBeInstanceOf(BadRequestException);
+      },
+    );
+  });
 });

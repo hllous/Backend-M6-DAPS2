@@ -58,7 +58,13 @@ describe('CitizenPortalService', () => {
 
       const [[args]] = prisma.environmentalReport.findFirst.mock.calls;
       const pedido = JSON.stringify(args.select);
-      for (const interno of ['findings', 'inspectorId', 'checklistItems', 'reporterSnapshot']) {
+      for (const interno of [
+        'findings',
+        'conclusion',
+        'inspectorId',
+        'checklistItems',
+        'reporterSnapshot',
+      ]) {
         expect(pedido).not.toContain(interno);
       }
     });

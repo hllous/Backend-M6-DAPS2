@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DisposalSiteType } from '@prisma/client';
-import { IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ToBoolean, Trim } from '../../../common/decorators';
 
 export class CreateDisposalSiteDto {
   @ApiProperty({
@@ -8,6 +9,7 @@ export class CreateDisposalSiteDto {
     example: 'DS-CEAMSE',
     maxLength: 20,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
@@ -18,6 +20,7 @@ export class CreateDisposalSiteDto {
     example: 'Relleno sanitario Norte III',
     maxLength: 100,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
@@ -37,6 +40,6 @@ export class CreateDisposalSiteDto {
     default: true,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

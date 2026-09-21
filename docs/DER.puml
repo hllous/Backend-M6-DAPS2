@@ -130,6 +130,7 @@ package "Ejecución" #FDF3E7 {
       status_reason : varchar
     * origin : enum <<ServiceOrigin>>
       ticket_id : varchar <<EXT M2>>
+      weather_alert_id : varchar ' alerta simulada, sin tabla ni FK
       notes : text
       assignment_override_note : text ' solo si se asigno sobre un solapamiento
       assignment_override_by : varchar <<EXT M1>>
@@ -302,6 +303,7 @@ package "Control ambiental" #FBEEF0 {
     --
     * report_type : enum <<EnvironmentalReportType>>
       address : varchar
+      description : text ' interna: no va al portal ni a eventos
       lat : numeric
       lng : numeric
       ticket_id : varchar <<EXT M2>>

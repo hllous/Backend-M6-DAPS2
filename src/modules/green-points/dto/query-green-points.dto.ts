@@ -1,18 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { WasteType } from '@prisma/client';
-import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { SearchText, ToBoolean } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryGreenPointsDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filtrar por estado habilitado', example: true })
   @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   active?: boolean;
 
   @ApiPropertyOptional({ description: 'Filtrar por zona operativa', format: 'uuid' })
@@ -34,6 +29,6 @@ export class QueryGreenPointsDto extends PaginationQueryDto {
     example: 'Mitre',
   })
   @IsOptional()
-  @IsString()
+  @SearchText()
   search?: string;
 }

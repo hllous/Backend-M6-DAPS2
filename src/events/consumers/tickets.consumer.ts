@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent, TicketUpdateType } from '../inbox/consumed-events';
+import { Data, esObjeto, esTexto, requerido } from '../inbox/payload-validation';
 import { REPORT_TRANSITIONS } from '../../modules/environmental-reports/environmental-reports.service';
 import { PRODUCER } from '../envelope';
 
@@ -57,7 +58,35 @@ export class TicketsConsumer implements OnModuleInit {
     // en handle().
     this.inbox.register(ConsumedEvent.TICKET_UPDATED, (d) => this.handle(d), {
       persistPayload: (d) => this.esNuestro(d),
+      validate: (d) => this.validar(d),
     });
+  }
+
+  /**
+   * Lo común a los trece `updateType` (filtro y correlación) y, solo para un
+   * ticket nuestro, lo que exigen las variantes que dependen de un campo de
+   * `details`. Los tickets de otros módulos no se validan más allá de lo común.
+   */
+  private validar(d: Data): string[] {
+    const problemas = [
+      ...requerido(d, ['ticketId'], 'string', esTexto),
+      ...requerido(d, ['updateType'], 'string', esTexto),
+    ];
+    // responsibleAreaId no se exige: un ticket todavía sin área responsable es
+    // legítimo y simplemente no es nuestro (los tests del inbox lo cubren).
+    if (problemas.length || !this.esNuestro(d)) return problemas;
+
+    if (d.updateType === TicketUpdateType.PRIORITY_CHANGED) {
+      problemas.push(...requerido(d, ['currentPriority'], 'string', esTexto));
+    }
+    if (d.updateType === TicketUpdateType.ESCALATION_CHANGED) {
+      const details = esObjeto(d.details) ? d.details : {};
+      const escalation = esObjeto(details.escalation) ? details.escalation : {};
+      if (typeof escalation.active !== 'boolean') {
+        problemas.push('details.escalation.active (boolean)');
+      }
+    }
+    return problemas;
   }
 
   private esNuestro(data: Record<string, unknown>): boolean {

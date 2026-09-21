@@ -3,6 +3,7 @@ import { Shift } from '@prisma/client';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaginationQueryDto } from '../../../common/dto';
+import { MAX_WEEKDAY, MIN_WEEKDAY } from '../../../common/decorators/numeric-limits';
 
 export class QueryServiceFrequenciesDto extends PaginationQueryDto {
   @ApiPropertyOptional({
@@ -31,14 +32,14 @@ export class QueryServiceFrequenciesDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description: 'Filtrar por día de la semana en el que aplica. 1 = Lunes … 7 = Domingo.',
     example: 2,
-    minimum: 1,
-    maximum: 7,
+    minimum: MIN_WEEKDAY,
+    maximum: MAX_WEEKDAY,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(1)
-  @Max(7)
+  @Min(MIN_WEEKDAY)
+  @Max(MAX_WEEKDAY)
   weekday?: number;
 
   @ApiPropertyOptional({

@@ -1,14 +1,17 @@
+import { Latitude, Longitude } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsBoolean,
   IsNumber,
   IsUUID,
   Min,
   MaxLength,
+  Max,
 } from 'class-validator';
+import { ToBoolean, Trim } from '../../../common/decorators';
+import { MAX_TREE_DIAMETER_CM, MAX_TREE_HEIGHT_M } from '../../../common/decorators/numeric-limits';
 
 export class CreateTreeDto {
   @ApiProperty({
@@ -16,6 +19,7 @@ export class CreateTreeDto {
     example: 'ARB-00442',
     maxLength: 20,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
@@ -51,28 +55,40 @@ export class CreateTreeDto {
 
   @ApiPropertyOptional({ description: 'Latitud', example: -34.5754 })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Longitud', example: -58.4109 })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Longitude()
   lng?: number;
 
-  @ApiPropertyOptional({ description: 'Altura en metros', example: 12.5, minimum: 0 })
+  @ApiPropertyOptional({
+    description: 'Altura en metros',
+    example: 12.5,
+    minimum: 0,
+    maximum: MAX_TREE_HEIGHT_M,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(MAX_TREE_HEIGHT_M)
   heightM?: number;
 
-  @ApiPropertyOptional({ description: 'Diámetro del tronco en cm', example: 45.0, minimum: 0 })
+  @ApiPropertyOptional({
+    description: 'Diámetro del tronco en cm',
+    example: 45.0,
+    minimum: 0,
+    maximum: MAX_TREE_DIAMETER_CM,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0)
+  @Max(MAX_TREE_DIAMETER_CM)
   diameterCm?: number;
 
   @ApiPropertyOptional({ description: 'Si el árbol está activo', example: true, default: true })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

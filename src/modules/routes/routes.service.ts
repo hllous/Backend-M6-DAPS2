@@ -16,8 +16,15 @@ import {
 } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
 
-// La zona es opcional porque el listado no incluye paradas; solo el detalle
-// las trae, y ahi si viene con su Zone.
+// Listado y detalle traen las paradas igual: en orden y con la zona embebida,
+// para que quien dibuje el recorrido no tenga que pedir /zones aparte solo para
+// traducir el UUID a un nombre. Prisma resuelve la relacion con una consulta
+// por nivel (IN sobre los ids de la pagina), no una por recorrido.
+const STOPS_INCLUDE = {
+  stops: { orderBy: { sequence: 'asc' }, include: { zone: true } },
+} satisfies Prisma.RouteInclude;
+
+// Las paradas son opcionales porque create y update no las traen.
 type RouteWithStops = Route & { stops?: (RouteStop & { zone?: Zone })[] };
 
 @Injectable()
@@ -61,6 +68,7 @@ export class RoutesService {
         skip: query.skip,
         take: query.take,
         orderBy: { code: 'asc' },
+        include: STOPS_INCLUDE,
       }),
       this.prisma.route.count({ where }),
     ]);
@@ -76,9 +84,7 @@ export class RoutesService {
   async findOne(id: string): Promise<RouteResponseDto> {
     const route = await this.prisma.route.findUnique({
       where: { id },
-      // La zona viene embebida para que quien dibuje el recorrido no tenga que
-      // pedir /zones aparte solo para traducir el UUID a un nombre.
-      include: { stops: { orderBy: { sequence: 'asc' }, include: { zone: true } } },
+      include: STOPS_INCLUDE,
     });
 
     if (!route) {

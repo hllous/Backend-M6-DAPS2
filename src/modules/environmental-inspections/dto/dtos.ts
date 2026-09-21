@@ -1,3 +1,4 @@
+import { MAX_NOTES_LENGTH, Trim } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   InspectionNextStep,
@@ -44,6 +45,7 @@ export class CreateInspectionDto {
 
 export class ChecklistItemDto {
   @ApiProperty({ description: 'Código del ítem del checklist', example: 'RES-01' })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
@@ -54,6 +56,7 @@ export class ChecklistItemDto {
     example: 'Cuenta con plan de gestión de residuos vigente',
     maxLength: 200,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
@@ -88,7 +91,8 @@ export class CompleteInspectionDto {
   outcome: InspectionOutcome;
 
   @ApiPropertyOptional({
-    description: 'Qué corresponde hacer después',
+    description:
+      'Qué corresponde hacer después. **Obligatorio si el resultado es VIOLATION_FOUND.**',
     enum: InspectionNextStep,
     example: InspectionNextStep.NOTICE_TO_BE_ISSUED,
   })
@@ -99,9 +103,12 @@ export class CompleteInspectionDto {
   @ApiPropertyOptional({
     description: 'Qué encontró el inspector. **Interno: nunca sale hacia M2.**',
     example: 'Vertido de efluentes sin tratar al pluvial en el fondo del predio.',
+    maxLength: MAX_NOTES_LENGTH,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @MaxLength(MAX_NOTES_LENGTH)
   findings?: string;
 
   @ApiPropertyOptional({
@@ -114,6 +121,47 @@ export class CompleteInspectionDto {
   @ValidateNested({ each: true })
   @Type(() => ChecklistItemDto)
   checklist?: ChecklistItemDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'Conclusión del inspector. Se acepta con cualquier resultado; vacía o sólo con espacios se guarda como null. **Interno: nunca sale hacia M2.**',
+    example: 'El predio cumple con la gestión de residuos; no se constató vertido.',
+    maxLength: MAX_NOTES_LENGTH,
+  })
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @MaxLength(MAX_NOTES_LENGTH)
+  conclusion?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Tipo de infracción constatada, si hubo. Orientativo: el acta lo vuelve a pedir y es la que se deriva a M4.',
+    enum: ViolationType,
+    example: ViolationType.UNTREATED_DISCHARGE,
+  })
+  @IsOptional()
+  @IsEnum(ViolationType)
+  violationType?: ViolationType;
+
+  @ApiPropertyOptional({
+    description: 'Gravedad de la infracción, si hubo. Orientativa, como violationType.',
+    enum: Severity,
+    example: Severity.HIGH,
+  })
+  @IsOptional()
+  @IsEnum(Severity)
+  severity?: Severity;
+
+  @ApiPropertyOptional({
+    description:
+      'Acción que sugiere el inspector, si hubo infracción. Orientativa, como violationType.',
+    enum: SuggestedAction,
+    example: SuggestedAction.FINE,
+  })
+  @IsOptional()
+  @IsEnum(SuggestedAction)
+  suggestedAction?: SuggestedAction;
 }
 
 export class IssueViolationNoticeDto {

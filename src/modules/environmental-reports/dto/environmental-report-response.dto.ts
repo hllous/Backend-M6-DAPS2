@@ -11,17 +11,26 @@ export class EnvironmentalReportResponseDto {
   @ApiProperty({ description: 'Estado del expediente', enum: EnvironmentalReportStatus })
   status: EnvironmentalReportStatus;
 
-  @ApiPropertyOptional({ description: 'Dirección denunciada', nullable: true })
+  @ApiPropertyOptional({ description: 'Dirección denunciada', type: String, nullable: true })
   address: string | null;
 
-  @ApiPropertyOptional({ description: 'Latitud', nullable: true })
+  @ApiPropertyOptional({
+    description:
+      'Descripción del hallazgo. Null si no se cargó (los expedientes que abre M2 no la traen).',
+    type: String,
+    nullable: true,
+  })
+  description: string | null;
+
+  @ApiPropertyOptional({ description: 'Latitud', type: Number, nullable: true })
   lat: number | null;
 
-  @ApiPropertyOptional({ description: 'Longitud', nullable: true })
+  @ApiPropertyOptional({ description: 'Longitud', type: Number, nullable: true })
   lng: number | null;
 
   @ApiPropertyOptional({
     description: 'Reclamo de M2 que lo originó. Null si es una detección de oficio.',
+    type: String,
     nullable: true,
   })
   ticketId: string | null;
@@ -30,6 +39,7 @@ export class EnvironmentalReportResponseDto {
     description:
       'Referencia humana del reclamo de M2, la que conoce el vecino. Solo para mostrar y buscar: no es credencial. Null en detecciones de oficio y en expedientes anteriores a la v1.70.',
     example: 'TK-2026-000123',
+    type: String,
     nullable: true,
   })
   publicId: string | null;
@@ -37,9 +47,27 @@ export class EnvironmentalReportResponseDto {
   @ApiPropertyOptional({ description: 'Prioridad', enum: Severity, nullable: true })
   priority: Severity | null;
 
+  @ApiProperty({
+    description:
+      'Si M2 escaló el reclamo (al enrutar el reclamo o por un cambio de escalamiento posterior). Es para que lo vea el supervisor; M6 no lo modifica.',
+    type: Boolean,
+    example: false,
+  })
+  escalated: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Respuesta del vecino a nuestro pedido de información (ticketUpdated/INFORMATION_PROVIDED): el mensaje y, debajo, una línea `nombre: url` por adjunto. Null mientras no respondió.',
+    type: String,
+    example: 'El ruido es del local de planta baja, después de las 23 h.',
+    nullable: true,
+  })
+  citizenResponse: string | null;
+
   @ApiPropertyOptional({
     description:
       'Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.',
+    type: String,
     format: 'date-time',
     nullable: true,
   })

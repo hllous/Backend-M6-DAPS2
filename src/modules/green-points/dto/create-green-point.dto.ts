@@ -1,19 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { WasteType } from '@prisma/client';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
-  IsBoolean,
   IsEnum,
-  IsLatitude,
-  IsLongitude,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
 } from 'class-validator';
+import { ToBoolean, Trim, MAX_LIST_SIZE, Latitude, Longitude } from '../../../common/decorators';
 
 export class CreateGreenPointDto {
   @ApiProperty({
@@ -21,6 +20,7 @@ export class CreateGreenPointDto {
     example: 'GP-0012',
     maxLength: 20,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
@@ -31,6 +31,7 @@ export class CreateGreenPointDto {
     example: 'Punto verde Plaza Mitre',
     maxLength: 100,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
@@ -45,6 +46,7 @@ export class CreateGreenPointDto {
   zoneId: string;
 
   @ApiProperty({
+    maxItems: MAX_LIST_SIZE,
     description: 'Tipos de residuo que el punto verde acepta',
     enum: WasteType,
     isArray: true,
@@ -52,6 +54,7 @@ export class CreateGreenPointDto {
   })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_LIST_SIZE)
   @ArrayUnique()
   @IsEnum(WasteType, { each: true })
   wasteTypes: WasteType[];
@@ -68,12 +71,12 @@ export class CreateGreenPointDto {
 
   @ApiPropertyOptional({ description: 'Latitud', example: -34.6037 })
   @IsOptional()
-  @IsLatitude()
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Longitud', example: -58.3816 })
   @IsOptional()
-  @IsLongitude()
+  @Longitude()
   lng?: number;
 
   @ApiPropertyOptional({
@@ -82,6 +85,6 @@ export class CreateGreenPointDto {
     default: true,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

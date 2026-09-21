@@ -20,6 +20,7 @@ import {
   QueryGreenSpacesDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('green-spaces')
 @ApiBearerAuth('JWT-auth')
@@ -73,10 +74,7 @@ export class GreenSpacesController {
     description:
       'Retorna un listado paginado de espacios verdes. Se puede filtrar por estado, tipo, zona y buscar por nombre.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Listado paginado de espacios verdes',
-  })
+  @ApiPaginatedResponse(GreenSpaceResponseDto, 'Listado paginado de espacios verdes')
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Prisma, RiskLevel } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { OutboxService } from '../../../events/outbox/outbox.service';
@@ -6,6 +6,7 @@ import { AggregateType, EventType } from '../../../events/event-types';
 import { treeRiskDetected } from '../../../events/payloads';
 import { CreateTreeSurveyDto, QueryTreeSurveysDto, TreeSurveyResponseDto } from './dto';
 import { PaginatedResponseDto } from '../../../common/dto';
+import { todayArgentina } from '../../../common/utils/date-only';
 
 @Injectable()
 export class TreeSurveysService {
@@ -17,6 +18,21 @@ export class TreeSurveysService {
   ) {}
 
   async create(treeId: string, dto: CreateTreeSurveyDto): Promise<TreeSurveyResponseDto> {
+    // Se compara por día en Argentina, no por instante: el frontend manda el mediodía UTC
+    // del día de hoy y antes de las 09:00 locales ese instante todavía es futuro.
+    // Un relevamiento de día futuro pasaría a ser el `lastSurvey` y taparía a los reales.
+    if (todayArgentina(new Date(dto.surveyedAt)).getTime() > todayArgentina().getTime()) {
+      throw new BadRequestException(
+        `'surveyedAt' (${dto.surveyedAt}) no puede ser posterior a hoy (huso Argentina)`,
+      );
+    }
+    // treeRiskDetected exige riskType; validarlo acá evita guardar el relevamiento
+    // y después publicar un evento que viola su schema.
+    if (this.publicaEvento(dto.riskLevel) && !dto.riskType) {
+      throw new BadRequestException(
+        `Un relevamiento con riesgo ${dto.riskLevel} necesita 'riskType'`,
+      );
+    }
     const tree = await this.prisma.tree.findUnique({ where: { id: treeId } });
     if (!tree) {
       throw new NotFoundException(`Árbol con id '${treeId}' no encontrado`);
@@ -40,7 +56,7 @@ export class TreeSurveysService {
 
       // Solo HIGH y CRITICAL salen al bus. Con cualquier otro riskLevel el
       // relevamiento se guarda igual pero no se publica nada.
-      if (row.riskLevel === RiskLevel.HIGH || row.riskLevel === RiskLevel.CRITICAL) {
+      if (this.publicaEvento(row.riskLevel)) {
         await this.outbox.enqueue(tx, {
           eventType: EventType.TREE_RISK_DETECTED,
           aggregateType: AggregateType.TREE_SURVEY,
@@ -105,6 +121,10 @@ export class TreeSurveysService {
     }
 
     return this.toResponseDto(survey);
+  }
+
+  private publicaEvento(riskLevel: RiskLevel): boolean {
+    return riskLevel === RiskLevel.HIGH || riskLevel === RiskLevel.CRITICAL;
   }
 
   private async ensureTreeExists(treeId: string): Promise<void> {

@@ -15,6 +15,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { TreesService } from './trees.service';
 import { CreateTreeDto, UpdateTreeDto, TreeResponseDto, QueryTreesDto } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('trees')
 @ApiBearerAuth('JWT-auth')
@@ -57,7 +58,7 @@ export class TreesController {
     description:
       'Retorna un listado paginado de árboles. Se puede filtrar por estado, zona y buscar por especie o dirección.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de árboles' })
+  @ApiPaginatedResponse(TreeResponseDto, 'Listado paginado de árboles')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findAll(@Query() query: QueryTreesDto) {

@@ -21,6 +21,7 @@ describe('EnvironmentalReportsService', () => {
       reportType: 'NOISE',
       status: S.RECEIVED,
       address: 'Av. Rivadavia 4500',
+      description: null,
       lat: new Prisma.Decimal('-34.6037'),
       lng: null,
       ticketId: 'TCK-2026-004512',
@@ -160,6 +161,43 @@ describe('EnvironmentalReportsService', () => {
         address: 'Rivadavia 100',
         priority: 'HIGH',
       });
+    });
+
+    it('guarda la descripción y la devuelve en el alta, el detalle y el listado (#218)', async () => {
+      const texto = 'Escombros sobre la vereda';
+      prisma.environmentalReport.create.mockResolvedValue(expediente({ description: texto }));
+      prisma.environmentalReport.findUnique.mockResolvedValue(expediente({ description: texto }));
+      prisma.environmentalReport.findMany.mockResolvedValue([expediente({ description: texto })]);
+
+      const creado = await service.create({ reportType: 'NOISE', description: texto } as any);
+
+      expect(prisma.environmentalReport.create.mock.calls[0][0].data.description).toBe(texto);
+      expect(creado.description).toBe(texto);
+      expect((await service.findOne(ID)).description).toBe(texto);
+      expect((await service.findAll({} as any)).data[0].description).toBe(texto);
+    });
+
+    it('sin descripción (o solo espacios, que @Trim deja vacía) guarda null (#218)', async () => {
+      await service.create({ reportType: 'NOISE' } as any);
+      await service.create({ reportType: 'NOISE', description: '' } as any);
+
+      const calls = prisma.environmentalReport.create.mock.calls;
+      expect(calls[0][0].data.description).toBeNull();
+      expect(calls[1][0].data.description).toBeNull();
+    });
+
+    it('el listado y el detalle devuelven escalated y citizenResponse, con sus defaults', async () => {
+      prisma.environmentalReport.findMany.mockResolvedValue([
+        expediente({ escalated: true, citizenResponse: 'Es en el 3B' }),
+        expediente(),
+      ]);
+      prisma.environmentalReport.findUnique.mockResolvedValue(expediente({ escalated: true }));
+
+      const lista = await service.findAll({ page: 1, pageSize: 20, skip: 0, take: 20 } as any);
+      expect(lista.data[0]).toMatchObject({ escalated: true, citizenResponse: 'Es en el 3B' });
+      expect(lista.data[1]).toMatchObject({ escalated: false, citizenResponse: null });
+      expect(lista.data[0]).not.toHaveProperty('reporterSnapshot');
+      expect(await service.findOne(ID)).toMatchObject({ escalated: true, citizenResponse: null });
     });
 
     it('sin filtros no arma ningún where', async () => {

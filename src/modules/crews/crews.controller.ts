@@ -21,6 +21,7 @@ import {
   AddCrewMembersDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('crews')
 @ApiBearerAuth('JWT-auth')
@@ -71,10 +72,7 @@ export class CrewsController {
     description:
       'Retorna un listado paginado de cuadrillas. Se puede filtrar por estado activo/inactivo, tipo de cuadrilla y turno.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Listado paginado de cuadrillas',
-  })
+  @ApiPaginatedResponse(CrewResponseDto, 'Listado paginado de cuadrillas')
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',

@@ -97,8 +97,9 @@ erDiagram
         varchar status_reason
         enum origin "ServiceOrigin"
         varchar ticket_id "EXT M2"
+        varchar weather_alert_id "alerta simulada, sin tabla ni FK"
         text notes
-        text assignment_override_note "solo si se asigno sobre un solapamiento"
+        text assignment_override_note "solo si se asigno o programo sobre un solapamiento"
         varchar assignment_override_by "EXT M1"
         timestamp assignment_override_at
     }
@@ -241,6 +242,7 @@ erDiagram
         uuid id PK
         enum report_type "EnvironmentalReportType"
         varchar address
+        text description "interna, no va al portal ni a eventos"
         numeric lat
         numeric lng
         varchar ticket_id "EXT M2"
@@ -261,6 +263,10 @@ erDiagram
         text findings "interno"
         enum outcome "InspectionOutcome"
         enum next_step "InspectionNextStep"
+        text conclusion "interno"
+        enum violation_type "ViolationType"
+        enum severity "Severity"
+        enum suggested_action "SuggestedAction"
     }
     CHECKLIST_ITEM {
         uuid id PK

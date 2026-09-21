@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EnvironmentalReportType, Severity } from '@prisma/client';
-import { IsEnum, IsLatitude, IsLongitude, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Latitude, Longitude, MAX_NOTES_LENGTH, Trim } from '../../../common/decorators';
 
 export class CreateEnvironmentalReportDto {
   @ApiProperty({
@@ -21,14 +22,26 @@ export class CreateEnvironmentalReportDto {
   @MaxLength(200)
   address?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Descripción del hallazgo. Opcional: los expedientes que abre un reclamo de M2 no la traen. Es interna: no se muestra en el portal ciudadano ni viaja en eventos.',
+    example: 'Acopio de escombros sobre la vereda, frente al número 4500.',
+    maxLength: MAX_NOTES_LENGTH,
+  })
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @MaxLength(MAX_NOTES_LENGTH)
+  description?: string;
+
   @ApiPropertyOptional({ description: 'Latitud', example: -34.7 })
   @IsOptional()
-  @IsLatitude()
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Longitud', example: -58.5 })
   @IsOptional()
-  @IsLongitude()
+  @Longitude()
   lng?: number;
 
   @ApiPropertyOptional({

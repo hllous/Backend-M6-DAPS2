@@ -75,7 +75,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
       ),
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    service = new ServicesService(prisma as unknown as PrismaService, outbox);
+    service = new ServicesService(prisma as unknown as PrismaService, outbox, {} as never);
   });
 
   /** Los argumentos con los que se actualizo el contenedor. */
@@ -86,7 +86,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
 
     expect(prisma.container.update).toHaveBeenCalledTimes(1);
     expect(containerOp().data).toMatchObject({ status: ContainerStatus.ACTIVE });
-    expect(containerOp().where).toEqual({ id: CONTAINER_ID });
+    expect(containerOp().where).toEqual({ id: CONTAINER_ID, status: ContainerStatus.OVERFLOWED });
   });
 
   it('un contenedor UNDER_REPAIR vuelve a ACTIVE y limpia los campos de daño', async () => {
