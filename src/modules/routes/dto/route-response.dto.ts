@@ -49,7 +49,7 @@ export class RouteResponseDto {
 
   @ApiPropertyOptional({
     description:
-      'Paradas en orden. Incluido en el GET por ID y en la respuesta de PUT /routes/:id/stops',
+      'Paradas en orden de sequence. Incluido en el listado, en el GET por ID y en la respuesta de PUT /routes/:id/stops; no en las respuestas de POST ni PATCH',
     type: [RouteStopResponseDto],
   })
   stops?: RouteStopResponseDto[];

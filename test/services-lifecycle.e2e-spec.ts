@@ -69,6 +69,24 @@ describe('Ciclo de vida de un servicio urbano (e2e)', () => {
     expect(res.headers['x-powered-by']).toBeUndefined();
   });
 
+  /** #216: el catálogo mostraba "Sin paradas" porque el listado no las traía. */
+  it('el listado de recorridos trae las paradas en orden, igual que el detalle', async () => {
+    const primera = await crearZona(api);
+    const segunda = await crearZona(api);
+    // Se cargan al revés del orden de creación para que el orden no salga del id.
+    const ruta = await crearRuta(api, [segunda.id, primera.id]);
+    const detalle = await api.get(`/routes/${ruta.id}`).expect(200);
+
+    const listado = await api.get('/routes?pageSize=100').expect(200);
+    const enListado = listado.body.data.find((r: { id: string }) => r.id === ruta.id);
+
+    expect(enListado.stops.map((s: { zoneId: string }) => s.zoneId)).toEqual([
+      segunda.id,
+      primera.id,
+    ]);
+    expect(enListado.stops).toEqual(detalle.body.stops);
+  });
+
   it('programa el servicio y encola urbanServiceScheduled en el outbox', async () => {
     const zona = await crearZona(api);
     zoneId = zona.id;

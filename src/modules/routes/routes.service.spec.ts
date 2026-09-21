@@ -240,6 +240,53 @@ describe('RoutesService — CRUD', () => {
     ]);
   });
 
+  /**
+   * #216: el listado trae las paradas igual que el detalle. Sin esto el frontend
+   * mostraba "Sin paradas" en todos los recorridos del catálogo.
+   */
+  it('el listado pide las paradas con el mismo include que el detalle', async () => {
+    await service.findAll({ page: 1, pageSize: 20 } as any);
+    await service.findOne(ID);
+
+    const includeListado = prisma.route.findMany.mock.calls[0][0].include;
+    expect(includeListado).toEqual({
+      stops: { orderBy: { sequence: 'asc' }, include: { zone: true } },
+    });
+    expect(includeListado).toEqual(prisma.route.findUnique.mock.calls[0][0].include);
+  });
+
+  it('el listado devuelve las paradas con el mismo shape que el detalle', async () => {
+    const stops = [
+      {
+        id: 'stop-1',
+        sequence: 1,
+        zoneId: 'zona-bel',
+        estimatedDurationMin: 90,
+        zone: { code: 'Z-BEL', name: 'Belgrano' },
+      },
+      {
+        id: 'stop-2',
+        sequence: 2,
+        zoneId: 'zona-pal',
+        estimatedDurationMin: 45,
+        zone: { code: 'Z-PAL', name: 'Palermo' },
+      },
+    ];
+    prisma.route.findMany.mockResolvedValue([
+      recorrido({ stops }),
+      recorrido({ id: 'r-2', stops: [] }),
+    ]);
+    prisma.route.findUnique.mockResolvedValue(recorrido({ stops }));
+
+    const listado = await service.findAll({ page: 1, pageSize: 20 } as any);
+    const detalle = await service.findOne(ID);
+
+    expect(listado.data[0].stops).toEqual(detalle.stops);
+    expect(listado.data[0].stops!.map((s) => s.sequence)).toEqual([1, 2]);
+    expect(listado.data[0].stops![1]).toMatchObject({ zoneCode: 'Z-PAL', zoneName: 'Palermo' });
+    expect(listado.data[1].stops).toEqual([]);
+  });
+
   it('findOne da 404 si no está', async () => {
     prisma.route.findUnique.mockResolvedValue(null);
 
