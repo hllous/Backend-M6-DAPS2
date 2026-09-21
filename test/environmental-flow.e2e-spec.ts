@@ -64,6 +64,13 @@ describe('Flujo del expediente ambiental (e2e)', () => {
   });
 
   it('cierra la inspección con infracción y lleva el expediente a VIOLATION_FOUND', async () => {
+    // #217: lo que el frontend manda al cerrar con infracción.
+    const cierre = {
+      conclusion: 'Vertido confirmado en el fondo del predio.',
+      violationType: 'UNTREATED_DISCHARGE',
+      severity: 'HIGH',
+      suggestedAction: 'FINE',
+    };
     const res = await api
       .post(`/environmental-inspections/${inspectionId}/complete`, {
         inspectedAt: new Date().toISOString(),
@@ -73,10 +80,15 @@ describe('Flujo del expediente ambiental (e2e)', () => {
         checklist: [
           { itemCode: 'RES-01', label: 'Plan de gestión de residuos vigente', result: false },
         ],
+        ...cierre,
       })
       .expect(200);
 
     expect(res.body.outcome).toBe('VIOLATION_FOUND');
+    expect(res.body).toMatchObject(cierre);
+
+    const detalle = await api.get(`/environmental-inspections/${inspectionId}`).expect(200);
+    expect(detalle.body).toMatchObject(cierre);
 
     const expediente = await prisma.environmentalReport.findUniqueOrThrow({
       where: { id: reportId },
