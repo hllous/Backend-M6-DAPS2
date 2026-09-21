@@ -109,10 +109,12 @@ No hay que hacer nada manual en el día a día.
 
 | Variable | Valor |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | `https://m6-backend-m64k.onrender.com` |
-| `M6_SESSION_SEAL_KEY` | Clave secreta para sellar la cookie JWE de sesión en el Next.js BFF (ADR-0004) |
+| `M6_AUTH_MODE` | `backend-development` (demo contra el backend real) |
+| `M6_BACKEND_ORIGIN` | `https://m6-backend-m64k.onrender.com` |
+| `M6_DEV_JWT` | JWT firmado con el `JWT_SECRET` del backend (payload `{ sub, exp }`) |
+| `M6_SESSION_SECRET` | Clave secreta para sellar la cookie de sesión del Next.js BFF |
 
-> `NEXT_PUBLIC_*` se inyecta en **build time** (client-side). Si el backend cambia de URL, hay que actualizar la variable y redeployar.
+> `M6_AUTH_MODE=backend-development` reenvía cada petición del BFF al backend con `M6_DEV_JWT` como Bearer. `M6_BACKEND_ORIGIN`, `M6_DEV_JWT` y `M6_SESSION_SECRET` se leen en runtime (server-side), así que se pueden cambiar sin rebuild. `NEXT_PUBLIC_API_URL` quedó obsoleto: el código actual no lo usa.
 
 ---
 
