@@ -1,3 +1,4 @@
+import { Trim } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
@@ -17,6 +18,7 @@ export class StatusChangeDto {
     example: 'Alerta meteorológica: tormenta fuerte en la zona',
     maxLength: 500,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(500)

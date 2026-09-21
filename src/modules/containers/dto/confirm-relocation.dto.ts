@@ -1,5 +1,6 @@
+import { Trim, Latitude, Longitude } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsNotEmpty } from 'class-validator';
 
 /**
  * DTO para confirmar la reubicación de un contenedor.
@@ -11,7 +12,9 @@ export class ConfirmRelocationDto {
     example: 'Av. Santa Fe 2800, esquina Anchorena',
     maxLength: 200,
   })
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(200)
   address: string;
 
@@ -20,7 +23,7 @@ export class ConfirmRelocationDto {
     example: -34.5955,
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({
@@ -28,6 +31,6 @@ export class ConfirmRelocationDto {
     example: -58.4016,
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 7 })
+  @Longitude()
   lng?: number;
 }

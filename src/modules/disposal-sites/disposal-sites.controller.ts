@@ -20,6 +20,7 @@ import {
   UpdateDisposalSiteDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('disposal-sites')
 @ApiBearerAuth('JWT-auth')
@@ -65,7 +66,7 @@ export class DisposalSitesController {
     description:
       'Retorna un listado paginado. Se puede filtrar por estado operativo y tipo de destino, y buscar por nombre.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de sitios de disposición' })
+  @ApiPaginatedResponse(DisposalSiteResponseDto, 'Listado paginado de sitios de disposición')
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',

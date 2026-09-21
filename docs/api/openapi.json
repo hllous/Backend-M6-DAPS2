@@ -4,12 +4,52 @@
     "/health": {
       "get": {
         "operationId": "HealthController_check",
-        "summary": "Health check",
-        "description": "Devuelve OK si el servicio está corriendo.",
+        "summary": "Health check (liveness)",
+        "description": "Devuelve OK si el proceso está corriendo. No consulta la base: para eso está /health/ready.",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Servicio activo"
+            "description": "Servicio activo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "summary": "Readiness: verifica la conexión a la base",
+        "description": "Ejecuta un SELECT 1 con un timeout de 3 s. Responde 503 si la base no contesta; es el endpoint para monitoreo.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Servicio y base disponibles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "La base no responde",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -35,10 +75,17 @@
         },
         "responses": {
           "200": {
-            "description": "Resultado de la ingesta: processed, duplicate (ya recibido), ignored (sin handler) o failed"
+            "description": "Resultado de la ingesta: processed, duplicate (ya recibido), ignored (sin handler) o failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResultDto"
+                }
+              }
+            }
           },
           "400": {
-            "description": "Sobre inválido",
+            "description": "Sobre inválido, o data sin los campos obligatorios de un evento con handler (no se guarda: se puede reenviar corregido con el mismo eventId)",
             "content": {
               "application/json": {
                 "schema": {
@@ -86,7 +133,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Tipos de evento con handler"
+            "description": "Tipos de evento con handler",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredHandlersDto"
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -218,6 +272,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -250,6 +305,7 @@
             "in": "query",
             "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "Norte",
               "type": "string"
             }
@@ -257,7 +313,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de zonas"
+            "description": "Listado paginado de zonas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ZoneResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -805,6 +883,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -869,6 +948,7 @@
             "in": "query",
             "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "recolección",
               "type": "string"
             }
@@ -876,7 +956,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de tipos de servicio"
+            "description": "Listado paginado de tipos de servicio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServiceTypeResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -1244,6 +1346,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -1292,6 +1395,7 @@
             "in": "query",
             "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "relleno",
               "type": "string"
             }
@@ -1299,7 +1403,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de sitios de disposición"
+            "description": "Listado paginado de sitios de disposición",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DisposalSiteResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -1658,7 +1784,7 @@
       "get": {
         "operationId": "RoutesController_findAll",
         "summary": "Listar recorridos",
-        "description": "Retorna un listado paginado. Se puede filtrar por estado, por zona por la que pasa el recorrido, y buscar por nombre. No incluye las paradas: para eso, el GET por ID.",
+        "description": "Retorna un listado paginado. Se puede filtrar por estado, por zona por la que pasa el recorrido, y buscar por nombre. Cada recorrido incluye sus paradas en orden, con el mismo formato que el GET por ID.",
         "parameters": [
           {
             "name": "page",
@@ -1667,6 +1793,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -1710,6 +1837,7 @@
             "in": "query",
             "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "troncal",
               "type": "string"
             }
@@ -1717,7 +1845,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de recorridos"
+            "description": "Listado paginado de recorridos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RouteResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -2152,6 +2302,16 @@
               }
             }
           },
+          "409": {
+            "description": "Ya existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -2184,6 +2344,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -2263,7 +2424,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de frecuencias"
+            "description": "Listado paginado de frecuencias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServiceFrequencyResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -2433,6 +2616,16 @@
           },
           "404": {
             "description": "Frecuencia no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2621,6 +2814,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -2680,7 +2874,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de cuadrillas"
+            "description": "Listado paginado de cuadrillas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CrewResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -3228,6 +3444,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -3275,7 +3492,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de vehículos"
+            "description": "Listado paginado de vehículos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VehicleResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -3663,6 +3902,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -3730,6 +3970,7 @@
             "in": "query",
             "description": "Buscar por dirección (coincidencia parcial)",
             "schema": {
+              "maxLength": 100,
               "example": "Rivadavia",
               "type": "string"
             }
@@ -3737,7 +3978,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de contenedores"
+            "description": "Listado paginado de contenedores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ContainerResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -4717,6 +4980,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -4758,13 +5022,36 @@
             "in": "query",
             "description": "Buscar por especie o dirección",
             "schema": {
+              "maxLength": 100,
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de árboles"
+            "description": "Listado paginado de árboles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TreeResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -5072,7 +5359,7 @@
             }
           },
           "400": {
-            "description": "Datos de entrada inválidos",
+            "description": "Datos inválidos, fecha posterior a hoy o riesgo HIGH/CRITICAL sin riskType",
             "content": {
               "application/json": {
                 "schema": {
@@ -5153,6 +5440,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -5205,7 +5493,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de relevamientos"
+            "description": "Listado paginado de relevamientos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TreeSurveyResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -5426,6 +5736,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -5478,7 +5789,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de intervenciones"
+            "description": "Listado paginado de intervenciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TreeInterventionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -6045,6 +6378,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -6105,6 +6439,7 @@
             "in": "query",
             "description": "Buscar por nombre (coincidencia parcial)",
             "schema": {
+              "maxLength": 100,
               "example": "Miserere",
               "type": "string"
             }
@@ -6112,7 +6447,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de espacios verdes"
+            "description": "Listado paginado de espacios verdes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GreenSpaceResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -6490,6 +6847,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -6549,6 +6907,7 @@
             "in": "query",
             "description": "Buscar por nombre o dirección (parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "Mitre",
               "type": "string"
             }
@@ -6556,7 +6915,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de puntos verdes"
+            "description": "Listado paginado de puntos verdes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GreenPointResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -6853,7 +7234,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos: falta routeId en un ROUTE, falta objetivo o zona en un POINT, recorrido sin paradas, ticketId inconsistente con el origen, ventana horaria invertida, o recurso dado de baja",
+            "description": "Datos inválidos: falta routeId en un ROUTE, falta objetivo o zona en un POINT, recorrido sin paradas, ticketId inconsistente con el origen, inspectionId sin origin = INSPECTION o weatherAlertId sin origin = WEATHER_ALERT, inspectionId con un tipo de servicio que no es POINT, ventana horaria invertida, o recurso dado de baja",
             "content": {
               "application/json": {
                 "schema": {
@@ -6883,7 +7264,17 @@
             }
           },
           "404": {
-            "description": "El tipo de servicio, el recorrido, el objetivo, la cuadrilla o el vehículo no existe",
+            "description": "El tipo de servicio, el recorrido, el objetivo, la cuadrilla, el vehículo o la inspección (inspectionId) no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada",
             "content": {
               "application/json": {
                 "schema": {
@@ -6924,6 +7315,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -7036,6 +7428,7 @@
             "in": "query",
             "description": "Filtrar por el reclamo de M2 que lo originó",
             "schema": {
+              "maxLength": 100,
               "example": "TCK-2026-004821",
               "type": "string"
             }
@@ -7065,7 +7458,39 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de servicios"
+            "description": "Listado paginado de servicios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServiceResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos: scheduledFrom posterior a scheduledTo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -7169,7 +7594,7 @@
       "patch": {
         "operationId": "ServicesController_update",
         "summary": "Corregir la programación de un servicio",
-        "description": "Actualiza vehículo, ventana horaria y notas, solo mientras el servicio no arrancó. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar. La fecha se mueve con reschedule y confirm-reschedule, que dejan rastro del motivo.",
+        "description": "Actualiza vehículo, ventana horaria y notas, solo mientras el servicio no arrancó. Si el cambio de vehículo o ventana lo solapa con otro servicio de la misma cuadrilla o vehículo ese día, avisa con 409 y hace falta `overrideNote` (10 a 500 caracteres), igual que en assign-crew. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar. La fecha se mueve con reschedule y confirm-reschedule, que dejan rastro del motivo.",
         "parameters": [
           {
             "name": "id",
@@ -7244,7 +7669,7 @@
             }
           },
           "409": {
-            "description": "El servicio ya arrancó o cerró y no admite edición",
+            "description": "El servicio ya arrancó o cerró y no admite edición, o el vehículo o la ventana nuevos se solapan con otro servicio de la misma cuadrilla o vehículo y falta `overrideNote`",
             "content": {
               "application/json": {
                 "schema": {
@@ -8027,7 +8452,7 @@
             }
           },
           "409": {
-            "description": "Transición inválida, o faltan resultados de alguna zona",
+            "description": "Transición inválida, faltan resultados de alguna zona, o el servicio o su contenedor cambiaron de estado durante el cierre",
             "content": {
               "application/json": {
                 "schema": {
@@ -8314,7 +8739,7 @@
             }
           },
           "400": {
-            "description": "Fecha inválida o ventana horaria invertida",
+            "description": "Fecha inválida o anterior a hoy, o ventana horaria invertida",
             "content": {
               "application/json": {
                 "schema": {
@@ -8742,6 +9167,539 @@
         ]
       }
     },
+    "/environmental-reports/{reportId}/inspections": {
+      "post": {
+        "operationId": "EnvironmentalInspectionsController_create",
+        "summary": "Programar la inspección de un expediente",
+        "description": "Lleva el expediente a INSPECTION_SCHEDULED. La inspección guarda qué se va a buscar; el Service asociado, cuándo y con qué cuadrilla — el mismo patrón que TreeIntervention. Ese paso no se publica al bus: environmentalInspectionScheduled fue descartado por no tener consumidor.",
+        "parameters": [
+          {
+            "name": "reportId",
+            "required": true,
+            "in": "path",
+            "description": "UUID del expediente",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInspectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Inspección programada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El servicio asociado no es de modo POINT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos sobre inspecciones ambientales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Expediente o servicio no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El expediente no está en UNDER_REVIEW",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "EnvironmentalInspectionsController_findByReport",
+        "summary": "Listar las inspecciones de un expediente",
+        "description": "Incluye el checklist relevado, que es información interna.",
+        "parameters": [
+          {
+            "name": "reportId",
+            "required": true,
+            "in": "path",
+            "description": "UUID del expediente",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspecciones del expediente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspectionResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Expediente no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/environmental-inspections/{id}": {
+      "get": {
+        "operationId": "EnvironmentalInspectionsController_findOne",
+        "summary": "Obtener una inspección por ID",
+        "description": "Detalle completo con el checklist y los hallazgos. **Todo esto es interno y nunca sale hacia M2**: lo que el vecino ve es la proyección pública, sin identidad del inspector ni contenido del acta.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la inspección",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspección encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inspección no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/environmental-inspections/{id}/complete": {
+      "post": {
+        "operationId": "EnvironmentalInspectionsController_complete",
+        "summary": "Cerrar la inspección con su resultado",
+        "description": "Lleva el expediente a INSPECTED y de ahí, en la misma operación, a NO_VIOLATION o VIOLATION_FOUND según el outcome. Un INCONCLUSIVE lo deja en INSPECTED, a la espera de otra inspección. El checklist y los hallazgos son internos.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la inspección",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteInspectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inspección cerrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, inspectedAt en el futuro, o resultado VIOLATION_FOUND sin nextStep",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos sobre inspecciones ambientales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inspección no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La inspección ya fue cerrada, o el expediente no está en INSPECTION_SCHEDULED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/environmental-inspections/{id}/violation-notice": {
+      "post": {
+        "operationId": "EnvironmentalInspectionsController_issueNotice",
+        "summary": "Emitir el acta de constatación",
+        "description": "Emite el acta sobre una inspección con resultado VIOLATION_FOUND y lleva el expediente a NOTICE_ISSUED. **El acta es inmutable**: no hay PATCH ni DELETE, si hay un error se emite otra. Sin establishmentId el acta se registra pero **no se deriva a M4** —es lo único sobre lo que pueden actuar— y el expediente cierra de nuestro lado. Con establishmentId se publica environmentalViolationDetected, con el conteo de actas previas del mismo establecimiento.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la inspección",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueViolationNoticeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Acta emitida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViolationNoticeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "La inspección no tiene resultado VIOLATION_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos sobre inspecciones ambientales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inspección no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La inspección ya tiene acta emitida, o el expediente no está en VIOLATION_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "EnvironmentalInspectionsController_findNotice",
+        "summary": "Obtener el acta de una inspección",
+        "description": "El acta emitida, con su número correlativo y el conteo de reincidencia.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la inspección",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acta encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViolationNoticeResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La inspección no tiene acta emitida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-inspections"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
     "/environmental-reports": {
       "post": {
         "operationId": "EnvironmentalReportsController_create",
@@ -8831,6 +9789,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -8909,6 +9868,7 @@
             "in": "query",
             "description": "Filtrar por el reclamo de M2 que lo originó (UUID)",
             "schema": {
+              "maxLength": 100,
               "example": "550e8400-e29b-41d4-a716-446655440000",
               "type": "string"
             }
@@ -8919,6 +9879,7 @@
             "in": "query",
             "description": "Filtrar por la referencia humana del reclamo de M2 (coincidencia exacta)",
             "schema": {
+              "maxLength": 100,
               "example": "TK-2026-000123",
               "type": "string"
             }
@@ -8929,6 +9890,7 @@
             "in": "query",
             "description": "Buscar por dirección (parcial, case-insensitive)",
             "schema": {
+              "maxLength": 100,
               "example": "Cintura",
               "type": "string"
             }
@@ -8936,7 +9898,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de expedientes"
+            "description": "Listado paginado de expedientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EnvironmentalReportResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -9434,539 +10418,6 @@
         ]
       }
     },
-    "/environmental-reports/{reportId}/inspections": {
-      "post": {
-        "operationId": "EnvironmentalInspectionsController_create",
-        "summary": "Programar la inspección de un expediente",
-        "description": "Lleva el expediente a INSPECTION_SCHEDULED. La inspección guarda qué se va a buscar; el Service asociado, cuándo y con qué cuadrilla — el mismo patrón que TreeIntervention. Ese paso no se publica al bus: environmentalInspectionScheduled fue descartado por no tener consumidor.",
-        "parameters": [
-          {
-            "name": "reportId",
-            "required": true,
-            "in": "path",
-            "description": "UUID del expediente",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateInspectionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Inspección programada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InspectionResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "El servicio asociado no es de modo POINT",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sin permisos sobre inspecciones ambientales",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Expediente o servicio no encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "El expediente no está en UNDER_REVIEW",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      },
-      "get": {
-        "operationId": "EnvironmentalInspectionsController_findByReport",
-        "summary": "Listar las inspecciones de un expediente",
-        "description": "Incluye el checklist relevado, que es información interna.",
-        "parameters": [
-          {
-            "name": "reportId",
-            "required": true,
-            "in": "path",
-            "description": "UUID del expediente",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Inspecciones del expediente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/InspectionResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Expediente no encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      }
-    },
-    "/environmental-inspections/{id}": {
-      "get": {
-        "operationId": "EnvironmentalInspectionsController_findOne",
-        "summary": "Obtener una inspección por ID",
-        "description": "Detalle completo con el checklist y los hallazgos. **Todo esto es interno y nunca sale hacia M2**: lo que el vecino ve es la proyección pública, sin identidad del inspector ni contenido del acta.",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la inspección",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Inspección encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InspectionResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Inspección no encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      }
-    },
-    "/environmental-inspections/{id}/complete": {
-      "post": {
-        "operationId": "EnvironmentalInspectionsController_complete",
-        "summary": "Cerrar la inspección con su resultado",
-        "description": "Lleva el expediente a INSPECTED y de ahí, en la misma operación, a NO_VIOLATION o VIOLATION_FOUND según el outcome. Un INCONCLUSIVE lo deja en INSPECTED, a la espera de otra inspección. El checklist y los hallazgos son internos.",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la inspección",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CompleteInspectionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Inspección cerrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InspectionResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos inválidos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sin permisos sobre inspecciones ambientales",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Inspección no encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "La inspección ya fue cerrada, o el expediente no está en INSPECTION_SCHEDULED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      }
-    },
-    "/environmental-inspections/{id}/violation-notice": {
-      "post": {
-        "operationId": "EnvironmentalInspectionsController_issueNotice",
-        "summary": "Emitir el acta de constatación",
-        "description": "Emite el acta sobre una inspección con resultado VIOLATION_FOUND y lleva el expediente a NOTICE_ISSUED. **El acta es inmutable**: no hay PATCH ni DELETE, si hay un error se emite otra. Sin establishmentId el acta se registra pero **no se deriva a M4** —es lo único sobre lo que pueden actuar— y el expediente cierra de nuestro lado. Con establishmentId se publica environmentalViolationDetected, con el conteo de actas previas del mismo establecimiento.",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la inspección",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/IssueViolationNoticeDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Acta emitida",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ViolationNoticeResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "La inspección no tiene resultado VIOLATION_FOUND",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sin permisos sobre inspecciones ambientales",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Inspección no encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "La inspección ya tiene acta emitida, o el expediente no está en VIOLATION_FOUND",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      },
-      "get": {
-        "operationId": "EnvironmentalInspectionsController_findNotice",
-        "summary": "Obtener el acta de una inspección",
-        "description": "El acta emitida, con su número correlativo y el conteo de reincidencia.",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la inspección",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Acta encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ViolationNoticeResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token JWT inválido o ausente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "La inspección no tiene acta emitida",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error interno del servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "environmental-inspections"
-        ],
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ]
-      }
-    },
     "/repair-requests": {
       "post": {
         "operationId": "RepairRequestsController_create",
@@ -10024,6 +10475,16 @@
               }
             }
           },
+          "404": {
+            "description": "El servicio o la inspección de origen no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10056,6 +10517,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -10130,7 +10592,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado"
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RepairRequestResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -10448,7 +10932,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos, o la solicitud no tiene tramos",
+            "description": "Datos inválidos, la solicitud no tiene tramos o requestedTo es anterior a requestedFrom",
             "content": {
               "application/json": {
                 "schema": {
@@ -10469,6 +10953,26 @@
           },
           "403": {
             "description": "Sin permisos sobre derivaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El servicio o la intervención de origen no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La intervención de origen no está en estado AUTHORIZED",
             "content": {
               "application/json": {
                 "schema": {
@@ -10509,6 +11013,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -10553,7 +11058,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado"
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StreetClosureRequestResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Token JWT inválido o ausente",
@@ -11029,6 +11556,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -11088,7 +11616,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de servicios programados"
+            "description": "Listado paginado de servicios programados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PublicServiceResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "429": {
             "description": "Demasiadas consultas desde la misma dirección",
@@ -11129,6 +11679,7 @@
             "description": "Página (1-indexed)",
             "schema": {
               "minimum": 1,
+              "maximum": 10000000,
               "default": 1,
               "type": "number"
             }
@@ -11158,7 +11709,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado paginado de puntos verdes"
+            "description": "Listado paginado de puntos verdes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PublicGreenPointResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
           },
           "429": {
             "description": "Demasiadas consultas desde la misma dirección",
@@ -11239,18 +11812,10 @@
         "description": "Endpoint genérico de evidencia — un archivo por llamada, atado a un ownerType/ownerId que ya debe existir (Container, Service, ZoneResult o EnvironmentalInspection). Requiere el header Idempotency-Key para identificar reintentos.",
         "parameters": [
           {
-            "name": "idempotency-key",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "Idempotency-Key",
+            "required": true,
             "in": "header",
             "description": "UUID generado por el cliente, único por intento de subida. Reenviar el mismo valor en un reintento evita crear evidencia duplicada.",
-            "required": true,
             "schema": {
               "type": "string"
             }
@@ -11343,6 +11908,16 @@
           },
           "500": {
             "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage de evidencia (R2) no configurado en el servidor. No se persiste nada: el reintento con la misma Idempotency-Key es seguro",
             "content": {
               "application/json": {
                 "schema": {
@@ -11497,6 +12072,16 @@
               }
             }
           },
+          "400": {
+            "description": "Período inválido: from posterior a to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -11586,6 +12171,16 @@
               }
             }
           },
+          "400": {
+            "description": "Período inválido: from posterior a to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -11655,6 +12250,16 @@
               }
             }
           },
+          "400": {
+            "description": "Período inválido: from posterior a to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -11720,6 +12325,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WasteIndicatorDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Período inválido: from posterior a to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -11867,16 +12482,106 @@
       }
     },
     "schemas": {
+      "HealthResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "description": "Siempre \"ok\" si el servicio responde"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-09-19T15:30:00.000Z",
+            "description": "Hora del servidor (ISO 8601)"
+          },
+          "service": {
+            "type": "string",
+            "example": "m6-ambiente-backend",
+            "description": "Identificador del servicio"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "service"
+        ]
+      },
+      "ReadinessResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "description": "Siempre \"ok\" si el servicio responde"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-09-19T15:30:00.000Z",
+            "description": "Hora del servidor (ISO 8601)"
+          },
+          "service": {
+            "type": "string",
+            "example": "m6-ambiente-backend",
+            "description": "Identificador del servicio"
+          },
+          "database": {
+            "type": "string",
+            "example": "up",
+            "description": "Estado de la conexión a la base"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "service",
+          "database"
+        ]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 404
+          },
+          "message": {
+            "type": "string",
+            "example": "Container with id 123e4567-... not found"
+          },
+          "error": {
+            "type": "string",
+            "example": "Not Found"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-08-20T10:00:00.000Z"
+          },
+          "path": {
+            "type": "string",
+            "example": "/containers/123e4567-e89b-12d3-a456-426614174000"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "error",
+          "timestamp",
+          "path"
+        ]
+      },
       "IngestEventDto": {
         "type": "object",
         "properties": {
           "eventId": {
             "type": "string",
+            "maxLength": 100,
             "description": "Identificador único del mensaje. **Es la clave de idempotencia**: repetirlo descarta el evento sin volver a aplicarlo.",
             "example": "646d19f5-5670-4a7b-9442-30e13b02ba11"
           },
           "eventType": {
             "type": "string",
+            "maxLength": 100,
             "description": "Nombre del evento en camelCase",
             "example": "streetClosureApproved"
           },
@@ -11944,36 +12649,47 @@
           "data"
         ]
       },
-      "ErrorResponseDto": {
+      "IngestResultDto": {
         "type": "object",
         "properties": {
-          "statusCode": {
-            "type": "number",
-            "example": 404
-          },
-          "message": {
+          "status": {
             "type": "string",
-            "example": "Container with id 123e4567-... not found"
+            "enum": [
+              "processed",
+              "duplicate",
+              "ignored",
+              "failed"
+            ],
+            "example": "processed",
+            "description": "Qué hizo M6 con el evento"
           },
-          "error": {
+          "detail": {
             "type": "string",
-            "example": "Not Found"
-          },
-          "timestamp": {
-            "type": "string",
-            "example": "2026-08-20T10:00:00.000Z"
-          },
-          "path": {
-            "type": "string",
-            "example": "/containers/123e4567-e89b-12d3-a456-426614174000"
+            "example": "sin handler registrado",
+            "description": "Motivo o error, cuando hay algo que aclarar"
           }
         },
         "required": [
-          "statusCode",
-          "message",
-          "error",
-          "timestamp",
-          "path"
+          "status"
+        ]
+      },
+      "RegisteredHandlersDto": {
+        "type": "object",
+        "properties": {
+          "eventTypes": {
+            "example": [
+              "ticketUpdated",
+              "weatherAlertIssued"
+            ],
+            "description": "Tipos de evento con handler registrado",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "eventTypes"
         ]
       },
       "CreateZoneDto": {
@@ -12069,6 +12785,37 @@
           "updatedAt"
         ]
       },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 142,
+            "description": "Total de registros"
+          },
+          "page": {
+            "type": "number",
+            "example": 1,
+            "description": "Página actual (1-indexed)"
+          },
+          "pageSize": {
+            "type": "number",
+            "example": 20,
+            "description": "Registros por página"
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 8,
+            "description": "Total de páginas"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "pageSize",
+          "totalPages"
+        ]
+      },
       "UpdateZoneDto": {
         "type": "object",
         "properties": {
@@ -12089,15 +12836,17 @@
         "type": "object",
         "properties": {
           "neighborhoodIds": {
+            "type": "array",
             "description": "IDs de barrios a asignar a la zona (catálogo de M9)",
             "example": [
               "barrio-palermo",
               "barrio-belgrano"
             ],
-            "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "maxLength": 100
+            },
+            "maxItems": 100
           }
         },
         "required": [
@@ -12478,7 +13227,7 @@
             "example": true
           },
           "stops": {
-            "description": "Paradas en orden. Incluido en el GET por ID y en la respuesta de PUT /routes/:id/stops",
+            "description": "Paradas en orden de sequence. Incluido en el listado, en el GET por ID y en la respuesta de PUT /routes/:id/stops; no en las respuestas de POST ni PATCH",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/RouteStopResponseDto"
@@ -12584,7 +13333,9 @@
             "maxItems": 7,
             "type": "array",
             "items": {
-              "type": "number"
+              "type": "number",
+              "maximum": 7,
+              "minimum": 1
             }
           },
           "shift": {
@@ -12665,7 +13416,7 @@
             "example": "2026-09-01"
           },
           "validTo": {
-            "type": "object",
+            "type": "string",
             "description": "Fecha hasta la que rige. Null si no tiene vencimiento.",
             "example": "2026-12-31",
             "format": "date-time",
@@ -12707,7 +13458,9 @@
             ],
             "type": "array",
             "items": {
-              "type": "number"
+              "type": "number",
+              "maximum": 7,
+              "minimum": 1
             }
           },
           "shift": {
@@ -12765,11 +13518,13 @@
           },
           "leaderUserId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID del usuario líder de la cuadrilla (usuario interno de M6)",
             "example": "usr-00001"
           },
           "organizationId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID de la organización (para cuadrillas de cooperativa o contratista)",
             "example": "org-coop-recicladores"
           },
@@ -12834,14 +13589,16 @@
             "example": "MORNING"
           },
           "leaderUserId": {
-            "type": "object",
+            "type": "string",
             "description": "ID del usuario líder",
-            "example": "usr-00001"
+            "example": "usr-00001",
+            "nullable": true
           },
           "organizationId": {
-            "type": "object",
+            "type": "string",
             "description": "ID de la organización (cooperativa/contratista)",
-            "example": "org-coop-recicladores"
+            "example": "org-coop-recicladores",
+            "nullable": true
           },
           "active": {
             "type": "boolean",
@@ -12899,11 +13656,13 @@
           },
           "leaderUserId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID del usuario líder de la cuadrilla",
             "example": "usr-00002"
           },
           "organizationId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID de la organización",
             "example": "org-coop-recicladores"
           },
@@ -12918,16 +13677,18 @@
         "type": "object",
         "properties": {
           "userIds": {
+            "type": "array",
             "description": "IDs de usuarios a agregar como miembros de la cuadrilla (usuarios internos de M6)",
             "example": [
               "usr-00010",
               "usr-00011",
               "usr-00012"
             ],
-            "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "maxLength": 100
+            },
+            "maxItems": 100
           }
         },
         "required": [
@@ -12960,7 +13721,8 @@
             "type": "number",
             "description": "Capacidad del vehículo en toneladas (ej. 10.50)",
             "example": 10.5,
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 99999999.99
           },
           "active": {
             "type": "boolean",
@@ -13002,9 +13764,10 @@
             "example": "COMPACTOR_TRUCK"
           },
           "capacity": {
-            "type": "object",
+            "type": "number",
             "description": "Capacidad en toneladas (null si no aplica)",
-            "example": 10.5
+            "example": 10.5,
+            "nullable": true
           },
           "active": {
             "type": "boolean",
@@ -13046,7 +13809,8 @@
             "type": "number",
             "description": "Capacidad del vehículo en toneladas",
             "example": 12,
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 99999999.99
           },
           "active": {
             "type": "boolean",
@@ -13085,7 +13849,8 @@
             "type": "number",
             "description": "Capacidad del contenedor en litros",
             "example": 1100,
-            "minimum": 1
+            "minimum": 1,
+            "maximum": 2147483647
           },
           "address": {
             "type": "string",
@@ -13095,11 +13860,15 @@
           },
           "lat": {
             "type": "number",
+            "minimum": -90,
+            "maximum": 90,
             "description": "Latitud de ubicación",
             "example": -34.6037
           },
           "lng": {
             "type": "number",
+            "minimum": -180,
+            "maximum": 180,
             "description": "Longitud de ubicación",
             "example": -58.3816
           }
@@ -13143,19 +13912,22 @@
             "format": "uuid"
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección del contenedor",
-            "example": "Av. Rivadavia 4500, esquina Medrano"
+            "example": "Av. Rivadavia 4500, esquina Medrano",
+            "nullable": true
           },
           "lat": {
-            "type": "object",
+            "type": "number",
             "description": "Latitud",
-            "example": -34.6037
+            "example": -34.6037,
+            "nullable": true
           },
           "lng": {
-            "type": "object",
+            "type": "number",
             "description": "Longitud",
-            "example": -58.3816
+            "example": -58.3816,
+            "nullable": true
           },
           "capacityLiters": {
             "type": "number",
@@ -13186,7 +13958,8 @@
               "VANDALIZED",
               "MISSING"
             ],
-            "example": "LID_BROKEN"
+            "example": "LID_BROKEN",
+            "nullable": true
           },
           "severity": {
             "type": "string",
@@ -13197,12 +13970,14 @@
               "HIGH",
               "CRITICAL"
             ],
-            "example": "MEDIUM"
+            "example": "MEDIUM",
+            "nullable": true
           },
           "requiresPublicWorks": {
-            "type": "object",
+            "type": "boolean",
             "description": "Si requiere derivación a Obras Públicas (solo cuando status = DAMAGED)",
-            "example": false
+            "example": false,
+            "nullable": true
           },
           "createdAt": {
             "format": "date-time",
@@ -13241,7 +14016,8 @@
             "type": "number",
             "description": "Capacidad del contenedor en litros",
             "example": 1200,
-            "minimum": 1
+            "minimum": 1,
+            "maximum": 2147483647
           },
           "address": {
             "type": "string",
@@ -13251,11 +14027,15 @@
           },
           "lat": {
             "type": "number",
+            "minimum": -90,
+            "maximum": 90,
             "description": "Latitud de ubicación",
             "example": -34.6037
           },
           "lng": {
             "type": "number",
+            "minimum": -180,
+            "maximum": 180,
             "description": "Longitud de ubicación",
             "example": -58.3816
           }
@@ -13312,11 +14092,15 @@
           },
           "lat": {
             "type": "number",
+            "minimum": -90,
+            "maximum": 90,
             "description": "Nueva latitud",
             "example": -34.5955
           },
           "lng": {
             "type": "number",
+            "minimum": -180,
+            "maximum": 180,
             "description": "Nueva longitud",
             "example": -58.4016
           }
@@ -13354,11 +14138,15 @@
           },
           "lat": {
             "type": "number",
+            "minimum": -90,
+            "maximum": 90,
             "description": "Latitud",
             "example": -34.5754
           },
           "lng": {
             "type": "number",
+            "minimum": -180,
+            "maximum": 180,
             "description": "Longitud",
             "example": -58.4109
           },
@@ -13366,13 +14154,15 @@
             "type": "number",
             "description": "Altura en metros",
             "example": 12.5,
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 999.99
           },
           "diameterCm": {
             "type": "number",
             "description": "Diámetro del tronco en cm",
             "example": 45,
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9999.9
           },
           "active": {
             "type": "boolean",
@@ -13425,7 +14215,8 @@
               "POWER_LINE_CONTACT",
               "SIGN_OBSTRUCTION",
               "PEST_INFESTATION"
-            ]
+            ],
+            "nullable": true
           },
           "suggestedIntervention": {
             "type": "string",
@@ -13436,7 +14227,8 @@
               "REMOVAL",
               "PLANTING",
               "TREATMENT"
-            ]
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -13456,26 +14248,32 @@
             "type": "string"
           },
           "species": {
-            "type": "object"
+            "type": "string",
+            "nullable": true
           },
           "zoneId": {
             "type": "string",
             "format": "uuid"
           },
           "address": {
-            "type": "object"
+            "type": "string",
+            "nullable": true
           },
           "lat": {
-            "type": "object"
+            "type": "number",
+            "nullable": true
           },
           "lng": {
-            "type": "object"
+            "type": "number",
+            "nullable": true
           },
           "heightM": {
-            "type": "object"
+            "type": "number",
+            "nullable": true
           },
           "diameterCm": {
-            "type": "object"
+            "type": "number",
+            "nullable": true
           },
           "active": {
             "type": "boolean"
@@ -13527,21 +14325,27 @@
           },
           "lat": {
             "type": "number",
+            "minimum": -90,
+            "maximum": 90,
             "description": "Latitud"
           },
           "lng": {
             "type": "number",
+            "minimum": -180,
+            "maximum": 180,
             "description": "Longitud"
           },
           "heightM": {
             "type": "number",
             "description": "Altura en metros",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 999.99
           },
           "diameterCm": {
             "type": "number",
             "description": "Diámetro del tronco en cm",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9999.9
           },
           "active": {
             "type": "boolean",
@@ -13554,7 +14358,7 @@
         "properties": {
           "surveyedAt": {
             "type": "string",
-            "description": "Fecha y hora del relevamiento fitosanitario",
+            "description": "Fecha y hora del relevamiento fitosanitario (no puede ser posterior a hoy en huso Argentina)",
             "example": "2026-08-15T09:30:00.000Z",
             "format": "date-time"
           },
@@ -13583,7 +14387,7 @@
           },
           "riskType": {
             "type": "string",
-            "description": "Tipo de riesgo detectado (requerido si riskLevel >= HIGH)",
+            "description": "Tipo de riesgo detectado (obligatorio si riskLevel es HIGH o CRITICAL, si no responde 400)",
             "enum": [
               "FALLING_BRANCH",
               "TRUNK_INSTABILITY",
@@ -13608,6 +14412,7 @@
           },
           "inspectorId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID del inspector que realizó el relevamiento (usuario interno M6)",
             "example": "usr-00015"
           },
@@ -13657,9 +14462,10 @@
             "example": "2026-08-15T09:30:00.000Z"
           },
           "inspectorId": {
-            "type": "object",
+            "type": "string",
             "description": "ID del inspector",
-            "example": "usr-00015"
+            "example": "usr-00015",
+            "nullable": true
           },
           "healthStatus": {
             "type": "string",
@@ -13694,7 +14500,8 @@
               "POWER_LINE_CONTACT",
               "SIGN_OBSTRUCTION",
               "PEST_INFESTATION"
-            ]
+            ],
+            "nullable": true
           },
           "suggestedIntervention": {
             "type": "string",
@@ -13705,7 +14512,8 @@
               "REMOVAL",
               "PLANTING",
               "TREATMENT"
-            ]
+            ],
+            "nullable": true
           },
           "requiresStreetClosure": {
             "type": "boolean",
@@ -13718,8 +14526,9 @@
             "example": false
           },
           "notes": {
-            "type": "object",
-            "description": "Notas del inspector"
+            "type": "string",
+            "description": "Notas del inspector",
+            "nullable": true
           },
           "createdAt": {
             "format": "date-time",
@@ -13754,6 +14563,7 @@
             "example": "SAFETY_PRUNING"
           },
           "treeIds": {
+            "maxItems": 100,
             "description": "UUIDs de los árboles incluidos en esta intervención",
             "example": [
               "f6a7b8c9-d0e1-2345-fghi-678901234567"
@@ -13844,14 +14654,16 @@
             "example": "REQUESTED"
           },
           "serviceId": {
-            "type": "object",
+            "type": "string",
             "description": "UUID del servicio programado (null hasta que se programe)",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección de referencia",
-            "example": "Av. del Libertador 4200"
+            "example": "Av. del Libertador 4200",
+            "nullable": true
           },
           "requiresStreetClosure": {
             "type": "boolean",
@@ -13866,20 +14678,24 @@
               "MEDIUM",
               "HIGH",
               "CRITICAL"
-            ]
+            ],
+            "nullable": true
           },
           "authorizedByUserId": {
-            "type": "object",
-            "description": "ID del usuario que autorizó (solo REMOVAL)"
+            "type": "string",
+            "description": "ID del usuario que autorizó (solo REMOVAL)",
+            "nullable": true
           },
           "authorizedAt": {
-            "type": "object",
+            "type": "string",
             "description": "Fecha de autorización (solo REMOVAL)",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true
           },
           "justification": {
-            "type": "object",
-            "description": "Justificación"
+            "type": "string",
+            "description": "Justificación",
+            "nullable": true
           },
           "trees": {
             "description": "Árboles incluidos en la intervención",
@@ -13913,6 +14729,7 @@
         "properties": {
           "authorizedByUserId": {
             "type": "string",
+            "maxLength": 100,
             "description": "ID del usuario que autoriza la extracción",
             "example": "usr-00003"
           },
@@ -13966,11 +14783,15 @@
           },
           "lat": {
             "type": "number",
+            "minimum": -90,
+            "maximum": 90,
             "description": "Latitud",
             "example": -34.5724
           },
           "lng": {
             "type": "number",
+            "minimum": -180,
+            "maximum": 180,
             "description": "Longitud",
             "example": -58.4166
           },
@@ -13978,7 +14799,8 @@
             "type": "number",
             "description": "Superficie en metros cuadrados",
             "example": 12500.5,
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 99999999.99
           },
           "active": {
             "type": "boolean",
@@ -14026,21 +14848,22 @@
             "format": "uuid"
           },
           "lat": {
-            "type": "object",
+            "type": "number",
             "description": "Latitud",
             "example": -34.5724,
             "nullable": true
           },
           "lng": {
-            "type": "object",
+            "type": "number",
             "description": "Longitud",
             "example": -58.4166,
             "nullable": true
           },
           "areaM2": {
-            "type": "object",
+            "type": "number",
             "description": "Superficie en metros cuadrados",
-            "example": 12500.5
+            "example": 12500.5,
+            "nullable": true
           },
           "active": {
             "type": "boolean",
@@ -14087,11 +14910,15 @@
           },
           "lat": {
             "type": "number",
+            "minimum": -90,
+            "maximum": 90,
             "description": "Latitud",
             "example": -34.5724
           },
           "lng": {
             "type": "number",
+            "minimum": -180,
+            "maximum": 180,
             "description": "Longitud",
             "example": -58.4166
           },
@@ -14099,7 +14926,8 @@
             "type": "number",
             "description": "Superficie en metros cuadrados",
             "example": 13000,
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 99999999.99
           },
           "active": {
             "type": "boolean",
@@ -14131,6 +14959,7 @@
           },
           "wasteTypes": {
             "type": "array",
+            "maxItems": 100,
             "description": "Tipos de residuo que el punto verde acepta",
             "example": [
               "RECYCLABLE",
@@ -14155,11 +14984,15 @@
           },
           "lat": {
             "type": "number",
+            "minimum": -90,
+            "maximum": 90,
             "description": "Latitud",
             "example": -34.6037
           },
           "lng": {
             "type": "number",
+            "minimum": -180,
+            "maximum": 180,
             "description": "Longitud",
             "example": -58.3816
           },
@@ -14220,19 +15053,19 @@
             }
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección del emplazamiento",
             "example": "Av. Mitre 1200",
             "nullable": true
           },
           "lat": {
-            "type": "object",
+            "type": "number",
             "description": "Latitud",
             "example": -34.6037,
             "nullable": true
           },
           "lng": {
-            "type": "object",
+            "type": "number",
             "description": "Longitud",
             "example": -58.3816,
             "nullable": true
@@ -14282,6 +15115,7 @@
           },
           "wasteTypes": {
             "type": "array",
+            "maxItems": 100,
             "description": "Tipos de residuo aceptados. Reemplaza el conjunto completo.",
             "example": [
               "RECYCLABLE"
@@ -14305,11 +15139,15 @@
           },
           "lat": {
             "type": "number",
+            "minimum": -90,
+            "maximum": 90,
             "description": "Latitud",
             "example": -34.6037
           },
           "lng": {
             "type": "number",
+            "minimum": -180,
+            "maximum": 180,
             "description": "Longitud",
             "example": -58.3816
           },
@@ -14337,7 +15175,7 @@
           },
           "origin": {
             "type": "string",
-            "description": "Origen de la programación. TICKET exige ticketId; el resto no lo admite.",
+            "description": "Origen de la programación. TICKET exige ticketId; el resto no lo admite. inspectionId solo se admite con INSPECTION y weatherAlertId solo con WEATHER_ALERT, pero no son obligatorios.",
             "enum": [
               "PLANNED",
               "TICKET",
@@ -14404,10 +15242,30 @@
             "example": "TCK-2026-004821",
             "maxLength": 64
           },
+          "inspectionId": {
+            "type": "string",
+            "description": "Inspección ambiental que va a ejecutar este servicio. Solo con origin = INSPECTION, y el tipo de servicio tiene que ser POINT. La inspección tiene que existir (404), seguir abierta y no tener otro servicio (409). El vínculo se guarda en la inspección, igual que al programarla con `serviceId`.",
+            "example": "0b1c2d3e-4f5a-6789-abcd-ef0123456789",
+            "format": "uuid"
+          },
+          "weatherAlertId": {
+            "type": "string",
+            "description": "Alerta meteorológica que originó el servicio. Solo con origin = WEATHER_ALERT. Es una referencia externa: M6 no guarda las alertas, así que no se verifica que exista.",
+            "example": "ALERTA-SMN-2026-0915",
+            "maxLength": 100
+          },
           "notes": {
             "type": "string",
+            "maxLength": 2000,
             "description": "Notas internas de la programación",
             "example": "Coordinar con la cooperativa antes de las 7."
+          },
+          "overrideNote": {
+            "type": "string",
+            "description": "Por qué se programa igual con una cuadrilla o vehículo ya tomado ese día en una franja que se pisa. **Obligatorio si hay solapamiento**, igual que en `assign-crew`; sin solapamiento se ignora.",
+            "minLength": 10,
+            "maxLength": 500,
+            "example": "La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla."
           }
         },
         "required": [
@@ -14474,13 +15332,13 @@
             "nullable": true
           },
           "proposedDate": {
-            "type": "object",
+            "type": "string",
             "description": "Fecha propuesta para reintentar",
             "format": "date-time",
             "nullable": true
           },
           "notes": {
-            "type": "object",
+            "type": "string",
             "description": "Notas de la cuadrilla",
             "nullable": true
           },
@@ -14523,19 +15381,19 @@
             "format": "uuid"
           },
           "zoneResultId": {
-            "type": "object",
+            "type": "string",
             "description": "Resultado de zona al que corresponde. Null en los servicios POINT.",
             "format": "uuid",
             "nullable": true
           },
           "volumeM3": {
-            "type": "object",
+            "type": "number",
             "description": "Volumen en m³",
             "example": 12.5,
             "nullable": true
           },
           "weightKg": {
-            "type": "object",
+            "type": "number",
             "description": "Peso en kg",
             "example": 3400.75,
             "nullable": true
@@ -14583,7 +15441,7 @@
             ]
           },
           "statusReason": {
-            "type": "object",
+            "type": "string",
             "description": "Motivo del último cambio de estado (suspensión, cancelación, reprogramación)",
             "nullable": true
           },
@@ -14599,7 +15457,7 @@
             ]
           },
           "routeId": {
-            "type": "object",
+            "type": "string",
             "description": "Recorrido ejecutado. Null en los servicios POINT.",
             "format": "uuid",
             "nullable": true
@@ -14616,7 +15474,7 @@
             "nullable": true
           },
           "targetId": {
-            "type": "object",
+            "type": "string",
             "description": "UUID del bien",
             "format": "uuid",
             "nullable": true
@@ -14627,34 +15485,45 @@
             "description": "Fecha agendada"
           },
           "windowFrom": {
-            "type": "object",
+            "type": "string",
             "description": "Inicio de la ventana horaria (HH:mm)",
             "nullable": true
           },
           "windowTo": {
-            "type": "object",
+            "type": "string",
             "description": "Fin de la ventana horaria (HH:mm)",
             "nullable": true
           },
           "crewId": {
-            "type": "object",
+            "type": "string",
             "description": "Cuadrilla asignada",
             "format": "uuid",
             "nullable": true
           },
           "vehicleId": {
-            "type": "object",
+            "type": "string",
             "description": "Vehículo asignado",
             "format": "uuid",
             "nullable": true
           },
           "ticketId": {
-            "type": "object",
+            "type": "string",
             "description": "Reclamo de M2 que lo originó. Solo cuando origin = TICKET.",
             "nullable": true
           },
+          "inspectionId": {
+            "type": "string",
+            "description": "Inspección ambiental que ejecuta este servicio. Se lee del lado de la inspección (`EnvironmentalInspection.serviceId`), que es la única fuente del vínculo.",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "weatherAlertId": {
+            "type": "string",
+            "description": "Alerta meteorológica que lo originó. Solo cuando origin = WEATHER_ALERT.",
+            "nullable": true
+          },
           "notes": {
-            "type": "object",
+            "type": "string",
             "description": "Notas internas",
             "nullable": true
           },
@@ -14680,7 +15549,7 @@
             }
           },
           "createdBy": {
-            "type": "object",
+            "type": "string",
             "description": "Usuario que lo programó",
             "nullable": true
           },
@@ -14728,8 +15597,16 @@
           },
           "notes": {
             "type": "string",
+            "maxLength": 2000,
             "description": "Notas internas",
             "example": "La cuadrilla entra por Rivadavia, la otra calle está cortada."
+          },
+          "overrideNote": {
+            "type": "string",
+            "description": "Por qué se acepta igual un vehículo o ventana que se pisa con otro servicio de la misma cuadrilla o vehículo ese día. **Obligatorio si hay solapamiento**, igual que en `assign-crew`; sin solapamiento se ignora.",
+            "minLength": 10,
+            "maxLength": 500,
+            "example": "La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla."
           }
         }
       },
@@ -14878,8 +15755,8 @@
           },
           "reason": {
             "type": "string",
-            "description": "Por qué se demora. Viaja hacia M2 como mensaje interno, no se le muestra al vecino.",
             "maxLength": 500,
+            "description": "Por qué se demora. Viaja hacia M2 como mensaje interno, no se le muestra al vecino.",
             "example": "Corte de calle imprevisto por rotura de un caño"
           },
           "newEstimatedEnd": {
@@ -15004,11 +15881,15 @@
           },
           "lat": {
             "type": "number",
+            "minimum": -90,
+            "maximum": 90,
             "description": "Nueva latitud",
             "example": -34.5955
           },
           "lng": {
             "type": "number",
+            "minimum": -180,
+            "maximum": 180,
             "description": "Nueva longitud",
             "example": -58.4016
           }
@@ -15135,189 +16016,20 @@
             "type": "number",
             "description": "Volumen recolectado en m³",
             "example": 12.5,
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 99999999.99
           },
           "weightKg": {
             "type": "number",
             "description": "Peso recolectado en kg",
             "example": 3400.75,
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 99999999.99
           }
         },
         "required": [
           "wasteType",
           "disposalSiteId"
-        ]
-      },
-      "CreateEnvironmentalReportDto": {
-        "type": "object",
-        "properties": {
-          "reportType": {
-            "type": "string",
-            "description": "Tipo de denuncia ambiental",
-            "enum": [
-              "NOISE",
-              "DUMPING",
-              "ILLEGAL_DUMPSITE",
-              "WATER_DISCHARGE",
-              "AIR_EMISSION",
-              "ODOR",
-              "PEST_INFESTATION",
-              "OTHER"
-            ],
-            "example": "ILLEGAL_DUMPSITE"
-          },
-          "address": {
-            "type": "string",
-            "description": "Dirección donde se denuncia el hecho",
-            "example": "Camino de Cintura 4500",
-            "maxLength": 200
-          },
-          "lat": {
-            "type": "number",
-            "description": "Latitud",
-            "example": -34.7
-          },
-          "lng": {
-            "type": "number",
-            "description": "Longitud",
-            "example": -58.5
-          },
-          "ticketId": {
-            "type": "string",
-            "description": "Reclamo de M2 que originó el expediente. Si no viene, es una detección de oficio y no se proyecta nada hacia M2.",
-            "example": "TCK-2026-004821",
-            "maxLength": 64
-          },
-          "priority": {
-            "type": "string",
-            "description": "Prioridad asignada al expediente",
-            "enum": [
-              "LOW",
-              "MEDIUM",
-              "HIGH",
-              "CRITICAL"
-            ],
-            "example": "HIGH"
-          }
-        },
-        "required": [
-          "reportType"
-        ]
-      },
-      "EnvironmentalReportResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "UUID del expediente",
-            "format": "uuid"
-          },
-          "reportType": {
-            "type": "string",
-            "description": "Tipo de denuncia",
-            "enum": [
-              "NOISE",
-              "DUMPING",
-              "ILLEGAL_DUMPSITE",
-              "WATER_DISCHARGE",
-              "AIR_EMISSION",
-              "ODOR",
-              "PEST_INFESTATION",
-              "OTHER"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "description": "Estado del expediente",
-            "enum": [
-              "RECEIVED",
-              "UNDER_REVIEW",
-              "FORWARDED",
-              "DISMISSED",
-              "INSPECTION_SCHEDULED",
-              "INSPECTED",
-              "NO_VIOLATION",
-              "VIOLATION_FOUND",
-              "NOTICE_ISSUED",
-              "SANCTIONED",
-              "CLOSED"
-            ]
-          },
-          "address": {
-            "type": "object",
-            "description": "Dirección denunciada",
-            "nullable": true
-          },
-          "lat": {
-            "type": "object",
-            "description": "Latitud",
-            "nullable": true
-          },
-          "lng": {
-            "type": "object",
-            "description": "Longitud",
-            "nullable": true
-          },
-          "ticketId": {
-            "type": "object",
-            "description": "Reclamo de M2 que lo originó. Null si es una detección de oficio.",
-            "nullable": true
-          },
-          "publicId": {
-            "type": "object",
-            "description": "Referencia humana del reclamo de M2, la que conoce el vecino. Solo para mostrar y buscar: no es credencial. Null en detecciones de oficio y en expedientes anteriores a la v1.70.",
-            "example": "TK-2026-000123",
-            "nullable": true
-          },
-          "priority": {
-            "type": "string",
-            "description": "Prioridad",
-            "enum": [
-              "LOW",
-              "MEDIUM",
-              "HIGH",
-              "CRITICAL"
-            ],
-            "nullable": true
-          },
-          "deadlineAt": {
-            "type": "object",
-            "description": "Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.",
-            "format": "date-time",
-            "nullable": true
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Fecha de creación"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Fecha de última actualización"
-          }
-        },
-        "required": [
-          "id",
-          "reportType",
-          "status",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "ReportStatusChangeDto": {
-        "type": "object",
-        "properties": {
-          "reason": {
-            "type": "string",
-            "description": "Motivo del cambio de estado",
-            "example": "El hecho denunciado corresponde a Obras Públicas, no a Ambiente.",
-            "maxLength": 500
-          }
-        },
-        "required": [
-          "reason"
         ]
       },
       "CreateInspectionDto": {
@@ -15358,7 +16070,7 @@
             "description": "Si el ítem se cumple"
           },
           "observations": {
-            "type": "object",
+            "type": "string",
             "description": "Observaciones",
             "nullable": true
           }
@@ -15384,24 +16096,24 @@
             "format": "uuid"
           },
           "serviceId": {
-            "type": "object",
+            "type": "string",
             "description": "Servicio que la ejecuta. Null hasta que se asocia.",
             "format": "uuid",
             "nullable": true
           },
           "inspectorId": {
-            "type": "object",
+            "type": "string",
             "description": "Inspector asignado. **Interno: nunca sale hacia M2.**",
             "nullable": true
           },
           "inspectedAt": {
-            "type": "object",
+            "type": "string",
             "description": "Cuándo se realizó",
             "format": "date-time",
             "nullable": true
           },
           "findings": {
-            "type": "object",
+            "type": "string",
             "description": "Qué encontró el inspector. **Interno: nunca sale hacia M2.**",
             "nullable": true
           },
@@ -15422,6 +16134,47 @@
               "NOTICE_TO_BE_ISSUED",
               "REINSPECTION",
               "CASE_CLOSED"
+            ],
+            "nullable": true
+          },
+          "conclusion": {
+            "type": "string",
+            "description": "Conclusión del inspector. **Interno: nunca sale hacia M2.**",
+            "nullable": true
+          },
+          "violationType": {
+            "type": "string",
+            "description": "Tipo de infracción",
+            "enum": [
+              "NOISE_LIMIT",
+              "ILLEGAL_DUMPING",
+              "UNTREATED_DISCHARGE",
+              "HAZARDOUS_WASTE",
+              "AIR_EMISSION",
+              "NO_WASTE_MANAGEMENT",
+              "INSPECTION_OBSTRUCTION"
+            ],
+            "nullable": true
+          },
+          "severity": {
+            "type": "string",
+            "description": "Gravedad",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ],
+            "nullable": true
+          },
+          "suggestedAction": {
+            "type": "string",
+            "description": "Acción sugerida por el inspector",
+            "enum": [
+              "WARNING",
+              "FORMAL_NOTICE",
+              "FINE",
+              "CLOSURE"
             ],
             "nullable": true
           },
@@ -15502,7 +16255,7 @@
           },
           "nextStep": {
             "type": "string",
-            "description": "Qué corresponde hacer después",
+            "description": "Qué corresponde hacer después. **Obligatorio si el resultado es VIOLATION_FOUND.**",
             "enum": [
               "NOTICE_TO_BE_ISSUED",
               "REINSPECTION",
@@ -15513,7 +16266,8 @@
           "findings": {
             "type": "string",
             "description": "Qué encontró el inspector. **Interno: nunca sale hacia M2.**",
-            "example": "Vertido de efluentes sin tratar al pluvial en el fondo del predio."
+            "example": "Vertido de efluentes sin tratar al pluvial en el fondo del predio.",
+            "maxLength": 2000
           },
           "checklist": {
             "description": "Checklist relevado. **Interno: nunca sale hacia M2.**",
@@ -15521,6 +16275,48 @@
             "items": {
               "$ref": "#/components/schemas/ChecklistItemDto"
             }
+          },
+          "conclusion": {
+            "type": "string",
+            "description": "Conclusión del inspector. Se acepta con cualquier resultado; vacía o sólo con espacios se guarda como null. **Interno: nunca sale hacia M2.**",
+            "example": "El predio cumple con la gestión de residuos; no se constató vertido.",
+            "maxLength": 2000
+          },
+          "violationType": {
+            "type": "string",
+            "description": "Tipo de infracción constatada, si hubo. Orientativo: el acta lo vuelve a pedir y es la que se deriva a M4.",
+            "enum": [
+              "NOISE_LIMIT",
+              "ILLEGAL_DUMPING",
+              "UNTREATED_DISCHARGE",
+              "HAZARDOUS_WASTE",
+              "AIR_EMISSION",
+              "NO_WASTE_MANAGEMENT",
+              "INSPECTION_OBSTRUCTION"
+            ],
+            "example": "UNTREATED_DISCHARGE"
+          },
+          "severity": {
+            "type": "string",
+            "description": "Gravedad de la infracción, si hubo. Orientativa, como violationType.",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ],
+            "example": "HIGH"
+          },
+          "suggestedAction": {
+            "type": "string",
+            "description": "Acción que sugiere el inspector, si hubo infracción. Orientativa, como violationType.",
+            "enum": [
+              "WARNING",
+              "FORMAL_NOTICE",
+              "FINE",
+              "CLOSURE"
+            ],
+            "example": "FINE"
           }
         },
         "required": [
@@ -15604,7 +16400,7 @@
             "description": "Cuándo se emitió"
           },
           "establishmentId": {
-            "type": "object",
+            "type": "string",
             "description": "Establecimiento de M4. Si es null el acta no se derivó y el expediente cierra de nuestro lado.",
             "nullable": true
           },
@@ -15662,6 +16458,204 @@
           "suggestedAction",
           "priorNoticeCount",
           "createdAt"
+        ]
+      },
+      "CreateEnvironmentalReportDto": {
+        "type": "object",
+        "properties": {
+          "reportType": {
+            "type": "string",
+            "description": "Tipo de denuncia ambiental",
+            "enum": [
+              "NOISE",
+              "DUMPING",
+              "ILLEGAL_DUMPSITE",
+              "WATER_DISCHARGE",
+              "AIR_EMISSION",
+              "ODOR",
+              "PEST_INFESTATION",
+              "OTHER"
+            ],
+            "example": "ILLEGAL_DUMPSITE"
+          },
+          "address": {
+            "type": "string",
+            "description": "Dirección donde se denuncia el hecho",
+            "example": "Camino de Cintura 4500",
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción del hallazgo. Opcional: los expedientes que abre un reclamo de M2 no la traen. Es interna: no se muestra en el portal ciudadano ni viaja en eventos.",
+            "example": "Acopio de escombros sobre la vereda, frente al número 4500.",
+            "maxLength": 2000
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Latitud",
+            "example": -34.7
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "description": "Longitud",
+            "example": -58.5
+          },
+          "ticketId": {
+            "type": "string",
+            "description": "Reclamo de M2 que originó el expediente. Si no viene, es una detección de oficio y no se proyecta nada hacia M2.",
+            "example": "TCK-2026-004821",
+            "maxLength": 64
+          },
+          "priority": {
+            "type": "string",
+            "description": "Prioridad asignada al expediente",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ],
+            "example": "HIGH"
+          }
+        },
+        "required": [
+          "reportType"
+        ]
+      },
+      "EnvironmentalReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID del expediente",
+            "format": "uuid"
+          },
+          "reportType": {
+            "type": "string",
+            "description": "Tipo de denuncia",
+            "enum": [
+              "NOISE",
+              "DUMPING",
+              "ILLEGAL_DUMPSITE",
+              "WATER_DISCHARGE",
+              "AIR_EMISSION",
+              "ODOR",
+              "PEST_INFESTATION",
+              "OTHER"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado del expediente",
+            "enum": [
+              "RECEIVED",
+              "UNDER_REVIEW",
+              "FORWARDED",
+              "DISMISSED",
+              "INSPECTION_SCHEDULED",
+              "INSPECTED",
+              "NO_VIOLATION",
+              "VIOLATION_FOUND",
+              "NOTICE_ISSUED",
+              "SANCTIONED",
+              "CLOSED"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "description": "Dirección denunciada",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción del hallazgo. Null si no se cargó (los expedientes que abre M2 no la traen).",
+            "nullable": true
+          },
+          "lat": {
+            "type": "number",
+            "description": "Latitud",
+            "nullable": true
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitud",
+            "nullable": true
+          },
+          "ticketId": {
+            "type": "string",
+            "description": "Reclamo de M2 que lo originó. Null si es una detección de oficio.",
+            "nullable": true
+          },
+          "publicId": {
+            "type": "string",
+            "description": "Referencia humana del reclamo de M2, la que conoce el vecino. Solo para mostrar y buscar: no es credencial. Null en detecciones de oficio y en expedientes anteriores a la v1.70.",
+            "example": "TK-2026-000123",
+            "nullable": true
+          },
+          "priority": {
+            "type": "string",
+            "description": "Prioridad",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ],
+            "nullable": true
+          },
+          "escalated": {
+            "type": "boolean",
+            "description": "Si M2 escaló el reclamo (al enrutar el reclamo o por un cambio de escalamiento posterior). Es para que lo vea el supervisor; M6 no lo modifica.",
+            "example": false
+          },
+          "citizenResponse": {
+            "type": "string",
+            "description": "Respuesta del vecino a nuestro pedido de información (ticketUpdated/INFORMATION_PROVIDED): el mensaje y, debajo, una línea `nombre: url` por adjunto. Null mientras no respondió.",
+            "example": "El ruido es del local de planta baja, después de las 23 h.",
+            "nullable": true
+          },
+          "deadlineAt": {
+            "type": "string",
+            "description": "Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fecha de creación"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fecha de última actualización"
+          }
+        },
+        "required": [
+          "id",
+          "reportType",
+          "status",
+          "escalated",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ReportStatusChangeDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo del cambio de estado",
+            "example": "El hecho denunciado corresponde a Obras Públicas, no a Ambiente.",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "CreateRepairRequestDto": {
@@ -15768,7 +16762,7 @@
             "format": "uuid"
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección del daño",
             "nullable": true
           },
@@ -15782,7 +16776,7 @@
             ]
           },
           "workOrderId": {
-            "type": "object",
+            "type": "string",
             "description": "Orden de trabajo de M3. Null hasta que la informan.",
             "nullable": true
           },
@@ -15976,13 +16970,13 @@
             }
           },
           "closureFrom": {
-            "type": "object",
+            "type": "string",
             "description": "Inicio solicitado",
             "format": "date-time",
             "nullable": true
           },
           "closureTo": {
-            "type": "object",
+            "type": "string",
             "description": "Fin solicitado",
             "format": "date-time",
             "nullable": true
@@ -16007,7 +17001,7 @@
             ]
           },
           "closureId": {
-            "type": "object",
+            "type": "string",
             "description": "Identificador del corte que asigna M7. Null hasta que responden.",
             "nullable": true
           },
@@ -16067,7 +17061,7 @@
             "example": "550e8400-e29b-41d4-a716-446655440000"
           },
           "publicId": {
-            "type": "object",
+            "type": "string",
             "description": "Referencia humana del reclamo de M2, para mostrar. Null si M2 no la envió",
             "example": "TK-2026-000123",
             "nullable": true
@@ -16105,9 +17099,10 @@
             "example": "Un inspector ya visitó el lugar y estamos evaluando lo que encontró."
           },
           "address": {
-            "type": "object",
+            "type": "string",
             "description": "Dirección denunciada",
-            "example": "Av. Rivadavia 4500"
+            "example": "Av. Rivadavia 4500",
+            "nullable": true
           },
           "openedAt": {
             "format": "date-time",
@@ -16120,8 +17115,9 @@
             "description": "Última novedad del expediente"
           },
           "inspectedAt": {
-            "type": "object",
-            "description": "Fecha de la inspección, si ya se realizó. Sin hallazgos ni inspector"
+            "type": "string",
+            "description": "Fecha de la inspección, si ya se realizó. Sin hallazgos ni inspector",
+            "nullable": true
           },
           "closed": {
             "type": "boolean",
@@ -16136,6 +17132,127 @@
           "openedAt",
           "lastUpdateAt",
           "closed"
+        ]
+      },
+      "PublicServiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serviceTypeName": {
+            "type": "string",
+            "description": "Tipo de servicio",
+            "example": "Recolección domiciliaria"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "WASTE_COLLECTION",
+              "STREET_CLEANING",
+              "CONTAINERS",
+              "TREES",
+              "GREEN_SPACES",
+              "ENVIRONMENTAL_CONTROL"
+            ]
+          },
+          "scheduledDate": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fecha programada",
+            "example": "2026-09-15"
+          },
+          "windowFrom": {
+            "type": "string",
+            "description": "Desde qué hora",
+            "example": "06:00",
+            "nullable": true
+          },
+          "windowTo": {
+            "type": "string",
+            "description": "Hasta qué hora",
+            "example": "10:00",
+            "nullable": true
+          },
+          "stage": {
+            "type": "string",
+            "description": "Estado en lenguaje del vecino: PROGRAMADO, EN_CURSO, REALIZADO o REPROGRAMADO",
+            "example": "PROGRAMADO"
+          },
+          "zones": {
+            "description": "Zonas por las que pasa",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "serviceTypeName",
+          "category",
+          "scheduledDate",
+          "stage",
+          "zones"
+        ]
+      },
+      "PublicGreenPointResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "PV-014"
+          },
+          "name": {
+            "type": "string",
+            "example": "Punto Verde Plaza Mitre"
+          },
+          "address": {
+            "type": "string",
+            "example": "Av. Mitre 1200",
+            "nullable": true
+          },
+          "lat": {
+            "type": "number",
+            "example": -34.6037,
+            "nullable": true
+          },
+          "lng": {
+            "type": "number",
+            "example": -58.3816,
+            "nullable": true
+          },
+          "zoneName": {
+            "type": "string",
+            "description": "Zona operativa",
+            "example": "Centro"
+          },
+          "wasteTypes": {
+            "type": "array",
+            "description": "Qué residuos recibe",
+            "items": {
+              "type": "string",
+              "enum": [
+                "HOUSEHOLD",
+                "RECYCLABLE",
+                "BULKY",
+                "GREEN",
+                "MIXED"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "zoneName",
+          "wasteTypes"
         ]
       },
       "PublicZoneResponseDto": {
@@ -16386,7 +17503,8 @@
               "EXCESS_VOLUME",
               "SECURITY_INCIDENT",
               "OTHER"
-            ]
+            ],
+            "nullable": true
           },
           "count": {
             "type": "number",

@@ -1,5 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsNumber, Min, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min, MaxLength, IsNotEmpty, Max } from 'class-validator';
+import { ToBoolean, Trim } from '../../../common/decorators';
+import { MAX_DECIMAL_10_2 } from '../../../common/decorators/numeric-limits';
 
 export class UpdateVehicleDto {
   @ApiPropertyOptional({
@@ -8,7 +10,9 @@ export class UpdateVehicleDto {
     maxLength: 15,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(15)
   plate?: string;
 
@@ -16,10 +20,12 @@ export class UpdateVehicleDto {
     description: 'Capacidad del vehículo en toneladas',
     example: 12.0,
     minimum: 0,
+    maximum: MAX_DECIMAL_10_2,
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(MAX_DECIMAL_10_2)
   capacity?: number;
 
   @ApiPropertyOptional({
@@ -27,6 +33,6 @@ export class UpdateVehicleDto {
     example: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

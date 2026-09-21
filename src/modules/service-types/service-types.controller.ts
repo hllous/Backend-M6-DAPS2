@@ -20,6 +20,7 @@ import {
   UpdateServiceTypeDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiPaginatedResponse } from '../../common/decorators';
 
 @ApiTags('service-types')
 @ApiBearerAuth('JWT-auth')
@@ -65,7 +66,7 @@ export class ServiceTypesController {
     description:
       'Retorna un listado paginado del catálogo. Se puede filtrar por estado, área operativa y modo, y buscar por nombre.',
   })
-  @ApiResponse({ status: 200, description: 'Listado paginado de tipos de servicio' })
+  @ApiPaginatedResponse(ServiceTypeResponseDto, 'Listado paginado de tipos de servicio')
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',

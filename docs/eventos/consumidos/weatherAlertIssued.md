@@ -21,6 +21,8 @@ Al no haber contraparte, la forma la definimos nosotros. Lo mínimo para que la 
 | `zoneIds[]` | Qué zonas se ven afectadas. `neighborhoodIds[]` no se lee |
 | `from`, `to` | **Obligatorios para `HIGH`/`CRITICAL`.** Ventana de la alerta (ISO 8601): qué servicios caen adentro |
 
+**Validación (400 en `POST /events/inbox`):** `severity` y `zoneIds` no vacío siempre; con `HIGH`/`CRITICAL`, cada elemento de `zoneIds` debe ser uuid y `from`/`to` fechas ISO 8601. Decisión: el uuid se exige solo donde el handler usa las zonas en el `updateMany`; el catálogo de zonas de M9 sigue abierto (bloqueantes.md) y una alerta leve nunca toca `zoneId`, así que no se la rechaza por el formato del id.
+
 Una alerta `HIGH`/`CRITICAL` sin `from` o sin `to` (o con fechas que no se pueden leer) **se descarta con un warn** y no reprograma nada: sin ventana, el filtro por zona movería todos los servicios agendados de esas zonas, en cualquier fecha. Las alertas de severidad menor no reprograman, así que para ellas la ventana no se valida.
 
 ## Por qué queda así

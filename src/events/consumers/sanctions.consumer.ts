@@ -3,6 +3,10 @@ import { EnvironmentalReportStatus as S, SanctionDecision } from '@prisma/client
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent } from '../inbox/consumed-events';
+import { Data, esUuid, requerido } from '../inbox/payload-validation';
+
+const validarActa = (d: Data): string[] =>
+  requerido(d, ['sourceViolationId', 'violationId'], 'uuid', esUuid);
 
 /**
  * Las resoluciones sancionatorias de M4 sobre nuestras actas.
@@ -27,8 +31,17 @@ export class SanctionsConsumer implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.inbox.register(ConsumedEvent.COMMERCIAL_FINE_GENERATED, (d) => this.fineGenerated(d));
-    this.inbox.register(ConsumedEvent.CLOSURE_UPDATE, (d) => this.closureUpdate(d));
+    this.inbox.register(ConsumedEvent.COMMERCIAL_FINE_GENERATED, (d) => this.fineGenerated(d), {
+      validate: validarActa,
+    });
+    this.inbox.register(ConsumedEvent.CLOSURE_UPDATE, (d) => this.closureUpdate(d), {
+      validate: (d) => [
+        ...validarActa(d),
+        ...requerido(d, ['status'], 'ORDERED | LIFTED', (v) =>
+          ['ORDERED', 'LIFTED'].includes(String(v).toUpperCase()),
+        ),
+      ],
+    });
   }
 
   private async fineGenerated(data: Record<string, unknown>): Promise<void> {

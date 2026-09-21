@@ -56,3 +56,6 @@ Thumbs.db
 *.swp
 *.swo
 *.stackdump
+
+# Capturas y traces del MCP de Playwright: pueden contener cabeceras Authorization.
+.playwright-mcp/

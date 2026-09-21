@@ -4,15 +4,17 @@ import {
   IsNotEmpty,
   IsEnum,
   IsOptional,
-  IsBoolean,
   IsNumber,
   IsUUID,
   IsLatitude,
   IsLongitude,
   Min,
   MaxLength,
+  Max,
 } from 'class-validator';
+import { ToBoolean, Trim, Latitude, Longitude } from '../../../common/decorators';
 import { GreenSpaceType } from '@prisma/client';
+import { MAX_DECIMAL_10_2 } from '../../../common/decorators/numeric-limits';
 
 export class CreateGreenSpaceDto {
   @ApiProperty({
@@ -20,6 +22,7 @@ export class CreateGreenSpaceDto {
     example: 'Plaza Miserere',
     maxLength: 150,
   })
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(150)
@@ -43,22 +46,24 @@ export class CreateGreenSpaceDto {
 
   @ApiPropertyOptional({ description: 'Latitud', example: -34.5724 })
   @IsOptional()
-  @IsLatitude()
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Longitud', example: -58.4166 })
   @IsOptional()
-  @IsLongitude()
+  @Longitude()
   lng?: number;
 
   @ApiPropertyOptional({
     description: 'Superficie en metros cuadrados',
     example: 12500.5,
     minimum: 0,
+    maximum: MAX_DECIMAL_10_2,
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(MAX_DECIMAL_10_2)
   areaM2?: number;
 
   @ApiPropertyOptional({
@@ -67,6 +72,6 @@ export class CreateGreenSpaceDto {
     default: true,
   })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }

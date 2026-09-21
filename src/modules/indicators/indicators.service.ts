@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   ContainerStatus,
   DisposalSiteType,
@@ -56,6 +56,11 @@ interface Periodo {
 function periodo(query: PeriodQueryDto): Periodo {
   const to = query.to ? new Date(query.to) : new Date(dia(new Date()));
   const from = query.from ? new Date(query.from) : new Date(to.getTime() - 30 * DIA_MS);
+  if (from > to) {
+    throw new BadRequestException(
+      `'from' (${dia(from)}) no puede ser posterior a 'to' (${dia(to)})`,
+    );
+  }
   return {
     from,
     to,

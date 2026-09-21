@@ -1,18 +1,18 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { WasteType } from '@prisma/client';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
-  IsBoolean,
   IsEnum,
-  IsLatitude,
-  IsLongitude,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
+  IsNotEmpty,
 } from 'class-validator';
+import { ToBoolean, Trim, MAX_LIST_SIZE, Latitude, Longitude } from '../../../common/decorators';
 
 /** El código no es mutable: identifica al punto verde en la vía pública. */
 export class UpdateGreenPointDto {
@@ -22,7 +22,9 @@ export class UpdateGreenPointDto {
     maxLength: 100,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   name?: string;
 
@@ -32,6 +34,7 @@ export class UpdateGreenPointDto {
   zoneId?: string;
 
   @ApiPropertyOptional({
+    maxItems: MAX_LIST_SIZE,
     description: 'Tipos de residuo aceptados. Reemplaza el conjunto completo.',
     enum: WasteType,
     isArray: true,
@@ -40,6 +43,7 @@ export class UpdateGreenPointDto {
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_LIST_SIZE)
   @ArrayUnique()
   @IsEnum(WasteType, { each: true })
   wasteTypes?: WasteType[];
@@ -52,16 +56,16 @@ export class UpdateGreenPointDto {
 
   @ApiPropertyOptional({ description: 'Latitud', example: -34.6037 })
   @IsOptional()
-  @IsLatitude()
+  @Latitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Longitud', example: -58.3816 })
   @IsOptional()
-  @IsLongitude()
+  @Longitude()
   lng?: number;
 
   @ApiPropertyOptional({ description: 'Si está habilitado', example: false })
   @IsOptional()
-  @IsBoolean()
+  @ToBoolean()
   active?: boolean;
 }
