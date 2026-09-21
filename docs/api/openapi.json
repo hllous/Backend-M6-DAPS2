@@ -16301,6 +16301,47 @@
             ],
             "nullable": true
           },
+          "conclusion": {
+            "type": "string",
+            "description": "Conclusión del inspector. **Interno: nunca sale hacia M2.**",
+            "nullable": true
+          },
+          "violationType": {
+            "type": "string",
+            "description": "Tipo de infracción",
+            "enum": [
+              "NOISE_LIMIT",
+              "ILLEGAL_DUMPING",
+              "UNTREATED_DISCHARGE",
+              "HAZARDOUS_WASTE",
+              "AIR_EMISSION",
+              "NO_WASTE_MANAGEMENT",
+              "INSPECTION_OBSTRUCTION"
+            ],
+            "nullable": true
+          },
+          "severity": {
+            "type": "string",
+            "description": "Gravedad",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ],
+            "nullable": true
+          },
+          "suggestedAction": {
+            "type": "string",
+            "description": "Acción sugerida por el inspector",
+            "enum": [
+              "WARNING",
+              "FORMAL_NOTICE",
+              "FINE",
+              "CLOSURE"
+            ],
+            "nullable": true
+          },
           "checklistItems": {
             "description": "Checklist relevado. **Interno: nunca sale hacia M2.**",
             "type": "array",
@@ -16397,6 +16438,48 @@
             "items": {
               "$ref": "#/components/schemas/ChecklistItemDto"
             }
+          },
+          "conclusion": {
+            "type": "string",
+            "description": "Conclusión del inspector. Se acepta con cualquier resultado; vacía o sólo con espacios se guarda como null. **Interno: nunca sale hacia M2.**",
+            "example": "El predio cumple con la gestión de residuos; no se constató vertido.",
+            "maxLength": 2000
+          },
+          "violationType": {
+            "type": "string",
+            "description": "Tipo de infracción constatada, si hubo. Orientativo: el acta lo vuelve a pedir y es la que se deriva a M4.",
+            "enum": [
+              "NOISE_LIMIT",
+              "ILLEGAL_DUMPING",
+              "UNTREATED_DISCHARGE",
+              "HAZARDOUS_WASTE",
+              "AIR_EMISSION",
+              "NO_WASTE_MANAGEMENT",
+              "INSPECTION_OBSTRUCTION"
+            ],
+            "example": "UNTREATED_DISCHARGE"
+          },
+          "severity": {
+            "type": "string",
+            "description": "Gravedad de la infracción, si hubo. Orientativa, como violationType.",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ],
+            "example": "HIGH"
+          },
+          "suggestedAction": {
+            "type": "string",
+            "description": "Acción que sugiere el inspector, si hubo infracción. Orientativa, como violationType.",
+            "enum": [
+              "WARNING",
+              "FORMAL_NOTICE",
+              "FINE",
+              "CLOSURE"
+            ],
+            "example": "FINE"
           }
         },
         "required": [

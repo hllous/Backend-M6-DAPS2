@@ -289,7 +289,9 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | POST   | `/environmental-inspections/:id/violation-notice` | **Emitir el acta.** Solo sobre una inspección `VIOLATION_FOUND`                                                                                                                                                                                              |
 | GET    | `/environmental-inspections/:id/violation-notice` | El acta emitida                                                                                                                                                                                                                                              |
 
-**`checklist[]`, `findings` e `inspectorId` son internos: nunca salen hacia M2.**
+**`checklist[]`, `findings`, `conclusion` e `inspectorId` son internos: nunca salen hacia M2.**
+
+**Al cerrar, `complete` acepta además `conclusion`, `violationType`, `severity` y `suggestedAction`**, todos opcionales, y el detalle los devuelve. `conclusion` es texto libre de hasta 2000 caracteres; los otros tres usan los mismos enums que el acta. Son orientativos: el acta los vuelve a pedir y lo que se deriva a M4 es lo del acta. No hay reglas cruzadas con `outcome`.
 
 **El acta es inmutable.** No hay `PATCH` ni `DELETE`: si hay un error se emite otra sobre una inspección nueva. Una segunda acta sobre la misma inspección da 409.
 

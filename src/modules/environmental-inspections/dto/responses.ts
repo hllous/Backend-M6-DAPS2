@@ -68,6 +68,26 @@ export class InspectionResponseDto {
   nextStep: InspectionNextStep | null;
 
   @ApiPropertyOptional({
+    description: 'Conclusión del inspector. **Interno: nunca sale hacia M2.**',
+    nullable: true,
+    type: String,
+  })
+  conclusion: string | null;
+
+  @ApiPropertyOptional({ description: 'Tipo de infracción', enum: ViolationType, nullable: true })
+  violationType: ViolationType | null;
+
+  @ApiPropertyOptional({ description: 'Gravedad', enum: Severity, nullable: true })
+  severity: Severity | null;
+
+  @ApiPropertyOptional({
+    description: 'Acción sugerida por el inspector',
+    enum: SuggestedAction,
+    nullable: true,
+  })
+  suggestedAction: SuggestedAction | null;
+
+  @ApiPropertyOptional({
     description: 'Checklist relevado. **Interno: nunca sale hacia M2.**',
     type: [ChecklistItemResponseDto],
   })

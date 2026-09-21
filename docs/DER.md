@@ -261,6 +261,10 @@ erDiagram
         text findings "interno"
         enum outcome "InspectionOutcome"
         enum next_step "InspectionNextStep"
+        text conclusion "interno"
+        enum violation_type "ViolationType"
+        enum severity "Severity"
+        enum suggested_action "SuggestedAction"
     }
     CHECKLIST_ITEM {
         uuid id PK
