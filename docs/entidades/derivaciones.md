@@ -17,8 +17,6 @@ Un daño de infraestructura que detectamos pero que no nos corresponde arreglar:
 
 **`publicSafetyRisk` es un campo propio y no se deriva de `severity`.** Son dos cosas distintas: una vereda rota puede ser de severidad baja y aun así tener a un chico cayéndose adentro. M3 prioriza con este campo y su schema lo exige, así que lo carga quien reporta el daño.
 
-**`publicSafetyRisk` es un campo propio y no se deriva de `severity`.** Son dos cosas distintas: una vereda rota puede ser de severidad baja y aun así tener a un chico cayéndose adentro. M3 prioriza con este campo y su schema lo exige, así que lo carga quien reporta el daño.
-
 **Tres estados, no una máquina:** pedida, en curso, cerrada. Alcanza con eso, y por eso no consumimos `workOrderUpdated` de M3.
 
 | Momento | Qué pasa |
