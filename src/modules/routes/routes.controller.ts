@@ -62,7 +62,7 @@ export class RoutesController {
   @ApiOperation({
     summary: 'Listar recorridos',
     description:
-      'Retorna un listado paginado. Se puede filtrar por estado, por zona por la que pasa el recorrido, y buscar por nombre. No incluye las paradas: para eso, el GET por ID.',
+      'Retorna un listado paginado. Se puede filtrar por estado, por zona por la que pasa el recorrido, y buscar por nombre. Cada recorrido incluye sus paradas en orden, con el mismo formato que el GET por ID.',
   })
   @ApiPaginatedResponse(RouteResponseDto, 'Listado paginado de recorridos')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })

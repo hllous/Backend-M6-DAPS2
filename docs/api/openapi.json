@@ -1784,7 +1784,7 @@
       "get": {
         "operationId": "RoutesController_findAll",
         "summary": "Listar recorridos",
-        "description": "Retorna un listado paginado. Se puede filtrar por estado, por zona por la que pasa el recorrido, y buscar por nombre. No incluye las paradas: para eso, el GET por ID.",
+        "description": "Retorna un listado paginado. Se puede filtrar por estado, por zona por la que pasa el recorrido, y buscar por nombre. Cada recorrido incluye sus paradas en orden, con el mismo formato que el GET por ID.",
         "parameters": [
           {
             "name": "page",
@@ -13227,7 +13227,7 @@
             "example": true
           },
           "stops": {
-            "description": "Paradas en orden. Incluido en el GET por ID y en la respuesta de PUT /routes/:id/stops",
+            "description": "Paradas en orden de sequence. Incluido en el listado, en el GET por ID y en la respuesta de PUT /routes/:id/stops; no en las respuestas de POST ni PATCH",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/RouteStopResponseDto"
