@@ -86,6 +86,8 @@ const SERVICE_INCLUDE = {
   zones: { orderBy: { sequence: 'asc' } },
   zoneResults: { orderBy: { recordedAt: 'asc' } },
   collectionRecords: true,
+  // El vinculo con la inspeccion vive en EnvironmentalInspection.serviceId.
+  inspection: { select: { id: true } },
 } satisfies Prisma.ServiceInclude;
 
 type ServiceWithRelations = Prisma.ServiceGetPayload<{ include: typeof SERVICE_INCLUDE }>;
@@ -181,6 +183,7 @@ export class ServicesService {
     }
 
     this.assertTicketConsistency(dto);
+    this.assertOriginLinks(dto);
     this.assertWindowOrder(dto.windowFrom, dto.windowTo);
 
     // El modo lo manda el tipo de servicio, no el DTO: un tipo ROUTE no se
@@ -192,6 +195,7 @@ export class ServicesService {
         : await this.resolvePointZone(dto);
 
     await this.assertResourcesExist(dto.crewId, dto.vehicleId);
+    if (dto.inspectionId) await this.assertInspectionLinkable(dto.inspectionId, mode);
 
     // Mismo criterio que assign-crew: programar con recursos ya tomados no se
     // puede en silencio. Va antes de la transaccion: no hay lock, asi que dos
@@ -223,6 +227,7 @@ export class ServicesService {
           crewId: dto.crewId ?? null,
           vehicleId: dto.vehicleId ?? null,
           ticketId: dto.ticketId ?? null,
+          weatherAlertId: dto.weatherAlertId ?? null,
           notes: dto.notes ?? null,
           createdBy: createdBy ?? null,
           ...(conflictos.length > 0 &&
@@ -237,6 +242,17 @@ export class ServicesService {
         },
         include: SERVICE_INCLUDE,
       });
+
+      if (dto.inspectionId) {
+        // Condicionado a que siga libre: si otra alta la tomo entre el chequeo
+        // y aca, se revierte todo el alta.
+        const { count } = await tx.environmentalInspection.updateMany({
+          where: { id: dto.inspectionId, serviceId: null },
+          data: { serviceId: created.id },
+        });
+        if (count === 0) throw this.inspectionTaken(dto.inspectionId);
+        created.inspection = { id: dto.inspectionId };
+      }
 
       await this.outbox.enqueue(tx, {
         eventType: EventType.URBAN_SERVICE_SCHEDULED,
@@ -982,6 +998,41 @@ export class ServicesService {
     }
   }
 
+  /** Misma idea que ticketId, pero opcionales: hay servicios INSPECTION y WEATHER_ALERT sin id. */
+  private assertOriginLinks(dto: CreateServiceDto): void {
+    if (dto.inspectionId && dto.origin !== ServiceOrigin.INSPECTION) {
+      throw new BadRequestException(
+        `'inspectionId' solo corresponde con origin = INSPECTION (este es ${dto.origin})`,
+      );
+    }
+    if (dto.weatherAlertId && dto.origin !== ServiceOrigin.WEATHER_ALERT) {
+      throw new BadRequestException(
+        `'weatherAlertId' solo corresponde con origin = WEATHER_ALERT (este es ${dto.origin})`,
+      );
+    }
+  }
+
+  /** Mismas reglas que programar la inspeccion con serviceId: existe, esta libre y el servicio es POINT. */
+  private async assertInspectionLinkable(inspectionId: string, mode: ServiceMode): Promise<void> {
+    const inspection = await this.prisma.environmentalInspection.findUnique({
+      where: { id: inspectionId },
+      select: { serviceId: true },
+    });
+    if (!inspection) {
+      throw new NotFoundException(`Inspección con id '${inspectionId}' no encontrada`);
+    }
+    if (inspection.serviceId) throw this.inspectionTaken(inspectionId);
+    if (mode !== ServiceMode.POINT) {
+      throw new BadRequestException(
+        `Una inspección ambiental se ejecuta sobre un objetivo puntual, así que el servicio tiene que ser de modo POINT (este es ${mode})`,
+      );
+    }
+  }
+
+  private inspectionTaken(inspectionId: string): ConflictException {
+    return new ConflictException(`La inspección '${inspectionId}' ya tiene un servicio asignado`);
+  }
+
   private assertWindowOrder(from?: string | null, to?: string | null): void {
     if (from && to && from >= to) {
       throw new BadRequestException(
@@ -1216,6 +1267,8 @@ export class ServicesService {
       crewId: service.crewId,
       vehicleId: service.vehicleId,
       ticketId: service.ticketId,
+      inspectionId: service.inspection?.id ?? null,
+      weatherAlertId: service.weatherAlertId,
       notes: service.notes,
       zones: service.zones.map((z) => ({ zoneId: z.zoneId, sequence: z.sequence })),
       zoneResults: service.zoneResults.map((r) => this.toZoneResultDto(r)),

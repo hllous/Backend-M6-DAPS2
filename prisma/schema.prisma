@@ -460,6 +460,9 @@ model Service {
   statusReason           String?       @map("status_reason")
   origin                 ServiceOrigin
   ticketId               String?       @map("ticket_id") // EXT M2
+  // Alerta meteorologica que lo origino. No hay tabla de alertas (la alerta es
+  // simulada y no se persiste), asi que es una referencia externa sin FK.
+  weatherAlertId         String?       @map("weather_alert_id")
   notes                  String?       @db.Text
   // Por que se asigno una cuadrilla o un vehiculo que ya estaba tomado. Se
   // exige cuando hay solapamiento: la asignacion avisa y deja pasar, pero no
@@ -753,6 +756,9 @@ model EnvironmentalReport {
   id               String                    @id @default(uuid()) @db.Uuid
   reportType       EnvironmentalReportType   @map("report_type")
   address          String?
+  // Descripcion del hallazgo. Interna: puede traer datos personales, no va al
+  // portal ciudadano ni a los eventos. Null en los que llegan de M2.
+  description      String?                   @db.Text
   lat              Decimal?                  @db.Decimal(10, 7)
   lng              Decimal?                  @db.Decimal(10, 7)
   ticketId         String?                   @map("ticket_id") // EXT M2

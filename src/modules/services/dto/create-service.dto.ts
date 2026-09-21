@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MAX_NOTES_LENGTH } from '../../../common/decorators';
+import { MAX_EXTERNAL_ID_LENGTH, MAX_NOTES_LENGTH } from '../../../common/decorators';
 import { ServiceOrigin } from '@prisma/client';
 import {
   IsDateString,
@@ -47,7 +47,8 @@ export class CreateServiceDto {
   scheduledDate: string;
 
   @ApiProperty({
-    description: 'Origen de la programación. TICKET exige ticketId; el resto no lo admite.',
+    description:
+      'Origen de la programación. TICKET exige ticketId; el resto no lo admite. inspectionId solo se admite con INSPECTION y weatherAlertId solo con WEATHER_ALERT, pero no son obligatorios.',
     enum: ServiceOrigin,
     example: ServiceOrigin.PLANNED,
   })
@@ -137,6 +138,27 @@ export class CreateServiceDto {
   @IsString()
   @MaxLength(64)
   ticketId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Inspección ambiental que va a ejecutar este servicio. Solo con origin = INSPECTION, y el tipo de servicio tiene que ser POINT. La inspección tiene que existir (404) y no tener otro servicio (409). El vínculo se guarda en la inspección, igual que al programarla con `serviceId`.',
+    example: '0b1c2d3e-4f5a-6789-abcd-ef0123456789',
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  inspectionId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Alerta meteorológica que originó el servicio. Solo con origin = WEATHER_ALERT. Es una referencia externa: M6 no guarda las alertas, así que no se verifica que exista.',
+    example: 'ALERTA-SMN-2026-0915',
+    maxLength: MAX_EXTERNAL_ID_LENGTH,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
+  weatherAlertId?: string;
 
   @ApiPropertyOptional({
     maxLength: MAX_NOTES_LENGTH,

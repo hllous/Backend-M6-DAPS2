@@ -181,6 +181,22 @@ export class ServiceResponseDto {
   })
   ticketId: string | null;
 
+  @ApiPropertyOptional({
+    description:
+      'Inspección ambiental que ejecuta este servicio. Se lee del lado de la inspección (`EnvironmentalInspection.serviceId`), que es la única fuente del vínculo.',
+    nullable: true,
+    type: String,
+    format: 'uuid',
+  })
+  inspectionId: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Alerta meteorológica que lo originó. Solo cuando origin = WEATHER_ALERT.',
+    nullable: true,
+    type: String,
+  })
+  weatherAlertId: string | null;
+
   @ApiPropertyOptional({ description: 'Notas internas', nullable: true, type: String })
   notes: string | null;
 

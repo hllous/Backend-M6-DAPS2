@@ -15175,7 +15175,7 @@
           },
           "origin": {
             "type": "string",
-            "description": "Origen de la programación. TICKET exige ticketId; el resto no lo admite.",
+            "description": "Origen de la programación. TICKET exige ticketId; el resto no lo admite. inspectionId solo se admite con INSPECTION y weatherAlertId solo con WEATHER_ALERT, pero no son obligatorios.",
             "enum": [
               "PLANNED",
               "TICKET",
@@ -15241,6 +15241,18 @@
             "description": "Reclamo de M2 que originó el servicio. Obligatorio si origin = TICKET, y rechazado en cualquier otro origen.",
             "example": "TCK-2026-004821",
             "maxLength": 64
+          },
+          "inspectionId": {
+            "type": "string",
+            "description": "Inspección ambiental que va a ejecutar este servicio. Solo con origin = INSPECTION, y el tipo de servicio tiene que ser POINT. La inspección tiene que existir (404) y no tener otro servicio (409). El vínculo se guarda en la inspección, igual que al programarla con `serviceId`.",
+            "example": "0b1c2d3e-4f5a-6789-abcd-ef0123456789",
+            "format": "uuid"
+          },
+          "weatherAlertId": {
+            "type": "string",
+            "description": "Alerta meteorológica que originó el servicio. Solo con origin = WEATHER_ALERT. Es una referencia externa: M6 no guarda las alertas, así que no se verifica que exista.",
+            "example": "ALERTA-SMN-2026-0915",
+            "maxLength": 100
           },
           "notes": {
             "type": "string",
@@ -15497,6 +15509,17 @@
           "ticketId": {
             "type": "string",
             "description": "Reclamo de M2 que lo originó. Solo cuando origin = TICKET.",
+            "nullable": true
+          },
+          "inspectionId": {
+            "type": "string",
+            "description": "Inspección ambiental que ejecuta este servicio. Se lee del lado de la inspección (`EnvironmentalInspection.serviceId`), que es la única fuente del vínculo.",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "weatherAlertId": {
+            "type": "string",
+            "description": "Alerta meteorológica que lo originó. Solo cuando origin = WEATHER_ALERT.",
             "nullable": true
           },
           "notes": {
@@ -16033,6 +16056,12 @@
             "example": "Camino de Cintura 4500",
             "maxLength": 200
           },
+          "description": {
+            "type": "string",
+            "description": "Descripción del hallazgo. Opcional: los expedientes que abre un reclamo de M2 no la traen. Es interna: no se muestra en el portal ciudadano ni viaja en eventos.",
+            "example": "Acopio de escombros sobre la vereda, frente al número 4500.",
+            "maxLength": 2000
+          },
           "lat": {
             "type": "number",
             "minimum": -90,
@@ -16111,6 +16140,11 @@
           "address": {
             "type": "string",
             "description": "Dirección denunciada",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción del hallazgo. Null si no se cargó (los expedientes que abre M2 no la traen).",
             "nullable": true
           },
           "lat": {

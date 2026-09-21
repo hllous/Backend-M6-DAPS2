@@ -8,11 +8,11 @@ La denuncia ambiental tal como la tramitamos nosotros: ruidos, vertidos, microba
 
 | Entidad | Campos principales |
 |---|---|
-| `EnvironmentalReport` | `reportType`, `location`, `ticketId`, `publicId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `deadlineAt` |
+| `EnvironmentalReport` | `reportType`, `location`, `description`, `ticketId`, `publicId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `deadlineAt` |
 
 Enums: `reportType` es `EnvironmentalReportType`, `status` es `EnvironmentalReportStatus` — ver [enumeraciones.md](../enumeraciones.md).
 
-**La API devuelve `escalated` y `citizenResponse`** (listado y detalle). `reporterSnapshot` se guarda pero no se expone: trae el `citizenId` del vecino y ningún flujo de M6 lo necesita.
+**La API devuelve `description`, `escalated` y `citizenResponse`** (listado y detalle). `description` es la descripción del hallazgo que carga el operador al abrir el expediente (opcional, hasta 2000 caracteres); los expedientes que abre un reclamo de M2 no la traen. Puede contener datos personales, así que **no sale en el portal ciudadano ni en ningún evento** (#218). `reporterSnapshot` se guarda pero no se expone: trae el `citizenId` del vecino y ningún flujo de M6 lo necesita.
 
 **`escalated` y `citizenResponse` los escribe M2, no nosotros.** Llegan por `ticketUpdated`: `ESCALATION_CHANGED` marca o desmarca el expediente como escalado (`details.escalation.active`) para que lo vea el supervisor, y el `ROUTED` ya trae el valor inicial. `INFORMATION_PROVIDED` trae lo que el vecino respondió a nuestro pedido de información: `citizenResponse` guarda `details.informationResponse.message` y, debajo, una línea `fileName: url` por adjunto. El expediente no tiene campo de adjuntos, y la URL de M2 puede ser temporal. El contrato de M2 no usa ID de correlación —impone como máximo una solicitud activa por ticket—, así que la respuesta siempre corresponde a la nuestra.
 

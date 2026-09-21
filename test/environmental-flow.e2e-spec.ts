@@ -1,7 +1,15 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { OutboxEventStatus } from '@prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { Api, createTestApp, tokenFor, truncateAll } from './helpers';
+import {
+  Api,
+  crearTipoServicio,
+  crearZona,
+  createTestApp,
+  hoy,
+  tokenFor,
+  truncateAll,
+} from './helpers';
 
 /**
  * El expediente ambiental de punta a punta: denuncia → análisis → inspección →
@@ -37,12 +45,16 @@ describe('Flujo del expediente ambiental (e2e)', () => {
       .post('/environmental-reports', {
         reportType: 'WATER_DISCHARGE',
         address: 'Camino de Cintura 4500',
+        description: '  Vuelco de efluentes al pluvial.  ',
         priority: 'HIGH',
       })
       .expect(201);
 
     reportId = creado.body.id;
     expect(creado.body.status).toBe('RECEIVED');
+    expect(creado.body.description).toBe('Vuelco de efluentes al pluvial.');
+    const detalle = await api.get(`/environmental-reports/${reportId}`).expect(200);
+    expect(detalle.body.description).toBe('Vuelco de efluentes al pluvial.');
 
     const enAnalisis = await api
       .post(`/environmental-reports/${reportId}/start-review`)
@@ -61,6 +73,38 @@ describe('Flujo del expediente ambiental (e2e)', () => {
       where: { id: reportId },
     });
     expect(expediente.status).toBe('INSPECTION_SCHEDULED');
+  });
+
+  it('programa el servicio de la inspección y el vínculo queda en la inspección (#218)', async () => {
+    const zona = await crearZona(api);
+    const tipo = await crearTipoServicio(api, { category: 'ENVIRONMENTAL_CONTROL', mode: 'POINT' });
+
+    const res = await api
+      .post('/services', {
+        serviceTypeId: tipo.id,
+        scheduledDate: hoy(),
+        origin: 'INSPECTION',
+        zoneId: zona.id,
+        inspectionId,
+      })
+      .expect(201);
+
+    expect(res.body.inspectionId).toBe(inspectionId);
+    const inspeccion = await prisma.environmentalInspection.findUniqueOrThrow({
+      where: { id: inspectionId },
+    });
+    expect(inspeccion.serviceId).toBe(res.body.id);
+
+    // Una segunda alta sobre la misma inspección no le pisa el servicio.
+    await api
+      .post('/services', {
+        serviceTypeId: tipo.id,
+        scheduledDate: hoy(),
+        origin: 'INSPECTION',
+        zoneId: zona.id,
+        inspectionId,
+      })
+      .expect(409);
   });
 
   it('cierra la inspección con infracción y lleva el expediente a VIOLATION_FOUND', async () => {

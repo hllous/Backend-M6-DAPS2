@@ -97,6 +97,7 @@ erDiagram
         varchar status_reason
         enum origin "ServiceOrigin"
         varchar ticket_id "EXT M2"
+        varchar weather_alert_id "alerta simulada, sin tabla ni FK"
         text notes
         text assignment_override_note "solo si se asigno o programo sobre un solapamiento"
         varchar assignment_override_by "EXT M1"
@@ -241,6 +242,7 @@ erDiagram
         uuid id PK
         enum report_type "EnvironmentalReportType"
         varchar address
+        text description "interna, no va al portal ni a eventos"
         numeric lat
         numeric lng
         varchar ticket_id "EXT M2"
