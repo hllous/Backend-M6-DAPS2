@@ -121,7 +121,7 @@ export class CompleteInspectionDto {
 
   @ApiPropertyOptional({
     description:
-      'Conclusión del inspector. El frontend la manda con NO_VIOLATION o INCONCLUSIVE. **Interno: nunca sale hacia M2.**',
+      'Conclusión del inspector. Se acepta con cualquier resultado; vacía o sólo con espacios se guarda como null. **Interno: nunca sale hacia M2.**',
     example: 'El predio cumple con la gestión de residuos; no se constató vertido.',
     maxLength: MAX_NOTES_LENGTH,
   })

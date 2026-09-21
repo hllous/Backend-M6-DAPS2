@@ -116,7 +116,8 @@ export class EnvironmentalInspectionsService {
           outcome: dto.outcome,
           nextStep: dto.nextStep ?? null,
           findings: dto.findings ?? null,
-          conclusion: dto.conclusion ?? null,
+          // Trim deja "" un texto de solo espacios: se guarda null, como la description del expediente.
+          conclusion: dto.conclusion || null,
           violationType: dto.violationType ?? null,
           severity: dto.severity ?? null,
           suggestedAction: dto.suggestedAction ?? null,

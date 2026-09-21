@@ -4,7 +4,7 @@ import { InspectionOutcome } from '@prisma/client';
 import { MAX_NOTES_LENGTH } from '../../../common/decorators';
 import { CompleteInspectionDto } from './dtos';
 
-// Mismas opciones que el ValidationPipe global.
+// whitelist y forbidNonWhitelisted como el ValidationPipe global (sin la conversion implicita, que estos campos no necesitan).
 async function validar(extra: Record<string, unknown>) {
   const dto = plainToInstance(CompleteInspectionDto, {
     inspectedAt: '2026-09-10T11:30:00.000Z',
