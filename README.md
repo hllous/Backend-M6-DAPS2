@@ -38,6 +38,7 @@ Requisitos:
 |---|---|---|
 | **API interactiva (Swagger)** | `https://m6-backend-m64k.onrender.com/api/docs` |
 | **Despliegue y estado** | [`docs/deploy.md`](docs/deploy.md) |
+| **Tests unitarios y e2e** | [`docs/testing.md`](docs/testing.md) |
 | **Índice de la documentación** | [`LEEME.md`](LEEME.md) |
 | **Alcance del módulo** | [`docs/Documento de Alcance.pdf`](docs/Documento%20de%20Alcance%20-%20Grupo%2004%20%28Modulo%206%29.pdf) |
 | **Diagrama de eventos** | [`docs/Diagrama de Eventos.pdf`](docs/Diagrama%20de%20Eventos%20-%20Grupo%2004%20%28Modulo%206%29.pdf) |
@@ -60,10 +61,10 @@ Para orientarse en el repo, el punto de entrada recomendado es [`AGENTS.md`](AGE
 │   ├── events/              outbox, inbox, consumidores y publishers
 │   └── modules/             un módulo por recurso
 ├── prisma/                  schema (35 modelos), migraciones y seed
-└── test/                    e2e (vacío — ver DoD: cobertura ≥ 85%)
+└── test/                    suites e2e contra Postgres real (ver docs/testing.md)
 ```
 
-Los tests unitarios viven al lado del código que prueban (`*.spec.ts` dentro de `src/`), no en `test/`.
+Los tests unitarios viven al lado del código que prueban (`*.spec.ts` dentro de `src/`), no en `test/`. Cómo correr unos y otros: [`docs/testing.md`](docs/testing.md).
 
 El pipeline de documentación que genera los entregables para la cátedra —`fuentes/`, `M6-por-modulo/`, `enunciado/` y los PDF compilados— vive en el **repositorio de documentación**, no acá. Detalle del mapeo fuente → PDF: ver [`LEEME.md`](LEEME.md).
 

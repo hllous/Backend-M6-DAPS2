@@ -1,46 +1,19 @@
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { ValidationPipe, Logger } from '@nestjs/common';
-import { NoNullCharsPipe } from './common/pipes/no-null-chars.pipe';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { configureApp } from './configure-app';
 import { buildSwaggerConfig } from './swagger-config';
-import { HttpExceptionFilter } from './common/filters';
-import { LoggingInterceptor } from './common/interceptors';
-import { securityHeaders } from './common/middleware/security-headers.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
-  // Render termina el TLS en un proxy: sin esto req.ip es la IP del proxy y el
-  // ThrottlerGuard mete a todos los clientes en el mismo balde. Un solo salto.
-  app.set('trust proxy', 1);
-
-  // No anunciar el framework y agregar las cabeceras de seguridad básicas.
-  app.disable('x-powered-by');
-  app.use(securityHeaders);
-
-  // ─── Global pipes ───────────────────────────────
-  app.useGlobalPipes(
-    new NoNullCharsPipe(),
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
-  );
-
-  // ─── Global filters ────────────────────────────
-  app.useGlobalFilters(new HttpExceptionFilter());
-
-  // ─── Global interceptors ───────────────────────
-  app.useGlobalInterceptors(new LoggingInterceptor());
+  // Pipes, filtros, interceptores y cabeceras. Lo mismo que levantan los e2e.
+  configureApp(app);
 
   // ─── CORS ──────────────────────────────────────
   // Sin CORS_ORIGINS se aceptan todos, que es lo que hace falta en desarrollo
