@@ -56,4 +56,5 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 - [enumeraciones.md](enumeraciones.md) — catálogo de valores cerrados
 - [decisiones/](decisiones/) — ADRs (decisiones técnicas de arquitectura)
 - [deploy.md](deploy.md) — despliegue, URLs, variables de entorno y estado operativo
+- [testing.md](testing.md) — tests unitarios y e2e contra Postgres: cómo correrlos y qué cubre cada suite
 - [gestion/](gestion/) — proceso Scrum: DoD, sprints y bitácoras
