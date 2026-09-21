@@ -73,7 +73,9 @@ describe('Ciclo de vida de un servicio urbano (e2e)', () => {
   it('el listado de recorridos trae las paradas en orden, igual que el detalle', async () => {
     const primera = await crearZona(api);
     const segunda = await crearZona(api);
-    // Se cargan al revés del orden de creación para que el orden no salga del id.
+    // Comprueba que el listado trae las paradas y que coinciden con el detalle. El
+    // orden por sequence lo cubre la spec unitaria: aca Postgres suele devolver las
+    // filas en el orden de insercion, asi que sacar el orderBy no romperia este test.
     const ruta = await crearRuta(api, [segunda.id, primera.id]);
     const detalle = await api.get(`/routes/${ruta.id}`).expect(200);
 
