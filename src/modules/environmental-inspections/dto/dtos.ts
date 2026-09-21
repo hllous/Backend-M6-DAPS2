@@ -103,9 +103,12 @@ export class CompleteInspectionDto {
   @ApiPropertyOptional({
     description: 'Qué encontró el inspector. **Interno: nunca sale hacia M2.**',
     example: 'Vertido de efluentes sin tratar al pluvial en el fondo del predio.',
+    maxLength: MAX_NOTES_LENGTH,
   })
   @IsOptional()
+  @Trim()
   @IsString()
+  @MaxLength(MAX_NOTES_LENGTH)
   findings?: string;
 
   @ApiPropertyOptional({

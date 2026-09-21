@@ -56,6 +56,20 @@ describe('CompleteInspectionDto: campos de cierre (#217)', () => {
     expect((await validar({ conclusion: 42 })).campos).toEqual(['conclusion']);
   });
 
+  it('findings acepta el tope y rechaza tope + 1 (#222)', async () => {
+    expect((await validar({ findings: 'a'.repeat(MAX_NOTES_LENGTH) })).campos).toEqual([]);
+    expect((await validar({ findings: 'a'.repeat(MAX_NOTES_LENGTH + 1) })).campos).toEqual([
+      'findings',
+    ]);
+  });
+
+  it('findings se recorta y no acepta algo que no sea string (#222)', async () => {
+    expect((await validar({ findings: '  vertido al pluvial  ' })).dto.findings).toBe(
+      'vertido al pluvial',
+    );
+    expect((await validar({ findings: 42 })).campos).toEqual(['findings']);
+  });
+
   it('los cuatro son opcionales', async () => {
     expect((await validar({})).campos).toEqual([]);
   });
