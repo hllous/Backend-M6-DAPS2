@@ -16266,7 +16266,8 @@
           "findings": {
             "type": "string",
             "description": "Qué encontró el inspector. **Interno: nunca sale hacia M2.**",
-            "example": "Vertido de efluentes sin tratar al pluvial en el fondo del predio."
+            "example": "Vertido de efluentes sin tratar al pluvial en el fondo del predio.",
+            "maxLength": 2000
           },
           "checklist": {
             "description": "Checklist relevado. **Interno: nunca sale hacia M2.**",
