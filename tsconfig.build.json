@@ -4,7 +4,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "incremental": false
   },
   "exclude": ["node_modules", "test", "dist", "prisma", "scripts", "**/*spec.ts"]
 }

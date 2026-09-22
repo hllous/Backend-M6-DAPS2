@@ -32,7 +32,7 @@ Documentación interna (equipo + IA que programe el módulo), no lo entregado a 
 
 ## Git Flow
 
-Flujo: `main ← test ← develop ← feature/*|bugfix/*|refactor/*|infra/*|docs/*`. Nunca commitear directo a `main`/`test`/`develop`.
+Flujo: `main ← test ← develop ← feature/*|fix/*|docs/*|refactor/*|tests/*|chore/*`. Nunca commitear directo a `main`/`test`/`develop`. Los prefijos y cuándo usar cada uno están en `CONTRIBUTING.md`. Ojo: es `tests/` en plural, porque `test/` choca con la rama protegida `test` y git rechaza el push.
 
 - **Ramas**: parten de `develop`, formato obligatorio `tipo/XXX-descripcion-corta` (ej. `feature/101-alta-servicio-urbano`), donde `XXX` es el número de Issue en GitHub
 - **Commits**: Conventional Commits (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `docs(scope):`, `chore(ci):`) — nunca mensajes vagos ("update", "fix")
