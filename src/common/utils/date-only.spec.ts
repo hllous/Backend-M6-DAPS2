@@ -1,4 +1,4 @@
-import { todayArgentina, toDateOnly } from './date-only';
+import { startOfDayArgentina, todayArgentina, toDateOnly } from './date-only';
 
 describe('todayArgentina', () => {
   const dia = (d: Date) => d.toISOString().slice(0, 10);
@@ -23,6 +23,12 @@ describe('todayArgentina', () => {
 
   it('cruza el fin de anio sin perder un dia', () => {
     expect(dia(todayArgentina(new Date('2027-01-01T02:00:00Z')))).toBe('2026-12-31');
+  });
+});
+
+describe('startOfDayArgentina', () => {
+  it('el dia argentino empieza a las 03:00 UTC', () => {
+    expect(startOfDayArgentina('2026-09-20').toISOString()).toBe('2026-09-20T03:00:00.000Z');
   });
 });
 

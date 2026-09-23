@@ -131,6 +131,19 @@ describe('CitizenPortalService', () => {
       expect(args.where.status).toEqual({ not: ServiceStatus.CANCELLED });
     });
 
+    it('sin from arranca hoy en Argentina aunque en UTC ya sea mañana', async () => {
+      jest.useFakeTimers({ now: new Date('2026-09-20T01:00:00.000Z') }); // 22:00 ART del 19
+      try {
+        await portal.findServices({ page: 1, pageSize: 20 } as any);
+      } finally {
+        jest.useRealTimers();
+      }
+
+      const { scheduledDate } = prisma.service.findMany.mock.calls[0][0].where;
+      expect(scheduledDate.gte).toEqual(new Date('2026-09-19T00:00:00.000Z'));
+      expect(scheduledDate.lte).toEqual(new Date('2026-10-19T00:00:00.000Z'));
+    });
+
     it('no expone cuadrilla, vehículo, notas ni el motivo interno del estado', async () => {
       await portal.findServices({ page: 1, pageSize: 20 } as any);
 
@@ -181,6 +194,20 @@ describe('CitizenPortalService', () => {
       const { scheduledDate } = prisma.service.findMany.mock.calls[0][0].where;
       expect(scheduledDate.gte).toEqual(new Date('2026-10-01'));
       expect(scheduledDate.lte).toEqual(new Date('2026-10-05'));
+    });
+
+    it('from y to con hora se truncan al día: scheduledDate es @db.Date', async () => {
+      await portal.findServices({
+        page: 1,
+        pageSize: 20,
+        from: '2026-10-01T15:00:00.000Z',
+        to: '2026-10-05T15:00:00.000Z',
+      } as any);
+
+      const { scheduledDate } = prisma.service.findMany.mock.calls[0][0].where;
+      expect(scheduledDate.gte).toEqual(new Date('2026-10-01T00:00:00.000Z'));
+      // Sin truncar, el lte a las 15:00 dejaría afuera el servicio del día 5.
+      expect(scheduledDate.lte).toEqual(new Date('2026-10-05T00:00:00.000Z'));
     });
 
     it('filtra por tipo de servicio y por zona', async () => {
