@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { EnvironmentalReportStatus as S, Prisma, ServiceStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginatedResponseDto } from '../../common/dto';
+import { toDateOnly, todayArgentina } from '../../common/utils/date-only';
 import {
   PublicGreenPointResponseDto,
   PublicReportResponseDto,
@@ -50,8 +51,6 @@ const ETAPA_SERVICIO: Record<ServiceStatus, string> = {
 };
 
 const DIA_MS = 86_400_000;
-
-const hoy = () => new Date(new Date().toISOString().slice(0, 10));
 
 /** `@db.Time` vuelve como Date con la fecha en cero; al vecino le sirve HH:mm. */
 function hora(value: Date | null): string | null {
@@ -121,8 +120,11 @@ export class CitizenPortalService {
   async findServices(
     query: QueryPublicServicesDto,
   ): Promise<PaginatedResponseDto<PublicServiceResponseDto>> {
-    const from = query.from ? new Date(query.from) : hoy();
-    const to = query.to ? new Date(query.to) : new Date(from.getTime() + 30 * DIA_MS);
+    // Hoy argentino: desde las 21:00 ART el día UTC es mañana y el vecino
+    // dejaría de ver el servicio de esta noche. Las fechas se truncan porque
+    // el DTO acepta ISO con hora y scheduledDate es @db.Date.
+    const from = query.from ? toDateOnly(query.from) : todayArgentina();
+    const to = query.to ? toDateOnly(query.to) : new Date(from.getTime() + 30 * DIA_MS);
 
     const where: Prisma.ServiceWhereInput = {
       scheduledDate: { gte: from, lte: to },

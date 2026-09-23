@@ -8,6 +8,7 @@ import {
   ServiceStatus,
   ZoneResultStatus,
 } from '@prisma/client';
+import { startOfDayArgentina, toDateOnly, todayArgentina } from '../../common/utils/date-only';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   ComplianceIndicatorDto,
@@ -37,6 +38,7 @@ function pct(parte: number, total: number): number {
   return total === 0 ? 0 : Math.round((parte / total) * 1000) / 10;
 }
 
+/** Solo para fechas sin hora (@db.Date o `from`/`to`); un timestamp va por `todayArgentina`. */
 function dia(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
@@ -48,14 +50,22 @@ function num(value: Prisma.Decimal | null): number {
 interface Periodo {
   from: Date;
   to: Date;
-  /** Límite superior exclusivo, para filtrar timestamps con un `to` que es día. */
-  toExclusive: Date;
+  /**
+   * Límites para filtrar timestamps. `from` y `to` son días argentinos: cortar
+   * en la medianoche UTC dejaría afuera lo cargado después de las 21:00 del
+   * último día y metería lo de la noche anterior al primero.
+   */
+  desde: Date;
+  /** Exclusivo. */
+  hasta: Date;
   dto: PeriodDto;
 }
 
 function periodo(query: PeriodQueryDto): Periodo {
-  const to = query.to ? new Date(query.to) : new Date(dia(new Date()));
-  const from = query.from ? new Date(query.from) : new Date(to.getTime() - 30 * DIA_MS);
+  // El DTO acepta ISO con hora: se trunca para que el filtro @db.Date y los
+  // límites argentinos de los timestamps hablen del mismo día.
+  const to = query.to ? toDateOnly(query.to) : todayArgentina();
+  const from = query.from ? toDateOnly(query.from) : new Date(to.getTime() - 30 * DIA_MS);
   if (from > to) {
     throw new BadRequestException(
       `'from' (${dia(from)}) no puede ser posterior a 'to' (${dia(to)})`,
@@ -64,7 +74,8 @@ function periodo(query: PeriodQueryDto): Periodo {
   return {
     from,
     to,
-    toExclusive: new Date(to.getTime() + DIA_MS),
+    desde: startOfDayArgentina(from),
+    hasta: startOfDayArgentina(new Date(to.getTime() + DIA_MS)),
     dto: { from: dia(from), to: dia(to) },
   };
 }
@@ -166,7 +177,9 @@ export class IndicatorsService {
           (max, r) => (r.recordedAt > max ? r.recordedAt : max),
           s.zoneResults[0].recordedAt,
         );
-        if (dia(cierre) <= dia(s.scheduledDate)) onTime += 1;
+        // El día del cierre es el argentino: un nocturno cerrado a las 23:30
+        // ya cae en el día UTC siguiente y contaría como demorado.
+        if (todayArgentina(cierre).getTime() <= s.scheduledDate.getTime()) onTime += 1;
         else late += 1;
       }
 
@@ -211,7 +224,7 @@ export class IndicatorsService {
   /** Contenedores, arbolado y denuncias. */
   async incidents(query: PeriodQueryDto): Promise<IncidentsIndicatorDto> {
     const p = periodo(query);
-    const rango = { gte: p.from, lt: p.toExclusive };
+    const rango = { gte: p.desde, lt: p.hasta };
 
     const [porEstado, porZona, zonas, riesgos, porTipo, porStatus, total, resolucion] =
       await Promise.all([
@@ -247,7 +260,7 @@ export class IndicatorsService {
         this.prisma.$queryRaw<{ days: number | null }[]>`
           SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 86400)::float8 AS days
           FROM environmental_report
-          WHERE status = 'CLOSED' AND created_at >= ${p.from} AND created_at < ${p.toExclusive}
+          WHERE status = 'CLOSED' AND created_at >= ${p.desde} AND created_at < ${p.hasta}
         `,
       ]);
 

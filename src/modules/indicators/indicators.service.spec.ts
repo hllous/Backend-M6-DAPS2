@@ -116,6 +116,31 @@ describe('IndicatorsService', () => {
       expect(result.byZone).toEqual([]);
     });
 
+    it('sin to, el período termina hoy en Argentina aunque en UTC ya sea mañana', async () => {
+      jest.useFakeTimers({ now: new Date('2026-09-20T01:00:00.000Z') }); // 22:00 ART del 19
+      try {
+        const result = await indicators.coverage({});
+
+        expect(result.period.to).toBe('2026-09-19');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('from y to con hora se truncan al día, en el filtro y en el período', async () => {
+      const result = await indicators.coverage({
+        from: '2026-08-01T15:00:00.000Z',
+        to: '2026-08-31T15:00:00.000Z',
+      });
+
+      const [[args]] = prisma.service.findMany.mock.calls;
+      expect(args.where.scheduledDate).toEqual({
+        gte: new Date('2026-08-01T00:00:00.000Z'),
+        lte: new Date('2026-08-31T00:00:00.000Z'),
+      });
+      expect(result.period).toEqual({ from: '2026-08-01', to: '2026-08-31' });
+    });
+
     it('sin fechas toma los últimos 30 días', async () => {
       const result = await indicators.coverage({});
 
@@ -146,23 +171,36 @@ describe('IndicatorsService', () => {
       expect(result.finished).toEqual({ total: 1, onTime: 1, late: 0, onTimePct: 100 });
     });
 
-    it('cerrar al día siguiente de lo programado cuenta como demorado', async () => {
-      prisma.service.findMany.mockResolvedValue([
+    describe('el día del cierre es el argentino, no el UTC (#230)', () => {
+      const cerradoEn = (iso: string) =>
         servicio({
           zoneResults: [
-            {
-              zoneId: 'z-centro',
-              status: Z.SERVICED,
-              reason: null,
-              recordedAt: new Date('2026-08-11T01:00:00.000Z'),
-            },
+            { zoneId: 'z-centro', status: Z.SERVICED, reason: null, recordedAt: new Date(iso) },
           ],
-        }),
-      ]);
+        });
 
-      const result = await indicators.compliance({});
+      it.each([
+        ['22:00 ART del día programado', '2026-08-11T01:00:00.000Z'],
+        ['23:30 ART del día programado', '2026-08-11T02:30:00.000Z'],
+        ['23:59:59.999 ART, último instante del día', '2026-08-11T02:59:59.999Z'],
+      ])('cerrar a las %s cuenta a tiempo', async (_, iso) => {
+        prisma.service.findMany.mockResolvedValue([cerradoEn(iso)]);
 
-      expect(result.finished).toMatchObject({ onTime: 0, late: 1, onTimePct: 0 });
+        const result = await indicators.compliance({});
+
+        expect(result.finished).toEqual({ total: 1, onTime: 1, late: 0, onTimePct: 100 });
+      });
+
+      it.each([
+        ['00:00 ART del día siguiente, la medianoche exacta', '2026-08-11T03:00:00.000Z'],
+        ['al mediodía ART del día siguiente', '2026-08-11T15:00:00.000Z'],
+      ])('cerrar a las %s cuenta como demorado', async (_, iso) => {
+        prisma.service.findMany.mockResolvedValue([cerradoEn(iso)]);
+
+        const result = await indicators.compliance({});
+
+        expect(result.finished).toMatchObject({ onTime: 0, late: 1, onTimePct: 0 });
+      });
     });
 
     it('un servicio que todavía no cerró no cuenta ni a favor ni en contra', async () => {
@@ -255,6 +293,23 @@ describe('IndicatorsService', () => {
       const result = await indicators.incidents({});
 
       expect(result.reports.avgResolutionDays).toBe(4.3);
+    });
+
+    it('filtra las denuncias por días argentinos, no por medianoche UTC', async () => {
+      await indicators.incidents({ from: '2026-08-01', to: '2026-08-31' });
+
+      // 00:00 ART del 1 al 00:00 ART del 1 de septiembre, exclusivo.
+      const rango = {
+        gte: new Date('2026-08-01T03:00:00.000Z'),
+        lt: new Date('2026-09-01T03:00:00.000Z'),
+      };
+      expect(prisma.environmentalReport.count).toHaveBeenCalledWith({
+        where: { createdAt: rango },
+      });
+      const resolucion = prisma.$queryRaw.mock.calls.find((c: unknown[]) =>
+        (c[0] as TemplateStringsArray).join('').includes('environmental_report'),
+      );
+      expect(resolucion.slice(1)).toEqual([rango.gte, rango.lt]);
     });
 
     it('sin denuncias cerradas el tiempo medio es nulo, no cero', async () => {
