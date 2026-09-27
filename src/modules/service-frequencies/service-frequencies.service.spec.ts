@@ -90,13 +90,18 @@ describe('ServiceFrequenciesService', () => {
     await expect(service.create(validDto)).rejects.toThrow(NotFoundException);
   });
 
-  it('la baja cierra la vigencia hoy, no borra el registro', async () => {
-    await service.remove(id);
+  it('la baja cierra la vigencia hoy argentino, no borra el registro', async () => {
+    jest.useFakeTimers({ now: new Date('2026-09-20T01:00:00.000Z') }); // 22:00 ART del 19
+    try {
+      await service.remove(id);
+    } finally {
+      jest.useRealTimers();
+    }
 
     const [[args]] = prisma.serviceFrequency.update.mock.calls;
-    const today = new Date().toISOString().slice(0, 10);
     expect(args.where).toEqual({ id });
-    expect(args.data.validTo.toISOString().slice(0, 10)).toBe(today);
+    // En UTC ya es el 20: con el día UTC la regla seguiría vigente un día más.
+    expect(args.data.validTo.toISOString()).toBe('2026-09-19T00:00:00.000Z');
   });
 
   it('si la regla todavia no empezo, la cierra en su fecha de inicio', async () => {
