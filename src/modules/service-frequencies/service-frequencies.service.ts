@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { FrequencyWeekday, Prisma, ServiceFrequency, ServiceMode, Shift } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { toDateOnly } from '../../common/utils/date-only';
+import { toDateOnly, todayArgentina } from '../../common/utils/date-only';
 import {
   CreateServiceFrequencyDto,
   QueryServiceFrequenciesDto,
@@ -159,7 +159,9 @@ export class ServiceFrequenciesService {
   async remove(id: string): Promise<void> {
     const current = await this.getFrequency(id);
 
-    const today = toDateOnly(new Date());
+    // Hoy argentino: a las 22:00 ART el día UTC ya es mañana y la regla
+    // seguiría vigente un día más.
+    const today = todayArgentina();
     const validTo = current.validFrom > today ? current.validFrom : today;
 
     await this.prisma.serviceFrequency.update({ where: { id }, data: { validTo } });
