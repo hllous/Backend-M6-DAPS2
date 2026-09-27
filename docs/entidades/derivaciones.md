@@ -53,7 +53,7 @@ Toda transición pasa por una tabla (`outbound-requests.transitions.ts`). Los en
 | `StreetClosureRequest` | `APPROVED` | `ENDED` |
 | `StreetClosureRequest` | `REJECTED`, `ENDED` | terminales |
 
-Dos saltos son válidos a propósito, porque los eventos de M3 y M7 viajan por topics distintos y Kafka no garantiza el orden entre ellos:
+Dos saltos son válidos a propósito, porque los eventos de M3 y M7 viajan por routing keys distintas y nada garantiza el orden entre ellos:
 
 - **`REQUESTED → CLOSED`**: `workOrderCompleted` puede llegar sin que hayamos visto `workOrderScheduled`, y M3 todavía no confirmó cuándo lo dispara.
 - **`REQUESTED → ENDED`**: `streetClosureEnded` puede adelantarse a `streetClosureApproved`. Como la tabla es una sola, el endpoint manual `POST /street-closure-requests/:id/end` también lo admite desde `REQUESTED`.

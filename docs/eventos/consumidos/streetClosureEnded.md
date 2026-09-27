@@ -33,4 +33,4 @@ streetClosureEnded
 
 ## Evento tardío o repetido
 
-Se acepta desde `APPROVED` y también desde `REQUESTED`: los eventos viajan por topics distintos sin orden garantizado, así que `streetClosureEnded` puede adelantarse a `streetClosureApproved`. En ese caso se guarda el `streetClosureId` como `closureId` si no lo teníamos, y el `streetClosureApproved` que llegue después se descarta (`ENDED` es terminal). Desde `REJECTED` o `ENDED` se descarta con un `warn`, sin error: el inbox responde `processed`.
+Se acepta desde `APPROVED` y también desde `REQUESTED`: los eventos viajan por routing keys distintas sin orden garantizado, así que `streetClosureEnded` puede adelantarse a `streetClosureApproved`. En ese caso se guarda el `streetClosureId` como `closureId` si no lo teníamos, y el `streetClosureApproved` que llegue después se descarta (`ENDED` es terminal). Desde `REJECTED` o `ENDED` se descarta con un `warn`, sin error: el inbox responde `processed`.

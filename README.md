@@ -8,7 +8,7 @@ M6 gestiona los servicios urbanos y el control ambiental de la ciudad: recolecci
 
 - **NestJS** + TypeScript + Node 22 LTS
 - **PostgreSQL** + Prisma como ORM
-- **Kafka** para eventos asincrónicos (confirmado por M9)
+- **RabbitMQ** para eventos asincrónicos (anunciado por M9)
 - **Jest** + Supertest para testing (cobertura mínima 85%)
 - Deploy en **Vercel** (frontend) + **Render** (backend + postgres)
 
@@ -28,7 +28,7 @@ Requisitos:
 
 - Node.js 22 LTS o superior
 - PostgreSQL 15+ (o base gestionada tipo Neon)
-- Kafka (confirmado por M9)
+- RabbitMQ (anunciado por M9)
 
 > Para levantar el stack completo con Docker local: ver `docker-compose.yml` en la raíz del workspace DevOps.
 

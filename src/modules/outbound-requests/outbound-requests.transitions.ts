@@ -2,7 +2,7 @@ import { ConflictException } from '@nestjs/common';
 import { RepairRequestStatus, StreetClosureRequestStatus } from '@prisma/client';
 
 // Derivadas de docs/entidades/derivaciones.md. Los eventos de M3 y M7 viajan
-// por topics distintos sin orden garantizado, así que las transiciones que
+// por routing keys distintas sin orden garantizado, así que las transiciones que
 // "saltean" un paso son válidas a propósito:
 // - REQUESTED→CLOSED: `workOrderCompleted` puede llegar sin haber visto
 //   `workOrderScheduled` (además M3 no confirmó cuándo lo dispara, bloqueantes.md).

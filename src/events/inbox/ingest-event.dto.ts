@@ -9,7 +9,7 @@ import {
   ValidateBy,
 } from 'class-validator';
 import { MAX_EXTERNAL_ID_LENGTH } from '../../common/decorators';
-import { EventProducer } from '../envelope';
+import { EventProducer, InboundEnvelope } from '../envelope';
 
 const noVacio = (v: unknown): boolean => typeof v === 'string' && v.trim().length > 0;
 
@@ -104,4 +104,23 @@ export class IngestEventDto {
   @IsOptional()
   @IsString()
   subject?: string;
+}
+
+/**
+ * Lo que llegó, sin rellenar. Los campos del sobre que no usamos no se
+ * inventan: un `producer: 'desconocido'` es peor que su ausencia cuando hay que
+ * auditar de dónde salió un evento. Lo comparten el endpoint y el consumidor
+ * del bus.
+ */
+export function toInboundEnvelope(dto: IngestEventDto): InboundEnvelope {
+  return {
+    specVersion: dto.specVersion,
+    eventId: dto.eventId,
+    eventType: dto.eventType,
+    eventVersion: dto.eventVersion,
+    occurredAt: dto.occurredAt,
+    producer: dto.producer,
+    subject: dto.subject,
+    data: dto.data,
+  };
 }

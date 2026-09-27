@@ -30,9 +30,9 @@ Los siete que se cayeron del contrato están en [descartados.md](descartados.md)
 | `infrastructureRepairRequested` | ✅ emitido | `POST /repair-requests` |
 | `streetClosureRequested` | ✅ emitido | `POST /street-closure-requests`, con `sourceModule = "M6"` |
 
-🔴 **No hay bus.** M9 nunca expuso un Kafka, así que sin `KAFKA_BROKERS` configurado el adaptador por defecto solo deja rastro en el log. Las filas de `outbox_event` —con su payload, su `status` y su `publishedAt`— son la evidencia de qué se habría publicado. Enchufar el broker no toca el dominio.
+🔴 **No hay bus.** M9 anunció RabbitMQ el 27/09/2026, pero todavía no expuso un broker, así que sin `RABBITMQ_URL` configurada el adaptador por defecto solo deja rastro en el log. Las filas de `outbox_event` —con su payload, su `status` y su `publishedAt`— son la evidencia de qué se habría publicado. Enchufar el broker no toca el dominio.
 
-**Si la publicación falla, la fila no se pierde ni se reintenta para siempre.** `outbox_event.attempts` cuenta los intentos y `last_error` guarda por qué falló el último; a los cinco intentos la fila pasa a `FAILED` y deja de barrerse, para que un broker caído no genere una cola infinita de reintentos. Del lado entrante, `inbox_event.error` cumple el mismo papel: un handler que falla deja la fila **sin** `processed_at` y con el error, para poder reintentarla.
+**Si la publicación falla, la fila no se pierde ni se reintenta para siempre.** `outbox_event.attempts` cuenta los intentos y `last_error` guarda por qué falló el último; a los cinco intentos la fila pasa a `FAILED` y deja de barrerse, para que un broker caído no genere una cola infinita de reintentos. Del lado entrante, `inbox_event.error` deja el rastro: un handler que falla deja la fila **sin** `processed_at` y con el error. **No hay reintento automático**: un reenvío con el mismo `eventId` sale `duplicate` (ver [ADR-006](../../decisiones/adr-006-rabbitmq-como-bus.md)).
 
 ⚠️ **`location.neighborhoodId` viaja ausente** en `containerDamaged`, `treeRiskDetected` y `treePruningScheduled`: sale del catálogo de barrios de M9, que sigue sin exponerse. Era un campo requerido de `_shared.location` y pasó a opcional hasta que exista. Hay que avisarle a M3 y M7.
 

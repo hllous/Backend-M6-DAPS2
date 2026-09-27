@@ -60,7 +60,7 @@ describe('OutboxDispatcher', () => {
   /**
    * §4 de la v1.6: M2 valida el sobre antes de mirar el payload, así que un
    * `subject` con el id de nuestro `Service` le hace rechazar el evento entero.
-   * Es la única excepción — el resto de los eventos particiona por agregado.
+   * Es la única excepción: el resto de los eventos lleva el id del agregado.
    */
   it('updateTicketStatus va con subject tickets/{ticketId}', async () => {
     prisma.outboxEvent.findMany.mockResolvedValue([
