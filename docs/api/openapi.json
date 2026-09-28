@@ -61,7 +61,7 @@
       "post": {
         "operationId": "InboxController_ingest",
         "summary": "Ingerir un evento entrante",
-        "description": "Recibe un sobre y lo despacha al handler que corresponda. La idempotencia es por eventId: un mensaje ya recibido se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin procesar y con el error, para poder reintentarla.",
+        "description": "Recibe un sobre y lo despacha al handler que corresponda. La idempotencia es por eventId: un mensaje ya recibido se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin procesar y con el error registrado; no se reintenta sola, y reenviar el mismo eventId devuelve duplicate.",
         "parameters": [],
         "requestBody": {
           "required": true,

@@ -29,7 +29,7 @@ export const MAX_ATTEMPTS = 5;
  * El `subject` del sobre, que no es el mismo dato para todos los eventos.
  *
  * Para los nuestros es el id del agregado —el servicio, el contenedor, el
- * árbol—, que es lo que además particiona en Kafka. Pero **M2 exige el formato
+ * árbol—. Pero **M2 exige el formato
  * `tickets/{ticketId}`** (§4 de su v1.6) y valida el sobre antes de mirar el
  * payload, así que `updateTicketStatus` es la excepción: mandarle el id de
  * nuestro `Service` hace que rechace el evento entero.

@@ -51,3 +51,73 @@ describe('configuration — CORS', () => {
     expect(config({ CORS_ORIGINS: '  ,  ' }).corsOrigins).toEqual([]);
   });
 });
+
+describe('configuration — RabbitMQ', () => {
+  it('sin RABBITMQ_URL no hay bus, y los nombres usan los defaults provisorios', () => {
+    expect(config().rabbitmq).toEqual({
+      url: undefined,
+      exchange: 'municipalidad.events',
+      exchangeType: 'topic',
+      queue: 'm6.ambiente',
+      deadLetterExchange: undefined,
+      prefetch: 1,
+    });
+  });
+
+  /** Un `RABBITMQ_URL=` vacío en el panel de Render no debe tumbar el arranque. */
+  it('una URL vacía cuenta como ausente', () => {
+    expect(config({ RABBITMQ_URL: '', RABBITMQ_DEAD_LETTER_EXCHANGE: '' }).rabbitmq).toEqual(
+      expect.objectContaining({ url: undefined, deadLetterExchange: undefined }),
+    );
+  });
+
+  it('toma la URL y los overrides', () => {
+    expect(
+      config({
+        RABBITMQ_URL: 'amqps://m6:clave@bus:5671/muni',
+        RABBITMQ_EXCHANGE_TYPE: 'direct',
+        RABBITMQ_PREFETCH: '5',
+      }).rabbitmq,
+    ).toEqual(
+      expect.objectContaining({
+        url: 'amqps://m6:clave@bus:5671/muni',
+        exchangeType: 'direct',
+        prefetch: 5,
+      }),
+    );
+  });
+
+  it('rechaza una URL que no es amqp:// ni amqps://', () => {
+    expect(() => config({ RABBITMQ_URL: 'http://bus:5672' })).toThrow();
+  });
+
+  it('rechaza algo que no es una URL', () => {
+    expect(() => config({ RABBITMQ_URL: 'amqp://' })).toThrow(/no es una URL/);
+    expect(() => config({ RABBITMQ_URL: 'bus:5672' })).toThrow();
+  });
+
+  /** Una clave con `/` sin encodear corre el `@` al path, y el path se loguea. */
+  it('rechaza una clave con caracteres especiales sin percent-encoding', () => {
+    expect(() => config({ RABBITMQ_URL: 'amqp://m6:12/secreto@bus:5672/muni' })).toThrow(
+      /percent-encoding/,
+    );
+    expect(config({ RABBITMQ_URL: 'amqp://m6:12%2Fsecreto@bus:5672/muni' }).rabbitmq.url).toBe(
+      'amqp://m6:12%2Fsecreto@bus:5672/muni',
+    );
+  });
+
+  it('en producción exige amqps://', () => {
+    expect(() => config({ NODE_ENV: 'production', RABBITMQ_URL: 'amqp://m6:c@bus' })).toThrow(
+      /amqps/,
+    );
+    expect(config({ NODE_ENV: 'production', RABBITMQ_URL: 'amqps://m6:c@bus' }).rabbitmq.url).toBe(
+      'amqps://m6:c@bus',
+    );
+    expect(config({ NODE_ENV: 'production' }).rabbitmq.url).toBeUndefined();
+  });
+
+  it('rechaza un tipo de exchange desconocido', () => {
+    expect(() => config({ RABBITMQ_EXCHANGE_TYPE: 'x-delayed' })).toThrow();
+    expect(() => config({ RABBITMQ_EXCHANGE_TYPE: 'fanout' })).toThrow();
+  });
+});

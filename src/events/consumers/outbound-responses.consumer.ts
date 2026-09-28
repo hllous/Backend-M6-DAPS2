@@ -131,9 +131,9 @@ export class OutboundResponsesConsumer implements OnModuleInit {
     const motivo = data.rejectionReason ?? data.reason;
 
     // Las dos escrituras van juntas: si la del servicio falla, el corte vuelve
-    // a REQUESTED y el reintento del inbox completa todo. Sin transacción, el
-    // reintento vería el corte ya REJECTED, lo descartaría y el servicio
-    // quedaría SCHEDULED para siempre.
+    // a REQUESTED y el error queda registrado en la fila del inbox, sin un
+    // estado a medias. Sin transacción, el corte quedaría REJECTED con el
+    // servicio SCHEDULED para siempre.
     const applied = await this.prisma.$transaction(async (tx) => {
       // Guard por estado de origen. Si no aplicó, tampoco se toca el servicio:
       // un rechazo tardío sobre un corte aprobado no debe reprogramar el trabajo.
@@ -175,7 +175,7 @@ export class OutboundResponsesConsumer implements OnModuleInit {
     if (!request) return;
 
     // Guard por estado de origen. Se acepta desde REQUESTED porque este evento
-    // puede adelantarse a streetClosureApproved (topics distintos, sin orden);
+    // puede adelantarse a streetClosureApproved (routing keys distintas, sin orden);
     // en ese caso el id de cierre de M7 se guarda acá, si no lo teníamos.
     const closureId = (data.streetClosureId as string) ?? (data.closureId as string);
     const { count } = await this.prisma.streetClosureRequest.updateMany({

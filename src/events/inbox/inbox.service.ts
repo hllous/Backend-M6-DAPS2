@@ -6,9 +6,9 @@ import { InboundEnvelope } from '../envelope';
 /**
  * Un handler de evento entrante. Recibe el `data` del sobre.
  *
- * Si tira, la fila del inbox queda sin `processedAt` y con el error, para
- * poder reintentarla. No debe ser idempotente por su cuenta: de eso se encarga
- * el inbox.
+ * Si tira, la fila del inbox queda sin `processedAt` y con el error registrado.
+ * No se reintenta sola: un reenvío con el mismo `eventId` sale `duplicate`. No
+ * debe ser idempotente por su cuenta: de eso se encarga el inbox.
  */
 export type InboxHandler = (data: Record<string, unknown>) => Promise<void>;
 
@@ -71,9 +71,9 @@ export class InboxService {
 
   /**
    * Lanza `BadRequestException` si el `data` de un evento con handler no trae
-   * sus campos obligatorios; no queda fila guardada. Hoy solo lo llama el
-   * controller HTTP. Un consumidor Kafka futuro debe capturarla y mandar el
-   * mensaje a DLQ o commitear el offset: si no, entra en reintento infinito.
+   * sus campos obligatorios; no queda fila guardada. El controller HTTP la
+   * devuelve como 400; `RabbitMqConsumer` la captura y hace `nack` sin requeue
+   * (a la DLX si hay), porque reencolarla sería un reintento infinito.
    */
   async ingest(envelope: InboundEnvelope): Promise<IngestResult> {
     const messageId = envelope.eventId;

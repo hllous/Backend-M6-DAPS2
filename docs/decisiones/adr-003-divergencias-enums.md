@@ -10,7 +10,7 @@ Seis enums difieren entre el catálogo interno ([`enumeraciones.md`](../enumerac
 
 **Cuatro de las seis salen al bus.** Los `.schema.json` de [`eventos/publicados/`](../eventos/publicados/) son la fuente para validar y generar tipos, y hoy tres de ellos llevan un `CONFLICTO SIN RESOLVER` escrito a mano en la `description` del campo. Si publicamos un valor que el consumidor no reconoce, el evento le llega y no lo puede mapear: no falla ruidosamente, se pierde silenciosamente del otro lado.
 
-Esto deja de ser teórico ahora. La **Fase 3** implementa el outbox y la publicación a Kafka, y el primer evento que salga fija el vocabulario de hecho. Además, tres de los enums en conflicto ya están materializados en `prisma/schema.prisma`, en la migración inicial aplicada en Render, y en el código de las Fases 0, 1 y 2 ya mergeadas.
+Esto deja de ser teórico ahora. La **Fase 3** implementa el outbox y la publicación al bus, y el primer evento que salga fija el vocabulario de hecho. Además, tres de los enums en conflicto ya están materializados en `prisma/schema.prisma`, en la migración inicial aplicada en Render, y en el código de las Fases 0, 1 y 2 ya mergeadas.
 
 Esa asimetría es el dato que ordena la decisión: **el catálogo es código desplegado; el acuerdo es un documento**.
 

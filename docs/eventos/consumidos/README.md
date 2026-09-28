@@ -19,7 +19,7 @@ Nueve de la cohorte, de cinco módulos, más uno simulado (`closureOrdered` + `c
 
 ## Qué se consume hoy
 
-**Nueve de los diez tienen handler.** Entran por `POST /events/inbox` —o por Kafka cuando haya broker— y la idempotencia es por `eventId`, resuelta en el inbox y no en cada handler.
+**Nueve de los diez tienen handler.** Entran por dos vías: `POST /events/inbox` y, con `RABBITMQ_URL` configurada, la cola de M6 (`RABBITMQ_QUEUE`), bindeada al exchange con una routing key por evento de esta lista. Las dos pasan por la misma validación y el mismo `InboxService.ingest()`; la idempotencia es por `eventId`, resuelta en el inbox y no en cada handler. La política de ack de la cola está en [ADR-006](../../decisiones/adr-006-rabbitmq-como-bus.md).
 
 `eventId` y `eventType` no pueden superar 100 caracteres (400 si se pasan). Los ids de M1, M2 y M9 miden hoy hasta ~24 caracteres (un UUID mide 36), así que entran holgados.
 

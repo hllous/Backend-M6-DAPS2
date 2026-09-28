@@ -21,3 +21,4 @@ Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeraci�
 | [003](adr-003-divergencias-enums.md) | Resolución de las divergencias de enums con el acuerdo publicado | Propuesto | 2026-09-02 |
 | [004](adr-004-jwt-m1-y-puerto-identidad.md) | JWT de usuario emitido por M1 y consulta a identidad desacoplada por puerto | Aceptado | 2026-09-01 |
 | [005](adr-005-alineacion-frontend-sesion-y-seguridad.md) | Alineación de arquitectura de sesión BFF, separación de actores y postura de seguridad con el Frontend | Aceptado | 2026-09-03 |
+| [006](adr-006-rabbitmq-como-bus.md) | RabbitMQ como bus de eventos (reemplaza a Kafka) | Aceptado | 2026-09-27 |

@@ -225,11 +225,11 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 
 **La idempotencia es por `eventId`** y vive en el inbox, no en cada handler: un mensaje ya recibido se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. La decide el `@unique` de `InboxEvent.messageId`, no una consulta previa que podría correr en paralelo con otra igual.
 
-Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin `processedAt` y con el error, para poder reintentarla.
+Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin `processedAt` y con el error registrado. No se reintenta sola: reenviar el mismo `eventId` devuelve `duplicate`.
 
 **El inbox no guarda contenido de negocio ajeno.** Un evento sin handler, o un `ticketUpdated` cuyo `responsibleAreaId` no es M6 (§2 y §11 del contrato de M2), deja la fila con `messageId`, `eventType` y `processedAt` —lo justo para la idempotencia— y un `payload` reemplazado por un marcador `{ "redacted": ... }`. El `ticketUpdated` de M6 conserva el payload completo, incluso los `updateType` que se descartan a propósito.
 
-> Este endpoint existe **porque M9 nunca expuso un bus**: sin él no hay forma de ejercitar los consumidores. Cuando haya broker, el consumidor de Kafka llama al mismo `ingest()`.
+> Este endpoint existe **porque M9 todavía no expuso el bus**: sin él no hay forma de ejercitar los consumidores. Cuando haya broker, el consumidor de RabbitMQ llama al mismo `ingest()`.
 
 ## `repair-requests` — reparaciones derivadas a M3
 
