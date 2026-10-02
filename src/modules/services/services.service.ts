@@ -715,7 +715,7 @@ export class ServicesService {
     }
   }
 
-  /** SCHEDULED | SUSPENDED → CANCELLED */
+  /** SCHEDULED | RESCHEDULED | SUSPENDED → CANCELLED */
   async cancel(id: string, reason: string, actorId = 'sistema'): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     return this.transition(
