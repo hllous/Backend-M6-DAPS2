@@ -15,7 +15,7 @@
 | [`notificationSent`](notificationSent.md) | **M9** | Registramos el acuse. 🔴 Puede que lo saquemos |
 | [`weatherAlertIssued`](weatherAlertIssued.md) | *nadie* | **Simulado internamente.** Dispara la reprogramación masiva por zona |
 
-Nueve de la cohorte, de cinco módulos, más uno simulado (`closureOrdered` + `closureLifted` se fusionaron en `closureUpdate`, 24/08). **De M1, M5 y M8 no consumimos ningún evento.**
+Nueve de la cohorte, de cinco módulos, más uno simulado (M4 fusionó `closureOrdered` + `closureLifted` en `closureUpdate` el 24/08; los dos viejos ya no tienen ficha). **De M1, M5 y M8 no consumimos ningún evento.**
 
 ## Qué se consume hoy
 
