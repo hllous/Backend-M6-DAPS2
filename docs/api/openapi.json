@@ -9780,7 +9780,7 @@
       "get": {
         "operationId": "EnvironmentalReportsController_findAll",
         "summary": "Listar expedientes ambientales",
-        "description": "Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen y búsqueda por dirección.",
+        "description": "Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen, cuadrilla (crewId: expedientes con alguna inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base para que la página y meta.total sean consistentes) y búsqueda por dirección.",
         "parameters": [
           {
             "name": "page",
@@ -9885,6 +9885,17 @@
             }
           },
           {
+            "name": "crewId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar los expedientes con alguna inspección cuyo servicio vigente tenga esta cuadrilla (no solo la más reciente; los servicios CANCELLED no cuentan)",
+            "schema": {
+              "format": "uuid",
+              "example": "e5f6a7b8-c9d0-4234-8fab-345678901234",
+              "type": "string"
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
@@ -9918,6 +9929,16 @@
                       "$ref": "#/components/schemas/PaginationMeta"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtro inválido (por ejemplo, crewId que no es UUID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -9957,7 +9978,7 @@
       "get": {
         "operationId": "EnvironmentalReportsController_findOne",
         "summary": "Obtener un expediente por ID",
-        "description": "Detalle del expediente, con su estado y su plazo de vencimiento si lo tiene.",
+        "description": "Detalle del expediente, con su estado, su plazo de vencimiento si lo tiene y la cuadrilla asignada a su inspección más reciente con servicio no cancelado (assignedCrewId).",
         "parameters": [
           {
             "name": "id",
@@ -16622,6 +16643,13 @@
             "type": "string",
             "description": "Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.",
             "format": "date-time",
+            "nullable": true
+          },
+          "assignedCrewId": {
+            "type": "string",
+            "description": "Cuadrilla del servicio que ejecuta la inspección más reciente del expediente con servicio vigente (los servicios CANCELLED no cuentan). Null si ninguna inspección tiene un servicio vigente o si ese servicio todavía no tiene cuadrilla. Viene en el alta, el listado, el detalle y las respuestas de las transiciones.",
+            "example": "e5f6a7b8-c9d0-4234-8fab-345678901234",
+            "format": "uuid",
             "nullable": true
           },
           "createdAt": {

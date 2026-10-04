@@ -1,5 +1,10 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { EnvironmentalReport, EnvironmentalReportStatus as S, Prisma } from '@prisma/client';
+import {
+  EnvironmentalReport,
+  EnvironmentalReportStatus as S,
+  Prisma,
+  ServiceStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
@@ -40,6 +45,34 @@ export const REPORT_TRANSITIONS: Record<S, S[]> = {
   CLOSED: [S.UNDER_REVIEW],
 };
 
+/**
+ * Un servicio cancelado ya no es una asignación: la cuadrilla no va a ir. Lo
+ * comparten el `assignedCrewId` y el filtro `crewId` para que digan lo mismo.
+ */
+const ACTIVE_SERVICE = {
+  status: { not: ServiceStatus.CANCELLED },
+} satisfies Prisma.ServiceWhereInput;
+
+/**
+ * Lo justo para resolver `assignedCrewId` en la misma consulta del expediente,
+ * sin una ida a la base por fila (#243): solo la inspección más reciente con
+ * servicio vigente, y de ese servicio solo la cuadrilla. El `id` desempata dos
+ * inspecciones creadas en el mismo instante, para que la respuesta no cambie
+ * entre una consulta y otra.
+ */
+const WITH_ASSIGNED_CREW = {
+  inspections: {
+    where: { serviceId: { not: null }, service: ACTIVE_SERVICE },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: 1,
+    select: { service: { select: { crewId: true } } },
+  },
+} satisfies Prisma.EnvironmentalReportInclude;
+
+type ReportWithAssignedCrew = Prisma.EnvironmentalReportGetPayload<{
+  include: typeof WITH_ASSIGNED_CREW;
+}>;
+
 function toNumber(value: Prisma.Decimal | null): number | null {
   return value === null ? null : Number(value);
 }
@@ -65,6 +98,7 @@ export class EnvironmentalReportsService {
         priority: dto.priority ?? null,
         status: S.RECEIVED,
       },
+      include: WITH_ASSIGNED_CREW,
     });
 
     this.logger.log(
@@ -88,10 +122,17 @@ export class EnvironmentalReportsService {
     if (query.search) {
       where.address = { contains: query.search, mode: 'insensitive' };
     }
+    // Cualquier inspección de esa cuadrilla con servicio vigente, no solo la más
+    // reciente: la cola de Campo incluye lo que ya visitó. Va en el where para
+    // que `count` y la página filtren lo mismo.
+    if (query.crewId) {
+      where.inspections = { some: { service: { ...ACTIVE_SERVICE, crewId: query.crewId } } };
+    }
 
     const [reports, total] = await Promise.all([
       this.prisma.environmentalReport.findMany({
         where,
+        include: WITH_ASSIGNED_CREW,
         skip: query.skip,
         take: query.take,
         orderBy: { createdAt: 'desc' },
@@ -108,7 +149,14 @@ export class EnvironmentalReportsService {
   }
 
   async findOne(id: string): Promise<EnvironmentalReportResponseDto> {
-    return this.toResponseDto(await this.getReport(id));
+    const report = await this.prisma.environmentalReport.findUnique({
+      where: { id },
+      include: WITH_ASSIGNED_CREW,
+    });
+    if (!report) {
+      throw new NotFoundException(`Expediente ambiental con id '${id}' no encontrado`);
+    }
+    return this.toResponseDto(report);
   }
 
   // ─── Acciones ─────────────────────────────────────
@@ -239,6 +287,7 @@ export class EnvironmentalReportsService {
       const row = await tx.environmentalReport.update({
         where: { id: report.id },
         data: { status: target, ...data },
+        include: WITH_ASSIGNED_CREW,
       });
       await this.outbox.enqueueMany(tx, events);
       return row;
@@ -280,7 +329,7 @@ export class EnvironmentalReportsService {
     ];
   }
 
-  toResponseDto(report: EnvironmentalReport): EnvironmentalReportResponseDto {
+  toResponseDto(report: ReportWithAssignedCrew): EnvironmentalReportResponseDto {
     return {
       id: report.id,
       reportType: report.reportType,
@@ -295,6 +344,7 @@ export class EnvironmentalReportsService {
       escalated: report.escalated,
       citizenResponse: report.citizenResponse,
       deadlineAt: report.deadlineAt,
+      assignedCrewId: report.inspections[0]?.service?.crewId ?? null,
       createdAt: report.createdAt,
       updatedAt: report.updatedAt,
     };
