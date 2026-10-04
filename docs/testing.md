@@ -1,5 +1,7 @@
 # Testing
 
+> Cómo correr los tests unitarios y e2e, y qué cubre cada suite de `test/`. Leer antes de tocar la base de pruebas o el job `e2e` del CI.
+
 Dos suites separadas, con propósitos distintos:
 
 | Suite | Comando | Qué prueba | Base de datos |
@@ -48,7 +50,7 @@ npm run test:e2e -- services-lifecycle
 | `helpers.ts` | Levanta la app con `configureApp()` —la misma configuración que `main.ts`—, firma tokens, trunca la base y arma los datos mínimos de cada caso |
 | `services-lifecycle.e2e-spec.ts` | Programar → asignar cuadrilla → iniciar → resultado por zona → cerrar, con el 409 de transición inválida y las filas del outbox. También el 401 sin token, el 400 del `ValidationPipe` ante una propiedad no declarada, `X-Content-Type-Options: nosniff` y la ausencia de `X-Powered-By` |
 | `inbox.e2e-spec.ts` | Idempotencia por `eventId` (el duplicado no reprograma un servicio creado después del primer envío), sobre v1.70 con `producer` objeto, el 400 que no deja fila y el evento sin handler |
-| `environmental-flow.e2e-spec.ts` | Expediente → inspección → acta, con la derivación a M4 en el outbox. Solo el camino feliz: no prueba rollback |
+| `environmental-flow.e2e-spec.ts` | Expediente → inspección → acta, con la derivación a M4 en el outbox, y la vuelta de M4 por el inbox (`commercialFineGenerated` cierra el expediente; sin `sourceViolationId` válido da 400 y no deja fila). No prueba rollback |
 | `containers-close.e2e-spec.ts` | Cerrar el servicio transiciona el contenedor. Es la única suite que prueba el rollback: un `CHECK` temporal hace fallar el `UPDATE` del contenedor dentro de la transacción y se verifica que el servicio siga `IN_PROGRESS` y que no se encole nada |
 
 Los datos se arman por caso con los helpers, **no con `prisma/seed.ts`**: el seed monta un escenario de demo entero y ata los tests a filas que no controlan.

@@ -1,6 +1,6 @@
 # Despliegue y estado del Módulo 6
 
-> Estado del despliegue de producción del M6 (Ambiente, Higiene y Servicios Urbanos) al **01/09/2026**.
+> Estado del despliegue de producción del M6 (Ambiente, Higiene y Servicios Urbanos) revisado el **04/10/2026**.
 > Mantenido por DevOps. Si algo cambia de plataforma o de URL, actualizar este archivo.
 
 ---
@@ -9,9 +9,11 @@
 
 | Componente | Plataforma | Estado | URL |
 |---|---|---|---|
-| **Backend** (NestJS) | Render (Web Service, free) | ✅ Live | `https://m6-backend-m64k.onrender.com` |
+| **Backend** (NestJS) | Render (Web Service, free) | ⚠️ Sin verificar: `/health` no respondió el 04/10 (¿arranque en frío?) | `https://m6-backend-m64k.onrender.com` |
 | **PostgreSQL** | Render (Managed, free) | ✅ Available | (Internal URL, no accesible desde afuera) |
-| **Frontend** (Next.js) | Vercel (free) | ✅ Live | `https://m6-ambiente-frontend.vercel.app` |
+| **Frontend** (Next.js) | Vercel (free) | ✅ `/api/health` 200 el 04/10 | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` |
+
+El frontend publica su URL en el repo [`hllous/Frontend-M6-DAPS2`](https://github.com/hllous/Frontend-M6-DAPS2) (campo "website"). `https://m6-ambiente-frontend.vercel.app` también respondía el 04/10, pero la vigente es la de arriba.
 
 El deploy está **enlazado a la rama `develop`** de cada repo: al pushear código a `develop` se actualiza automáticamente — el backend vía GitHub Actions + Deploy Hook de Render, el frontend vía auto-deploy nativo de Vercel (~2-5 min).
 
@@ -21,8 +23,8 @@ El deploy está **enlazado a la rama `develop`** de cada repo: al pushear códig
 
 | Recurso | URL |
 |---|---|
-| Frontend (landing) | `https://m6-ambiente-frontend.vercel.app` |
-| Frontend health | `https://m6-ambiente-frontend.vercel.app/api/health` |
+| Frontend (landing) | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` |
+| Frontend health | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app/api/health` |
 | Backend health | `https://m6-backend-m64k.onrender.com/health` |
 | Backend Swagger UI | `https://m6-backend-m64k.onrender.com/api/docs` |
 
@@ -36,7 +38,7 @@ curl https://m6-backend-m64k.onrender.com/health
 # → {"status":"ok","timestamp":"...","service":"m6-ambiente-backend"}
 
 # Frontend: debe devolver status ok
-curl https://m6-ambiente-frontend.vercel.app/api/health
+curl https://frontend-m6-daps2-grupo4-modulo6.vercel.app/api/health
 # → {"status":"ok","timestamp":"...","service":"m6-ambiente-frontend"}
 ```
 
@@ -90,7 +92,7 @@ No hay que hacer nada manual en el día a día.
 |---|---|---|
 | `DATABASE_URL` | (Internal Database URL del Postgres) | ✅ Sí |
 | `JWT_SECRET` | Secreto ≥ 8 caracteres (generar random) | ✅ Sí |
-| `CORS_ORIGINS` | `https://m6-ambiente-frontend.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
+| `CORS_ORIGINS` | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
 | `JWT_EXPIRATION` | `3600` | No (default 3600s) |
 | `NODE_ENV` | `production` | ✅ Sí |
 | `SANCTION_DEADLINE_DAYS` | `30` | No (default 30 días para cierre de expediente ambiental sin resolución M4) |
@@ -146,7 +148,7 @@ No hay que hacer nada manual en el día a día.
 
 ## 6. Estado de la app end-to-end
 
-> Actualizado al 18/09/2026, con las siete fases del plan de backend completadas (134 rutas en 23 tags Swagger) y diseño de arquitectura frontend alineado.
+> Conteos contrastados con el código el 04/10/2026 (134 rutas en 23 tags Swagger). El estado en vivo de Render y Vercel hay que confirmarlo con los `curl` de abajo: no se asume.
 
 La infraestructura está deployada, las migraciones corren solas en cada deploy y la API sirve datos reales.
 

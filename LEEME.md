@@ -86,7 +86,7 @@ Bloqueantes abiertos:
 | Con quién | Qué falta |
 |---|---|
 | **M2** | Que `ticketUpdated / ROUTED` diga a qué módulo va —o el catálogo de `requestTypeId` que nos corresponden— y que `location` traiga `neighborhoodId` en vez de texto libre |
-| **M4** | Que devuelvan `sourceViolationId` en `commercialFineGenerated`, `closureOrdered` y `closureLifted` |
+| **M4** | Que devuelvan `sourceViolationId` en `commercialFineGenerated` y `closureUpdate` |
 | **M9** | No aparece en la recopilación. Falta la lista de eventos del Core y el catálogo de barrios |
 | **M1** | Confirmado como emisor del JWT; falta su contrato técnico: `alg`, `iss`, `aud`, claves/JWKS, claims y TTL |
 

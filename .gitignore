@@ -47,6 +47,7 @@ lerna-debug.log*
 .agents/
 .claude/skills/
 .claude/settings.local.json
+.claude/
 
 # === IDE y sistema operativo ===
 .vscode/

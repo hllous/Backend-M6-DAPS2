@@ -1,6 +1,6 @@
 # AGENTS.md — Módulo 6, Grupo 04
 
-TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal distribuida, 9 grupos, 1 módulo c/u, integrada por eventos asincrónicos (`AsyncAPI`/bus de eventos, sobre pendiente de que M9 lo defina) + REST solo para lo síncrono. Cada módulo: frontend + backend en 3 capas + DB propia; sin acceso directo entre bases. Enunciado completo: `enunciado/TPO - Desarrollo de Apps II - Gestión de municipalidad.pdf`, en el repositorio de documentación.
+TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal distribuida, 9 grupos, 1 módulo c/u, integrada por eventos asincrónicos (bus RabbitMQ, ver ADR-006) + REST solo para lo síncrono. El JWT lo emite M1 (ADR-004). Cada módulo: frontend + backend en 3 capas + DB propia; sin acceso directo entre bases. Enunciado completo: `enunciado/TPO - Desarrollo de Apps II - Gestión de municipalidad.pdf`, en el repositorio de documentación.
 
 ## Por dónde empezar
 
@@ -13,6 +13,30 @@ TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal d
 7. [docs/api/](docs/api/) — estándar Swagger + endpoints REST del backend
 8. [docs/decisiones/](docs/decisiones/) — ADRs (decisiones técnicas)
 9. [docs/gestion/](docs/gestion/) — proceso Scrum: DoD, sprints, retros, bitácoras individuales
+
+## Comandos
+
+Node 22 (`.nvmrc`). Antes de dar algo por terminado: build, lint y tests en verde.
+
+| Qué | Comando |
+|---|---|
+| Build / lint (sin autofix) | `npm run build` / `npm run lint:check` |
+| Tests unitarios / cobertura (umbral 85%) | `npm test` / `npm run test:cov` |
+| e2e (Postgres real, ver `docs/testing.md`) | `npm run test:e2e` |
+| Regenerar `docs/api/openapi.json` | `npm run openapi:generate` |
+| Prisma | `npm run prisma:migrate:dev` · `prisma:generate` · `prisma:seed` |
+
+Los e2e migran la base apuntada por `DATABASE_URL`: leer `docs/testing.md` antes de correrlos para no tocar la base desplegada.
+
+## Arquitectura del código
+
+Tres capas por recurso en `src/modules/<recurso>/`: `*.controller.ts` (HTTP + Swagger, sin lógica) → `*.service.ts` (reglas y máquinas de estado) → Prisma. DTOs en `dto/`, validados con `class-validator` por el `ValidationPipe` global.
+
+- **Auth**: `JwtAuthGuard` es global (`APP_GUARD`); un endpoint sin token lleva `@Public()`. Hoy no hay autorización por rol: `@Roles()` y `RolesGuard` existen pero ningún endpoint los usa (ver `docs/api/endpoints.md`). Código en `src/common/guards` y `src/auth`.
+- **Eventos** (`src/events/`): publicar = escribir en el outbox dentro de la misma transacción del cambio de dominio (`OutboxService`); `OutboxDispatcher` los envía a RabbitMQ. Consumir = `inbox` (idempotente) + `consumers/`. Payloads en `payloads.ts`, contratos en `docs/eventos/`.
+- **Swagger**: todo endpoint sigue `docs/api/estandar-swagger.md`; `docs/api/openapi.json` se regenera, no se edita a mano (hay un spec que lo compara).
+- **Tests**: `*.spec.ts` junto al código; e2e en `test/`.
+- **Config**: variables validadas en `src/config/env.validation.ts`; sumar la variable también a `.env.example`.
 
 ## Qué NO es `docs/`
 
@@ -40,7 +64,7 @@ Flujo: `main ← test ← develop ← feature/*|fix/*|docs/*|refactor/*|tests/*|
 - **Antes de abrir PR**: debe compilar, tests deben pasar, docs/Swagger actualizados, sin conflictos
 - **Cambios a contratos** (APIs REST, DTOs públicos, eventos/exchanges/routing keys, OpenAPI): avisar a consumidores, actualizar docs, mantener retrocompatibilidad cuando sea posible
 
-**Stack confirmado**: Node.js + TypeScript + Nest.js + Prisma + PostgreSQL (backend); React + TypeScript + Next.js + Tailwind (frontend); mensajería RabbitMQ (anunciado por M9). M6 se comunica solo por eventos asincrónicos, patrón outbox/inbox.
+**Stack confirmado**: Node.js + TypeScript + Nest.js + Prisma + PostgreSQL (backend); React + TypeScript + Next.js + Tailwind (frontend); mensajería RabbitMQ (ADR-006). M6 se comunica solo por eventos asincrónicos, patrón outbox/inbox.
 
 **Principios clave**: nunca hardcodear secretos (usar `.env.example`); status como enums; `ValidationPipe` global desde el inicio; Auth/JWT prioritario antes de tocar módulos de dominio.
 

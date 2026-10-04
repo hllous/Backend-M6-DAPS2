@@ -2,7 +2,9 @@
 
 ## Estado
 
-**Propuesto** — 2026-09-02
+**Aceptado** — propuesto el 2026-09-02, aceptado el 2026-10-04.
+
+> Nota del 2026-10-04: la decisión ya estaba en vigor. El schema de Prisma, el código y [`enumeraciones.md`](../enumeraciones.md) usan los valores del catálogo interno, y [`bloqueantes.md`](../bloqueantes.md) trata las divergencias como resueltas. Se formaliza el estado, sin cambios en la decisión.
 
 ## Contexto
 

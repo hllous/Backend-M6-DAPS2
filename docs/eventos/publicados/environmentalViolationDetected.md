@@ -34,10 +34,10 @@ Enums: `severity` es `Severity`, `violationType` es `ViolationType`, `suggestedA
 
 ## Qué le pedimos al consumidor
 
-🔴 **Que devuelvan `violationId` como `sourceViolationId`** en [`commercialFineGenerated`](../consumidos/commercialFineGenerated.md), [`closureOrdered`](../consumidos/closureOrdered.md) y [`closureLifted`](../consumidos/closureLifted.md). Sin ese campo no sabemos cuál de nuestras actas resolvieron y el expediente queda en `NOTICE_ISSUED` para siempre. Es un [pedido abierto](../../bloqueantes.md#tablero).
+🔴 **Que devuelvan `violationId` como `sourceViolationId`** en [`commercialFineGenerated`](../consumidos/commercialFineGenerated.md), [`closureUpdate`](../consumidos/closureUpdate.md) (con `status: ORDERED` o `LIFTED`). Sin ese campo no sabemos cuál de nuestras actas resolvieron y el expediente queda en `NOTICE_ISSUED` para siempre. Es un [pedido abierto](../../bloqueantes.md#tablero).
 
-**No les pedimos un evento de desestimación.** El caso "M4 decide que no corresponde castigo" no dispara nada, ni siquiera `closureLifted`, y lo cerramos por vencimiento de un plazo configurable. Una dependencia menos.
+**No les pedimos un evento de desestimación.** El caso "M4 decide que no corresponde castigo" no dispara nada, ni siquiera `closureUpdate / LIFTED`, y lo cerramos por vencimiento de un plazo configurable. Una dependencia menos.
 
 ## Nota para M1
 
-Este evento **no** se le publica a M1. Su expediente digital recibe actuaciones de M4, M5, M7 y M8, y el hecho les llega igual —por M4, que reporta la sanción— en vez de entrarles dos veces. Falta que lo confirmen: ver [bloqueantes.md](../../bloqueantes.md#m1--ciudadanos--sin-eventos).
+Este evento **no** se le publica a M1. Su expediente digital recibe actuaciones de M4, M5, M7 y M8, y el hecho les llega igual —por M4, que reporta la sanción— en vez de entrarles dos veces. Falta que lo confirmen: ver [bloqueantes.md](../../bloqueantes.md#m1--ciudadanos--jwt-confirmado-sin-integración-de-dominio-actual).
