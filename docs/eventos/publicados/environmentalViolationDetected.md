@@ -40,4 +40,4 @@ Enums: `severity` es `Severity`, `violationType` es `ViolationType`, `suggestedA
 
 ## Nota para M1
 
-Este evento **no** se le publica a M1. Su expediente digital recibe actuaciones de M4, M5, M7 y M8, y el hecho les llega igual —por M4, que reporta la sanción— en vez de entrarles dos veces. Falta que lo confirmen: ver [bloqueantes.md](../../bloqueantes.md#m1--ciudadanos--sin-eventos).
+Este evento **no** se le publica a M1. Su expediente digital recibe actuaciones de M4, M5, M7 y M8, y el hecho les llega igual —por M4, que reporta la sanción— en vez de entrarles dos veces. Falta que lo confirmen: ver [bloqueantes.md](../../bloqueantes.md#m1--ciudadanos--jwt-confirmado-sin-integración-de-dominio-actual).

@@ -1,5 +1,7 @@
 # Módulo 6 — Ambiente, Higiene y Servicios Urbanos
 
+> Punto de entrada de `docs/`: qué hace el módulo, glosario y mapa de la carpeta. Leer primero; el código manda ante cualquier contradicción.
+
 > Fuente original: `fuentes/alcance-entregable.md` §1-2, en el repositorio de documentación. Esta versión es la que se mantiene viva; el entregable formal se sigue generando de la fuente original hasta que se unifique el pipeline (ver [bloqueantes.md](bloqueantes.md)).
 
 Módulo operativo de campo de la higiene urbana y el control ambiental. Planifica y ejecuta los servicios de recolección, limpieza, arbolado y espacios verdes; administra el inventario urbano ambiental; y tramita las denuncias ambientales hasta el acta de constatación, registrando después la resolución sancionatoria que devuelve M4.
@@ -52,9 +54,12 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 - [DER.md](DER.md) — modelo relacional entidad-relación (diagrama Mermaid y reglas de esquema)
 - [eventos/publicados/](eventos/publicados/) — los 8 eventos que este módulo emite (con sus `.schema.json`)
 - [eventos/consumidos/](eventos/consumidos/) — los 10 eventos que este módulo escucha
+- [Acuerdo-Eventos-M6.md](Acuerdo-Eventos-M6.md) — contrato de eventos que circula a las otras cohortes (fuente del PDF; ver [ADR-003](decisiones/adr-003-divergencias-enums.md) por los enums que ya divergen)
+- [Cruce-Eventos-M6.md](Cruce-Eventos-M6.md) — análisis interno del 17/08 que contrasta las listas de eventos de la cohorte; histórico, no se mantiene
 - [bloqueantes.md](bloqueantes.md) — estado vivo de la integración inter-módulo (fuente única)
 - [enumeraciones.md](enumeraciones.md) — catálogo de valores cerrados
 - [decisiones/](decisiones/) — ADRs (decisiones técnicas de arquitectura)
 - [deploy.md](deploy.md) — despliegue, URLs, variables de entorno y estado operativo
 - [testing.md](testing.md) — tests unitarios y e2e contra Postgres: cómo correrlos y qué cubre cada suite
 - [gestion/](gestion/) — proceso Scrum: DoD, sprints y bitácoras
+- [agents/](agents/) — configuración para skills de IA: cómo leer estos docs, tracker de issues y labels de triage

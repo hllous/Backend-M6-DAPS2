@@ -7,7 +7,7 @@ El patrimonio ambiental que administramos, sin contar los contenedores ([contain
 | `GreenPoint` | Punto verde de entrega voluntaria. `code`, `name`, `location`, `acceptedWasteTypes[]`, `zoneId`, `status` |
 | `Tree` | `surveyCode`, `species`, `location`, `heightM`, `diameterCm`, `zoneId`, más el historial de `TreeSurvey` |
 | `TreeSurvey` | `treeId`, `surveyedAt`, `inspectorId`, `healthStatus`, `riskLevel`, `riskType`, `suggestedIntervention`, `requiresStreetClosure`, `requiresPublicWorks`, `notes` |
-| `GreenSpace` | `name`, `spaceType`, `areaM2`, `zoneId`, `status` |
+| `GreenSpace` | `name`, `spaceType`, `lat`, `lng` (punto, opcionales), `areaM2`, `zoneId`, `active` |
 
 Enums: `acceptedWasteTypes[]` es `WasteType`, `healthStatus` es `TreeHealthStatus`, `riskLevel` es `RiskLevel`, `riskType` es `RiskType`, `suggestedIntervention` es `TreeInterventionType`, `spaceType` es `GreenSpaceType` — ver [enumeraciones.md](../enumeraciones.md). `zoneId` → [`Zone`](configuracion-y-recursos.md#zone).
 

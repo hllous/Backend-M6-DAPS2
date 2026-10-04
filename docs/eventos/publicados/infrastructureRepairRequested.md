@@ -29,6 +29,6 @@ Enums: `damageType` es `RepairDamageType`, `severity` es `Severity` — ver [enu
 
 **Que devuelvan `requestId` como `sourceRequestId`** en [`workOrderScheduled`](../consumidos/workOrderScheduled.md) y [`workOrderCompleted`](../consumidos/workOrderCompleted.md). Sin ese campo hay que correlacionar por dirección, que es frágil.
 
-Sigue abierto **cuándo** dispara M3 su `workOrderScheduled`: si es recién al ponerle fecha, entre que mandamos la solicitud y ellos la agendan no tenemos ninguna señal. Ver [bloqueantes.md](../../bloqueantes.md#m3--obras-públicas--con-una-pregunta).
+Sigue abierto **cuándo** dispara M3 su `workOrderScheduled`: si es recién al ponerle fecha, entre que mandamos la solicitud y ellos la agendan no tenemos ninguna señal. Ver [bloqueantes.md](../../bloqueantes.md#m3--obras-públicas--con-una-pregunta-menor).
 
 M3 borró de su lista el alias `urbanServiceRepairRequested`, que era el nombre del enunciado para este mismo evento.

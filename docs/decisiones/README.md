@@ -6,7 +6,7 @@ Registro de las decisiones de arquitectura y tecnología del módulo. Cada archi
 
 Un documento corto que explica **por qué** se tomó una decisión técnica, en qué contexto, y qué consecuencias trae. Sirve para que un integrante que llega meses después entienda el razonamiento, y para no reabrir discusiones ya cerradas.
 
-Los ADRs no se editan una vez aceptados. Si una decisión cambia, se escribe un ADR nuevo que la reemplaza, y el viejo se marca como *Superseded by ADR-XXX*.
+Los ADRs no se reescriben una vez aceptados. Si una decisión cambia, se escribe un ADR nuevo que la reemplaza, y el viejo se marca como *Superseded by ADR-XXX* o recibe una nota de corrección fechada, como en [ADR-001](adr-001-stack-tecnologico.md) y [ADR-002](adr-002-auth-provisoria.md).
 
 ## Formato
 

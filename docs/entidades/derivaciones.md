@@ -23,7 +23,7 @@ Un daño de infraestructura que detectamos pero que no nos corresponde arreglar:
 | Llega [`workOrderScheduled`](../eventos/consumidos/workOrderScheduled.md) | Pasa a en curso |
 | Llega [`workOrderCompleted`](../eventos/consumidos/workOrderCompleted.md) | Se cierra |
 
-Las dos respuestas dependen de que M3 devuelva nuestro `requestId` como `sourceRequestId`; sin ese campo hay que correlacionar por dirección, que es frágil. Y sigue sin confirmarse **cuándo** dispara M3 su `workOrderScheduled`: ver [bloqueantes.md](../bloqueantes.md#m3--obras-públicas--con-una-pregunta).
+Las dos respuestas dependen de que M3 devuelva nuestro `requestId` como `sourceRequestId`; sin ese campo hay que correlacionar por dirección, que es frágil. Y sigue sin confirmarse **cuándo** dispara M3 su `workOrderScheduled`: ver [bloqueantes.md](../bloqueantes.md#m3--obras-públicas--con-una-pregunta-menor).
 
 Un [`Container`](container.md) con `requiresPublicWorks = true` también le llega a M3, pero por otra vía: el evento `containerDamaged`, no una `RepairRequest`.
 

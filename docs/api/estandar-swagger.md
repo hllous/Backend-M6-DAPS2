@@ -8,7 +8,7 @@ Todo endpoint que no cumpla estas reglas no pasa la review de PR.
 
 ## 1. Configuración global
 
-La configuración de Swagger vive en `src/main.ts` y expone la documentación en `/api/docs`.
+La configuración de Swagger vive en `src/swagger-config.ts` (el `DocumentBuilder` y los tags) y `src/main.ts` la monta en `/api/docs`. El bloque siguiente es ilustrativo: el código real está en esos dos archivos.
 
 ```typescript
 import { NestFactory } from '@nestjs/core';
@@ -84,7 +84,7 @@ bootstrap();
 
 Un endpoint pertenece a **un solo tag**. Los tags deben coincidir exactamente con los definidos en la configuración global:
 
-**Un recurso, un tag.** No se comparte tag entre dominios distintos: si un recurso nuevo no encaja en ninguno de los de abajo, se le agrega el suyo a `main.ts` y a esta tabla, en el grupo que corresponda.
+**Un recurso, un tag.** No se comparte tag entre dominios distintos: si un recurso nuevo no encaja en ninguno de los de abajo, se le agrega el suyo a `swagger-config.ts` y a esta tabla, en el grupo que corresponda.
 
 | Área | Tag | Cubre |
 |---|---|---|
@@ -106,11 +106,13 @@ Un endpoint pertenece a **un solo tag**. Los tags deben coincidir exactamente co
 | | `street-closure-requests` | Cortes de calle solicitados a M7 |
 | Control ambiental | `environmental-reports` | Denuncias ambientales, expedientes |
 | | `environmental-inspections` | Inspecciones programadas y realizadas |
+| Evidencia | `evidence` | Adjuntos de evidencia (foto/PDF) para `Container`, `Service`, `ZoneResult` e `Inspection` |
 | Integración | `events` | Ingesta de eventos entrantes y estado de los handlers |
+| Tablero | `indicators` | Indicadores de cobertura, cumplimiento, incidencias y residuos |
 | Otros | `citizen-portal` | Endpoints expuestos al ciudadano (portal público) |
-| | `health` | `/health`, `/ready`, `/metrics` |
+| | `health` | `/health` y `/health/ready` |
 
-El orden de declaración en `main.ts` es el orden en que Swagger UI muestra los grupos, así que se mantiene el de esta tabla: primero sobre qué se programa, después quién lo ejecuta, después la operación, después el inventario.
+El orden de declaración en `swagger-config.ts` es el orden en que Swagger UI muestra los grupos, así que se mantiene el de esta tabla: primero sobre qué se programa, después quién lo ejecuta, después la operación, después el inventario.
 
 **Cómo se aplica:**
 

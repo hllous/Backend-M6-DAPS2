@@ -35,7 +35,7 @@ Requisitos:
 ## Enlaces útiles
 
 | Recurso | Dónde |
-|---|---|---|
+|---|---|
 | **API interactiva (Swagger)** | `https://m6-backend-m64k.onrender.com/api/docs` |
 | **Despliegue y estado** | [`docs/deploy.md`](docs/deploy.md) |
 | **Tests unitarios y e2e** | [`docs/testing.md`](docs/testing.md) |
@@ -72,8 +72,8 @@ El pipeline de documentación que genera los entregables para la cátedra —`fu
 
 M6 se comunica con el resto de la plataforma **por eventos asincrónicos** vía el bus del Core (M9). REST síncrono se usa solo para casos justificados (búsqueda de establecimiento a M4, catálogo de barrios a M9).
 
-- Publicamos **8 eventos**, todos con consumidor confirmado.
-- Consumimos **9 eventos** de M2, M3, M4, M7 y M9, más una alerta meteorológica simulada internamente — 10 en total.
+- Publicamos **8 eventos**, todos con consumidor declarado.
+- Consumimos **10 eventos**: 9 de M2, M3, M4, M7 y M9 más una alerta meteorológica simulada internamente. 9 tienen handler; `notificationSent` (M9) no, porque nadie lo publica.
 
 Ver detalle en [`docs/eventos/`](docs/eventos/) y estado vivo en [`docs/bloqueantes.md`](docs/bloqueantes.md).
 

@@ -22,7 +22,7 @@ Al cerrarla, el inspector puede dejar su `conclusion` y, si hubo infracción, `v
 
 **Inmutable una vez emitida.** Es un acto administrativo formal: si hay un error, se emite otra, no se corrige esta.
 
-**`establishmentId` es obligatorio.** Intimar, clausurar y multar se le aplican a un comercio habilitado, que es lo único sobre lo que M4 puede actuar: un acta sin establecimiento no les sirve. Si no identificamos el establecimiento **no derivamos el acta** y el expediente cierra de nuestro lado. Para completarlo antes de emitir necesitamos la búsqueda REST de establecimiento de M4, [pendiente](../bloqueantes.md#m4--habilitaciones-).
+**`establishmentId` es obligatorio.** Intimar, clausurar y multar se le aplican a un comercio habilitado, que es lo único sobre lo que M4 puede actuar: un acta sin establecimiento no les sirve. Si no identificamos el establecimiento **no derivamos el acta** y el expediente cierra de nuestro lado. Para completarlo antes de emitir necesitamos la búsqueda REST de establecimiento de M4, [pendiente](../bloqueantes.md#m4--habilitaciones--con-dos-preguntas-abiertas).
 
 `suggestedAction` **no es vinculante**: la decisión es de M4.
 
@@ -32,6 +32,6 @@ Al emitirse sale [`environmentalViolationDetected`](../eventos/publicados/enviro
 
 **Espejo de solo lectura de lo que decidió M4.** No lo editamos: existe para poder cerrar el expediente y para mostrar en qué terminó.
 
-Se llena al recibir [`commercialFineGenerated`](../eventos/consumidos/commercialFineGenerated.md), [`closureOrdered`](../eventos/consumidos/closureOrdered.md) o [`closureLifted`](../eventos/consumidos/closureLifted.md). Los tres tienen que traer `sourceViolationId` —el `violationId` que mandamos en el acta— y **eso es lo que hoy no devuelven**: sin ese campo no sabemos cuál de nuestras actas resolvieron y el expediente queda en `NOTICE_ISSUED` para siempre. Es uno de los [pedidos abiertos](../bloqueantes.md#tablero).
+Se llena al recibir [`commercialFineGenerated`](../eventos/consumidos/commercialFineGenerated.md) o [`closureUpdate`](../eventos/consumidos/closureUpdate.md) (`ORDERED` o `LIFTED`) de M4. Ambos traen `sourceViolationId` —el `violationId` que mandamos en el acta—, confirmado el 24/08: sin ese campo no sabríamos cuál de nuestras actas resolvieron. Estado vivo en [bloqueantes.md](../bloqueantes.md#m4--habilitaciones--con-dos-preguntas-abiertas).
 
 `dismissalReason` no llega por evento: **M4 no publica nada cuando decide que no corresponde castigo.** Ese caso se cierra por vencimiento de plazo, sin `SanctionOutcome` — ver [`EnvironmentalReport`](environmental-report.md#estados).
