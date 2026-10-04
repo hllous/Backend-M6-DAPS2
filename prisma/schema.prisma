@@ -808,6 +808,9 @@ model EnvironmentalInspection {
   checklistItems  ChecklistItem[]
   violationNotice ViolationNotice?
 
+  // Postgres no indexa las FK solo: el filtro `?crewId=` y el include de
+  // `assignedCrewId` de la cola filtran por report_id y ordenan por created_at.
+  @@index([reportId, createdAt])
   @@map("environmental_inspection")
 }
 
