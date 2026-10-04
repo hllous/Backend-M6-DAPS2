@@ -89,12 +89,13 @@ export class ServicesController {
   @ApiOperation({
     summary: 'Listar servicios',
     description:
-      'Listado paginado. Filtros por estado, tipo, modo, origen, cuadrilla, vehículo, zona cubierta, reclamo de M2 y rango de fechas agendadas.',
+      'Listado paginado. Filtros por estado, tipo, modo, origen, cuadrilla, vehículo, zona cubierta, bien objetivo (targetType/targetId, p. ej. los servicios de un árbol), reclamo de M2 y rango de fechas agendadas.',
   })
   @ApiPaginatedResponse(ServiceResponseDto, 'Listado paginado de servicios')
   @ApiResponse({
     status: 400,
-    description: 'Filtros inválidos: scheduledFrom posterior a scheduledTo',
+    description:
+      'Filtros inválidos: scheduledFrom posterior a scheduledTo, valor fuera del catálogo o id que no es UUID',
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)

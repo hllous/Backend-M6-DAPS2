@@ -12,7 +12,7 @@ class CrewMemberResponseDto {
 export class CrewResponseDto {
   @ApiProperty({
     description: 'UUID de la cuadrilla',
-    example: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    example: 'c3d4e5f6-a7b8-4012-8def-123456789012',
     format: 'uuid',
   })
   id: string;

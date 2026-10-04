@@ -14,7 +14,7 @@ const TIME_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 export class UpdateServiceDto {
   @ApiPropertyOptional({
     description: 'Vehículo asignado',
-    example: 'f6a7b8c9-d0e1-2345-fabc-456789012345',
+    example: 'f6a7b8c9-d0e1-4345-8abc-456789012345',
     format: 'uuid',
   })
   @IsOptional()
