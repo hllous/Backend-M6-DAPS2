@@ -1,3 +1,5 @@
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { TreeInterventionsController } from './tree-interventions.controller';
 import { TreeInterventionsService } from './tree-interventions.service';
 import {
@@ -37,6 +39,21 @@ describe('TreeInterventionsController', () => {
     const query = {} as QueryTreeInterventionsDto;
     await controller.findAll(query);
     expect(service.findAll).toHaveBeenCalledWith(query);
+  });
+
+  it('findAll pasa el filtro por árbol al service', async () => {
+    const query = { treeId: ID } as QueryTreeInterventionsDto;
+    await controller.findAll(query);
+    expect(service.findAll).toHaveBeenCalledWith(query);
+  });
+
+  /** Lo que el ValidationPipe global convierte en 400. */
+  it.each([
+    ['un UUID válido', 'b8c9d0e1-f2a3-4567-8bcd-678901234567', 0],
+    ['algo que no es UUID', 'arbol-1', 1],
+  ])('treeId: %s', async (_caso, treeId, errores) => {
+    const dto = plainToInstance(QueryTreeInterventionsDto, { treeId });
+    expect(await validate(dto)).toHaveLength(errores);
   });
 
   it('findOne delega el id', async () => {

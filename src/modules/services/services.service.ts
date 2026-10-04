@@ -277,6 +277,8 @@ export class ServicesService {
     if (query.crewId) where.crewId = query.crewId;
     if (query.vehicleId) where.vehicleId = query.vehicleId;
     if (query.ticketId) where.ticketId = query.ticketId;
+    if (query.targetType) where.targetType = query.targetType;
+    if (query.targetId) where.targetId = query.targetId;
     if (query.zoneId) where.zones = { some: { zoneId: query.zoneId } };
 
     if (

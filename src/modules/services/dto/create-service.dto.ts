@@ -76,7 +76,7 @@ export class CreateServiceDto {
 
   @ApiPropertyOptional({
     description: 'UUID del bien sobre el que se ejecuta. La zona se deriva del bien.',
-    example: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    example: 'c3d4e5f6-a7b8-4012-8def-123456789012',
     format: 'uuid',
   })
   @IsOptional()
@@ -86,7 +86,7 @@ export class CreateServiceDto {
   @ApiPropertyOptional({
     description:
       'Zona del servicio POINT cuando el objetivo es una ubicación suelta y no un bien del inventario. Se ignora si viene targetType/targetId.',
-    example: 'd4e5f6a7-b8c9-0123-defa-234567890123',
+    example: 'd4e5f6a7-b8c9-4123-8efa-234567890123',
     format: 'uuid',
   })
   @IsOptional()
@@ -95,7 +95,7 @@ export class CreateServiceDto {
 
   @ApiPropertyOptional({
     description: 'Cuadrilla asignada. Es opcional al programar; se puede asignar después.',
-    example: 'e5f6a7b8-c9d0-1234-efab-345678901234',
+    example: 'e5f6a7b8-c9d0-4234-8fab-345678901234',
     format: 'uuid',
   })
   @IsOptional()
@@ -105,7 +105,7 @@ export class CreateServiceDto {
   @ApiPropertyOptional({
     description:
       'Vehículo asignado. Si el tipo de servicio exige vehículo, hace falta antes de iniciar.',
-    example: 'f6a7b8c9-d0e1-2345-fabc-456789012345',
+    example: 'f6a7b8c9-d0e1-4345-8abc-456789012345',
     format: 'uuid',
   })
   @IsOptional()

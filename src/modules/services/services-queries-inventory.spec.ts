@@ -159,6 +159,20 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
       });
     });
 
+    it('filtra por el bien objetivo con el mismo where en listado y conteo', async () => {
+      await service.findAll(query({ targetType: ServiceTargetType.TREE, targetId: TARGET_ID }));
+
+      const where = { targetType: ServiceTargetType.TREE, targetId: TARGET_ID };
+      expect(prisma.service.findMany.mock.calls[0][0].where).toEqual(where);
+      expect(prisma.service.count).toHaveBeenCalledWith({ where });
+    });
+
+    it('acepta targetId solo, sin targetType', async () => {
+      await service.findAll(query({ targetId: TARGET_ID }));
+
+      expect(prisma.service.findMany.mock.calls[0][0].where).toEqual({ targetId: TARGET_ID });
+    });
+
     it.each([
       ['solo desde', { scheduledFrom: '2026-09-01' }, { gte: true, lte: false }],
       ['solo hasta', { scheduledTo: '2026-09-30' }, { gte: false, lte: true }],

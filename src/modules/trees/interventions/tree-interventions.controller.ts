@@ -59,9 +59,14 @@ export class TreeInterventionsController {
   @ApiOperation({
     summary: 'Listar intervenciones sobre árboles',
     description:
-      'Retorna un listado paginado de intervenciones. Se puede filtrar por tipo y estado.',
+      'Retorna un listado paginado de intervenciones. Se puede filtrar por tipo, estado y por árbol: con treeId vienen solo las intervenciones que incluyen ese árbol, para armar su ficha.',
   })
   @ApiPaginatedResponse(TreeInterventionResponseDto, 'Listado paginado de intervenciones')
+  @ApiResponse({
+    status: 400,
+    description: 'Filtros inválidos: tipo o estado fuera del catálogo, o treeId que no es UUID',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findAll(@Query() query: QueryTreeInterventionsDto) {
