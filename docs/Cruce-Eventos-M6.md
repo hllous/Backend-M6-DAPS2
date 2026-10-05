@@ -265,7 +265,7 @@ Consumen los tres que les mandamos y nos publican `workOrderCompleted`. **Acepta
 
 - ✅ Borraron `urbanRiskDetected` y `urbanServiceRepairRequested` en su lista actualizada.
 - ✅ `workOrderValidated` desapareció: la solicitud la cierra `workOrderCompleted` y no hay ambigüedad.
-- **A definir:** `workOrderCreated` fue reemplazado por `workOrderScheduled`. "Creada" y "programada" no son lo mismo: hay que confirmar si sale al abrir la orden o recién al darle fecha.
+- ✅ **Cerrado (5 oct 2026):** `workOrderCreated` fue reemplazado por `workOrderScheduled`. Que salga al abrir la orden o al darle fecha no nos cambia nada.
 - ✅ **Resuelto.** `sourceRequestId` ya viaja en `workOrderScheduled` y `workOrderCompleted`.
 
 ## M4 — Habilitaciones ⚠️ ENCAJA CON RESERVA
@@ -357,7 +357,7 @@ Ordenado por lo que nos bloquea, no por módulo.
 | **M1** 🔴 | **Publicar el contrato técnico del JWT**: algoritmo de firma, `iss`, `aud`, claves o JWKS, claims y TTL. M1 ya está confirmado como emisor; sin esos datos no se puede verificar un token real |
 | **M4** | **Confirmar que nos rutean `commercialFineGenerated`,** que hoy está rotulado solo hacia Rentas. Les avisamos además que adoptamos `closureLifted` (hoy `closureUpdate / LIFTED`) como señal de cierre y que no les pedimos ningún evento nuevo |
 | **M3 · M4 · M7** ✅ M3 · ✅ M4 · ✅ M7 | **Devolver el identificador de origen.** `sourceRequestId` en `workOrderCompleted` y en las tres de corte; `sourceViolationId` en `commercialFineGenerated` y `closureOrdered` — **los tres ya lo devuelven.** M3 confirmó `sourceRequestId` en `workOrderScheduled` y `workOrderCompleted`; M4 confirmó `sourceViolationId` en `commercialFineGenerated` y en el evento fusionado `closureUpdate` (24/08); M7 confirmó el 25/08, como `closureRequestId` + `requestingModule` en `streetClosureApproved`/`Rejected` — no en `streetClosureEnded`, que solo trae `streetClosureId` |
-| **M3** | ✅ Lista actualizada: borraron los dos nombres viejos y `workOrderValidated`. **Queda definir cuándo se dispara `workOrderScheduled`** |
+| **M3** | ✅ Lista actualizada: borraron los dos nombres viejos y `workOrderValidated`. Lo de cuándo se dispara `workOrderScheduled` se cerró el 5 oct 2026: aceptado en ambos casos |
 | **Cohorte** | **Fijar una convención de escritura de nombres de evento.** camelCase, que es lo que usa toda la recopilación. Nuestros documentos están en PascalCase y los vamos a corregir |
 | **Cohorte** | **Fijar el vocabulario de corte de calle en los nombres de M7:** `streetClosureApproved` / `streetClosureRejected` / `streetClosureEnded` |
 | **Cohorte** | **Repasar la tabla de huérfanos.** El más caro es el par `paymentRegistered` / `debtSettled`, que rompe el cierre financiero de M4 y M7 con Rentas |

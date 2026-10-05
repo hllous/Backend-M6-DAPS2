@@ -243,7 +243,7 @@ Tres eventos, y ya confirmaron que los consumen los tres: `infrastructureRepairR
 
 ✅ **Nuestro `requestId` ya viaja como `sourceRequestId`** en `workOrderScheduled` y `workOrderCompleted`. Confirmado por M3. Era nuestro pedido — queda cerrado.
 
-🟡 **Nombre a confirmar:** `workOrderCompleted` trae `evidence`, y nuestro diseño tentativo esperaba `attachments[]`. Probablemente sea el mismo dato con otro nombre.
+✅ **Cierre del 5 oct 2026:** `workOrderCompleted` lleva `outcome` (texto libre) y `attachments[]` con la forma de adjunto de M2 (`{fileName, contentType, url, sizeBytes?}`); `evidence` queda descartado. `containerDamaged` y `treeRiskDetected` son avisos sin respuesta: no deben emitir `workOrderCompleted` hacia nosotros.
 
 ## 1.4 Para M4 — Habilitaciones
 
@@ -362,7 +362,7 @@ details.routing:  requestType (string), ticketType, summary, description,
 
 `workOrderUpdated` va solo hacia M2 y no lo necesitamos: nuestra solicitud de reparación tiene tres estados —pedida, en curso, cerrada— y con esos dos alcanza.
 
-⚠️ **Una pregunta sobre `workOrderScheduled`.** En su lista anterior el acuse era `workOrderCreated`, que significaba "la recibí y abrí la orden". `workOrderScheduled` significa "le puse fecha", que puede ser bastante después. Necesitamos saber si se dispara al crear la orden o recién al programarla: si es lo segundo, entre que les mandamos la solicitud y ustedes la agendan no tenemos ninguna señal y no podemos distinguir "todavía no la vieron" de "la están por hacer".
+✅ **`workOrderScheduled` (cerrado el 5 oct 2026).** Pueden dispararlo al abrir la orden o al agendarla: aceptado en ambos casos, sin impacto. Consumimos solo `workOrderScheduled` y `workOrderCompleted` (no `workOrderCreated` ni `workOrderValidated`) y cerramos la solicitud con `workOrderCompleted`.
 
 ## M4 — Habilitaciones
 
@@ -444,7 +444,7 @@ streetClosureEnded
 | 1 | **M2 publicó su contrato (ahora v1.6) y ningún otro módulo está escrito contra él.** M1, M4, M5 y M8 siguen publicando `ticketInProgress`, `ticketUpdate`, `ticketCompleted` y `ticketRejected`, que M2 no consume: lo suyo va por `updateTicketStatus` con `updateType`. Y los seis eventos de ciclo de vida que M1, M3, M5, M7 y M8 esperan son hoy variantes de `ticketUpdated`, no eventos. **Los cinco tienen que releer el contrato** | M1, M3, M4, M5, M8 |
 | 2 | **`commercialFineGenerated` figura rotulado solo hacia Rentas**, pero nosotros lo necesitamos para cerrar el expediente | M4 |
 | 3 | **M4 declara consumir `updateTicketStatus`.** Es el canal de entrada de M2 desde las áreas operativas: ningún otro módulo tendría que escucharlo | M4 |
-| 4 | **`workOrderScheduled` reemplazó a `workOrderCreated`** y no significan lo mismo. Hay que confirmar cuándo se dispara | M3 |
+| 4 | ~~**`workOrderScheduled` reemplazó a `workOrderCreated`**~~ ✅ Cerrado el 5 oct 2026: se dispare al abrir o al agendar, no nos cambia nada | M3 |
 | 5 | **El sobre común de M2 no es el sobre de la cohorte.** Definieron `specVersion`, `eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `subject` y `data`, con reglas de idempotencia y DLQ. Es el único envelope escrito que existe. **M9 tendría que adoptarlo o publicar el suyo**, porque hoy cada módulo asume uno distinto | M9, toda la cohorte |
 | 6 | **Los adjuntos se llaman distinto.** M2 usa `attachment { attachmentId, fileName, contentType, url, sizeBytes }`; nosotros veníamos con `{ url, mimeType, description }`. Nos alineamos al suyo en lo que va hacia M2, pero conviene unificarlo en toda la cohorte antes de implementar | toda la cohorte |
 
@@ -456,7 +456,7 @@ Su lista actualizada cerró tres cosas de un saque:
 - **Adoptaron el vocabulario de corte de calle de M7**: `streetClosureApproved`, `streetClosureRejected` y `streetClosureEnded`. Antes usaban `streetClosureAuthorized` / `Activated` / `Finished`, que M7 no publica.
 - **Bajaron los `publicWorksProject*` de doce a dos.**
 
-Con M3 nos queda una sola pregunta abierta, la del punto 3.
+Con M3 no queda ninguna pregunta abierta (cierre del 5 oct 2026).
 
 ## 3.2 Las que no nos afectan pero van a romper el ruteo
 

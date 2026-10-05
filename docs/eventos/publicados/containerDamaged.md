@@ -29,4 +29,8 @@ Enums: `severity` es `Severity`, `damageType` es `DamageType` — ver [enumeraci
 
 ## Qué le pedimos al consumidor
 
-No abre una `RepairRequest` nuestra, así que **no esperamos `sourceRequestId` en este caso**: el pedido de correlación aplica a [`infrastructureRepairRequested`](infrastructureRepairRequested.md), que sí es una derivación con seguimiento.
+Es un aviso: no lleva `requestId`, no abre una `RepairRequest` nuestra y **no esperamos respuesta**. M3 correlaciona por `containerId` y **no debe emitir `workOrderCompleted` hacia M6** para este caso; el pedido de correlación aplica a [`infrastructureRepairRequested`](infrastructureRepairRequested.md), que sí es una derivación con seguimiento.
+
+Se emite con `requiresPublicWorks` en `true` o en `false`; M3 procesa solo los `true`.
+
+`ticketId` (opcional) es el nombre que usa la cohorte; M3 lo llamaba `complaintId`.

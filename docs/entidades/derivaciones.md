@@ -23,7 +23,7 @@ Un daño de infraestructura que detectamos pero que no nos corresponde arreglar:
 | Llega [`workOrderScheduled`](../eventos/consumidos/workOrderScheduled.md) | Pasa a en curso |
 | Llega [`workOrderCompleted`](../eventos/consumidos/workOrderCompleted.md) | Se cierra |
 
-Las dos respuestas dependen de que M3 devuelva nuestro `requestId` como `sourceRequestId`; sin ese campo hay que correlacionar por dirección, que es frágil. Y sigue sin confirmarse **cuándo** dispara M3 su `workOrderScheduled`: ver [bloqueantes.md](../bloqueantes.md#m3--obras-públicas--con-una-pregunta-menor).
+Las dos respuestas dependen de que M3 devuelva nuestro `requestId` como `sourceRequestId`; el `sourceRequestId` es obligatorio (uuid) y confirmado. Que M3 dispare `workOrderScheduled` al abrir o al agendar no nos cambia nada (cerrado el 5 oct 2026, ver [bloqueantes.md](../bloqueantes.md#m3--obras-públicas)). La solicitud se cierra con `workOrderCompleted`; no esperamos `workOrderValidated`.
 
 Un [`Container`](container.md) con `requiresPublicWorks = true` también le llega a M3, pero por otra vía: el evento `containerDamaged`, no una `RepairRequest`.
 
@@ -55,5 +55,5 @@ Toda transición pasa por una tabla (`outbound-requests.transitions.ts`). Los en
 
 Dos saltos son válidos a propósito, porque los eventos de M3 y M7 viajan por routing keys distintas y nada garantiza el orden entre ellos:
 
-- **`REQUESTED → CLOSED`**: `workOrderCompleted` puede llegar sin que hayamos visto `workOrderScheduled`, y M3 todavía no confirmó cuándo lo dispara.
+- **`REQUESTED → CLOSED`**: `workOrderCompleted` puede llegar sin que hayamos visto `workOrderScheduled`, y M3 lo dispara al abrir o al agendar, según le convenga.
 - **`REQUESTED → ENDED`**: `streetClosureEnded` puede adelantarse a `streetClosureApproved`. Como la tabla es una sola, el endpoint manual `POST /street-closure-requests/:id/end` también lo admite desde `REQUESTED`.
