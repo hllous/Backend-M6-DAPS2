@@ -9,6 +9,7 @@ M6-por-modulo/*.zip
 !docs/Documento de Alcance - Grupo 04 (Modulo 6).pdf
 !docs/Diagrama de Eventos - Grupo 04 (Modulo 6).pdf
 !docs/Acuerdo-Eventos-M6.pdf
+/docs/documentacion/
 
 # === Pipeline de doc ===
 # Scripts de generación y librerías de terceros: viven fuera del repo.
