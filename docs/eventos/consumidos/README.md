@@ -62,7 +62,7 @@ El payload lo define el módulo que publica. Acá documentamos **solo los campos
 | M9 | Que alguien publique algo que origine una notificación | 🔴 Sin publicador |
 | M2 | `progress` de `updateTicketStatus` (lo que publicamos, no lo que consumimos) no sirve para la fecha agendada | 🔴 Bloqueante — ver [`updateTicketStatus`](../publicados/updateTicketStatus.md) |
 | M4 | Confirmar ruteo de `commercialFineGenerated`, `decidedAt`/`externalRef` pendientes de publicar, pregunta sobre `actId` | ⚠️ Abierto |
-| M3 | Cuándo se dispara `workOrderScheduled`, nombre `evidence` vs `attachments[]` a confirmar | ⚠️ Abierto (no bloqueante) |
+| M3 | ~~Cuándo se dispara `workOrderScheduled`; `evidence` vs `attachments[]`~~ | ✅ Cerrado (5 oct 2026): aceptado en ambos casos; `attachments[]` con la forma de M2 |
 | M7 | ~~Asimetría: `streetClosureEnded` no traía el origen de la solicitud~~ | ✅ Resuelto (30/08): ya trae `closureRequestId` |
 
 Detalle en [bloqueantes.md](../../bloqueantes.md).
@@ -72,6 +72,7 @@ Detalle en [bloqueantes.md](../../bloqueantes.md).
 | Evento | Por qué no |
 |---|---|
 | `ticketCreated` (M2) | Va hacia M1 con los datos mínimos del registro del ciudadano. No sirve para abrir un servicio |
+| `workOrderCreated`, `workOrderValidated` (M3) | Cerrado con M3 el 5 oct 2026: consumimos solo `workOrderScheduled` y `workOrderCompleted`. La solicitud se cierra con `workOrderCompleted` |
 | `workOrderUpdated` (M3) | Va solo hacia M2. Nuestra solicitud tiene tres estados y con los otros dos alcanza |
 | `notificationFailed` (M9) | Mismo problema que `notificationSent`, sin el beneficio del acuse |
 | `citizenDeceased`, `addressUpdated`, `citizenBlocked` (M1) | No replicamos el registro de ciudadanos |
