@@ -446,7 +446,7 @@ streetClosureEnded
 | 3 | **M4 declara consumir `updateTicketStatus`.** Es el canal de entrada de M2 desde las áreas operativas: ningún otro módulo tendría que escucharlo | M4 |
 | 4 | ~~**`workOrderScheduled` reemplazó a `workOrderCreated`**~~ ✅ Cerrado el 5 oct 2026: se dispare al abrir o al agendar, no nos cambia nada | M3 |
 | 5 | **El sobre común de M2 no es el sobre de la cohorte.** Definieron `specVersion`, `eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `subject` y `data`, con reglas de idempotencia y DLQ. Es el único envelope escrito que existe. **M9 tendría que adoptarlo o publicar el suyo**, porque hoy cada módulo asume uno distinto | M9, toda la cohorte |
-| 6 | **Los adjuntos se llaman distinto.** M2 usa `attachment { attachmentId, fileName, contentType, url, sizeBytes }`; nosotros veníamos con `{ url, mimeType, description }`. Nos alineamos al suyo en lo que va hacia M2, pero conviene unificarlo en toda la cohorte antes de implementar | toda la cohorte |
+| 6 | **Los adjuntos se llaman distinto.** M2 usa `attachment { fileName, contentType, url, sizeBytes? }` (sin `attachmentId` desde la v1.6); nosotros veníamos con `{ url, mimeType, description }`. Nos alineamos al suyo en lo que va hacia M2, pero conviene unificarlo en toda la cohorte antes de implementar | toda la cohorte |
 
 ### Lo que M3 ya resolvió
 
