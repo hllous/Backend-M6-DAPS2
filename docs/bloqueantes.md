@@ -36,7 +36,7 @@
 | **M3** | `sourceRequestId` en `workOrderScheduled` y `workOrderCompleted` | ✅ Cerrado | 25 ago 2026 |
 | **M3** | `workOrderCompleted` lleva `outcome` (string libre) + `attachments[]` con la forma de adjunto de M2 (§5.3 v1.73); `evidence` descartado. Cierre definitivo del contrato enviado a M3 | ✅ Cerrado | 5 oct 2026 |
 | **M7** | Payload completo de `streetClosureApproved`, `streetClosureRejected` y `streetClosureEnded`, confirmado con su documento de referencia | ✅ Cerrado | 25 ago 2026 |
-| **M7** | El origen de la solicitud vuelve como `closureRequestId` + `requestingModule` (no `sourceRequestId`/`sourceModule` como pedíamos, pero el dato está) en las **tres** respuestas de corte, incluida `streetClosureEnded` | ✅ Cerrado | 30 ago 2026 |
+| **M7** | El origen de la solicitud vuelve como `closureRequestId` + `requestingModule` (no `sourceRequestId`/`sourceModule` como pedíamos, pero el dato está) en las **tres** respuestas de corte, incluida `streetClosureEnded`. Verificado en código: el consumer exige `closureRequestId` (uuid) en las tres y **no lee `requestingModule`**. No verificado: qué valor manda M7 en `requestingModule` ni si `streetClosureEnded` lo trae realmente, porque no hay un ejemplo real de M7 en el repo | ✅ Cerrado (campo de correlación); `requestingModule` sin verificar | 5 oct 2026 |
 | **M7** | Typo en su lista: `streetClousureEnded` → `streetClosureEnded` | ✅ Cerrado | 25 ago 2026 |
 | **M7** | `streetClosureRequested` tenía forma distinta según el origen (Obras vs. Ambiente/nosotros). M7 propuso un esquema único y lo aceptamos, renombrando `requestId→closureRequestId`, `streets[]→affectedSections`, `from`/`to`→`requestedFrom`/`requestedTo` | ✅ Cerrado | 30 ago 2026 |
 | **M7** | Payloads de `urbanServiceScheduled` y `treeRiskDetected`: preguntaron si los teníamos definidos. Ya estaban — se les compartió el documento completo con los 8 eventos que publicamos | ✅ Cerrado | 30 ago 2026 |
@@ -44,7 +44,7 @@
 | **M1** | Decidir si el acta ambiental va al expediente digital. Nuestra postura: no — el hecho les llega vía M4 | ⚠️ A definir | 17 ago 2026 |
 | **Cohorte** | Fijar el sobre común. M2 lo actualizó en la v1.6 (§4): `specVersion` es constante `"1.0"`, `producer` pasó a ser objeto `{moduleId, service}` y **`eventVersion` desapareció**. Sigue siendo el único envelope escrito de la cohorte | ⚠️ A definir | 8 sep 2026 |
 | **Interno** | Los enums del [acuerdo publicado](Acuerdo-Eventos-M6.md) no coincidían con el catálogo en seis casos. Decidido por [ADR-003](decisiones/adr-003-divergencias-enums.md): manda el catálogo, se corrige el acuerdo | ✅ Cerrado | 2 sep 2026 |
-| **Interno** | Regenerar el acuerdo publicado con los enums corregidos y volver a circularlo | ⚠️ Pendiente | 2 sep 2026 |
+| **Interno** | ~~Regenerar el acuerdo publicado con los enums corregidos y volver a circularlo~~ El [`.md`](Acuerdo-Eventos-M6.md) ya está corregido (5 oct 2026). Falta que una persona regenere el PDF y lo recircule a la cohorte | ⚠️ Pendiente (PDF y recirculación) | 5 oct 2026 |
 | **M7** | Avisar que `ServiceOrigin` tiene 5 valores (`PLANNED`/`MANUAL`/`WEATHER_ALERT`, no `SCHEDULED`/`INTERNAL`), que `TreeHealthStatus` no colapsa en `DECLINING` y que `TreeInterventionType` distingue las dos podas y usa `REMOVAL`, no `FELLING` | ⚠️ Aviso pendiente | 2 sep 2026 |
 | **M3** | Aviso de que `TreeHealthStatus` conserva `WEAKENED` y `DISEASED` en vez de `DECLINING`, en `treeRiskDetected` | ✅ Enviado a M3 (la respuesta de M3 no consta) | 5 oct 2026 |
 | **M4** | Confirmar que toleran `FORMAL_NOTICE` como cuarto valor de `suggestedAction`. El campo no es vinculante, así que no debería bloquearles el circuito, pero son los que actúan sobre el valor | ⚠️ A confirmar | 2 sep 2026 |
@@ -78,7 +78,7 @@ Las filas ⚠️ de arriba que dicen "aviso pendiente" son estas. El texto está
 
 **→ Interno**
 
-> Regenerar el acuerdo publicado (`Acuerdo-Eventos-M6.md` → PDF) con los enums corregidos por ADR-003 y volver a circularlo a la cohorte. Es lo que las contrapartes tienen en la mano hoy, y todavía muestra los valores viejos.
+> Regenerar el PDF del acuerdo publicado (`Acuerdo-Eventos-M6.md` → PDF) y volver a circularlo a la cohorte. El `.md` ya tiene los enums corregidos por ADR-003 (5 oct 2026); el PDF que las contrapartes tienen en la mano todavía muestra los valores viejos.
 
 **→ M9 (Core)**
 
@@ -200,7 +200,7 @@ El cruce más limpio, y con payload confirmado desde el 25/08 y actualizado el 3
 
 El origen de la solicitud vuelve como **`closureRequestId` + `requestingModule`** (valores `"Obras"`/`"Ambiente"` — nosotros somos `"Ambiente"`), no con los nombres `sourceRequestId`/`sourceModule` que habíamos pedido, pero el dato está.
 
-**La asimetría de `streetClosureEnded` quedó resuelta (30/08).** Hasta el 25/08 ese evento no traía el origen, solo `streetClosureId` — había que persistirlo desde el `streetClosureApproved` anterior para correlacionar el cierre. El documento de referencia nuevo de M7 ya agrega `closureRequestId` también ahí, igualando los tres eventos de respuesta.
+**La asimetría de `streetClosureEnded` quedó resuelta (30/08).** Hasta el 25/08 ese evento no traía el origen, solo `streetClosureId` — había que persistirlo desde el `streetClosureApproved` anterior para correlacionar el cierre. El documento de referencia nuevo de M7 ya agrega `closureRequestId` también ahí, igualando los tres eventos de respuesta. En el código no hay mapeo `streetClosureId → closureRequestId` de respaldo: si un `streetClosureEnded` llega sin `closureRequestId`, el inbox lo rechaza con 400. `requestingModule` no se lee en ninguno de los tres.
 
 El typo `streetClousureEnded` ya está corregido desde el 25/08: escriben `streetClosureEnded` bien, coincidiendo con lo que usamos nosotros y M3.
 

@@ -1,6 +1,6 @@
 # Módulo 6 — Ambiente, Higiene y Servicios Urbanos · Grupo 04
 
-Contenido de la carpeta de trabajo. Estado al 17 de agosto de 2026.
+Contenido de la carpeta de trabajo. Estado al 5 de octubre de 2026.
 
 ## Dos conjuntos de documentación
 
@@ -75,22 +75,15 @@ En cuanto se cree el proyecto NestJS, se suman en la raíz: `src/`, `prisma/`, `
 
 ## Estado de la integración
 
-> **Versión resumida.** El estado vivo, con el detalle por contraparte y la fecha de cada pedido, está en [`docs/bloqueantes.md`](docs/bloqueantes.md). Si los dos difieren, vale ese.
+> **Versión resumida, al 5 de octubre de 2026.** El estado vivo, con el detalle por contraparte y la fecha de cada pedido, está en [`docs/bloqueantes.md`](docs/bloqueantes.md), que es la fuente única: si difiere de este archivo, vale ese.
 
 **Publicamos 8 eventos y los ocho tienen consumidor confirmado.** Eran 15: los siete que le ofrecíamos a M2 como detalle del avance se quedaron sin consumidor cuando M2 definió que todo lo suyo entra por `updateTicketStatus`, y los sacamos del contrato. El diseño de esos siete queda escrito en `fuentes/alcance.md`, sección 7.2.
 
 **Consumimos 10 eventos, de cinco módulos.** De M1, M5 y M8 no consumimos nada.
 
-Bloqueantes abiertos:
+**Contexto vigente.** La referencia de M2 es la v1.73 (WIP). El contrato con M3 quedó cerrado el 5 de octubre. El bus es RabbitMQ ([ADR-006](docs/decisiones/adr-006-rabbitmq-como-bus.md)): M9 anunció el cambio desde Kafka el 27 de septiembre. El JWT lo emite M1, no M9.
 
-| Con quién | Qué falta |
-|---|---|
-| **M2** | Que `ticketUpdated / ROUTED` diga a qué módulo va —o el catálogo de `requestTypeId` que nos corresponden— y que `location` traiga `neighborhoodId` en vez de texto libre |
-| **M4** | Que devuelvan `sourceViolationId` en `commercialFineGenerated` y `closureUpdate` |
-| **M9** | No aparece en la recopilación. Falta la lista de eventos del Core y el catálogo de barrios |
-| **M1** | Confirmado como emisor del JWT; falta su contrato técnico: `alg`, `iss`, `aud`, claves/JWKS, claims y TTL |
-
-M3, M4 y M7 ya confirmaron todo lo que les mandamos.
+**Bloqueantes abiertos** (🔴 en [`docs/bloqueantes.md`](docs/bloqueantes.md)): la fecha/franja agendada de M2, el contrato técnico del JWT de M1, y de M9 el broker RabbitMQ, el catálogo de barrios y la lista de eventos del Core. Hay además avisos pendientes, entre ellos reenviar a M7 los cambios de enums y de `neighborhoodId`, y regenerar el PDF del acuerdo de eventos. M3 y M4 no tienen bloqueantes.
 
 ## Referencia importante
 
