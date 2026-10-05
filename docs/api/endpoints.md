@@ -306,7 +306,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 **Genérico por diseño (Issue #64).** Un solo módulo sirve a los cuatro tipos de recurso en vez de reimplementar la subida por cada uno — el modelo `Attachment` ya era polimórfico en el schema, esto le agrega el endpoint que faltaba.
 
-**Storage: Cloudflare R2** (S3-compatible), bucket público. La respuesta (`{id, url, filename, contentType, uploadedAt}`) sigue la hipótesis ya documentada por el frontend en su `CONTRACTS.md`, distinta del shape `{attachmentId, fileName, sizeBytes}` que espera M2 en sus eventos — ese mapeo queda para cuando se implemente el envío de `evidence` hacia M2 (ver `bloqueantes.md`).
+**Storage: Cloudflare R2** (S3-compatible), bucket público. La respuesta (`{id, url, filename, contentType, uploadedAt}`) sigue la hipótesis ya documentada por el frontend en su `CONTRACTS.md`, distinta del shape `{fileName, contentType, url, sizeBytes?}` que espera M2 en sus eventos — ese mapeo queda para cuando se implemente el envío de `evidence` hacia M2 (ver `bloqueantes.md`).
 
 **El backend no le cree al cliente sobre el archivo.** El `Content-Type` que llega en el multipart lo declara quien sube: Multer no inspecciona el contenido. Se verifica el tipo real por los primeros bytes y se rechaza con 400 si no coincide con lo declarado — un ejecutable renombrado a `.jpg` no entra. Es el pedido 1 del [Issue #90](https://github.com/hllous/Backend-M6-DAPS2/issues/90), donde el frontend dejó escrito que sus propios controles son defensa en profundidad y que la autoridad es el backend.
 
