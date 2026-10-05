@@ -1,7 +1,7 @@
 # Cruce de Eventos M6
 
 **Grupo 04 — Módulo 6, Ambiente, Higiene y Servicios Urbanos**
-Fecha: 17 de agosto de 2026
+Fecha: 17 de agosto de 2026 (cruce original). Métrica de bloqueantes actualizada al 5 de octubre de 2026
 Fuente: listas de eventos publicados y consumidos de M1–M8 (`Eventos.txt`)
 Contraste: Documento de Alcance M6 + las siete fichas por módulo
 Alcance del cruce: nombres y direcciones de evento. Los campos de payload no son visibles en esta ronda.
@@ -14,7 +14,7 @@ Alcance del cruce: nombres y direcciones de evento. Los campos de payload no son
 |---|---|
 | Eventos que publicamos con consumidor confirmado | 8 / 8 |
 | Eventos que consumimos con publicador confirmado | 9 / 10 |
-| Bloqueantes abiertos | 3 |
+| Bloqueantes abiertos (🔴 al 5 oct, según [`bloqueantes.md`](bloqueantes.md)) | 5, más 1 condicional |
 | Pedidos nuestros que esta ronda cierra | 6 |
 | Eventos huérfanos o con choque de nombre en la cohorte | 17 |
 | **Equivalencias de nombre que hay que resolver de nuestro lado** | **11** |

@@ -86,7 +86,7 @@ scheduledDate, timeWindow { from, to },
 crewId?, vehicleId?, origin, ticketId?
 
 mode:   ROUTE | POINT
-origin: SCHEDULED | TICKET | INSPECTION | INTERNAL
+origin: PLANNED | TICKET | WEATHER_ALERT | INSPECTION | MANUAL
 ```
 
 **3. `containerDamaged` → M3**
@@ -104,13 +104,13 @@ damageType:          sale de nuestro catálogo, viaja como texto
 
 ```
 treeId, surveyCode, species, zoneId, location,
-riskLevel, riskType, healthStatus, suggestedIntervention,
+riskLevel, riskType, healthStatus, suggestedIntervention?,
 requiresStreetClosure, requiresPublicWorks, surveyedAt
 
 riskLevel:             LOW | MEDIUM | HIGH | CRITICAL
                        (el evento solo se publica con HIGH o CRITICAL)
-healthStatus:          HEALTHY | DECLINING | DEAD
-suggestedIntervention: PRUNING | FELLING | TREATMENT | MONITORING
+healthStatus:          HEALTHY | WEAKENED | DISEASED | DEAD
+suggestedIntervention: FORMATION_PRUNING | SAFETY_PRUNING | REMOVAL | PLANTING | TREATMENT — opcional
 requiresStreetClosure: booleano
 requiresPublicWorks:   booleano
 ```
@@ -121,7 +121,7 @@ requiresPublicWorks:   booleano
 interventionId, serviceId, interventionType, treeIds[], zoneId, location,
 scheduledDate, timeWindow { from, to }, crewId, requiresStreetClosure
 
-interventionType:      PRUNING | FELLING | PLANTING | TREATMENT
+interventionType:      FORMATION_PRUNING | SAFETY_PRUNING | REMOVAL | PLANTING | TREATMENT
 requiresStreetClosure: booleano — en true, después les llega la solicitud de corte
 ```
 
@@ -136,7 +136,7 @@ priorNoticeCount,
 evidence[], suggestedAction
 
 severity:         LOW | MEDIUM | HIGH | CRITICAL
-suggestedAction:  WARNING | FINE | CLOSURE — no es vinculante
+suggestedAction:  WARNING | FORMAL_NOTICE | FINE | CLOSURE — no es vinculante
 priorNoticeCount: entero, actas previas al mismo establecimiento
 violationType:    sale de nuestro catálogo, viaja como texto
 ```
