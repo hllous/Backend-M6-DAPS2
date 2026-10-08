@@ -254,6 +254,10 @@ erDiagram
         enum priority "Severity"
         boolean escalated "EXT M2 - ticketUpdated"
         text citizen_response "EXT M2 - ticketUpdated"
+        timestamp priority_changed_at "occurredAt del ultimo PRIORITY_CHANGED aplicado"
+        timestamp escalation_changed_at "occurredAt del ultimo ESCALATION_CHANGED aplicado"
+        timestamp citizen_response_at "occurredAt del ultimo INFORMATION_PROVIDED aplicado"
+        timestamp ticket_status_at "occurredAt del ultimo REOPENED o CANCELLED aplicado"
         timestamp deadline_at "cierre por vencimiento"
     }
     ENVIRONMENTAL_INSPECTION {
@@ -355,6 +359,7 @@ erDiagram
         varchar error
         uuid correlation_id "hilo con el que corrio el handler"
         varchar source_module "modulo emisor segun el sobre del Core"
+        timestamp occurred_at "occurredAt del sobre, el reintento ordena con este"
     }
 
     %% ======== RELACIONES ========

@@ -753,30 +753,41 @@ model GreenSpace {
 // ════════════════════════════════════════════════════════════════
 
 model EnvironmentalReport {
-  id               String                    @id @default(uuid()) @db.Uuid
-  reportType       EnvironmentalReportType   @map("report_type")
-  address          String?
+  id                  String                    @id @default(uuid()) @db.Uuid
+  reportType          EnvironmentalReportType   @map("report_type")
+  address             String?
   // Descripcion del hallazgo. Interna: puede traer datos personales, no va al
   // portal ciudadano ni a los eventos. Null en los que llegan de M2.
-  description      String?                   @db.Text
-  lat              Decimal?                  @db.Decimal(10, 7)
-  lng              Decimal?                  @db.Decimal(10, 7)
-  ticketId         String?                   @map("ticket_id") // EXT M2
+  description         String?                   @db.Text
+  lat                 Decimal?                  @db.Decimal(10, 7)
+  lng                 Decimal?                  @db.Decimal(10, 7)
+  ticketId            String?                   @map("ticket_id") // EXT M2
   // EXT M2, referencia humana (TK-2026-000123) desde la v1.70. No es credencial:
   // se muestra y se busca con auth, nunca reemplaza al ticketId.
-  publicId         String?                   @map("public_id")
-  reporterSnapshot Json?                     @map("reporter_snapshot")
-  status           EnvironmentalReportStatus @default(RECEIVED)
-  priority         Severity?
+  publicId            String?                   @map("public_id")
+  reporterSnapshot    Json?                     @map("reporter_snapshot")
+  status              EnvironmentalReportStatus @default(RECEIVED)
+  priority            Severity?
   // ticketUpdated/ESCALATION_CHANGED: se lo mostramos al supervisor.
-  escalated        Boolean                   @default(false)
+  escalated           Boolean                   @default(false)
   // ticketUpdated/INFORMATION_PROVIDED: lo que el vecino respondio. El contrato
   // de M2 no usa ID de correlacion — hay como maximo una solicitud activa por
   // ticket, asi que la respuesta siempre corresponde a la nuestra.
-  citizenResponse  String?                   @map("citizen_response")
-  deadlineAt       DateTime?                 @map("deadline_at") // cierre por vencimiento
-  createdAt        DateTime                  @default(now()) @map("created_at")
-  updatedAt        DateTime                  @updatedAt @map("updated_at")
+  citizenResponse     String?                   @map("citizen_response")
+  // El occurredAt (reloj de M2) del ultimo ticketUpdated aplicado a cada campo
+  // que M2 pisa (#270): un reintento atrasado del Core no puede volver atras un
+  // dato mas nuevo. Una marca por campo, no una sola: un PRIORITY_CHANGED nuevo
+  // no tiene por que descartar un ESCALATION_CHANGED atrasado pero legitimo.
+  // Null = sin marca, se aplica (filas viejas o sobre sin occurredAt).
+  priorityChangedAt   DateTime?                 @map("priority_changed_at")
+  escalationChangedAt DateTime?                 @map("escalation_changed_at")
+  citizenResponseAt   DateTime?                 @map("citizen_response_at")
+  // La comparten REOPENED y CANCELLED: un REOPENED atrasado no revive el
+  // expediente de un reclamo que el vecino ya cancelo.
+  ticketStatusAt      DateTime?                 @map("ticket_status_at")
+  deadlineAt          DateTime?                 @map("deadline_at") // cierre por vencimiento
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
 
   inspections EnvironmentalInspection[]
 
@@ -957,6 +968,9 @@ model InboxEvent {
   correlationId String?   @map("correlation_id") @db.Uuid
   // Módulo emisor según el sobre del Core. Null si no lo mandó (sobre de M2).
   sourceModule  String?   @map("source_module")
+  // occurredAt del sobre (#270). El reintento ordena con este, no con el del
+  // reenvio. Null si el sobre no lo trajo (el de M2 puede no traerlo).
+  occurredAt    DateTime? @map("occurred_at")
 
   @@index([processedAt])
   @@map("inbox_event")

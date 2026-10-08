@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService, REDACTED_PAYLOAD } from './inbox.service';
@@ -23,6 +24,8 @@ describe('InboxService', () => {
     data: { closureRequestId: 'xyz' },
     ...over,
   });
+
+  const OCURRIDO = new Date('2026-09-02T10:00:00.000Z');
 
   const duplicado = () =>
     new Prisma.PrismaClientKnownRequestError('dup', {
@@ -50,9 +53,55 @@ describe('InboxService', () => {
     const result = await inbox.ingest(sobre());
 
     expect(result.status).toBe('processed');
-    expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' });
+    expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' }, OCURRIDO);
     const [[args]] = prisma.inboxEvent.update.mock.calls;
     expect(args.data.processedAt).toBeInstanceOf(Date);
+  });
+
+  // #270: el handler ordena con occurredAt, y el reintento lo lee de la fila.
+  it('guarda el occurredAt del sobre en la fila', async () => {
+    inbox.register('streetClosureApproved', jest.fn());
+
+    await inbox.ingest(sobre());
+
+    expect(prisma.inboxEvent.create.mock.calls[0][0].data.occurredAt).toEqual(OCURRIDO);
+  });
+
+  it.each([undefined, 'no-es-fecha'])(
+    'sin un occurredAt legible (%s) el handler recibe null',
+    async (occurredAt) => {
+      const handler = jest.fn().mockResolvedValue(undefined);
+      inbox.register('streetClosureApproved', handler);
+
+      await inbox.ingest(sobre({ occurredAt }));
+
+      expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' }, null);
+      expect(prisma.inboxEvent.create.mock.calls[0][0].data.occurredAt).toBeNull();
+    },
+  );
+
+  // Una fecha futura congelaría la marca de orden: se trata como ausente.
+  it('un occurredAt en el futuro llega como null, no se guarda y se avisa', async () => {
+    const handler = jest.fn().mockResolvedValue(undefined);
+    inbox.register('streetClosureApproved', handler);
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    await inbox.ingest(sobre({ occurredAt: '2999-01-01T00:00:00.000Z' }));
+
+    expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' }, null);
+    expect(prisma.inboxEvent.create.mock.calls[0][0].data.occurredAt).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('en el futuro'));
+    warn.mockRestore();
+  });
+
+  it('un occurredAt adelantado dentro de la tolerancia se usa para ordenar', async () => {
+    const handler = jest.fn().mockResolvedValue(undefined);
+    inbox.register('streetClosureApproved', handler);
+    const adelantado = new Date(Date.now() + 60_000);
+
+    await inbox.ingest(sobre({ occurredAt: adelantado.toISOString() }));
+
+    expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' }, adelantado);
   });
 
   // El criterio central: la regla 1 del enunciado.
@@ -70,11 +119,15 @@ describe('InboxService', () => {
 
   describe('reintento de un evento cuyo handler falló (#264)', () => {
     const GUARDADO = { closureRequestId: 'guardado' };
+    const GUARDADA = new Date('2026-09-01T08:00:00.000Z');
 
     beforeEach(() => {
       prisma.inboxEvent.create.mockRejectedValue(duplicado());
       prisma.inboxEvent.updateMany.mockResolvedValue({ count: 1 });
-      prisma.inboxEvent.findUniqueOrThrow.mockResolvedValue({ payload: GUARDADO });
+      prisma.inboxEvent.findUniqueOrThrow.mockResolvedValue({
+        payload: GUARDADO,
+        occurredAt: GUARDADA,
+      });
     });
 
     it('toma la fila con un update condicional y corre el handler con lo guardado', async () => {
@@ -93,8 +146,9 @@ describe('InboxService', () => {
         },
         data: { error: null },
       });
-      // El data del sobre nuevo no entra: se reproduce lo de la primera entrega.
-      expect(handler).toHaveBeenCalledWith(GUARDADO);
+      // El data y el occurredAt del sobre nuevo no entran: se reproduce lo de
+      // la primera entrega (#270: con otra fecha podría adelantarse).
+      expect(handler).toHaveBeenCalledWith(GUARDADO, GUARDADA);
       const [[args]] = prisma.inboxEvent.update.mock.calls;
       expect(args.data.processedAt).toBeInstanceOf(Date);
       expect(args.data.error).toBeNull();
@@ -148,11 +202,14 @@ describe('InboxService', () => {
     it('si la fila quedó redactada, reintenta con el data del sobre', async () => {
       const handler = jest.fn().mockResolvedValue(undefined);
       inbox.register('streetClosureApproved', handler);
-      prisma.inboxEvent.findUniqueOrThrow.mockResolvedValue({ payload: REDACTED_PAYLOAD });
+      prisma.inboxEvent.findUniqueOrThrow.mockResolvedValue({
+        payload: REDACTED_PAYLOAD,
+        occurredAt: null,
+      });
 
       await inbox.ingest(sobre());
 
-      expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' });
+      expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' }, null);
     });
   });
 
@@ -241,7 +298,7 @@ describe('InboxService', () => {
       const result = await inbox.ingest(sobre({ eventType: 'ticketUpdated' }));
 
       expect(result.status).toBe('processed');
-      expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' });
+      expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' }, OCURRIDO);
       expect(payloadGuardado()).toEqual(REDACTED_PAYLOAD);
       expect(prisma.inboxEvent.update.mock.calls[0][0].data.processedAt).toBeInstanceOf(Date);
     });
