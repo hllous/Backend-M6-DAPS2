@@ -2,7 +2,9 @@
 
 ## Estado
 
-**Aceptado** — 2026-09-27
+**Reemplazado parcialmente por [ADR-007](adr-007-contrato-de-integracion-del-core.md)** — aceptado el 2026-09-27
+
+> Corregido el 2026-10-08: el 7/10/2026 M9 fijó el contrato de integración de la cohorte y [ADR-007](adr-007-contrato-de-integracion-del-core.md) lo adopta. **Sigue vigente:** RabbitMQ como transporte detrás de `EventPublisher`, el patrón outbox/inbox, el consumidor que entra por el mismo camino que `POST /events/inbox`, la conexión perezosa con timeout de handshake, el modo `recovery` de amqplib, el tope de 100 kB y la publicación con confirm channel y `mandatory`. **Ya no vale:** los defaults provisorios (`municipalidad.events`, `m6.ambiente`, exchange `topic`); declarar exchange, cola, bindings y DLX desde M6 (ahora son del Core y M6 solo los verifica en modo pasivo); la routing key igual al nombre del evento (el exchange `muni.inbox` es `fanout`); el sobre de M2 y sus headers `producer`; la política de ack con `nack` reencolando y `ack` ante un `failed` (ahora todo no-ack es `nack` sin reencolar y el inbox re-corre el evento fallido); las variables `RABBITMQ_EXCHANGE_TYPE` y `RABBITMQ_DEAD_LETTER_EXCHANGE`; y la sección "Qué queda pendiente de M9", cuyo estado actual está en [bloqueantes.md](../bloqueantes.md). El cuerpo de abajo se conserva como se aceptó.
 
 ## Contexto
 
