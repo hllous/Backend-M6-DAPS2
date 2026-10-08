@@ -195,6 +195,12 @@ export class TicketsConsumer implements OnModuleInit {
     const nombre = `${this.requestTypeName(routing.requestType)} ${routing.summary ?? ''}`;
     const priority = this.prioridad(data.currentPriority);
     const escalated = this.escalado(routing.escalation);
+    // Un ms antes del ROUTED: M2 puede derivar y escalar (o repriorizar) en la
+    // misma transacción con el mismo now(), y ese cambio explícito tiene que
+    // ganarle al snapshot aunque comparta el instante. El `lt` de `noAtrasado`
+    // sigue reconociendo el reintento de un cambio ya aplicado, porque ese sí
+    // deja su propio occurredAt como marca.
+    const marca = at && new Date(at.getTime() - 1);
 
     const report = await this.prisma.environmentalReport.create({
       data: {
@@ -218,9 +224,9 @@ export class TicketsConsumer implements OnModuleInit {
         // trae: sin prioridad o sin escalamiento no hay qué proteger, y
         // `citizenResponse` nunca viene, así que una respuesta anterior al
         // ROUTED todavía puede guardarse.
-        ticketStatusAt: at,
-        priorityChangedAt: priority ? at : null,
-        escalationChangedAt: escalated !== null ? at : null,
+        ticketStatusAt: marca,
+        priorityChangedAt: priority ? marca : null,
+        escalationChangedAt: escalated !== null ? marca : null,
         // Solo lo que el vecino aceptó exponer: si es anónimo no guardamos
         // identidad.
         reporterSnapshot: data.isAnonymous
@@ -382,10 +388,9 @@ export class TicketsConsumer implements OnModuleInit {
    */
   private async reopened(ticketId: string, at: Date | null): Promise<void> {
     const report = await this.prisma.environmentalReport.findFirst({ where: { ticketId } });
-    // Sin expediente no se reintenta, a diferencia de los datos (#275): una
-    // reapertura supone una solución nuestra, y un `Service` con ticketId puede
-    // resolver el reclamo sin expediente. Ahí la ausencia es definitiva y
-    // reintentar solo llevaría el evento a la DLQ.
+    // Sin expediente no se reintenta, a diferencia de los datos (#275): un
+    // REOPENED supone una solución nuestra previa, así que no puede llegar antes
+    // del ROUTED. Si no hay expediente, no hay nada que reabrir.
     if (!report) {
       this.logger.log(
         `ticketUpdated/REOPENED: el ticket ${ticketId} no tiene expediente que reabrir`,
@@ -473,8 +478,8 @@ export class TicketsConsumer implements OnModuleInit {
    * el expediente no existía al hacer el update: el ticket es nuestro (lo
    * filtró `handle()`) y todo ROUTED nuestro abre expediente, así que el ROUTED
    * falló o todavía no llegó. Se tira para que el Core lo reintente después; el
-   * snapshot del ROUTED deja sus marcas en su occurredAt, así que el reintento
-   * aplica si es más nuevo. Cubre también un ROUTED que crea el expediente entre
+   * snapshot del ROUTED deja sus marcas justo antes de su occurredAt, así que
+   * el reintento aplica si es del mismo instante o más nuevo. Cubre también un ROUTED que crea el expediente entre
    * el update y esta lectura: la marca sigue siendo más vieja y se reintenta.
    *
    * El costo: si el ROUTED no llega nunca (se perdió o agotó sus reintentos),

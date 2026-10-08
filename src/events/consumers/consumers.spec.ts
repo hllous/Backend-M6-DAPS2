@@ -592,6 +592,8 @@ describe('consumidores de eventos', () => {
       await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'ROUTED' });
 
       expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+      // El re-entregado (#170) tampoco reescribe marcas ni snapshot.
+      expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
     });
 
     /**
@@ -926,6 +928,7 @@ describe('consumidores de eventos', () => {
 
       describe('antes del ROUTED', () => {
         const T0 = new Date('2026-10-01T09:55:00.000Z');
+        const T1_MENOS_1MS = new Date(T1.getTime() - 1);
         const routed = evento('ROUTED', {
           currentPriority: 'LOW',
           details: { routing: { requestType: 'Ruidos molestos', escalation: { active: false } } },
@@ -991,13 +994,13 @@ describe('consumidores de eventos', () => {
           ).rejects.toThrow('se reintenta tras el ROUTED');
         });
 
-        it('el ROUTED deja las marcas en su occurredAt: un cambio anterior que reintenta después no pisa el snapshot', async () => {
+        it('el ROUTED deja las marcas justo antes de su occurredAt: un cambio anterior que reintenta después no pisa el snapshot', async () => {
           await h(routed, T1);
 
           expect(fila).toMatchObject({
-            ticketStatusAt: T1,
-            priorityChangedAt: T1,
-            escalationChangedAt: T1,
+            ticketStatusAt: T1_MENOS_1MS,
+            priorityChangedAt: T1_MENOS_1MS,
+            escalationChangedAt: T1_MENOS_1MS,
             citizenResponseAt: null,
           });
 
@@ -1011,6 +1014,24 @@ describe('consumidores de eventos', () => {
             status: S.RECEIVED,
           });
           expect(warn).toHaveBeenCalledWith(expect.stringContaining('se ignora'));
+        });
+
+        it('un cambio explícito del mismo instante que el ROUTED le gana al snapshot', async () => {
+          // M2 deriva y escala en la misma transacción: mismo now() en los dos.
+          await h(routed, T1);
+          await h(evento('ESCALATION_CHANGED', { details: { escalation: { active: true } } }), T1);
+          await h(evento('PRIORITY_CHANGED', { currentPriority: 'HIGH' }), T1);
+
+          expect(fila).toMatchObject({
+            escalated: true,
+            escalationChangedAt: T1,
+            priority: Severity.HIGH,
+            priorityChangedAt: T1,
+          });
+
+          // El reintento de ese mismo cambio ya aplicado sí se reconoce.
+          await h(evento('ESCALATION_CHANGED', { details: { escalation: { active: false } } }), T1);
+          expect(fila.escalated).toBe(true);
         });
 
         it('una respuesta del vecino anterior al ROUTED se guarda igual: el snapshot no la trae', async () => {
@@ -1030,7 +1051,7 @@ describe('consumidores de eventos', () => {
           await h(evento('ROUTED'), T1);
 
           expect(fila).toMatchObject({
-            ticketStatusAt: T1,
+            ticketStatusAt: T1_MENOS_1MS,
             priorityChangedAt: null,
             escalationChangedAt: null,
           });
@@ -1046,7 +1067,7 @@ describe('consumidores de eventos', () => {
           });
         });
 
-        it('REOPENED sin expediente no reintenta: la ausencia puede ser definitiva', async () => {
+        it('REOPENED sin expediente no reintenta: no hay nada que reabrir', async () => {
           await expect(h(evento('REOPENED'), T2)).resolves.toBeUndefined();
 
           expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
