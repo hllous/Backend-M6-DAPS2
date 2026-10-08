@@ -65,15 +65,6 @@ export interface EventProducer {
   service: string;
 }
 
-/**
- * Ya no viaja en el sobre (#260). Queda solo porque `TicketsConsumer` lo usa
- * para reconocer nuestros tickets por el `responsibleAreaId` de M2.
- */
-export const PRODUCER: EventProducer = {
-  moduleId: 'M6',
-  service: 'urban-services-api',
-};
-
 export function buildEnvelope<T>(params: {
   eventId: string;
   eventType: string;
