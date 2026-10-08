@@ -75,7 +75,7 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
     await this.connection?.close();
   }
 
-  /** Corre en cada (re)conexión: la topología se declara idempotente cada vez. */
+  /** Corre en cada (re)conexión: la topología no se declara, se verifica cada vez. */
   private async setup(model: ChannelModel): Promise<void> {
     const channel = await model.createChannel();
     channel.on('error', (err: Error) => this.logger.warn(`Canal RabbitMQ: ${err.message}`));
@@ -100,7 +100,8 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
 
   private async onMessage(channel: Channel, msg: ConsumeMessage | null): Promise<void> {
     if (!msg) {
-      // El broker canceló el consumo (cola borrada): reconectar la redeclara.
+      // El broker canceló el consumo (cola borrada). Al reconectar, checkQueue da
+      // 404 hasta que el Core la recree; `recovery` sigue reintentando.
       this.logger.warn(`El broker canceló el consumo de ${this.config.queue}`);
       await channel.close().catch(() => undefined);
       return;

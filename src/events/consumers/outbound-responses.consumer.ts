@@ -175,7 +175,7 @@ export class OutboundResponsesConsumer implements OnModuleInit {
     if (!request) return;
 
     // Guard por estado de origen. Se acepta desde REQUESTED porque este evento
-    // puede adelantarse a streetClosureApproved (routing keys distintas, sin orden);
+    // puede adelantarse a streetClosureApproved (el Core no garantiza orden);
     // en ese caso el id de cierre de M7 se guarda acá, si no lo teníamos.
     const closureId = (data.streetClosureId as string) ?? (data.closureId as string);
     const { count } = await this.prisma.streetClosureRequest.updateMany({

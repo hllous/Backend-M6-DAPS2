@@ -140,7 +140,7 @@ describe('RabbitMqEventPublisher', () => {
       cb(null);
       return true;
     });
-    await expect(publisher.publish(envelope)).rejects.toThrow('Sin cola bindeada');
+    await expect(publisher.publish(envelope)).rejects.toThrow('no tiene ninguna cola bindeada');
 
     // El return se consume: el siguiente con el mismo id ya no queda marcado.
     await expect(publisher.publish(envelope)).resolves.toBeUndefined();

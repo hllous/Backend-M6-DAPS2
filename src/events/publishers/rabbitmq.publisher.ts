@@ -19,7 +19,7 @@ export class RabbitMqEventPublisher extends EventPublisher implements OnModuleDe
   private connection?: ChannelModel;
   private channel?: ConfirmChannel;
   private connecting?: Promise<ConfirmChannel>;
-  /** `messageId` de lo que el broker devolvió por no tener cola bindeada. */
+  /** `messageId` de lo que el broker devolvió: el exchange no tenía ninguna cola bindeada. */
   private readonly returned = new Set<string>();
 
   constructor(private readonly config: RabbitMqConfig) {
@@ -37,10 +37,10 @@ export class RabbitMqEventPublisher extends EventPublisher implements OnModuleDe
 
     // Qué se garantiza: la promesa resuelve solo si el broker confirmó el
     // mensaje Y lo enrutó a al menos una cola. Rechaza con el nack del broker,
-    // con el cierre del canal, o si no había cola bindeada para la routing key
-    // (`mandatory` + `basic.return`). En cualquier rechazo el dispatcher cuenta
-    // un intento y deja la fila PENDING, hasta FAILED al quinto. No garantiza
-    // que el consumidor lo haya procesado.
+    // con el cierre del canal, o si el exchange no tenía ninguna cola bindeada
+    // (`mandatory` + `basic.return`; con fanout la routing key no cuenta). En
+    // cualquier rechazo el dispatcher cuenta un intento y deja la fila PENDING,
+    // hasta FAILED al quinto. No garantiza que el consumidor lo haya procesado.
     await new Promise<void>((resolve, reject) => {
       channel.publish(
         this.config.exchange,
@@ -67,7 +67,9 @@ export class RabbitMqEventPublisher extends EventPublisher implements OnModuleDe
           if (err) return reject(err instanceof Error ? err : new Error(String(err)));
           if (devuelto) {
             return reject(
-              new Error(`Sin cola bindeada para ${envelope.eventType}: el broker lo devolvió`),
+              new Error(
+                `${envelope.eventType} devuelto por el broker: ${this.config.exchange} no tiene ninguna cola bindeada`,
+              ),
             );
           }
           resolve();

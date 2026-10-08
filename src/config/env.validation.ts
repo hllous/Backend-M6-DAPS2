@@ -56,7 +56,7 @@ export const envSchema = z
     // en el outbox y se registran en el log, no hay consumidor, y la app arranca
     // igual. Exchange y cola los crea el Core: M6 solo los verifica en modo
     // pasivo, así que los nombres tienen que coincidir con los suyos. Ver ADR-006
-    // y el contrato de M9 en docs/bloqueantes.md.
+    // y la issue #257.
     // Vacía cuenta como ausente: un `RABBITMQ_URL=` en el panel no debe tumbar el arranque.
     RABBITMQ_URL: z.preprocess(
       (v) => (v === '' ? undefined : v),
