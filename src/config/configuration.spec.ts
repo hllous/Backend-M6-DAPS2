@@ -144,6 +144,13 @@ describe('configuration — Core', () => {
     );
   });
 
+  it('un secret en blanco no pasa', () => {
+    expect(() => config({ CORE_API_URL: 'https://core.app', CORE_MODULE_SECRET: '   ' })).toThrow(
+      /CORE_MODULE_SECRET/,
+    );
+    expect(() => config({ CORE_MODULE_SECRET: ' ' })).toThrow(/CORE_MODULE_SECRET/);
+  });
+
   it('rechaza algo que no es una URL http(s)', () => {
     const conSecret = { CORE_MODULE_SECRET: 's' };
     expect(() => config({ ...conSecret, CORE_API_URL: 'core.app' })).toThrow();

@@ -85,8 +85,12 @@ export const envSchema = z
         .optional(),
     ),
     // Secret de máquina con el que pedimos el token de módulo. Lo entrega M9;
-    // nunca se loguea ni va en un mensaje de error.
-    CORE_MODULE_SECRET: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+    // nunca se loguea ni va en un mensaje de error. Uno en blanco ("  ") no
+    // pasa; largo mínimo no se exige porque M9 no lo fijó.
+    CORE_MODULE_SECRET: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().trim().min(1).optional(),
+    ),
 
     // Cloudflare R2 (S3-compatible) para evidencia/adjuntos — Issue #64.
     // Opcionales: sin credenciales la app arranca igual, pero POST /evidence

@@ -172,12 +172,65 @@ describe('CoreClient', () => {
     expect(error.message).not.toContain('eyJ');
   });
 
+  describe('endurecimiento (#265)', () => {
+    /** El Bearer solo viaja al origen del Core. */
+    it.each(['api/v1/x', '@evil.com/x', '//evil.com/x', '/\\evil.com/x', 'https://evil.com/x'])(
+      'rechaza el path %s sin pedir token ni llamar a nada',
+      async (path) => {
+        await expect(cliente().request(path)).rejects.toThrow(/Path inválido/);
+        expect(fetchMock).not.toHaveBeenCalled();
+      },
+    );
+
+    it('todos los fetch van con redirect: error', async () => {
+      fetchMock.mockResolvedValueOnce(token('t1')).mockResolvedValueOnce(json({}));
+
+      await cliente().request('/x');
+
+      expect(fetchMock.mock.calls.map(([, init]) => (init as RequestInit).redirect)).toEqual([
+        'error',
+        'error',
+      ]);
+    });
+
+    it('respeta el signal del caller además del timeout', async () => {
+      fetchMock.mockResolvedValueOnce(token('t1')).mockResolvedValueOnce(json({}));
+      const caller = new AbortController();
+
+      await cliente().request('/x', { signal: caller.signal });
+
+      const signal = (fetchMock.mock.calls[1][1] as RequestInit).signal as AbortSignal;
+      expect(signal.aborted).toBe(false);
+      caller.abort();
+      expect(signal.aborted).toBe(true);
+    });
+
+    it('acota expiresIn: uno enorme no deja el token más de una hora', async () => {
+      jest.useFakeTimers({ now: 0 });
+      fetchMock.mockResolvedValueOnce(token('t1', 1e9)).mockResolvedValueOnce(token('t2'));
+      const core = cliente();
+
+      expect(await core.getToken()).toBe('t1');
+      jest.setSystemTime(59 * 60_000);
+      expect(await core.getToken()).toBe('t2');
+    });
+
+    it('acota expiresIn: uno negativo no rompe, se renueva en la próxima llamada', async () => {
+      fetchMock.mockResolvedValueOnce(token('t1', -5)).mockResolvedValueOnce(token('t2'));
+      const core = cliente();
+
+      expect(await core.getToken()).toBe('t1');
+      expect(await core.getToken()).toBe('t2');
+    });
+  });
+
   /** Sin URL la app arranca: el error aparece recién si alguien lo usa. */
   it('sin CORE_API_URL queda deshabilitado y no llama a nada', async () => {
     const core = cliente({ apiUrl: undefined, moduleSecret: undefined });
 
     expect(core.enabled).toBe(false);
     await expect(core.request('/x')).rejects.toThrow(/deshabilitado/);
+    await expect(core.getToken()).rejects.toThrow(/deshabilitado/);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(cliente().enabled).toBe(true);
   });
