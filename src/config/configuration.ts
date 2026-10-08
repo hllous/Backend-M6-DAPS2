@@ -21,6 +21,8 @@ export default () => {
     },
     core: {
       moduleId: parsed.CORE_MODULE_ID,
+      apiUrl: parsed.CORE_API_URL,
+      moduleSecret: parsed.CORE_MODULE_SECRET,
     },
     corsOrigins: parsed.CORS_ORIGINS?.split(',')
       .map((o) => o.trim())

@@ -107,6 +107,9 @@ No hay que hacer nada manual en el día a día.
 | `RABBITMQ_QUEUE` | `m6.ambiente` (default, provisorio) | No |
 | `RABBITMQ_DEAD_LETTER_EXCHANGE` | Nombre de la DLX, si M9 define una | No |
 | `RABBITMQ_PREFETCH` | `1` (default: mantiene el orden de llegada) | No |
+| `CORE_MODULE_ID` | `ambiente` (default): nuestro módulo ante el Core, va como `sourceModule` en el sobre y en el pedido de token | No |
+| `CORE_API_URL` | URL base de la API REST del Core (M9), p. ej. `https://core.example.com`; `https://` obligatorio con `NODE_ENV=production` | Opcional hasta que M9 publique la URL de cada ambiente. Sin ella la app arranca igual y no se le pide nada al Core |
+| `CORE_MODULE_SECRET` | Secret de máquina para pedir el token de módulo (`POST /api/v1/auth/module-token`). Lo entrega M9; se carga **solo en el panel de Render**, nunca en el repo ni en `.env.example`, y la app no lo loguea | ✅ Sí si hay `CORE_API_URL` (sin él la app no arranca) |
 
 > **Importante**: **NO** setear `PORT` a mano. Render inyecta su propio `PORT` automáticamente; pisarlo rompe el health check del deploy (la app corre en `10000` en free tier).
 

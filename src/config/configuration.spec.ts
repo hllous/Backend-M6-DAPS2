@@ -119,3 +119,43 @@ describe('configuration — RabbitMQ', () => {
     expect(() => config({ CORE_MODULE_ID: 'x'.repeat(61) })).toThrow();
   });
 });
+
+describe('configuration — Core', () => {
+  /** Hasta que M9 publique la URL de cada ambiente, la app arranca sin Core. */
+  it('sin CORE_API_URL no hay Core ni hace falta el secret', () => {
+    expect(config().core).toEqual({
+      moduleId: 'ambiente',
+      apiUrl: undefined,
+      moduleSecret: undefined,
+    });
+    expect(config({ CORE_API_URL: '', CORE_MODULE_SECRET: '' }).core.apiUrl).toBeUndefined();
+  });
+
+  it('toma la URL y el secret', () => {
+    expect(
+      config({ CORE_API_URL: 'http://localhost:4000', CORE_MODULE_SECRET: 's3cr3t' }).core,
+    ).toEqual({ moduleId: 'ambiente', apiUrl: 'http://localhost:4000', moduleSecret: 's3cr3t' });
+  });
+
+  it('con CORE_API_URL exige CORE_MODULE_SECRET', () => {
+    expect(() => config({ CORE_API_URL: 'https://core.app' })).toThrow(/CORE_MODULE_SECRET/);
+    expect(() => config({ CORE_API_URL: 'https://core.app', CORE_MODULE_SECRET: '' })).toThrow(
+      /CORE_MODULE_SECRET/,
+    );
+  });
+
+  it('rechaza algo que no es una URL http(s)', () => {
+    const conSecret = { CORE_MODULE_SECRET: 's' };
+    expect(() => config({ ...conSecret, CORE_API_URL: 'core.app' })).toThrow();
+    expect(() => config({ ...conSecret, CORE_API_URL: 'ftp://core.app' })).toThrow(/http/);
+  });
+
+  /** El secret viaja en el body del pedido de token. */
+  it('en producción exige https://', () => {
+    const prod = { NODE_ENV: 'production', CORE_MODULE_SECRET: 's' };
+    expect(() => config({ ...prod, CORE_API_URL: 'http://core.app' })).toThrow(/https/);
+    expect(config({ ...prod, CORE_API_URL: 'https://core.app' }).core.apiUrl).toBe(
+      'https://core.app',
+    );
+  });
+});

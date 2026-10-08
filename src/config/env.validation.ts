@@ -73,6 +73,20 @@ export const envSchema = z
     // Identificador de M6 ante el Core: va como `sourceModule` en el sobre y
     // tiene que coincidir con el módulo del token, o el Core responde 403.
     CORE_MODULE_ID: z.string().min(1).max(60).default('ambiente'),
+    // API REST del Core (catálogo, auditoría, DLQ). Opcional hasta que M9
+    // publique la URL de cada ambiente: sin ella el CoreClient queda
+    // deshabilitado y la app arranca igual. Vacía cuenta como ausente.
+    CORE_API_URL: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z
+        .string()
+        .url()
+        .refine((v) => /^https?:\/\//i.test(v), 'CORE_API_URL debe empezar con http:// o https://')
+        .optional(),
+    ),
+    // Secret de máquina con el que pedimos el token de módulo. Lo entrega M9;
+    // nunca se loguea ni va en un mensaje de error.
+    CORE_MODULE_SECRET: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
 
     // Cloudflare R2 (S3-compatible) para evidencia/adjuntos — Issue #64.
     // Opcionales: sin credenciales la app arranca igual, pero POST /evidence
@@ -90,6 +104,21 @@ export const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ['RABBITMQ_URL'],
         message: 'En producción RABBITMQ_URL tiene que ser amqps://',
+      });
+    }
+    // El secret viaja en el body del pedido de token.
+    if (env.NODE_ENV === 'production' && /^http:/i.test(env.CORE_API_URL ?? '')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['CORE_API_URL'],
+        message: 'En producción CORE_API_URL tiene que ser https://',
+      });
+    }
+    if (env.CORE_API_URL && !env.CORE_MODULE_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['CORE_MODULE_SECRET'],
+        message: 'Con CORE_API_URL hace falta CORE_MODULE_SECRET para pedir el token de módulo',
       });
     }
   });
