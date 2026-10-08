@@ -33,7 +33,7 @@ Los e2e migran la base apuntada por `DATABASE_URL`: leer `docs/testing.md` antes
 Tres capas por recurso en `src/modules/<recurso>/`: `*.controller.ts` (HTTP + Swagger, sin lógica) → `*.service.ts` (reglas y máquinas de estado) → Prisma. DTOs en `dto/`, validados con `class-validator` por el `ValidationPipe` global.
 
 - **Auth**: `JwtAuthGuard` es global (`APP_GUARD`); un endpoint sin token lleva `@Public()`. Hoy no hay autorización por rol: `@Roles()` y `RolesGuard` existen pero ningún endpoint los usa (ver `docs/api/endpoints.md`). Código en `src/common/guards` y `src/auth`.
-- **Eventos** (`src/events/`): publicar = escribir en el outbox dentro de la misma transacción del cambio de dominio (`OutboxService`); `OutboxDispatcher` los envía a RabbitMQ. Consumir = `inbox` (idempotente) + `consumers/`. Payloads en `payloads.ts`, contratos en `docs/eventos/`.
+- **Eventos** (`src/events/`): publicar = escribir en el outbox dentro de la misma transacción del cambio de dominio (`OutboxService`); `OutboxDispatcher` los envía al bus del Core (RabbitMQ, exchange `muni.inbox`). Consumir = `inbox` (idempotente) + `consumers/`. Payloads en `payloads.ts`, contratos en `docs/eventos/`.
 - **Swagger**: todo endpoint sigue `docs/api/estandar-swagger.md`; `docs/api/openapi.json` se regenera, no se edita a mano (hay un spec que lo compara).
 - **Tests**: `*.spec.ts` junto al código; e2e en `test/`.
 - **Config**: variables validadas en `src/config/env.validation.ts`; sumar la variable también a `.env.example`.
