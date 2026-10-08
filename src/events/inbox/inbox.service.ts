@@ -1,10 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboundEnvelope } from '../envelope';
-import { eventContext, EventTrace } from '../event-context';
-import { esUuid } from './payload-validation';
+import { eventContext, EventTrace, trazaDelConsumido } from '../event-context';
 
 /**
  * Un handler de evento entrante. Recibe el `data` del sobre.
@@ -67,6 +65,7 @@ export interface IngestResult {
  *
  * El handler corre dentro de `eventContext`: lo que encole hereda el
  * `correlationId` del sobre y lleva su `eventId` como `causationId` (#267).
+ * Por `POST /events/inbox` este contexto pisa al que abre el request.
  */
 @Injectable()
 export class InboxService {
@@ -116,14 +115,7 @@ export class InboxService {
     // se guarda: la regla mira el dueño, no la acción.
     const persist = this.debePersistir(envelope.eventType, data);
 
-    // Quien no migró al sobre del Core no manda correlationId: su eventId abre
-    // el hilo para no cortarlo. Solo si es uuid, que es lo que admiten el Core
-    // y las columnas; si no, el hilo arranca acá y no hay causa que citar.
-    const propio = esUuid(messageId) ? messageId : null;
-    let trace: EventTrace = {
-      correlationId: envelope.correlationId ?? propio ?? randomUUID(),
-      causationId: propio,
-    };
+    let trace: EventTrace = trazaDelConsumido(messageId, envelope.correlationId);
 
     // El unique de messageId es lo que decide si es duplicado: dejamos que
     // falle el insert en vez de consultar antes, porque entre la consulta y el
@@ -167,7 +159,7 @@ export class InboxService {
       // HTTP no puede cambiarle el contenido a un evento fallido. Si quedó
       // redactado no hay nada que reproducir y va el data nuevo, ya validado.
       // El hilo también es el guardado: un reenvío con otro correlationId, o sin
-      // ninguno y con un eventId que no es uuid, partiría el flujo en dos.
+      // ninguno y con un eventId que no es un UUID RFC, partiría el flujo en dos.
       const fila = await this.prisma.inboxEvent.findUniqueOrThrow({
         where: { messageId },
         select: { payload: true, correlationId: true },

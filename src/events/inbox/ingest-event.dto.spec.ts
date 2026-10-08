@@ -71,11 +71,22 @@ describe('IngestEventDto', () => {
       ['correlationId no UUID', { correlationId: 'corr-1' }],
       ['causationId no UUID', { causationId: 'cause-1' }],
       ['sourceModule de más de 60', { sourceModule: 'x'.repeat(61) }],
+      ['sourceModule vacío', { sourceModule: '' }],
+      ['sourceModule con NUL', { sourceModule: 'obras\u0000' }],
+      ['sourceModule con espacios', { sourceModule: 'obras publicas' }],
+      ['sourceModule con barra', { sourceModule: 'obras/../x' }],
       ['eventVersion de más de 20', { eventVersion: '1'.repeat(21) }],
       ['eventType de más de 120', { eventType: 'x'.repeat(121) }],
     ])('rechaza %s', async (_caso, over) => {
       await expect(validarCore(over)).rejects.toBeInstanceOf(BadRequestException);
     });
+
+    it.each(['atencion-ciudadana', 'desarrollo_social', 'M2', 'x'.repeat(60)])(
+      'acepta el id de módulo %s',
+      async (sourceModule) => {
+        await expect(validarCore({ sourceModule })).resolves.toMatchObject({ sourceModule });
+      },
+    );
 
     it('un eventId que no es UUID sigue entrando: no se exige para no rechazar a quien no migró', async () => {
       await expect(validarCore({ eventId: 'e-1' })).resolves.toMatchObject({ eventId: 'e-1' });

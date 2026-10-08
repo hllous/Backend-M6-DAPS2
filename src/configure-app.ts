@@ -4,10 +4,11 @@ import { NoNullCharsPipe } from './common/pipes/no-null-chars.pipe';
 import { HttpExceptionFilter } from './common/filters';
 import { LoggingInterceptor } from './common/interceptors';
 import { securityHeaders } from './common/middleware/security-headers.middleware';
+import { EventTraceInterceptor } from './events/event-trace.interceptor';
 
 /**
  * Todo lo que transforma la app, en un solo lugar: pipes, filtro de errores,
- * interceptor y cabeceras.
+ * interceptores y cabeceras.
  *
  * Vive fuera de `main.ts` para que los e2e levanten **la misma** configuración
  * que corre en producción. Mientras estuvo inline, un test podía pasar con un
@@ -28,7 +29,8 @@ export function configureApp(app: NestExpressApplication): NestExpressApplicatio
   app.useGlobalPipes(...globalPipes());
 
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new LoggingInterceptor());
+  // EventTraceInterceptor: un correlationId por request para todo lo que encole (#267).
+  app.useGlobalInterceptors(new LoggingInterceptor(), new EventTraceInterceptor());
 
   return app;
 }

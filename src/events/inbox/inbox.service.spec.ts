@@ -362,6 +362,54 @@ describe('InboxService', () => {
       expect(encolado().causationId).toBeNull();
     });
 
+    /**
+     * `@IsUUID()` deja pasar el nulo y el máximo. Reenviarlos en nuestro sobre
+     * arriesga que el Core rechace el derivado: no se heredan, pero el
+     * consumido se procesa igual.
+     */
+    it.each(['00000000-0000-0000-0000-000000000000', 'ffffffff-ffff-ffff-ffff-ffffffffffff'])(
+      'un correlationId %s no se hereda y el evento se procesa',
+      async (correlationId) => {
+        const res = await inbox.ingest(sobre({ correlationId }));
+
+        expect(res.status).toBe('processed');
+        expect(encolado()).toMatchObject({ correlationId: MESSAGE_ID, causationId: MESSAGE_ID });
+      },
+    );
+
+    it('un eventId UUID nulo no es causa: hilo nuevo, sin rechazar el evento', async () => {
+      const res = await inbox.ingest(
+        sobre({ eventId: '00000000-0000-0000-0000-000000000000', correlationId: CORRELATION }),
+      );
+
+      expect(res.status).toBe('processed');
+      expect(encolado()).toMatchObject({ correlationId: CORRELATION, causationId: null });
+    });
+
+    /**
+     * El contexto es por cadena asincrónica, no global: dos consumidos que se
+     * intercalan (el `$transaction` del beforeEach cede con setImmediate) no se
+     * pisan la traza.
+     */
+    it('dos ingest concurrentes no mezclan sus trazas', async () => {
+      const OTRO_ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+      const OTRA_CORRELATION = '2b1d7f3e-0c4a-4e8b-9f6d-3a5c1e7b9d20';
+
+      await Promise.all([
+        inbox.ingest(sobre({ correlationId: CORRELATION })),
+        inbox.ingest(sobre({ eventId: OTRO_ID, correlationId: OTRA_CORRELATION })),
+      ]);
+
+      const filas = tx.outboxEvent.create.mock.calls.map(([{ data }]) => data);
+      expect(filas).toHaveLength(2);
+      expect(filas).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ correlationId: CORRELATION, causationId: MESSAGE_ID }),
+          expect.objectContaining({ correlationId: OTRA_CORRELATION, causationId: OTRO_ID }),
+        ]),
+      );
+    });
+
     it('el reintento usa el correlationId guardado, no el del reenvío', async () => {
       const GUARDADO = '11111111-2222-4333-8444-555555555555';
       prisma.inboxEvent.create.mockRejectedValue(duplicado());

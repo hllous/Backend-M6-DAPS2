@@ -26,9 +26,12 @@ export interface OutboxEntry {
  * dispatcher, y ese desacople es lo que permite que el dominio no dependa de
  * que haya un broker arriba.
  *
- * `correlationId` y `causationId` no los pasa el dominio: salen del handler de
- * inbox en curso (`eventContext`). Fuera de un handler —un endpoint, un
- * barrido— el evento abre un hilo nuevo y no tiene causa.
+ * `correlationId` y `causationId` no los pasa el dominio: salen de
+ * `eventContext`. Dentro de un handler de inbox, son el hilo y el `eventId` del
+ * evento consumido. Dentro de un request HTTP, todo lo que encola el request
+ * comparte un hilo y no tiene causa (`EventTraceInterceptor`). Fuera de los dos
+ * —un `@Interval` o un `@Cron`— cada llamada a `enqueue`/`enqueueMany` abre un
+ * hilo propio.
  */
 @Injectable()
 export class OutboxService {
@@ -44,7 +47,7 @@ export class OutboxService {
     if (entries.length === 0) return;
 
     // Una sola traza para todo el lote: es un mismo cambio de dominio, así que
-    // fuera de un handler también comparten hilo.
+    // también comparten hilo en un barrido, donde no hay contexto.
     const trace = currentTrace();
     await tx.outboxEvent.createMany({ data: entries.map((entry) => this.fila(entry, trace)) });
   }
