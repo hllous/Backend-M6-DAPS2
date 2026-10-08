@@ -81,10 +81,10 @@ En cuanto se cree el proyecto NestJS, se suman en la raíz: `src/`, `prisma/`, `
 
 **Consumimos 10 eventos, de cinco módulos.** De M1, M5 y M8 no consumimos nada.
 
-**Contexto vigente.** La referencia de M2 es la v1.73 (WIP). El contrato con M3 quedó cerrado el 5 de octubre. El bus es RabbitMQ ([ADR-006](docs/decisiones/adr-006-rabbitmq-como-bus.md)): M9 anunció el cambio desde Kafka el 27 de septiembre. El JWT lo emite M1, no M9.
+**Contexto vigente.** La referencia de M2 es la v1.73 (WIP). El contrato con M3 quedó cerrado el 5 de octubre. El bus es RabbitMQ ([ADR-006](docs/decisiones/adr-006-rabbitmq-como-bus.md), reemplazado en parte por [ADR-007](docs/decisiones/adr-007-contrato-de-integracion-del-core.md)): M9 anunció el cambio desde Kafka el 27 de septiembre y el 7 de octubre fijó el contrato de integración (sobre, `muni.inbox`, reintentos). El JWT lo emite M1, no M9.
 
-**Bloqueantes abiertos** (🔴 en [`docs/bloqueantes.md`](docs/bloqueantes.md)): la fecha/franja agendada de M2, el contrato técnico del JWT de M1, y de M9 el broker RabbitMQ, el catálogo de barrios y la lista de eventos del Core. Hay además avisos pendientes, entre ellos reenviar a M7 los cambios de enums y de `neighborhoodId`, y regenerar el PDF del acuerdo de eventos. M3 y M4 no tienen bloqueantes.
+**Bloqueantes abiertos** (🔴 en [`docs/bloqueantes.md`](docs/bloqueantes.md)): la fecha/franja agendada de M2, el contrato técnico del JWT de M1, y de M9 las URLs de ambientes y las credenciales del broker, el catálogo de barrios y la lista de eventos del Core. Hay además avisos pendientes, entre ellos reenviar a M7 los cambios de enums y de `neighborhoodId`, y regenerar el PDF del acuerdo de eventos. M3 y M4 no tienen bloqueantes.
 
 ## Referencia importante
 
-`referencias/Documentacion_Eventos_Modulo_2_v1.2_unificado.docx` es la guía de integración de M2. **Es el documento de contrato más completo de la cohorte** —sobre común, JSON Schema, matriz de transiciones, reglas de idempotencia y DLQ— y el único que define un envelope. Nuestro `updateTicketStatus` adopta su payload tal cual.
+`referencias/Documentacion_Eventos_Modulo_2_v1.2_unificado.docx` es la guía de integración de M2. **Es el documento de contrato más completo de la cohorte** —sobre común, JSON Schema, matriz de transiciones, reglas de idempotencia y DLQ— y el único que definía un envelope. **El sobre de M2 es histórico:** desde el 7 de octubre el vigente es el del Core, adoptado por toda la cohorte. Nuestro `updateTicketStatus` adopta su payload tal cual.
