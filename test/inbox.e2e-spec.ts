@@ -178,7 +178,7 @@ describe('Inbox de eventos entrantes (e2e)', () => {
   });
 
   /**
-   * #270 contra la base real: el filtro por la marca (`OR null / lte`) lo
+   * #270 contra la base real: el filtro por la marca (`OR null / lt`) lo
    * evalúa Postgres, y el reintento ordena con el occurredAt de la fila.
    */
   it('el reintento atrasado de un ESCALATION_CHANGED no pisa al más nuevo', async () => {

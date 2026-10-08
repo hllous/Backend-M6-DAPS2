@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService, REDACTED_PAYLOAD } from './inbox.service';
@@ -78,6 +79,30 @@ describe('InboxService', () => {
       expect(prisma.inboxEvent.create.mock.calls[0][0].data.occurredAt).toBeNull();
     },
   );
+
+  // Una fecha futura congelaría la marca de orden: se trata como ausente.
+  it('un occurredAt en el futuro llega como null, no se guarda y se avisa', async () => {
+    const handler = jest.fn().mockResolvedValue(undefined);
+    inbox.register('streetClosureApproved', handler);
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    await inbox.ingest(sobre({ occurredAt: '2999-01-01T00:00:00.000Z' }));
+
+    expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' }, null);
+    expect(prisma.inboxEvent.create.mock.calls[0][0].data.occurredAt).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('en el futuro'));
+    warn.mockRestore();
+  });
+
+  it('un occurredAt adelantado dentro de la tolerancia se usa para ordenar', async () => {
+    const handler = jest.fn().mockResolvedValue(undefined);
+    inbox.register('streetClosureApproved', handler);
+    const adelantado = new Date(Date.now() + 60_000);
+
+    await inbox.ingest(sobre({ occurredAt: adelantado.toISOString() }));
+
+    expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' }, adelantado);
+  });
 
   // El criterio central: la regla 1 del enunciado.
   it('un messageId ya procesado NO vuelve a aplicar el efecto', async () => {

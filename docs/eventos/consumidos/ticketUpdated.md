@@ -38,11 +38,12 @@ El Core reintenta un handler fallido con backoff (15 s → 1 m → 5 m → 15 m 
 | `REOPENED`, `CANCELLED` | `ticket_status_at` (compartida: un `REOPENED` atrasado no revive el expediente de un reclamo que se canceló después) |
 
 - **Una marca por dato, no una sola**: un `PRIORITY_CHANGED` nuevo no descarta un `ESCALATION_CHANGED` atrasado pero legítimo.
-- Un evento con `occurredAt` **anterior** a la marca se ignora con un `warn` y sale `processed`: reintentarlo no lo haría más nuevo. Uno igual se aplica (el reintento de un evento cuyo efecto ya quedó escrito).
-- La comparación va en el `where` del update, no en una lectura previa: no hay carrera entre dos eventos del mismo ticket.
+- Un evento con `occurredAt` **anterior o igual** a la marca se ignora con un `warn` y sale `processed`: reintentarlo no lo haría más nuevo. Igual es el de un evento ya aplicado (el reintento de uno cuyo efecto quedó escrito), y re-aplicarlo no es idempotente: un `REOPENED` reabriría un expediente que el operador volvió a cerrar, y un `CANCELLED` cancelaría servicios programados después. El costo: dos eventos distintos del mismo dato con el mismo milisegundo, se queda el primero que llega.
+- La comparación va en el `where` del update, no en una lectura previa: no hay carrera entre dos eventos del mismo ticket. En `CANCELLED` la marca se escribe primero y en la misma transacción que la cancelación de servicios: si no pasa, no se cancela nada, y un `REOPENED` más nuevo espera el lock de la fila en vez de colarse en el medio.
 - El reintento ordena con el `occurredAt` **guardado** en `inbox_event.occurred_at`, no con el del reenvío.
 - **Sin `occurredAt` en el sobre** (el de M2 puede no traerlo) no hay con qué comparar: se aplica como antes, sin tocar la marca, y queda un `warn`. Lo mismo con las filas anteriores a las columnas (marca null).
-- `ROUTED` no ordena: es idempotente (un segundo `ROUTED` no abre otro expediente).
+- **Tope de futuro**: un `occurredAt` más de 5 minutos adelante del reloj de M6 se trata como ausente (se aplica sin ordenar, no deja marca y en `inbox_event.occurred_at` queda null), con un `warn`. Sin el tope, una fecha en 9999 —un reloj roto, o cualquiera con JWT por `POST /events/inbox`— congelaría el dato para siempre.
+- `ROUTED` no ordena: un segundo `ROUTED` no abre otro expediente. **Pero un `ROUTED` que llega tarde no está cubierto**: si falló y el Core lo reintenta, un `PRIORITY_CHANGED`, `ESCALATION_CHANGED` o `INFORMATION_PROVIDED` que llegue antes no encuentra expediente y se pierde. Pendiente en [#275](https://github.com/hllous/Backend-M6-DAPS2/issues/275).
 
 > **M2 no replica un hecho externo como `ticketUpdated` espejo (§10).** Una resolución, una cancelación o un `INFORMATION_REQUIRED` que M2 recibe por [`updateTicketStatus`](../publicados/updateTicketStatus.md) **no vuelve** como `ticketUpdated`: no esperemos eco de lo que publicamos nosotros. Los `ticketUpdated` que llegan son los que M2 origina por su cuenta.
 

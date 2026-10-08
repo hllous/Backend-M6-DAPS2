@@ -51,10 +51,22 @@ function esRedactado(payload: Prisma.JsonValue): boolean {
   );
 }
 
-/** El `occurredAt` del sobre como fecha, o null si no vino o no se puede leer. */
+/**
+ * ponytail: tolerancia fija al reloj del emisor. Pasarla a config si un emisor
+ * real deriva más que esto.
+ */
+const TOLERANCIA_FUTURO_MS = 5 * 60_000;
+
+/**
+ * El `occurredAt` del sobre como fecha, o null si no vino, no se puede leer o
+ * está en el futuro. Una fecha futura (un reloj roto, o cualquiera con JWT por
+ * `POST /events/inbox`) dejaría la marca de orden ahí y todo evento legítimo
+ * posterior se ignoraría como atrasado, sin arreglo salvo por SQL (#270).
+ */
 function aFecha(valor: string | undefined): Date | null {
   const fecha = valor ? new Date(valor) : null;
-  return fecha && !isNaN(fecha.getTime()) ? fecha : null;
+  if (!fecha || isNaN(fecha.getTime())) return null;
+  return fecha.getTime() > Date.now() + TOLERANCIA_FUTURO_MS ? null : fecha;
 }
 
 export interface IngestResult {
@@ -128,6 +140,12 @@ export class InboxService {
 
     let trace: EventTrace = trazaDelConsumido(messageId, envelope.correlationId);
     let occurredAt = aFecha(envelope.occurredAt);
+    if (envelope.occurredAt && !occurredAt) {
+      // No se interpola el valor: viene de un tercero.
+      this.logger.warn(
+        `${envelope.eventType} (${messageId}): occurredAt ilegible o en el futuro, se procesa sin ordenar`,
+      );
+    }
 
     // El unique de messageId es lo que decide si es duplicado: dejamos que
     // falle el insert en vez de consultar antes, porque entre la consulta y el

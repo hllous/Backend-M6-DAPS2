@@ -64,8 +64,8 @@ const PRIORIDAD: Record<string, Severity> = {
  * **El orden de llegada no es el de M2** (#270): el Core reintenta un handler
  * fallido hasta ~21 min después, detrás de eventos más nuevos del mismo
  * ticket. Lo que pisa un dato compara su `occurredAt` con la marca de ese dato
- * en el expediente y, si es más viejo, se ignora (sale `processed`: reintentarlo
- * no lo haría más nuevo).
+ * en el expediente y, si no es más nuevo, se ignora (sale `processed`:
+ * reintentarlo no lo haría más nuevo).
  */
 @Injectable()
 export class TicketsConsumer implements OnModuleInit {
@@ -228,34 +228,50 @@ export class TicketsConsumer implements OnModuleInit {
    *
    * Deja la marca `ticketStatusAt` aunque el expediente no cambie de estado: es
    * lo que hace descartar un REOPENED anterior que llegue reintentado después.
+   *
+   * Todo en una transacción y la marca primero: el update que la deja toma el
+   * lock de la fila, así que un REOPENED más nuevo no puede colarse entre la
+   * comparación y la cancelación de servicios. Si la marca no pasa, no se
+   * cancela nada. Va separada del `DISMISSED` para que el guard de estado no
+   * la arrastre: que el operador haya movido el expediente no frena la
+   * cancelación. Sin expediente o sin occurredAt no hay marca y los servicios
+   * se cancelan igual.
    */
   private async cancelled(ticketId: string, at: Date | null): Promise<void> {
     const report = await this.prisma.environmentalReport.findFirst({ where: { ticketId } });
-    if (this.atrasado(report?.ticketStatusAt, at)) {
-      return this.ignorarAtrasado('CANCELLED', ticketId, at);
-    }
 
-    const { count } = await this.prisma.service.updateMany({
-      where: {
-        ticketId,
-        status: { in: [ServiceStatus.SCHEDULED, ServiceStatus.RESCHEDULED] },
-      },
-      data: {
-        status: ServiceStatus.CANCELLED,
-        statusReason: 'El vecino canceló el reclamo en M2',
-      },
+    const count = await this.prisma.$transaction(async (tx) => {
+      if (report && at) {
+        const marcado = await tx.environmentalReport.updateMany({
+          where: { id: report.id, ...this.noAtrasado('ticketStatusAt', at) },
+          data: { ticketStatusAt: at },
+        });
+        if (!marcado.count) return null;
+      }
+
+      if (report?.status === S.UNDER_REVIEW) {
+        // El estado leído en el `where` es el guard: si otro evento lo movió
+        // entre la lectura y acá, no se pisa.
+        await tx.environmentalReport.updateMany({
+          where: { id: report.id, status: S.UNDER_REVIEW },
+          data: { status: S.DISMISSED },
+        });
+      }
+
+      const { count } = await tx.service.updateMany({
+        where: {
+          ticketId,
+          status: { in: [ServiceStatus.SCHEDULED, ServiceStatus.RESCHEDULED] },
+        },
+        data: {
+          status: ServiceStatus.CANCELLED,
+          statusReason: 'El vecino canceló el reclamo en M2',
+        },
+      });
+      return count;
     });
 
-    const dismiss = report?.status === S.UNDER_REVIEW;
-    if (report && (dismiss || at)) {
-      // El estado leído y la marca en el `where` hacen de guard: si otro evento
-      // lo movió entre la lectura y acá, no se pisa.
-      await this.prisma.environmentalReport.updateMany({
-        where: { id: report.id, status: report.status, ...this.noAtrasado('ticketStatusAt', at) },
-        data: { ...(dismiss && { status: S.DISMISSED }), ...(at && { ticketStatusAt: at }) },
-      });
-    }
-
+    if (count === null) return this.ignorarAtrasado('CANCELLED', ticketId, at);
     this.logger.log(
       `ticketUpdated/CANCELLED: ${count} servicio/s cancelado/s para el reclamo ${ticketId}`,
     );
@@ -370,7 +386,7 @@ export class TicketsConsumer implements OnModuleInit {
     });
     if (!count) {
       this.logger.warn(
-        `ticketUpdated/REOPENED (${ticketId}): el expediente ${report.id} cambió de estado mientras tanto o ya tiene un cambio más nuevo, se ignora`,
+        `ticketUpdated/REOPENED (${ticketId}): el expediente ${report.id} cambió de estado mientras tanto o ya tiene un cambio igual o más nuevo, se ignora`,
       );
       return;
     }
@@ -419,16 +435,14 @@ export class TicketsConsumer implements OnModuleInit {
    * El filtro que deja escribir solo si el evento no es más viejo que el último
    * aplicado a ese dato. Va en el `where` del update y no en un chequeo previo:
    * comparar y escribir es una sola operación, sin carrera entre dos eventos
-   * del mismo ticket. `lte` y no `lt`: el reintento de un evento cuyo efecto ya
-   * quedó escrito tiene que poder volver a aplicarse. Sin occurredAt no hay con
-   * qué comparar y se aplica como antes.
+   * del mismo ticket. `lt` y no `lte`: un occurredAt igual a la marca es el de
+   * un evento ya aplicado (el reintento de uno cuyo efecto quedó escrito), y
+   * re-aplicarlo no es idempotente: un REOPENED reabriría un expediente que el
+   * operador volvió a cerrar. Sin occurredAt no hay con qué comparar y se
+   * aplica como antes.
    */
   private noAtrasado(marca: Marca, at: Date | null): Prisma.EnvironmentalReportWhereInput {
-    return at ? { OR: [{ [marca]: null }, { [marca]: { lte: at } }] } : {};
-  }
-
-  private atrasado(marca: Date | null | undefined, at: Date | null): boolean {
-    return !!(at && marca && marca > at);
+    return at ? { OR: [{ [marca]: null }, { [marca]: { lt: at } }] } : {};
   }
 
   /** Con occurredAt, un update sin filas es "atrasado" si el expediente existe. */
@@ -438,7 +452,7 @@ export class TicketsConsumer implements OnModuleInit {
 
   private ignorarAtrasado(updateType: string, ticketId: string, at: Date | null): void {
     this.logger.warn(
-      `ticketUpdated/${updateType} (${ticketId}) con occurredAt ${at?.toISOString()}: el expediente ya tiene un cambio más nuevo, se ignora`,
+      `ticketUpdated/${updateType} (${ticketId}) con occurredAt ${at?.toISOString()}: el expediente ya tiene un cambio igual o más nuevo, se ignora`,
     );
   }
 

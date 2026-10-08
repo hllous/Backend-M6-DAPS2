@@ -815,8 +815,8 @@ describe('consumidores de eventos', () => {
         const cumple = (where: Record<string, unknown>): boolean =>
           Object.entries(where).every(([k, v]) => {
             if (k === 'OR') return (v as Record<string, unknown>[]).some(cumple);
-            if (v && typeof v === 'object' && 'lte' in v) {
-              return fila[k] != null && (fila[k] as Date) <= (v as { lte: Date }).lte;
+            if (v && typeof v === 'object' && 'lt' in v) {
+              return fila[k] != null && (fila[k] as Date) < (v as { lt: Date }).lt;
             }
             return fila[k] === v;
           });
@@ -945,6 +945,75 @@ describe('consumidores de eventos', () => {
 
         expect(prisma.service.updateMany).not.toHaveBeenCalled();
         expect(fila.status).toBe(S.UNDER_REVIEW);
+      });
+
+      // Igual a la marca = ya aplicado: re-aplicarlo no es idempotente.
+      it('un REOPENED con occurredAt igual a la marca no reabre lo que el operador volvió a cerrar', async () => {
+        await h(evento('REOPENED'), T1);
+        fila.status = S.CLOSED;
+
+        await h(evento('REOPENED'), T1);
+
+        expect(fila.status).toBe(S.CLOSED);
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('se ignora'));
+      });
+
+      it('un CANCELLED con occurredAt igual a la marca no vuelve a cancelar servicios', async () => {
+        fila.ticketStatusAt = T1;
+
+        await h(evento('CANCELLED'), T1);
+
+        expect(prisma.service.updateMany).not.toHaveBeenCalled();
+      });
+
+      it('CANCELLED sobre UNDER_REVIEW descarta el expediente y deja la marca', async () => {
+        fila.status = S.UNDER_REVIEW;
+
+        await h(evento('CANCELLED'), T2);
+
+        expect(fila.status).toBe(S.DISMISSED);
+        expect(fila.ticketStatusAt).toEqual(T2);
+        expect(prisma.service.updateMany).toHaveBeenCalled();
+      });
+
+      it('CANCELLED: si la marca avanzó entre la lectura y la transacción, no cancela servicios', async () => {
+        prisma.environmentalReport.findFirst.mockImplementationOnce(async () => {
+          const leida = { ...fila };
+          fila.ticketStatusAt = T2; // un REOPENED(T2) que entra en el medio
+          return leida;
+        });
+
+        await h(evento('CANCELLED'), T1);
+
+        expect(prisma.service.updateMany).not.toHaveBeenCalled();
+        expect(fila.ticketStatusAt).toEqual(T2);
+      });
+
+      it('CANCELLED con occurredAt pero sin expediente cancela los servicios igual', async () => {
+        prisma.environmentalReport.findFirst.mockResolvedValue(null);
+
+        await h(evento('CANCELLED'), T1);
+
+        expect(prisma.service.updateMany).toHaveBeenCalled();
+        expect(fila.ticketStatusAt).toBeNull();
+      });
+
+      it('por el inbox, un occurredAt en el futuro se aplica sin ordenar y no deja marca', async () => {
+        fila.priorityChangedAt = T2;
+        prisma.inboxEvent = {
+          create: jest.fn().mockResolvedValue({}),
+          update: jest.fn().mockResolvedValue({}),
+        };
+
+        await inbox.ingest({
+          eventId: '646d19f5-5670-4a7b-9442-30e13b02ba11',
+          eventType: 'ticketUpdated',
+          occurredAt: '2999-12-31T23:59:59Z',
+          data: evento('PRIORITY_CHANGED', { currentPriority: 'HIGH' }),
+        });
+
+        expect(fila.priority).toBe(Severity.HIGH);
+        expect(fila.priorityChangedAt).toEqual(T2);
       });
 
       it('por el inbox, el atrasado sale processed: reintentarlo no lo haría más nuevo', async () => {
