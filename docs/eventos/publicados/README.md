@@ -30,9 +30,9 @@ Los siete que se cayeron del contrato están en [descartados.md](descartados.md)
 | `infrastructureRepairRequested` | ✅ emitido | `POST /repair-requests` |
 | `streetClosureRequested` | ✅ emitido | `POST /street-closure-requests`, con `sourceModule = "M6"` |
 
-🔴 **No hay bus.** M9 anunció RabbitMQ el 27/09/2026, pero todavía no expuso un broker, así que sin `RABBITMQ_URL` configurada el adaptador por defecto solo deja rastro en el log. Las filas de `outbox_event` —con su payload, su `status` y su `publishedAt`— son la evidencia de qué se habría publicado. Enchufar el broker no toca el dominio.
+🔴 **Sin `RABBITMQ_URL` no hay bus.** El bus es el del Core (M9): publicamos al exchange fanout `muni.inbox`, que crea el Core (la app solo verifica que exista; el fanout ignora la routing key, que igual es el nombre del evento). Sin la variable el adaptador por defecto solo deja rastro en el log, y las filas de `outbox_event` —con su payload, su `status` y su `publishedAt`— son la evidencia de qué se habría publicado. Enchufar el broker no toca el dominio. Estado del broker en [bloqueantes.md](../../bloqueantes.md).
 
-**Si la publicación falla, la fila no se pierde ni se reintenta para siempre.** `outbox_event.attempts` cuenta los intentos y `last_error` guarda por qué falló el último; a los cinco intentos la fila pasa a `FAILED` y deja de barrerse, para que un broker caído no genere una cola infinita de reintentos. Del lado entrante, `inbox_event.error` deja el rastro: un handler que falla deja la fila **sin** `processed_at` y con el error. **No hay reintento automático**: un reenvío con el mismo `eventId` sale `duplicate` (ver [ADR-006](../../decisiones/adr-006-rabbitmq-como-bus.md)).
+**Si la publicación falla, la fila no se pierde ni se reintenta para siempre.** `outbox_event.attempts` cuenta los intentos y `last_error` guarda por qué falló el último; a los cinco intentos la fila pasa a `FAILED` y deja de barrerse, para que un broker caído no genere una cola infinita de reintentos. Del lado entrante, `inbox_event.error` deja el rastro: un handler que falla deja la fila **sin** `processed_at` y con el error. El reintento lo hace el Core, que reentrega con backoff (15 s → 1 m → 5 m → 15 m → DLQ), y reenviar el mismo `eventId` vuelve a correr el handler; ver [consumidos](../consumidos/README.md#qué-se-consume-hoy).
 
 ⚠️ **`location.neighborhoodId` viaja ausente** en `containerDamaged`, `treeRiskDetected` y `treePruningScheduled`: sale del catálogo de barrios de M9, que sigue sin exponerse. Era un campo requerido de `_shared.location` y pasó a opcional hasta que exista. Hay que avisarle a M3 y M7.
 
@@ -57,7 +57,7 @@ M3 y M4 siguen abiertos: ver [bloqueantes.md](../../bloqueantes.md#tablero).
 - Nombres de evento y de campo en **camelCase**.
 - `?` es opcional o puede venir en nulo, `[]` es lista, `{ }` es un objeto anidado.
 - Los campos que terminan en `At` son fecha y hora; `scheduledDate` es solo el día y la franja la da `timeWindow`.
-- **El sobre lo define M9**, y todavía no lo hizo. Lo que está acá es el `data`, no el mensaje completo.
+- **El sobre es el del Core (M9, mensaje del 7/10/2026)** y vale para toda la cohorte: `{ eventId, eventType, eventVersion: "1.0", occurredAt, sourceModule: "ambiente", correlationId?, causationId?, data }`, sin campos extra (el Core rechaza los de más). Reemplaza al de M2: ya no mandamos `specVersion`, `producer` ni `subject`. `correlationId` y `causationId` todavía no se mandan (#267). Lo que está acá es el `data`, no el mensaje completo.
 
 **Quién genera cada identificador:**
 

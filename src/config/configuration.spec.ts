@@ -53,35 +53,32 @@ describe('configuration — CORS', () => {
 });
 
 describe('configuration — RabbitMQ', () => {
-  it('sin RABBITMQ_URL no hay bus, y los nombres usan los defaults provisorios', () => {
+  it('sin RABBITMQ_URL no hay bus, y los nombres son los del Core', () => {
     expect(config().rabbitmq).toEqual({
       url: undefined,
-      exchange: 'municipalidad.events',
-      exchangeType: 'topic',
-      queue: 'm6.ambiente',
-      deadLetterExchange: undefined,
+      exchange: 'muni.inbox',
+      queue: 'q.ambiente',
       prefetch: 1,
     });
+    expect(config().core.moduleId).toBe('ambiente');
   });
 
   /** Un `RABBITMQ_URL=` vacío en el panel de Render no debe tumbar el arranque. */
   it('una URL vacía cuenta como ausente', () => {
-    expect(config({ RABBITMQ_URL: '', RABBITMQ_DEAD_LETTER_EXCHANGE: '' }).rabbitmq).toEqual(
-      expect.objectContaining({ url: undefined, deadLetterExchange: undefined }),
-    );
+    expect(config({ RABBITMQ_URL: '' }).rabbitmq.url).toBeUndefined();
   });
 
   it('toma la URL y los overrides', () => {
     expect(
       config({
         RABBITMQ_URL: 'amqps://m6:clave@bus:5671/muni',
-        RABBITMQ_EXCHANGE_TYPE: 'direct',
+        RABBITMQ_QUEUE: 'q.otra',
         RABBITMQ_PREFETCH: '5',
       }).rabbitmq,
     ).toEqual(
       expect.objectContaining({
         url: 'amqps://m6:clave@bus:5671/muni',
-        exchangeType: 'direct',
+        queue: 'q.otra',
         prefetch: 5,
       }),
     );
@@ -116,8 +113,56 @@ describe('configuration — RabbitMQ', () => {
     expect(config({ NODE_ENV: 'production' }).rabbitmq.url).toBeUndefined();
   });
 
-  it('rechaza un tipo de exchange desconocido', () => {
-    expect(() => config({ RABBITMQ_EXCHANGE_TYPE: 'x-delayed' })).toThrow();
-    expect(() => config({ RABBITMQ_EXCHANGE_TYPE: 'fanout' })).toThrow();
+  /** Es el `sourceModule` del sobre: el Core lo limita a 60 caracteres. */
+  it('rechaza un CORE_MODULE_ID vacío o de más de 60', () => {
+    expect(() => config({ CORE_MODULE_ID: '' })).toThrow();
+    expect(() => config({ CORE_MODULE_ID: 'x'.repeat(61) })).toThrow();
+  });
+});
+
+describe('configuration — Core', () => {
+  /** Hasta que M9 publique la URL de cada ambiente, la app arranca sin Core. */
+  it('sin CORE_API_URL no hay Core ni hace falta el secret', () => {
+    expect(config().core).toEqual({
+      moduleId: 'ambiente',
+      apiUrl: undefined,
+      moduleSecret: undefined,
+    });
+    expect(config({ CORE_API_URL: '', CORE_MODULE_SECRET: '' }).core.apiUrl).toBeUndefined();
+  });
+
+  it('toma la URL y el secret', () => {
+    expect(
+      config({ CORE_API_URL: 'http://localhost:4000', CORE_MODULE_SECRET: 's3cr3t' }).core,
+    ).toEqual({ moduleId: 'ambiente', apiUrl: 'http://localhost:4000', moduleSecret: 's3cr3t' });
+  });
+
+  it('con CORE_API_URL exige CORE_MODULE_SECRET', () => {
+    expect(() => config({ CORE_API_URL: 'https://core.app' })).toThrow(/CORE_MODULE_SECRET/);
+    expect(() => config({ CORE_API_URL: 'https://core.app', CORE_MODULE_SECRET: '' })).toThrow(
+      /CORE_MODULE_SECRET/,
+    );
+  });
+
+  it('un secret en blanco no pasa', () => {
+    expect(() => config({ CORE_API_URL: 'https://core.app', CORE_MODULE_SECRET: '   ' })).toThrow(
+      /CORE_MODULE_SECRET/,
+    );
+    expect(() => config({ CORE_MODULE_SECRET: ' ' })).toThrow(/CORE_MODULE_SECRET/);
+  });
+
+  it('rechaza algo que no es una URL http(s)', () => {
+    const conSecret = { CORE_MODULE_SECRET: 's' };
+    expect(() => config({ ...conSecret, CORE_API_URL: 'core.app' })).toThrow();
+    expect(() => config({ ...conSecret, CORE_API_URL: 'ftp://core.app' })).toThrow(/http/);
+  });
+
+  /** El secret viaja en el body del pedido de token. */
+  it('en producción exige https://', () => {
+    const prod = { NODE_ENV: 'production', CORE_MODULE_SECRET: 's' };
+    expect(() => config({ ...prod, CORE_API_URL: 'http://core.app' })).toThrow(/https/);
+    expect(config({ ...prod, CORE_API_URL: 'https://core.app' }).core.apiUrl).toBe(
+      'https://core.app',
+    );
   });
 });

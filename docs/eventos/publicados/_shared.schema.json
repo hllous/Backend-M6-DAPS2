@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uade.m6.grupo04/eventos/_shared.schema.json",
   "title": "Objetos compartidos entre los eventos publicados por M6",
-  "description": "Definiciones que se repiten en varios payloads. Se referencian con $ref desde cada evento en vez de duplicarlas. Los formatos de fecha y hora son tentativos: el sobre y el formato exacto los define M9.",
+  "description": "Definiciones que se repiten en varios payloads. Se referencian con $ref desde cada evento en vez de duplicarlas. Los formatos de fecha y hora de los payloads son tentativos. El sobre lo define el Core (M9) y no forma parte de estos schemas.",
   "$defs": {
     "location": {
       "type": "object",

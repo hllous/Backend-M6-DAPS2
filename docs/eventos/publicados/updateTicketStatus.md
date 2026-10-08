@@ -24,7 +24,7 @@ attachments[]?, updatedBy, updateOccurredAt
 - **`updatedBy.type` ya no es `AREA_USER`** — ese valor nunca existió en su enum. La v1.6 (§5.2) cierra la lista en `CITIZEN | AGENT | AREA_RESPONSIBLE | ADMIN | EXTERNAL_USER | SYSTEM`, con una regla de clasificación explícita: una persona que actúa desde otro módulo y cuyo hecho llega a M2 por integración es **`EXTERNAL_USER`**, cualquiera sea el rol que tenga acá; un hecho automático es **`SYSTEM`**, y ahí `id` puede ser `null`.
 - El adjunto **perdió `attachmentId`** (§5.3): queda `{fileName, contentType, url, sizeBytes?}`. Como §13 fija `additionalProperties: false`, mandarlo es rechazo del evento, no un campo que se ignora.
 - `resolution.type` cambió `INFORMATION_PROVIDED` por **`INQUIRY_ANSWERED`** (§8.5).
-- El **sobre** cambió y nos afecta acá: `subject` tiene que ser `tickets/{ticketId}` (§4), no el id de nuestro `Service`. Ver [`envelope.ts`](../../../src/events/envelope.ts).
+- El **sobre** ya no lleva `subject`: el sobre del Core no lo tiene, así que dejamos de mandar `tickets/{ticketId}` (§4 de M2) y la correlación con M2 va solo por `data.ticketId`. Ver [`envelope.ts`](../../../src/events/envelope.ts).
 
 Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED`/`PROGRESS` siguen sin estructura de `details`. El bloqueante de la fecha agendada sigue abierto — ver más abajo.
 

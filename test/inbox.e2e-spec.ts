@@ -147,6 +147,50 @@ describe('Inbox de eventos entrantes (e2e)', () => {
     expect(corregido.body.status).toBe('processed');
   });
 
+  it('un eventId cuyo handler falló se reintenta, y si anda queda procesado y sin error', async () => {
+    const eventId = randomUUID();
+    const data = { severity: 'LOW', zoneIds: [zoneId] };
+    // La fila que deja un handler que tiró: sin processedAt y con el error.
+    await prisma.inboxEvent.create({
+      data: { messageId: eventId, eventType: 'weatherAlertIssued', payload: data, error: 'boom' },
+    });
+
+    // Otro eventType con el mismo eventId no toma la fila ni la marca procesada.
+    const ajeno = await api
+      .post('/events/inbox', sobre(eventId, 'eventoQueNadieEscucha', { algo: 1 }))
+      .expect(200);
+    expect(ajeno.body.status).toBe('duplicate');
+    const intacta = await prisma.inboxEvent.findUniqueOrThrow({ where: { messageId: eventId } });
+    expect(intacta.processedAt).toBeNull();
+    expect(intacta.error).toBe('boom');
+
+    const res = await api
+      .post('/events/inbox', sobre(eventId, 'weatherAlertIssued', data))
+      .expect(200);
+    expect(res.body.status).toBe('processed');
+
+    const fila = await prisma.inboxEvent.findUniqueOrThrow({ where: { messageId: eventId } });
+    expect(fila.processedAt).not.toBeNull();
+    expect(fila.error).toBeNull();
+  });
+
+  it('acepta el sobre del Core, con causationId null', async () => {
+    const res = await api
+      .post('/events/inbox', {
+        eventId: randomUUID(),
+        eventType: 'weatherAlertIssued',
+        eventVersion: '1.0',
+        occurredAt: '2026-09-29T18:00:00Z',
+        sourceModule: 'clima',
+        correlationId: randomUUID(),
+        causationId: null,
+        data: { severity: 'LOW', zoneIds: [zoneId] },
+      })
+      .expect(200);
+
+    expect(res.body.status).toBe('processed');
+  });
+
   it('registra y descarta un evento sin handler', async () => {
     const eventId = randomUUID();
     const res = await api

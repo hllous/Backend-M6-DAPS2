@@ -19,9 +19,11 @@ Nueve de la cohorte, de cinco módulos, más uno simulado (M4 fusionó `closureO
 
 ## Qué se consume hoy
 
-**Nueve de los diez tienen handler.** Entran por dos vías: `POST /events/inbox` y, con `RABBITMQ_URL` configurada, la cola de M6 (`RABBITMQ_QUEUE`), bindeada al exchange con una routing key por evento de esta lista. Las dos pasan por la misma validación y el mismo `InboxService.ingest()`; la idempotencia es por `eventId`, resuelta en el inbox y no en cada handler. La política de ack de la cola está en [ADR-006](../../decisiones/adr-006-rabbitmq-como-bus.md).
+**Nueve de los diez tienen handler.** Entran por dos vías: `POST /events/inbox` y, con `RABBITMQ_URL` configurada, la cola `q.ambiente` (`RABBITMQ_QUEUE`), que crea el Core al registrar nuestras suscripciones: la app solo verifica que exista y no declara bindings. Ahí llegan mezclados todos los `eventType` que suscribimos. Las dos vías pasan por la misma validación y el mismo `InboxService.ingest()`; la idempotencia es por `eventId`, resuelta en el inbox y no en cada handler.
 
-`eventId` y `eventType` no pueden superar 100 caracteres (400 si se pasan). Los ids de M1, M2 y M9 miden hoy hasta ~24 caracteres (un UUID mide 36), así que entran holgados.
+**Ack: nunca se reencola.** Si el inbox responde `processed`, `duplicate` o `ignored` se hace `ack`. Todo lo demás —el handler falló (`failed`), el mensaje es inválido (lo que por HTTP es 400) o hubo un error inesperado— es `nack` sin reencolar, y el Core reintenta con backoff (15 s → 1 m → 5 m → 15 m) hasta mandarlo a su DLQ, consultable en `GET /api/v1/dlq?targetModule=ambiente`. Un inválido agota los reintentos, pero así queda en la DLQ con el payload crudo y no se pierde. Reenviar el `eventId` de un evento cuyo handler falló **vuelve a correr el handler**, así que los handlers tienen que tolerar correr de nuevo; uno ya procesado o en curso sale `duplicate`. **El orden de llegada no está garantizado**: un reintento llega después de lo que se publicó más tarde. Contexto en [ADR-006](../../decisiones/adr-006-rabbitmq-como-bus.md) (anterior al Core: su política de ack y su topología quedaron reemplazadas).
+
+`eventId` no puede superar 100 caracteres y `eventType` 120, el tope del Core (400 si se pasan). Los ids de M1, M2 y M9 miden hoy hasta ~24 caracteres (un UUID mide 36), así que entran holgados.
 
 | Evento | Handler | Efecto |
 |---|---|---|

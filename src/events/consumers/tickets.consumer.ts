@@ -10,7 +10,12 @@ import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent, TicketUpdateType } from '../inbox/consumed-events';
 import { Data, esObjeto, esTexto, requerido } from '../inbox/payload-validation';
 import { REPORT_TRANSITIONS } from '../../modules/environmental-reports/environmental-reports.service';
-import { PRODUCER } from '../envelope';
+
+/**
+ * Cómo nos nombra M2 en `responsibleAreaId`: el identificador canónico `Mx` de
+ * su §4/§5.1, no el `sourceModule` del Core ('ambiente').
+ */
+const AREA_M6 = 'M6';
 
 /** El nombre visible del Request Type de M2, mapeado a nuestro catálogo. */
 const TIPO_POR_PALABRA: [RegExp, EnvironmentalReportType][] = [
@@ -90,7 +95,7 @@ export class TicketsConsumer implements OnModuleInit {
   }
 
   private esNuestro(data: Record<string, unknown>): boolean {
-    return data.responsibleAreaId === PRODUCER.moduleId;
+    return data.responsibleAreaId === AREA_M6;
   }
 
   private async handle(data: Record<string, unknown>): Promise<void> {

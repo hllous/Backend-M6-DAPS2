@@ -1,9 +1,9 @@
 import { ConflictException } from '@nestjs/common';
 import { RepairRequestStatus, StreetClosureRequestStatus } from '@prisma/client';
 
-// Derivadas de docs/entidades/derivaciones.md. Los eventos de M3 y M7 viajan
-// por routing keys distintas sin orden garantizado, así que las transiciones que
-// "saltean" un paso son válidas a propósito:
+// Derivadas de docs/entidades/derivaciones.md. El Core no garantiza el orden de
+// los eventos de M3 y M7 (un reintento vuelve después de los que venían atrás),
+// así que las transiciones que "saltean" un paso son válidas a propósito:
 // - REQUESTED→CLOSED: `workOrderCompleted` puede llegar sin haber visto
 //   `workOrderScheduled` (además M3 no confirmó cuándo lo dispara, bloqueantes.md).
 // - REQUESTED→ENDED: `streetClosureEnded` puede adelantarse a `streetClosureApproved`.

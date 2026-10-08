@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { ChannelModel, ConsumeMessage, connect } from 'amqplib';
 import { MAX_MESSAGE_BYTES, RabbitMqConsumer } from './rabbitmq.consumer';
 import { createRabbitMqConsumer } from '../events.module';
-import { ConsumedEvent } from '../inbox/consumed-events';
 import { InboxService } from '../inbox/inbox.service';
 import { RabbitMqConfig } from '../rabbitmq';
 
@@ -15,10 +14,8 @@ type OnMessage = (msg: ConsumeMessage | null) => void;
 
 const config: RabbitMqConfig = {
   url: 'amqp://usuario:secreto@broker:5672',
-  exchange: 'municipalidad.events',
-  exchangeType: 'topic',
-  queue: 'm6.ambiente',
-  deadLetterExchange: 'municipalidad.dlx',
+  exchange: 'muni.inbox',
+  queue: 'q.ambiente',
   prefetch: 10,
 };
 
@@ -33,9 +30,7 @@ const json = (body: unknown): Buffer => Buffer.from(JSON.stringify(body));
 
 function fakeChannel() {
   return Object.assign(new EventEmitter(), {
-    assertExchange: jest.fn().mockResolvedValue(undefined),
-    assertQueue: jest.fn().mockResolvedValue(undefined),
-    bindQueue: jest.fn().mockResolvedValue(undefined),
+    checkQueue: jest.fn().mockResolvedValue(undefined),
     prefetch: jest.fn().mockResolvedValue(undefined),
     consume: jest.fn().mockResolvedValue(undefined),
     ack: jest.fn(),
@@ -60,9 +55,14 @@ describe('RabbitMqConsumer', () => {
   });
 
   describe('handle (misma validación que POST /events/inbox)', () => {
-    it.each(['processed', 'duplicate', 'ignored', 'failed'])('%s → ack', async (status) => {
+    it.each(['processed', 'duplicate', 'ignored'])('%s → ack', async (status) => {
       inbox.ingest.mockResolvedValueOnce({ status });
       await expect(consumer.handle(json(sobre))).resolves.toBe('ack');
+    });
+
+    it('failed → nack, para que el Core reintente con backoff', async () => {
+      inbox.ingest.mockResolvedValueOnce({ status: 'failed', detail: 'boom' });
+      await expect(consumer.handle(json(sobre))).resolves.toBe('nack');
     });
 
     it('pasa al inbox el sobre validado, sin rellenar lo que no vino', async () => {
@@ -71,8 +71,23 @@ describe('RabbitMqConsumer', () => {
       expect(inbox.ingest.mock.calls[0][0].occurredAt).toBeUndefined();
     });
 
-    it('un cuerpo que no es JSON → reject', async () => {
-      await expect(consumer.handle(Buffer.from('{no json'))).resolves.toBe('reject');
+    it('el sobre del Core llega al inbox con eventId y la correlación', async () => {
+      const core = {
+        eventId: '3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11',
+        eventType: 'workOrderCompleted',
+        eventVersion: '1.0',
+        occurredAt: '2026-09-29T18:00:00Z',
+        sourceModule: 'obras',
+        correlationId: '8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5',
+        causationId: null,
+        data: { sourceRequestId: '0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a' },
+      };
+      await expect(consumer.handle(json(core))).resolves.toBe('ack');
+      expect(inbox.ingest.mock.calls[0][0]).toMatchObject(core);
+    });
+
+    it('un cuerpo que no es JSON → nack', async () => {
+      await expect(consumer.handle(Buffer.from('{no json'))).resolves.toBe('nack');
       expect(inbox.ingest).not.toHaveBeenCalled();
     });
 
@@ -81,8 +96,8 @@ describe('RabbitMqConsumer', () => {
       ['carácter nulo (NoNullCharsPipe)', { ...sobre, data: { a: 'x\u0000' } }],
       ['null', null],
       ['un string suelto', 'hola'],
-    ])('sobre inválido (%s) → reject, sin llegar al inbox', async (_caso, body) => {
-      await expect(consumer.handle(json(body))).resolves.toBe('reject');
+    ])('sobre inválido (%s) → nack, sin llegar al inbox', async (_caso, body) => {
+      await expect(consumer.handle(json(body))).resolves.toBe('nack');
       expect(inbox.ingest).not.toHaveBeenCalled();
     });
 
@@ -91,9 +106,9 @@ describe('RabbitMqConsumer', () => {
       expect(inbox.ingest.mock.calls[0][0]).not.toHaveProperty('traceId');
     });
 
-    it('un mensaje más grande que el body HTTP → reject sin parsear', async () => {
+    it('un mensaje más grande que el body HTTP → nack sin parsear', async () => {
       const grande = Buffer.alloc(MAX_MESSAGE_BYTES + 1, 'a');
-      await expect(consumer.handle(grande)).resolves.toBe('reject');
+      await expect(consumer.handle(grande)).resolves.toBe('nack');
       expect(inbox.ingest).not.toHaveBeenCalled();
     });
 
@@ -106,19 +121,19 @@ describe('RabbitMqConsumer', () => {
       warn.mockRestore();
     });
 
-    it('payload inválido para el handler (400 del inbox) → reject', async () => {
+    it('payload inválido para el handler (400 del inbox) → nack', async () => {
       inbox.ingest.mockRejectedValueOnce(new BadRequestException('Payload inválido'));
-      await expect(consumer.handle(json(sobre))).resolves.toBe('reject');
+      await expect(consumer.handle(json(sobre))).resolves.toBe('nack');
     });
 
-    it('error inesperado (base caída) → requeue', async () => {
+    it('error inesperado (base caída) → nack', async () => {
       inbox.ingest.mockRejectedValueOnce(new Error('ECONNREFUSED'));
-      await expect(consumer.handle(json(sobre))).resolves.toBe('requeue');
+      await expect(consumer.handle(json(sobre))).resolves.toBe('nack');
     });
 
-    it('un rechazo que no es Error también → requeue', async () => {
+    it('un rechazo que no es Error también → nack', async () => {
       inbox.ingest.mockRejectedValueOnce('raro');
-      await expect(consumer.handle(json(sobre))).resolves.toBe('requeue');
+      await expect(consumer.handle(json(sobre))).resolves.toBe('nack');
     });
   });
 
@@ -147,27 +162,34 @@ describe('RabbitMqConsumer', () => {
       );
     });
 
-    it('declara exchange y cola con DLX, y bindea una routing key por evento consumido', async () => {
+    it('verifica la cola del Core en modo pasivo, sin declarar ni bindear nada', async () => {
       const { channel } = await arrancar();
 
-      expect(channel.assertExchange).toHaveBeenCalledWith('municipalidad.events', 'topic', {
-        durable: true,
-      });
-      expect(channel.assertQueue).toHaveBeenCalledWith('m6.ambiente', {
-        durable: true,
-        deadLetterExchange: 'municipalidad.dlx',
-      });
-      const keys = channel.bindQueue.mock.calls.map((c: unknown[]) => c[2]);
-      expect(keys).toEqual(Object.values(ConsumedEvent));
-      expect(channel.bindQueue).toHaveBeenCalledWith(
-        'm6.ambiente',
-        'municipalidad.events',
-        'ticketUpdated',
-      );
+      // El fake no tiene assertQueue ni bindQueue: si se llamaran, el setup tiraría.
+      expect(channel.checkQueue).toHaveBeenCalledWith('q.ambiente');
       expect(channel.prefetch).toHaveBeenCalledWith(10);
     });
 
-    it('ack si se procesó, nack sin requeue si es inválido, nack con requeue si falló', async () => {
+    it('sin la cola (falta suscribirse en el Core) loguea y falla el setup para que recovery reintente', async () => {
+      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      await consumer.onApplicationBootstrap();
+      const options = connectMock.mock.calls[0][1];
+      const channel = fakeChannel();
+      channel.checkQueue.mockRejectedValueOnce(new Error('NOT_FOUND - no queue'));
+      const model = Object.assign(new EventEmitter(), {
+        createChannel: jest.fn().mockResolvedValue(channel),
+        close: jest.fn().mockResolvedValue(undefined),
+      });
+
+      await expect(
+        (options.recovery.setup as Setup)(model as unknown as ChannelModel),
+      ).rejects.toThrow('NOT_FOUND');
+      expect(error.mock.calls[0][0]).toMatch(/suscripciones/);
+      expect(channel.consume).not.toHaveBeenCalled();
+      error.mockRestore();
+    });
+
+    it('ack si se procesó; si no, nack siempre sin reencolar (los reintentos son del Core)', async () => {
       const { channel, onMessage } = await arrancar();
       const msg = (body: unknown) =>
         ({ content: json(body), fields: { redelivered: false } }) as ConsumeMessage;
@@ -186,21 +208,15 @@ describe('RabbitMqConsumer', () => {
       const roto = msg(sobre);
       onMessage(roto);
       await tick();
-      expect(channel.nack).toHaveBeenCalledWith(roto, false, true);
-    });
+      expect(channel.nack).toHaveBeenCalledWith(roto, false, false);
 
-    it('si vuelve a fallar en la reentrega, nack sin requeue: corta el loop caliente', async () => {
-      const { channel, onMessage } = await arrancar();
-      inbox.ingest.mockRejectedValueOnce(new Error('unsupported Unicode escape sequence'));
-      const reentregado = {
-        content: json(sobre),
-        fields: { redelivered: true },
-      } as ConsumeMessage;
-
-      onMessage(reentregado);
+      inbox.ingest.mockResolvedValueOnce({ status: 'failed', detail: 'boom' });
+      const fallido = msg(sobre);
+      onMessage(fallido);
       await tick();
+      expect(channel.nack).toHaveBeenCalledWith(fallido, false, false);
 
-      expect(channel.nack).toHaveBeenCalledWith(reentregado, false, false);
+      expect(channel.nack).not.toHaveBeenCalledWith(expect.anything(), false, true);
     });
 
     it('un ack sobre un canal cerrado no se escapa como unhandled rejection', async () => {
