@@ -65,7 +65,9 @@ const PRIORIDAD: Record<string, Severity> = {
  * fallido hasta ~21 min después, detrás de eventos más nuevos del mismo
  * ticket. Lo que pisa un dato compara su `occurredAt` con la marca de ese dato
  * en el expediente y, si no es más nuevo, se ignora (sale `processed`:
- * reintentarlo no lo haría más nuevo).
+ * reintentarlo no lo haría más nuevo). Si en cambio el expediente todavía no
+ * existe porque su ROUTED falló o no llegó, el handler tira para que el Core
+ * lo reintente después (#275). Ver `sinFilas()`.
  */
 @Injectable()
 export class TicketsConsumer implements OnModuleInit {
@@ -147,7 +149,7 @@ export class TicketsConsumer implements OnModuleInit {
 
     switch (updateType) {
       case TicketUpdateType.ROUTED:
-        return this.routed(ticketId, data);
+        return this.routed(ticketId, data, at);
       case TicketUpdateType.CANCELLED:
         return this.cancelled(ticketId, at);
       case TicketUpdateType.PRIORITY_CHANGED:
@@ -177,7 +179,11 @@ export class TicketsConsumer implements OnModuleInit {
    * publicó, y el expediente es la entrada diseñada para el reclamo del vecino
    * — de él sale la inspección, y de la inspección el servicio.
    */
-  private async routed(ticketId: string, data: Record<string, unknown>): Promise<void> {
+  private async routed(
+    ticketId: string,
+    data: Record<string, unknown>,
+    at: Date | null,
+  ): Promise<void> {
     const existente = await this.prisma.environmentalReport.findFirst({ where: { ticketId } });
     if (existente) {
       this.logger.log(`ticketUpdated/ROUTED: el ticket ${ticketId} ya tiene expediente abierto`);
@@ -187,6 +193,14 @@ export class TicketsConsumer implements OnModuleInit {
     const routing = this.routing(data);
     const location = (routing.location ?? {}) as Record<string, unknown>;
     const nombre = `${this.requestTypeName(routing.requestType)} ${routing.summary ?? ''}`;
+    const priority = this.prioridad(data.currentPriority);
+    const escalated = this.escalado(routing.escalation);
+    // Un ms antes del ROUTED: M2 puede derivar y escalar (o repriorizar) en la
+    // misma transacción con el mismo now(), y ese cambio explícito tiene que
+    // ganarle al snapshot aunque comparta el instante. El `lt` de `noAtrasado`
+    // sigue reconociendo el reintento de un cambio ya aplicado, porque ese sí
+    // deja su propio occurredAt como marca.
+    const marca = at && new Date(at.getTime() - 1);
 
     const report = await this.prisma.environmentalReport.create({
       data: {
@@ -200,10 +214,19 @@ export class TicketsConsumer implements OnModuleInit {
         // salvo que M2 las mande igual. Se georreferencia por `address`.
         lat: location.latitude != null ? Number(location.latitude) : null,
         lng: location.longitude != null ? Number(location.longitude) : null,
-        priority: this.prioridad(data.currentPriority),
+        priority,
         // El snapshot trae el escalamiento vigente (§7.4). Si M2 lo escaló antes
         // de derivar, no va a llegar un ESCALATION_CHANGED que lo marque.
-        escalated: this.escalado(routing.escalation) ?? false,
+        escalated: escalated ?? false,
+        // El snapshot ya refleja lo anterior a su occurredAt: un cambio más
+        // viejo que el Core reintenta después no lo pisa, y uno más nuevo que
+        // llegó antes y falló sí aplica (#275). Solo marca lo que el snapshot
+        // trae: sin prioridad o sin escalamiento no hay qué proteger, y
+        // `citizenResponse` nunca viene, así que una respuesta anterior al
+        // ROUTED todavía puede guardarse.
+        ticketStatusAt: marca,
+        priorityChangedAt: priority ? marca : null,
+        escalationChangedAt: escalated !== null ? marca : null,
         // Solo lo que el vecino aceptó exponer: si es anónimo no guardamos
         // identidad.
         reporterSnapshot: data.isAnonymous
@@ -235,7 +258,9 @@ export class TicketsConsumer implements OnModuleInit {
    * cancela nada. Va separada del `DISMISSED` para que el guard de estado no
    * la arrastre: que el operador haya movido el expediente no frena la
    * cancelación. Sin expediente o sin occurredAt no hay marca y los servicios
-   * se cancelan igual.
+   * se cancelan igual. Sin expediente tampoco se reintenta (#275): lo que hay
+   * que cancelar son los servicios, y un expediente que abra un ROUTED
+   * reintentado después nace `RECEIVED`, estado que CANCELLED no toca.
    */
   private async cancelled(ticketId: string, at: Date | null): Promise<void> {
     const report = await this.prisma.environmentalReport.findFirst({ where: { ticketId } });
@@ -297,9 +322,7 @@ export class TicketsConsumer implements OnModuleInit {
       where: { ticketId, ...this.noAtrasado('priorityChangedAt', at) },
       data: { priority, ...(at && { priorityChangedAt: at }) },
     });
-    if (!count && (await this.hayExpediente(ticketId, at))) {
-      return this.ignorarAtrasado('PRIORITY_CHANGED', ticketId, at);
-    }
+    if (!count) return this.sinFilas('PRIORITY_CHANGED', 'priorityChangedAt', ticketId, at);
     this.logger.log(
       `ticketUpdated/PRIORITY_CHANGED: ${count} expediente/s del reclamo ${ticketId} a ${priority}`,
     );
@@ -349,9 +372,7 @@ export class TicketsConsumer implements OnModuleInit {
       where: { ticketId, ...this.noAtrasado('citizenResponseAt', at) },
       data: { citizenResponse: respuesta.slice(0, 2000), ...(at && { citizenResponseAt: at }) },
     });
-    if (!count && (await this.hayExpediente(ticketId, at))) {
-      return this.ignorarAtrasado('INFORMATION_PROVIDED', ticketId, at);
-    }
+    if (!count) return this.sinFilas('INFORMATION_PROVIDED', 'citizenResponseAt', ticketId, at);
     this.logger.log(
       `ticketUpdated/INFORMATION_PROVIDED: respuesta del vecino sumada a ${count} expediente/s`,
     );
@@ -367,7 +388,15 @@ export class TicketsConsumer implements OnModuleInit {
    */
   private async reopened(ticketId: string, at: Date | null): Promise<void> {
     const report = await this.prisma.environmentalReport.findFirst({ where: { ticketId } });
-    if (!report) return;
+    // Sin expediente no se reintenta, a diferencia de los datos (#275): un
+    // REOPENED supone una solución nuestra previa, así que no puede llegar antes
+    // del ROUTED. Si no hay expediente, no hay nada que reabrir.
+    if (!report) {
+      this.logger.log(
+        `ticketUpdated/REOPENED: el ticket ${ticketId} no tiene expediente que reabrir`,
+      );
+      return;
+    }
 
     // Un evento entrante no debería fallar duro por una carrera de estado:
     // si la reapertura no aplica desde donde está, se descarta con log.
@@ -421,9 +450,7 @@ export class TicketsConsumer implements OnModuleInit {
       where: { ticketId, ...this.noAtrasado('escalationChangedAt', at) },
       data: { escalated, ...(at && { escalationChangedAt: at }) },
     });
-    if (!count && (await this.hayExpediente(ticketId, at))) {
-      return this.ignorarAtrasado('ESCALATION_CHANGED', ticketId, at);
-    }
+    if (!count) return this.sinFilas('ESCALATION_CHANGED', 'escalationChangedAt', ticketId, at);
     this.logger.log(
       `ticketUpdated/ESCALATION_CHANGED: ${count} expediente/s marcado/s escalated=${escalated}`,
     );
@@ -445,9 +472,34 @@ export class TicketsConsumer implements OnModuleInit {
     return at ? { OR: [{ [marca]: null }, { [marca]: { lt: at } }] } : {};
   }
 
-  /** Con occurredAt, un update sin filas es "atrasado" si el expediente existe. */
-  private async hayExpediente(ticketId: string, at: Date | null): Promise<boolean> {
-    return !!at && (await this.prisma.environmentalReport.count({ where: { ticketId } })) > 0;
+  /**
+   * Un update que no tocó filas tiene dos explicaciones (#275). Si la marca del
+   * expediente es igual o más nueva, el evento es atrasado y se ignora. Si no,
+   * el expediente no existía al hacer el update: el ticket es nuestro (lo
+   * filtró `handle()`) y todo ROUTED nuestro abre expediente, así que el ROUTED
+   * falló o todavía no llegó. Se tira para que el Core lo reintente después; el
+   * snapshot del ROUTED deja sus marcas justo antes de su occurredAt, así que
+   * el reintento aplica si es del mismo instante o más nuevo. Cubre también un ROUTED que crea el expediente entre
+   * el update y esta lectura: la marca sigue siendo más vieja y se reintenta.
+   *
+   * El costo: si el ROUTED no llega nunca (se perdió o agotó sus reintentos),
+   * este evento también agota los suyos (~21 min) y termina en la DLQ del Core.
+   * Es visible y acotado; procesarlo en silencio lo perdería igual.
+   */
+  private async sinFilas(
+    updateType: string,
+    marca: Marca,
+    ticketId: string,
+    at: Date | null,
+  ): Promise<void> {
+    const report = await this.prisma.environmentalReport.findFirst({ where: { ticketId } });
+    const aplicada = report?.[marca];
+    if (at && aplicada && aplicada >= at) return this.ignorarAtrasado(updateType, ticketId, at);
+    // Solo el ticketId: el resto del payload es contenido de terceros, y el
+    // mensaje queda en `inbox_event.error`.
+    throw new Error(
+      `ticketUpdated/${updateType}: el expediente todavía no existe para el ticket ${ticketId}; se reintenta tras el ROUTED`,
+    );
   }
 
   private ignorarAtrasado(updateType: string, ticketId: string, at: Date | null): void {

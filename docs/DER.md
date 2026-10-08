@@ -254,10 +254,10 @@ erDiagram
         enum priority "Severity"
         boolean escalated "EXT M2 - ticketUpdated"
         text citizen_response "EXT M2 - ticketUpdated"
-        timestamp priority_changed_at "occurredAt del ultimo PRIORITY_CHANGED aplicado"
-        timestamp escalation_changed_at "occurredAt del ultimo ESCALATION_CHANGED aplicado"
+        timestamp priority_changed_at "occurredAt del ultimo PRIORITY_CHANGED aplicado o del ROUTED"
+        timestamp escalation_changed_at "occurredAt del ultimo ESCALATION_CHANGED aplicado o del ROUTED"
         timestamp citizen_response_at "occurredAt del ultimo INFORMATION_PROVIDED aplicado"
-        timestamp ticket_status_at "occurredAt del ultimo REOPENED o CANCELLED aplicado"
+        timestamp ticket_status_at "occurredAt del ultimo REOPENED, CANCELLED o ROUTED aplicado"
         timestamp deadline_at "cierre por vencimiento"
     }
     ENVIRONMENTAL_INSPECTION {
