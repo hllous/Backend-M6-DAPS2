@@ -52,12 +52,11 @@ export class RabbitMqEventPublisher extends EventPublisher implements OnModuleDe
           contentType: 'application/json',
           messageId: envelope.eventId,
           type: envelope.eventType,
-          appId: envelope.producer.moduleId,
+          appId: envelope.sourceModule,
           headers: {
             eventId: envelope.eventId,
             eventType: envelope.eventType,
-            // El header va plano: desde la v1.6 `producer` es un objeto.
-            producer: envelope.producer.moduleId,
+            sourceModule: envelope.sourceModule,
           },
         },
         (err: unknown) => {

@@ -1,8 +1,11 @@
+import { ConfigService } from '@nestjs/config';
 import { OutboxEventStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventPublisher } from '../publishers/event-publisher.port';
 import { EventEnvelope } from '../envelope';
-import { MAX_ATTEMPTS, OutboxDispatcher, subjectFor } from './outbox-dispatcher.service';
+import { MAX_ATTEMPTS, OutboxDispatcher } from './outbox-dispatcher.service';
+
+const configCon = (moduleId: string) => new ConfigService({ core: { moduleId } });
 
 describe('OutboxDispatcher', () => {
   const ROW_ID = '11111111-1111-1111-1111-111111111111';
@@ -38,56 +41,51 @@ describe('OutboxDispatcher', () => {
     dispatcher = new OutboxDispatcher(
       prisma as unknown as PrismaService,
       publisher as unknown as EventPublisher,
+      configCon('ambiente'),
     );
   });
 
   const publicado = (): EventEnvelope => publisher.publish.mock.calls[0][0];
 
-  it('envuelve el payload en el sobre de la cohorte', async () => {
+  it('envuelve el payload en el sobre del Core', async () => {
     await dispatcher.dispatchPending();
 
     expect(publicado()).toEqual({
-      specVersion: '1.0',
       eventId: ROW_ID,
       eventType: 'urbanServiceScheduled',
+      eventVersion: '1.0',
       occurredAt: '2026-09-02T10:00:00.000Z',
-      producer: { moduleId: 'M6', service: 'urban-services-api' },
-      subject: SUBJECT,
+      sourceModule: 'ambiente',
       data: { serviceId: SUBJECT },
     });
   });
 
-  /**
-   * §4 de la v1.6: M2 valida el sobre antes de mirar el payload, así que un
-   * `subject` con el id de nuestro `Service` le hace rechazar el evento entero.
-   * Es la única excepción: el resto de los eventos lleva el id del agregado.
-   */
-  it('updateTicketStatus va con subject tickets/{ticketId}', async () => {
-    prisma.outboxEvent.findMany.mockResolvedValue([
-      row({ eventType: 'updateTicketStatus', payload: { ticketId: 'TCK-1' } }),
-    ]);
+  // El Core rechaza campos extra. `toEqual` ignora claves con `undefined`, así
+  // que el conjunto de claves se fija aparte.
+  it('el sobre lleva exactamente las claves del Core, sin extras', async () => {
+    await dispatcher.dispatchPending();
+
+    expect(Object.keys(publicado()).sort()).toEqual(
+      ['data', 'eventId', 'eventType', 'eventVersion', 'occurredAt', 'sourceModule'].sort(),
+    );
+  });
+
+  it('occurredAt va en ISO 8601 con offset', async () => {
+    await dispatcher.dispatchPending();
+
+    expect(publicado().occurredAt).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+(Z|[+-]\d{2}:\d{2})$/);
+  });
+
+  it('el sourceModule sale de la config, no de una constante', async () => {
+    dispatcher = new OutboxDispatcher(
+      prisma as unknown as PrismaService,
+      publisher as unknown as EventPublisher,
+      configCon('otro'),
+    );
 
     await dispatcher.dispatchPending();
 
-    expect(publicado().subject).toBe('tickets/TCK-1');
-  });
-
-  it('los demás eventos siguen yendo con el id del agregado', () => {
-    expect(
-      subjectFor({
-        eventType: 'urbanServiceScheduled',
-        aggregateId: SUBJECT,
-        payload: { ticketId: 'TCK-1' },
-      }),
-    ).toBe(SUBJECT);
-  });
-
-  // Sin ticketId no hay subject válido que construir; se cae al agregado en vez
-  // de mandar el string 'tickets/undefined'.
-  it('un updateTicketStatus sin ticketId cae al id del agregado', () => {
-    expect(subjectFor({ eventType: 'updateTicketStatus', aggregateId: SUBJECT, payload: {} })).toBe(
-      SUBJECT,
-    );
+    expect(publicado().sourceModule).toBe('otro');
   });
 
   it('el eventId es el id de la fila, para que el consumidor pueda deduplicar', async () => {

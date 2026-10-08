@@ -40,12 +40,11 @@ describe('RabbitMqEventPublisher', () => {
   };
 
   const envelope: EventEnvelope = {
-    specVersion: '1.0',
     eventId: 'ev-1',
     eventType: 'urbanServiceScheduled',
+    eventVersion: '1.0',
     occurredAt: '2026-01-01T00:00:00.000Z',
-    producer: { moduleId: 'M6', service: 'urban-services-api' },
-    subject: 'svc-1',
+    sourceModule: 'ambiente',
     data: { serviceId: 'svc-1' },
   };
 
@@ -86,8 +85,8 @@ describe('RabbitMqEventPublisher', () => {
       contentType: 'application/json',
       messageId: 'ev-1',
       type: 'urbanServiceScheduled',
-      appId: 'M6',
-      headers: { eventId: 'ev-1', eventType: 'urbanServiceScheduled', producer: 'M6' },
+      appId: 'ambiente',
+      headers: { eventId: 'ev-1', eventType: 'urbanServiceScheduled', sourceModule: 'ambiente' },
     });
   });
 

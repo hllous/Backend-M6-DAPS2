@@ -1,41 +1,33 @@
 /**
- * El sobre común de la cohorte.
+ * El sobre del Core (M9), el que exige `muni.inbox`.
  *
- * Lo definió M2 en su contrato y es **el único envelope escrito que existe**:
- * M9 nunca publicó el suyo (ver docs/bloqueantes.md). Lo adoptamos tal cual en
- * vez de inventar uno propio, para que el día que el Core fije un estándar la
- * diferencia sea mínima.
- *
- * Vigente en la **v1.73** (§4), sin cambios desde la v1.6, que cambió tres
- * cosas respecto de lo que teníamos: `producer` pasó a ser un objeto, `eventVersion` desapareció de la
- * tabla y `specVersion` es la versión del contrato de integración —constante
- * `"1.0"`—, no la del documento de M2. Importa porque §13 fija
- * `additionalProperties: false`: un campo de más es rechazo, no se ignora.
+ * Reemplaza al de M2 (`specVersion`, `producer`, `subject`), que adoptamos
+ * mientras M9 no tenía uno escrito. Importa la forma exacta porque el Core
+ * rechaza campos extra: un campo de más es rechazo, no se ignora.
  */
 export interface EventEnvelope<T = unknown> {
-  /** Versión del contrato/schema de integración. Constante `"1.0"` por §4. */
-  specVersion: string;
-
   /** Identificador único de este mensaje. Es el id de la fila del outbox, lo que hace la publicación idempotente del lado del consumidor. */
   eventId: string;
 
   /** Nombre del evento en camelCase, ej. `urbanServiceScheduled`. */
   eventType: string;
 
-  /** Cuándo ocurrió el hecho de dominio, no cuándo se publicó. */
-  occurredAt: string;
-
-  /** Módulo y servicio que emitió el evento. Objeto desde la v1.6 (§5.1). */
-  producer: EventProducer;
+  /** Versión del sobre. Constante `"1.0"`. */
+  eventVersion: string;
 
   /**
-   * El agregado sobre el que ocurrió.
-   *
-   * Para los eventos que consume M2 es obligatoriamente `tickets/{ticketId}`
-   * (§4); para el resto es el id de nuestro agregado —el servicio, el
-   * contenedor, el árbol—. Lo resuelve `subjectFor()` en el dispatcher.
+   * Cuándo ocurrió el hecho de dominio, no cuándo se publicó. ISO 8601 con
+   * offset; la `Z` de `toISOString()` cuenta. Con doble r: el `occuredAt` de la
+   * tabla de M9 es un typo.
    */
-  subject: string;
+  occurredAt: string;
+
+  /** Módulo emisor. Tiene que coincidir con el del token de módulo del Core. */
+  sourceModule: string;
+
+  // Opcionales en el Core; por ahora no se mandan (#267).
+  correlationId?: string;
+  causationId?: string;
 
   /** El payload propio del evento, el que valida contra su `.schema.json`. */
   data: T;
@@ -74,14 +66,9 @@ export interface EventProducer {
 }
 
 /**
- * Versión del contrato de integración, no la del documento de M2.
- *
- * §4 la declara `const "1.0"`. Mandábamos `'1.5'` por confundir una cosa con la
- * otra: la guía va por la v1.73 y el `specVersion` sigue siendo `"1.0"`
- * (§13: mientras siga WIP, los cambios se consolidan bajo 1.0).
+ * Ya no viaja en el sobre (#260). Queda solo porque `TicketsConsumer` lo usa
+ * para reconocer nuestros tickets por el `responsibleAreaId` de M2.
  */
-export const SPEC_VERSION = '1.0';
-
 export const PRODUCER: EventProducer = {
   moduleId: 'M6',
   service: 'urban-services-api',
@@ -91,16 +78,15 @@ export function buildEnvelope<T>(params: {
   eventId: string;
   eventType: string;
   occurredAt: Date;
-  subject: string;
+  sourceModule: string;
   data: T;
 }): EventEnvelope<T> {
   return {
-    specVersion: SPEC_VERSION,
     eventId: params.eventId,
     eventType: params.eventType,
+    eventVersion: '1.0',
     occurredAt: params.occurredAt.toISOString(),
-    producer: PRODUCER,
-    subject: params.subject,
+    sourceModule: params.sourceModule,
     data: params.data,
   };
 }
