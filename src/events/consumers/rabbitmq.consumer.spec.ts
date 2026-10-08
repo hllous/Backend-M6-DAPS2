@@ -66,6 +66,21 @@ describe('RabbitMqConsumer', () => {
       expect(inbox.ingest.mock.calls[0][0].occurredAt).toBeUndefined();
     });
 
+    it('el sobre del Core llega al inbox con eventId y la correlación', async () => {
+      const core = {
+        eventId: '3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11',
+        eventType: 'workOrderCompleted',
+        eventVersion: '1.0',
+        occurredAt: '2026-09-29T18:00:00Z',
+        sourceModule: 'obras',
+        correlationId: '8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5',
+        causationId: null,
+        data: { sourceRequestId: '0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a' },
+      };
+      await expect(consumer.handle(json(core))).resolves.toBe('ack');
+      expect(inbox.ingest.mock.calls[0][0]).toMatchObject(core);
+    });
+
     it('un cuerpo que no es JSON → reject', async () => {
       await expect(consumer.handle(Buffer.from('{no json'))).resolves.toBe('reject');
       expect(inbox.ingest).not.toHaveBeenCalled();

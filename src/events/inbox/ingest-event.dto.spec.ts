@@ -1,5 +1,5 @@
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
-import { IngestEventDto } from './ingest-event.dto';
+import { IngestEventDto, toInboundEnvelope } from './ingest-event.dto';
 
 describe('IngestEventDto', () => {
   // Las mismas opciones que main.ts: forbidNonWhitelisted es lo que rechazaba
@@ -40,6 +40,47 @@ describe('IngestEventDto', () => {
       await expect(validar(producer)).rejects.toBeInstanceOf(BadRequestException);
     },
   );
+
+  describe('sobre del Core', () => {
+    // El ejemplo de M9 tal cual, con `causationId: null`.
+    const core = {
+      eventId: '3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11',
+      eventType: 'workOrderCompleted',
+      eventVersion: '1.0',
+      occurredAt: '2026-09-29T18:00:00Z',
+      sourceModule: 'obras',
+      correlationId: '8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5',
+      causationId: null,
+      data: {},
+    };
+    const validarCore = (over: Record<string, unknown> = {}) =>
+      pipe.transform({ ...core, ...over }, { type: 'body', metatype: IngestEventDto });
+
+    it('lo acepta tal cual y toInboundEnvelope conserva la correlación', async () => {
+      const dto = await validarCore();
+
+      expect(toInboundEnvelope(dto)).toMatchObject(core);
+    });
+
+    it('acepta un causationId UUID', async () => {
+      const causationId = '646d19f5-5670-4a7b-9442-30e13b02ba11';
+      await expect(validarCore({ causationId })).resolves.toMatchObject({ causationId });
+    });
+
+    it.each([
+      ['correlationId no UUID', { correlationId: 'corr-1' }],
+      ['causationId no UUID', { causationId: 'cause-1' }],
+      ['sourceModule de más de 60', { sourceModule: 'x'.repeat(61) }],
+      ['eventVersion de más de 20', { eventVersion: '1'.repeat(21) }],
+      ['eventType de más de 120', { eventType: 'x'.repeat(121) }],
+    ])('rechaza %s', async (_caso, over) => {
+      await expect(validarCore(over)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('un eventId que no es UUID sigue entrando: no se exige para no rechazar a quien no migró', async () => {
+      await expect(validarCore({ eventId: 'e-1' })).resolves.toMatchObject({ eventId: 'e-1' });
+    });
+  });
 
   describe('occurredAt', () => {
     const conFecha = (occurredAt: unknown) =>

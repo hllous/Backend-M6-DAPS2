@@ -147,6 +147,23 @@ describe('Inbox de eventos entrantes (e2e)', () => {
     expect(corregido.body.status).toBe('processed');
   });
 
+  it('acepta el sobre del Core, con causationId null', async () => {
+    const res = await api
+      .post('/events/inbox', {
+        eventId: randomUUID(),
+        eventType: 'weatherAlertIssued',
+        eventVersion: '1.0',
+        occurredAt: '2026-09-29T18:00:00Z',
+        sourceModule: 'clima',
+        correlationId: randomUUID(),
+        causationId: null,
+        data: { severity: 'LOW', zoneIds: [zoneId] },
+      })
+      .expect(200);
+
+    expect(res.body.status).toBe('processed');
+  });
+
   it('registra y descarta un evento sin handler', async () => {
     const eventId = randomUUID();
     const res = await api

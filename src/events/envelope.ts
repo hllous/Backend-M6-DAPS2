@@ -36,21 +36,28 @@ export interface EventEnvelope<T = unknown> {
 /**
  * El sobre tal como **llega** del bus, que no es el mismo que el que emitimos.
  *
- * Somos estrictos al publicar y tolerantes al consumir: cada módulo de la
- * cohorte asume un sobre distinto —M9 nunca publicó el suyo—, así que rechazar
- * un evento por la forma del `producer` sería tirar información de negocio por
- * un campo que ni miramos. `ingest()` solo usa `eventId`, `eventType` y `data`;
- * el resto se acepta como venga.
+ * Somos estrictos al publicar y tolerantes al consumir: conviven el sobre del
+ * Core y el de M2 mientras la cohorte migra, así que rechazar un evento por la
+ * forma del `producer` sería tirar información de negocio por un campo que ni
+ * miramos. `ingest()` solo usa `eventId`, `eventType` y `data`; el resto se
+ * acepta como venga.
  */
 export interface InboundEnvelope {
   eventId: string;
   eventType: string;
   data: Record<string, unknown>;
 
-  specVersion?: string;
-  /** Ya no existe en el sobre de la v1.6, pero puede seguir llegando. */
   eventVersion?: string;
   occurredAt?: string;
+
+  /** Sobre del Core. Opcionales: quien no migró todavía no los manda. */
+  sourceModule?: string;
+  correlationId?: string;
+  /** El ejemplo de M9 lo manda `null` cuando no lo causó otro evento. */
+  causationId?: string | null;
+
+  /** Sobre de M2, reemplazado por el del Core: puede seguir llegando. */
+  specVersion?: string;
   /** String en los módulos que no adoptaron la v1.6, objeto en los que sí. */
   producer?: string | EventProducer;
   subject?: string;

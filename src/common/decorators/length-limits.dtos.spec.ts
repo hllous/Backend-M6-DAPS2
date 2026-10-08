@@ -60,7 +60,9 @@ const TEXTOS: Array<[string, new () => object, string, number]> = [
   ['AuthorizeInterventionDto', AuthorizeInterventionDto, 'authorizedByUserId', 100],
   ['CreateTreeSurveyDto', CreateTreeSurveyDto, 'inspectorId', 100],
   ['IngestEventDto', IngestEventDto, 'eventId', 100],
-  ['IngestEventDto', IngestEventDto, 'eventType', 100],
+  ['IngestEventDto', IngestEventDto, 'eventType', 120],
+  ['IngestEventDto', IngestEventDto, 'eventVersion', 20],
+  ['IngestEventDto', IngestEventDto, 'sourceModule', 60],
 ];
 
 // [clase, campo, tope de elementos, elemento valido n-esimo]

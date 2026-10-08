@@ -5,6 +5,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   ValidateBy,
 } from 'class-validator';
@@ -34,13 +35,22 @@ function IsProducer(): PropertyDecorator {
   });
 }
 
-/** El sobre de la cohorte, tal como lo recibiría del bus. */
+/** Lo que el Core admite para `eventType`. */
+const MAX_EVENT_TYPE_LENGTH = 120;
+
+/**
+ * El sobre de la cohorte, tal como lo recibiría del bus.
+ *
+ * El vigente es el del Core (M9). El de M2 (`specVersion`, `producer`,
+ * `subject`) se sigue aceptando porque los módulos no migran todos el mismo
+ * día; sacarlo cuando la cohorte haya migrado.
+ */
 export class IngestEventDto {
   @ApiProperty({
     maxLength: MAX_EXTERNAL_ID_LENGTH,
     description:
-      'Identificador único del mensaje. **Es la clave de idempotencia**: repetirlo descarta el evento sin volver a aplicarlo.',
-    example: '646d19f5-5670-4a7b-9442-30e13b02ba11',
+      'Identificador único del mensaje (UUID en el sobre del Core; no se exige, para no rechazar a quien todavía no migró). **Es la clave de idempotencia**: repetirlo descarta el evento sin volver a aplicarlo.',
+    example: '3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11',
   })
   @IsString()
   @IsNotEmpty()
@@ -48,41 +58,87 @@ export class IngestEventDto {
   eventId: string;
 
   @ApiProperty({
-    maxLength: MAX_EXTERNAL_ID_LENGTH,
+    maxLength: MAX_EVENT_TYPE_LENGTH,
     description: 'Nombre del evento en camelCase',
-    example: 'streetClosureApproved',
+    example: 'workOrderCompleted',
   })
   @IsString()
   @IsNotEmpty()
-  @MaxLength(MAX_EXTERNAL_ID_LENGTH)
+  @MaxLength(MAX_EVENT_TYPE_LENGTH)
   eventType: string;
 
   @ApiProperty({
     description: 'El payload propio del evento, tal como lo define el módulo que lo publica',
     type: Object,
-    example: { closureRequestId: 'a1b2c3d4-...', closureId: 'CL-2026-0342' },
+    example: {
+      sourceRequestId: '0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a',
+      workOrderId: 'f1e2d3c4-b5a6-4789-9abc-def012345678',
+      completedAt: '2026-09-29T17:45:00Z',
+    },
   })
   @IsObject()
   data: Record<string, unknown>;
 
-  @ApiPropertyOptional({ description: 'Versión del sobre', example: '1.0' })
+  @ApiPropertyOptional({ maxLength: 20, description: 'Versión del payload', example: '1.0' })
   @IsOptional()
   @IsString()
-  specVersion?: string;
-
-  @ApiPropertyOptional({ description: 'Versión del payload', example: '1.0' })
-  @IsOptional()
-  @IsString()
+  @MaxLength(20)
   eventVersion?: string;
 
-  @ApiPropertyOptional({ description: 'Cuándo ocurrió el hecho', format: 'date-time' })
+  @ApiPropertyOptional({
+    description: 'Cuándo ocurrió el hecho, ISO 8601 con zona horaria',
+    format: 'date-time',
+    example: '2026-09-29T18:00:00Z',
+  })
   @IsOptional()
   @IsISO8601({ strict: true }, { message: 'occurredAt debe ser una fecha ISO 8601' })
   occurredAt?: string;
 
   @ApiPropertyOptional({
+    maxLength: 60,
+    description: 'Módulo que publicó el evento (sobre del Core)',
+    example: 'obras',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  sourceModule?: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Agrupa los eventos de un mismo flujo entre módulos (sobre del Core)',
+    example: '8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5',
+  })
+  @IsOptional()
+  @IsUUID()
+  correlationId?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
     description:
-      'Quién lo publica. Objeto `{ moduleId, service }` (sobre v1.6/v1.70) o string suelto (v1.5)',
+      'eventId del evento que causó este, o null si no lo causó otro evento (sobre del Core)',
+    example: null,
+  })
+  // `@IsOptional` también deja pasar null, que es lo que manda el ejemplo de M9.
+  @IsOptional()
+  @IsUUID()
+  causationId?: string | null;
+
+  @ApiPropertyOptional({
+    deprecated: true,
+    description: 'Sobre de M2, reemplazado por el del Core. Versión del sobre',
+    example: '1.0',
+  })
+  @IsOptional()
+  @IsString()
+  specVersion?: string;
+
+  @ApiPropertyOptional({
+    deprecated: true,
+    description:
+      'Sobre de M2, reemplazado por el del Core (`sourceModule`). Quién lo publica: objeto `{ moduleId, service }` (v1.6/v1.70) o string suelto (v1.5)',
     oneOf: [
       { type: 'string', example: 'M7' },
       {
@@ -100,7 +156,10 @@ export class IngestEventDto {
   @IsProducer()
   producer?: string | EventProducer;
 
-  @ApiPropertyOptional({ description: 'Agregado sobre el que ocurrió' })
+  @ApiPropertyOptional({
+    deprecated: true,
+    description: 'Sobre de M2, reemplazado por el del Core. Agregado sobre el que ocurrió',
+  })
   @IsOptional()
   @IsString()
   subject?: string;
@@ -119,6 +178,9 @@ export function toInboundEnvelope(dto: IngestEventDto): InboundEnvelope {
     eventType: dto.eventType,
     eventVersion: dto.eventVersion,
     occurredAt: dto.occurredAt,
+    sourceModule: dto.sourceModule,
+    correlationId: dto.correlationId,
+    causationId: dto.causationId,
     producer: dto.producer,
     subject: dto.subject,
     data: dto.data,
