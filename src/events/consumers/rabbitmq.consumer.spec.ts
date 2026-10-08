@@ -55,9 +55,14 @@ describe('RabbitMqConsumer', () => {
   });
 
   describe('handle (misma validación que POST /events/inbox)', () => {
-    it.each(['processed', 'duplicate', 'ignored', 'failed'])('%s → ack', async (status) => {
+    it.each(['processed', 'duplicate', 'ignored'])('%s → ack', async (status) => {
       inbox.ingest.mockResolvedValueOnce({ status });
       await expect(consumer.handle(json(sobre))).resolves.toBe('ack');
+    });
+
+    it('failed → nack, para que el Core reintente con backoff', async () => {
+      inbox.ingest.mockResolvedValueOnce({ status: 'failed', detail: 'boom' });
+      await expect(consumer.handle(json(sobre))).resolves.toBe('nack');
     });
 
     it('pasa al inbox el sobre validado, sin rellenar lo que no vino', async () => {
@@ -81,8 +86,8 @@ describe('RabbitMqConsumer', () => {
       expect(inbox.ingest.mock.calls[0][0]).toMatchObject(core);
     });
 
-    it('un cuerpo que no es JSON → reject', async () => {
-      await expect(consumer.handle(Buffer.from('{no json'))).resolves.toBe('reject');
+    it('un cuerpo que no es JSON → nack', async () => {
+      await expect(consumer.handle(Buffer.from('{no json'))).resolves.toBe('nack');
       expect(inbox.ingest).not.toHaveBeenCalled();
     });
 
@@ -91,8 +96,8 @@ describe('RabbitMqConsumer', () => {
       ['carácter nulo (NoNullCharsPipe)', { ...sobre, data: { a: 'x\u0000' } }],
       ['null', null],
       ['un string suelto', 'hola'],
-    ])('sobre inválido (%s) → reject, sin llegar al inbox', async (_caso, body) => {
-      await expect(consumer.handle(json(body))).resolves.toBe('reject');
+    ])('sobre inválido (%s) → nack, sin llegar al inbox', async (_caso, body) => {
+      await expect(consumer.handle(json(body))).resolves.toBe('nack');
       expect(inbox.ingest).not.toHaveBeenCalled();
     });
 
@@ -101,9 +106,9 @@ describe('RabbitMqConsumer', () => {
       expect(inbox.ingest.mock.calls[0][0]).not.toHaveProperty('traceId');
     });
 
-    it('un mensaje más grande que el body HTTP → reject sin parsear', async () => {
+    it('un mensaje más grande que el body HTTP → nack sin parsear', async () => {
       const grande = Buffer.alloc(MAX_MESSAGE_BYTES + 1, 'a');
-      await expect(consumer.handle(grande)).resolves.toBe('reject');
+      await expect(consumer.handle(grande)).resolves.toBe('nack');
       expect(inbox.ingest).not.toHaveBeenCalled();
     });
 
@@ -116,19 +121,19 @@ describe('RabbitMqConsumer', () => {
       warn.mockRestore();
     });
 
-    it('payload inválido para el handler (400 del inbox) → reject', async () => {
+    it('payload inválido para el handler (400 del inbox) → nack', async () => {
       inbox.ingest.mockRejectedValueOnce(new BadRequestException('Payload inválido'));
-      await expect(consumer.handle(json(sobre))).resolves.toBe('reject');
+      await expect(consumer.handle(json(sobre))).resolves.toBe('nack');
     });
 
-    it('error inesperado (base caída) → requeue', async () => {
+    it('error inesperado (base caída) → nack', async () => {
       inbox.ingest.mockRejectedValueOnce(new Error('ECONNREFUSED'));
-      await expect(consumer.handle(json(sobre))).resolves.toBe('requeue');
+      await expect(consumer.handle(json(sobre))).resolves.toBe('nack');
     });
 
-    it('un rechazo que no es Error también → requeue', async () => {
+    it('un rechazo que no es Error también → nack', async () => {
       inbox.ingest.mockRejectedValueOnce('raro');
-      await expect(consumer.handle(json(sobre))).resolves.toBe('requeue');
+      await expect(consumer.handle(json(sobre))).resolves.toBe('nack');
     });
   });
 
@@ -184,7 +189,7 @@ describe('RabbitMqConsumer', () => {
       error.mockRestore();
     });
 
-    it('ack si se procesó, nack sin requeue si es inválido, nack con requeue si falló', async () => {
+    it('ack si se procesó; si no, nack siempre sin reencolar (los reintentos son del Core)', async () => {
       const { channel, onMessage } = await arrancar();
       const msg = (body: unknown) =>
         ({ content: json(body), fields: { redelivered: false } }) as ConsumeMessage;
@@ -203,21 +208,15 @@ describe('RabbitMqConsumer', () => {
       const roto = msg(sobre);
       onMessage(roto);
       await tick();
-      expect(channel.nack).toHaveBeenCalledWith(roto, false, true);
-    });
+      expect(channel.nack).toHaveBeenCalledWith(roto, false, false);
 
-    it('si vuelve a fallar en la reentrega, nack sin requeue: corta el loop caliente', async () => {
-      const { channel, onMessage } = await arrancar();
-      inbox.ingest.mockRejectedValueOnce(new Error('unsupported Unicode escape sequence'));
-      const reentregado = {
-        content: json(sobre),
-        fields: { redelivered: true },
-      } as ConsumeMessage;
-
-      onMessage(reentregado);
+      inbox.ingest.mockResolvedValueOnce({ status: 'failed', detail: 'boom' });
+      const fallido = msg(sobre);
+      onMessage(fallido);
       await tick();
+      expect(channel.nack).toHaveBeenCalledWith(fallido, false, false);
 
-      expect(channel.nack).toHaveBeenCalledWith(reentregado, false, false);
+      expect(channel.nack).not.toHaveBeenCalledWith(expect.anything(), false, true);
     });
 
     it('un ack sobre un canal cerrado no se escapa como unhandled rejection', async () => {

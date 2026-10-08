@@ -61,7 +61,7 @@
       "post": {
         "operationId": "InboxController_ingest",
         "summary": "Ingerir un evento entrante",
-        "description": "Recibe un sobre y lo despacha al handler que corresponda. La idempotencia es por eventId: un mensaje ya recibido se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin procesar y con el error registrado; no se reintenta sola, y reenviar el mismo eventId devuelve duplicate.",
+        "description": "Recibe un sobre y lo despacha al handler que corresponda. La idempotencia es por eventId: un mensaje ya procesado se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin procesar y con el error registrado, y reenviar el mismo eventId vuelve a correr el handler (es lo que hace el reintento del Core por el bus).",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -75,7 +75,7 @@
         },
         "responses": {
           "200": {
-            "description": "Resultado de la ingesta: processed, duplicate (ya recibido), ignored (sin handler) o failed",
+            "description": "Resultado de la ingesta: processed, duplicate (ya procesado), ignored (sin handler) o failed",
             "content": {
               "application/json": {
                 "schema": {
@@ -12645,7 +12645,7 @@
           "eventId": {
             "type": "string",
             "maxLength": 100,
-            "description": "Identificador único del mensaje (UUID en el sobre del Core; no se exige, para no rechazar a quien todavía no migró). **Es la clave de idempotencia**: repetirlo descarta el evento sin volver a aplicarlo.",
+            "description": "Identificador único del mensaje (UUID en el sobre del Core; no se exige, para no rechazar a quien todavía no migró). **Es la clave de idempotencia**: repetir uno ya procesado lo descarta sin volver a aplicarlo; repetir uno cuyo handler falló lo reintenta.",
             "example": "3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11"
           },
           "eventType": {

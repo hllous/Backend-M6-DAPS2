@@ -147,6 +147,26 @@ describe('Inbox de eventos entrantes (e2e)', () => {
     expect(corregido.body.status).toBe('processed');
   });
 
+  it('un eventId cuyo handler falló se reintenta, y si anda queda procesado y sin error', async () => {
+    const eventId = randomUUID();
+    // La fila que deja un handler que tiró: sin processedAt y con el error.
+    await prisma.inboxEvent.create({
+      data: { messageId: eventId, eventType: 'weatherAlertIssued', payload: {}, error: 'boom' },
+    });
+
+    const res = await api
+      .post(
+        '/events/inbox',
+        sobre(eventId, 'weatherAlertIssued', { severity: 'LOW', zoneIds: [zoneId] }),
+      )
+      .expect(200);
+    expect(res.body.status).toBe('processed');
+
+    const fila = await prisma.inboxEvent.findUniqueOrThrow({ where: { messageId: eventId } });
+    expect(fila.processedAt).not.toBeNull();
+    expect(fila.error).toBeNull();
+  });
+
   it('acepta el sobre del Core, con causationId null', async () => {
     const res = await api
       .post('/events/inbox', {

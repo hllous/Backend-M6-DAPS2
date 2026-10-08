@@ -20,8 +20,11 @@ export const MAX_MESSAGE_BYTES = 100 * 1024;
 /** Cuánto del error se loguea: los nombres de propiedad los elige el emisor. */
 const MAX_DETALLE = 500;
 
-/** Qué hacer con el mensaje una vez que el inbox habló. */
-export type Disposition = 'ack' | 'reject' | 'requeue';
+/**
+ * Qué hacer con el mensaje una vez que el inbox habló. `nack` es siempre sin
+ * reencolar: los reintentos los hace el Core, con backoff.
+ */
+export type Disposition = 'ack' | 'nack';
 
 /**
  * Lado entrante del bus: la cola de M6 (`q.ambiente`), que crea el Core y en la
@@ -103,19 +106,14 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
       return;
     }
 
-    let disposition = await this.handle(msg.content);
-    if (disposition === 'requeue' && msg.fields.redelivered) {
-      // Segunda entrega y vuelve a fallar: se asume determinista (un texto que
-      // jsonb rechaza, un error de Prisma) y se corta el loop. El costo es que
-      // una caída de la base que dure dos entregas manda el mensaje a la DLX
-      // (o lo descarta si no hay) en vez de esperar.
-      this.logger.error('Falló también en la reentrega: se descarta sin reencolar');
-      disposition = 'reject';
-    }
+    const disposition = await this.handle(msg.content);
 
     try {
+      // Nunca se reencola (pedido de M9): reencolado, el mensaje gira en nuestra cola
+      // sin demora ni auditoría. Con `nack` sin reencolar el Core reintenta con
+      // backoff (15 s → 1 m → 5 m → 15 m) y después lo manda a su DLQ.
       if (disposition === 'ack') channel.ack(msg);
-      else channel.nack(msg, false, disposition === 'requeue');
+      else channel.nack(msg, false, false);
     } catch (error) {
       // Canal cerrado mientras se procesaba: amqplib tira síncrono y, dentro de
       // este async llamado con `void`, sería un unhandled rejection que en Node
@@ -125,38 +123,36 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
   }
 
   /**
-   * - procesado, duplicado, ignorado o failed → `ack`. `failed` también: la
-   *   fila del inbox ya quedó con el error, y un reenvío sería `duplicate`.
-   * - inválido (lo que por HTTP es 400) → `reject`, a la DLX si hay.
-   * - error inesperado (base caída) → `requeue`, solo en la primera entrega.
-   *
-   * Límite: si `ingest` ya insertó la fila y falló después, la reentrega sale
-   * `duplicate` y no vuelve a correr el handler.
+   * - procesado, duplicado o ignorado → `ack`.
+   * - failed (el handler tiró) → `nack`: el Core lo reentrega con backoff y el
+   *   inbox vuelve a correr el handler, porque la fila quedó sin `processedAt`.
+   *   Así se recupera una falla transitoria (la base caída un minuto).
+   * - inválido (lo que por HTTP es 400) → `nack` también. Va a agotar los
+   *   reintentos, pero termina en la DLQ del Core con el payload crudo, que es
+   *   donde alguien lo puede ver; un `ack` + log lo perdería.
+   * - error inesperado (base caída antes del handler) → `nack`.
    */
   async handle(content: Buffer): Promise<Disposition> {
     if (content.length > MAX_MESSAGE_BYTES) {
-      this.logger.warn(
-        `Mensaje de ${content.length} bytes descartado: supera ${MAX_MESSAGE_BYTES}`,
-      );
-      return 'reject';
+      this.logger.warn(`Mensaje de ${content.length} bytes rechazado: supera ${MAX_MESSAGE_BYTES}`);
+      return 'nack';
     }
     try {
       let value: unknown = JSON.parse(content.toString('utf8'));
       for (const pipe of this.pipes) {
         value = await pipe.transform(value, { type: 'body', metatype: IngestEventDto });
       }
-      await this.inbox.ingest(toInboundEnvelope(value as IngestEventDto));
-      return 'ack';
+      const { status } = await this.inbox.ingest(toInboundEnvelope(value as IngestEventDto));
+      return status === 'failed' ? 'nack' : 'ack';
     } catch (error) {
       if (error instanceof SyntaxError || error instanceof BadRequestException) {
-        this.logger.warn(`Mensaje inválido descartado: ${describe(error)}`);
-        return 'reject';
+        this.logger.warn(`Mensaje inválido rechazado: ${describe(error)}`);
+        return 'nack';
       }
-      // ponytail: requeue inmediato y una sola vez (onMessage corta en la
-      // reentrega). Sin demora entre intentos: la mejora es DLX + TTL (retry
-      // con backoff) cuando M9 defina la topología.
-      this.logger.error(`Error procesando mensaje, se reencola: ${describe(error)}`);
-      return 'requeue';
+      this.logger.error(
+        `Error procesando mensaje, queda para el reintento del Core: ${describe(error)}`,
+      );
+      return 'nack';
     }
   }
 }

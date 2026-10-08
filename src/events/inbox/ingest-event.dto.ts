@@ -49,7 +49,7 @@ export class IngestEventDto {
   @ApiProperty({
     maxLength: MAX_EXTERNAL_ID_LENGTH,
     description:
-      'Identificador único del mensaje (UUID en el sobre del Core; no se exige, para no rechazar a quien todavía no migró). **Es la clave de idempotencia**: repetirlo descarta el evento sin volver a aplicarlo.',
+      'Identificador único del mensaje (UUID en el sobre del Core; no se exige, para no rechazar a quien todavía no migró). **Es la clave de idempotencia**: repetir uno ya procesado lo descarta sin volver a aplicarlo; repetir uno cuyo handler falló lo reintenta.',
     example: '3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11',
   })
   @IsString()

@@ -33,6 +33,8 @@ describe('InboxService', () => {
       inboxEvent: {
         create: jest.fn().mockResolvedValue({}),
         update: jest.fn().mockResolvedValue({}),
+        // Por defecto, un messageId repetido ya está procesado.
+        findUnique: jest.fn().mockResolvedValue({ processedAt: new Date() }),
       },
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
@@ -51,7 +53,7 @@ describe('InboxService', () => {
   });
 
   // El criterio central: la regla 1 del enunciado.
-  it('un messageId repetido NO vuelve a aplicar el efecto', async () => {
+  it('un messageId ya procesado NO vuelve a aplicar el efecto', async () => {
     const handler = jest.fn();
     inbox.register('streetClosureApproved', handler);
     prisma.inboxEvent.create.mockRejectedValue(duplicado());
@@ -61,6 +63,40 @@ describe('InboxService', () => {
     expect(result.status).toBe('duplicate');
     expect(handler).not.toHaveBeenCalled();
     expect(prisma.inboxEvent.update).not.toHaveBeenCalled();
+  });
+
+  describe('reintento de un evento cuyo handler falló (#264)', () => {
+    beforeEach(() => {
+      prisma.inboxEvent.create.mockRejectedValue(duplicado());
+      prisma.inboxEvent.findUnique.mockResolvedValue({ processedAt: null });
+    });
+
+    it('vuelve a correr el handler y, si anda, deja la fila procesada y sin error', async () => {
+      const handler = jest.fn().mockResolvedValue(undefined);
+      inbox.register('streetClosureApproved', handler);
+
+      const result = await inbox.ingest(sobre());
+
+      expect(result.status).toBe('processed');
+      expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' });
+      expect(prisma.inboxEvent.findUnique).toHaveBeenCalledWith({
+        where: { messageId: MESSAGE_ID },
+        select: { processedAt: true },
+      });
+      const [[args]] = prisma.inboxEvent.update.mock.calls;
+      expect(args.data.processedAt).toBeInstanceOf(Date);
+      expect(args.data.error).toBeNull();
+    });
+
+    it('si vuelve a fallar, sigue failed y sin processedAt', async () => {
+      inbox.register('streetClosureApproved', jest.fn().mockRejectedValue(new Error('otra vez')));
+
+      const result = await inbox.ingest(sobre());
+
+      expect(result).toEqual({ status: 'failed', detail: 'otra vez' });
+      const [[args]] = prisma.inboxEvent.update.mock.calls;
+      expect(args.data).toEqual({ error: 'otra vez' });
+    });
   });
 
   it('la idempotencia la decide el unique de la base, no una consulta previa', async () => {

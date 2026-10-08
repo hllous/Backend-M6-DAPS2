@@ -6,9 +6,9 @@ import { InboundEnvelope } from '../envelope';
 /**
  * Un handler de evento entrante. Recibe el `data` del sobre.
  *
- * Si tira, la fila del inbox queda sin `processedAt` y con el error registrado.
- * No se reintenta sola: un reenvío con el mismo `eventId` sale `duplicate`. No
- * debe ser idempotente por su cuenta: de eso se encarga el inbox.
+ * Si tira, la fila del inbox queda sin `processedAt` y con el error registrado,
+ * y un reenvío con el mismo `eventId` (el reintento del Core) lo vuelve a
+ * correr. No debe ser idempotente por su cuenta: de eso se encarga el inbox.
  */
 export type InboxHandler = (data: Record<string, unknown>) => Promise<void>;
 
@@ -72,8 +72,8 @@ export class InboxService {
   /**
    * Lanza `BadRequestException` si el `data` de un evento con handler no trae
    * sus campos obligatorios; no queda fila guardada. El controller HTTP la
-   * devuelve como 400; `RabbitMqConsumer` la captura y hace `nack` sin requeue
-   * (a la DLX si hay), porque reencolarla sería un reintento infinito.
+   * devuelve como 400; `RabbitMqConsumer` la captura y hace `nack`, y después
+   * de los reintentos del Core termina en su DLQ.
    */
   async ingest(envelope: InboundEnvelope): Promise<IngestResult> {
     const messageId = envelope.eventId;
@@ -108,13 +108,25 @@ export class InboxService {
         },
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) {
+        throw error;
+      }
+      // Duplicado solo si ya se procesó. Si el handler falló antes, la fila
+      // quedó sin `processedAt` y esto es el reintento del Core: se vuelve a
+      // correr. ponytail: sin lock, dos entregas simultáneas del mismo eventId
+      // fallido correrían el handler dos veces; hoy no pasa (una instancia,
+      // prefetch 1). Upgrade: tomar la fila con un update condicional o un lock.
+      const previo = await this.prisma.inboxEvent.findUnique({
+        where: { messageId },
+        select: { processedAt: true },
+      });
+      if (!previo || previo.processedAt) {
         this.logger.log(
           `${envelope.eventType} (${messageId}) ya recibido: se descarta sin volver a aplicarlo`,
         );
         return { status: 'duplicate' };
       }
-      throw error;
+      this.logger.log(`${envelope.eventType} (${messageId}) había fallado: se reintenta`);
     }
 
     const handler = this.handlers.get(envelope.eventType);
