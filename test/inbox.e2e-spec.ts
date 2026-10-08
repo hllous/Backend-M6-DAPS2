@@ -1,6 +1,9 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { InboxService } from '../src/events/inbox/inbox.service';
+import { OutboxService } from '../src/events/outbox/outbox.service';
+import { AggregateType, EventType } from '../src/events/event-types';
 import {
   Api,
   crearRuta,
@@ -189,6 +192,51 @@ describe('Inbox de eventos entrantes (e2e)', () => {
       .expect(200);
 
     expect(res.body.status).toBe('processed');
+  });
+
+  /**
+   * #267 contra la base real: lo que importa es que el contexto del handler
+   * atraviese el `$transaction` interactivo de Prisma, que en un unitario está
+   * simulado. Ningún consumer publica hoy, así que se registra uno de prueba.
+   */
+  it('lo que publica un handler lleva el correlationId del consumido y su eventId como causa', async () => {
+    const outbox = app.get(OutboxService);
+    const aggregateId = randomUUID();
+    app.get(InboxService).register('pruebaTraza267', () =>
+      prisma.$transaction((tx) =>
+        outbox.enqueue(tx, {
+          eventType: EventType.UPDATE_TICKET_STATUS,
+          aggregateType: AggregateType.ENVIRONMENTAL_REPORT,
+          aggregateId,
+          payload: {},
+        }),
+      ),
+    );
+    const eventId = randomUUID();
+    const correlationId = randomUUID();
+
+    const res = await api
+      .post('/events/inbox', {
+        eventId,
+        eventType: 'pruebaTraza267',
+        sourceModule: 'reclamos',
+        correlationId,
+        data: {},
+      })
+      .expect(200);
+    expect(res.body.status).toBe('processed');
+
+    const publicado = await prisma.outboxEvent.findFirstOrThrow({ where: { aggregateId } });
+    expect(publicado).toMatchObject({ correlationId, causationId: eventId });
+    const consumido = await prisma.inboxEvent.findUniqueOrThrow({ where: { messageId: eventId } });
+    expect(consumido).toMatchObject({ correlationId, sourceModule: 'reclamos' });
+  });
+
+  it('lo que publica un endpoint abre un hilo nuevo y no tiene causa', async () => {
+    const [encolado] = await prisma.outboxEvent.findMany({ where: { aggregateId: serviceId } });
+
+    expect(encolado.correlationId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(encolado.causationId).toBeNull();
   });
 
   it('registra y descarta un evento sin handler', async () => {

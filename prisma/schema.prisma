@@ -929,6 +929,12 @@ model OutboxEvent {
   lastError     String?           @map("last_error")
   occurredAt    DateTime          @default(now()) @map("occurred_at")
   publishedAt   DateTime?         @map("published_at")
+  // Trazabilidad del sobre del Core. El outbox siempre lo completa; el default
+  // de la base existe solo para rellenar las filas anteriores a la columna.
+  correlationId String            @default(dbgenerated("gen_random_uuid()")) @map("correlation_id") @db.Uuid
+  // eventId del evento consumido que causó este. Null si nació de una acción
+  // directa en M6 (un endpoint, un barrido).
+  causationId   String?           @map("causation_id") @db.Uuid
 
   // El dispatcher barre PENDING en orden de ocurrencia.
   @@index([status, occurredAt])
@@ -936,15 +942,21 @@ model OutboxEvent {
 }
 
 model InboxEvent {
-  id          String    @id @default(uuid()) @db.Uuid
-  messageId   String    @unique @map("message_id") // idempotencia
-  eventType   String    @map("event_type")
-  payload     Json
-  receivedAt  DateTime  @default(now()) @map("received_at")
+  id            String    @id @default(uuid()) @db.Uuid
+  messageId     String    @unique @map("message_id") // idempotencia
+  eventType     String    @map("event_type")
+  payload       Json
+  receivedAt    DateTime  @default(now()) @map("received_at")
   // Null mientras no se aplico el efecto: un handler que falla deja la fila
   // sin procesar y con el error, para poder reintentarla.
-  processedAt DateTime? @map("processed_at")
-  error       String?
+  processedAt   DateTime? @map("processed_at")
+  error         String?
+  // El hilo con el que corrió el handler, ya resuelto (el del sobre o el de
+  // respaldo): el reintento lo reusa para no partir el flujo en dos. Null en
+  // las filas anteriores a la columna.
+  correlationId String?   @map("correlation_id") @db.Uuid
+  // Módulo emisor según el sobre del Core. Null si no lo mandó (sobre de M2).
+  sourceModule  String?   @map("source_module")
 
   @@index([processedAt])
   @@map("inbox_event")

@@ -12678,7 +12678,8 @@
           "sourceModule": {
             "type": "string",
             "maxLength": 60,
-            "description": "Módulo que publicó el evento (sobre del Core)",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "description": "Módulo que publicó el evento (sobre del Core): letras, números, guion y guion bajo",
             "example": "obras"
           },
           "correlationId": {

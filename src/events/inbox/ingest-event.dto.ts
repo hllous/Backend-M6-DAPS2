@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   ValidateBy,
 } from 'class-validator';
@@ -37,6 +38,9 @@ function IsProducer(): PropertyDecorator {
 
 /** Lo que el Core admite para `eventType`. */
 const MAX_EVENT_TYPE_LENGTH = 120;
+
+/** Los ids de módulo del Core: `obras`, `atencion-ciudadana`, `desarrollo-social`. */
+const SOURCE_MODULE = /^[A-Za-z0-9_-]+$/;
 
 /**
  * El sobre de la cohorte, tal como lo recibiría del bus.
@@ -100,12 +104,19 @@ export class IngestEventDto {
 
   @ApiPropertyOptional({
     maxLength: 60,
-    description: 'Módulo que publicó el evento (sobre del Core)',
+    pattern: SOURCE_MODULE.source,
+    description:
+      'Módulo que publicó el evento (sobre del Core): letras, números, guion y guion bajo',
     example: 'obras',
   })
   @IsOptional()
   @IsString()
+  // Se guarda en inbox_event: un id de módulo del Core (`atencion-ciudadana`)
+  // no necesita más, y un carácter de control haría fallar el insert.
   @MaxLength(60)
+  @Matches(SOURCE_MODULE, {
+    message: 'sourceModule solo admite letras, números, guion y guion bajo',
+  })
   sourceModule?: string;
 
   @ApiPropertyOptional({

@@ -65,6 +65,8 @@ export class OutboxDispatcher {
           eventType: event.eventType,
           occurredAt: event.occurredAt,
           sourceModule: this.sourceModule,
+          correlationId: event.correlationId,
+          causationId: event.causationId,
           data: event.payload,
         }),
       );

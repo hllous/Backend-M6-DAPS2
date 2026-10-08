@@ -57,7 +57,12 @@ M3 y M4 siguen abiertos: ver [bloqueantes.md](../../bloqueantes.md#tablero).
 - Nombres de evento y de campo en **camelCase**.
 - `?` es opcional o puede venir en nulo, `[]` es lista, `{ }` es un objeto anidado.
 - Los campos que terminan en `At` son fecha y hora; `scheduledDate` es solo el día y la franja la da `timeWindow`.
-- **El sobre es el del Core (M9, mensaje del 7/10/2026)** y vale para toda la cohorte: `{ eventId, eventType, eventVersion: "1.0", occurredAt, sourceModule: "ambiente", correlationId?, causationId?, data }`, sin campos extra (el Core rechaza los de más). Reemplaza al de M2: ya no mandamos `specVersion`, `producer` ni `subject`. `correlationId` y `causationId` todavía no se mandan (#267). Lo que está acá es el `data`, no el mensaje completo.
+- **El sobre es el del Core (M9, mensaje del 7/10/2026)** y vale para toda la cohorte: `{ eventId, eventType, eventVersion: "1.0", occurredAt, sourceModule: "ambiente", correlationId?, causationId?, data }`, sin campos extra (el Core rechaza los de más). Reemplaza al de M2: ya no mandamos `specVersion`, `producer` ni `subject`. Lo que está acá es el `data`, no el mensaje completo.
+- **Trazabilidad (#267), con la regla de M9:** `correlationId` agrupa los eventos de un mismo flujo entre módulos y se hereda; `causationId` es el `eventId` del evento que causó este. Nuestro sobre lleva **siempre** `correlationId` y lleva `causationId` **solo** cuando el evento sale de consumir otro; si no hay causa, la clave se omite (el Core la acepta ausente o `null`).
+  - Evento derivado de uno consumido: hereda su `correlationId` (si no trae, su `eventId` abre el hilo) y cita su `eventId` como `causationId`. Solo se propaga un UUID RFC estricto (versión 1-8, variante `10xx`, ni el nulo ni el máximo); si no lo es, el hilo arranca en M6 sin causa, y el evento consumido se procesa igual.
+  - Acción directa (un endpoint): **un hilo por request HTTP**. Todo lo que encola un mismo request comparte `correlationId`, aunque salga de transacciones o `enqueue` distintos (por ejemplo, el acta hacia M4 y su `updateTicketStatus` hacia M2).
+  - Barridos `@Interval`/`@Cron`: cada `enqueue`/`enqueueMany` abre un hilo propio.
+  - Código en `src/events/event-context.ts` (AsyncLocalStorage), `EventTraceInterceptor` e `InboxService.ingest`.
 
 **Quién genera cada identificador:**
 

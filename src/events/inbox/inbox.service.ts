@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboundEnvelope } from '../envelope';
+import { eventContext, EventTrace, trazaDelConsumido } from '../event-context';
 
 /**
  * Un handler de evento entrante. Recibe el `data` del sobre.
@@ -61,6 +62,10 @@ export interface IngestResult {
  * paralelo con otra igual. El reintento de un evento fallido también lo decide
  * la base: lo toma un update condicional, así que de dos entregas solapadas
  * corre una sola.
+ *
+ * El handler corre dentro de `eventContext`: lo que encole hereda el
+ * `correlationId` del sobre y lleva su `eventId` como `causationId` (#267).
+ * Por `POST /events/inbox` este contexto pisa al que abre el request.
  */
 @Injectable()
 export class InboxService {
@@ -110,6 +115,8 @@ export class InboxService {
     // se guarda: la regla mira el dueño, no la acción.
     const persist = this.debePersistir(envelope.eventType, data);
 
+    let trace: EventTrace = trazaDelConsumido(messageId, envelope.correlationId);
+
     // El unique de messageId es lo que decide si es duplicado: dejamos que
     // falle el insert en vez de consultar antes, porque entre la consulta y el
     // insert podría entrar el mismo mensaje otra vez.
@@ -119,6 +126,8 @@ export class InboxService {
           messageId,
           eventType: envelope.eventType,
           payload: (persist ? envelope.data : REDACTED_PAYLOAD) as Prisma.InputJsonObject,
+          correlationId: trace.correlationId,
+          sourceModule: envelope.sourceModule,
         },
       });
     } catch (error) {
@@ -149,11 +158,14 @@ export class InboxService {
       // Se reintenta lo que se guardó, no lo que trae este sobre: un reenvío por
       // HTTP no puede cambiarle el contenido a un evento fallido. Si quedó
       // redactado no hay nada que reproducir y va el data nuevo, ya validado.
+      // El hilo también es el guardado: un reenvío con otro correlationId, o sin
+      // ninguno y con un eventId que no es un UUID RFC, partiría el flujo en dos.
       const fila = await this.prisma.inboxEvent.findUniqueOrThrow({
         where: { messageId },
-        select: { payload: true },
+        select: { payload: true, correlationId: true },
       });
       if (!esRedactado(fila.payload)) data = fila.payload as Record<string, unknown>;
+      if (fila.correlationId) trace = { ...trace, correlationId: fila.correlationId };
       this.logger.log(`${envelope.eventType} (${messageId}) había fallado: se reintenta`);
     }
 
@@ -170,7 +182,7 @@ export class InboxService {
     }
 
     try {
-      await handler(data);
+      await eventContext.run(trace, () => handler(data));
       await this.markProcessed(messageId);
       this.logger.log(`${envelope.eventType} (${messageId}) procesado`);
       return { status: 'processed' };

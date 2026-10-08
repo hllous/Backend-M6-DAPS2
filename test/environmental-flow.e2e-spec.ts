@@ -48,6 +48,8 @@ describe('Flujo del expediente ambiental (e2e)', () => {
         address: 'Camino de Cintura 4500',
         description: '  Vuelco de efluentes al pluvial.  ',
         priority: 'HIGH',
+        // Con reclamo de M2: cada paso proyecta también un updateTicketStatus.
+        ticketId: 'TCK-E2E-ACTA',
       })
       .expect(201);
 
@@ -168,6 +170,17 @@ describe('Flujo del expediente ambiental (e2e)', () => {
     expect((encolados[0].payload as { establishmentId: string }).establishmentId).toBe(
       'EST-E2E-01',
     );
+
+    // Un solo hilo para la acción (#267): el acta hacia M4 y la novedad hacia M2
+    // salen de enqueue distintos pero del mismo request.
+    const hilo = await prisma.outboxEvent.findMany({
+      where: { correlationId: encolados[0].correlationId },
+    });
+    expect(hilo.map((e) => e.eventType).sort()).toEqual([
+      'environmentalViolationDetected',
+      'updateTicketStatus',
+    ]);
+    expect(hilo.every((e) => e.causationId === null)).toBe(true);
   });
 
   it('no deja emitir una segunda acta sobre la misma inspección', async () => {

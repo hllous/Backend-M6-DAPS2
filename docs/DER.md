@@ -342,6 +342,8 @@ erDiagram
         varchar last_error "error del ultimo intento"
         timestamp occurred_at
         timestamp published_at
+        uuid correlation_id "hilo del flujo, heredado del evento consumido"
+        uuid causation_id "eventId consumido que lo causo, null si es accion directa"
     }
     INBOX_EVENT {
         uuid id PK
@@ -351,6 +353,8 @@ erDiagram
         timestamp received_at
         timestamp processed_at "null mientras no se aplico"
         varchar error
+        uuid correlation_id "hilo con el que corrio el handler"
+        varchar source_module "modulo emisor segun el sobre del Core"
     }
 
     %% ======== RELACIONES ========
