@@ -177,6 +177,61 @@ describe('Inbox de eventos entrantes (e2e)', () => {
     expect(fila.error).toBeNull();
   });
 
+  /**
+   * #270 contra la base real: el filtro por la marca (`OR null / lte`) lo
+   * evalúa Postgres, y el reintento ordena con el occurredAt de la fila.
+   */
+  it('el reintento atrasado de un ESCALATION_CHANGED no pisa al más nuevo', async () => {
+    const ticketId = `TCK-${randomUUID()}`;
+    const reporte = await prisma.environmentalReport.create({
+      data: { ticketId, reportType: 'NOISE', status: 'UNDER_REVIEW' },
+    });
+    const escalado = (active: boolean) => ({
+      ticketId,
+      responsibleAreaId: 'M6',
+      updateType: 'ESCALATION_CHANGED',
+      details: { escalation: { active } },
+    });
+    // El active=true de las 10:00 falló: queda la fila con su occurredAt.
+    const atrasadoId = randomUUID();
+    await prisma.inboxEvent.create({
+      data: {
+        messageId: atrasadoId,
+        eventType: 'ticketUpdated',
+        payload: escalado(true),
+        occurredAt: new Date('2026-10-01T10:00:00.000Z'),
+        error: 'boom',
+      },
+    });
+
+    // Llega y se aplica el active=false de las 10:05.
+    await api
+      .post('/events/inbox', {
+        eventId: randomUUID(),
+        eventType: 'ticketUpdated',
+        occurredAt: '2026-10-01T10:05:00.000Z',
+        data: escalado(false),
+      })
+      .expect(200);
+
+    // El reintento del Core: aunque el reenvío traiga otra fecha, vale la guardada.
+    const res = await api
+      .post('/events/inbox', {
+        eventId: atrasadoId,
+        eventType: 'ticketUpdated',
+        occurredAt: '2026-10-01T11:00:00.000Z',
+        data: escalado(true),
+      })
+      .expect(200);
+    expect(res.body.status).toBe('processed');
+
+    const despues = await prisma.environmentalReport.findUniqueOrThrow({
+      where: { id: reporte.id },
+    });
+    expect(despues.escalated).toBe(false);
+    expect(despues.escalationChangedAt).toEqual(new Date('2026-10-01T10:05:00.000Z'));
+  });
+
   it('acepta el sobre del Core, con causationId null', async () => {
     const res = await api
       .post('/events/inbox', {

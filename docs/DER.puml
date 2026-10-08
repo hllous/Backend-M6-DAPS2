@@ -313,6 +313,10 @@ package "Control ambiental" #FBEEF0 {
       priority : enum <<Severity>>
     * escalated : boolean       ' ticketUpdated/ESCALATION_CHANGED
       citizen_response : text   ' ticketUpdated/INFORMATION_PROVIDED
+      priority_changed_at : timestamp   ' occurredAt del último PRIORITY_CHANGED aplicado
+      escalation_changed_at : timestamp ' occurredAt del último ESCALATION_CHANGED aplicado
+      citizen_response_at : timestamp   ' occurredAt del último INFORMATION_PROVIDED aplicado
+      ticket_status_at : timestamp      ' occurredAt del último REOPENED o CANCELLED aplicado
       deadline_at : timestamp ' cierre por vencimiento
   }
 
@@ -432,6 +436,7 @@ package "Integración (técnico, no de dominio)" #EFEFEF {
       error : varchar          ' por qué falló el handler
       correlation_id : uuid    ' hilo con el que corrió el handler
       source_module : varchar  ' módulo emisor según el sobre del Core
+      occurred_at : timestamp  ' occurredAt del sobre: el reintento ordena con este
   }
 }
 

@@ -5,7 +5,9 @@ import { InboundEnvelope } from '../envelope';
 import { eventContext, EventTrace, trazaDelConsumido } from '../event-context';
 
 /**
- * Un handler de evento entrante. Recibe el `data` del sobre.
+ * Un handler de evento entrante. Recibe el `data` del sobre y su `occurredAt`
+ * (null si no vino o no es una fecha), para que un reintento atrasado no pise
+ * un dato más nuevo: el orden de llegada no está garantizado (#270).
  *
  * Si tira, la fila del inbox queda sin `processedAt` y con el error registrado,
  * y un reenvío con el mismo `eventId` (el reintento del Core) lo vuelve a
@@ -14,7 +16,10 @@ import { eventContext, EventTrace, trazaDelConsumido } from '../event-context';
  * cuando su efecto ya quedó escrito y lo que falló fue marcar la fila. El inbox
  * descarta un evento ya procesado, no el reintento de uno fallido.
  */
-export type InboxHandler = (data: Record<string, unknown>) => Promise<void>;
+export type InboxHandler = (
+  data: Record<string, unknown>,
+  occurredAt: Date | null,
+) => Promise<void>;
 
 export interface InboxHandlerOptions {
   /**
@@ -44,6 +49,12 @@ function esRedactado(payload: Prisma.JsonValue): boolean {
     !Array.isArray(payload) &&
     payload.redacted === REDACTED_PAYLOAD.redacted
   );
+}
+
+/** El `occurredAt` del sobre como fecha, o null si no vino o no se puede leer. */
+function aFecha(valor: string | undefined): Date | null {
+  const fecha = valor ? new Date(valor) : null;
+  return fecha && !isNaN(fecha.getTime()) ? fecha : null;
 }
 
 export interface IngestResult {
@@ -116,6 +127,7 @@ export class InboxService {
     const persist = this.debePersistir(envelope.eventType, data);
 
     let trace: EventTrace = trazaDelConsumido(messageId, envelope.correlationId);
+    let occurredAt = aFecha(envelope.occurredAt);
 
     // El unique de messageId es lo que decide si es duplicado: dejamos que
     // falle el insert en vez de consultar antes, porque entre la consulta y el
@@ -128,6 +140,7 @@ export class InboxService {
           payload: (persist ? envelope.data : REDACTED_PAYLOAD) as Prisma.InputJsonObject,
           correlationId: trace.correlationId,
           sourceModule: envelope.sourceModule,
+          occurredAt,
         },
       });
     } catch (error) {
@@ -160,12 +173,15 @@ export class InboxService {
       // redactado no hay nada que reproducir y va el data nuevo, ya validado.
       // El hilo también es el guardado: un reenvío con otro correlationId, o sin
       // ninguno y con un eventId que no es un UUID RFC, partiría el flujo en dos.
+      // El occurredAt, igual y sin respaldo: es lo que ordena, y un reenvío con
+      // otra fecha podría adelantar un evento viejo.
       const fila = await this.prisma.inboxEvent.findUniqueOrThrow({
         where: { messageId },
-        select: { payload: true, correlationId: true },
+        select: { payload: true, correlationId: true, occurredAt: true },
       });
       if (!esRedactado(fila.payload)) data = fila.payload as Record<string, unknown>;
       if (fila.correlationId) trace = { ...trace, correlationId: fila.correlationId };
+      occurredAt = fila.occurredAt;
       this.logger.log(`${envelope.eventType} (${messageId}) había fallado: se reintenta`);
     }
 
@@ -182,7 +198,7 @@ export class InboxService {
     }
 
     try {
-      await eventContext.run(trace, () => handler(data));
+      await eventContext.run(trace, () => handler(data, occurredAt));
       await this.markProcessed(messageId);
       this.logger.log(`${envelope.eventType} (${messageId}) procesado`);
       return { status: 'processed' };

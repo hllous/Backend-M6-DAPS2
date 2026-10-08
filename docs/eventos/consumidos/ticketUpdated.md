@@ -26,6 +26,24 @@ Depende del discriminador `updateType`. La v1.73 —vigente (WIP), reemplaza a l
 
 La cancelación llega por acá: no hace falta un `ticketCancelled`, que es uno de los huérfanos de la cohorte.
 
+### Orden: por `occurredAt`, no por llegada (#270)
+
+El Core reintenta un handler fallido con backoff (15 s → 1 m → 5 m → 15 m → DLQ) y M9 no garantiza el orden, así que un evento viejo puede aplicarse **después** de uno más nuevo del mismo ticket. Los `updateType` que pisan un dato lo comparan con el `occurredAt` del último aplicado **a ese dato**, guardado en el expediente:
+
+| `updateType` | Marca en `environmental_report` |
+|---|---|
+| `PRIORITY_CHANGED` | `priority_changed_at` |
+| `ESCALATION_CHANGED` | `escalation_changed_at` |
+| `INFORMATION_PROVIDED` | `citizen_response_at` |
+| `REOPENED`, `CANCELLED` | `ticket_status_at` (compartida: un `REOPENED` atrasado no revive el expediente de un reclamo que se canceló después) |
+
+- **Una marca por dato, no una sola**: un `PRIORITY_CHANGED` nuevo no descarta un `ESCALATION_CHANGED` atrasado pero legítimo.
+- Un evento con `occurredAt` **anterior** a la marca se ignora con un `warn` y sale `processed`: reintentarlo no lo haría más nuevo. Uno igual se aplica (el reintento de un evento cuyo efecto ya quedó escrito).
+- La comparación va en el `where` del update, no en una lectura previa: no hay carrera entre dos eventos del mismo ticket.
+- El reintento ordena con el `occurredAt` **guardado** en `inbox_event.occurred_at`, no con el del reenvío.
+- **Sin `occurredAt` en el sobre** (el de M2 puede no traerlo) no hay con qué comparar: se aplica como antes, sin tocar la marca, y queda un `warn`. Lo mismo con las filas anteriores a las columnas (marca null).
+- `ROUTED` no ordena: es idempotente (un segundo `ROUTED` no abre otro expediente).
+
 > **M2 no replica un hecho externo como `ticketUpdated` espejo (§10).** Una resolución, una cancelación o un `INFORMATION_REQUIRED` que M2 recibe por [`updateTicketStatus`](../publicados/updateTicketStatus.md) **no vuelve** como `ticketUpdated`: no esperemos eco de lo que publicamos nosotros. Los `ticketUpdated` que llegan son los que M2 origina por su cuenta.
 
 ## Campos que necesitamos de `ROUTED` (v1.73)
