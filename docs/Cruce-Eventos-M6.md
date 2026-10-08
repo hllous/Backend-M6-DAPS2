@@ -211,7 +211,7 @@ Dos ausencias a confirmar, no a corregir: `weatherAlertIssued` no está porque l
 
 ## M2 — Atención ciudadana 🔴 BLOQUEANTE
 
-Publicaron una **guía de integración con contrato v1.2**: sobre común, JSON Schema, matriz de transiciones, reglas de idempotencia y DLQ. Es, por lejos, el documento de integración más completo de la cohorte, y es el único que define un envelope.
+Publicaron una **guía de integración con contrato v1.2**: sobre común, JSON Schema, matriz de transiciones, reglas de idempotencia y DLQ. Es, por lejos, el documento de integración más completo de la cohorte, y era el único que definía un envelope (histórico: desde el 7 oct 2026 el sobre vigente es el del Core, ver [bloqueantes.md](bloqueantes.md)).
 
 > 🔄 **Actualización 24/08.** M2 publicó la **v1.5**, que reemplaza la v1.2 de esta sección. Cambió el payload de `updateTicketStatus` y se resolvieron los dos bloqueantes de `ROUTED` (más el menor de `citizenId`). El detalle está en las notas de esta sección y en la ficha `M6-por-modulo/M6-para-M2.md`, en el repositorio de documentación.
 
@@ -304,6 +304,8 @@ Consumen `commercialFineGenerated` de Habilitaciones, que es como nuestra acta l
 Ninguna acción. Se confirma también que las cooperativas nos llegan como organizaciones de M1, no como beneficiarias de un programa.
 
 ## M9 — Core 🔴 AUSENTE
+
+> Actualización 8 oct 2026: M9 sigue ausente de la recopilación, pero el 7 oct fijó un contrato de integración para toda la cohorte (sobre, `muni.inbox`, reintentos y DLQ). Lo que cerró y lo que sigue abierto vive en [bloqueantes.md](bloqueantes.md); este análisis queda como foto de la recopilación.
 
 **No hay sección de M9 en la recopilación.** Sin la lista del Core no se puede validar nada, y es el módulo del que depende el resto.
 

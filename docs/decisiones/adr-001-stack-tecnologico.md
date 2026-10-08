@@ -5,6 +5,8 @@
 **Aceptado** — 2026-08-20
 
 > Corregido el 2026-09-27: **Reemplazado en lo que respecta al bus por [ADR-006](adr-006-rabbitmq-como-bus.md).** M9 anunció el 27/09/2026 que el broker de eventos de la cohorte es RabbitMQ, no Kafka. El resto de esta decisión (frontend, backend, base de datos, ORM, deploy) no cambia.
+>
+> Corregido el 2026-10-08: **la base de datos pasó de Render PostgreSQL a Supabase** (#273) porque venció el free tier de Render. El backend sigue en Render y el resto del stack (PostgreSQL, Prisma) no cambia. Ver [`deploy.md`](../deploy.md).
 
 ## Contexto
 

@@ -1,6 +1,6 @@
 # Despliegue y estado del Módulo 6
 
-> Estado del despliegue de producción del M6 (Ambiente, Higiene y Servicios Urbanos) revisado el **06/10/2026**.
+> Estado del despliegue de producción del M6 (Ambiente, Higiene y Servicios Urbanos) revisado el **08/10/2026**.
 > Mantenido por DevOps. Si algo cambia de plataforma o de URL, actualizar este archivo.
 
 ---
@@ -9,7 +9,7 @@
 
 | Componente | Plataforma | Estado | URL |
 |---|---|---|---|
-| **Backend** (NestJS) | Render (Web Service, free) | ⚠️ Sin verificar: `/health` no respondió el 04/10 (¿arranque en frío?) | `https://m6-backend-m64k.onrender.com` |
+| **Backend** (NestJS) | Render (Web Service, free) | ✅ `/health` 200 y `/health/ready` 200 con `"database":"up"` el 08/10 12:09 UTC | `https://m6-backend-m64k.onrender.com` |
 | **PostgreSQL** | Supabase (Managed, free) | ✅ Available | `db.oscepollzibotvggabfv.supabase.co` (URI directa, puerto `5432`) |
 | **Frontend** (Next.js) | Vercel (free) | ✅ `/api/health` 200 el 04/10 | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` |
 

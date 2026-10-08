@@ -59,7 +59,7 @@ De M9:        neighborhoodId
 De M1:        citizenId, organizationId
 ```
 
-Los campos que terminan en `At` son **fecha y hora**; `scheduledDate` es solo el día y la franja la da `timeWindow`. El formato exacto lo define M9 en el sobre común.
+Los campos que terminan en `At` son **fecha y hora**; `scheduledDate` es solo el día y la franja la da `timeWindow`. El formato es el del sobre del Core: `occurredAt` en ISO 8601 con offset (ver [bloqueantes.md](bloqueantes.md)).
 
 ---
 
@@ -445,7 +445,7 @@ streetClosureEnded
 | 2 | **`commercialFineGenerated` figura rotulado solo hacia Rentas**, pero nosotros lo necesitamos para cerrar el expediente | M4 |
 | 3 | **M4 declara consumir `updateTicketStatus`.** Es el canal de entrada de M2 desde las áreas operativas: ningún otro módulo tendría que escucharlo | M4 |
 | 4 | ~~**`workOrderScheduled` reemplazó a `workOrderCreated`**~~ ✅ Cerrado el 5 oct 2026: se dispare al abrir o al agendar, no nos cambia nada | M3 |
-| 5 | **El sobre común de M2 no es el sobre de la cohorte.** Definieron `specVersion`, `eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `subject` y `data`, con reglas de idempotencia y DLQ. Es el único envelope escrito que existe. **M9 tendría que adoptarlo o publicar el suyo**, porque hoy cada módulo asume uno distinto | M9, toda la cohorte |
+| 5 | ✅ **Cerrado el 7 oct 2026: el sobre vigente es el del Core.** M2 había definido `specVersion`, `eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `subject` y `data`; M9 publicó el suyo (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `sourceModule`, `correlationId?`, `causationId?`, `data`) para toda la cohorte y el de M2 queda reemplazado, también para M2 | M9, toda la cohorte |
 | 6 | **Los adjuntos se llaman distinto.** M2 usa `attachment { fileName, contentType, url, sizeBytes? }` (sin `attachmentId` desde la v1.6); nosotros veníamos con `{ url, mimeType, description }`. Nos alineamos al suyo en lo que va hacia M2, pero conviene unificarlo en toda la cohorte antes de implementar | toda la cohorte |
 
 ### Lo que M3 ya resolvió
