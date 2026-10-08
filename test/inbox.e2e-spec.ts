@@ -232,6 +232,46 @@ describe('Inbox de eventos entrantes (e2e)', () => {
     expect(despues.escalationChangedAt).toEqual(new Date('2026-10-01T10:05:00.000Z'));
   });
 
+  /**
+   * #275 contra la base real: el PRIORITY_CHANGED que llega antes de su ROUTED
+   * falla, y el reintento del Core lo aplica sobre el expediente que abrió el
+   * ROUTED, que es más viejo.
+   */
+  it('un PRIORITY_CHANGED que llega antes que su ROUTED se aplica en el reintento', async () => {
+    const ticketId = `TCK-${randomUUID()}`;
+    const cambioId = randomUUID();
+    const cambio = {
+      eventId: cambioId,
+      eventType: 'ticketUpdated',
+      occurredAt: '2026-10-01T10:05:00.000Z',
+      data: {
+        ticketId,
+        responsibleAreaId: 'M6',
+        updateType: 'PRIORITY_CHANGED',
+        currentPriority: 'HIGH',
+      },
+    };
+
+    const antes = await api.post('/events/inbox', cambio).expect(200);
+    expect(antes.body.status).toBe('failed');
+
+    await api
+      .post('/events/inbox', {
+        eventId: randomUUID(),
+        eventType: 'ticketUpdated',
+        occurredAt: '2026-10-01T10:00:00.000Z',
+        data: { ticketId, responsibleAreaId: 'M6', updateType: 'ROUTED', currentPriority: 'LOW' },
+      })
+      .expect(200);
+
+    const reintento = await api.post('/events/inbox', cambio).expect(200);
+    expect(reintento.body.status).toBe('processed');
+
+    const expediente = await prisma.environmentalReport.findFirstOrThrow({ where: { ticketId } });
+    expect(expediente.priority).toBe('HIGH');
+    expect(expediente.priorityChangedAt).toEqual(new Date('2026-10-01T10:05:00.000Z'));
+  });
+
   it('acepta el sobre del Core, con causationId null', async () => {
     const res = await api
       .post('/events/inbox', {
