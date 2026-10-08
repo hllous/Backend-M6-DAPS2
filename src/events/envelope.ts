@@ -12,7 +12,7 @@ export interface EventEnvelope<T = unknown> {
   /** Nombre del evento en camelCase, ej. `urbanServiceScheduled`. */
   eventType: string;
 
-  /** Versión del sobre. Constante `"1.0"`. */
+  /** Versión del contrato del evento (M9). `"1.0"` mientras ningún payload cambie de forma. */
   eventVersion: string;
 
   /**

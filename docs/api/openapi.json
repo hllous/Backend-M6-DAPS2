@@ -12666,7 +12666,7 @@
           "eventVersion": {
             "type": "string",
             "maxLength": 20,
-            "description": "Versión del payload",
+            "description": "Versión del contrato del evento (el Core asume \"1.0\" si falta)",
             "example": "1.0"
           },
           "occurredAt": {

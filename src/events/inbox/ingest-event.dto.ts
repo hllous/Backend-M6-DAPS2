@@ -79,7 +79,11 @@ export class IngestEventDto {
   @IsObject()
   data: Record<string, unknown>;
 
-  @ApiPropertyOptional({ maxLength: 20, description: 'Versión del payload', example: '1.0' })
+  @ApiPropertyOptional({
+    maxLength: 20,
+    description: 'Versión del contrato del evento (el Core asume "1.0" si falta)',
+    example: '1.0',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(20)
