@@ -1,6 +1,6 @@
 # Despliegue y estado del Módulo 6
 
-> Estado del despliegue de producción del M6 (Ambiente, Higiene y Servicios Urbanos) revisado el **04/10/2026**.
+> Estado del despliegue de producción del M6 (Ambiente, Higiene y Servicios Urbanos) revisado el **06/10/2026**.
 > Mantenido por DevOps. Si algo cambia de plataforma o de URL, actualizar este archivo.
 
 ---
@@ -10,7 +10,7 @@
 | Componente | Plataforma | Estado | URL |
 |---|---|---|---|
 | **Backend** (NestJS) | Render (Web Service, free) | ⚠️ Sin verificar: `/health` no respondió el 04/10 (¿arranque en frío?) | `https://m6-backend-m64k.onrender.com` |
-| **PostgreSQL** | Render (Managed, free) | ✅ Available | (Internal URL, no accesible desde afuera) |
+| **PostgreSQL** | Supabase (Managed, free) | ✅ Available | `db.oscepollzibotvggabfv.supabase.co` (URI directa, puerto `5432`) |
 | **Frontend** (Next.js) | Vercel (free) | ✅ `/api/health` 200 el 04/10 | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` |
 
 El frontend publica su URL en el repo [`hllous/Frontend-M6-DAPS2`](https://github.com/hllous/Frontend-M6-DAPS2) (campo "website"). `https://m6-ambiente-frontend.vercel.app` también respondía el 04/10, pero la vigente es la de arriba.
@@ -90,7 +90,7 @@ No hay que hacer nada manual en el día a día.
 
 | Variable | Valor | Requerida |
 |---|---|---|
-| `DATABASE_URL` | (Internal Database URL del Postgres) | ✅ Sí |
+| `DATABASE_URL` | Connection string de Supabase (URI directa, puerto `5432`, con `?schema=public`) | ✅ Sí |
 | `JWT_SECRET` | Secreto ≥ 8 caracteres (generar random) | ✅ Sí |
 | `CORS_ORIGINS` | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
 | `JWT_EXPIRATION` | `3600` | No (default 3600s) |
@@ -128,7 +128,7 @@ No hay que hacer nada manual en el día a día.
 
 ## 5. Gotchas conocidos
 
-- **Spin-down de Render (free tier)**: el backend se "duerme" tras **15 min** sin requests. El primer request tras dormirse tarda **30-60 s** en responder (lo despierta). El Postgres y el frontend (Vercel) **no se duermen**.
+- **Spin-down de Render (free tier)**: el backend se "duerme" tras **15 min** sin requests. El primer request tras dormirse tarda **30-60 s** en responder (lo despierta). El frontend (Vercel) **no se duerme**; Supabase free se **pausa** tras ~1 semana sin actividad (se reactiva desde el dashboard, no pierde datos).
 
   **Y mientras duerme no corren los procesos de fondo**, que es lo que de verdad importa:
 
@@ -145,7 +145,7 @@ No hay que hacer nada manual en el día a día.
 - **Health Check Path de Render**: dejarlo **vacío**. Un path de health check mal configurado produce `==> Timed Out` en el deploy aunque la app arranque bien.
 - **Monitoreo**: `GET /health/ready` devuelve 503 si la base no responde; `/health` es solo liveness (keepalive) y sigue en 200 aunque la base esté caída. Con la base inalcanzable al arrancar el servidor ni empieza a escuchar (Prisma falla en `onModuleInit`): `/health/ready` solo detecta una base que se cae con el proceso ya arriba.
 - **Bind `0.0.0.0`**: el backend escucha en `0.0.0.0:PORT` (no `localhost`), que es lo que Render espera. No cambiar esto.
-- **Postgres free tier**: 256 MB de storage y retención de 90 días (los datos viejos se purgan). Suficiente para el TPO.
+- **Supabase free tier**: 500 MB de storage y sin el vencimiento de 30 días de Render, pero el proyecto se **pausa** tras ~1 semana de inactividad (se reactiva desde el dashboard). Suficiente para el TPO.
 
 ---
 
