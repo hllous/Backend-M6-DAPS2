@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { Channel, ChannelModel, ConsumeMessage, RecoveringChannelModel, connect } from 'amqplib';
 import { globalPipes } from '../../configure-app';
-import { ConsumedEvent } from '../inbox/consumed-events';
 import { InboxService } from '../inbox/inbox.service';
 import { IngestEventDto, toInboundEnvelope } from '../inbox/ingest-event.dto';
 import { brokerHost, CONNECT_TIMEOUT_MS, RabbitMqConfig } from '../rabbitmq';
@@ -25,8 +24,8 @@ const MAX_DETALLE = 500;
 export type Disposition = 'ack' | 'reject' | 'requeue';
 
 /**
- * Lado entrante del bus: la cola de M6 bindeada al exchange con una routing key
- * por evento consumido.
+ * Lado entrante del bus: la cola de M6 (`q.ambiente`), que crea el Core y en la
+ * que llega solo lo que suscribimos, con varios `eventType` mezclados.
  *
  * Entra por **el mismo camino que `POST /events/inbox`**: los mismos pipes
  * globales sobre `IngestEventDto` y el mismo `InboxService.ingest()`, así la
@@ -57,9 +56,7 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
       },
     });
     connection.on('connect', () =>
-      this.logger.log(
-        `Consumiendo ${this.config.queue} desde ${brokerHost(this.config.url)}, exchange ${this.config.exchange}`,
-      ),
+      this.logger.log(`Consumiendo ${this.config.queue} desde ${brokerHost(this.config.url)}`),
     );
     connection.on('reconnect-scheduled', ({ attempt, delay, error }) =>
       this.logger.warn(
@@ -83,12 +80,17 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
     // borrada, ack inválido) se cierra la conexión para que reconecte todo.
     channel.on('close', () => void model.close().catch(() => undefined));
 
-    const { exchange, exchangeType, queue, deadLetterExchange, prefetch } = this.config;
-    await channel.assertExchange(exchange, exchangeType, { durable: true });
-    await channel.assertQueue(queue, { durable: true, deadLetterExchange });
-    for (const eventType of Object.values(ConsumedEvent)) {
-      await channel.bindQueue(queue, exchange, eventType);
-    }
+    const { queue, prefetch } = this.config;
+    // Pasivo: la cola y su binding los crea el Core al registrar nuestras
+    // suscripciones. Declararla con otros argumentos daría PRECONDITION_FAILED;
+    // si todavía no existe, el broker cierra el canal con 404 y `recovery`
+    // reintenta hasta que aparezca.
+    await channel.checkQueue(queue).catch((error: Error) => {
+      this.logger.error(
+        `La cola ${queue} no está disponible (${error.message}): ¿están registradas las suscripciones de M6 en el Core?`,
+      );
+      throw error;
+    });
     await channel.prefetch(prefetch);
     await channel.consume(queue, (msg) => void this.onMessage(channel, msg));
   }

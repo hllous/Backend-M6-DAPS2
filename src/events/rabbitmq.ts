@@ -8,9 +8,7 @@ export const CONNECT_TIMEOUT_MS = 10_000;
 export interface RabbitMqConfig {
   url: string;
   exchange: string;
-  exchangeType: 'topic' | 'direct';
   queue: string;
-  deadLetterExchange?: string;
   prefetch: number;
 }
 

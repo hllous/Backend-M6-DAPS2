@@ -53,35 +53,32 @@ describe('configuration — CORS', () => {
 });
 
 describe('configuration — RabbitMQ', () => {
-  it('sin RABBITMQ_URL no hay bus, y los nombres usan los defaults provisorios', () => {
+  it('sin RABBITMQ_URL no hay bus, y los nombres son los del Core', () => {
     expect(config().rabbitmq).toEqual({
       url: undefined,
-      exchange: 'municipalidad.events',
-      exchangeType: 'topic',
-      queue: 'm6.ambiente',
-      deadLetterExchange: undefined,
+      exchange: 'muni.inbox',
+      queue: 'q.ambiente',
       prefetch: 1,
     });
+    expect(config().core.moduleId).toBe('ambiente');
   });
 
   /** Un `RABBITMQ_URL=` vacío en el panel de Render no debe tumbar el arranque. */
   it('una URL vacía cuenta como ausente', () => {
-    expect(config({ RABBITMQ_URL: '', RABBITMQ_DEAD_LETTER_EXCHANGE: '' }).rabbitmq).toEqual(
-      expect.objectContaining({ url: undefined, deadLetterExchange: undefined }),
-    );
+    expect(config({ RABBITMQ_URL: '' }).rabbitmq.url).toBeUndefined();
   });
 
   it('toma la URL y los overrides', () => {
     expect(
       config({
         RABBITMQ_URL: 'amqps://m6:clave@bus:5671/muni',
-        RABBITMQ_EXCHANGE_TYPE: 'direct',
+        RABBITMQ_QUEUE: 'q.otra',
         RABBITMQ_PREFETCH: '5',
       }).rabbitmq,
     ).toEqual(
       expect.objectContaining({
         url: 'amqps://m6:clave@bus:5671/muni',
-        exchangeType: 'direct',
+        queue: 'q.otra',
         prefetch: 5,
       }),
     );
@@ -116,8 +113,9 @@ describe('configuration — RabbitMQ', () => {
     expect(config({ NODE_ENV: 'production' }).rabbitmq.url).toBeUndefined();
   });
 
-  it('rechaza un tipo de exchange desconocido', () => {
-    expect(() => config({ RABBITMQ_EXCHANGE_TYPE: 'x-delayed' })).toThrow();
-    expect(() => config({ RABBITMQ_EXCHANGE_TYPE: 'fanout' })).toThrow();
+  /** Es el `sourceModule` del sobre: el Core lo limita a 60 caracteres. */
+  it('rechaza un CORE_MODULE_ID vacío o de más de 60', () => {
+    expect(() => config({ CORE_MODULE_ID: '' })).toThrow();
+    expect(() => config({ CORE_MODULE_ID: 'x'.repeat(61) })).toThrow();
   });
 });

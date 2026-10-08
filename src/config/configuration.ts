@@ -16,10 +16,11 @@ export default () => {
     rabbitmq: {
       url: parsed.RABBITMQ_URL,
       exchange: parsed.RABBITMQ_EXCHANGE,
-      exchangeType: parsed.RABBITMQ_EXCHANGE_TYPE,
       queue: parsed.RABBITMQ_QUEUE,
-      deadLetterExchange: parsed.RABBITMQ_DEAD_LETTER_EXCHANGE || undefined,
       prefetch: parsed.RABBITMQ_PREFETCH,
+    },
+    core: {
+      moduleId: parsed.CORE_MODULE_ID,
     },
     corsOrigins: parsed.CORS_ORIGINS?.split(',')
       .map((o) => o.trim())

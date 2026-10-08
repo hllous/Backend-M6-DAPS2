@@ -52,26 +52,27 @@ export const envSchema = z
     // expediente por vencimiento. Ver ReportDeadlineSweeper.
     SANCTION_DEADLINE_DAYS: z.coerce.number().int().positive().default(30),
 
-    // RabbitMQ — el bus que anunció M9 al dejar Kafka, todavía sin broker,
-    // nombres ni credenciales. Sin RABBITMQ_URL los eventos se encolan en el
-    // outbox y se registran en el log, no hay consumidor, y la app arranca igual.
-    // Los defaults de exchange y cola son nuestros y provisorios hasta que M9
-    // publique su catálogo. Ver src/events/events.module.ts.
+    // RabbitMQ — el bus del Core (M9). Sin RABBITMQ_URL los eventos se encolan
+    // en el outbox y se registran en el log, no hay consumidor, y la app arranca
+    // igual. Exchange y cola los crea el Core: M6 solo los verifica en modo
+    // pasivo, así que los nombres tienen que coincidir con los suyos. Ver ADR-006
+    // y el contrato de M9 en docs/bloqueantes.md.
     // Vacía cuenta como ausente: un `RABBITMQ_URL=` en el panel no debe tumbar el arranque.
     RABBITMQ_URL: z.preprocess(
       (v) => (v === '' ? undefined : v),
       z.string().superRefine(validarUrlAmqp).optional(),
     ),
-    RABBITMQ_EXCHANGE: z.string().min(1).default('municipalidad.events'),
-    // Sin fanout ni headers: ahí los bindings por routing key no filtran y la
-    // cola recibiría todo lo que pasa por el exchange.
-    RABBITMQ_EXCHANGE_TYPE: z.enum(['topic', 'direct']).default('topic'),
-    RABBITMQ_QUEUE: z.string().min(1).default('m6.ambiente'),
-    RABBITMQ_DEAD_LETTER_EXCHANGE: z.string().optional(),
-    // 1 = de a un mensaje: el orden importa (workOrderScheduled antes que
-    // workOrderCompleted) y el callback procesa en serie solo si no hay más de
-    // uno sin confirmar.
+    // Donde publican todos los módulos (fanout): el Core rutea por suscripción.
+    RABBITMQ_EXCHANGE: z.string().min(1).default('muni.inbox'),
+    // La cola de M6, que el Core crea al registrar nuestras suscripciones.
+    RABBITMQ_QUEUE: z.string().min(1).default('q.ambiente'),
+    // 1 = de a un mensaje. El orden igual no está garantizado (un reintento del
+    // Core vuelve después de los que venían atrás), pero no lo empeoramos.
     RABBITMQ_PREFETCH: z.coerce.number().int().positive().default(1),
+
+    // Identificador de M6 ante el Core: va como `sourceModule` en el sobre y
+    // tiene que coincidir con el módulo del token, o el Core responde 403.
+    CORE_MODULE_ID: z.string().min(1).max(60).default('ambiente'),
 
     // Cloudflare R2 (S3-compatible) para evidencia/adjuntos — Issue #64.
     // Opcionales: sin credenciales la app arranca igual, pero POST /evidence

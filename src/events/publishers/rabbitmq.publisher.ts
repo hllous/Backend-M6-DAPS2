@@ -8,10 +8,9 @@ import { brokerHost, CONNECT_TIMEOUT_MS, RabbitMqConfig } from '../rabbitmq';
  * Adaptador RabbitMQ. El EventsModule lo instancia solo cuando hay
  * `RABBITMQ_URL`; si no, provee el de log.
  *
- * Publica al exchange configurado con routing key = nombre del evento tal cual:
- * el Core matchea por string literal, así que la clave es
- * `urbanServiceScheduled`, no `M6.urbanServiceScheduled`. Cuando M9 publique su
- * catálogo —sigue pendiente— puede que haya que prefijarla.
+ * Publica a `muni.inbox`, el exchange fanout del Core: la routing key no
+ * enruta nada —el Core decide el destino leyendo las suscripciones—. Se manda
+ * el `eventType` igual, porque no cuesta nada y se lee en el panel del broker.
  */
 @Injectable()
 export class RabbitMqEventPublisher extends EventPublisher implements OnModuleDestroy {
@@ -119,9 +118,9 @@ export class RabbitMqEventPublisher extends EventPublisher implements OnModuleDe
           void connection?.close().catch(() => undefined);
         });
 
-        await channel.assertExchange(this.config.exchange, this.config.exchangeType, {
-          durable: true,
-        });
+        // Pasivo: el exchange es del Core. Si no existe, el broker cierra el
+        // canal con 404 y la publicación vuelve como fallo al outbox.
+        await channel.checkExchange(this.config.exchange);
 
         this.logger.log(
           `Productor RabbitMQ conectado a ${brokerHost(this.config.url)}, exchange ${this.config.exchange}`,

@@ -13,7 +13,7 @@ type ConfirmCallback = (err: unknown) => void;
 
 function fakeChannel() {
   const channel = Object.assign(new EventEmitter(), {
-    assertExchange: jest.fn().mockResolvedValue(undefined),
+    checkExchange: jest.fn().mockResolvedValue(undefined),
     publish: jest.fn(
       (_ex: string, _rk: string, _body: Buffer, _opts: unknown, cb: ConfirmCallback) => {
         cb(null);
@@ -34,9 +34,8 @@ function fakeConnection(channel: ReturnType<typeof fakeChannel>) {
 describe('RabbitMqEventPublisher', () => {
   const config: RabbitMqConfig = {
     url: 'amqp://usuario:secreto@broker:5672/m6',
-    exchange: 'municipalidad.events',
-    exchangeType: 'topic',
-    queue: 'm6.ambiente',
+    exchange: 'muni.inbox',
+    queue: 'q.ambiente',
     prefetch: 10,
   };
 
@@ -66,7 +65,7 @@ describe('RabbitMqEventPublisher', () => {
     expect(connectMock).not.toHaveBeenCalled();
   });
 
-  it('conecta una sola vez, declara el exchange y publica con routing key = eventType', async () => {
+  it('conecta una sola vez, verifica el exchange del Core y publica con routing key = eventType', async () => {
     const publisher = new RabbitMqEventPublisher(config);
 
     await publisher.publish(envelope);
@@ -74,13 +73,11 @@ describe('RabbitMqEventPublisher', () => {
 
     expect(connectMock).toHaveBeenCalledTimes(1);
     expect(connectMock).toHaveBeenCalledWith(config.url, { timeout: 10_000 });
-    expect(channel.assertExchange).toHaveBeenCalledWith('municipalidad.events', 'topic', {
-      durable: true,
-    });
+    expect(channel.checkExchange).toHaveBeenCalledWith('muni.inbox');
     expect(channel.publish).toHaveBeenCalledTimes(2);
 
     const [exchange, routingKey, body, options] = channel.publish.mock.calls[0];
-    expect(exchange).toBe('municipalidad.events');
+    expect(exchange).toBe('muni.inbox');
     expect(routingKey).toBe('urbanServiceScheduled');
     expect(JSON.parse(body.toString())).toEqual(envelope);
     expect(options).toEqual({
@@ -114,11 +111,11 @@ describe('RabbitMqEventPublisher', () => {
     expect(channel.publish).toHaveBeenCalledTimes(1);
   });
 
-  it('si falla después de conectar (exchange incompatible), cierra la conexión y reintenta', async () => {
-    channel.assertExchange.mockRejectedValueOnce(new Error('PRECONDITION_FAILED'));
+  it('si falla después de conectar (exchange inexistente), cierra la conexión y reintenta', async () => {
+    channel.checkExchange.mockRejectedValueOnce(new Error('NOT_FOUND'));
     const publisher = new RabbitMqEventPublisher(config);
 
-    await expect(publisher.publish(envelope)).rejects.toThrow('PRECONDITION_FAILED');
+    await expect(publisher.publish(envelope)).rejects.toThrow('NOT_FOUND');
     expect(connection.close).toHaveBeenCalledTimes(1);
 
     await publisher.publish(envelope);
@@ -236,7 +233,7 @@ describe('createEventPublisher', () => {
   it('con RABBITMQ_URL usa RabbitMQ, sin conectar todavía', () => {
     (connect as jest.Mock).mockClear();
     const publisher = createEventPublisher(
-      conConfig({ url: 'amqp://u:p@broker:5672', exchange: 'x', exchangeType: 'topic' }),
+      conConfig({ url: 'amqp://u:p@broker:5672', exchange: 'x' }),
     );
     expect(publisher).toBeInstanceOf(RabbitMqEventPublisher);
     expect(connect).not.toHaveBeenCalled();

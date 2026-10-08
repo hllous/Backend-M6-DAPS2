@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { ChannelModel, ConsumeMessage, connect } from 'amqplib';
 import { MAX_MESSAGE_BYTES, RabbitMqConsumer } from './rabbitmq.consumer';
 import { createRabbitMqConsumer } from '../events.module';
-import { ConsumedEvent } from '../inbox/consumed-events';
 import { InboxService } from '../inbox/inbox.service';
 import { RabbitMqConfig } from '../rabbitmq';
 
@@ -15,10 +14,8 @@ type OnMessage = (msg: ConsumeMessage | null) => void;
 
 const config: RabbitMqConfig = {
   url: 'amqp://usuario:secreto@broker:5672',
-  exchange: 'municipalidad.events',
-  exchangeType: 'topic',
-  queue: 'm6.ambiente',
-  deadLetterExchange: 'municipalidad.dlx',
+  exchange: 'muni.inbox',
+  queue: 'q.ambiente',
   prefetch: 10,
 };
 
@@ -33,9 +30,7 @@ const json = (body: unknown): Buffer => Buffer.from(JSON.stringify(body));
 
 function fakeChannel() {
   return Object.assign(new EventEmitter(), {
-    assertExchange: jest.fn().mockResolvedValue(undefined),
-    assertQueue: jest.fn().mockResolvedValue(undefined),
-    bindQueue: jest.fn().mockResolvedValue(undefined),
+    checkQueue: jest.fn().mockResolvedValue(undefined),
     prefetch: jest.fn().mockResolvedValue(undefined),
     consume: jest.fn().mockResolvedValue(undefined),
     ack: jest.fn(),
@@ -147,24 +142,31 @@ describe('RabbitMqConsumer', () => {
       );
     });
 
-    it('declara exchange y cola con DLX, y bindea una routing key por evento consumido', async () => {
+    it('verifica la cola del Core en modo pasivo, sin declarar ni bindear nada', async () => {
       const { channel } = await arrancar();
 
-      expect(channel.assertExchange).toHaveBeenCalledWith('municipalidad.events', 'topic', {
-        durable: true,
-      });
-      expect(channel.assertQueue).toHaveBeenCalledWith('m6.ambiente', {
-        durable: true,
-        deadLetterExchange: 'municipalidad.dlx',
-      });
-      const keys = channel.bindQueue.mock.calls.map((c: unknown[]) => c[2]);
-      expect(keys).toEqual(Object.values(ConsumedEvent));
-      expect(channel.bindQueue).toHaveBeenCalledWith(
-        'm6.ambiente',
-        'municipalidad.events',
-        'ticketUpdated',
-      );
+      // El fake no tiene assertQueue ni bindQueue: si se llamaran, el setup tiraría.
+      expect(channel.checkQueue).toHaveBeenCalledWith('q.ambiente');
       expect(channel.prefetch).toHaveBeenCalledWith(10);
+    });
+
+    it('sin la cola (falta suscribirse en el Core) loguea y falla el setup para que recovery reintente', async () => {
+      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      await consumer.onApplicationBootstrap();
+      const options = connectMock.mock.calls[0][1];
+      const channel = fakeChannel();
+      channel.checkQueue.mockRejectedValueOnce(new Error('NOT_FOUND - no queue'));
+      const model = Object.assign(new EventEmitter(), {
+        createChannel: jest.fn().mockResolvedValue(channel),
+        close: jest.fn().mockResolvedValue(undefined),
+      });
+
+      await expect(
+        (options.recovery.setup as Setup)(model as unknown as ChannelModel),
+      ).rejects.toThrow('NOT_FOUND');
+      expect(error.mock.calls[0][0]).toMatch(/suscripciones/);
+      expect(channel.consume).not.toHaveBeenCalled();
+      error.mockRestore();
     });
 
     it('ack si se procesó, nack sin requeue si es inválido, nack con requeue si falló', async () => {
