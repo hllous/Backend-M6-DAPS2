@@ -25,13 +25,13 @@ export class InboxController {
   @ApiOperation({
     summary: 'Ingerir un evento entrante',
     description:
-      'Recibe un sobre y lo despacha al handler que corresponda. La idempotencia es por eventId: un mensaje ya procesado se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin procesar y con el error registrado, y reenviar el mismo eventId vuelve a correr el handler (es lo que hace el reintento del Core por el bus).',
+      'Recibe un sobre y lo despacha al handler que corresponda. La idempotencia es por eventId: un mensaje ya procesado se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin procesar y con el error registrado, y reenviar el mismo eventId vuelve a correr el handler con el payload guardado en la primera entrega (es lo que hace el reintento del Core por el bus). Un reenvío con otro eventType, o mientras el intento anterior sigue en curso, sale duplicate.',
   })
   @ApiResponse({
     status: 200,
     type: IngestResultDto,
     description:
-      'Resultado de la ingesta: processed, duplicate (ya procesado), ignored (sin handler) o failed',
+      'Resultado de la ingesta: processed, duplicate (ya procesado o en curso), ignored (sin handler) o failed',
   })
   @ApiResponse({
     status: 400,

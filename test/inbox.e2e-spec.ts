@@ -149,16 +149,23 @@ describe('Inbox de eventos entrantes (e2e)', () => {
 
   it('un eventId cuyo handler falló se reintenta, y si anda queda procesado y sin error', async () => {
     const eventId = randomUUID();
+    const data = { severity: 'LOW', zoneIds: [zoneId] };
     // La fila que deja un handler que tiró: sin processedAt y con el error.
     await prisma.inboxEvent.create({
-      data: { messageId: eventId, eventType: 'weatherAlertIssued', payload: {}, error: 'boom' },
+      data: { messageId: eventId, eventType: 'weatherAlertIssued', payload: data, error: 'boom' },
     });
 
+    // Otro eventType con el mismo eventId no toma la fila ni la marca procesada.
+    const ajeno = await api
+      .post('/events/inbox', sobre(eventId, 'eventoQueNadieEscucha', { algo: 1 }))
+      .expect(200);
+    expect(ajeno.body.status).toBe('duplicate');
+    const intacta = await prisma.inboxEvent.findUniqueOrThrow({ where: { messageId: eventId } });
+    expect(intacta.processedAt).toBeNull();
+    expect(intacta.error).toBe('boom');
+
     const res = await api
-      .post(
-        '/events/inbox',
-        sobre(eventId, 'weatherAlertIssued', { severity: 'LOW', zoneIds: [zoneId] }),
-      )
+      .post('/events/inbox', sobre(eventId, 'weatherAlertIssued', data))
       .expect(200);
     expect(res.body.status).toBe('processed');
 

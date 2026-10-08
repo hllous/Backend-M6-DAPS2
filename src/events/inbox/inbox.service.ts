@@ -8,7 +8,10 @@ import { InboundEnvelope } from '../envelope';
  *
  * Si tira, la fila del inbox queda sin `processedAt` y con el error registrado,
  * y un reenvío con el mismo `eventId` (el reintento del Core) lo vuelve a
- * correr. No debe ser idempotente por su cuenta: de eso se encarga el inbox.
+ * correr con el payload guardado. **Tiene que tolerar correr de nuevo** (guard
+ * por estado o un unique): el reintento llega tras cualquier `failed`, también
+ * cuando su efecto ya quedó escrito y lo que falló fue marcar la fila. El inbox
+ * descarta un evento ya procesado, no el reintento de uno fallido.
  */
 export type InboxHandler = (data: Record<string, unknown>) => Promise<void>;
 
@@ -33,6 +36,15 @@ export interface InboxHandlerOptions {
 /** Lo que queda en la columna (NO nula) cuando no corresponde guardar el payload. */
 export const REDACTED_PAYLOAD = Object.freeze({ redacted: 'contenido no persistido' });
 
+function esRedactado(payload: Prisma.JsonValue): boolean {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    !Array.isArray(payload) &&
+    payload.redacted === REDACTED_PAYLOAD.redacted
+  );
+}
+
 export interface IngestResult {
   status: 'processed' | 'duplicate' | 'ignored' | 'failed';
   detail?: string;
@@ -46,7 +58,9 @@ export interface IngestResult {
  * punto de entrada es mucho más confiable que pedirle a cada handler que sea
  * idempotente por su cuenta. `InboxEvent.messageId` es `@unique`, así que el
  * duplicado lo detecta la base, no una consulta previa que podría correr en
- * paralelo con otra igual.
+ * paralelo con otra igual. El reintento de un evento fallido también lo decide
+ * la base: lo toma un update condicional, así que de dos entregas solapadas
+ * corre una sola.
  */
 @Injectable()
 export class InboxService {
@@ -77,7 +91,7 @@ export class InboxService {
    */
   async ingest(envelope: InboundEnvelope): Promise<IngestResult> {
     const messageId = envelope.eventId;
-    const data = (envelope.data ?? {}) as Record<string, unknown>;
+    let data = (envelope.data ?? {}) as Record<string, unknown>;
 
     // Se rechaza antes del insert: sin fila, el emisor puede reenviar el corregido
     // con el mismo eventId (el 400 ya le dice qué corregir). Sin handler no hay
@@ -111,21 +125,35 @@ export class InboxService {
       if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) {
         throw error;
       }
-      // Duplicado solo si ya se procesó. Si el handler falló antes, la fila
-      // quedó sin `processedAt` y esto es el reintento del Core: se vuelve a
-      // correr. ponytail: sin lock, dos entregas simultáneas del mismo eventId
-      // fallido correrían el handler dos veces; hoy no pasa (una instancia,
-      // prefetch 1). Upgrade: tomar la fila con un update condicional o un lock.
-      const previo = await this.prisma.inboxEvent.findUnique({
-        where: { messageId },
-        select: { processedAt: true },
+      // Es un reintento solo si el handler falló antes (sin `processedAt`, con
+      // `error`) y es el mismo eventType. El update condicional toma la fila de
+      // forma atómica: una entrega solapada la ve en curso (error null) y sale
+      // duplicate. ponytail: si el proceso se cae a mitad del handler, la fila
+      // queda sin processedAt ni error y ningún reenvío la retoma; destrabarlo
+      // pide una columna de lease (migración).
+      const { count } = await this.prisma.inboxEvent.updateMany({
+        where: {
+          messageId,
+          eventType: envelope.eventType,
+          processedAt: null,
+          error: { not: null },
+        },
+        data: { error: null },
       });
-      if (!previo || previo.processedAt) {
+      if (count === 0) {
         this.logger.log(
           `${envelope.eventType} (${messageId}) ya recibido: se descarta sin volver a aplicarlo`,
         );
         return { status: 'duplicate' };
       }
+      // Se reintenta lo que se guardó, no lo que trae este sobre: un reenvío por
+      // HTTP no puede cambiarle el contenido a un evento fallido. Si quedó
+      // redactado no hay nada que reproducir y va el data nuevo, ya validado.
+      const fila = await this.prisma.inboxEvent.findUniqueOrThrow({
+        where: { messageId },
+        select: { payload: true },
+      });
+      if (!esRedactado(fila.payload)) data = fila.payload as Record<string, unknown>;
       this.logger.log(`${envelope.eventType} (${messageId}) había fallado: se reintenta`);
     }
 

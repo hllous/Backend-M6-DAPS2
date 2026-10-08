@@ -33,8 +33,9 @@ describe('InboxService', () => {
       inboxEvent: {
         create: jest.fn().mockResolvedValue({}),
         update: jest.fn().mockResolvedValue({}),
-        // Por defecto, un messageId repetido ya está procesado.
-        findUnique: jest.fn().mockResolvedValue({ processedAt: new Date() }),
+        // Por defecto, un messageId repetido ya está procesado: no hay fila que tomar.
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findUniqueOrThrow: jest.fn(),
       },
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
@@ -66,23 +67,32 @@ describe('InboxService', () => {
   });
 
   describe('reintento de un evento cuyo handler falló (#264)', () => {
+    const GUARDADO = { closureRequestId: 'guardado' };
+
     beforeEach(() => {
       prisma.inboxEvent.create.mockRejectedValue(duplicado());
-      prisma.inboxEvent.findUnique.mockResolvedValue({ processedAt: null });
+      prisma.inboxEvent.updateMany.mockResolvedValue({ count: 1 });
+      prisma.inboxEvent.findUniqueOrThrow.mockResolvedValue({ payload: GUARDADO });
     });
 
-    it('vuelve a correr el handler y, si anda, deja la fila procesada y sin error', async () => {
+    it('toma la fila con un update condicional y corre el handler con lo guardado', async () => {
       const handler = jest.fn().mockResolvedValue(undefined);
       inbox.register('streetClosureApproved', handler);
 
-      const result = await inbox.ingest(sobre());
+      const result = await inbox.ingest(sobre({ data: { closureRequestId: 'otro' } }));
 
       expect(result.status).toBe('processed');
-      expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' });
-      expect(prisma.inboxEvent.findUnique).toHaveBeenCalledWith({
-        where: { messageId: MESSAGE_ID },
-        select: { processedAt: true },
+      expect(prisma.inboxEvent.updateMany).toHaveBeenCalledWith({
+        where: {
+          messageId: MESSAGE_ID,
+          eventType: 'streetClosureApproved',
+          processedAt: null,
+          error: { not: null },
+        },
+        data: { error: null },
       });
+      // El data del sobre nuevo no entra: se reproduce lo de la primera entrega.
+      expect(handler).toHaveBeenCalledWith(GUARDADO);
       const [[args]] = prisma.inboxEvent.update.mock.calls;
       expect(args.data.processedAt).toBeInstanceOf(Date);
       expect(args.data.error).toBeNull();
@@ -96,6 +106,51 @@ describe('InboxService', () => {
       expect(result).toEqual({ status: 'failed', detail: 'otra vez' });
       const [[args]] = prisma.inboxEvent.update.mock.calls;
       expect(args.data).toEqual({ error: 'otra vez' });
+    });
+
+    it('dos entregas solapadas del mismo eventId corren el handler una sola vez', async () => {
+      let liberar!: () => void;
+      const handler = jest.fn(() => new Promise<void>((r) => (liberar = r)));
+      inbox.register('streetClosureApproved', handler);
+      // La base deja que solo uno de los dos updates tome la fila.
+      prisma.inboxEvent.updateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 0 });
+
+      const primera = inbox.ingest(sobre());
+      const segunda = await inbox.ingest(sobre());
+      liberar();
+
+      expect(segunda.status).toBe('duplicate');
+      expect((await primera).status).toBe('processed');
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('una fila en curso, con otro eventType o ya procesada sale duplicate sin correr nada', async () => {
+      const handler = jest.fn();
+      inbox.register('streetClosureApproved', handler);
+      inbox.register('workOrderCompleted', handler);
+      prisma.inboxEvent.updateMany.mockResolvedValue({ count: 0 });
+
+      const result = await inbox.ingest(sobre({ eventType: 'workOrderCompleted' }));
+
+      expect(result.status).toBe('duplicate');
+      expect(prisma.inboxEvent.updateMany.mock.calls[0][0].where.eventType).toBe(
+        'workOrderCompleted',
+      );
+      expect(handler).not.toHaveBeenCalled();
+      expect(prisma.inboxEvent.findUniqueOrThrow).not.toHaveBeenCalled();
+      expect(prisma.inboxEvent.update).not.toHaveBeenCalled();
+    });
+
+    it('si la fila quedó redactada, reintenta con el data del sobre', async () => {
+      const handler = jest.fn().mockResolvedValue(undefined);
+      inbox.register('streetClosureApproved', handler);
+      prisma.inboxEvent.findUniqueOrThrow.mockResolvedValue({ payload: REDACTED_PAYLOAD });
+
+      await inbox.ingest(sobre());
+
+      expect(handler).toHaveBeenCalledWith({ closureRequestId: 'xyz' });
     });
   });
 
