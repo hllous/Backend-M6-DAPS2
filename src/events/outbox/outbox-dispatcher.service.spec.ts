@@ -10,6 +10,8 @@ const configCon = (moduleId: string) => new ConfigService({ core: { moduleId } }
 describe('OutboxDispatcher', () => {
   const ROW_ID = '11111111-1111-1111-1111-111111111111';
   const SUBJECT = '22222222-2222-2222-2222-222222222222';
+  const CORRELATION = '33333333-3333-3333-3333-333333333333';
+  const CAUSA = '44444444-4444-4444-4444-444444444444';
 
   let prisma: any;
   let publisher: { publish: jest.Mock; transport: string };
@@ -26,6 +28,8 @@ describe('OutboxDispatcher', () => {
     lastError: null,
     occurredAt: new Date('2026-09-02T10:00:00.000Z'),
     publishedAt: null,
+    correlationId: CORRELATION,
+    causationId: null,
     ...over,
   });
 
@@ -56,18 +60,36 @@ describe('OutboxDispatcher', () => {
       eventVersion: '1.0',
       occurredAt: '2026-09-02T10:00:00.000Z',
       sourceModule: 'ambiente',
+      correlationId: CORRELATION,
       data: { serviceId: SUBJECT },
     });
   });
 
   // El Core rechaza campos extra. `toEqual` ignora claves con `undefined`, así
-  // que el conjunto de claves se fija aparte.
+  // que el conjunto de claves se fija aparte. Sin causa, `causationId` no viaja.
   it('el sobre lleva exactamente las claves del Core, sin extras', async () => {
     await dispatcher.dispatchPending();
 
     expect(Object.keys(publicado()).sort()).toEqual(
-      ['data', 'eventId', 'eventType', 'eventVersion', 'occurredAt', 'sourceModule'].sort(),
+      [
+        'correlationId',
+        'data',
+        'eventId',
+        'eventType',
+        'eventVersion',
+        'occurredAt',
+        'sourceModule',
+      ].sort(),
     );
+  });
+
+  it('un evento causado por otro lleva su causationId en el sobre', async () => {
+    prisma.outboxEvent.findMany.mockResolvedValue([row({ causationId: CAUSA })]);
+
+    await dispatcher.dispatchPending();
+
+    expect(publicado()).toMatchObject({ correlationId: CORRELATION, causationId: CAUSA });
+    expect(Object.keys(publicado())).toHaveLength(8);
   });
 
   it('occurredAt va en ISO 8601 con offset', async () => {

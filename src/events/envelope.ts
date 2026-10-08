@@ -25,8 +25,13 @@ export interface EventEnvelope<T = unknown> {
   /** Módulo emisor. Tiene que coincidir con el del token de módulo del Core. */
   sourceModule: string;
 
-  // Opcionales en el Core; por ahora no se mandan (#267).
-  correlationId?: string;
+  /** El hilo del flujo entre módulos: el del evento consumido que lo causó, o uno nuevo. */
+  correlationId: string;
+  /**
+   * eventId del evento consumido que causó este. Se omite si nació de una
+   * acción directa en M6: el Core lo acepta ausente o `null`, y omitirlo evita
+   * mandar una clave vacía.
+   */
   causationId?: string;
 
   /** El payload propio del evento, el que valida contra su `.schema.json`. */
@@ -39,8 +44,8 @@ export interface EventEnvelope<T = unknown> {
  * Somos estrictos al publicar y tolerantes al consumir: conviven el sobre del
  * Core y el de M2 mientras la cohorte migra, así que rechazar un evento por la
  * forma del `producer` sería tirar información de negocio por un campo que ni
- * miramos. `ingest()` solo usa `eventId`, `eventType` y `data`; el resto se
- * acepta como venga.
+ * miramos. `ingest()` usa `eventId`, `eventType`, `data` y, para la traza,
+ * `correlationId` y `sourceModule`; el resto se acepta como venga.
  */
 export interface InboundEnvelope {
   eventId: string;
@@ -77,6 +82,8 @@ export function buildEnvelope<T>(params: {
   eventType: string;
   occurredAt: Date;
   sourceModule: string;
+  correlationId: string;
+  causationId: string | null;
   data: T;
 }): EventEnvelope<T> {
   return {
@@ -85,6 +92,8 @@ export function buildEnvelope<T>(params: {
     eventVersion: '1.0',
     occurredAt: params.occurredAt.toISOString(),
     sourceModule: params.sourceModule,
+    correlationId: params.correlationId,
+    ...(params.causationId && { causationId: params.causationId }),
     data: params.data,
   };
 }

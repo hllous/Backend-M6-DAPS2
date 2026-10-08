@@ -417,6 +417,8 @@ package "Integración (técnico, no de dominio)" #EFEFEF {
       last_error : varchar    ' por qué falló el último intento
     * occurred_at : timestamp
       published_at : timestamp
+    * correlation_id : uuid   ' hilo del flujo, heredado del evento consumido
+      causation_id : uuid     ' eventId consumido que lo causó; null si es acción directa
   }
 
   entity "inbox_event" as inbox_event {
@@ -428,6 +430,8 @@ package "Integración (técnico, no de dominio)" #EFEFEF {
     * received_at : timestamp
       processed_at : timestamp ' null mientras no se aplicó el efecto
       error : varchar          ' por qué falló el handler
+      correlation_id : uuid    ' hilo con el que corrió el handler
+      source_module : varchar  ' módulo emisor según el sobre del Core
   }
 }
 

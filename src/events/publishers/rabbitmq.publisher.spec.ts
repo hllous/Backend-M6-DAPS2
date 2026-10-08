@@ -45,6 +45,7 @@ describe('RabbitMqEventPublisher', () => {
     eventVersion: '1.0',
     occurredAt: '2026-01-01T00:00:00.000Z',
     sourceModule: 'ambiente',
+    correlationId: '8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5',
     data: { serviceId: 'svc-1' },
   };
 
