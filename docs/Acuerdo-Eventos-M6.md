@@ -12,6 +12,8 @@ Este documento sirve para cerrar el contrato de eventos antes de empezar a progr
 
 Notación: `?` es campo opcional o que puede venir en nulo, `[]` es lista. Todos los nombres van en **camelCase**, que es lo que usa la recopilación de la cohorte.
 
+**Los mensajes completos, con el sobre del Core, están en [Sobres-M6.md](Sobres-M6.md)**: un ejemplo copiable de cada evento que publicamos y de cada uno que recibimos. Este Acuerdo describe los `data`; el sobre que los transporta es el del Core (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `sourceModule`, `correlationId`, `causationId?`, `data`).
+
 ---
 
 # Parte 1 — Lo que publicamos
@@ -63,7 +65,7 @@ Los campos que terminan en `At` son **fecha y hora**; `scheduledDate` es solo el
 
 ---
 
-**1. `updateTicketStatus` → M2** · *el payload lo define M2 en su contrato v1.6*
+**1. `updateTicketStatus` → M2** · *el payload lo define M2 en su contrato, vigente v1.75 (WIP)*
 
 ```
 ticketId, updateType,
@@ -75,7 +77,7 @@ updateType: STARTED | PROGRESS | INFORMATION_REQUIRED |
 updatedBy:  { type: EXTERNAL_USER, id } | { type: SYSTEM, id: null }
 ```
 
-No lleva `status`: informamos el hecho y **M2 decide el estado**. Tampoco lleva `sourceRef` — su contrato prohíbe mandarles IDs de nuestras entidades internas, así que la correlación `ticketId ↔ serviceId` la guardamos de nuestro lado. `expectedTicketVersion` salió del contrato en la v1.5 y `publicId` no viaja en este evento (§8.1 de la v1.70): la correlación es solo por `ticketId`. El sobre que lo transporta lleva `subject: tickets/{ticketId}`. El detalle de cada variante está en 1.2.
+No lleva `status`: informamos el hecho y **M2 decide el estado**. Tampoco lleva `sourceRef` — su contrato prohíbe mandarles IDs de nuestras entidades internas, así que la correlación `ticketId ↔ serviceId` la guardamos de nuestro lado. `expectedTicketVersion` salió del contrato en la v1.5 y `publicId` no viaja en este evento (§8.1 de la v1.70): la correlación es solo por `ticketId`. El sobre del Core ya no lleva `subject` (era del sobre de M2): la correlación va por `data.ticketId`. El detalle de cada variante está en 1.2.
 
 **2. `urbanServiceScheduled` → M7**
 
@@ -171,7 +173,7 @@ Antes de la unificación, M7 recibía este evento con forma distinta según el o
 
 ### `updateTicketStatus` — el único, con el contrato de M2
 
-Leímos el contrato, ahora en su **v1.6** (reemplazó la v1.5, que a su vez había reemplazado la v1.2 sobre la que habíamos escrito esto), y **adoptamos su payload tal cual**. No pedimos campos nuevos ni proponemos alternativas: nos adaptamos a lo que ya definieron.
+Leímos el contrato, ahora en su **v1.75** (WIP; reemplaza a la v1.74, y antes la v1.73, la v1.70, la v1.6, la v1.5 y la v1.2 sobre la que habíamos escrito esto. En lo que enviamos y recibimos no cambió desde la v1.6), y **adoptamos su payload tal cual**. No pedimos campos nuevos ni proponemos alternativas: nos adaptamos a lo que ya definieron.
 
 ```
 ticketId, updateType,
@@ -217,7 +219,7 @@ Los otros dos no tienen una traducción directa, y conviene que quede escrito po
 
 Tres cosas que teníamos anotadas como problema dejaron de serlo:
 
-- **`detail` ya no es todo el canal.** Era nuestra objeción principal: el vecino iba a ver solo prosa. Con `resolution.type` el cierre tiene un texto propio en `publicMessage` y con `attachments[]` podemos mandar la foto del trabajo terminado. Lo único que sigue sin resolver es la **fecha agendada**: el campo común `progress` es un `Int` (porcentaje), no una fecha, y ni la v1.5 ni la v1.6 definen estructura de `details` para `STARTED`/`PROGRESS`. Sigue como pedido abierto.
+- **`detail` ya no es todo el canal.** Era nuestra objeción principal: el vecino iba a ver solo prosa. Con `resolution.type` el cierre tiene un texto propio en `publicMessage` y con `attachments[]` podemos mandar la foto del trabajo terminado. Lo único que sigue sin resolver es la **fecha agendada**: el campo común `progress` es un `Int` (porcentaje), no una fecha, y ni la v1.5, ni la v1.6, ni la v1.73 ni la v1.75 definen estructura de `details` para `STARTED`/`PROGRESS`. Sigue como pedido abierto.
 - **Podemos pedirle información al ciudadano.** `INFORMATION_REQUIRED` era el canal que dábamos por perdido cuando desapareció `additionalInfoRequired`. No desapareció: se convirtió en una variante. El inspector que necesita una referencia más precisa o una foto nocturna ya tiene por dónde pedirla. La v1.5 ya no correlaciona por `informationRequestId` (ese campo nunca llegó a existir formalmente): la respuesta siempre corresponde a la única solicitud activa que puede haber por ticket.
 - **`RETURNED` es mejor que rechazar.** Cuando un reclamo no es nuestro, devolverlo a M2 para que lo re-derive es distinto de cancelárselo al vecino. Antes teníamos un solo `REJECTED` para las dos cosas.
 
@@ -296,18 +298,20 @@ Abajo, módulo por módulo, están los campos sin los cuales el flujo no funcion
 
 ## M1 — Ciudadanos y organizaciones
 
-**Sin eventos en ninguna dirección.** Lo que necesitamos son dos consultas REST.
+**No consumimos ningún evento de M1.** Lo que necesitamos son dos consultas, y hoy no hay por dónde hacerlas: su documento del 13/10 define dos eventos de **respuesta** para M6, `citizenInfoDelivered` (por `citizenId`) y `organizationInfoDelivered` (por `cuit`), pero no el pedido que los dispara, y su único endpoint REST es el login. **Les pedimos que definan cómo se piden** (un evento de consulta con su payload, o endpoints REST).
 
 | Consulta | Campos | Para qué |
 |---|---|---|
 | Ciudadano por `citizenId` | `citizenId`, `fullName`, `documentId`, `phone`, `email`, `address { street, number, neighborhoodId }` | Cuando el inspector detecta una infracción de oficio y el infractor es persona física, necesitamos identificarlo para emitir el acta |
 | Organización por `organizationId` | `organizationId`, `legalName`, `tradeName`, `taxId`, `status` | Cada cuadrilla guarda el `organizationId` de la cooperativa que la opera. Sin esto no podemos mostrar su nombre en ninguna pantalla |
 
+⚠️ **El de organización llega por `cuit`**, y en su ejemplo vale `3311`: parece el `organizationId`, no un CUIT (el CUIT es `taxId`, `30712345678`). ¿Con cuál se consulta? También mezclan `ACTIVA` (`organizationInfoDelivered`) y `ACTIVE` (`organizationRegistered`) para el mismo estado.
+
 **Decisión que les avisamos:** el acta de constatación ambiental **no** va al expediente digital. Reciben actuaciones de M4, M5, M7 y M8, y podría llamar la atención que de nosotros no reciban nada. Es a propósito: el acta la derivamos a M4, que decide la sanción y sí les reporta el resultado. El hecho les llega igual, por un solo camino, en lugar de entrarles dos veces. Si prefieren tener también la constatación original, avísennos y les publicamos `environmentalViolationDetected`.
 
 ## M2 — Atención ciudadana
 
-Leímos el contrato completo, ahora en su **v1.6**. **Adoptamos su modelo sin pedir eventos nuevos ni cambios de forma**, y entre la v1.5 y la v1.6 resolvieron por su cuenta cuatro de los pedidos que teníamos anotados abajo. De sus dos eventos publicados escuchamos uno solo:
+Leímos el contrato completo, ahora en su **v1.75** (WIP; en lo que usamos coincide con la v1.6). **Adoptamos su modelo sin pedir eventos nuevos ni cambios de forma**, y entre la v1.5 y la v1.6 resolvieron por su cuenta cuatro de los pedidos que teníamos anotados abajo. De sus dos eventos publicados escuchamos uno solo:
 
 | Evento | Qué hacemos con él |
 |---|---|
@@ -327,7 +331,7 @@ Los `updateType` que nos importan:
 
 `STATUS_CHANGED`, `RESOLVED` y `CLOSED` los escuchamos pero no hacemos nada con ellos: en esos casos el cierre lo originamos nosotros.
 
-**Campos que necesitamos de `ticketUpdated / ROUTED`** (actualizado a v1.6):
+**Campos que necesitamos de `ticketUpdated / ROUTED`** (vigente v1.75; igual que la v1.6):
 
 ```
 comunes:  ticketId, citizenId, isAnonymous, responsibleAreaId, updateType,
@@ -349,7 +353,7 @@ details.routing:  requestType (string), ticketType, summary, description,
 
 ✅ **`RESOLVED` directo desde `ROUTED` — resuelto por la v1.6.** §8.2 dice que M2 **no** mantiene una configuración por RequestType para habilitar o impedir la resolución directa, y que `STARTED`/`PROGRESS` son hechos opcionales. Ya no hay catálogo que esperar. Mantenemos igual la costumbre de publicar `STARTED` antes de `RESOLVED` porque refleja el hecho real, no porque haga falta.
 
-🔴 **Sigue abierto: `progress` no sirve para nuestra fecha agendada.** Tercera versión seguida. El campo común `progress` de `updateTicketStatus` (lo que nosotros publicamos) es un `Int` (porcentaje), no una fecha, y §8.2 sigue sin definir estructura de `details` para `STARTED`/`PROGRESS`. Necesitamos saber cómo mandar la fecha/franja agendada del servicio.
+🔴 **Sigue abierto: `progress` no sirve para nuestra fecha agendada.** Sexta versión seguida (v1.75 incluida). El campo común `progress` de `updateTicketStatus` (lo que nosotros publicamos) es un `Int` (porcentaje), no una fecha, y §8.2 sigue sin definir estructura de `details` para `STARTED`/`PROGRESS`. Necesitamos saber cómo mandar la fecha/franja agendada del servicio. En el paquete de schemas de la v1.75 hay un ejemplo de `PROGRESS` que informa la programación como texto en `publicMessage`: **¿es la forma oficial?** Si lo es, cerramos el pedido.
 
 ✅ **Lo que ya no preguntamos.** `ticketInfoProvided` y `additionalInfoRequired` no desaparecieron: se convirtieron en `ticketUpdated / INFORMATION_PROVIDED` y `updateTicketStatus / INFORMATION_REQUIRED`. La cancelación tampoco se perdió: es `ticketUpdated / CANCELLED`. Y `targetArea` en `ticketCreated` dejó de tener sentido, porque ese evento no es para nosotros. Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode`, que antes no estaban enumerados, están publicados desde la v1.5.
 
@@ -441,7 +445,7 @@ streetClosureEnded
 
 | # | Qué pasa | Con quién |
 |---|---|---|
-| 1 | **M2 publicó su contrato (ahora v1.6) y ningún otro módulo está escrito contra él.** M1, M4, M5 y M8 siguen publicando `ticketInProgress`, `ticketUpdate`, `ticketCompleted` y `ticketRejected`, que M2 no consume: lo suyo va por `updateTicketStatus` con `updateType`. Y los seis eventos de ciclo de vida que M1, M3, M5, M7 y M8 esperan son hoy variantes de `ticketUpdated`, no eventos. **Los cinco tienen que releer el contrato** | M1, M3, M4, M5, M8 |
+| 1 | **M2 publicó su contrato (ahora v1.75, WIP) y ningún otro módulo está escrito contra él.** M4, M5 y M8 siguen publicando `ticketInProgress`, `ticketUpdate`, `ticketCompleted` y `ticketRejected`, que M2 no consume: lo suyo va por `updateTicketStatus` con `updateType`. Y los seis eventos de ciclo de vida que M1, M3, M5, M7 y M8 esperan son hoy variantes de `ticketUpdated`, no eventos. **Los cinco tienen que releer el contrato**. El documento de M1 del 13/10 ya no lista esos eventos, pero sus ejemplos de `updateTicketStatus` de M2 (`COMPLETED`, `UPDATED`, `ADDITIONAL_INFO_REQUIRED`, `statusChangedAt`, `AREA_USER`) son del contrato viejo | M1, M3, M4, M5, M8 |
 | 2 | **`commercialFineGenerated` figura rotulado solo hacia Rentas**, pero nosotros lo necesitamos para cerrar el expediente | M4 |
 | 3 | **M4 declara consumir `updateTicketStatus`.** Es el canal de entrada de M2 desde las áreas operativas: ningún otro módulo tendría que escucharlo | M4 |
 | 4 | ~~**`workOrderScheduled` reemplazó a `workOrderCreated`**~~ ✅ Cerrado el 5 oct 2026: se dispare al abrir o al agendar, no nos cambia nada | M3 |
@@ -465,8 +469,8 @@ Un huérfano es un evento que alguien espera y nadie publica. Esta lista se achi
 | Evento | Lo espera | Lo publica | Qué pasa |
 |---|---|---|---|
 | `paymentRegistered`, `debtSettled` | M4, M7 | **nadie** | M5 los publica como `paymentRecorded` y `debtCancelled`. **Rompe el cierre financiero de infracciones y habilitaciones** |
-| `caseFileResolved` | M3, M7 | **nadie** | M1 no publica ningún evento de expediente |
-| `registeredCitizen`, `registeredOrganization` | M5 | **nadie** | M1 los publica invertidos: `citizenRegistered`, `organizationRegistered` |
+| `caseFileResolved` | M3, M7 | ~~nadie~~ **M1**, con otro nombre | M1 lo publica ahora (documento del 13/10) como `casefileResolved`, con la `f` minúscula, y lo muestra solo para M3. Es el mismo problema de siempre, esta vez de mayúsculas: no le llega a nadie hasta que se alinee el nombre |
+| `registeredCitizen`, `registeredOrganization` | M5 | ~~nadie~~ **M1**, con otros nombres | M1 publica ahora `citizenUpdated` (con `updateType: REGISTERED`) para M2 y M5, y `organizationRegistered`. M5 sigue esperando los nombres viejos |
 | `enablingFeeGenerated`, `enablingSuspended` | M5 | **nadie** | Alias viejos de `permitFeeGenerated` y `permitSuspended`. M5 ya consume el primero por duplicado bajo los dos nombres |
 | `licenseRequestInitiated`, `licenseApproved` | M1 | **nadie** | M4 usa `permitApplicationStarted` y `permitApproved`. M1 tiene los dos vocabularios en su misma lista |
 | `constructionApproved` | M1 | **nadie** | M3 lo llama `publicWorksProjectApproved` |
@@ -476,8 +480,8 @@ Un huérfano es un evento que alguien espera y nadie publica. Esta lista se achi
 | `publicWorksProjectApproved`, `publicWorksProjectCompleted` | **nadie** | M3 | M3 los dirige a M1, que consume `constructionApproved`. Eran doce, quedaron dos |
 | Todo lo de M8 hacia M2 | **nadie** | M8 | M2 no consume nada de M8 |
 | `workOrderScheduled`, `workOrderCompleted`, `workOrderUpdated` hacia M2 | **nadie** | M3 | M2 no consume nada de M3 |
-| `additionalInfoRequired` | **nadie** | M1 | El contrato de M2 lo reemplazó por `updateTicketStatus / INFORMATION_REQUIRED`. M1 tiene que publicar esa variante en vez del evento |
-| `representationExpired`, `citizenBlocked`, `citizenDeceased` | **nadie** | M1 | Sin consumidor declarado. Puede estar bien, pero conviene confirmarlo |
+| `additionalInfoRequired` | **nadie** | M1 | El contrato de M2 lo reemplazó por `updateTicketStatus / INFORMATION_REQUIRED`. El documento de M1 del 13/10 ya no lo lista como evento, pero sus ejemplos todavía usan `ADDITIONAL_INFO_REQUIRED`, que no existe en la v1.75 |
+| `representationExpired`, `citizenBlocked`, `citizenDeceased` | **nadie** | M1 | `citizenBlocked` y `citizenDeceased` ya no son eventos: son `citizenUpdated` con `updateType: BLOCKED` o `DECEASED`, que M1 manda a M2 y M5. `representationExpired` sigue publicado sin consumidor declarado. Conviene confirmarlo |
 | `eventRejected` | **nadie** | todos | Todos lo publican y nadie lo consume. Debería consumirlo M9 |
 
 ## 3.3 Un riesgo en el bloque común

@@ -14,7 +14,7 @@ No toca ningún [`Container`](../../entidades/container.md): el consumer solo ac
 |---|---|
 | ✅ `sourceRequestId` | **Obligatorio**, uuid. Es el `requestId` de nuestro [`infrastructureRepairRequested`](../publicados/infrastructureRepairRequested.md). Confirmado (25/08) |
 | `outcome` | String libre: **no lo interpretamos** (hoy tampoco lo persistimos) |
-| `attachments[]` | Evidencia del trabajo, con la forma de adjunto de M2 (§5.3, v1.73): `{fileName, contentType, url, sizeBytes?}`, sin `attachmentId`. `fileName`, `contentType` y `url` obligatorios. Reemplaza al `evidence` que M3 había mandado |
+| `attachments[]` | Evidencia del trabajo, con la forma de adjunto de M2 (§5.3, v1.75): `{fileName, contentType, url, sizeBytes?}`, sin `attachmentId`. `fileName`, `contentType` y `url` obligatorios. Reemplaza al `evidence` que M3 había mandado |
 | `workOrderId`, `completedAt`, `consumedMaterials` | Se toleran. No los usamos |
 
 ## Notas

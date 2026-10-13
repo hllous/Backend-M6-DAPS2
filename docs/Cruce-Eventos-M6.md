@@ -1,7 +1,7 @@
 # Cruce de Eventos M6
 
 **Grupo 04 — Módulo 6, Ambiente, Higiene y Servicios Urbanos**
-Fecha: 17 de agosto de 2026 (cruce original). Métrica de bloqueantes actualizada al 5 de octubre de 2026
+Fecha: 17 de agosto de 2026 (cruce original). Métrica de bloqueantes actualizada al 5 de octubre de 2026; M1 y M2 actualizados al 13 de octubre de 2026
 Fuente: listas de eventos publicados y consumidos de M1–M8 (`Eventos.txt`)
 Contraste: Documento de Alcance M6 + las siete fichas por módulo
 Alcance del cruce: nombres y direcciones de evento. Los campos de payload no son visibles en esta ronda.
@@ -293,7 +293,9 @@ Coherente con lo acordado. Nuestros dos pedidos son REST —consulta de ciudadan
 
 **A decidir:** M1 consume las actuaciones de todas las áreas para el expediente digital —inspecciones de M4, beneficios de M8, infracciones apeladas de M7— **menos las nuestras**. Nuestra acta de constatación es un acto administrativo formal; o confirmamos explícitamente que queda fuera del expediente, o les publicamos `environmentalViolationDetected` a ellos también.
 
-No necesitamos `citizenDeceased`, `addressUpdated` ni `citizenBlocked`: no replicamos el registro de ciudadanos.
+**Actualización 13/10/2026.** M1 pasó su documento de funciones, payloads y endpoints y ya no es "sin eventos": para nosotros define dos eventos de **respuesta**, `citizenInfoDelivered` (por `citizenId`) y `organizationInfoDelivered` (por `cuit`), pero no el pedido que los dispara; su único endpoint REST es el login. Tampoco migró al sobre del Core: sigue con `producer`, `subject` y `correlationId` tipo `M6-REQ-000045`. Además cambiaron nombres: `citizenBlocked`, `citizenDeceased` y el alta de ciudadano son ahora `citizenUpdated` con `updateType` (`BLOCKED`, `DECEASED`, `ADDRESS_UPDATED`, `REGISTERED`), y publican `casefileResolved` (con `f` minúscula) para M3. Detalle en [bloqueantes.md](bloqueantes.md).
+
+No necesitamos lo que M1 agrupa en `citizenUpdated` (alta, bloqueo, fallecimiento, cambio de domicilio): no replicamos el registro de ciudadanos.
 
 ## M5 — Rentas ✅ CONFIRMADO SIN INTEGRACIÓN
 

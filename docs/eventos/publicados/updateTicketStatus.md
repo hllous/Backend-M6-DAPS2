@@ -1,6 +1,6 @@
 # `updateTicketStatus` → M2
 
-El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — v1.73 (WIP), que reemplaza a la v1.72 WIP y no cambia este evento respecto de la v1.6; la v1.71 y la v1.72 nunca se cruzaron — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
+El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — v1.75 (WIP), que reemplaza a la v1.74 WIP y no cambia este evento respecto de la v1.6; la v1.71, la v1.72 y la v1.74 nunca se cruzaron — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
 
 Schema: [`updateTicketStatus.schema.json`](updateTicketStatus.schema.json).
 
@@ -10,7 +10,7 @@ Cuando cambia el estado de un [`Service`](../../entidades/service.md) o de una i
 
 > **La regla:** proyectamos si y solo si el `Service` o el [`EnvironmentalReport`](../../entidades/environmental-report.md) tiene `ticketId`. Sin esta regla, M2 recibe eventos de tickets que no existen.
 
-## Payload (v1.73, sin cambios desde la v1.6)
+## Payload (v1.75, sin cambios desde la v1.6)
 
 ```
 ticketId, updateType,
@@ -50,7 +50,7 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 
 ### 🔴 Bloqueante: `progress` no sirve para la fecha agendada
 
-**Quinta versión seguida sin resolverse.** El campo común `progress` es un `Int` 0..100 (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.73 mantiene "details obligatorio: Ninguno". Necesitamos saber cómo mandar la fecha/franja agendada del servicio: ¿va como texto en `publicMessage`, o van a definir una estructura tipo `details.schedule`? Ver [bloqueantes.md](../../bloqueantes.md#tablero).
+**Sexta versión seguida sin una estructura propia.** *Novedad del 13/10:* el paquete de schemas de M2 trae `updateTicketStatus_PROGRESS_programacion.json`, un ejemplo de M3 que informa la programación como **texto en `publicMessage`** de un `PROGRESS` (`progress: 10`). Es la opción de texto de nuestro pedido; su schema fuerza `details: null` en `STARTED` y `PROGRESS`, así que `details.schedule` no va a llegar. Falta que M2 lo confirme, y que decidamos nosotros cuándo mandarlo: `PROGRESS` exige el ticket en `IN_PROGRESS` y hoy `urbanServiceScheduled` no emite nada hacia M2 (ver la tabla de abajo). El campo común `progress` es un `Int` 0..100 (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.75 mantiene "details obligatorio: Ninguno". Necesitamos saber cómo mandar la fecha/franja agendada del servicio: ¿va como texto en `publicMessage`, o van a definir una estructura tipo `details.schedule`? Ver [bloqueantes.md](../../bloqueantes.md#tablero).
 
 ⚠️ **Validación nueva en `PROGRESS`.** La v1.6 (§8.2) exige que aporte al menos uno de `progress`, `publicMessage`, `internalMessage` o `attachments`. Un `PROGRESS` vacío ahora es inválido: afectaría sobre todo al fan-out de `zoneNotServiced` si se implementa (hoy no lo está, ver más abajo).
 
@@ -59,6 +59,19 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 **La v1.6 lo resolvió a nuestro favor.** §8.2 lo dice sin ambigüedad: *"M2 no mantiene una configuración por RequestType para habilitar o impedir la resolución directa"*, y `RESOLVED` se acepta tanto desde `ROUTED` como desde `IN_PROGRESS`. `STARTED` y `PROGRESS` son hechos opcionales que cada área decide si informa.
 
 Nuestra regla de publicar siempre `STARTED` inmediatamente antes de `RESOLVED` nació de que ese catálogo no existía. Ya no hace falta esperarlo. **La mantenemos igual por ahora** —es válida en cualquier caso y refleja el hecho real de que la cuadrilla empezó—, pero pasó de ser una defensa contra la ambigüedad a una decisión de contenido, y se puede simplificar sin pedirle nada a nadie.
+
+### Reglas de M2 que ya cumplimos (§8.2 y §12 de la v1.75)
+
+Revisadas contra los lugares donde se arma el evento (`ticketEvents` en `EnvironmentalReportsService` y `ServicesService`); no hay un test que las fije todas:
+
+| Regla de M2 | Cómo la cumplimos |
+|---|---|
+| `PROGRESS` solo con el ticket `IN_PROGRESS`; si no, M2 lo `nack`ea (queda reintentando hasta la DLQ). **Informar `STARTED` antes** | La demora solo se proyecta con el servicio `IN_PROGRESS` (#146); el aviso por acta sale después del `STARTED` de `startReview` |
+| `RESOLVED` exige `details.resolution.type` y `publicMessage` | Siempre `ACTION_COMPLETED` y un `publicMessage` fijo |
+| `RETURNED` y `REJECTED` exigen `publicMessage` o `internalMessage` | Mandamos `internalMessage` (el motivo del operador, que no se le muestra al vecino) |
+| `INFORMATION_REQUIRED` exige `informationRequest.messageForCitizen` | No lo emitimos todavía (ver abajo) |
+| Un `updateTicketStatus` solo lo acepta M2 si el `sourceModule` del sobre, traducido a `Mx`, es el `responsibleAreaId` del ticket | Nuestro `sourceModule` es `ambiente`, que M2 traduce a `M6` (§5.1) |
+| Reenviar el mismo hecho reusa el `eventId` | El `eventId` es el id de la fila del outbox |
 
 ### Enums publicados
 
@@ -94,7 +107,7 @@ Los otros dos hechos no tienen traducción directa:
 
 `INFORMATION_REQUIRED` se correlaciona sin ID: desde la v1.5 no hay `informationRequestId`, sino una invariante de "como máximo una `InformationRequest` activa por ticket a la vez", así que la respuesta del vecino siempre corresponde a la nuestra. Llega como [`ticketUpdated / INFORMATION_PROVIDED`](../consumidos/ticketUpdated.md).
 
-**§9 de la v1.73: un Ticket tiene como máximo UNA solicitud de información activa.** Un segundo `INFORMATION_REQUIRED` mientras hay una pendiente **no abre una interacción paralela**: M2 lo rechaza o registra conflicto. El flujo: publicamos `INFORMATION_REQUIRED`; M2 pasa el ticket a `PENDING_INFORMATION` y pausa el SLA; el vecino responde; M2 restaura el estado anterior y publica `ticketUpdated / INFORMATION_PROVIDED`. En el ejemplo de M2 el sobre lleva `producer: { moduleId: "M6", service: "urban-services-api" }`, igual que el nuestro. **Hoy no emitimos `INFORMATION_REQUIRED`** (no hay call site; la propuesta abierta es el issue #169), así que el riesgo de mandar un segundo pedido con uno activo no existe todavía, pero hay que resolverlo al implementarlo.
+**§9 de la v1.75: un Ticket tiene como máximo UNA solicitud de información activa.** Un segundo `INFORMATION_REQUIRED` mientras hay una pendiente **no abre una interacción paralela**: M2 lo rechaza o registra conflicto. El flujo: publicamos `INFORMATION_REQUIRED`; M2 pasa el ticket a `PENDING_INFORMATION` y pausa el SLA; el vecino responde; M2 restaura el estado anterior y publica `ticketUpdated / INFORMATION_PROVIDED`. En el ejemplo de la v1.75 el sobre lleva `sourceModule: "ambiente"`, igual que el nuestro, y `updatedBy: { type: "EXTERNAL_USER", id: "USR-M6-77" }`. **Hoy no emitimos `INFORMATION_REQUIRED`** (no hay call site; la propuesta abierta es el issue #169), así que el riesgo de mandar un segundo pedido con uno activo no existe todavía, pero hay que resolverlo al implementarlo.
 
 ## Un hecho, dos eventos, un solo efecto
 

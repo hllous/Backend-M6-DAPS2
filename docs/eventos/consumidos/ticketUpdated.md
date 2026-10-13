@@ -6,7 +6,7 @@ No consumimos `ticketCreated`: va hacia M1 con los datos mínimos del registro d
 
 ## Qué hace M6 al recibirlo
 
-Depende del discriminador `updateType`. La v1.73 —vigente (WIP), reemplaza a la v1.72 WIP; la v1.71 y la v1.72 nunca se cruzaron— define trece valores posibles (§7.2), los mismos que la v1.6 y la v1.5 — **la tabla de abajo cubre los trece**, no solo los que nos interesan: seis disparan acción, siete se ignoran a propósito.
+Depende del discriminador `updateType`. La v1.75 —vigente (WIP), reemplaza a la v1.74 WIP; la v1.71, la v1.72 y la v1.74 nunca se cruzaron— define trece valores posibles (§7.2), los mismos que la v1.73, la v1.6 y la v1.5 — **la tabla de abajo cubre los trece**, no solo los que nos interesan: seis disparan acción, siete se ignoran a propósito.
 
 | `updateType` | Qué hacemos |
 |---|---|
@@ -14,10 +14,10 @@ Depende del discriminador `updateType`. La v1.73 —vigente (WIP), reemplaza a l
 | `INFORMATION_PROVIDED` | Sumamos al expediente lo que el vecino respondió. No hay ID de correlación: como máximo hay una solicitud activa por ticket, así que la respuesta siempre corresponde a la nuestra. Viene en `details.informationResponse.message`, en `attachments[]`, o en ambos — §7.6 garantiza al menos uno de los dos. `citizenResponse` guarda el `message` y una línea `fileName: url` por adjunto. `publicMessage` es la glosa de M2 y no se usa |
 | `CANCELLED` | Cancelamos los `Service` `SCHEDULED`/`RESCHEDULED` que tengan este `ticketId`. La inspección no se toca — `EnvironmentalInspection` es un modelo propio, sin `ticketId` — y su servicio solo cae si se programó con `origin = TICKET`. Si el expediente está en `UNDER_REVIEW`, pasa a `DISMISSED`; **en cualquier otro estado no lo toca** |
 | `REOPENED` | Reabrimos: el vecino rechazó la solución y vuelve a gestión |
-| `PRIORITY_CHANGED` | Actualizamos `priority` del expediente. Hoy es el único camino por el que cambia después del alta: no existe `PATCH /environmental-reports/:id`. **§7.2 de la v1.73 lo marca como valor contractual reservado**: M2 no lo emite automáticamente y *no se publica por el mero recálculo interno*. **Lo seguimos aceptando y procesando igual** (`TicketsConsumer` tiene el handler): si M2 lo activa, ya funciona |
+| `PRIORITY_CHANGED` | Actualizamos `priority` del expediente. Hoy es el único camino por el que cambia después del alta: no existe `PATCH /environmental-reports/:id`. **§7.2 de la v1.75 lo marca como valor contractual reservado**: M2 no lo emite automáticamente y *no se publica por el mero recálculo interno*. **Lo seguimos aceptando y procesando igual** (`TicketsConsumer` tiene el handler): si M2 lo activa, ya funciona |
 | `ESCALATION_CHANGED` | Marcamos **o desmarcamos** `escalated` según `details.escalation.active` (§5.6, §7.7) y se lo mostramos al supervisor. Sin un `active` booleano no tocamos el flag. El `ROUTED` también lo trae, en `details.routing.escalation`: un ticket derivado ya escalado nace escalado |
 | `CONTENT_UPDATED` | **Nada, decisión propia — pero por otro motivo que antes.** La v1.6 **sí** define `details.content` (§7.7) con `requestType, category, subcategory, ticketType, summary, description, formData, resolutionDueAt`, así que el argumento de "no hay campo del que copiar" caducó. Lo seguimos ignorando porque §7.3 aclara que la clasificación **queda bloqueada una vez que el ticket fue `ROUTED`**: un `CONTENT_UPDATED` que nos llegue es casi siempre anterior a que exista expediente nuestro, y si llega después no puede haber cambiado la clasificación. Si trae `publicMessage`, lo dejamos en el registro de mensajes para trazabilidad |
-| `PROGRESS` | **Nada.** §7.2 de la v1.73 lo marca como valor contractual reservado: M2 no lo emite automáticamente, y por §10 el `PROGRESS` que le mandamos por `updateTicketStatus` no vuelve como `ticketUpdated` |
+| `PROGRESS` | **Nada.** §7.2 de la v1.75 lo marca como valor contractual reservado: M2 no lo emite automáticamente, y por §10 el `PROGRESS` que le mandamos por `updateTicketStatus` no vuelve como `ticketUpdated` |
 | `DUPLICATE_LINKED` | **Nada.** Gestión de vinculación que hace M2; no genera trabajo operativo propio |
 | `INFORMATION_REQUIRED` (variante de `ticketUpdated`, no confundir con la de `updateTicketStatus`) | **Nada.** Su propio contrato dice explícitamente que este tipo de update es solo para uso interno y de M1 |
 | `STATUS_CHANGED`, `RESOLVED`, `CLOSED` | **Nada.** Si llegan (los origina M2 por su cuenta, por ejemplo un `CLOSED` por confirmación del vecino o por timeout) se descartan; no esperamos eco del cierre que publicamos nosotros |
@@ -58,7 +58,7 @@ Si el `ROUTED` que abre el expediente falla y el Core lo reintenta, un evento m�
 
 > **M2 no replica un hecho externo como `ticketUpdated` espejo (§10).** Una resolución, una cancelación o un `INFORMATION_REQUIRED` que M2 recibe por [`updateTicketStatus`](../publicados/updateTicketStatus.md) **no vuelve** como `ticketUpdated`: no esperemos eco de lo que publicamos nosotros. Los `ticketUpdated` que llegan son los que M2 origina por su cuenta.
 
-## Campos que necesitamos de `ROUTED` (v1.73)
+## Campos que necesitamos de `ROUTED` (v1.75, igual que la v1.73)
 
 ```
 comunes:  ticketId, publicId, citizenId, isAnonymous, responsibleAreaId, updateType,
