@@ -15,7 +15,7 @@
 | [`notificationSent`](notificationSent.md) | **M9** | Registramos el acuse. 🔴 Puede que lo saquemos |
 | [`weatherAlertIssued`](weatherAlertIssued.md) | *nadie* | **Simulado internamente.** Dispara la reprogramación masiva por zona |
 
-Nueve de la cohorte, de cinco módulos, más uno simulado (M4 fusionó `closureOrdered` + `closureLifted` en `closureUpdate` el 24/08; los dos viejos ya no tienen ficha). **De M1, M5 y M8 no consumimos ningún evento.**
+Nueve de la cohorte, de cinco módulos, más uno simulado (M4 fusionó `closureOrdered` + `closureLifted` en `closureUpdate` el 24/08; los dos viejos ya no tienen ficha). **De M1, M5 y M8 no consumimos ningún evento.** M1 define para nosotros dos eventos de respuesta, `citizenInfoDelivered` y `organizationInfoDelivered`, pero no el de consulta que los dispara, y siguen en el sobre viejo de M2 (con un `correlationId` que no es UUID, que el inbox rechazaría): no tienen ficha y no nos suscribimos. Ver [bloqueantes.md](../../bloqueantes.md#m1--ciudadanos--roles-e-identidad-recibidos-falta-el-jwt).
 
 ## Qué se consume hoy
 
