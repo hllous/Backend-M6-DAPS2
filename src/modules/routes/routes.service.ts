@@ -170,6 +170,9 @@ export class RoutesService {
           estimatedDurationMin: stop.estimatedDurationMin,
         })),
       }),
+      // Las paradas son hijas: sin tocar la fila de Route, su updatedAt no cambia
+      // y el chequeo de concurrencia optimista del frontend no detecta la edición.
+      this.prisma.route.update({ where: { id: routeId }, data: { updatedAt: new Date() } }),
     ]);
 
     this.logger.log(`Recorrido ${routeId}: secuencia actualizada a ${dto.stops.length} paradas`);
