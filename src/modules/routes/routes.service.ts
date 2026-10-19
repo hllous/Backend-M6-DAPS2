@@ -170,6 +170,12 @@ export class RoutesService {
           estimatedDurationMin: stop.estimatedDurationMin,
         })),
       }),
+      // Las paradas son hijas: sin tocar la fila de Route, su updatedAt no cambia
+      // y el chequeo de concurrencia optimista del frontend no detecta la edición.
+      // `updatedAt: new Date()` es explícito a propósito: no depende de que Prisma
+      // bumpee @updatedAt con un update vacío, y usa el reloj de la app. Se bumpea
+      // aunque las paradas enviadas sean idénticas a las actuales.
+      this.prisma.route.update({ where: { id: routeId }, data: { updatedAt: new Date() } }),
     ]);
 
     this.logger.log(`Recorrido ${routeId}: secuencia actualizada a ${dto.stops.length} paradas`);
