@@ -144,6 +144,15 @@ describe('Flujo del expediente ambiental (e2e)', () => {
     expect(expediente.status).toBe('VIOLATION_FOUND');
   });
 
+  it('el GET del acta sin acta emitida responde 200 con el literal null; inspección inexistente, 404', async () => {
+    const res = await api
+      .get(`/environmental-inspections/${inspectionId}/violation-notice`)
+      .expect(200);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.text).toBe('null');
+    await api.get(`/environmental-inspections/${randomUUID()}/violation-notice`).expect(404);
+  });
+
   it('emite el acta, la deriva a M4 y cierra el expediente en NOTICE_ISSUED', async () => {
     const res = await api
       .post(`/environmental-inspections/${inspectionId}/violation-notice`, {
