@@ -513,7 +513,8 @@ export class ContainersController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Transición inválida (solo se puede retirar desde ACTIVE o DAMAGED)',
+    description:
+      'Transición inválida (solo se puede retirar desde DAMAGED; un ACTIVE debe reportarse dañado primero)',
     type: ErrorResponseDto,
   })
   @ApiResponse({

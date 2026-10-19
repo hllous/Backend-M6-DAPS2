@@ -3251,7 +3251,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     creado: momento(-8, 15),
     // M7 nunca lo recibió: por eso el corte sigue en REQUESTED sin respuesta.
     fallo:
-      'KafkaJSNumberOfRetriesExceeded: el topic de M7 no respondió. Se agotaron los 5 intentos.',
+      'Channel closed by server: 404 (NOT-FOUND): no exchange municipalidad.events. Se agotaron los 5 intentos.',
   });
   const hidrolavado = servicio('hidrolavado-plaza-de-mayo');
   const corteHidrolavado = await corte({
@@ -3699,7 +3699,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     ViolationType.NO_WASTE_MANAGEMENT,
     -3,
     'insp-lavalle',
-    'KafkaJSConnectionError: Connection timeout (broker no disponible). Se agotaron los 5 intentos.',
+    'connect ECONNREFUSED: broker RabbitMQ no disponible. Se agotaron los 5 intentos.',
   );
 
   const clausura = await expediente(

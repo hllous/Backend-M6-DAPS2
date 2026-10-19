@@ -59,9 +59,14 @@ export class EnvironmentalReportsController {
   @ApiOperation({
     summary: 'Listar expedientes ambientales',
     description:
-      'Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen y búsqueda por dirección.',
+      'Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen, cuadrilla (crewId: expedientes con alguna inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base para que la página y meta.total sean consistentes) y búsqueda por dirección.',
   })
   @ApiPaginatedResponse(EnvironmentalReportResponseDto, 'Listado paginado de expedientes')
+  @ApiResponse({
+    status: 400,
+    description: 'Filtro inválido (por ejemplo, crewId que no es UUID)',
+    type: ErrorResponseDto,
+  })
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
   async findAll(@Query() query: QueryEnvironmentalReportsDto) {
@@ -71,7 +76,8 @@ export class EnvironmentalReportsController {
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener un expediente por ID',
-    description: 'Detalle del expediente, con su estado y su plazo de vencimiento si lo tiene.',
+    description:
+      'Detalle del expediente, con su estado, su plazo de vencimiento si lo tiene y la cuadrilla asignada a su inspección más reciente con servicio no cancelado (assignedCrewId).',
   })
   @ApiParam({ name: 'id', description: 'UUID del expediente', format: 'uuid' })
   @ApiResponse({

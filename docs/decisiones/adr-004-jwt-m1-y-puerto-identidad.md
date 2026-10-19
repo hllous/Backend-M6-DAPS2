@@ -14,7 +14,7 @@ El transporte futuro de una eventual consulta de identidad tampoco es necesario 
 
 M6 no emite JWT propios. Valida los JWT emitidos por M1 mediante una configuración basada en el contrato que M1 publique. Mientras falten sus parámetros técnicos, las claves de desarrollo son locales, configurables y no representan un contrato de integración.
 
-Cuando un caso de uso necesite datos de identidad de M1, dependerá de un puerto de aplicación; un adaptador de infraestructura implementará REST o Kafka request/response. No se agrega ese adaptador ni se consumen eventos de M1 hasta que exista un caso de uso de M6 que lo requiera.
+Cuando un caso de uso necesite datos de identidad de M1, dependerá de un puerto de aplicación; un adaptador de infraestructura implementará REST o request/response por el bus. No se agrega ese adaptador ni se consumen eventos de M1 hasta que exista un caso de uso de M6 que lo requiera.
 
 ## Alternativas consideradas
 
@@ -27,7 +27,7 @@ Cuando un caso de uso necesite datos de identidad de M1, dependerá de un puerto
 ### Positivas
 
 - Una sola autoridad para la identidad de usuarios.
-- La lógica de dominio no cambia si una consulta futura usa REST o Kafka.
+- La lógica de dominio no cambia si una consulta futura usa REST o el bus.
 
 ### Negativas
 

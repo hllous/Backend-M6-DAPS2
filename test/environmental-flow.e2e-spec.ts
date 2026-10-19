@@ -1,5 +1,6 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { OutboxEventStatus } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
   Api,
@@ -47,6 +48,8 @@ describe('Flujo del expediente ambiental (e2e)', () => {
         address: 'Camino de Cintura 4500',
         description: '  Vuelco de efluentes al pluvial.  ',
         priority: 'HIGH',
+        // Con reclamo de M2: cada paso proyecta también un updateTicketStatus.
+        ticketId: 'TCK-E2E-ACTA',
       })
       .expect(201);
 
@@ -141,6 +144,15 @@ describe('Flujo del expediente ambiental (e2e)', () => {
     expect(expediente.status).toBe('VIOLATION_FOUND');
   });
 
+  it('el GET del acta sin acta emitida responde 200 con el literal null; inspección inexistente, 404', async () => {
+    const res = await api
+      .get(`/environmental-inspections/${inspectionId}/violation-notice`)
+      .expect(200);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.text).toBe('null');
+    await api.get(`/environmental-inspections/${randomUUID()}/violation-notice`).expect(404);
+  });
+
   it('emite el acta, la deriva a M4 y cierra el expediente en NOTICE_ISSUED', async () => {
     const res = await api
       .post(`/environmental-inspections/${inspectionId}/violation-notice`, {
@@ -167,6 +179,17 @@ describe('Flujo del expediente ambiental (e2e)', () => {
     expect((encolados[0].payload as { establishmentId: string }).establishmentId).toBe(
       'EST-E2E-01',
     );
+
+    // Un solo hilo para la acción (#267): el acta hacia M4 y la novedad hacia M2
+    // salen de enqueue distintos pero del mismo request.
+    const hilo = await prisma.outboxEvent.findMany({
+      where: { correlationId: encolados[0].correlationId },
+    });
+    expect(hilo.map((e) => e.eventType).sort()).toEqual([
+      'environmentalViolationDetected',
+      'updateTicketStatus',
+    ]);
+    expect(hilo.every((e) => e.causationId === null)).toBe(true);
   });
 
   it('no deja emitir una segunda acta sobre la misma inspección', async () => {
@@ -177,6 +200,74 @@ describe('Flujo del expediente ambiental (e2e)', () => {
     });
 
     expect(res.status).toBe(409);
+  });
+
+  it('recibe la multa de M4 por el inbox, registra la resolución y cierra el expediente', async () => {
+    const acta = await prisma.violationNotice.findFirstOrThrow({ where: { inspectionId } });
+    const evento = {
+      specVersion: '1.70',
+      eventId: randomUUID(),
+      eventType: 'commercialFineGenerated',
+      eventVersion: '1.0',
+      occurredAt: new Date().toISOString(),
+      producer: { moduleId: 'M4', service: 'habilitaciones' },
+      subject: `violations/${acta.id}`,
+      data: {
+        sourceViolationId: acta.id,
+        actId: 'MULTA-E2E-01',
+        decision: 'FINE_ISSUED',
+        decidedAt: '2026-09-01T12:00:00.000Z',
+        externalRef: 'EXT-E2E-01',
+      },
+    };
+
+    const primera = await api.post('/events/inbox', evento).expect(200);
+    expect(primera.body.status).toBe('processed');
+
+    // El consumidor pasa por SANCTIONED y cierra en la misma transacción.
+    const expediente = await prisma.environmentalReport.findUniqueOrThrow({
+      where: { id: reportId },
+    });
+    expect(expediente.status).toBe('CLOSED');
+    const resolucion = await prisma.sanctionOutcome.findMany({
+      where: { violationNoticeId: acta.id },
+    });
+    expect(resolucion).toHaveLength(1);
+    expect(resolucion[0]).toMatchObject({ decision: 'FINE_ISSUED', externalRef: 'EXT-E2E-01' });
+    expect(resolucion[0].decidedAt?.toISOString()).toBe('2026-09-01T12:00:00.000Z');
+
+    // Mismo eventId: el inbox lo descarta y no se duplica nada.
+    const segunda = await api.post('/events/inbox', evento).expect(200);
+    expect(segunda.body.status).toBe('duplicate');
+    expect(await prisma.sanctionOutcome.count({ where: { violationNoticeId: acta.id } })).toBe(1);
+    expect(await prisma.inboxEvent.count({ where: { messageId: evento.eventId } })).toBe(1);
+
+    // Otro eventId sobre la misma acta: el handler lo descarta, sigue habiendo una sola resolución.
+    // 'processed' y no 'failed': lo descarta el guard, no el @unique de violationNoticeId.
+    const tercera = await api
+      .post('/events/inbox', { ...evento, eventId: randomUUID() })
+      .expect(200);
+    expect(tercera.body.status).toBe('processed');
+    expect(await prisma.sanctionOutcome.count({ where: { violationNoticeId: acta.id } })).toBe(1);
+  });
+
+  it('rechaza con 400 una multa sin sourceViolationId válido y no guarda la fila', async () => {
+    const eventId = randomUUID();
+    const res = await api
+      .post('/events/inbox', {
+        specVersion: '1.70',
+        eventId,
+        eventType: 'commercialFineGenerated',
+        eventVersion: '1.0',
+        occurredAt: new Date().toISOString(),
+        producer: { moduleId: 'M4', service: 'habilitaciones' },
+        subject: 'violations/n-a',
+        data: { sourceViolationId: 'no-es-uuid' },
+      })
+      .expect(400);
+
+    expect(res.body.message).toContain('sourceViolationId');
+    expect(await prisma.inboxEvent.findUnique({ where: { messageId: eventId } })).toBeNull();
   });
 
   describe('vínculo servicio → inspección (#218)', () => {

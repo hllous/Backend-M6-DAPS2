@@ -1,6 +1,6 @@
 # Módulo 6 — Ambiente, Higiene y Servicios Urbanos · Grupo 04
 
-Contenido de la carpeta de trabajo. Estado al 17 de agosto de 2026.
+Contenido de la carpeta de trabajo. Estado al 5 de octubre de 2026.
 
 ## Dos conjuntos de documentación
 
@@ -24,6 +24,7 @@ Los tres PDF están en [`docs/`](docs/) para tenerlos junto al resto de la docum
 | [`docs/Documento de Alcance - Grupo 04 (Modulo 6).pdf`](docs/Documento%20de%20Alcance%20-%20Grupo%2004%20%28Modulo%206%29.pdf) | **El entregable de la cátedra.** Alcance completo del módulo |
 | [`docs/Diagrama de Eventos - Grupo 04 (Modulo 6).pdf`](docs/Diagrama%20de%20Eventos%20-%20Grupo%2004%20%28Modulo%206%29.pdf) | Diagrama de integración M6 ↔ resto vía Core |
 | `docs/Acuerdo-Eventos-M6.pdf` (compilado, en el repositorio de documentación) | **El documento que circula a los otros grupos.** Los 8 eventos que publicamos con sus payloads, lo que consumimos, y las incongruencias abiertas |
+| `docs/Sobres-M6.md` | **Anexo del Acuerdo, para los otros grupos.** Un mensaje completo, con el sobre del Core, por cada evento que publicamos y recibimos |
 | `Cruce-Eventos-M6.md` | Análisis interno: cruce de las listas de eventos de M1–M9 contra la nuestra |
 | `M6-por-modulo/M6-para-M{1..9}.md` | Una ficha por módulo, para mandarle a cada grupo la suya |
 
@@ -34,6 +35,7 @@ Todo se escribe en Markdown. **Los PDF entregables se regeneran fuera del repo**
 | Archivo fuente | Entregable que produce |
 |---|---|
 | `Acuerdo-Eventos-M6.md` | `docs/Acuerdo-Eventos-M6.pdf` (circula a otros grupos) |
+| `Sobres-M6.md` | `Sobres-M6.pdf` (circula junto al Acuerdo) |
 | `Cruce-Eventos-M6.md` | análisis interno, no se entrega |
 | `fuentes/alcance.md` | versión larga de trabajo, no se entrega |
 | `fuentes/alcance-entregable.md` | `docs/Documento de Alcance - Grupo 04 (Modulo 6).pdf` (entregable cátedra) |
@@ -75,23 +77,16 @@ En cuanto se cree el proyecto NestJS, se suman en la raíz: `src/`, `prisma/`, `
 
 ## Estado de la integración
 
-> **Versión resumida.** El estado vivo, con el detalle por contraparte y la fecha de cada pedido, está en [`docs/bloqueantes.md`](docs/bloqueantes.md). Si los dos difieren, vale ese.
+> **Versión resumida, al 5 de octubre de 2026.** El estado vivo, con el detalle por contraparte y la fecha de cada pedido, está en [`docs/bloqueantes.md`](docs/bloqueantes.md), que es la fuente única: si difiere de este archivo, vale ese.
 
 **Publicamos 8 eventos y los ocho tienen consumidor confirmado.** Eran 15: los siete que le ofrecíamos a M2 como detalle del avance se quedaron sin consumidor cuando M2 definió que todo lo suyo entra por `updateTicketStatus`, y los sacamos del contrato. El diseño de esos siete queda escrito en `fuentes/alcance.md`, sección 7.2.
 
 **Consumimos 10 eventos, de cinco módulos.** De M1, M5 y M8 no consumimos nada.
 
-Bloqueantes abiertos:
+**Contexto vigente.** La referencia de M2 es la v1.75 (WIP). El contrato con M3 quedó cerrado el 5 de octubre. El bus es RabbitMQ ([ADR-006](docs/decisiones/adr-006-rabbitmq-como-bus.md), reemplazado en parte por [ADR-007](docs/decisiones/adr-007-contrato-de-integracion-del-core.md)): M9 anunció el cambio desde Kafka el 27 de septiembre y el 7 de octubre fijó el contrato de integración (sobre, `muni.inbox`, reintentos). El JWT lo emite M1, no M9.
 
-| Con quién | Qué falta |
-|---|---|
-| **M2** | Que `ticketUpdated / ROUTED` diga a qué módulo va —o el catálogo de `requestTypeId` que nos corresponden— y que `location` traiga `neighborhoodId` en vez de texto libre |
-| **M4** | Que devuelvan `sourceViolationId` en `commercialFineGenerated`, `closureOrdered` y `closureLifted` |
-| **M9** | No aparece en la recopilación. Falta la lista de eventos del Core y el catálogo de barrios |
-| **M1** | Confirmado como emisor del JWT; falta su contrato técnico: `alg`, `iss`, `aud`, claves/JWKS, claims y TTL |
-
-M3, M4 y M7 ya confirmaron todo lo que les mandamos.
+**Bloqueantes abiertos** (🔴 en [`docs/bloqueantes.md`](docs/bloqueantes.md)): la fecha/franja agendada de M2, el contrato técnico del JWT de M1, y de M9 las URLs de ambientes y las credenciales del broker, el catálogo de barrios y la lista de eventos del Core. Hay además avisos pendientes, entre ellos reenviar a M7 los cambios de enums y de `neighborhoodId`, y regenerar el PDF del acuerdo de eventos. M3 y M4 no tienen bloqueantes.
 
 ## Referencia importante
 
-`referencias/Documentacion_Eventos_Modulo_2_v1.2_unificado.docx` es la guía de integración de M2. **Es el documento de contrato más completo de la cohorte** —sobre común, JSON Schema, matriz de transiciones, reglas de idempotencia y DLQ— y el único que define un envelope. Nuestro `updateTicketStatus` adopta su payload tal cual.
+`referencias/Documentacion_Eventos_Modulo_2_v1.2_unificado.docx` es la guía de integración de M2. **Es el documento de contrato más completo de la cohorte** —sobre común, JSON Schema, matriz de transiciones, reglas de idempotencia y DLQ— y el único que definía un envelope. **El sobre de M2 es histórico:** desde el 7 de octubre el vigente es el del Core, adoptado por toda la cohorte. Nuestro `updateTicketStatus` adopta su payload tal cual.

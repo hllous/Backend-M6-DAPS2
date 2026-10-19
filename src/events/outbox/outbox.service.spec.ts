@@ -1,5 +1,8 @@
 import { OutboxEntry, OutboxService } from './outbox.service';
 import { AggregateType, EventType } from '../event-types';
+import { eventContext } from '../event-context';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 describe('OutboxService', () => {
   let tx: any;
@@ -89,6 +92,59 @@ describe('OutboxService', () => {
       const [primera, segunda] = tx.outboxEvent.createMany.mock.calls[0][0].data;
       expect(primera.occurredAt).toEqual(cuando);
       expect(segunda.occurredAt).not.toEqual(cuando);
+    });
+  });
+
+  describe('correlationId y causationId (#267)', () => {
+    const TRAZA = {
+      correlationId: '8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5',
+      causationId: '646d19f5-5670-4a7b-9442-30e13b02ba11',
+    };
+
+    /** Un endpoint o un barrido: el evento abre un hilo propio y no tiene causa. */
+    it('fuera de un handler genera un correlationId nuevo y sin causationId', async () => {
+      await outbox.enqueue(tx, entrada());
+      await outbox.enqueue(tx, entrada());
+
+      const [[uno], [otro]] = tx.outboxEvent.create.mock.calls;
+      expect(uno.data.correlationId).toMatch(UUID);
+      expect(uno.data.causationId).toBeNull();
+      expect(otro.data.correlationId).not.toBe(uno.data.correlationId);
+    });
+
+    it('dentro de un handler hereda la traza del evento consumido', async () => {
+      await eventContext.run(TRAZA, () => outbox.enqueue(tx, entrada()));
+
+      expect(tx.outboxEvent.create.mock.calls[0][0].data).toMatchObject(TRAZA);
+    });
+
+    /**
+     * Lo que hace el dominio de verdad: encolar dentro del callback de
+     * `$transaction`, después de varios `await`. El contexto tiene que llegar.
+     */
+    it('la traza sobrevive a los await de una transacción', async () => {
+      const transaccion = async (fn: (t: typeof tx) => Promise<void>) => {
+        await new Promise((r) => setImmediate(r));
+        return fn(tx);
+      };
+
+      await eventContext.run(TRAZA, () =>
+        transaccion(async (t) => {
+          await Promise.resolve();
+          await outbox.enqueueMany(t, [entrada()]);
+        }),
+      );
+
+      expect(tx.outboxEvent.createMany.mock.calls[0][0].data[0]).toMatchObject(TRAZA);
+    });
+
+    it('un lote fuera de un handler comparte un único hilo', async () => {
+      await outbox.enqueueMany(tx, [entrada(), entrada()]);
+
+      const [a, b] = tx.outboxEvent.createMany.mock.calls[0][0].data;
+      expect(a.correlationId).toMatch(UUID);
+      expect(b.correlationId).toBe(a.correlationId);
+      expect(a.causationId).toBeNull();
     });
   });
 });

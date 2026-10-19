@@ -51,3 +51,118 @@ describe('configuration — CORS', () => {
     expect(config({ CORS_ORIGINS: '  ,  ' }).corsOrigins).toEqual([]);
   });
 });
+
+describe('configuration — RabbitMQ', () => {
+  it('sin RABBITMQ_URL no hay bus, y los nombres son los del Core', () => {
+    expect(config().rabbitmq).toEqual({
+      url: undefined,
+      exchange: 'muni.inbox',
+      queue: 'q.ambiente',
+      prefetch: 1,
+    });
+    expect(config().core.moduleId).toBe('ambiente');
+  });
+
+  /** Un `RABBITMQ_URL=` vacío en el panel de Render no debe tumbar el arranque. */
+  it('una URL vacía cuenta como ausente', () => {
+    expect(config({ RABBITMQ_URL: '' }).rabbitmq.url).toBeUndefined();
+  });
+
+  it('toma la URL y los overrides', () => {
+    expect(
+      config({
+        RABBITMQ_URL: 'amqps://m6:clave@bus:5671/muni',
+        RABBITMQ_QUEUE: 'q.otra',
+        RABBITMQ_PREFETCH: '5',
+      }).rabbitmq,
+    ).toEqual(
+      expect.objectContaining({
+        url: 'amqps://m6:clave@bus:5671/muni',
+        queue: 'q.otra',
+        prefetch: 5,
+      }),
+    );
+  });
+
+  it('rechaza una URL que no es amqp:// ni amqps://', () => {
+    expect(() => config({ RABBITMQ_URL: 'http://bus:5672' })).toThrow();
+  });
+
+  it('rechaza algo que no es una URL', () => {
+    expect(() => config({ RABBITMQ_URL: 'amqp://' })).toThrow(/no es una URL/);
+    expect(() => config({ RABBITMQ_URL: 'bus:5672' })).toThrow();
+  });
+
+  /** Una clave con `/` sin encodear corre el `@` al path, y el path se loguea. */
+  it('rechaza una clave con caracteres especiales sin percent-encoding', () => {
+    expect(() => config({ RABBITMQ_URL: 'amqp://m6:12/secreto@bus:5672/muni' })).toThrow(
+      /percent-encoding/,
+    );
+    expect(config({ RABBITMQ_URL: 'amqp://m6:12%2Fsecreto@bus:5672/muni' }).rabbitmq.url).toBe(
+      'amqp://m6:12%2Fsecreto@bus:5672/muni',
+    );
+  });
+
+  it('en producción exige amqps://', () => {
+    expect(() => config({ NODE_ENV: 'production', RABBITMQ_URL: 'amqp://m6:c@bus' })).toThrow(
+      /amqps/,
+    );
+    expect(config({ NODE_ENV: 'production', RABBITMQ_URL: 'amqps://m6:c@bus' }).rabbitmq.url).toBe(
+      'amqps://m6:c@bus',
+    );
+    expect(config({ NODE_ENV: 'production' }).rabbitmq.url).toBeUndefined();
+  });
+
+  /** Es el `sourceModule` del sobre: el Core lo limita a 60 caracteres. */
+  it('rechaza un CORE_MODULE_ID vacío o de más de 60', () => {
+    expect(() => config({ CORE_MODULE_ID: '' })).toThrow();
+    expect(() => config({ CORE_MODULE_ID: 'x'.repeat(61) })).toThrow();
+  });
+});
+
+describe('configuration — Core', () => {
+  /** Hasta que M9 publique la URL de cada ambiente, la app arranca sin Core. */
+  it('sin CORE_API_URL no hay Core ni hace falta el secret', () => {
+    expect(config().core).toEqual({
+      moduleId: 'ambiente',
+      apiUrl: undefined,
+      moduleSecret: undefined,
+    });
+    expect(config({ CORE_API_URL: '', CORE_MODULE_SECRET: '' }).core.apiUrl).toBeUndefined();
+  });
+
+  it('toma la URL y el secret', () => {
+    expect(
+      config({ CORE_API_URL: 'http://localhost:4000', CORE_MODULE_SECRET: 's3cr3t' }).core,
+    ).toEqual({ moduleId: 'ambiente', apiUrl: 'http://localhost:4000', moduleSecret: 's3cr3t' });
+  });
+
+  it('con CORE_API_URL exige CORE_MODULE_SECRET', () => {
+    expect(() => config({ CORE_API_URL: 'https://core.app' })).toThrow(/CORE_MODULE_SECRET/);
+    expect(() => config({ CORE_API_URL: 'https://core.app', CORE_MODULE_SECRET: '' })).toThrow(
+      /CORE_MODULE_SECRET/,
+    );
+  });
+
+  it('un secret en blanco no pasa', () => {
+    expect(() => config({ CORE_API_URL: 'https://core.app', CORE_MODULE_SECRET: '   ' })).toThrow(
+      /CORE_MODULE_SECRET/,
+    );
+    expect(() => config({ CORE_MODULE_SECRET: ' ' })).toThrow(/CORE_MODULE_SECRET/);
+  });
+
+  it('rechaza algo que no es una URL http(s)', () => {
+    const conSecret = { CORE_MODULE_SECRET: 's' };
+    expect(() => config({ ...conSecret, CORE_API_URL: 'core.app' })).toThrow();
+    expect(() => config({ ...conSecret, CORE_API_URL: 'ftp://core.app' })).toThrow(/http/);
+  });
+
+  /** El secret viaja en el body del pedido de token. */
+  it('en producción exige https://', () => {
+    const prod = { NODE_ENV: 'production', CORE_MODULE_SECRET: 's' };
+    expect(() => config({ ...prod, CORE_API_URL: 'http://core.app' })).toThrow(/https/);
+    expect(config({ ...prod, CORE_API_URL: 'https://core.app' }).core.apiUrl).toBe(
+      'https://core.app',
+    );
+  });
+});

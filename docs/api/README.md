@@ -24,4 +24,4 @@ La comunicación entre módulos es **por eventos asincrónicos** — no REST (ve
 
 El JWT de usuario lo emite M1 y este backend lo valida; no se emiten JWT propios desde M6. El detalle verificable del token sigue pendiente en M1 y se documenta en [`bloqueantes.md`](../bloqueantes.md#m1--ciudadanos--jwt-confirmado-sin-integración-de-dominio-actual).
 
-M6 no consume actualmente los eventos ni endpoints de ciudadanos u organizaciones de M1. Si un caso de uso futuro lo requiere, el caso de uso depende de un puerto de aplicación y el adaptador de infraestructura resuelve el transporte (REST o Kafka request/response). Así no se acopla el dominio a una decisión de integración aún no necesaria.
+M6 no consume actualmente los eventos ni endpoints de ciudadanos u organizaciones de M1. Si un caso de uso futuro lo requiere, el caso de uso depende de un puerto de aplicación y el adaptador de infraestructura resuelve el transporte (REST o request/response por el bus). Así no se acopla el dominio a una decisión de integración aún no necesaria.

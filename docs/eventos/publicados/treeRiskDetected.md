@@ -27,8 +27,8 @@ surveyedAt
 
 Enums: `riskLevel` es `RiskLevel`, `riskType` es `RiskType`, `healthStatus` es `TreeHealthStatus`, `suggestedIntervention` es `TreeInterventionType` — ver [enumeraciones.md](../../enumeraciones.md).
 
-✅ **Los dos enums quedaron resueltos** por [ADR-003](../../decisiones/adr-003-divergencias-enums.md): `healthStatus` conserva `WEAKENED` y `DISEASED` en vez de colapsarlos en `DECLINING` (divergencia 3), e `interventionType` conserva los cinco valores del catálogo (divergencia 4). El `MONITORING` que el acuerdo agregaba **se descarta**: monitorear no es una intervención sino la ausencia de una, así que `suggestedIntervention` pasa a ser **opcional** y su ausencia es la que lo expresa. Pendiente de avisarle a M3 y M7.
+✅ **Los dos enums quedaron resueltos** por [ADR-003](../../decisiones/adr-003-divergencias-enums.md): `healthStatus` conserva `WEAKENED` y `DISEASED` en vez de colapsarlos en `DECLINING` (divergencia 3), e `interventionType` conserva los cinco valores del catálogo (divergencia 4). El `MONITORING` que el acuerdo agregaba **se descarta**: monitorear no es una intervención sino la ausencia de una, así que `suggestedIntervention` pasa a ser **opcional** y su ausencia es la que lo expresa. Avisado a M3 el 5 oct 2026; a M7 sigue pendiente.
 
 ## Qué le pedimos al consumidor
 
-Nada de vuelta. M3 lo aceptó tal cual en su lista de consumo, así que **queda descartado** el evento genérico con `hazardType` que se había ofrecido como alternativa. Su lista actualizada ya no tiene el alias `urbanRiskDetected`.
+Nada de vuelta. Es un aviso sin `requestId`: M3 correlaciona por `treeId` y **no debe emitir `workOrderCompleted` hacia M6** para este caso. M3 lo aceptó tal cual en su lista de consumo, así que **queda descartado** el evento genérico con `hazardType` que se había ofrecido como alternativa. El alias `urbanRiskDetected` también está descartado (cierre del 5 oct 2026).

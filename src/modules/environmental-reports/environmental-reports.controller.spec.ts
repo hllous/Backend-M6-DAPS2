@@ -1,3 +1,5 @@
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { EnvironmentalReportsController } from './environmental-reports.controller';
 import { EnvironmentalReportsService } from './environmental-reports.service';
 import {
@@ -36,6 +38,33 @@ describe('EnvironmentalReportsController', () => {
     const query = {} as QueryEnvironmentalReportsDto;
     await controller.findAll(query);
     expect(service.findAll).toHaveBeenCalledWith(query);
+  });
+
+  // El filtro y la paginación los resuelve el service; el controller no recorta.
+  it('findAll pasa crewId y la paginación tal cual al service (#243)', async () => {
+    const page = { data: [{ id: ID, assignedCrewId: 'crew-1' }], meta: { total: 1 } };
+    service.findAll.mockResolvedValue(page as any);
+    const query = { crewId: 'crew-1', page: 2, pageSize: 10 } as QueryEnvironmentalReportsDto;
+
+    await expect(controller.findAll(query)).resolves.toBe(page);
+    expect(service.findAll).toHaveBeenCalledWith(query);
+  });
+
+  it('crewId tiene que ser UUID: otro valor es 400, no una cola vacía (#243)', async () => {
+    const errores = (crewId: string) =>
+      validate(plainToInstance(QueryEnvironmentalReportsDto, { crewId }), {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      });
+
+    expect(await errores('e5f6a7b8-c9d0-4234-8fab-345678901234')).toEqual([]);
+    expect((await errores('cuadrilla-1')).map((e) => e.property)).toEqual(['crewId']);
+  });
+
+  it('findOne devuelve assignedCrewId tal como lo arma el service (#243)', async () => {
+    service.findOne.mockResolvedValue({ id: ID, assignedCrewId: null } as any);
+
+    await expect(controller.findOne(ID)).resolves.toMatchObject({ assignedCrewId: null });
   });
 
   it('findOne delega el id', async () => {

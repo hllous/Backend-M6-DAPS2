@@ -15,13 +15,15 @@
 | [`notificationSent`](notificationSent.md) | **M9** | Registramos el acuse. 🔴 Puede que lo saquemos |
 | [`weatherAlertIssued`](weatherAlertIssued.md) | *nadie* | **Simulado internamente.** Dispara la reprogramación masiva por zona |
 
-Nueve de la cohorte, de cinco módulos, más uno simulado (`closureOrdered` + `closureLifted` se fusionaron en `closureUpdate`, 24/08). **De M1, M5 y M8 no consumimos ningún evento.**
+Nueve de la cohorte, de cinco módulos, más uno simulado (M4 fusionó `closureOrdered` + `closureLifted` en `closureUpdate` el 24/08; los dos viejos ya no tienen ficha). **De M1, M5 y M8 no consumimos ningún evento.** M1 define para nosotros dos eventos de respuesta, `citizenInfoDelivered` y `organizationInfoDelivered`, pero no el de consulta que los dispara, y siguen en el sobre viejo de M2 (con un `correlationId` que no es UUID, que el inbox rechazaría): no tienen ficha y no nos suscribimos. Ver [bloqueantes.md](../../bloqueantes.md#m1--ciudadanos--roles-e-identidad-recibidos-falta-el-jwt).
 
 ## Qué se consume hoy
 
-**Nueve de los diez tienen handler.** Entran por `POST /events/inbox` —o por Kafka cuando haya broker— y la idempotencia es por `eventId`, resuelta en el inbox y no en cada handler.
+**Nueve de los diez tienen handler.** Entran por dos vías: `POST /events/inbox` y, con `RABBITMQ_URL` configurada, la cola `q.ambiente` (`RABBITMQ_QUEUE`), que crea el Core al registrar nuestras suscripciones: la app solo verifica que exista y no declara bindings. Ahí llegan mezclados todos los `eventType` que suscribimos. Las dos vías pasan por la misma validación y el mismo `InboxService.ingest()`; la idempotencia es por `eventId`, resuelta en el inbox y no en cada handler.
 
-`eventId` y `eventType` no pueden superar 100 caracteres (400 si se pasan). Los ids de M1, M2 y M9 miden hoy hasta ~24 caracteres (un UUID mide 36), así que entran holgados.
+**Ack: nunca se reencola.** Si el inbox responde `processed`, `duplicate` o `ignored` se hace `ack`. Todo lo demás —el handler falló (`failed`), el mensaje es inválido (lo que por HTTP es 400) o hubo un error inesperado— es `nack` sin reencolar, y el Core reintenta con backoff (15 s → 1 m → 5 m → 15 m) hasta mandarlo a su DLQ, consultable en `GET /api/v1/dlq?targetModule=ambiente`. Un inválido agota los reintentos, pero así queda en la DLQ con el payload crudo y no se pierde. Reenviar el `eventId` de un evento cuyo handler falló **vuelve a correr el handler**, así que los handlers tienen que tolerar correr de nuevo; uno ya procesado o en curso sale `duplicate`. **El orden de llegada no está garantizado**: un reintento llega después de lo que se publicó más tarde. Contexto en [ADR-006](../../decisiones/adr-006-rabbitmq-como-bus.md) (anterior al Core: su política de ack y su topología quedaron reemplazadas).
+
+`eventId` no puede superar 100 caracteres y `eventType` 120, el tope del Core (400 si se pasan). Los ids de M1, M2 y M9 miden hoy hasta ~24 caracteres (un UUID mide 36), así que entran holgados.
 
 | Evento | Handler | Efecto |
 |---|---|---|
@@ -62,7 +64,7 @@ El payload lo define el módulo que publica. Acá documentamos **solo los campos
 | M9 | Que alguien publique algo que origine una notificación | 🔴 Sin publicador |
 | M2 | `progress` de `updateTicketStatus` (lo que publicamos, no lo que consumimos) no sirve para la fecha agendada | 🔴 Bloqueante — ver [`updateTicketStatus`](../publicados/updateTicketStatus.md) |
 | M4 | Confirmar ruteo de `commercialFineGenerated`, `decidedAt`/`externalRef` pendientes de publicar, pregunta sobre `actId` | ⚠️ Abierto |
-| M3 | Cuándo se dispara `workOrderScheduled`, nombre `evidence` vs `attachments[]` a confirmar | ⚠️ Abierto (no bloqueante) |
+| M3 | ~~Cuándo se dispara `workOrderScheduled`; `evidence` vs `attachments[]`~~ | ✅ Cerrado (5 oct 2026): aceptado en ambos casos; `attachments[]` con la forma de M2 |
 | M7 | ~~Asimetría: `streetClosureEnded` no traía el origen de la solicitud~~ | ✅ Resuelto (30/08): ya trae `closureRequestId` |
 
 Detalle en [bloqueantes.md](../../bloqueantes.md).
@@ -72,6 +74,7 @@ Detalle en [bloqueantes.md](../../bloqueantes.md).
 | Evento | Por qué no |
 |---|---|
 | `ticketCreated` (M2) | Va hacia M1 con los datos mínimos del registro del ciudadano. No sirve para abrir un servicio |
+| `workOrderCreated`, `workOrderValidated` (M3) | Cerrado con M3 el 5 oct 2026: consumimos solo `workOrderScheduled` y `workOrderCompleted`. La solicitud se cierra con `workOrderCompleted` |
 | `workOrderUpdated` (M3) | Va solo hacia M2. Nuestra solicitud tiene tres estados y con los otros dos alcanza |
 | `notificationFailed` (M9) | Mismo problema que `notificationSent`, sin el beneficio del acuse |
 | `citizenDeceased`, `addressUpdated`, `citizenBlocked` (M1) | No replicamos el registro de ciudadanos |

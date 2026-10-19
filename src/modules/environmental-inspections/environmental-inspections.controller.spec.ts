@@ -1,3 +1,4 @@
+import type { Response } from 'express';
 import { EnvironmentalInspectionsController } from './environmental-inspections.controller';
 import { EnvironmentalInspectionsService } from './environmental-inspections.service';
 import { CompleteInspectionDto, CreateInspectionDto, IssueViolationNoticeDto } from './dto';
@@ -51,7 +52,16 @@ describe('EnvironmentalInspectionsController', () => {
   });
 
   it('findNotice delega el id', async () => {
-    await controller.findNotice(ID);
+    const res = { type: jest.fn() } as unknown as Response;
+    await expect(controller.findNotice(ID, res)).resolves.toBe(RESULT);
     expect(service.findNotice).toHaveBeenCalledWith(ID);
+    expect(res.type).not.toHaveBeenCalled();
+  });
+
+  it('findNotice sin acta responde el literal JSON null', async () => {
+    service.findNotice.mockResolvedValue(null);
+    const res = { type: jest.fn() } as unknown as Response;
+    await expect(controller.findNotice(ID, res)).resolves.toBe('null');
+    expect(res.type).toHaveBeenCalledWith('application/json');
   });
 });

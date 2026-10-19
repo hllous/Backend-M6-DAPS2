@@ -2,15 +2,24 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboundEnvelope } from '../envelope';
+import { eventContext, EventTrace, trazaDelConsumido } from '../event-context';
 
 /**
- * Un handler de evento entrante. Recibe el `data` del sobre.
+ * Un handler de evento entrante. Recibe el `data` del sobre y su `occurredAt`
+ * (null si no vino o no es una fecha), para que un reintento atrasado no pise
+ * un dato más nuevo: el orden de llegada no está garantizado (#270).
  *
- * Si tira, la fila del inbox queda sin `processedAt` y con el error, para
- * poder reintentarla. No debe ser idempotente por su cuenta: de eso se encarga
- * el inbox.
+ * Si tira, la fila del inbox queda sin `processedAt` y con el error registrado,
+ * y un reenvío con el mismo `eventId` (el reintento del Core) lo vuelve a
+ * correr con el payload guardado. **Tiene que tolerar correr de nuevo** (guard
+ * por estado o un unique): el reintento llega tras cualquier `failed`, también
+ * cuando su efecto ya quedó escrito y lo que falló fue marcar la fila. El inbox
+ * descarta un evento ya procesado, no el reintento de uno fallido.
  */
-export type InboxHandler = (data: Record<string, unknown>) => Promise<void>;
+export type InboxHandler = (
+  data: Record<string, unknown>,
+  occurredAt: Date | null,
+) => Promise<void>;
 
 export interface InboxHandlerOptions {
   /**
@@ -33,6 +42,33 @@ export interface InboxHandlerOptions {
 /** Lo que queda en la columna (NO nula) cuando no corresponde guardar el payload. */
 export const REDACTED_PAYLOAD = Object.freeze({ redacted: 'contenido no persistido' });
 
+function esRedactado(payload: Prisma.JsonValue): boolean {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    !Array.isArray(payload) &&
+    payload.redacted === REDACTED_PAYLOAD.redacted
+  );
+}
+
+/**
+ * ponytail: tolerancia fija al reloj del emisor. Pasarla a config si un emisor
+ * real deriva más que esto.
+ */
+const TOLERANCIA_FUTURO_MS = 5 * 60_000;
+
+/**
+ * El `occurredAt` del sobre como fecha, o null si no vino, no se puede leer o
+ * está en el futuro. Una fecha futura (un reloj roto, o cualquiera con JWT por
+ * `POST /events/inbox`) dejaría la marca de orden ahí y todo evento legítimo
+ * posterior se ignoraría como atrasado, sin arreglo salvo por SQL (#270).
+ */
+function aFecha(valor: string | undefined): Date | null {
+  const fecha = valor ? new Date(valor) : null;
+  if (!fecha || isNaN(fecha.getTime())) return null;
+  return fecha.getTime() > Date.now() + TOLERANCIA_FUTURO_MS ? null : fecha;
+}
+
 export interface IngestResult {
   status: 'processed' | 'duplicate' | 'ignored' | 'failed';
   detail?: string;
@@ -46,7 +82,13 @@ export interface IngestResult {
  * punto de entrada es mucho más confiable que pedirle a cada handler que sea
  * idempotente por su cuenta. `InboxEvent.messageId` es `@unique`, así que el
  * duplicado lo detecta la base, no una consulta previa que podría correr en
- * paralelo con otra igual.
+ * paralelo con otra igual. El reintento de un evento fallido también lo decide
+ * la base: lo toma un update condicional, así que de dos entregas solapadas
+ * corre una sola.
+ *
+ * El handler corre dentro de `eventContext`: lo que encole hereda el
+ * `correlationId` del sobre y lleva su `eventId` como `causationId` (#267).
+ * Por `POST /events/inbox` este contexto pisa al que abre el request.
  */
 @Injectable()
 export class InboxService {
@@ -71,13 +113,13 @@ export class InboxService {
 
   /**
    * Lanza `BadRequestException` si el `data` de un evento con handler no trae
-   * sus campos obligatorios; no queda fila guardada. Hoy solo lo llama el
-   * controller HTTP. Un consumidor Kafka futuro debe capturarla y mandar el
-   * mensaje a DLQ o commitear el offset: si no, entra en reintento infinito.
+   * sus campos obligatorios; no queda fila guardada. El controller HTTP la
+   * devuelve como 400; `RabbitMqConsumer` la captura y hace `nack`, y después
+   * de los reintentos del Core termina en su DLQ.
    */
   async ingest(envelope: InboundEnvelope): Promise<IngestResult> {
     const messageId = envelope.eventId;
-    const data = (envelope.data ?? {}) as Record<string, unknown>;
+    let data = (envelope.data ?? {}) as Record<string, unknown>;
 
     // Se rechaza antes del insert: sin fila, el emisor puede reenviar el corregido
     // con el mismo eventId (el 400 ya le dice qué corregir). Sin handler no hay
@@ -96,6 +138,15 @@ export class InboxService {
     // se guarda: la regla mira el dueño, no la acción.
     const persist = this.debePersistir(envelope.eventType, data);
 
+    let trace: EventTrace = trazaDelConsumido(messageId, envelope.correlationId);
+    let occurredAt = aFecha(envelope.occurredAt);
+    if (envelope.occurredAt && !occurredAt) {
+      // No se interpola el valor: viene de un tercero.
+      this.logger.warn(
+        `${envelope.eventType} (${messageId}): occurredAt ilegible o en el futuro, se procesa sin ordenar`,
+      );
+    }
+
     // El unique de messageId es lo que decide si es duplicado: dejamos que
     // falle el insert en vez de consultar antes, porque entre la consulta y el
     // insert podría entrar el mismo mensaje otra vez.
@@ -105,16 +156,51 @@ export class InboxService {
           messageId,
           eventType: envelope.eventType,
           payload: (persist ? envelope.data : REDACTED_PAYLOAD) as Prisma.InputJsonObject,
+          correlationId: trace.correlationId,
+          sourceModule: envelope.sourceModule,
+          occurredAt,
         },
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) {
+        throw error;
+      }
+      // Es un reintento solo si el handler falló antes (sin `processedAt`, con
+      // `error`) y es el mismo eventType. El update condicional toma la fila de
+      // forma atómica: una entrega solapada la ve en curso (error null) y sale
+      // duplicate. ponytail: si el proceso se cae a mitad del handler, la fila
+      // queda sin processedAt ni error y ningún reenvío la retoma; destrabarlo
+      // pide una columna de lease (migración).
+      const { count } = await this.prisma.inboxEvent.updateMany({
+        where: {
+          messageId,
+          eventType: envelope.eventType,
+          processedAt: null,
+          error: { not: null },
+        },
+        data: { error: null },
+      });
+      if (count === 0) {
         this.logger.log(
           `${envelope.eventType} (${messageId}) ya recibido: se descarta sin volver a aplicarlo`,
         );
         return { status: 'duplicate' };
       }
-      throw error;
+      // Se reintenta lo que se guardó, no lo que trae este sobre: un reenvío por
+      // HTTP no puede cambiarle el contenido a un evento fallido. Si quedó
+      // redactado no hay nada que reproducir y va el data nuevo, ya validado.
+      // El hilo también es el guardado: un reenvío con otro correlationId, o sin
+      // ninguno y con un eventId que no es un UUID RFC, partiría el flujo en dos.
+      // El occurredAt, igual y sin respaldo: es lo que ordena, y un reenvío con
+      // otra fecha podría adelantar un evento viejo.
+      const fila = await this.prisma.inboxEvent.findUniqueOrThrow({
+        where: { messageId },
+        select: { payload: true, correlationId: true, occurredAt: true },
+      });
+      if (!esRedactado(fila.payload)) data = fila.payload as Record<string, unknown>;
+      if (fila.correlationId) trace = { ...trace, correlationId: fila.correlationId };
+      occurredAt = fila.occurredAt;
+      this.logger.log(`${envelope.eventType} (${messageId}) había fallado: se reintenta`);
     }
 
     const handler = this.handlers.get(envelope.eventType);
@@ -130,7 +216,7 @@ export class InboxService {
     }
 
     try {
-      await handler(data);
+      await eventContext.run(trace, () => handler(data, occurredAt));
       await this.markProcessed(messageId);
       this.logger.log(`${envelope.eventType} (${messageId}) procesado`);
       return { status: 'processed' };

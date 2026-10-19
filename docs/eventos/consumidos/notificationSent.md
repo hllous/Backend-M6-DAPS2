@@ -17,7 +17,7 @@ Registra el acuse. No dispara ninguna transición de estado.
 
 ## 🔴 Puede que lo saquemos
 
-**Nadie publica hoy algo que dispare una notificación.** M9 está ausente de la recopilación, así que este evento no tiene publicador confirmado.
+**Nadie publica hoy algo que dispare una notificación.** M9 está ausente de la recopilación, así que este evento sigue sin publicador confirmado (pregunta abierta en #258).
 
 Peor: M7 menciona un `notificationRequest` de M2 que ningún otro módulo declaró. **Si resulta que solo M2 puede pedir notificaciones**, estaríamos recibiendo acuses de mensajes que nunca pedimos — en ese caso lo damos de baja y este archivo se borra.
 

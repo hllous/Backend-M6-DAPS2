@@ -8,9 +8,9 @@ M6 gestiona los servicios urbanos y el control ambiental de la ciudad: recolecci
 
 - **NestJS** + TypeScript + Node 22 LTS
 - **PostgreSQL** + Prisma como ORM
-- **Kafka** para eventos asincrónicos (confirmado por M9)
+- **RabbitMQ** para eventos asincrónicos (el bus del Core, vía el exchange `muni.inbox`)
 - **Jest** + Supertest para testing (cobertura mínima 85%)
-- Deploy en **Vercel** (frontend) + **Render** (backend + postgres)
+- Deploy en **Vercel** (frontend) + **Render** (backend) + **Supabase** (PostgreSQL)
 
 Ver decisiones detalladas en [`docs/decisiones/`](docs/decisiones/).
 
@@ -28,14 +28,14 @@ Requisitos:
 
 - Node.js 22 LTS o superior
 - PostgreSQL 15+ (o base gestionada tipo Neon)
-- Kafka (confirmado por M9)
+- RabbitMQ (el bus del Core, vía el exchange `muni.inbox`)
 
 > Para levantar el stack completo con Docker local: ver `docker-compose.yml` en la raíz del workspace DevOps.
 
 ## Enlaces útiles
 
 | Recurso | Dónde |
-|---|---|---|
+|---|---|
 | **API interactiva (Swagger)** | `https://m6-backend-m64k.onrender.com/api/docs` |
 | **Despliegue y estado** | [`docs/deploy.md`](docs/deploy.md) |
 | **Tests unitarios y e2e** | [`docs/testing.md`](docs/testing.md) |
@@ -72,8 +72,8 @@ El pipeline de documentación que genera los entregables para la cátedra —`fu
 
 M6 se comunica con el resto de la plataforma **por eventos asincrónicos** vía el bus del Core (M9). REST síncrono se usa solo para casos justificados (búsqueda de establecimiento a M4, catálogo de barrios a M9).
 
-- Publicamos **8 eventos**, todos con consumidor confirmado.
-- Consumimos **9 eventos** de M2, M3, M4, M7 y M9, más una alerta meteorológica simulada internamente — 10 en total.
+- Publicamos **8 eventos**, todos con consumidor declarado.
+- Consumimos **10 eventos**: 9 de M2, M3, M4, M7 y M9 más una alerta meteorológica simulada internamente. 9 tienen handler; `notificationSent` (M9) no, porque nadie lo publica.
 
 Ver detalle en [`docs/eventos/`](docs/eventos/) y estado vivo en [`docs/bloqueantes.md`](docs/bloqueantes.md).
 

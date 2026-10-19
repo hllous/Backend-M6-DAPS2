@@ -15,8 +15,13 @@ describe('EnvironmentalReportsService', () => {
   let outbox: any;
   let service: EnvironmentalReportsService;
 
-  const expediente = (over: Partial<EnvironmentalReport> = {}): EnvironmentalReport =>
+  // `inspections` es lo que trae el include de assignedCrewId: a lo sumo la
+  // inspección con servicio más reciente, que ya filtra y ordena la base.
+  const expediente = (
+    over: Partial<EnvironmentalReport> & { inspections?: unknown[] } = {},
+  ): EnvironmentalReport =>
     ({
+      inspections: [],
       id: ID,
       reportType: 'NOISE',
       status: S.RECEIVED,
@@ -234,6 +239,122 @@ describe('EnvironmentalReportsService', () => {
       prisma.environmentalReport.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne(ID)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  // ─── #243: la cuadrilla asignada y la cola de Campo ──
+
+  describe('assignedCrewId y filtro por cuadrilla', () => {
+    const CREW = 'e5f6a7b8-c9d0-4234-8fab-345678901234';
+    const conCuadrilla = (crewId: string | null) => ({ service: { crewId } });
+
+    it('sin inspecciones con servicio, assignedCrewId es null', async () => {
+      await expect(service.findOne(ID)).resolves.toMatchObject({ assignedCrewId: null });
+    });
+
+    /**
+     * La inspección sin servicio, o con el servicio cancelado, no llega al
+     * mapper: el include la descarta en la base. Si no la descartara, `take: 1`
+     * podría quedarse con ella y tapar la cuadrilla de una anterior vigente.
+     * El `id` desempata dos inspecciones creadas en el mismo instante.
+     */
+    it('pide solo la inspección más reciente con servicio vigente, en la misma consulta', async () => {
+      await service.findOne(ID);
+
+      expect(prisma.environmentalReport.findUnique.mock.calls[0][0].include).toEqual({
+        inspections: {
+          where: { serviceId: { not: null }, service: { status: { not: 'CANCELLED' } } },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: 1,
+          select: { service: { select: { crewId: true } } },
+        },
+      });
+    });
+
+    // Sin base real, "el servicio cancelado no cuenta" se verifica en la forma
+    // de la consulta: si la base descarta la inspección, el mapper ve la lista
+    // vacía y responde null.
+    it('si la única inspección tiene el servicio cancelado, assignedCrewId es null', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(expediente({ inspections: [] }));
+
+      const dto = await service.findOne(ID);
+
+      expect(dto.assignedCrewId).toBeNull();
+      const { where } = prisma.environmentalReport.findUnique.mock.calls[0][0].include.inspections;
+      expect(where.service).toEqual({ status: { not: 'CANCELLED' } });
+    });
+
+    it('un servicio todavía sin cuadrilla da null, no undefined', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(
+        expediente({ inspections: [conCuadrilla(null)] }),
+      );
+
+      expect((await service.findOne(ID)).assignedCrewId).toBeNull();
+    });
+
+    it('con varias inspecciones, gana la primera que devuelve la base (la más reciente)', async () => {
+      prisma.environmentalReport.findMany.mockResolvedValue([
+        expediente({ inspections: [conCuadrilla(CREW), conCuadrilla('otra-cuadrilla')] }),
+      ]);
+
+      const lista = await service.findAll({ page: 1, pageSize: 20, skip: 0, take: 20 } as any);
+
+      expect(lista.data[0].assignedCrewId).toBe(CREW);
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].include).toBeDefined();
+    });
+
+    it('crewId filtra en la base, sin servicios cancelados, y count y la página usan el mismo where', async () => {
+      prisma.environmentalReport.findMany.mockResolvedValue([
+        expediente({ inspections: [conCuadrilla(CREW)] }),
+      ]);
+      prisma.environmentalReport.count.mockResolvedValue(21);
+
+      const lista = await service.findAll({
+        page: 2,
+        pageSize: 20,
+        skip: 20,
+        take: 20,
+        crewId: CREW,
+      } as any);
+
+      // Una inspección de esta cuadrilla con el servicio cancelado no la mete en la cola.
+      const where = {
+        inspections: { some: { service: { status: { not: 'CANCELLED' }, crewId: CREW } } },
+      };
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0]).toMatchObject({
+        where,
+        skip: 20,
+        take: 20,
+      });
+      expect(prisma.environmentalReport.count).toHaveBeenCalledWith({ where });
+      expect(lista.meta).toMatchObject({ total: 21, page: 2, pageSize: 20, totalPages: 2 });
+    });
+
+    it('el alta y las transiciones también devuelven assignedCrewId', async () => {
+      expect(await service.create({ reportType: 'NOISE' } as any)).toHaveProperty(
+        'assignedCrewId',
+        null,
+      );
+      expect(prisma.environmentalReport.create.mock.calls[0][0].include).toBeDefined();
+
+      prisma.environmentalReport.findUnique.mockResolvedValue(
+        expediente({ status: S.NO_VIOLATION }),
+      );
+      prisma.environmentalReport.update.mockResolvedValue(
+        expediente({ status: S.CLOSED, inspections: [conCuadrilla(CREW)] }),
+      );
+
+      const cerrado = await service.close(ID, ACTOR);
+      expect(cerrado.assignedCrewId).toBe(CREW);
+      expect(prisma.environmentalReport.update.mock.calls[0][0].include).toBeDefined();
+    });
+
+    it('no expone reporterSnapshot', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(
+        expediente({ reporterSnapshot: { citizenId: 'cit-1' } }),
+      );
+
+      expect(await service.findOne(ID)).not.toHaveProperty('reporterSnapshot');
     });
   });
 

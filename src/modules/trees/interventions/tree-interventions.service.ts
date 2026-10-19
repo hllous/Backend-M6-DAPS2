@@ -90,6 +90,9 @@ export class TreeInterventionsService {
     if (query.status) {
       where.status = query.status;
     }
+    if (query.treeId) {
+      where.trees = { some: { treeId: query.treeId } };
+    }
 
     const [interventions, total] = await Promise.all([
       this.prisma.treeIntervention.findMany({

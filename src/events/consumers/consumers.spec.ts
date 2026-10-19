@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import {
   EnvironmentalReportStatus as S,
+  Prisma,
   RepairRequestStatus,
   SanctionDecision,
   ServiceStatus,
@@ -14,13 +15,13 @@ import { SanctionsConsumer } from './sanctions.consumer';
 import { TicketsConsumer } from './tickets.consumer';
 import { WeatherConsumer } from './weather.consumer';
 
+type Handler = (d: Record<string, unknown>, occurredAt?: Date | null) => Promise<void>;
+
 /** Registra los handlers y devuelve el de un tipo, para invocarlo directo. */
 function registrar(consumer: { onModuleInit: () => void }, inbox: InboxService) {
   consumer.onModuleInit();
   return (tipo: string) =>
-    (
-      inbox as unknown as { handlers: Map<string, (d: Record<string, unknown>) => Promise<void>> }
-    ).handlers.get(tipo)!;
+    (inbox as unknown as { handlers: Map<string, Handler> }).handlers.get(tipo)!;
 }
 
 describe('consumidores de eventos', () => {
@@ -440,7 +441,7 @@ describe('consumidores de eventos', () => {
   });
 
   describe('ticketUpdated de M2', () => {
-    let h: (d: Record<string, unknown>) => Promise<void>;
+    let h: Handler;
 
     beforeEach(() => {
       h = registrar(
@@ -591,6 +592,8 @@ describe('consumidores de eventos', () => {
       await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'ROUTED' });
 
       expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+      // El re-entregado (#170) tampoco reescribe marcas ni snapshot.
+      expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
     });
 
     /**
@@ -758,17 +761,488 @@ describe('consumidores de eventos', () => {
 
       await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'REOPENED' });
 
-      expect(prisma.environmentalReport.update).not.toHaveBeenCalled();
+      expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
     });
 
-    it('REOPENED sí reabre desde CLOSED', async () => {
+    it('REOPENED sí reabre desde CLOSED, con el estado leído como guard', async () => {
       prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'rep-1', status: S.CLOSED });
 
       await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'REOPENED' });
 
-      expect(prisma.environmentalReport.update).toHaveBeenCalledWith({
-        where: { id: 'rep-1' },
+      expect(prisma.environmentalReport.updateMany).toHaveBeenCalledWith({
+        where: { id: 'rep-1', status: S.CLOSED },
         data: { status: S.UNDER_REVIEW },
+      });
+    });
+
+    it('CANCELLED descarta el expediente en UNDER_REVIEW', async () => {
+      prisma.environmentalReport.findFirst.mockResolvedValue({
+        id: 'rep-1',
+        status: S.UNDER_REVIEW,
+      });
+
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'CANCELLED' });
+
+      expect(prisma.environmentalReport.updateMany).toHaveBeenCalledWith({
+        where: { id: 'rep-1', status: S.UNDER_REVIEW },
+        data: { status: S.DISMISSED },
+      });
+    });
+
+    // ─── #270: un reintento atrasado no pisa un dato más nuevo ──
+
+    describe('orden por occurredAt', () => {
+      const T1 = new Date('2026-10-01T10:00:00.000Z');
+      const T2 = new Date('2026-10-01T10:05:00.000Z');
+      let fila: Record<string, unknown>;
+      let existe: boolean;
+      let warn: jest.SpyInstance;
+
+      /**
+       * El expediente en memoria, con un `updateMany` que evalúa el `where`
+       * como la base: así el test mira el estado final y no solo la consulta.
+       * Con `existe = false` todavía no se abrió, y el `create` del ROUTED lo
+       * abre (#275).
+       */
+      beforeEach(() => {
+        fila = {
+          id: 'rep-1',
+          ticketId: 'TCK-1',
+          status: S.CLOSED,
+          priority: null,
+          escalated: false,
+          citizenResponse: null,
+          priorityChangedAt: null,
+          escalationChangedAt: null,
+          citizenResponseAt: null,
+          ticketStatusAt: null,
+        };
+        existe = true;
+        const cumple = (where: Record<string, unknown>): boolean =>
+          Object.entries(where).every(([k, v]) => {
+            if (k === 'OR') return (v as Record<string, unknown>[]).some(cumple);
+            if (v && typeof v === 'object' && 'lt' in v) {
+              return fila[k] != null && (fila[k] as Date) < (v as { lt: Date }).lt;
+            }
+            return fila[k] === v;
+          });
+        prisma.environmentalReport.findFirst.mockImplementation(async () =>
+          existe ? { ...fila } : null,
+        );
+        prisma.environmentalReport.create.mockImplementation(async ({ data }: { data: object }) => {
+          existe = true;
+          Object.assign(fila, data);
+          return { ...fila };
+        });
+        prisma.environmentalReport.updateMany.mockImplementation(
+          async ({ where, data }: { where: Record<string, unknown>; data: object }) => {
+            if (!existe || !cumple(where)) return { count: 0 };
+            Object.assign(fila, data);
+            return { count: 1 };
+          },
+        );
+        warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      });
+
+      afterEach(() => warn.mockRestore());
+
+      const evento = (updateType: string, extra: object = {}) => ({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType,
+        ...extra,
+      });
+
+      // [updateType, payload viejo, payload nuevo, campo, valor nuevo, marca]
+      it.each([
+        [
+          'PRIORITY_CHANGED',
+          { currentPriority: 'LOW' },
+          { currentPriority: 'HIGH' },
+          'priority',
+          Severity.HIGH,
+          'priorityChangedAt',
+        ],
+        [
+          'ESCALATION_CHANGED',
+          { details: { escalation: { active: true } } },
+          { details: { escalation: { active: false } } },
+          'escalated',
+          false,
+          'escalationChangedAt',
+        ],
+        [
+          'INFORMATION_PROVIDED',
+          { details: { informationResponse: { message: 'vieja' } } },
+          { details: { informationResponse: { message: 'nueva' } } },
+          'citizenResponse',
+          'nueva',
+          'citizenResponseAt',
+        ],
+      ])(
+        '%s atrasado no pisa al más nuevo y se ignora sin fallar',
+        async (updateType, viejo, nuevo, campo, valor, marca) => {
+          await h(evento(updateType, nuevo), T2);
+          // El reintento del Core llega después con el occurredAt guardado.
+          await expect(h(evento(updateType, viejo), T1)).resolves.toBeUndefined();
+
+          expect(fila[campo]).toEqual(valor);
+          expect(fila[marca]).toEqual(T2);
+          expect(warn).toHaveBeenCalledWith(expect.stringContaining('se ignora'));
+        },
+      );
+
+      it.each([
+        ['PRIORITY_CHANGED', { currentPriority: 'LOW' }, { currentPriority: 'HIGH' }, 'priority'],
+        [
+          'ESCALATION_CHANGED',
+          { details: { escalation: { active: false } } },
+          { details: { escalation: { active: true } } },
+          'escalated',
+        ],
+      ])('%s más nuevo sí aplica', async (updateType, viejo, nuevo, campo) => {
+        await h(evento(updateType, viejo), T1);
+        await h(evento(updateType, nuevo), T2);
+
+        expect(fila[campo]).toEqual(campo === 'priority' ? Severity.HIGH : true);
+      });
+
+      it('una marca por campo: un PRIORITY_CHANGED nuevo no descarta un ESCALATION_CHANGED atrasado', async () => {
+        await h(evento('PRIORITY_CHANGED', { currentPriority: 'HIGH' }), T2);
+        await h(evento('ESCALATION_CHANGED', { details: { escalation: { active: true } } }), T1);
+
+        expect(fila.escalated).toBe(true);
+      });
+
+      it('sin occurredAt aplica como antes, aunque haya marca, y lo loguea', async () => {
+        fila.priorityChangedAt = T2;
+
+        await h(evento('PRIORITY_CHANGED', { currentPriority: 'LOW' }), null);
+
+        expect(fila.priority).toBe(Severity.LOW);
+        expect(fila.priorityChangedAt).toEqual(T2);
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('sin occurredAt'));
+      });
+
+      // ─── #275: el ROUTED que abre el expediente llega después ──
+
+      describe('antes del ROUTED', () => {
+        const T0 = new Date('2026-10-01T09:55:00.000Z');
+        const T1_MENOS_1MS = new Date(T1.getTime() - 1);
+        const routed = evento('ROUTED', {
+          currentPriority: 'LOW',
+          details: { routing: { requestType: 'Ruidos molestos', escalation: { active: false } } },
+        });
+
+        beforeEach(() => {
+          existe = false;
+        });
+
+        // [updateType, payload, campo, valor, marca]
+        it.each([
+          [
+            'PRIORITY_CHANGED',
+            { currentPriority: 'HIGH' },
+            'priority',
+            Severity.HIGH,
+            'priorityChangedAt',
+          ],
+          [
+            'ESCALATION_CHANGED',
+            { details: { escalation: { active: true } } },
+            'escalated',
+            true,
+            'escalationChangedAt',
+          ],
+          [
+            'INFORMATION_PROVIDED',
+            { details: { informationResponse: { message: 'Frente al 1240' } } },
+            'citizenResponse',
+            'Frente al 1240',
+            'citizenResponseAt',
+          ],
+        ])(
+          '%s sin expediente falla, y su reintento aplica tras el ROUTED',
+          async (updateType, extra, campo, valor, marca) => {
+            // El mensaje lleva el ticketId y nada del payload.
+            await expect(h(evento(updateType, extra), T2)).rejects.toThrow(
+              new Error(
+                `ticketUpdated/${updateType}: el expediente todavía no existe para el ticket TCK-1; se reintenta tras el ROUTED`,
+              ),
+            );
+
+            await h(routed, T1);
+            await h(evento(updateType, extra), T2);
+
+            expect(fila[campo]).toEqual(valor);
+            expect(fila[marca]).toEqual(T2);
+          },
+        );
+
+        it('sin occurredAt también falla: el expediente no existe igual', async () => {
+          await expect(
+            h(evento('PRIORITY_CHANGED', { currentPriority: 'HIGH' }), null),
+          ).rejects.toThrow('se reintenta tras el ROUTED');
+        });
+
+        it('si el ROUTED abre el expediente entre el update y la lectura, se reintenta', async () => {
+          prisma.environmentalReport.updateMany.mockResolvedValueOnce({ count: 0 });
+          await h(routed, T1);
+
+          await expect(
+            h(evento('PRIORITY_CHANGED', { currentPriority: 'HIGH' }), T2),
+          ).rejects.toThrow('se reintenta tras el ROUTED');
+        });
+
+        it('el ROUTED deja las marcas justo antes de su occurredAt: un cambio anterior que reintenta después no pisa el snapshot', async () => {
+          await h(routed, T1);
+
+          expect(fila).toMatchObject({
+            ticketStatusAt: T1_MENOS_1MS,
+            priorityChangedAt: T1_MENOS_1MS,
+            escalationChangedAt: T1_MENOS_1MS,
+            citizenResponseAt: null,
+          });
+
+          await h(evento('PRIORITY_CHANGED', { currentPriority: 'CRITICAL' }), T0);
+          await h(evento('ESCALATION_CHANGED', { details: { escalation: { active: true } } }), T0);
+          await h(evento('REOPENED'), T0);
+
+          expect(fila).toMatchObject({
+            priority: Severity.LOW,
+            escalated: false,
+            status: S.RECEIVED,
+          });
+          expect(warn).toHaveBeenCalledWith(expect.stringContaining('se ignora'));
+        });
+
+        it('un cambio explícito del mismo instante que el ROUTED le gana al snapshot', async () => {
+          // M2 deriva y escala en la misma transacción: mismo now() en los dos.
+          await h(routed, T1);
+          await h(evento('ESCALATION_CHANGED', { details: { escalation: { active: true } } }), T1);
+          await h(evento('PRIORITY_CHANGED', { currentPriority: 'HIGH' }), T1);
+
+          expect(fila).toMatchObject({
+            escalated: true,
+            escalationChangedAt: T1,
+            priority: Severity.HIGH,
+            priorityChangedAt: T1,
+          });
+
+          // El reintento de ese mismo cambio ya aplicado sí se reconoce.
+          await h(evento('ESCALATION_CHANGED', { details: { escalation: { active: false } } }), T1);
+          expect(fila.escalated).toBe(true);
+        });
+
+        it('una respuesta del vecino anterior al ROUTED se guarda igual: el snapshot no la trae', async () => {
+          await h(routed, T1);
+
+          await h(
+            evento('INFORMATION_PROVIDED', {
+              details: { informationResponse: { message: 'Frente al 1240' } },
+            }),
+            T0,
+          );
+
+          expect(fila.citizenResponse).toBe('Frente al 1240');
+        });
+
+        it('el ROUTED no marca lo que su snapshot no trae', async () => {
+          await h(evento('ROUTED'), T1);
+
+          expect(fila).toMatchObject({
+            ticketStatusAt: T1_MENOS_1MS,
+            priorityChangedAt: null,
+            escalationChangedAt: null,
+          });
+        });
+
+        it('el ROUTED sin occurredAt no deja marcas, como antes', async () => {
+          await h(routed, null);
+
+          expect(fila).toMatchObject({
+            ticketStatusAt: null,
+            priorityChangedAt: null,
+            escalationChangedAt: null,
+          });
+        });
+
+        it('REOPENED sin expediente no reintenta: no hay nada que reabrir', async () => {
+          await expect(h(evento('REOPENED'), T2)).resolves.toBeUndefined();
+
+          expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
+        });
+
+        describe('por el inbox', () => {
+          const eventId = '646d19f5-5670-4a7b-9442-30e13b02ba11';
+          const sobre = (data: Record<string, unknown>) => ({
+            eventId,
+            eventType: 'ticketUpdated',
+            occurredAt: T2.toISOString(),
+            data,
+          });
+
+          beforeEach(() => {
+            prisma.inboxEvent = {
+              create: jest.fn().mockResolvedValue({}),
+              update: jest.fn().mockResolvedValue({}),
+              updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+              findUniqueOrThrow: jest.fn(),
+            };
+          });
+
+          it('sale failed, y el reintento del Core lo aplica tras el ROUTED', async () => {
+            const data = evento('PRIORITY_CHANGED', { currentPriority: 'HIGH' });
+
+            const primero = await inbox.ingest(sobre(data));
+            expect(primero.status).toBe('failed');
+
+            await h(routed, T1);
+
+            // El reintento: la fila ya existe y se reproduce con lo guardado.
+            prisma.inboxEvent.create.mockRejectedValue(
+              new Prisma.PrismaClientKnownRequestError('dup', {
+                code: 'P2002',
+                clientVersion: '5.22.0',
+              }),
+            );
+            prisma.inboxEvent.findUniqueOrThrow.mockResolvedValue({
+              payload: data,
+              correlationId: null,
+              occurredAt: T2,
+            });
+            const reintento = await inbox.ingest(sobre(data));
+
+            expect(reintento.status).toBe('processed');
+            expect(fila.priority).toBe(Severity.HIGH);
+          });
+
+          it('un ticket ajeno sin expediente sale processed, sin reintento', async () => {
+            const { status } = await inbox.ingest(
+              sobre({
+                ...evento('PRIORITY_CHANGED', { currentPriority: 'HIGH' }),
+                responsibleAreaId: 'M3',
+              }),
+            );
+
+            expect(status).toBe('processed');
+            expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
+          });
+        });
+      });
+
+      it('un REOPENED atrasado no revive el expediente de un reclamo cancelado después', async () => {
+        await h(evento('CANCELLED'), T2);
+        await expect(h(evento('REOPENED'), T1)).resolves.toBeUndefined();
+
+        expect(fila.status).toBe(S.CLOSED);
+        expect(fila.ticketStatusAt).toEqual(T2);
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('se ignora'));
+      });
+
+      it('un REOPENED más nuevo que la marca sí reabre', async () => {
+        fila.ticketStatusAt = T1;
+
+        await h(evento('REOPENED'), T2);
+
+        expect(fila.status).toBe(S.UNDER_REVIEW);
+        expect(fila.ticketStatusAt).toEqual(T2);
+      });
+
+      it('un CANCELLED atrasado no toca servicios ni expediente', async () => {
+        Object.assign(fila, { status: S.UNDER_REVIEW, ticketStatusAt: T2 });
+
+        await h(evento('CANCELLED'), T1);
+
+        expect(prisma.service.updateMany).not.toHaveBeenCalled();
+        expect(fila.status).toBe(S.UNDER_REVIEW);
+      });
+
+      // Igual a la marca = ya aplicado: re-aplicarlo no es idempotente.
+      it('un REOPENED con occurredAt igual a la marca no reabre lo que el operador volvió a cerrar', async () => {
+        await h(evento('REOPENED'), T1);
+        fila.status = S.CLOSED;
+
+        await h(evento('REOPENED'), T1);
+
+        expect(fila.status).toBe(S.CLOSED);
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('se ignora'));
+      });
+
+      it('un CANCELLED con occurredAt igual a la marca no vuelve a cancelar servicios', async () => {
+        fila.ticketStatusAt = T1;
+
+        await h(evento('CANCELLED'), T1);
+
+        expect(prisma.service.updateMany).not.toHaveBeenCalled();
+      });
+
+      it('CANCELLED sobre UNDER_REVIEW descarta el expediente y deja la marca', async () => {
+        fila.status = S.UNDER_REVIEW;
+
+        await h(evento('CANCELLED'), T2);
+
+        expect(fila.status).toBe(S.DISMISSED);
+        expect(fila.ticketStatusAt).toEqual(T2);
+        expect(prisma.service.updateMany).toHaveBeenCalled();
+      });
+
+      it('CANCELLED: si la marca avanzó entre la lectura y la transacción, no cancela servicios', async () => {
+        prisma.environmentalReport.findFirst.mockImplementationOnce(async () => {
+          const leida = { ...fila };
+          fila.ticketStatusAt = T2; // un REOPENED(T2) que entra en el medio
+          return leida;
+        });
+
+        await h(evento('CANCELLED'), T1);
+
+        expect(prisma.service.updateMany).not.toHaveBeenCalled();
+        expect(fila.ticketStatusAt).toEqual(T2);
+      });
+
+      it('CANCELLED con occurredAt pero sin expediente cancela los servicios igual', async () => {
+        prisma.environmentalReport.findFirst.mockResolvedValue(null);
+
+        await h(evento('CANCELLED'), T1);
+
+        expect(prisma.service.updateMany).toHaveBeenCalled();
+        expect(fila.ticketStatusAt).toBeNull();
+      });
+
+      it('por el inbox, un occurredAt en el futuro se aplica sin ordenar y no deja marca', async () => {
+        fila.priorityChangedAt = T2;
+        prisma.inboxEvent = {
+          create: jest.fn().mockResolvedValue({}),
+          update: jest.fn().mockResolvedValue({}),
+        };
+
+        await inbox.ingest({
+          eventId: '646d19f5-5670-4a7b-9442-30e13b02ba11',
+          eventType: 'ticketUpdated',
+          occurredAt: '2999-12-31T23:59:59Z',
+          data: evento('PRIORITY_CHANGED', { currentPriority: 'HIGH' }),
+        });
+
+        expect(fila.priority).toBe(Severity.HIGH);
+        expect(fila.priorityChangedAt).toEqual(T2);
+      });
+
+      it('por el inbox, el atrasado sale processed: reintentarlo no lo haría más nuevo', async () => {
+        fila.escalationChangedAt = T2;
+        prisma.inboxEvent = {
+          create: jest.fn().mockResolvedValue({}),
+          update: jest.fn().mockResolvedValue({}),
+        };
+
+        const { status } = await inbox.ingest({
+          eventId: '646d19f5-5670-4a7b-9442-30e13b02ba11',
+          eventType: 'ticketUpdated',
+          occurredAt: T1.toISOString(),
+          data: evento('ESCALATION_CHANGED', { details: { escalation: { active: true } } }),
+        });
+
+        expect(status).toBe('processed');
+        expect(fila.escalated).toBe(false);
       });
     });
 
@@ -784,6 +1258,7 @@ describe('consumidores de eventos', () => {
 
       expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
       expect(prisma.environmentalReport.update).not.toHaveBeenCalled();
+      expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
       expect(prisma.service.updateMany).not.toHaveBeenCalled();
     });
   });

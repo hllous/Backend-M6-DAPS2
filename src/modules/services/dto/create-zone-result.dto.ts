@@ -5,7 +5,7 @@ import { IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-valida
 export class CreateZoneResultDto {
   @ApiProperty({
     description: 'Zona sobre la que se informa. Tiene que ser una de las zonas del servicio.',
-    example: 'd4e5f6a7-b8c9-0123-defa-234567890123',
+    example: 'd4e5f6a7-b8c9-4123-8efa-234567890123',
     format: 'uuid',
   })
   @IsUUID()
