@@ -18,7 +18,7 @@ publicSafetyRisk, requestedAt
 
 | Campo | Nota |
 |---|---|
-| `requestId` | Nuestro. **Es el que le pedimos a M3 que devuelva** |
+| `requestId` | Nuestro, uuid (`format: "uuid"` en el schema). **Es el que le pedimos a M3 que devuelva** |
 | `detectedIn` | El `serviceId` o `inspectionId` nuestro que originó la detección |
 | `publicSafetyRisk` | Booleano: marca lo que no puede esperar |
 | `ticketId?` | Solo si el daño lo reportó un vecino |
