@@ -9,7 +9,7 @@ describe('RoutesService — secuencia de paradas', () => {
   const zoneB = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
   let prisma: {
-    route: { findUnique: jest.Mock };
+    route: { findUnique: jest.Mock; update: jest.Mock };
     zone: { findMany: jest.Mock };
     routeStop: { deleteMany: jest.Mock; createMany: jest.Mock };
     $transaction: jest.Mock;
@@ -28,6 +28,7 @@ describe('RoutesService — secuencia de paradas', () => {
           updatedAt: new Date(),
           stops: [],
         }),
+        update: jest.fn().mockReturnValue('touch-op'),
       },
       zone: {
         // Se comporta como el findMany real: devuelve solo los ids del `in`.
@@ -62,7 +63,16 @@ describe('RoutesService — secuencia de paradas', () => {
     await service.setStops(routeId, { stops: [{ zoneId: zoneA, estimatedDurationMin: 60 }] });
 
     // Sin esto, intercambiar dos paradas choca con @@unique([routeId, sequence]).
-    expect(prisma.$transaction).toHaveBeenCalledWith(['delete-op', 'create-op']);
+    expect(prisma.$transaction).toHaveBeenCalledWith(['delete-op', 'create-op', 'touch-op']);
+  });
+
+  it('actualiza Route.updatedAt en la misma transaccion', async () => {
+    await service.setStops(routeId, { stops: [{ zoneId: zoneA, estimatedDurationMin: 60 }] });
+
+    expect(prisma.route.update).toHaveBeenCalledWith({
+      where: { id: routeId },
+      data: { updatedAt: expect.any(Date) },
+    });
   });
 
   it('rechaza una zona repetida: romperia ServiceZone al copiar el recorrido', async () => {
