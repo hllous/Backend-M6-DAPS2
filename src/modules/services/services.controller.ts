@@ -27,6 +27,7 @@ import {
   QueryServicesDto,
   ServiceResponseDto,
   StatusChangeDto,
+  SuspendServiceDto,
   UpdateServiceDto,
   ZoneResultResponseDto,
 } from './dto';
@@ -306,7 +307,8 @@ export class ServicesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Suspender la ejecución',
-    description: 'IN_PROGRESS → SUSPENDED. El motivo queda registrado en statusReason.',
+    description:
+      'IN_PROGRESS → SUSPENDED. El motivo queda en statusReason; la nota opcional, en statusNote.',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Servicio suspendido', type: ServiceResponseDto })
@@ -318,9 +320,9 @@ export class ServicesController {
   @ApiResponse(SERVER)
   async suspend(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: StatusChangeDto,
+    @Body() dto: SuspendServiceDto,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.suspend(id, dto.reason);
+    return this.servicesService.suspend(id, dto.reason, dto.note);
   }
 
   @Post(':id/resume')

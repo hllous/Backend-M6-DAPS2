@@ -458,6 +458,7 @@ model Service {
   vehicleId              String?       @map("vehicle_id") @db.Uuid
   status                 ServiceStatus @default(SCHEDULED)
   statusReason           String?       @map("status_reason")
+  statusNote             String?       @map("status_note") // nota libre de la suspension
   origin                 ServiceOrigin
   ticketId               String?       @map("ticket_id") // EXT M2
   // Alerta meteorologica que lo origino. No hay tabla de alertas (la alerta es

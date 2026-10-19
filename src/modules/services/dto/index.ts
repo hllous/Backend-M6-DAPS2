@@ -7,7 +7,7 @@ export {
   ZoneResultResponseDto,
   CollectionRecordResponseDto,
 } from './service-response.dto';
-export { StatusChangeDto, ConfirmRescheduleDto } from './status-change.dto';
+export { StatusChangeDto, SuspendServiceDto, ConfirmRescheduleDto } from './status-change.dto';
 export { AssignCrewDto } from './assign-crew.dto';
 export { CreateZoneResultDto } from './create-zone-result.dto';
 export { CreateCollectionRecordDto } from './create-collection-record.dto';

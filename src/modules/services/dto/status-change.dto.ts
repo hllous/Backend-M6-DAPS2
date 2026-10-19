@@ -25,6 +25,20 @@ export class StatusChangeDto {
   reason: string;
 }
 
+/** Suspender suma una nota opcional: el motivo es el rótulo, la nota el detalle. */
+export class SuspendServiceDto extends StatusChangeDto {
+  @ApiPropertyOptional({
+    description: 'Detalle libre de la suspensión. Queda en statusNote hasta retomar o cancelar.',
+    example: 'El camión 12 se quedó sin frenos; esperan reemplazo',
+    maxLength: 1000,
+  })
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @MaxLength(1000)
+  note?: string;
+}
+
 export class ConfirmRescheduleDto {
   @ApiProperty({
     description: 'Nueva fecha agendada (YYYY-MM-DD)',

@@ -8227,7 +8227,7 @@
       "post": {
         "operationId": "ServicesController_suspend",
         "summary": "Suspender la ejecución",
-        "description": "IN_PROGRESS → SUSPENDED. El motivo queda registrado en statusReason.",
+        "description": "IN_PROGRESS → SUSPENDED. El motivo queda en statusReason; la nota opcional, en statusNote.",
         "parameters": [
           {
             "name": "id",
@@ -8245,7 +8245,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StatusChangeDto"
+                "$ref": "#/components/schemas/SuspendServiceDto"
               }
             }
           }
@@ -15540,6 +15540,11 @@
             "description": "Motivo del último cambio de estado (suspensión, cancelación, reprogramación)",
             "nullable": true
           },
+          "statusNote": {
+            "type": "string",
+            "description": "Nota opcional de la suspensión; se limpia al retomar o cancelar",
+            "nullable": true
+          },
           "origin": {
             "type": "string",
             "description": "Origen de la programación",
@@ -15951,7 +15956,7 @@
           "active"
         ]
       },
-      "StatusChangeDto": {
+      "SuspendServiceDto": {
         "type": "object",
         "properties": {
           "reason": {
@@ -15959,6 +15964,12 @@
             "description": "Motivo del cambio de estado. Queda en statusReason.",
             "example": "Alerta meteorológica: tormenta fuerte en la zona",
             "maxLength": 500
+          },
+          "note": {
+            "type": "string",
+            "description": "Detalle libre de la suspensión. Queda en statusNote hasta retomar o cancelar.",
+            "example": "El camión 12 se quedó sin frenos; esperan reemplazo",
+            "maxLength": 1000
           }
         },
         "required": [
@@ -16005,6 +16016,20 @@
             ]
           }
         }
+      },
+      "StatusChangeDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo del cambio de estado. Queda en statusReason.",
+            "example": "Alerta meteorológica: tormenta fuerte en la zona",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
+        ]
       },
       "ConfirmRescheduleDto": {
         "type": "object",

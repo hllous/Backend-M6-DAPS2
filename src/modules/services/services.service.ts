@@ -550,9 +550,12 @@ export class ServicesService {
   }
 
   /** IN_PROGRESS → SUSPENDED */
-  async suspend(id: string, reason: string): Promise<ServiceResponseDto> {
+  async suspend(id: string, reason: string, note?: string): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
-    return this.transition(current, ServiceStatus.SUSPENDED, { statusReason: reason });
+    return this.transition(current, ServiceStatus.SUSPENDED, {
+      statusReason: reason,
+      statusNote: note ?? null,
+    });
   }
 
   /** SUSPENDED → IN_PROGRESS */
@@ -565,7 +568,10 @@ export class ServicesService {
         `No se puede pasar de '${current.status}' a '${ServiceStatus.IN_PROGRESS}'. Transiciones válidas desde '${current.status}': [${VALID_TRANSITIONS[current.status].join(', ') || 'ninguna, es un estado final'}]. resume solo aplica desde '${ServiceStatus.SUSPENDED}'`,
       );
     }
-    return this.transition(current, ServiceStatus.IN_PROGRESS, { statusReason: null });
+    return this.transition(current, ServiceStatus.IN_PROGRESS, {
+      statusReason: null,
+      statusNote: null,
+    });
   }
 
   /**
@@ -723,7 +729,8 @@ export class ServicesService {
     return this.transition(
       current,
       ServiceStatus.CANCELLED,
-      { statusReason: reason },
+      // statusNote: si venía suspendido, su nota ya no describe el estado.
+      { statusReason: reason, statusNote: null },
       this.ticketEvents(current, actorId, {
         updateType: 'REJECTED',
         internalMessage: reason,
@@ -1235,6 +1242,7 @@ export class ServicesService {
       mode: service.mode,
       status: service.status,
       statusReason: service.statusReason,
+      statusNote: service.statusNote,
       origin: service.origin,
       routeId: service.routeId,
       targetType: service.targetType,
