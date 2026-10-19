@@ -115,6 +115,13 @@ export class ServiceResponseDto {
   })
   statusReason: string | null;
 
+  @ApiPropertyOptional({
+    description: 'Nota opcional de la suspensión; se limpia al retomar o cancelar',
+    nullable: true,
+    type: String,
+  })
+  statusNote: string | null;
+
   @ApiProperty({ description: 'Origen de la programación', enum: ServiceOrigin })
   origin: ServiceOrigin;
 

@@ -14,6 +14,7 @@ import {
   QueryServicesDto,
   ServiceTargetType,
   StatusChangeDto,
+  SuspendServiceDto,
   UpdateServiceDto,
 } from './dto';
 
@@ -129,9 +130,9 @@ describe('ServicesController', () => {
     expect(service.start).toHaveBeenCalledWith(ID, 'user-1');
   });
 
-  it('suspend delega id y el motivo del dto', async () => {
-    await controller.suspend(ID, { reason: 'lluvia' } as StatusChangeDto);
-    expect(service.suspend).toHaveBeenCalledWith(ID, 'lluvia');
+  it('suspend delega id y motivo y nota del dto', async () => {
+    await controller.suspend(ID, { reason: 'lluvia', note: 'detalle' } as SuspendServiceDto);
+    expect(service.suspend).toHaveBeenCalledWith(ID, 'lluvia', 'detalle');
   });
 
   it('resume delega el id', async () => {

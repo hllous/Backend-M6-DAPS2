@@ -17,7 +17,7 @@ Las podas y las inspecciones ambientales también son servicios: [`TreeIntervent
 
 | Entidad | Campos principales |
 |---|---|
-| `Service` | `serviceTypeId`, `mode`, `zoneIds[]`, `routeId` \| `targetRef`, `scheduledDate`, `timeWindow`, `crewId`, `vehicleId`, `status`, `statusReason`, `origin`, `ticketId`, `weatherAlertId`, `attachments[]`, `notes`. `crewId` es opcional hasta que se asigna la cuadrilla. `assignmentOverrideNote` / `By` / `At` solo se llenan si la asignación o la programación se hizo **sobre un solapamiento** |
+| `Service` | `serviceTypeId`, `mode`, `zoneIds[]`, `routeId` \| `targetRef`, `scheduledDate`, `timeWindow`, `crewId`, `vehicleId`, `status`, `statusReason`, `statusNote`, `origin`, `ticketId`, `weatherAlertId`, `attachments[]`, `notes`. `crewId` es opcional hasta que se asigna la cuadrilla. `assignmentOverrideNote` / `By` / `At` solo se llenan si la asignación o la programación se hizo **sobre un solapamiento** |
 | `ServiceDelayNotice` | Hijo de un `Service`, uno por aviso de demora. `delayType`, `delayMinutes`, `reason`, `newEstimatedEnd`, `serviceStatus`, `reportedBy`, `detectedAt`, `supersededById`. El vigente es el que no fue reemplazado |
 | `ZoneResult` | Hijo de un `Service` con `mode = ROUTE`, uno por zona. `zoneId`, `status`, `reason`, `proposedDate`, `notes`, `attachments[]`, `recordedAt` |
 | `CollectionRecord` | `wasteType`, `volumeM3`, `weightKg`, `disposalSiteId` |
@@ -52,6 +52,8 @@ stateDiagram-v2
     COMPLETED --> [*]
     PARTIALLY_COMPLETED --> [*]
 ```
+
+`statusNote` es el detalle opcional de la suspensión: solo vive mientras el servicio está `SUSPENDED`; `resume` y `cancel` lo ponen en `null`. Solo `suspend` la recibe.
 
 `DELAYED` **no es un estado**: es un aviso, y vive en su propia tabla. El servicio sigue en `SCHEDULED` o en `IN_PROGRESS` mientras se demora, y esos son los dos únicos momentos en los que un retraso significa algo — uno cerrado ya no se demora, y uno suspendido tiene su motivo en `statusReason`.
 
