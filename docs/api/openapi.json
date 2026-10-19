@@ -8336,7 +8336,7 @@
       "post": {
         "operationId": "ServicesController_resume",
         "summary": "Reanudar la ejecución",
-        "description": "SUSPENDED → IN_PROGRESS. Limpia el motivo de la suspensión.",
+        "description": "SUSPENDED → IN_PROGRESS. Limpia el motivo y la nota de la suspensión (statusNote solo vive mientras el servicio está SUSPENDED).",
         "parameters": [
           {
             "name": "id",
@@ -8534,7 +8534,7 @@
       "post": {
         "operationId": "ServicesController_cancel",
         "summary": "Cancelar el servicio",
-        "description": "SCHEDULED, RESCHEDULED o SUSPENDED → CANCELLED. El motivo queda registrado. Un servicio RESCHEDULED se cancela directo: no hace falta confirmar antes una fecha nueva. IN_PROGRESS no se cancela — hay que suspenderlo o cerrarlo.",
+        "description": "SCHEDULED, RESCHEDULED o SUSPENDED → CANCELLED. El motivo queda registrado. Un servicio RESCHEDULED se cancela directo: no hace falta confirmar antes una fecha nueva. IN_PROGRESS no se cancela — hay que suspenderlo o cerrarlo. Solo acepta reason: enviar note da 400 (la nota existe solo en suspend) y limpia statusNote.",
         "parameters": [
           {
             "name": "id",
@@ -8643,7 +8643,7 @@
       "post": {
         "operationId": "ServicesController_reschedule",
         "summary": "Marcar el servicio para reprogramar",
-        "description": "SCHEDULED → RESCHEDULED. Deja el servicio a la espera de fecha nueva, con el motivo registrado. Es el estado en el que caen los servicios ante una alerta meteorológica o el rechazo de un corte de calle. La fecha se fija con confirm-reschedule.",
+        "description": "SCHEDULED → RESCHEDULED. Deja el servicio a la espera de fecha nueva, con el motivo registrado. Es el estado en el que caen los servicios ante una alerta meteorológica o el rechazo de un corte de calle. La fecha se fija con confirm-reschedule. Solo acepta reason: enviar note da 400 (la nota existe solo en suspend).",
         "parameters": [
           {
             "name": "id",
@@ -15969,7 +15969,7 @@
             "type": "string",
             "description": "Detalle libre de la suspensión. Queda en statusNote hasta retomar o cancelar.",
             "example": "El camión 12 se quedó sin frenos; esperan reemplazo",
-            "maxLength": 1000
+            "maxLength": 500
           }
         },
         "required": [

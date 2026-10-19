@@ -53,6 +53,8 @@ stateDiagram-v2
     PARTIALLY_COMPLETED --> [*]
 ```
 
+`statusNote` es el detalle opcional de la suspensión: solo vive mientras el servicio está `SUSPENDED`; `resume` y `cancel` lo ponen en `null`. Solo `suspend` la recibe.
+
 `DELAYED` **no es un estado**: es un aviso, y vive en su propia tabla. El servicio sigue en `SCHEDULED` o en `IN_PROGRESS` mientras se demora, y esos son los dos únicos momentos en los que un retraso significa algo — uno cerrado ya no se demora, y uno suspendido tiene su motivo en `statusReason`.
 
 El tipo tiene que coincidir con el momento: `START` es empezar tarde y solo aplica antes de arrancar; `DURATION` es tardar más, y solo aplica con la cuadrilla trabajando. Aceptar la combinación cruzada dejaría entrar datos que después nadie sabe leer.

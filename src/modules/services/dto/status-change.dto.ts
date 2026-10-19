@@ -1,4 +1,4 @@
-import { Trim } from '../../../common/decorators';
+import { MAX_REASON_LENGTH, Trim } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
@@ -30,12 +30,12 @@ export class SuspendServiceDto extends StatusChangeDto {
   @ApiPropertyOptional({
     description: 'Detalle libre de la suspensión. Queda en statusNote hasta retomar o cancelar.',
     example: 'El camión 12 se quedó sin frenos; esperan reemplazo',
-    maxLength: 1000,
+    maxLength: MAX_REASON_LENGTH,
   })
   @IsOptional()
   @Trim()
   @IsString()
-  @MaxLength(1000)
+  @MaxLength(MAX_REASON_LENGTH)
   note?: string;
 }
 

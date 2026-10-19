@@ -554,7 +554,7 @@ export class ServicesService {
     const current = await this.getService(id);
     return this.transition(current, ServiceStatus.SUSPENDED, {
       statusReason: reason,
-      statusNote: note ?? null,
+      statusNote: note?.trim() || null,
     });
   }
 

@@ -329,7 +329,8 @@ export class ServicesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Reanudar la ejecución',
-    description: 'SUSPENDED → IN_PROGRESS. Limpia el motivo de la suspensión.',
+    description:
+      'SUSPENDED → IN_PROGRESS. Limpia el motivo y la nota de la suspensión (statusNote solo vive mientras el servicio está SUSPENDED).',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Servicio reanudado', type: ServiceResponseDto })
@@ -382,7 +383,8 @@ export class ServicesController {
     description:
       'SCHEDULED, RESCHEDULED o SUSPENDED → CANCELLED. El motivo queda registrado. ' +
       'Un servicio RESCHEDULED se cancela directo: no hace falta confirmar antes una fecha ' +
-      'nueva. IN_PROGRESS no se cancela — hay que suspenderlo o cerrarlo.',
+      'nueva. IN_PROGRESS no se cancela — hay que suspenderlo o cerrarlo. ' +
+      'Solo acepta reason: enviar note da 400 (la nota existe solo en suspend) y limpia statusNote.',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Servicio cancelado', type: ServiceResponseDto })
@@ -405,7 +407,7 @@ export class ServicesController {
   @ApiOperation({
     summary: 'Marcar el servicio para reprogramar',
     description:
-      'SCHEDULED → RESCHEDULED. Deja el servicio a la espera de fecha nueva, con el motivo registrado. Es el estado en el que caen los servicios ante una alerta meteorológica o el rechazo de un corte de calle. La fecha se fija con confirm-reschedule.',
+      'SCHEDULED → RESCHEDULED. Deja el servicio a la espera de fecha nueva, con el motivo registrado. Es el estado en el que caen los servicios ante una alerta meteorológica o el rechazo de un corte de calle. La fecha se fija con confirm-reschedule. Solo acepta reason: enviar note da 400 (la nota existe solo en suspend).',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({

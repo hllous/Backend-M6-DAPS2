@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { SuspendServiceDto } from '../../modules/services/dto/status-change.dto';
 import { IngestEventDto } from '../../events/inbox/ingest-event.dto';
 import { QueryContainersDto } from '../../modules/containers/dto/query-containers.dto';
 import { AddCrewMembersDto } from '../../modules/crews/dto/add-crew-members.dto';
@@ -49,6 +50,7 @@ const TEXTOS: Array<[string, new () => object, string, number]> = [
   ['QueryZonesDto', QueryZonesDto, 'search', 100],
   ['QueryServicesDto', QueryServicesDto, 'ticketId', 100],
   ['CreateDelayNoticeDto', CreateDelayNoticeDto, 'reason', 500],
+  ['SuspendServiceDto', SuspendServiceDto, 'note', 500],
   ['CreateServiceDto', CreateServiceDto, 'notes', 2000],
   ['CreateServiceDto', CreateServiceDto, 'weatherAlertId', 100],
   ['CreateEnvironmentalReportDto', CreateEnvironmentalReportDto, 'description', 2000],
