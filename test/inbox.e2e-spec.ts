@@ -1,6 +1,9 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { InboxService } from '../src/events/inbox/inbox.service';
+import { OutboxService } from '../src/events/outbox/outbox.service';
+import { AggregateType, EventType } from '../src/events/event-types';
 import {
   Api,
   crearRuta,
@@ -145,6 +148,190 @@ describe('Inbox de eventos entrantes (e2e)', () => {
       )
       .expect(200);
     expect(corregido.body.status).toBe('processed');
+  });
+
+  it('un eventId cuyo handler falló se reintenta, y si anda queda procesado y sin error', async () => {
+    const eventId = randomUUID();
+    const data = { severity: 'LOW', zoneIds: [zoneId] };
+    // La fila que deja un handler que tiró: sin processedAt y con el error.
+    await prisma.inboxEvent.create({
+      data: { messageId: eventId, eventType: 'weatherAlertIssued', payload: data, error: 'boom' },
+    });
+
+    // Otro eventType con el mismo eventId no toma la fila ni la marca procesada.
+    const ajeno = await api
+      .post('/events/inbox', sobre(eventId, 'eventoQueNadieEscucha', { algo: 1 }))
+      .expect(200);
+    expect(ajeno.body.status).toBe('duplicate');
+    const intacta = await prisma.inboxEvent.findUniqueOrThrow({ where: { messageId: eventId } });
+    expect(intacta.processedAt).toBeNull();
+    expect(intacta.error).toBe('boom');
+
+    const res = await api
+      .post('/events/inbox', sobre(eventId, 'weatherAlertIssued', data))
+      .expect(200);
+    expect(res.body.status).toBe('processed');
+
+    const fila = await prisma.inboxEvent.findUniqueOrThrow({ where: { messageId: eventId } });
+    expect(fila.processedAt).not.toBeNull();
+    expect(fila.error).toBeNull();
+  });
+
+  /**
+   * #270 contra la base real: el filtro por la marca (`OR null / lt`) lo
+   * evalúa Postgres, y el reintento ordena con el occurredAt de la fila.
+   */
+  it('el reintento atrasado de un ESCALATION_CHANGED no pisa al más nuevo', async () => {
+    const ticketId = `TCK-${randomUUID()}`;
+    const reporte = await prisma.environmentalReport.create({
+      data: { ticketId, reportType: 'NOISE', status: 'UNDER_REVIEW' },
+    });
+    const escalado = (active: boolean) => ({
+      ticketId,
+      responsibleAreaId: 'M6',
+      updateType: 'ESCALATION_CHANGED',
+      details: { escalation: { active } },
+    });
+    // El active=true de las 10:00 falló: queda la fila con su occurredAt.
+    const atrasadoId = randomUUID();
+    await prisma.inboxEvent.create({
+      data: {
+        messageId: atrasadoId,
+        eventType: 'ticketUpdated',
+        payload: escalado(true),
+        occurredAt: new Date('2026-10-01T10:00:00.000Z'),
+        error: 'boom',
+      },
+    });
+
+    // Llega y se aplica el active=false de las 10:05.
+    await api
+      .post('/events/inbox', {
+        eventId: randomUUID(),
+        eventType: 'ticketUpdated',
+        occurredAt: '2026-10-01T10:05:00.000Z',
+        data: escalado(false),
+      })
+      .expect(200);
+
+    // El reintento del Core: aunque el reenvío traiga otra fecha, vale la guardada.
+    const res = await api
+      .post('/events/inbox', {
+        eventId: atrasadoId,
+        eventType: 'ticketUpdated',
+        occurredAt: '2026-10-01T11:00:00.000Z',
+        data: escalado(true),
+      })
+      .expect(200);
+    expect(res.body.status).toBe('processed');
+
+    const despues = await prisma.environmentalReport.findUniqueOrThrow({
+      where: { id: reporte.id },
+    });
+    expect(despues.escalated).toBe(false);
+    expect(despues.escalationChangedAt).toEqual(new Date('2026-10-01T10:05:00.000Z'));
+  });
+
+  /**
+   * #275 contra la base real: el PRIORITY_CHANGED que llega antes de su ROUTED
+   * falla, y el reintento del Core lo aplica sobre el expediente que abrió el
+   * ROUTED, que es más viejo.
+   */
+  it('un PRIORITY_CHANGED que llega antes que su ROUTED se aplica en el reintento', async () => {
+    const ticketId = `TCK-${randomUUID()}`;
+    const cambioId = randomUUID();
+    const cambio = {
+      eventId: cambioId,
+      eventType: 'ticketUpdated',
+      occurredAt: '2026-10-01T10:05:00.000Z',
+      data: {
+        ticketId,
+        responsibleAreaId: 'M6',
+        updateType: 'PRIORITY_CHANGED',
+        currentPriority: 'HIGH',
+      },
+    };
+
+    const antes = await api.post('/events/inbox', cambio).expect(200);
+    expect(antes.body.status).toBe('failed');
+
+    await api
+      .post('/events/inbox', {
+        eventId: randomUUID(),
+        eventType: 'ticketUpdated',
+        occurredAt: '2026-10-01T10:00:00.000Z',
+        data: { ticketId, responsibleAreaId: 'M6', updateType: 'ROUTED', currentPriority: 'LOW' },
+      })
+      .expect(200);
+
+    const reintento = await api.post('/events/inbox', cambio).expect(200);
+    expect(reintento.body.status).toBe('processed');
+
+    const expediente = await prisma.environmentalReport.findFirstOrThrow({ where: { ticketId } });
+    expect(expediente.priority).toBe('HIGH');
+    expect(expediente.priorityChangedAt).toEqual(new Date('2026-10-01T10:05:00.000Z'));
+  });
+
+  it('acepta el sobre del Core, con causationId null', async () => {
+    const res = await api
+      .post('/events/inbox', {
+        eventId: randomUUID(),
+        eventType: 'weatherAlertIssued',
+        eventVersion: '1.0',
+        occurredAt: '2026-09-29T18:00:00Z',
+        sourceModule: 'clima',
+        correlationId: randomUUID(),
+        causationId: null,
+        data: { severity: 'LOW', zoneIds: [zoneId] },
+      })
+      .expect(200);
+
+    expect(res.body.status).toBe('processed');
+  });
+
+  /**
+   * #267 contra la base real: lo que importa es que el contexto del handler
+   * atraviese el `$transaction` interactivo de Prisma, que en un unitario está
+   * simulado. Ningún consumer publica hoy, así que se registra uno de prueba.
+   */
+  it('lo que publica un handler lleva el correlationId del consumido y su eventId como causa', async () => {
+    const outbox = app.get(OutboxService);
+    const aggregateId = randomUUID();
+    app.get(InboxService).register('pruebaTraza267', () =>
+      prisma.$transaction((tx) =>
+        outbox.enqueue(tx, {
+          eventType: EventType.UPDATE_TICKET_STATUS,
+          aggregateType: AggregateType.ENVIRONMENTAL_REPORT,
+          aggregateId,
+          payload: {},
+        }),
+      ),
+    );
+    const eventId = randomUUID();
+    const correlationId = randomUUID();
+
+    const res = await api
+      .post('/events/inbox', {
+        eventId,
+        eventType: 'pruebaTraza267',
+        sourceModule: 'reclamos',
+        correlationId,
+        data: {},
+      })
+      .expect(200);
+    expect(res.body.status).toBe('processed');
+
+    const publicado = await prisma.outboxEvent.findFirstOrThrow({ where: { aggregateId } });
+    expect(publicado).toMatchObject({ correlationId, causationId: eventId });
+    const consumido = await prisma.inboxEvent.findUniqueOrThrow({ where: { messageId: eventId } });
+    expect(consumido).toMatchObject({ correlationId, sourceModule: 'reclamos' });
+  });
+
+  it('lo que publica un endpoint abre un hilo nuevo y no tiene causa', async () => {
+    const [encolado] = await prisma.outboxEvent.findMany({ where: { aggregateId: serviceId } });
+
+    expect(encolado.correlationId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(encolado.causationId).toBeNull();
   });
 
   it('registra y descarta un evento sin handler', async () => {

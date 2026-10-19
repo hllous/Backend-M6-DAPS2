@@ -73,6 +73,16 @@ export class EnvironmentalReportResponseDto {
   })
   deadlineAt: Date | null;
 
+  @ApiPropertyOptional({
+    description:
+      'Cuadrilla del servicio que ejecuta la inspección más reciente del expediente con servicio vigente (los servicios CANCELLED no cuentan). Null si ninguna inspección tiene un servicio vigente o si ese servicio todavía no tiene cuadrilla. Viene en el alta, el listado, el detalle y las respuestas de las transiciones.',
+    example: 'e5f6a7b8-c9d0-4234-8fab-345678901234',
+    type: String,
+    format: 'uuid',
+    nullable: true,
+  })
+  assignedCrewId: string | null;
+
   @ApiProperty({ description: 'Fecha de creación', format: 'date-time' })
   createdAt: Date;
 

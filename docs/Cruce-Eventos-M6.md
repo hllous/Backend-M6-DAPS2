@@ -1,7 +1,7 @@
 # Cruce de Eventos M6
 
 **Grupo 04 — Módulo 6, Ambiente, Higiene y Servicios Urbanos**
-Fecha: 17 de agosto de 2026
+Fecha: 17 de agosto de 2026 (cruce original). Métrica de bloqueantes actualizada al 5 de octubre de 2026; M1 y M2 actualizados al 13 de octubre de 2026
 Fuente: listas de eventos publicados y consumidos de M1–M8 (`Eventos.txt`)
 Contraste: Documento de Alcance M6 + las siete fichas por módulo
 Alcance del cruce: nombres y direcciones de evento. Los campos de payload no son visibles en esta ronda.
@@ -14,7 +14,7 @@ Alcance del cruce: nombres y direcciones de evento. Los campos de payload no son
 |---|---|
 | Eventos que publicamos con consumidor confirmado | 8 / 8 |
 | Eventos que consumimos con publicador confirmado | 9 / 10 |
-| Bloqueantes abiertos | 3 |
+| Bloqueantes abiertos (🔴 al 5 oct, según [`bloqueantes.md`](bloqueantes.md)) | 5, más 1 condicional |
 | Pedidos nuestros que esta ronda cierra | 6 |
 | Eventos huérfanos o con choque de nombre en la cohorte | 17 |
 | **Equivalencias de nombre que hay que resolver de nuestro lado** | **11** |
@@ -211,7 +211,7 @@ Dos ausencias a confirmar, no a corregir: `weatherAlertIssued` no está porque l
 
 ## M2 — Atención ciudadana 🔴 BLOQUEANTE
 
-Publicaron una **guía de integración con contrato v1.2**: sobre común, JSON Schema, matriz de transiciones, reglas de idempotencia y DLQ. Es, por lejos, el documento de integración más completo de la cohorte, y es el único que define un envelope.
+Publicaron una **guía de integración con contrato v1.2**: sobre común, JSON Schema, matriz de transiciones, reglas de idempotencia y DLQ. Es, por lejos, el documento de integración más completo de la cohorte, y era el único que definía un envelope (histórico: desde el 7 oct 2026 el sobre vigente es el del Core, ver [bloqueantes.md](bloqueantes.md)).
 
 > 🔄 **Actualización 24/08.** M2 publicó la **v1.5**, que reemplaza la v1.2 de esta sección. Cambió el payload de `updateTicketStatus` y se resolvieron los dos bloqueantes de `ROUTED` (más el menor de `citizenId`). El detalle está en las notas de esta sección y en la ficha `M6-por-modulo/M6-para-M2.md`, en el repositorio de documentación.
 
@@ -265,7 +265,7 @@ Consumen los tres que les mandamos y nos publican `workOrderCompleted`. **Acepta
 
 - ✅ Borraron `urbanRiskDetected` y `urbanServiceRepairRequested` en su lista actualizada.
 - ✅ `workOrderValidated` desapareció: la solicitud la cierra `workOrderCompleted` y no hay ambigüedad.
-- **A definir:** `workOrderCreated` fue reemplazado por `workOrderScheduled`. "Creada" y "programada" no son lo mismo: hay que confirmar si sale al abrir la orden o recién al darle fecha.
+- ✅ **Cerrado (5 oct 2026):** `workOrderCreated` fue reemplazado por `workOrderScheduled`. Que salga al abrir la orden o al darle fecha no nos cambia nada.
 - ✅ **Resuelto.** `sourceRequestId` ya viaja en `workOrderScheduled` y `workOrderCompleted`.
 
 ## M4 — Habilitaciones ⚠️ ENCAJA CON RESERVA
@@ -293,7 +293,9 @@ Coherente con lo acordado. Nuestros dos pedidos son REST —consulta de ciudadan
 
 **A decidir:** M1 consume las actuaciones de todas las áreas para el expediente digital —inspecciones de M4, beneficios de M8, infracciones apeladas de M7— **menos las nuestras**. Nuestra acta de constatación es un acto administrativo formal; o confirmamos explícitamente que queda fuera del expediente, o les publicamos `environmentalViolationDetected` a ellos también.
 
-No necesitamos `citizenDeceased`, `addressUpdated` ni `citizenBlocked`: no replicamos el registro de ciudadanos.
+**Actualización 13/10/2026.** M1 pasó su documento de funciones, payloads y endpoints y ya no es "sin eventos": para nosotros define dos eventos de **respuesta**, `citizenInfoDelivered` (por `citizenId`) y `organizationInfoDelivered` (por `cuit`), pero no el pedido que los dispara; su único endpoint REST es el login. Tampoco migró al sobre del Core: sigue con `producer`, `subject` y `correlationId` tipo `M6-REQ-000045`. Además cambiaron nombres: `citizenBlocked`, `citizenDeceased` y el alta de ciudadano son ahora `citizenUpdated` con `updateType` (`BLOCKED`, `DECEASED`, `ADDRESS_UPDATED`, `REGISTERED`), y publican `casefileResolved` (con `f` minúscula) para M3. Detalle en [bloqueantes.md](bloqueantes.md).
+
+No necesitamos lo que M1 agrupa en `citizenUpdated` (alta, bloqueo, fallecimiento, cambio de domicilio): no replicamos el registro de ciudadanos.
 
 ## M5 — Rentas ✅ CONFIRMADO SIN INTEGRACIÓN
 
@@ -304,6 +306,8 @@ Consumen `commercialFineGenerated` de Habilitaciones, que es como nuestra acta l
 Ninguna acción. Se confirma también que las cooperativas nos llegan como organizaciones de M1, no como beneficiarias de un programa.
 
 ## M9 — Core 🔴 AUSENTE
+
+> Actualización 8 oct 2026: M9 sigue ausente de la recopilación, pero el 7 oct fijó un contrato de integración para toda la cohorte (sobre, `muni.inbox`, reintentos y DLQ). Lo que cerró y lo que sigue abierto vive en [bloqueantes.md](bloqueantes.md); este análisis queda como foto de la recopilación.
 
 **No hay sección de M9 en la recopilación.** Sin la lista del Core no se puede validar nada, y es el módulo del que depende el resto.
 
@@ -357,7 +361,7 @@ Ordenado por lo que nos bloquea, no por módulo.
 | **M1** 🔴 | **Publicar el contrato técnico del JWT**: algoritmo de firma, `iss`, `aud`, claves o JWKS, claims y TTL. M1 ya está confirmado como emisor; sin esos datos no se puede verificar un token real |
 | **M4** | **Confirmar que nos rutean `commercialFineGenerated`,** que hoy está rotulado solo hacia Rentas. Les avisamos además que adoptamos `closureLifted` (hoy `closureUpdate / LIFTED`) como señal de cierre y que no les pedimos ningún evento nuevo |
 | **M3 · M4 · M7** ✅ M3 · ✅ M4 · ✅ M7 | **Devolver el identificador de origen.** `sourceRequestId` en `workOrderCompleted` y en las tres de corte; `sourceViolationId` en `commercialFineGenerated` y `closureOrdered` — **los tres ya lo devuelven.** M3 confirmó `sourceRequestId` en `workOrderScheduled` y `workOrderCompleted`; M4 confirmó `sourceViolationId` en `commercialFineGenerated` y en el evento fusionado `closureUpdate` (24/08); M7 confirmó el 25/08, como `closureRequestId` + `requestingModule` en `streetClosureApproved`/`Rejected` — no en `streetClosureEnded`, que solo trae `streetClosureId` |
-| **M3** | ✅ Lista actualizada: borraron los dos nombres viejos y `workOrderValidated`. **Queda definir cuándo se dispara `workOrderScheduled`** |
+| **M3** | ✅ Lista actualizada: borraron los dos nombres viejos y `workOrderValidated`. Lo de cuándo se dispara `workOrderScheduled` se cerró el 5 oct 2026: aceptado en ambos casos |
 | **Cohorte** | **Fijar una convención de escritura de nombres de evento.** camelCase, que es lo que usa toda la recopilación. Nuestros documentos están en PascalCase y los vamos a corregir |
 | **Cohorte** | **Fijar el vocabulario de corte de calle en los nombres de M7:** `streetClosureApproved` / `streetClosureRejected` / `streetClosureEnded` |
 | **Cohorte** | **Repasar la tabla de huérfanos.** El más caro es el par `paymentRegistered` / `debtSettled`, que rompe el cierre financiero de M4 y M7 con Rentas |

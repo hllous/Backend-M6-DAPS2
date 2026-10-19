@@ -1,3 +1,5 @@
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { ServicesController } from './services.controller';
 import { ServicesService } from './services.service';
 import {
@@ -10,7 +12,9 @@ import {
   CreateZoneResultDto,
   QueryAssignmentConflictsDto,
   QueryServicesDto,
+  ServiceTargetType,
   StatusChangeDto,
+  SuspendServiceDto,
   UpdateServiceDto,
 } from './dto';
 
@@ -58,6 +62,35 @@ describe('ServicesController', () => {
     expect(service.findAll).toHaveBeenCalledWith(query);
   });
 
+  it('findAll pasa el filtro por bien objetivo al service', async () => {
+    const query = { targetType: ServiceTargetType.TREE, targetId: ID } as QueryServicesDto;
+    await controller.findAll(query);
+    expect(service.findAll).toHaveBeenCalledWith(query);
+  });
+
+  /** Lo que el ValidationPipe global convierte en 400. */
+  it.each([
+    [
+      'tipo y UUID válidos',
+      { targetType: 'TREE', targetId: 'c3d4e5f6-a7b8-4012-8def-123456789012' },
+      [],
+    ],
+    ['tipo fuera del catálogo', { targetType: 'LAMPPOST' }, ['targetType']],
+    ['targetId que no es UUID', { targetId: 'arbol-1' }, ['targetId']],
+  ])('filtro por bien objetivo: %s', async (_caso, raw, invalidos) => {
+    const errores = await validate(plainToInstance(QueryServicesDto, raw));
+    expect(errores.map((e) => e.property)).toEqual(invalidos);
+  });
+
+  /** #246: los ejemplos de Swagger tienen que poder probarse tal cual. */
+  it('los UUID de ejemplo de assignCrew pasan la validación', async () => {
+    const dto = plainToInstance(AssignCrewDto, {
+      crewId: 'e5f6a7b8-c9d0-4234-8fab-345678901234',
+      vehicleId: 'f6a7b8c9-d0e1-4345-8abc-456789012345',
+    });
+    expect(await validate(dto)).toEqual([]);
+  });
+
   it('findOne delega el id', async () => {
     await controller.findOne(ID);
     expect(service.findOne).toHaveBeenCalledWith(ID);
@@ -97,9 +130,9 @@ describe('ServicesController', () => {
     expect(service.start).toHaveBeenCalledWith(ID, 'user-1');
   });
 
-  it('suspend delega id y el motivo del dto', async () => {
-    await controller.suspend(ID, { reason: 'lluvia' } as StatusChangeDto);
-    expect(service.suspend).toHaveBeenCalledWith(ID, 'lluvia');
+  it('suspend delega id y motivo y nota del dto', async () => {
+    await controller.suspend(ID, { reason: 'lluvia', note: 'detalle' } as SuspendServiceDto);
+    expect(service.suspend).toHaveBeenCalledWith(ID, 'lluvia', 'detalle');
   });
 
   it('resume delega el id', async () => {

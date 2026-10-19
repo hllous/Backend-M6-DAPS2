@@ -1,4 +1,4 @@
-import { Trim } from '../../../common/decorators';
+import { MAX_REASON_LENGTH, Trim } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
@@ -23,6 +23,20 @@ export class StatusChangeDto {
   @IsNotEmpty()
   @MaxLength(500)
   reason: string;
+}
+
+/** Suspender suma una nota opcional: el motivo es el rótulo, la nota el detalle. */
+export class SuspendServiceDto extends StatusChangeDto {
+  @ApiPropertyOptional({
+    description: 'Detalle libre de la suspensión. Queda en statusNote hasta retomar o cancelar.',
+    example: 'El camión 12 se quedó sin frenos; esperan reemplazo',
+    maxLength: MAX_REASON_LENGTH,
+  })
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @MaxLength(MAX_REASON_LENGTH)
+  note?: string;
 }
 
 export class ConfirmRescheduleDto {

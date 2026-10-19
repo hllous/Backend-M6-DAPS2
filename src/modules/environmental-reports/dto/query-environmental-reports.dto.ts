@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { SearchText, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
 import { EnvironmentalReportStatus, EnvironmentalReportType, Severity } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
@@ -39,6 +39,16 @@ export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
   @IsString()
   @MaxLength(MAX_EXTERNAL_ID_LENGTH)
   publicId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Filtrar los expedientes con alguna inspección cuyo servicio vigente tenga esta cuadrilla (no solo la más reciente; los servicios CANCELLED no cuentan)',
+    example: 'e5f6a7b8-c9d0-4234-8fab-345678901234',
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  crewId?: string;
 
   @ApiPropertyOptional({
     description: 'Buscar por dirección (parcial, case-insensitive)',

@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { OutboxService } from '../../../events/outbox/outbox.service';
 import { TreeInterventionsService } from './tree-interventions.service';
+import { QueryTreeInterventionsDto } from './dto';
 
 const ID = '11111111-1111-1111-1111-111111111111';
 const SRV = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
@@ -226,6 +227,16 @@ describe('TreeInterventionsService', () => {
         interventionType: T.REMOVAL,
         status: I.AUTHORIZED,
       });
+    });
+
+    /** El árbol no es un campo de la intervención: viaja en la tabla InterventionTree. */
+    it('filtra por árbol con el mismo where en listado y conteo', async () => {
+      const TREE = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+      await service.findAll(Object.assign(new QueryTreeInterventionsDto(), { treeId: TREE }));
+
+      const where = { trees: { some: { treeId: TREE } } };
+      expect(prisma.treeIntervention.findMany.mock.calls[0][0].where).toEqual(where);
+      expect(prisma.treeIntervention.count).toHaveBeenCalledWith({ where });
     });
 
     it('findOne da 404 si no está', async () => {

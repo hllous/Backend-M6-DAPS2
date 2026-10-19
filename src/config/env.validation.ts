@@ -1,42 +1,130 @@
 import { z } from 'zod';
 
-export const envSchema = z.object({
-  // Server
-  PORT: z.coerce.number().default(3000),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+/**
+ * Una URL AMQP que se pueda loguear sin filtrar la clave. Si la clave trae `/`,
+ * `?`, `#` o `@` sin percent-encoding, el parser corta la userinfo en otro lado
+ * y el resto de la clave queda en el path o el query, que `brokerHost()` sí
+ * loguea. El `@` fuera de la userinfo es la señal.
+ */
+function validarUrlAmqp(value: string, ctx: z.RefinementCtx): void {
+  let url: URL;
+  try {
+    url = new URL(value);
+    if (!url.hostname) throw new Error('sin host');
+  } catch {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'RABBITMQ_URL no es una URL válida' });
+    return;
+  }
+  if (url.protocol !== 'amqp:' && url.protocol !== 'amqps:') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'RABBITMQ_URL debe empezar con amqp:// o amqps://',
+    });
+  }
+  if (`${url.pathname}${url.search}${url.hash}`.includes('@')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'RABBITMQ_URL: la clave tiene caracteres especiales sin percent-encoding (/ ? # @)',
+    });
+  }
+}
 
-  // Database
-  DATABASE_URL: z.string().url(),
+export const envSchema = z
+  .object({
+    // Server
+    PORT: z.coerce.number().default(3000),
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  // Origenes que pueden llamar a la API desde un navegador, separados por
-  // coma. Sin la variable se aceptan todos, que es lo que hace falta en
-  // desarrollo. El JWT viaja en un header y no en una cookie, asi que esto no
-  // cierra un CSRF: es higiene, no un limite de seguridad.
-  CORS_ORIGINS: z.string().optional(),
+    // Database
+    DATABASE_URL: z.string().url(),
 
-  // JWT — placeholder hasta que M1 publique su contrato de firma y claims
-  JWT_SECRET: z.string().min(8),
-  JWT_EXPIRATION: z.coerce.number().default(3600),
+    // Origenes que pueden llamar a la API desde un navegador, separados por
+    // coma. Sin la variable se aceptan todos, que es lo que hace falta en
+    // desarrollo. El JWT viaja en un header y no en una cookie, asi que esto no
+    // cierra un CSRF: es higiene, no un limite de seguridad.
+    CORS_ORIGINS: z.string().optional(),
 
-  // Plazo que le damos a M4 para resolver un acta antes de cerrar el
-  // expediente por vencimiento. Ver ReportDeadlineSweeper.
-  SANCTION_DEADLINE_DAYS: z.coerce.number().int().positive().default(30),
+    // JWT — placeholder hasta que M1 publique su contrato de firma y claims
+    JWT_SECRET: z.string().min(8),
+    JWT_EXPIRATION: z.coerce.number().default(3600),
 
-  // Kafka — el transporte confirmado por M9, pero todavía sin broker expuesto.
-  // Si KAFKA_BROKERS no está, los eventos se encolan en el outbox y se
-  // registran en el log; la app arranca igual. Ver src/events/events.module.ts.
-  KAFKA_BROKERS: z.string().optional(),
-  KAFKA_CLIENT_ID: z.string().default('m6-ambiente'),
-  KAFKA_GROUP_ID: z.string().default('m6-ambiente-group'),
+    // Plazo que le damos a M4 para resolver un acta antes de cerrar el
+    // expediente por vencimiento. Ver ReportDeadlineSweeper.
+    SANCTION_DEADLINE_DAYS: z.coerce.number().int().positive().default(30),
 
-  // Cloudflare R2 (S3-compatible) para evidencia/adjuntos — Issue #64.
-  // Opcionales: sin credenciales la app arranca igual, pero POST /evidence
-  // falla al subir. Ver src/modules/attachments/storage/r2-evidence.storage.ts.
-  R2_ACCOUNT_ID: z.string().optional(),
-  R2_ACCESS_KEY_ID: z.string().optional(),
-  R2_SECRET_ACCESS_KEY: z.string().optional(),
-  R2_BUCKET: z.string().optional(),
-  R2_PUBLIC_URL_BASE: z.string().optional(),
-});
+    // RabbitMQ — el bus del Core (M9). Sin RABBITMQ_URL los eventos se encolan
+    // en el outbox y se registran en el log, no hay consumidor, y la app arranca
+    // igual. Exchange y cola los crea el Core: M6 solo los verifica en modo
+    // pasivo, así que los nombres tienen que coincidir con los suyos. Ver ADR-006
+    // y la issue #257.
+    // Vacía cuenta como ausente: un `RABBITMQ_URL=` en el panel no debe tumbar el arranque.
+    RABBITMQ_URL: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().superRefine(validarUrlAmqp).optional(),
+    ),
+    // Donde publican todos los módulos (fanout): el Core rutea por suscripción.
+    RABBITMQ_EXCHANGE: z.string().min(1).default('muni.inbox'),
+    // La cola de M6, que el Core crea al registrar nuestras suscripciones.
+    RABBITMQ_QUEUE: z.string().min(1).default('q.ambiente'),
+    // 1 = de a un mensaje. El orden igual no está garantizado (un reintento del
+    // Core vuelve después de los que venían atrás), pero no lo empeoramos.
+    RABBITMQ_PREFETCH: z.coerce.number().int().positive().default(1),
+
+    // Identificador de M6 ante el Core: va como `sourceModule` en el sobre y
+    // tiene que coincidir con el módulo del token, o el Core responde 403.
+    CORE_MODULE_ID: z.string().min(1).max(60).default('ambiente'),
+    // API REST del Core (catálogo, auditoría, DLQ). Opcional hasta que M9
+    // publique la URL de cada ambiente: sin ella el CoreClient queda
+    // deshabilitado y la app arranca igual. Vacía cuenta como ausente.
+    CORE_API_URL: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z
+        .string()
+        .url()
+        .refine((v) => /^https?:\/\//i.test(v), 'CORE_API_URL debe empezar con http:// o https://')
+        .optional(),
+    ),
+    // Secret de máquina con el que pedimos el token de módulo. Lo entrega M9;
+    // nunca se loguea ni va en un mensaje de error. Uno en blanco ("  ") no
+    // pasa; largo mínimo no se exige porque M9 no lo fijó.
+    CORE_MODULE_SECRET: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().trim().min(1).optional(),
+    ),
+
+    // Cloudflare R2 (S3-compatible) para evidencia/adjuntos — Issue #64.
+    // Opcionales: sin credenciales la app arranca igual, pero POST /evidence
+    // falla al subir. Ver src/modules/attachments/storage/r2-evidence.storage.ts.
+    R2_ACCOUNT_ID: z.string().optional(),
+    R2_ACCESS_KEY_ID: z.string().optional(),
+    R2_SECRET_ACCESS_KEY: z.string().optional(),
+    R2_BUCKET: z.string().optional(),
+    R2_PUBLIC_URL_BASE: z.string().optional(),
+  })
+  .superRefine((env, ctx) => {
+    // En producción la clave no viaja en claro.
+    if (env.NODE_ENV === 'production' && /^amqp:/i.test(env.RABBITMQ_URL ?? '')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['RABBITMQ_URL'],
+        message: 'En producción RABBITMQ_URL tiene que ser amqps://',
+      });
+    }
+    // El secret viaja en el body del pedido de token.
+    if (env.NODE_ENV === 'production' && /^http:/i.test(env.CORE_API_URL ?? '')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['CORE_API_URL'],
+        message: 'En producción CORE_API_URL tiene que ser https://',
+      });
+    }
+    if (env.CORE_API_URL && !env.CORE_MODULE_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['CORE_MODULE_SECRET'],
+        message: 'Con CORE_API_URL hace falta CORE_MODULE_SECRET para pedir el token de módulo',
+      });
+    }
+  });
 
 export type EnvConfig = z.infer<typeof envSchema>;

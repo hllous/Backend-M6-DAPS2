@@ -13,10 +13,16 @@ export default () => {
       expirationSeconds: parsed.JWT_EXPIRATION,
     },
     sanctionDeadlineDays: parsed.SANCTION_DEADLINE_DAYS,
-    kafka: {
-      brokers: parsed.KAFKA_BROKERS,
-      clientId: parsed.KAFKA_CLIENT_ID,
-      groupId: parsed.KAFKA_GROUP_ID,
+    rabbitmq: {
+      url: parsed.RABBITMQ_URL,
+      exchange: parsed.RABBITMQ_EXCHANGE,
+      queue: parsed.RABBITMQ_QUEUE,
+      prefetch: parsed.RABBITMQ_PREFETCH,
+    },
+    core: {
+      moduleId: parsed.CORE_MODULE_ID,
+      apiUrl: parsed.CORE_API_URL,
+      moduleSecret: parsed.CORE_MODULE_SECRET,
     },
     corsOrigins: parsed.CORS_ORIGINS?.split(',')
       .map((o) => o.trim())

@@ -6,16 +6,16 @@ Guía interna del **Grupo 04 — Módulo 6**. Reglas cortas para que el trabajo 
 
 1. Leé el [`AGENTS.md`](AGENTS.md) para orientarte.
 2. Chequeá el [`docs/bloqueantes.md`](docs/bloqueantes.md) si vas a tocar algo de integración.
-3. Tomá o creá una tarjeta en Trello. Todo lo que se codea tiene que estar asociado a una tarjeta.
+3. Tomá o creá un Issue de GitHub. Todo lo que se codea tiene que estar asociado a uno.
 
 ## Branches
 
-Rama principal: **`main`**.
+Rama de integración: **`develop`** (`main ← test ← develop`).
 
-Se trabaja siempre en una rama nueva a partir de `main`, con este formato:
+Se trabaja siempre en una rama nueva a partir de `develop`, con este formato (`XXX` = número de Issue):
 
 ```
-<tipo>/<descripción-corta>
+<tipo>/XXX-<descripción-corta>
 ```
 
 Los tipos que usamos:
@@ -32,12 +32,12 @@ Los tipos que usamos:
 Ejemplos:
 
 ```
-feature/endpoint-crear-contenedor
-fix/validacion-fecha-servicio
-docs/adr-002-broker
-refactor/service-modulo-arboles
-tests/environmental-report-coverage
-chore/actualizar-nestjs
+feature/101-endpoint-crear-contenedor
+fix/102-validacion-fecha-servicio
+docs/103-adr-002-broker
+refactor/104-service-modulo-arboles
+tests/105-environmental-report-coverage
+chore/106-actualizar-nestjs
 ```
 
 **Descripciones en minúscula, separadas por guión, en castellano.** Sin acentos ni caracteres especiales.
@@ -66,14 +66,14 @@ Un commit por cambio lógico. No metas 15 archivos sin relación en un commit gi
 
 ## Pull Requests
 
-Todo cambio entra por PR. La rama de integración es `develop`: ahí apuntan los PR de `feature/*`, `fix/*`, `docs/*` e `infra/*`. De `develop` sale a `test` y de `test` a `main`. Nada de commits directos a ninguna de las tres.
+Todo cambio entra por PR. La rama de integración es `develop`: ahí apuntan los PR de `feature/*`, `fix/*`, `docs/*`, `refactor/*`, `tests/*` y `chore/*`. De `develop` sale a `test` y de `test` a `main`. Nada de commits directos a ninguna de las tres.
 
 **Un buen PR tiene:**
 
 - Título claro, con el mismo formato que un commit (`feat: ...`, `fix: ...`).
 - Descripción con:
   - Qué hace y por qué
-  - Link a la tarjeta de Trello
+  - Issue que cierra (`Closes #XXX`)
   - Si tocó documentación, cuál
   - Si hay algo que quede pendiente en otro PR
 - Checklist mínima marcada (ver abajo).
@@ -117,7 +117,7 @@ Si vas a hacer un cambio grande en la doc de dominio (`docs/entidades/`, `docs/e
 
 ## Estilo de código
 
-- **ESLint** y **Prettier** configurados en el proyecto — corren en cada commit vía `husky` (ver sprint 1).
+- **ESLint** y **Prettier** configurados en el proyecto — `npm run lint:check` y `npm run format`; el CI corre el lint.
 - No cambiar reglas del linter sin discutirlo con el equipo.
 - No commitear código comentado. Si un bloque ya no se usa, se borra — Git guarda la historia.
 - Nombres de variables y funciones en **inglés**. Comentarios y doc en **castellano**.
@@ -148,7 +148,7 @@ Es la rama donde corren el CI y el deploy automático, así que es donde se ve p
 
 ## Definition of Done
 
-El DoD acordado por el equipo vive en `docs/gestion/definition-of-done.md` (pendiente sprint 1). Una tarea no está terminada hasta que cumple el DoD.
+El DoD acordado por el equipo vive en [`docs/gestion/definition-of-done.md`](docs/gestion/definition-of-done.md). Una tarea no está terminada hasta que cumple el DoD.
 
 ---
 

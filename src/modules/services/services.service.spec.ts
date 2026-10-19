@@ -35,6 +35,7 @@ describe('ServicesService', () => {
     mode: ServiceMode.ROUTE,
     status: ServiceStatus.SCHEDULED,
     statusReason: null,
+    statusNote: null,
     origin: ServiceOrigin.PLANNED,
     routeId: ROUTE_ID,
     targetType: null,
@@ -604,7 +605,48 @@ describe('ServicesService', () => {
           data: expect.objectContaining({
             status: ServiceStatus.SUSPENDED,
             statusReason: 'Rotura del camión',
+            statusNote: null,
           }),
+        }),
+      );
+    });
+
+    it('suspender con nota de solo espacios la guarda como null', async () => {
+      prisma.service.findUnique.mockResolvedValue(
+        serviceRow({ status: ServiceStatus.IN_PROGRESS }),
+      );
+
+      await service.suspend(SERVICE_ID, 'Rotura', '   ');
+
+      expect(prisma.service.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ statusNote: null }) }),
+      );
+    });
+
+    it('reanudar y cancelar desde SUSPENDED limpian statusNote', async () => {
+      prisma.service.findUnique.mockResolvedValue(
+        serviceRow({ status: ServiceStatus.SUSPENDED, statusNote: 'x' }),
+      );
+
+      await service.resume(SERVICE_ID);
+      await service.cancel(SERVICE_ID, 'motivo');
+
+      for (const [arg] of prisma.service.update.mock.calls) {
+        expect(arg.data.statusNote).toBeNull();
+      }
+      expect(prisma.service.update).toHaveBeenCalledTimes(2);
+    });
+
+    it('suspender guarda la nota opcional', async () => {
+      prisma.service.findUnique.mockResolvedValue(
+        serviceRow({ status: ServiceStatus.IN_PROGRESS }),
+      );
+
+      await service.suspend(SERVICE_ID, 'Rotura', 'Sin frenos');
+
+      expect(prisma.service.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ statusNote: 'Sin frenos' }),
         }),
       );
     });

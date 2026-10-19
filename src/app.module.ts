@@ -8,6 +8,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
+import { CoreModule } from './core/core.module';
 import { JwtAuthGuard } from './common/guards';
 
 // Módulos de dominio
@@ -44,6 +45,7 @@ import { IndicatorsModule } from './modules/indicators/indicators.module';
     HealthModule,
     AuthModule,
     EventsModule,
+    CoreModule,
 
     // ─── Dominios de negocio ────────────────────────
     ZonesModule,

@@ -2,7 +2,7 @@
 
 La denuncia ambiental tal como la tramitamos nosotros: ruidos, vertidos, microbasurales, emisiones. Puede nacer de un reclamo de M2 (`ticketId` presente) o de una detección de oficio del inspector.
 
-> **No confundir con el expediente digital de M1** (`caseFile`). En prosa se parecen; en código no, porque los nombres técnicos son distintos. El acta que emitimos **no** va al expediente digital — ver [bloqueantes.md](../bloqueantes.md#m1--ciudadanos--sin-eventos).
+> **No confundir con el expediente digital de M1** (`caseFile`). En prosa se parecen; en código no, porque los nombres técnicos son distintos. El acta que emitimos **no** va al expediente digital — ver [bloqueantes.md](../bloqueantes.md#m1--ciudadanos--jwt-confirmado-sin-integración-de-dominio-actual).
 
 ## Campos
 
@@ -14,7 +14,11 @@ Enums: `reportType` es `EnvironmentalReportType`, `status` es `EnvironmentalRepo
 
 **La API devuelve `description`, `escalated` y `citizenResponse`** (listado y detalle). `description` es la descripción del hallazgo que carga el operador al abrir el expediente (opcional, hasta 2000 caracteres); los expedientes que abre un reclamo de M2 no la traen. Puede contener datos personales, así que **no sale en el portal ciudadano ni en ningún evento** (#218). `reporterSnapshot` se guarda pero no se expone: trae el `citizenId` del vecino y ningún flujo de M6 lo necesita.
 
+**`assignedCrewId` no es una columna: se deriva** (#243). Es la `crewId` del `Service` vinculado a la inspección más reciente (por `createdAt`, con el `id` como desempate) que tiene un servicio vigente; **los servicios `CANCELLED` no cuentan**, porque esa cuadrilla ya no va a ir. Es `null` si ninguna inspección tiene un servicio vigente o si ese servicio todavía no tiene cuadrilla. Sale en la respuesta del alta (siempre `null`: un expediente recién abierto no tiene inspecciones), en el listado, en el detalle y en las respuestas de las transiciones, resuelto en la misma consulta del expediente. El filtro `GET /environmental-reports?crewId=` aplica el mismo criterio de servicio vigente, pero es más amplio a propósito: trae los expedientes con **alguna** inspección cuyo servicio no cancelado tenga esa cuadrilla, así que un expediente puede aparecer en la cola de una cuadrilla aunque su `assignedCrewId` sea otro (lo reasignaron a una inspección posterior).
+
 **`escalated` y `citizenResponse` los escribe M2, no nosotros.** Llegan por `ticketUpdated`: `ESCALATION_CHANGED` marca o desmarca el expediente como escalado (`details.escalation.active`) para que lo vea el supervisor, y el `ROUTED` ya trae el valor inicial. `INFORMATION_PROVIDED` trae lo que el vecino respondió a nuestro pedido de información: `citizenResponse` guarda `details.informationResponse.message` y, debajo, una línea `fileName: url` por adjunto. El expediente no tiene campo de adjuntos, y la URL de M2 puede ser temporal. El contrato de M2 no usa ID de correlación —impone como máximo una solicitud activa por ticket—, así que la respuesta siempre corresponde a la nuestra.
+
+**`priorityChangedAt`, `escalationChangedAt`, `citizenResponseAt` y `ticketStatusAt` son marcas de orden, no datos de negocio** (#270). Guardan el `occurredAt` del último `ticketUpdated` aplicado a `priority`, a `escalated`, a `citizenResponse` y al estado (`REOPENED`/`CANCELLED`, compartida) respectivamente. El Core no garantiza el orden y reintenta tarde, así que un evento que no es más nuevo que la marca de su dato se ignora en vez de pisarlo. Una por dato y no una sola: un cambio de prioridad nuevo no tiene por qué descartar un escalamiento atrasado. El `ROUTED` que abre el expediente deja `ticketStatusAt`, y `priorityChangedAt`/`escalationChangedAt` si su snapshot trae esos datos, en su propio `occurredAt` (#275): el snapshot ya refleja lo anterior. No salen en la API. Ver [`ticketUpdated`](../eventos/consumidos/ticketUpdated.md#orden-por-occurredat-no-por-llegada-270).
 
 **`deadlineAt` es el plazo que le damos a M4** para resolver el acta antes de cerrar el expediente por vencimiento. Se configura con `SANCTION_DEADLINE_DAYS`.
 
@@ -39,8 +43,13 @@ stateDiagram-v2
     DISMISSED --> CLOSED
     NO_VIOLATION --> CLOSED
     SANCTIONED --> CLOSED
-    CLOSED --> [*]
+    FORWARDED --> UNDER_REVIEW : reapertura
+    DISMISSED --> UNDER_REVIEW : reapertura
+    NO_VIOLATION --> UNDER_REVIEW : reapertura
+    CLOSED --> UNDER_REVIEW : reapertura
 ```
+
+**La reapertura llega por `ticketUpdated` con `REOPENED`**: el vecino rechazó la solución y el expediente vuelve a `UNDER_REVIEW` desde `FORWARDED`, `DISMISSED`, `NO_VIOLATION` o `CLOSED`. Un expediente `SANCTIONED` no se reabre (la tabla `REPORT_TRANSITIONS` solo lo deja pasar a `CLOSED`): eso ya lo resolvió M4.
 
 **`NOTICE_ISSUED → CLOSED` por vencimiento de plazo no es un atajo, es el diseño.** M4 no publica ningún evento cuando decide que no corresponde castigo, así que sin ese cierre el expediente quedaría abierto para siempre. Cierra sin `SanctionOutcome`: una desestimación y una demora de M4 se ven igual, y esa imprecisión se aceptó a cambio de no depender de que otro grupo agregue un evento. El barrido corre **cada hora y también al arrancar** (#150): en el free tier de Render el servicio duerme, y sin el barrido de arranque el cierre esperaba a que coincidieran el despertar y la hora en punto. Ver [bloqueantes.md](../bloqueantes.md#resueltos--no-repreguntar).
 
@@ -48,5 +57,5 @@ stateDiagram-v2
 
 - Al emitirse el acta: [`environmentalViolationDetected`](../eventos/publicados/environmentalViolationDetected.md) → M4.
 - Si hay `ticketId`, cada tramo dispara un [`updateTicketStatus`](../eventos/publicados/updateTicketStatus.md) → M2. La transición a `DISMISSED` sale como `REJECTED`; un reclamo que no es de nuestra área sale como `RETURNED`, que es distinto. El cierre posterior de un expediente `FORWARDED` o `DISMISSED` **no** vuelve a proyectar: M2 ya lo sacó de gestión y un `RESOLVED` sería rechazado (#146).
-- Pasa a `SANCTIONED` al recibir [`commercialFineGenerated`](../eventos/consumidos/commercialFineGenerated.md), [`closureOrdered`](../eventos/consumidos/closureOrdered.md) o [`closureLifted`](../eventos/consumidos/closureLifted.md) de M4.
+- Pasa a `SANCTIONED` al recibir [`commercialFineGenerated`](../eventos/consumidos/commercialFineGenerated.md) o [`closureUpdate`](../eventos/consumidos/closureUpdate.md) de M4.
 - `INSPECTION_SCHEDULED` e `INSPECTED` **no** se publican: eran los descartados `environmentalInspectionScheduled` y `environmentalInspectionCompleted`.

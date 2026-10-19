@@ -61,7 +61,7 @@
       "post": {
         "operationId": "InboxController_ingest",
         "summary": "Ingerir un evento entrante",
-        "description": "Recibe un sobre y lo despacha al handler que corresponda. La idempotencia es por eventId: un mensaje ya recibido se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin procesar y con el error, para poder reintentarla.",
+        "description": "Recibe un sobre y lo despacha al handler que corresponda. La idempotencia es por eventId: un mensaje ya procesado se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin procesar y con el error registrado, y reenviar el mismo eventId vuelve a correr el handler con el payload guardado en la primera entrega (es lo que hace el reintento del Core por el bus). Un reenvío con otro eventType, o mientras el intento anterior sigue en curso, sale duplicate.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -75,7 +75,7 @@
         },
         "responses": {
           "200": {
-            "description": "Resultado de la ingesta: processed, duplicate (ya recibido), ignored (sin handler) o failed",
+            "description": "Resultado de la ingesta: processed, duplicate (ya procesado o en curso), ignored (sin handler) o failed",
             "content": {
               "application/json": {
                 "schema": {
@@ -4841,7 +4841,7 @@
             }
           },
           "409": {
-            "description": "Transición inválida (solo se puede retirar desde ACTIVE o DAMAGED)",
+            "description": "Transición inválida (solo se puede retirar desde DAMAGED; un ACTIVE debe reportarse dañado primero)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5727,7 +5727,7 @@
       "get": {
         "operationId": "TreeInterventionsController_findAll",
         "summary": "Listar intervenciones sobre árboles",
-        "description": "Retorna un listado paginado de intervenciones. Se puede filtrar por tipo y estado.",
+        "description": "Retorna un listado paginado de intervenciones. Se puede filtrar por tipo, estado y por árbol: con treeId vienen solo las intervenciones que incluyen ese árbol, para armar su ficha.",
         "parameters": [
           {
             "name": "page",
@@ -5785,6 +5785,17 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "treeId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar las intervenciones que incluyen este árbol",
+            "schema": {
+              "format": "uuid",
+              "example": "b8c9d0e1-f2a3-4567-8bcd-678901234567",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5809,6 +5820,16 @@
                       "$ref": "#/components/schemas/PaginationMeta"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos: tipo o estado fuera del catálogo, o treeId que no es UUID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -7306,7 +7327,7 @@
       "get": {
         "operationId": "ServicesController_findAll",
         "summary": "Listar servicios",
-        "description": "Listado paginado. Filtros por estado, tipo, modo, origen, cuadrilla, vehículo, zona cubierta, reclamo de M2 y rango de fechas agendadas.",
+        "description": "Listado paginado. Filtros por estado, tipo, modo, origen, cuadrilla, vehículo, zona cubierta, bien objetivo (targetType/targetId, p. ej. los servicios de un árbol), reclamo de M2 y rango de fechas agendadas.",
         "parameters": [
           {
             "name": "page",
@@ -7423,6 +7444,33 @@
             }
           },
           {
+            "name": "targetType",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por tipo del bien sobre el que se ejecuta (servicios POINT)",
+            "schema": {
+              "example": "TREE",
+              "enum": [
+                "CONTAINER",
+                "TREE",
+                "GREEN_SPACE",
+                "GREEN_POINT"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por el bien sobre el que se ejecuta. Se combina con targetType o se usa solo: los UUID no se repiten entre inventarios.",
+            "schema": {
+              "format": "uuid",
+              "example": "c3d4e5f6-a7b8-4012-8def-123456789012",
+              "type": "string"
+            }
+          },
+          {
             "name": "ticketId",
             "required": false,
             "in": "query",
@@ -7483,7 +7531,7 @@
             }
           },
           "400": {
-            "description": "Filtros inválidos: scheduledFrom posterior a scheduledTo",
+            "description": "Filtros inválidos: scheduledFrom posterior a scheduledTo, valor fuera del catálogo o id que no es UUID",
             "content": {
               "application/json": {
                 "schema": {
@@ -8179,7 +8227,7 @@
       "post": {
         "operationId": "ServicesController_suspend",
         "summary": "Suspender la ejecución",
-        "description": "IN_PROGRESS → SUSPENDED. El motivo queda registrado en statusReason.",
+        "description": "IN_PROGRESS → SUSPENDED. El motivo queda en statusReason; la nota opcional, en statusNote.",
         "parameters": [
           {
             "name": "id",
@@ -8197,7 +8245,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StatusChangeDto"
+                "$ref": "#/components/schemas/SuspendServiceDto"
               }
             }
           }
@@ -8288,7 +8336,7 @@
       "post": {
         "operationId": "ServicesController_resume",
         "summary": "Reanudar la ejecución",
-        "description": "SUSPENDED → IN_PROGRESS. Limpia el motivo de la suspensión.",
+        "description": "SUSPENDED → IN_PROGRESS. Limpia el motivo y la nota de la suspensión (statusNote solo vive mientras el servicio está SUSPENDED).",
         "parameters": [
           {
             "name": "id",
@@ -8486,7 +8534,7 @@
       "post": {
         "operationId": "ServicesController_cancel",
         "summary": "Cancelar el servicio",
-        "description": "SCHEDULED, RESCHEDULED o SUSPENDED → CANCELLED. El motivo queda registrado. Un servicio RESCHEDULED se cancela directo: no hace falta confirmar antes una fecha nueva. IN_PROGRESS no se cancela — hay que suspenderlo o cerrarlo.",
+        "description": "SCHEDULED, RESCHEDULED o SUSPENDED → CANCELLED. El motivo queda registrado. Un servicio RESCHEDULED se cancela directo: no hace falta confirmar antes una fecha nueva. IN_PROGRESS no se cancela — hay que suspenderlo o cerrarlo. Solo acepta reason: enviar note da 400 (la nota existe solo en suspend) y limpia statusNote.",
         "parameters": [
           {
             "name": "id",
@@ -8595,7 +8643,7 @@
       "post": {
         "operationId": "ServicesController_reschedule",
         "summary": "Marcar el servicio para reprogramar",
-        "description": "SCHEDULED → RESCHEDULED. Deja el servicio a la espera de fecha nueva, con el motivo registrado. Es el estado en el que caen los servicios ante una alerta meteorológica o el rechazo de un corte de calle. La fecha se fija con confirm-reschedule.",
+        "description": "SCHEDULED → RESCHEDULED. Deja el servicio a la espera de fecha nueva, con el motivo registrado. Es el estado en el que caen los servicios ante una alerta meteorológica o el rechazo de un corte de calle. La fecha se fija con confirm-reschedule. Solo acepta reason: enviar note da 400 (la nota existe solo en suspend).",
         "parameters": [
           {
             "name": "id",
@@ -9635,7 +9683,7 @@
       "get": {
         "operationId": "EnvironmentalInspectionsController_findNotice",
         "summary": "Obtener el acta de una inspección",
-        "description": "El acta emitida, con su número correlativo y el conteo de reincidencia.",
+        "description": "El acta emitida, con su número correlativo y el conteo de reincidencia. Si la inspección existe pero todavía no tiene acta responde 200 con el JSON literal null, no 404.",
         "parameters": [
           {
             "name": "id",
@@ -9650,11 +9698,16 @@
         ],
         "responses": {
           "200": {
-            "description": "Acta encontrada",
+            "description": "Acta encontrada, o null si la inspección aún no tiene acta",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViolationNoticeResponseDto"
+                  "nullable": true,
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ViolationNoticeResponseDto"
+                    }
+                  ]
                 }
               }
             }
@@ -9670,7 +9723,7 @@
             }
           },
           "404": {
-            "description": "La inspección no tiene acta emitida",
+            "description": "Inspección no encontrada",
             "content": {
               "application/json": {
                 "schema": {
@@ -9780,7 +9833,7 @@
       "get": {
         "operationId": "EnvironmentalReportsController_findAll",
         "summary": "Listar expedientes ambientales",
-        "description": "Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen y búsqueda por dirección.",
+        "description": "Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen, cuadrilla (crewId: expedientes con alguna inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base para que la página y meta.total sean consistentes) y búsqueda por dirección.",
         "parameters": [
           {
             "name": "page",
@@ -9885,6 +9938,17 @@
             }
           },
           {
+            "name": "crewId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar los expedientes con alguna inspección cuyo servicio vigente tenga esta cuadrilla (no solo la más reciente; los servicios CANCELLED no cuentan)",
+            "schema": {
+              "format": "uuid",
+              "example": "e5f6a7b8-c9d0-4234-8fab-345678901234",
+              "type": "string"
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
@@ -9918,6 +9982,16 @@
                       "$ref": "#/components/schemas/PaginationMeta"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtro inválido (por ejemplo, crewId que no es UUID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -9957,7 +10031,7 @@
       "get": {
         "operationId": "EnvironmentalReportsController_findOne",
         "summary": "Obtener un expediente por ID",
-        "description": "Detalle del expediente, con su estado y su plazo de vencimiento si lo tiene.",
+        "description": "Detalle del expediente, con su estado, su plazo de vencimiento si lo tiene y la cuadrilla asignada a su inspección más reciente con servicio no cancelado (assignedCrewId).",
         "parameters": [
           {
             "name": "id",
@@ -12576,40 +12650,65 @@
           "eventId": {
             "type": "string",
             "maxLength": 100,
-            "description": "Identificador único del mensaje. **Es la clave de idempotencia**: repetirlo descarta el evento sin volver a aplicarlo.",
-            "example": "646d19f5-5670-4a7b-9442-30e13b02ba11"
+            "description": "Identificador único del mensaje (UUID en el sobre del Core; no se exige, para no rechazar a quien todavía no migró). **Es la clave de idempotencia**: repetir uno ya procesado lo descarta sin volver a aplicarlo; repetir uno cuyo handler falló lo reintenta.",
+            "example": "3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11"
           },
           "eventType": {
             "type": "string",
-            "maxLength": 100,
+            "maxLength": 120,
             "description": "Nombre del evento en camelCase",
-            "example": "streetClosureApproved"
+            "example": "workOrderCompleted"
           },
           "data": {
             "type": "object",
             "description": "El payload propio del evento, tal como lo define el módulo que lo publica",
             "example": {
-              "closureRequestId": "a1b2c3d4-...",
-              "closureId": "CL-2026-0342"
+              "sourceRequestId": "0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a",
+              "workOrderId": "f1e2d3c4-b5a6-4789-9abc-def012345678",
+              "completedAt": "2026-09-29T17:45:00Z"
             }
-          },
-          "specVersion": {
-            "type": "string",
-            "description": "Versión del sobre",
-            "example": "1.0"
           },
           "eventVersion": {
             "type": "string",
-            "description": "Versión del payload",
+            "maxLength": 20,
+            "description": "Versión del contrato del evento (el Core asume \"1.0\" si falta)",
             "example": "1.0"
           },
           "occurredAt": {
             "type": "string",
-            "description": "Cuándo ocurrió el hecho",
-            "format": "date-time"
+            "description": "Cuándo ocurrió el hecho, ISO 8601 con zona horaria",
+            "format": "date-time",
+            "example": "2026-09-29T18:00:00Z"
+          },
+          "sourceModule": {
+            "type": "string",
+            "maxLength": 60,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "description": "Módulo que publicó el evento (sobre del Core): letras, números, guion y guion bajo",
+            "example": "obras"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Agrupa los eventos de un mismo flujo entre módulos (sobre del Core)",
+            "example": "8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5"
+          },
+          "causationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "eventId del evento que causó este, o null si no lo causó otro evento (sobre del Core)",
+            "example": null
+          },
+          "specVersion": {
+            "type": "string",
+            "deprecated": true,
+            "description": "Sobre de M2, reemplazado por el del Core. Versión del sobre",
+            "example": "1.0"
           },
           "producer": {
-            "description": "Quién lo publica. Objeto `{ moduleId, service }` (sobre v1.6/v1.70) o string suelto (v1.5)",
+            "deprecated": true,
+            "description": "Sobre de M2, reemplazado por el del Core (`sourceModule`). Quién lo publica: objeto `{ moduleId, service }` (v1.6/v1.70) o string suelto (v1.5)",
             "oneOf": [
               {
                 "type": "string",
@@ -12640,7 +12739,8 @@
           },
           "subject": {
             "type": "string",
-            "description": "Agregado sobre el que ocurrió"
+            "deprecated": true,
+            "description": "Sobre de M2, reemplazado por el del Core. Agregado sobre el que ocurrió"
           }
         },
         "required": [
@@ -13560,7 +13660,7 @@
           "id": {
             "type": "string",
             "description": "UUID de la cuadrilla",
-            "example": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+            "example": "c3d4e5f6-a7b8-4012-8def-123456789012",
             "format": "uuid"
           },
           "name": {
@@ -15205,25 +15305,25 @@
           "targetId": {
             "type": "string",
             "description": "UUID del bien sobre el que se ejecuta. La zona se deriva del bien.",
-            "example": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+            "example": "c3d4e5f6-a7b8-4012-8def-123456789012",
             "format": "uuid"
           },
           "zoneId": {
             "type": "string",
             "description": "Zona del servicio POINT cuando el objetivo es una ubicación suelta y no un bien del inventario. Se ignora si viene targetType/targetId.",
-            "example": "d4e5f6a7-b8c9-0123-defa-234567890123",
+            "example": "d4e5f6a7-b8c9-4123-8efa-234567890123",
             "format": "uuid"
           },
           "crewId": {
             "type": "string",
             "description": "Cuadrilla asignada. Es opcional al programar; se puede asignar después.",
-            "example": "e5f6a7b8-c9d0-1234-efab-345678901234",
+            "example": "e5f6a7b8-c9d0-4234-8fab-345678901234",
             "format": "uuid"
           },
           "vehicleId": {
             "type": "string",
             "description": "Vehículo asignado. Si el tipo de servicio exige vehículo, hace falta antes de iniciar.",
-            "example": "f6a7b8c9-d0e1-2345-fabc-456789012345",
+            "example": "f6a7b8c9-d0e1-4345-8abc-456789012345",
             "format": "uuid"
           },
           "windowFrom": {
@@ -15445,6 +15545,11 @@
             "description": "Motivo del último cambio de estado (suspensión, cancelación, reprogramación)",
             "nullable": true
           },
+          "statusNote": {
+            "type": "string",
+            "description": "Nota opcional de la suspensión; se limpia al retomar o cancelar",
+            "nullable": true
+          },
           "origin": {
             "type": "string",
             "description": "Origen de la programación",
@@ -15582,7 +15687,7 @@
           "vehicleId": {
             "type": "string",
             "description": "Vehículo asignado",
-            "example": "f6a7b8c9-d0e1-2345-fabc-456789012345",
+            "example": "f6a7b8c9-d0e1-4345-8abc-456789012345",
             "format": "uuid"
           },
           "windowFrom": {
@@ -15616,13 +15721,13 @@
           "crewId": {
             "type": "string",
             "description": "Cuadrilla que va a ejecutar el servicio",
-            "example": "e5f6a7b8-c9d0-1234-efab-345678901234",
+            "example": "e5f6a7b8-c9d0-4234-8fab-345678901234",
             "format": "uuid"
           },
           "vehicleId": {
             "type": "string",
             "description": "Vehículo asignado en la misma operación, si el tipo de servicio lo exige",
-            "example": "f6a7b8c9-d0e1-2345-fabc-456789012345",
+            "example": "f6a7b8c9-d0e1-4345-8abc-456789012345",
             "format": "uuid"
           },
           "overrideNote": {
@@ -15856,13 +15961,19 @@
           "active"
         ]
       },
-      "StatusChangeDto": {
+      "SuspendServiceDto": {
         "type": "object",
         "properties": {
           "reason": {
             "type": "string",
             "description": "Motivo del cambio de estado. Queda en statusReason.",
             "example": "Alerta meteorológica: tormenta fuerte en la zona",
+            "maxLength": 500
+          },
+          "note": {
+            "type": "string",
+            "description": "Detalle libre de la suspensión. Queda en statusNote hasta retomar o cancelar.",
+            "example": "El camión 12 se quedó sin frenos; esperan reemplazo",
             "maxLength": 500
           }
         },
@@ -15911,6 +16022,20 @@
           }
         }
       },
+      "StatusChangeDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo del cambio de estado. Queda en statusReason.",
+            "example": "Alerta meteorológica: tormenta fuerte en la zona",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
       "ConfirmRescheduleDto": {
         "type": "object",
         "properties": {
@@ -15941,7 +16066,7 @@
           "zoneId": {
             "type": "string",
             "description": "Zona sobre la que se informa. Tiene que ser una de las zonas del servicio.",
-            "example": "d4e5f6a7-b8c9-0123-defa-234567890123",
+            "example": "d4e5f6a7-b8c9-4123-8efa-234567890123",
             "format": "uuid"
           },
           "status": {
@@ -16622,6 +16747,13 @@
             "type": "string",
             "description": "Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.",
             "format": "date-time",
+            "nullable": true
+          },
+          "assignedCrewId": {
+            "type": "string",
+            "description": "Cuadrilla del servicio que ejecuta la inspección más reciente del expediente con servicio vigente (los servicios CANCELLED no cuentan). Null si ninguna inspección tiene un servicio vigente o si ese servicio todavía no tiene cuadrilla. Viene en el alta, el listado, el detalle y las respuestas de las transiciones.",
+            "example": "e5f6a7b8-c9d0-4234-8fab-345678901234",
+            "format": "uuid",
             "nullable": true
           },
           "createdAt": {

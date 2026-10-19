@@ -270,10 +270,13 @@ export class EnvironmentalInspectionsService {
     return this.toResponseDto(await this.getInspection(id));
   }
 
-  async findNotice(inspectionId: string): Promise<ViolationNoticeResponseDto> {
+  // Una inspección sin acta es el estado normal (el acta solo existe tras VIOLATION_FOUND),
+  // por eso devuelve null; el 404 queda para la inspección inexistente.
+  async findNotice(inspectionId: string): Promise<ViolationNoticeResponseDto | null> {
     const notice = await this.prisma.violationNotice.findUnique({ where: { inspectionId } });
     if (!notice) {
-      throw new NotFoundException(`La inspección '${inspectionId}' no tiene acta emitida`);
+      await this.getInspection(inspectionId);
+      return null;
     }
     return this.toNoticeDto(notice);
   }

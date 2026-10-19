@@ -26,12 +26,16 @@ If any of these files don't exist, proceed silently. Don't flag their absence; d
 │   │   ├── _template-adr.md
 │   │   └── adr-001-*.md
 │   ├── entidades/             ← data model, with state diagrams
-│   └── eventos/
-│       ├── publicados/        ← events this module emits
-│       └── consumidos/        ← events this module listens to
+│   ├── eventos/
+│   │   ├── publicados/        ← events this module emits (with .schema.json)
+│   │   └── consumidos/        ← events this module listens to
+│   ├── DER.md                 ← relational model (Mermaid)
+│   ├── api/                   ← Swagger standard, endpoint map, openapi.json
+│   ├── deploy.md · testing.md ← operations
+│   └── gestion/               ← Scrum process
 ```
 
-No `src/` yet — this repo is at the docs/design stage for Módulo 6 of the TPO. Revisit this file once implementation code lands, in case new domain docs conventions (multi-context, `CONTEXT-MAP.md`, etc.) become relevant.
+The implementation lives in `src/` (NestJS) and `prisma/schema.prisma`; when a doc and the code disagree, the code wins.
 
 ## Writing new ADRs
 
@@ -39,7 +43,7 @@ When `/domain-modeling` (or `/grill-with-docs`, `/improve-codebase-architecture`
 
 - Add a new file `docs/decisiones/adr-00N-<slug>.md` following `_template-adr.md`, continuing the correlative numbering.
 - Update the index table in `docs/decisiones/README.md`.
-- ADRs are not edited once accepted — a changed decision gets a new ADR, and the old one is marked *Superseded by ADR-XXX*.
+- ADRs are not rewritten once accepted: a changed decision gets a new ADR, and the old one gets a dated correction note (see ADR-002 and ADR-001 for the format).
 
 ## Use the glossary's vocabulary
 

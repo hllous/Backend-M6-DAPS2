@@ -1,6 +1,6 @@
 # Enumeraciones
 
-Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](eventos/). Diseño tentativo hasta la primera entrega.
+Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](eventos/). Leer para saber qué valores acepta cada campo enum; la fuente de código es `prisma/schema.prisma`.
 
 > **Es la fuente.** Los archivos de evento y de entidad linkean acá en vez de repetir los valores. Si agregás un valor, agregalo en esta tabla y no en el archivo que lo usa.
 >
@@ -44,7 +44,7 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 | `StreetClosureType` | `TOTAL`, `PARTIAL` |
 | `StreetClosureRequestStatus` | `REQUESTED`, `APPROVED`, `REJECTED`, `ENDED` |
 
-Son 33. `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
+Son 33 enums de dominio (`prisma/schema.prisma` tiene 34: falta `OutboxEventStatus`, de infraestructura: `PENDING`, `SENT`, `FAILED`). `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
 
 ## Divergencias con el acuerdo publicado — resueltas
 

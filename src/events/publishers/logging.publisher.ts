@@ -15,8 +15,6 @@ export class LoggingEventPublisher extends EventPublisher {
   private readonly logger = new Logger(LoggingEventPublisher.name);
 
   async publish(envelope: EventEnvelope): Promise<void> {
-    this.logger.log(
-      `[sin broker] ${envelope.eventType} subject=${envelope.subject} eventId=${envelope.eventId}`,
-    );
+    this.logger.log(`[sin broker] ${envelope.eventType} eventId=${envelope.eventId}`);
   }
 }

@@ -6,7 +6,7 @@ Modelo relacional derivado de `docs/entidades/` del Módulo 6. Convenciones apli
 - **IDs externos no son FK.** `ticketId` (M2), `establishmentId` (M4), `organizationId` / `leaderUserId` / `memberUserIds` (M1), `neighborhoodId` (M9) se guardan como referencias sin integridad referencial: viven en otra base. Van marcados `EXT` y con índice, no con `FOREIGN KEY`.
 - **Referencias polimórficas** (`targetRef`, `sourceRef`, `detectedIn`) se modelan como par `*_type` + `*_id`, porque apuntan a tablas distintas según el caso.
 - **Enums** = los 33 de `enumeraciones.md`. Se implementan como tipo enumerado o `VARCHAR` + `CHECK`, no como tabla de catálogo (son valores cerrados de código, no configurables por el usuario).
-- Toda tabla lleva `id UUID PK` y auditoría (`created_at`, `updated_at`, `created_by`); la auditoría no se repite en el diagrama para no ensuciarlo.
+- Toda tabla lleva `id UUID PK` y auditoría (`created_at`, `updated_at`; `service` además lleva `created_by`); la auditoría no se repite en el diagrama para no ensuciarlo.
 
 ## Diagrama
 
@@ -233,6 +233,8 @@ erDiagram
         varchar name
         enum space_type "GreenSpaceType"
         uuid zone_id FK
+        numeric lat
+        numeric lng
         numeric area_m2
         boolean active
     }
@@ -252,6 +254,10 @@ erDiagram
         enum priority "Severity"
         boolean escalated "EXT M2 - ticketUpdated"
         text citizen_response "EXT M2 - ticketUpdated"
+        timestamp priority_changed_at "occurredAt del ultimo PRIORITY_CHANGED aplicado o del ROUTED"
+        timestamp escalation_changed_at "occurredAt del ultimo ESCALATION_CHANGED aplicado o del ROUTED"
+        timestamp citizen_response_at "occurredAt del ultimo INFORMATION_PROVIDED aplicado"
+        timestamp ticket_status_at "occurredAt del ultimo REOPENED, CANCELLED o ROUTED aplicado"
         timestamp deadline_at "cierre por vencimiento"
     }
     ENVIRONMENTAL_INSPECTION {
@@ -340,6 +346,8 @@ erDiagram
         varchar last_error "error del ultimo intento"
         timestamp occurred_at
         timestamp published_at
+        uuid correlation_id "hilo del flujo, heredado del evento consumido"
+        uuid causation_id "eventId consumido que lo causo, null si es accion directa"
     }
     INBOX_EVENT {
         uuid id PK
@@ -349,6 +357,9 @@ erDiagram
         timestamp received_at
         timestamp processed_at "null mientras no se aplico"
         varchar error
+        uuid correlation_id "hilo con el que corrio el handler"
+        varchar source_module "modulo emisor segun el sobre del Core"
+        timestamp occurred_at "occurredAt del sobre, el reintento ordena con este"
     }
 
     %% ======== RELACIONES ========
@@ -412,10 +423,6 @@ erDiagram
 
 ## Riesgos abiertos que impactan el esquema
 
-Salen de `bloqueantes.md` y de las divergencias de enums. Ninguno bloquea empezar, pero conviene tenerlos a la vista antes de escribir la primera migración:
+El estado vivo está en [bloqueantes.md](bloqueantes.md); acá solo lo que toca el esquema.
 
-- **`sourceViolationId` que M4 no devuelve.** Sin ese campo en `commercialFineGenerated` / `closureOrdered` / `closureLifted` no se sabe a qué acta corresponde la resolución, y `SANCTION_OUTCOME` nunca se llena. El esquema soporta el caso (el expediente cierra por `deadline_at`), pero el dato se pierde.
-- **`sourceRequestId` de M3 y M7.** Mismo problema en `REPAIR_REQUEST` y `STREET_CLOSURE_REQUEST`: las columnas `work_order_id` / `closure_id` existen para correlacionar, pero hoy la respuesta no trae con qué llenarlas.
 - **Catálogo de barrios de M9 sin exponer.** `ZONE_NEIGHBORHOOD.neighborhood_id` queda como `VARCHAR` sin validación hasta que se conozca el formato del ID.
-- **Divergencias 2 a 5 de enums** (`ServiceOrigin`, `TreeHealthStatus`, `TreeInterventionType`, `SuggestedAction`). Como esos valores viajan al bus, elegir mal implica migrar datos y no solo cambiar una constante: conviene cerrarlas antes de la primera migración.
-- **Colisión del nombre `Zone` con M9.** Si M9 se queda con la palabra, el rename es de tabla y de API. Mejor decidirlo antes que después.
