@@ -7,8 +7,18 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Res,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
+import {
+  ApiBearerAuth,
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { EnvironmentalInspectionsService } from './environmental-inspections.service';
 import {
   CompleteInspectionDto,
@@ -165,20 +175,30 @@ export class EnvironmentalInspectionsController {
   }
 
   @Get('environmental-inspections/:id/violation-notice')
+  @ApiExtraModels(ViolationNoticeResponseDto)
   @ApiOperation({
     summary: 'Obtener el acta de una inspección',
-    description: 'El acta emitida, con su número correlativo y el conteo de reincidencia.',
+    description:
+      'El acta emitida, con su número correlativo y el conteo de reincidencia. Si la inspección existe pero todavía no tiene acta responde 200 con el JSON literal null, no 404.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la inspección', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Acta encontrada', type: ViolationNoticeResponseDto })
-  @ApiResponse(AUTH)
   @ApiResponse({
-    status: 404,
-    description: 'La inspección no tiene acta emitida',
-    type: ErrorResponseDto,
+    status: 200,
+    description: 'Acta encontrada, o null si la inspección aún no tiene acta',
+    schema: { nullable: true, allOf: [{ $ref: getSchemaPath(ViolationNoticeResponseDto) }] },
   })
+  @ApiResponse(AUTH)
+  @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
-  async findNotice(@Param('id', ParseUUIDPipe) id: string): Promise<ViolationNoticeResponseDto> {
-    return this.inspectionsService.findNotice(id);
+  async findNotice(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ViolationNoticeResponseDto | string> {
+    const notice = await this.inspectionsService.findNotice(id);
+    if (notice) return notice;
+    // Nest manda un cuerpo vacío para null, y res.json() del cliente falla con eso.
+    // Devolver el texto 'null' con Content-Type JSON da el literal sin tocar otros endpoints.
+    res.type('application/json');
+    return 'null';
   }
 }

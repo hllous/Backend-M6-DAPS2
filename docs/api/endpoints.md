@@ -289,7 +289,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | GET    | `/environmental-inspections/:id`                  | Detalle con checklist y hallazgos                                                                                                                                                                                                                            |
 | POST   | `/environmental-inspections/:id/complete`         | Cierra con su `outcome`. Lleva el expediente a `INSPECTED` y de ahí, en la misma operación, a `NO_VIOLATION` o `VIOLATION_FOUND`. Un `INCONCLUSIVE` lo deja en `INSPECTED`. 400 si `inspectedAt` está en el futuro o si `VIOLATION_FOUND` no trae `nextStep` |
 | POST   | `/environmental-inspections/:id/violation-notice` | **Emitir el acta.** Solo sobre una inspección `VIOLATION_FOUND`                                                                                                                                                                                              |
-| GET    | `/environmental-inspections/:id/violation-notice` | El acta emitida                                                                                                                                                                                                                                              |
+| GET    | `/environmental-inspections/:id/violation-notice` | El acta emitida; `200` con `null` (JSON literal) si la inspección no tiene acta, `404` solo si no existe                                                                                                                                                     |
 
 **`checklist[]`, `findings`, `conclusion` e `inspectorId` son internos: nunca salen hacia M2.**
 
