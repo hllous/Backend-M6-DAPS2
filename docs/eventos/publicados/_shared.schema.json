@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uade.m6.grupo04/eventos/_shared.schema.json",
   "title": "Objetos compartidos entre los eventos publicados por M6",
-  "description": "Definiciones que se repiten en varios payloads. Se referencian con $ref desde cada evento en vez de duplicarlas. Los formatos de fecha y hora de los payloads son tentativos. El sobre lo define el Core (M9) y no forma parte de estos schemas.",
+  "description": "Definiciones que se repiten en varios payloads. Se referencian con $ref desde cada evento en vez de duplicarlas. Formatos de fecha y hora definitivos desde la v1.0: `timestamp` es ISO 8601 `date-time` (RFC 3339), `date` es `YYYY-MM-DD` y `timeWindow` usa horas `HH:mm`. El sobre lo define el Core (M9) y no forma parte de estos schemas.",
   "$defs": {
     "location": {
       "type": "object",
