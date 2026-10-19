@@ -9683,7 +9683,7 @@
       "get": {
         "operationId": "EnvironmentalInspectionsController_findNotice",
         "summary": "Obtener el acta de una inspección",
-        "description": "El acta emitida, con su número correlativo y el conteo de reincidencia.",
+        "description": "El acta emitida, con su número correlativo y el conteo de reincidencia. Si la inspección existe pero todavía no tiene acta responde 200 con cuerpo vacío (null), no 404.",
         "parameters": [
           {
             "name": "id",
@@ -9698,7 +9698,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Acta encontrada",
+            "description": "Acta encontrada, o null (cuerpo vacío) si la inspección aún no tiene acta",
             "content": {
               "application/json": {
                 "schema": {
@@ -9718,7 +9718,7 @@
             }
           },
           "404": {
-            "description": "La inspección no tiene acta emitida",
+            "description": "Inspección no encontrada",
             "content": {
               "application/json": {
                 "schema": {

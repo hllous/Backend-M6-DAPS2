@@ -167,18 +167,21 @@ export class EnvironmentalInspectionsController {
   @Get('environmental-inspections/:id/violation-notice')
   @ApiOperation({
     summary: 'Obtener el acta de una inspección',
-    description: 'El acta emitida, con su número correlativo y el conteo de reincidencia.',
+    description:
+      'El acta emitida, con su número correlativo y el conteo de reincidencia. Si la inspección existe pero todavía no tiene acta responde 200 con cuerpo vacío (null), no 404.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la inspección', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Acta encontrada', type: ViolationNoticeResponseDto })
-  @ApiResponse(AUTH)
   @ApiResponse({
-    status: 404,
-    description: 'La inspección no tiene acta emitida',
-    type: ErrorResponseDto,
+    status: 200,
+    description: 'Acta encontrada, o null (cuerpo vacío) si la inspección aún no tiene acta',
+    type: ViolationNoticeResponseDto,
   })
+  @ApiResponse(AUTH)
+  @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
-  async findNotice(@Param('id', ParseUUIDPipe) id: string): Promise<ViolationNoticeResponseDto> {
+  async findNotice(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ViolationNoticeResponseDto | null> {
     return this.inspectionsService.findNotice(id);
   }
 }
