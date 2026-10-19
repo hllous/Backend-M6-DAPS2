@@ -489,11 +489,18 @@ describe('EnvironmentalInspectionsService', () => {
       });
 
       const result = await service.findNotice(INSPECTION_ID);
-      expect(result.noticeNumber).toBe('ACTA-2026-000001');
+      expect(result?.noticeNumber).toBe('ACTA-2026-000001');
     });
 
-    it('findNotice lanza 404 si la inspección no tiene acta', async () => {
+    it('findNotice devuelve null si la inspección existe y no tiene acta', async () => {
       prisma.violationNotice.findUnique.mockResolvedValue(null);
+      prisma.environmentalInspection.findUnique.mockResolvedValue(inspection({ outcome: null }));
+      await expect(service.findNotice(INSPECTION_ID)).resolves.toBeNull();
+    });
+
+    it('findNotice lanza 404 si la inspección no existe', async () => {
+      prisma.violationNotice.findUnique.mockResolvedValue(null);
+      prisma.environmentalInspection.findUnique.mockResolvedValue(null);
       await expect(service.findNotice(INSPECTION_ID)).rejects.toThrow(NotFoundException);
     });
   });
