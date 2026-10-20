@@ -55,6 +55,7 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 - `PROGRESS` solo es válido con el ticket en `IN_PROGRESS`. En `ROUTED`, M2 hace `nack` y el Core reintenta hasta la DLQ.
 - `STARTED` significa para M2 que el área tomó la gestión del ticket, y **agendar el servicio cuenta**: el ticket pasa a `IN_PROGRESS` y el ciudadano lo ve.
 - Dos formas válidas: **(a)** `STARTED` con la programación en su propio `publicMessage`, o **(b)** `STARTED` al abrir el expediente y la programación como `PROGRESS`. Una reprogramación posterior es otro `PROGRESS`.
+- **El estado del ticket lo tenemos que llevar nosotros** (M2, 20/10): no hay un `ticketUpdated` que avise `IN_PROGRESS`, nuestro `STARTED` es la única fuente. Un `PROGRESS` fuera de estado no rompe nada grave (en `ROUTED` M2 lo trata como prematuro y lo reintenta; en los demás estados inválidos lo registra y lo confirma sin aplicar). Con el ticket en `PENDING_INFORMATION` M2 no acepta `PROGRESS` ni `REJECTED`.
 - Hoy no lo mandamos: se implementa en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).
 
 *Histórico, antes de la respuesta:* `progress` no sirve para la fecha agendada.
