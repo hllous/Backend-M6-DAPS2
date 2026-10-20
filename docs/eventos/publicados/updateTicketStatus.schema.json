@@ -88,10 +88,14 @@
     },
     "updatedBy": {
       "type": "object",
-      "description": "Actor en el vocabulario de M2 (§5.2). Un hecho que llega desde otro módulo por integración es EXTERNAL_USER cualquiera sea el rol real; uno automático es SYSTEM, y ahí id puede ser null (o llegar ausente: el Core re-serializa sin los null, por eso el schema no exige el campo). M2 v1.78 exige que id sea UUID o null; este schema todavía acepta cualquier string hasta que el código lo cumpla. El AREA_USER que usábamos con la v1.5 nunca existió en su enum.",
+      "description": "Actor en el vocabulario de M2 (§5.2). Un hecho que llega desde otro módulo por integración es EXTERNAL_USER cualquiera sea el rol real; uno automático es SYSTEM, y ahí id puede ser null (o llegar ausente: el Core re-serializa sin los null, por eso el schema no exige el campo). M2 v1.78 exige que id sea UUID o null: si el sub del JWT no es un UUID mandamos null. El AREA_USER que usábamos con la v1.5 nunca existió en su enum.",
       "properties": {
         "type": { "type": "string", "enum": ["EXTERNAL_USER", "SYSTEM"] },
-        "id": { "type": ["string", "null"] }
+        "id": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "description": "UUID de la persona en M6, o null en SYSTEM o cuando el sub del JWT no es un UUID."
+        }
       },
       "required": ["type"],
       "additionalProperties": false

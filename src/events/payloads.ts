@@ -276,6 +276,13 @@ export type TicketUpdateType =
 const ACTOR_SISTEMA = 'sistema';
 
 /**
+ * M2 v1.78 exige que `updatedBy.id` sea UUID o null. El `sub` del JWT provisorio
+ * puede ser un código o un entero, y ahí mandamos null (la persona sigue siendo
+ * EXTERNAL_USER). Laxo como el Core: 8-4-4-4-12 hex, sin mirar versión.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
  * Payload del contrato v1.75 de M2 (sin cambios desde la v1.6), adoptado tal cual.
  *
  * La fecha y la franja agendadas **siguen sin viajar**: `progress` es un entero
@@ -301,7 +308,10 @@ export function updateTicketStatus(params: {
     details: params.details,
     updatedBy: esAutomatico
       ? { type: 'SYSTEM' as const, id: null }
-      : { type: 'EXTERNAL_USER' as const, id: params.updatedById },
+      : {
+          type: 'EXTERNAL_USER' as const,
+          id: UUID.test(params.updatedById) ? params.updatedById : null,
+        },
     // Antes `statusChangedAt` en la v1.5. Renombrado en la v1.6 (§8.1).
     updateOccurredAt: new Date().toISOString(),
   });
