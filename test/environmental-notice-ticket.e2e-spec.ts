@@ -72,7 +72,7 @@ describe('Acta ambiental: aviso a M2 según el estado del ticket (e2e)', () => {
 
     const avisos = await prisma.outboxEvent.findMany({
       where: { eventType: 'updateTicketStatus', aggregateId: reportId },
-      orderBy: { occurredAt: 'asc' },
+      orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
     });
     return avisos.map((a) => (a.payload as { updateType: string }).updateType);
   }

@@ -96,7 +96,7 @@ Revisadas contra los lugares donde se arma el evento (`ticketEvents` en `Environ
 
 | Regla de M2 | Cómo la cumplimos |
 |---|---|
-| `PROGRESS` solo con el ticket `IN_PROGRESS`; si no, M2 lo `nack`ea (queda reintentando hasta la DLQ). **Informar `STARTED` antes** | La demora solo se proyecta con el servicio `IN_PROGRESS` (#146); el aviso por acta lee el estado del ticket: `PROGRESS` si está `IN_PROGRESS`, `STARTED` si está `ROUTED`, `IN_REVIEW` o es desconocido, y no sale con `PENDING_INFORMATION` o terminal (#325) |
+| `PROGRESS` solo con el ticket `IN_PROGRESS`; si no, M2 lo `nack`ea (queda reintentando hasta la DLQ). **Informar `STARTED` antes** | La demora solo se proyecta con el servicio `IN_PROGRESS` (#146); el aviso por acta lee el estado del ticket: `PROGRESS` si está `IN_PROGRESS`, `STARTED` si está `ROUTED`, `IN_REVIEW` o es desconocido, y no sale con `PENDING_INFORMATION` o terminal (#325). **Riesgo aceptado, sin backfill de `ticket_m2_state`:** un expediente `UNDER_REVIEW` anterior al deploy de #303 que ya mandó `STARTED` tiene estado desconocido y su acta sale como `STARTED`; según M2 (`integracion/m2.md`) un `STARTED` con el ticket ya `IN_PROGRESS` se registra y se confirma sin aplicar (el `nack` es solo de `PROGRESS` en `ROUTED`). Pendiente que M2 lo confirme |
 | `RESOLVED` exige `details.resolution.type` y `publicMessage` | Siempre `ACTION_COMPLETED` y un `publicMessage` fijo |
 | `RETURNED` y `REJECTED` exigen `publicMessage` o `internalMessage` | Mandamos `internalMessage` (el motivo del operador, que no se le muestra al vecino) |
 | `INFORMATION_REQUIRED` exige `informationRequest.messageForCitizen` | No lo emitimos todavía (ver abajo) |
