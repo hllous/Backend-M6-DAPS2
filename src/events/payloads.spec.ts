@@ -20,6 +20,7 @@ import {
   TreeInterventionType,
 } from '@prisma/client';
 import * as payloads from './payloads';
+import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from './m2-contract.testing';
 
 /**
  * Valida lo que emitimos contra los `.schema.json` que le circulamos a la
@@ -62,6 +63,7 @@ function expectValido(evento: string, payload: unknown) {
   }
 }
 
+const UUID_ACTOR = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
 const ID = (n: number) => `${n}`.repeat(8) + '-1111-1111-1111-111111111111';
 
 const serviceBase = {
@@ -490,10 +492,48 @@ describe('payloads de los eventos publicados', () => {
       const p = payloads.updateTicketStatus({
         ticketId: 'TCK-1',
         updateType: 'PROGRESS',
-        updatedById: 'user-009',
+        updatedById: UUID_ACTOR,
       });
 
-      expect(p.updatedBy).toEqual({ type: 'EXTERNAL_USER', id: 'user-009' });
+      expect(p.updatedBy).toEqual({ type: 'EXTERNAL_USER', id: UUID_ACTOR });
+    });
+
+    // M2 v1.78 exige UUID o null en updatedBy.id. El sub del JWT provisorio
+    // puede ser un código o un entero (M1 lo documenta como bigint).
+    it.each(['user-009', '42', ''])(
+      'un actor que no es UUID (%j) va como EXTERNAL_USER con id null',
+      (sub) => {
+        const p = payloads.updateTicketStatus({
+          ticketId: 'TCK-1',
+          updateType: 'PROGRESS',
+          updatedById: sub,
+        });
+
+        expect(p.updatedBy).toEqual({ type: 'EXTERNAL_USER', id: null });
+        expectValido('updateTicketStatus', p);
+      },
+    );
+
+    // El schema local acepta cualquier string en ticketId; el de M2 exige UUID.
+    const itM2 = PAQUETE_M2_PRESENTE ? it : it.skip;
+    itM2.each([
+      ['persona con UUID', UUID_ACTOR],
+      ['persona sin UUID', 'user-009'],
+      ['sistema', 'sistema'],
+    ])('valida contra el paquete de M2 v1.78: %s', (_n, actor) => {
+      const base = { ticketId: ID(7), updatedById: actor };
+      for (const p of [
+        payloads.updateTicketStatus({ ...base, updateType: 'STARTED' }),
+        payloads.updateTicketStatus({ ...base, updateType: 'PROGRESS', publicMessage: 'Demora' }),
+        payloads.updateTicketStatus({
+          ...base,
+          updateType: 'RESOLVED',
+          publicMessage: 'Listo',
+          details: { resolution: { type: 'ACTION_COMPLETED' } },
+        }),
+      ]) {
+        expect(erroresM2UpdateTicketStatus(p)).toEqual([]);
+      }
     });
 
     it('un hecho automático va como SYSTEM, con id null', () => {

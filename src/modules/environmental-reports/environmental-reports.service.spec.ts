@@ -6,7 +6,8 @@ import { OutboxService } from '../../events/outbox/outbox.service';
 import { EnvironmentalReportsService, REPORT_TRANSITIONS } from './environmental-reports.service';
 
 const ID = '11111111-1111-1111-1111-111111111111';
-const ACTOR = 'inspector-7';
+// UUID: M2 v1.78 no admite otro id en updatedBy (#314); uno que no lo es viaja como null.
+const ACTOR = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
 
 /** Todos los estados, para poder recorrer la tabla entera. */
 const ESTADOS = Object.keys(REPORT_TRANSITIONS) as S[];
