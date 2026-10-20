@@ -71,3 +71,38 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 > ¿Un ticket puede derivarse dos veces al mismo módulo, con el mismo `ticketId`, después de una devolución (`RETURNED` → `IN_REVIEW` → `ROUTED`)? Si es así, ¿cómo distinguimos ese segundo `ROUTED` de un reintento del primero?
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
+
+## Pendientes de enviar (20/10)
+
+
+> Redactados el 20/10 para que el PO los envíe. **Al enviarlos, anotar la fecha acá y mover la respuesta de cada uno a su ficha (`mX.md`).** Dos de ellos suponen decisiones del equipo, marcadas con ⚠️.
+
+**→ M3 (Obras)**
+
+> Recibimos su contrato v0.6, gracias. Sobre sus tres pedidos: (1) **aceptamos** `workOrderId` como UUID técnico y `workOrderNumber` como referencia humana opcional ⚠️ (decisión del equipo: nuestro consumidor ya tolera ambos). (2) Todavía **no nos llegaron los archivos de schema** de `workOrderScheduled` y `workOrderCompleted`, solo los ejemplos del PDF: ¿nos los pasan para validarlos? Pedimos `sourceRequestId` con `format: "uuid"`. (3) La prueba `requestId → sourceRequestId` la hacemos apenas tengan el adaptador RabbitMQ/Core; nos avisan. Además: ustedes mencionan que el Core tiene registrada `streetClousureEnded` con el error de tipeo en `q.obras`; lo vamos a verificar contra el Core local. Del lado nuestro no cambia ningún evento que les mandamos.
+
+**→ M7 (Tránsito)**
+
+> Cuatro puntos del documento «Payloads actualizados Core v4»: (1) Su lista de eventos que reciben de Obras y Ambiente incluye solo `streetClosureRequested`: no figuran `urbanServiceScheduled`, `treePruningScheduled` ni `treeRiskDetected`, que nosotros les enviamos. ¿Los van a consumir? Si no, los sacamos de nuestros destinatarios. (2) Un corte `APPROVED` que nunca se activa pasa a `EXPIRED` **sin publicar nada** de su lado. Lo resolvimos por tiempo: pasados `endDate` + **6 horas de gracia** sin recibir `streetClosureEnded`, lo damos por vencido y dejamos para reprogramar el servicio que dependía. ¿Les sirve esa gracia? ¿Un corte `ACTIVE` publica siempre su `Ended` al vencer `endDate`? (3) Confirmen que publican `streetClosureEnded` bien escrito, porque M3 dice que el catálogo del Core tiene `streetClousureEnded`. (4) `treePruningScheduled` lo emitimos solo cuando el servicio ya tiene cuadrilla y franja, que ustedes exigen.
+
+**→ M1 (Ciudadanos)** — sigue siendo nuestro bloqueante principal
+
+> Seguimos esperando el JWT. Para integrar necesitamos: dónde viaja (header), `alg`, claves o JWKS, claims, `iss`/`aud`, TTL, y si `RESPONSABLE_AREA` lleva un área asociada. Además, M2 v1.78 exige que `updatedBy.id` sea **UUID**, y su login devuelve `user_id` como `bigint`: ¿qué identificador viaja en el token? Hoy mandamos el `sub` si tiene forma de UUID y `null` si no. Por último, su documento sigue con el sobre viejo (`producer`, `subject`, `eventId` tipo `M1-EVT-…`): hay que pasar al sobre del Core, que además exige `correlationId` en forma UUID.
+
+**→ M4 (Habilitaciones)**
+
+> Cuatro confirmaciones sobre su contrato de octubre: (1) en `environmentalViolationDetected` mandamos `suggestedAction` con cuatro valores: `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE`. Su documento lista tres; ¿toleran `FORMAL_NOTICE`? El campo no es vinculante. (2) ¿`commercialFineGenerated` también nos lo rutean a nosotros, o solo `closureUpdate`? (3) ¿`actId` y `externalRef` son el mismo dato? (4) ¿Dejaron de publicar `ticketInProgress`? Aclaración: `sourceViolationId` reproduce exactamente el `violationId` UUID que les mandamos.
+
+**→ M9 (Core)** — seguimiento de [#300](https://github.com/hllous/Backend-M6-DAPS2/issues/300), sin respuesta desde el 20/10
+
+> Retomamos lo pendiente: (1) barrios y zonas: el TPO §9 dice que son del Core y ustedes que no; (2) `notificationSent`/`NotificacionEnviada`, que el TPO también les asigna. Dos preguntas técnicas nuevas: (3) ¿el Core acepta el UUID nulo y el máximo como `correlationId`? Los heredamos con la forma 8-4-4-4-12; (4) ¿`exclude_none` también quita los `null` dentro de `data`? Y para poder probar: (5) ¿pueden pasarnos el repo del Core local y los pasos para levantarlo?, (6) ¿hay fecha de despliegue y entrega de credenciales?, (7) ¿el nombre del tipo es `streetClosureEnded` o `streetClousureEnded` en el catálogo, y pueden dar de baja `zoneNotServiced`?
+
+**→ M2 (Atención Ciudadana)** — informativo y dos confirmaciones
+
+> Ya implementamos la forma (a): al agendar un servicio publicamos `STARTED` con la fecha y franja como texto en `publicMessage`, y `PROGRESS` al reprogramar, según el estado del ticket que llevamos nosotros; también `updatedBy.id` UUID o `null`. Dos confirmaciones: (1) si mandamos `STARTED` con el ticket ya `IN_PROGRESS` (por ejemplo tickets anteriores al deploy), ¿M2 lo registra y lo confirma sin aplicar, sin `nack`? (2) Guardamos `currentStatus` solo si es uno de los 9 estados de §3 (`REGISTERED`, `IN_REVIEW`, `ROUTED`, `IN_PROGRESS`, `PENDING_INFORMATION`, `DUPLICATE`, `RESOLVED`, `CLOSED`, `CANCELLED`); ¿hay otros?
+
+**Decisiones internas que el PO tiene que tomar**
+
+1. **#294:** el filtro de fechas va por `updatedAt` (la columna «Actualizado»). ¿O `createdAt`?
+2. **#169:** ¿M6 puede pedirle información al vecino (`INFORMATION_REQUIRED`) durante una inspección? Si no es un caso real, alcanza con dejar documentado que no lo emitimos.
+3. **M3:** confirmar que aceptamos su propuesta de `workOrderId` y `workOrderNumber` ⚠️.
