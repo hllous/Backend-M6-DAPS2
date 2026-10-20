@@ -7,7 +7,7 @@ import {
   Severity,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { InboxService } from '../inbox/inbox.service';
+import { aFecha, InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent, TicketUpdateType } from '../inbox/consumed-events';
 import { Data, esObjeto, esTexto, requerido } from '../inbox/payload-validation';
 import { REPORT_TRANSITIONS } from '../../modules/environmental-reports/environmental-reports.service';
@@ -119,7 +119,13 @@ export class TicketsConsumer implements OnModuleInit {
     return data.responsibleAreaId === AREA_M6;
   }
 
-  private async handle(data: Record<string, unknown>, at: Date | null): Promise<void> {
+  private async handle(data: Record<string, unknown>, occurredAt: Date | null): Promise<void> {
+    // M2 (20/10): se ordena por `data.updatedAt`, cuándo persistió el cambio. El
+    // `occurredAt` del sobre es cuándo se publicó y puede ser posterior si se demoró
+    // o se reintentó, así que solo queda de respaldo. Dentro del mismo productor:
+    // no se compara con timestamps nuestros. Mismo tope de futuro que el inbox.
+    const updatedAt = typeof data.updatedAt === 'string' ? data.updatedAt : undefined;
+    const at = aFecha(updatedAt) ?? occurredAt;
     const updateType = String(data.updateType ?? '');
     const ticketId = data.ticketId as string | undefined;
 
@@ -135,6 +141,10 @@ export class TicketsConsumer implements OnModuleInit {
     // de la infraestructura. Sin esto, un reclamo derivado a cualquier otro
     // modulo abriria igual un expediente de este lado.
     if (!this.esNuestro(data)) {
+      // Un ticket que devolvimos y M2 reasignó a otra área: el ROUTED ajeno es la
+      // señal para cerrar nuestro expediente devuelto. Solo ticketId y área, nada
+      // del contenido de un ticket que no es nuestro.
+      if (updateType === TicketUpdateType.ROUTED) await this.cerrarDevuelto(ticketId, at);
       this.logger.log(
         `ticketUpdated/${updateType}: responsibleAreaId=${String(data.responsibleAreaId ?? '(ausente)').slice(0, 32)} no es nuestro, se descarta`,
       );
@@ -163,6 +173,22 @@ export class TicketsConsumer implements OnModuleInit {
       default:
         // Los siete restantes se descartan a propósito.
         this.logger.log(`ticketUpdated/${updateType}: sin efecto operativo, se descarta`);
+    }
+  }
+
+  /**
+   * El ticket que devolvimos (`FORWARDED`) pasó a otra área: lo cerramos. La marca
+   * evita que un ROUTED viejo, de antes de la devolución, que llega tarde lo cierre.
+   */
+  private async cerrarDevuelto(ticketId: string, at: Date | null): Promise<void> {
+    const { count } = await this.prisma.environmentalReport.updateMany({
+      where: { ticketId, status: S.FORWARDED, ...this.noAtrasado('ticketStatusAt', at) },
+      data: { status: S.CLOSED },
+    });
+    if (count) {
+      this.logger.log(
+        `ticketUpdated/ROUTED: ${ticketId} pasó a otra área, expediente devuelto cerrado`,
+      );
     }
   }
 
@@ -242,7 +268,7 @@ export class TicketsConsumer implements OnModuleInit {
       // snapshot nuevo en vez de crear otro. El estado va en el `where`: un
       // reproceso del mismo evento ya no lo encuentra en FORWARDED.
       const { count } = await this.prisma.environmentalReport.updateMany({
-        where: { id: existente.id, status: S.FORWARDED },
+        where: { id: existente.id, status: S.FORWARDED, ...this.noAtrasado('ticketStatusAt', at) },
         data: { ...snapshot, status: S.UNDER_REVIEW },
       });
       this.logger.log(
@@ -301,6 +327,14 @@ export class TicketsConsumer implements OnModuleInit {
         await tx.environmentalReport.updateMany({
           where: { id: report.id, status: S.UNDER_REVIEW },
           data: { status: S.DISMISSED },
+        });
+      }
+
+      if (report?.status === S.FORWARDED) {
+        // M2 canceló administrativamente el ticket que habíamos devuelto.
+        await tx.environmentalReport.updateMany({
+          where: { id: report.id, status: S.FORWARDED },
+          data: { status: S.CLOSED },
         });
       }
 
