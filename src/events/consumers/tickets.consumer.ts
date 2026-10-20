@@ -368,7 +368,16 @@ export class TicketsConsumer implements OnModuleInit {
     // (§7.6). `publicMessage` es la glosa de M2 ("El ciudadano aportó la
     // información solicitada."), no la respuesta: no se usa de respaldo.
     const details = (data.details ?? {}) as Record<string, unknown>;
-    const message = (details.informationResponse as Record<string, unknown> | undefined)?.message;
+    const response = details.informationResponse as Record<string, unknown> | undefined;
+    // v1.77 §2: una reclasificación es entre M2 y el vecino, y ningún módulo operativo
+    // actúa por ella aunque responsibleAreaId coincida (es el provisional).
+    if (response?.purpose === 'RECLASSIFICATION') {
+      this.logger.log(
+        `ticketUpdated/INFORMATION_PROVIDED de reclasificación (${ticketId}): se ignora`,
+      );
+      return;
+    }
+    const message = response?.message;
     // ponytail: los adjuntos quedan como texto porque el expediente no tiene
     // dónde guardarlos, y la url puede ser temporal (§5.3). Campo propio si hay
     // que conservar el archivo.
