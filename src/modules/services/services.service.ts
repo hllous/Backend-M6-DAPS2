@@ -1237,6 +1237,9 @@ export class ServicesService {
     tx: Prisma.TransactionClient,
     service: ServiceWithRelations,
   ): Promise<void> {
+    // RESCHEDULED es editable pero la fecha vigente es la vieja: se espera a
+    // confirm-reschedule (que vuelve a SCHEDULED), porque el evento no se reemite.
+    if (service.status !== ServiceStatus.SCHEDULED) return;
     if (!service.crewId || !service.windowFrom || !service.windowTo) return;
 
     const intervention = await tx.treeIntervention.findUnique({

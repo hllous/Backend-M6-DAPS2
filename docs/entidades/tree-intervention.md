@@ -8,7 +8,7 @@ El árbol y su historial de relevamientos están en [inventario-urbano.md](inven
 
 | Entidad | Campos principales |
 |---|---|
-| `TreeIntervention` | `interventionType`, `treeIds[]`, `location`, `requiresStreetClosure`, `status`, `priority`, `serviceId`, y en las extracciones `pruningScheduledAt` (marca interna: ya salió `treePruningScheduled`, que se emite una sola vez), y en las extracciones `authorizedByUserId`, `authorizedAt`, `justification` |
+| `TreeIntervention` | `interventionType`, `treeIds[]`, `location`, `requiresStreetClosure`, `status`, `priority`, `serviceId`, `pruningScheduledAt` (marca interna: ya salió `treePruningScheduled`, que se emite una sola vez) y, en las extracciones, `authorizedByUserId`, `authorizedAt`, `justification` |
 
 Enums: `interventionType` es `TreeInterventionType`, `status` es `TreeInterventionStatus` — ver [enumeraciones.md](../enumeraciones.md). La [divergencia 4](../enumeraciones.md#divergencias-con-el-acuerdo-publicado--resueltas) sobre `interventionType` quedó resuelta a favor del catálogo ([ADR-003](../decisiones/adr-003-divergencias-enums.md)).
 

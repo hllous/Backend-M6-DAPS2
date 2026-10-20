@@ -141,6 +141,27 @@ describe('ServicesService — treePruningScheduled diferido', () => {
     expect(outbox.enqueue.mock.calls[0][1].eventType).toBe('treePruningScheduled');
   });
 
+  it('un servicio RESCHEDULED no emite: la fecha vieja se reemplaza al confirmar', async () => {
+    conServicio({
+      status: ServiceStatus.RESCHEDULED,
+      windowFrom: hora('07:00'),
+      windowTo: hora('11:00'),
+    });
+
+    await service.assignCrew(SERVICE_ID, { crewId: CREW });
+    expect(outbox.enqueue).not.toHaveBeenCalled();
+
+    conServicio({
+      status: ServiceStatus.RESCHEDULED,
+      crewId: CREW,
+      windowFrom: hora('07:00'),
+      windowTo: hora('11:00'),
+    });
+    await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-01-01' });
+    expect(outbox.enqueue).toHaveBeenCalledTimes(1);
+    expect(outbox.enqueue.mock.calls[0][1].payload).toMatchObject({ scheduledDate: '2099-01-01' });
+  });
+
   it('si ya se emitió, un cambio posterior no lo reenvía', async () => {
     conServicio({ windowFrom: hora('07:00'), windowTo: hora('11:00') });
     prisma.treeIntervention.findUnique.mockResolvedValue(

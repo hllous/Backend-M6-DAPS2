@@ -118,4 +118,25 @@ describe('treePruningScheduled diferido (e2e)', () => {
       .expect(200);
     expect(await emitidos(intervencionId)).toBe(1);
   });
+
+  it('un servicio RESCHEDULED no emite hasta confirmar la nueva fecha', async () => {
+    const { intervencionId, servicioId } = await podaYServicio({ scheduledDate: '2098-01-01' });
+    await asociar(intervencionId, servicioId);
+    await api.post(`/services/${servicioId}/reschedule`, { reason: 'lluvia' }).expect(200);
+
+    await api.post(`/services/${servicioId}/assign-crew`, { crewId }).expect(200);
+    await api
+      .patch(`/services/${servicioId}`, { windowFrom: '07:00', windowTo: '11:00' })
+      .expect(200);
+    expect(await emitidos(intervencionId)).toBe(0);
+
+    await api
+      .post(`/services/${servicioId}/confirm-reschedule`, { scheduledDate: '2098-02-02' })
+      .expect(200);
+    expect(await emitidos(intervencionId)).toBe(1);
+    const evento = await prisma.outboxEvent.findFirstOrThrow({
+      where: { eventType: 'treePruningScheduled', aggregateId: intervencionId },
+    });
+    expect(evento.payload).toMatchObject({ scheduledDate: '2098-02-02' });
+  });
 });
