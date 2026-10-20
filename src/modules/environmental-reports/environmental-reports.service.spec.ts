@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { EnvironmentalReport, EnvironmentalReportStatus as S, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
@@ -328,6 +328,49 @@ describe('EnvironmentalReportsService', () => {
       });
       expect(prisma.environmentalReport.count).toHaveBeenCalledWith({ where });
       expect(lista.meta).toMatchObject({ total: 21, page: 2, pageSize: 20, totalPages: 2 });
+    });
+
+    it('from/to filtran updatedAt por días argentinos, to inclusivo, combinado con otros filtros', async () => {
+      await service.findAll({
+        page: 1,
+        pageSize: 20,
+        skip: 0,
+        take: 20,
+        status: 'RECEIVED',
+        from: '2026-09-01',
+        to: '2026-09-30',
+      } as any);
+
+      // 00:00 ART del 01/09 = 03:00 UTC; el 30/09 entero cierra a las 03:00 UTC del 01/10 (exclusivo).
+      const where = {
+        status: 'RECEIVED',
+        updatedAt: {
+          gte: new Date('2026-09-01T03:00:00.000Z'),
+          lt: new Date('2026-10-01T03:00:00.000Z'),
+        },
+      };
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual(where);
+      expect(prisma.environmentalReport.count).toHaveBeenCalledWith({ where });
+    });
+
+    it('acepta solo from o solo to', async () => {
+      await service.findAll({ page: 1, pageSize: 20, from: '2026-09-01' } as any);
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual({
+        updatedAt: { gte: new Date('2026-09-01T03:00:00.000Z') },
+      });
+
+      prisma.environmentalReport.findMany.mockClear();
+      await service.findAll({ page: 1, pageSize: 20, to: '2026-09-01' } as any);
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual({
+        updatedAt: { lt: new Date('2026-09-02T03:00:00.000Z') },
+      });
+    });
+
+    it('from posterior a to da 400 y no consulta la base', async () => {
+      await expect(
+        service.findAll({ page: 1, pageSize: 20, from: '2026-09-30', to: '2026-09-01' } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.environmentalReport.findMany).not.toHaveBeenCalled();
     });
 
     it('el alta y las transiciones también devuelven assignedCrewId', async () => {

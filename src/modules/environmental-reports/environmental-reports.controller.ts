@@ -59,12 +59,13 @@ export class EnvironmentalReportsController {
   @ApiOperation({
     summary: 'Listar expedientes ambientales',
     description:
-      'Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen, cuadrilla (crewId: expedientes con alguna inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base para que la página y meta.total sean consistentes) y búsqueda por dirección.',
+      'Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen, cuadrilla (crewId: expedientes con alguna inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base para que la página y meta.total sean consistentes) y búsqueda por dirección. Rango de fechas from/to (YYYY-MM-DD, inclusivo, día argentino) sobre la fecha de última actualización; meta.total refleja el filtro.',
   })
   @ApiPaginatedResponse(EnvironmentalReportResponseDto, 'Listado paginado de expedientes')
   @ApiResponse({
     status: 400,
-    description: 'Filtro inválido (por ejemplo, crewId que no es UUID)',
+    description:
+      'Filtro inválido (por ejemplo, crewId que no es UUID, fecha mal formada o from posterior a to)',
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
