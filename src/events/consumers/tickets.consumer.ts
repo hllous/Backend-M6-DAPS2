@@ -35,6 +35,34 @@ const TIPO_POR_PALABRA: [RegExp, EnvironmentalReportType][] = [
 ];
 
 /** La marca de orden de cada dato que M2 pisa (#270). Ver `noAtrasado()`. */
+/** Las tres columnas de la solicitud de información al vecino (#169), apagadas. */
+const SIN_SOLICITUD = {
+  informationRequestedAt: null,
+  informationRequestMessage: null,
+  informationRequestRequiredBy: null,
+};
+
+/**
+ * Los updateType de M2 (§7.2) que implican un cambio de estado del ticket, y por
+ * eso pueden cerrar una solicitud de información pendiente (#169). Los demás
+ * traen `currentStatus` pero no lo cambian, y uno atrasado puede llevar un estado
+ * viejo mientras M2 ya está en PENDING_INFORMATION: cerraría la solicitud por error.
+ *   incluidos: STATUS_CHANGED, ROUTED (nueva derivación), REOPENED, RESOLVED,
+ *     CLOSED, CANCELLED y DUPLICATE_LINKED (el ticket quedó DUPLICATE).
+ *   excluidos: PRIORITY_CHANGED, ESCALATION_CHANGED, CONTENT_UPDATED y PROGRESS
+ *     (no cambian de estado), INFORMATION_REQUIRED (es PENDING_INFORMATION) e
+ *     INFORMATION_PROVIDED (se cierra en su propio update, con la respuesta).
+ */
+const CAMBIAN_EL_ESTADO: readonly string[] = [
+  'STATUS_CHANGED',
+  'ROUTED',
+  'REOPENED',
+  'RESOLVED',
+  'CLOSED',
+  'CANCELLED',
+  'DUPLICATE_LINKED',
+];
+
 type Marca = 'priorityChangedAt' | 'escalationChangedAt' | 'citizenResponseAt' | 'ticketStatusAt';
 
 /** Los que escriben "gana el último" y por eso ordenan por occurredAt (#270). */
@@ -169,13 +197,14 @@ export class TicketsConsumer implements OnModuleInit {
     // es campo común.
     if (esEstadoM2(data.currentStatus)) {
       const aplicado = await registrarRecibido(this.prisma, ticketId, data.currentStatus, at);
-      // Cualquier estado distinto de PENDING_INFORMATION significa que la solicitud
-      // ya no está viva (respondida, vencida, cancelada o reabierta, #169).
-      // INFORMATION_PROVIDED la cierra en su propio update, junto con la respuesta.
+      // Un cambio de estado a algo distinto de PENDING_INFORMATION significa que la
+      // solicitud ya no está viva (vencida, cancelada, reabierta, #169). Solo cuentan
+      // los updateType de CAMBIO_DE_ESTADO; INFORMATION_PROVIDED la cierra en su propio
+      // update, junto con la respuesta.
       if (
         aplicado &&
         data.currentStatus !== 'PENDING_INFORMATION' &&
-        updateType !== TicketUpdateType.INFORMATION_PROVIDED &&
+        CAMBIAN_EL_ESTADO.includes(updateType) &&
         !this.esReclasificacion(data)
       ) {
         await this.cerrarSolicitud(ticketId, at);
@@ -229,11 +258,7 @@ export class TicketsConsumer implements OnModuleInit {
         informationRequestedAt: { not: null },
         ...this.noAtrasado('citizenResponseAt', at),
       },
-      data: {
-        informationRequestedAt: null,
-        informationRequestMessage: null,
-        informationRequestRequiredBy: null,
-      },
+      data: SIN_SOLICITUD,
     });
     if (count) {
       this.logger.log(`ticketUpdated: solicitud de información del ticket ${ticketId} cerrada`);
@@ -419,7 +444,9 @@ export class TicketsConsumer implements OnModuleInit {
         // entre la lectura y acá, no se pisa.
         await tx.environmentalReport.updateMany({
           where: { id: report.id, status: S.UNDER_REVIEW },
-          data: { status: S.DISMISSED },
+          // Sale de UNDER_REVIEW: la solicitud pendiente quedaría pegada (y close()
+          // daría 409 para siempre), y este camino no depende de que venga currentStatus.
+          data: { status: S.DISMISSED, ...SIN_SOLICITUD },
         });
       }
 
@@ -427,7 +454,7 @@ export class TicketsConsumer implements OnModuleInit {
         // M2 canceló administrativamente el ticket que habíamos devuelto.
         await tx.environmentalReport.updateMany({
           where: { id: report.id, status: S.FORWARDED },
-          data: { status: S.CLOSED },
+          data: { status: S.CLOSED, ...SIN_SOLICITUD },
         });
       }
 
@@ -532,9 +559,7 @@ export class TicketsConsumer implements OnModuleInit {
         ...(at && { citizenResponseAt: at }),
         // Contestó: se cierra la solicitud pendiente (#169), en el mismo update para
         // que el orden por citizenResponseAt valga también para cerrarla.
-        informationRequestedAt: null,
-        informationRequestMessage: null,
-        informationRequestRequiredBy: null,
+        ...SIN_SOLICITUD,
       },
     });
     if (!count) return this.sinFilas('INFORMATION_PROVIDED', 'citizenResponseAt', ticketId, at);
