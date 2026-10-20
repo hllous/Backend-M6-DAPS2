@@ -80,6 +80,20 @@ describe('InboxService', () => {
     },
   );
 
+  // `eventId` es un string libre de un tercero: no puede partir ni falsificar una línea de log.
+  it('un eventId con saltos de línea y ESC no llega crudo a los logs', async () => {
+    inbox.register('streetClosureApproved', jest.fn().mockResolvedValue(undefined));
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    await inbox.ingest(sobre({ eventId: 'ev\n[ERROR] falso\u001b[31m' }));
+
+    const lineas = log.mock.calls.map(([m]) => String(m));
+    expect(lineas.length).toBeGreaterThan(0);
+    // eslint-disable-next-line no-control-regex
+    for (const l of lineas) expect(l).not.toMatch(/[\u0000-\u001f\u007f-\u009f]/);
+    log.mockRestore();
+  });
+
   // Una fecha futura congelaría la marca de orden: se trata como ausente.
   it('un occurredAt en el futuro llega como null, no se guarda y se avisa', async () => {
     const handler = jest.fn().mockResolvedValue(undefined);
@@ -420,27 +434,26 @@ describe('InboxService', () => {
     });
 
     /**
-     * `@IsUUID()` deja pasar el nulo y el máximo. Reenviarlos en nuestro sobre
-     * arriesga que el Core rechace el derivado: no se heredan, pero el
-     * consumido se procesa igual.
+     * El Core acepta cualquier UUID (`uuid.UUID` de Python) y lo entrega
+     * normalizado (#296): lo que él deja pasar no corta el hilo. Solo lo que no
+     * tiene la forma 8-4-4-4-12 no se hereda, y el consumido se procesa igual.
      */
     it.each(['00000000-0000-0000-0000-000000000000', 'ffffffff-ffff-ffff-ffff-ffffffffffff'])(
-      'un correlationId %s no se hereda y el evento se procesa',
+      'un correlationId %s se hereda',
       async (correlationId) => {
         const res = await inbox.ingest(sobre({ correlationId }));
 
         expect(res.status).toBe('processed');
-        expect(encolado()).toMatchObject({ correlationId: MESSAGE_ID, causationId: MESSAGE_ID });
+        expect(encolado()).toMatchObject({ correlationId, causationId: MESSAGE_ID });
       },
     );
 
-    it('un eventId UUID nulo no es causa: hilo nuevo, sin rechazar el evento', async () => {
-      const res = await inbox.ingest(
-        sobre({ eventId: '00000000-0000-0000-0000-000000000000', correlationId: CORRELATION }),
-      );
+    it('un eventId UUID nulo es causa: el Core lo aceptó y lo entrega normalizado', async () => {
+      const nulo = '00000000-0000-0000-0000-000000000000';
+      const res = await inbox.ingest(sobre({ eventId: nulo, correlationId: CORRELATION }));
 
       expect(res.status).toBe('processed');
-      expect(encolado()).toMatchObject({ correlationId: CORRELATION, causationId: null });
+      expect(encolado()).toMatchObject({ correlationId: CORRELATION, causationId: nulo });
     });
 
     /**

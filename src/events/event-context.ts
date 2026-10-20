@@ -31,26 +31,29 @@ export function currentTrace(): EventTrace {
 }
 
 /**
- * RFC 9562: versión 1-8 y variante `10xx`. Deja afuera el UUID nulo y el
- * máximo, que `esUuid` y el `@IsUUID()` del sobre aceptan.
+ * La forma 8-4-4-4-12 en hex, sin mirar versión ni variante. El Core valida con
+ * `uuid.UUID` de Python (acepta v1/v7, el nulo, el máximo...) y lo entrega
+ * siempre normalizado así (#296): lo que nos llega ya pasó por él.
  */
-const UUID_RFC = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_FORMA = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const esUuidRfc = (v: unknown): v is string => typeof v === 'string' && UUID_RFC.test(v);
+export const esUuidHeredable = (v: unknown): v is string =>
+  typeof v === 'string' && UUID_FORMA.test(v);
 
 /**
  * La traza que hereda lo que publique el handler de un evento consumido.
  *
- * Solo se propaga un UUID RFC estricto: lo reenviamos en nuestro sobre, y si el
- * Core lo valida según la RFC rechazaría el evento derivado sin que nos
- * enteremos. Lo que no pasa no rechaza el consumido (somos tolerantes al
+ * Al **heredar** alcanza con la forma de UUID: si el Core lo entregó es que lo
+ * aceptó, y exigir RFC estricto cortaría la correlación con un módulo cuyo
+ * valor el Core sí admite. Lo que **generamos** nosotros sigue siendo v4. Lo
+ * que no tiene la forma no rechaza el consumido (somos tolerantes al
  * consumir): el hilo arranca acá. Quien no migró al sobre del Core no manda
  * `correlationId`, así que su `eventId` abre el hilo para no cortarlo.
  */
 export function trazaDelConsumido(eventId: string, correlationId?: string): EventTrace {
-  const causa = esUuidRfc(eventId) ? eventId : null;
+  const causa = esUuidHeredable(eventId) ? eventId : null;
   return {
-    correlationId: (esUuidRfc(correlationId) ? correlationId : causa) ?? randomUUID(),
+    correlationId: (esUuidHeredable(correlationId) ? correlationId : causa) ?? randomUUID(),
     causationId: causa,
   };
 }

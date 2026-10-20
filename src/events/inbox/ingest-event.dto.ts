@@ -5,7 +5,6 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  IsUUID,
   Matches,
   MaxLength,
   ValidateBy,
@@ -38,6 +37,15 @@ function IsProducer(): PropertyDecorator {
 
 /** Lo que el Core admite para `eventType`. */
 const MAX_EVENT_TYPE_LENGTH = 120;
+
+/**
+ * La forma 8-4-4-4-12 en hex, sin mirar versión ni variante: el Core valida con
+ * `uuid.UUID` de Python y entrega siempre normalizado (#296). `@IsUUID()` es
+ * más estricto (rechaza variante inválida y versión 0) y mandaría a la DLQ un
+ * evento que el Core aceptó. Misma forma que `esUuidHeredable`.
+ */
+const UUID_FORMA = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MSG_UUID = 'debe tener la forma de un UUID (8-4-4-4-12)';
 
 /** Los ids de módulo del Core: `obras`, `atencion-ciudadana`, `desarrollo-social`. */
 const SOURCE_MODULE = /^[A-Za-z0-9_-]+$/;
@@ -125,7 +133,7 @@ export class IngestEventDto {
     example: '8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5',
   })
   @IsOptional()
-  @IsUUID()
+  @Matches(UUID_FORMA, { message: `correlationId ${MSG_UUID}` })
   correlationId?: string;
 
   @ApiPropertyOptional({
@@ -138,7 +146,7 @@ export class IngestEventDto {
   })
   // `@IsOptional` también deja pasar null, que es lo que manda el ejemplo de M9.
   @IsOptional()
-  @IsUUID()
+  @Matches(UUID_FORMA, { message: `causationId ${MSG_UUID}` })
   causationId?: string | null;
 
   @ApiPropertyOptional({

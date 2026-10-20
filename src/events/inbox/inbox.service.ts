@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboundEnvelope } from '../envelope';
+import { paraLog } from '../log-safe';
 import { eventContext, EventTrace, trazaDelConsumido } from '../event-context';
 
 /**
@@ -119,6 +120,8 @@ export class InboxService {
    */
   async ingest(envelope: InboundEnvelope): Promise<IngestResult> {
     const messageId = envelope.eventId;
+    // Solo para los logs: `eventId` es un string libre de un tercero.
+    const idLog = paraLog(messageId);
     let data = (envelope.data ?? {}) as Record<string, unknown>;
 
     // Se rechaza antes del insert: sin fila, el emisor puede reenviar el corregido
@@ -126,7 +129,7 @@ export class InboxService {
     // contrato que validar y sigue `ignored`.
     const invalidos = this.validar(envelope.eventType, data);
     if (invalidos.length) {
-      this.logger.warn(`${envelope.eventType} (${messageId}) rechazado: payload inválido`);
+      this.logger.warn(`${envelope.eventType} (${idLog}) rechazado: payload inválido`);
       throw new BadRequestException(
         `Payload inválido para ${envelope.eventType}. Campos faltantes o con tipo incorrecto: ${invalidos.join(', ')}`,
       );
@@ -143,7 +146,7 @@ export class InboxService {
     if (envelope.occurredAt && !occurredAt) {
       // No se interpola el valor: viene de un tercero.
       this.logger.warn(
-        `${envelope.eventType} (${messageId}): occurredAt ilegible o en el futuro, se procesa sin ordenar`,
+        `${envelope.eventType} (${idLog}): occurredAt ilegible o en el futuro, se procesa sin ordenar`,
       );
     }
 
@@ -182,7 +185,7 @@ export class InboxService {
       });
       if (count === 0) {
         this.logger.log(
-          `${envelope.eventType} (${messageId}) ya recibido: se descarta sin volver a aplicarlo`,
+          `${envelope.eventType} (${idLog}) ya recibido: se descarta sin volver a aplicarlo`,
         );
         return { status: 'duplicate' };
       }
@@ -190,7 +193,7 @@ export class InboxService {
       // HTTP no puede cambiarle el contenido a un evento fallido. Si quedó
       // redactado no hay nada que reproducir y va el data nuevo, ya validado.
       // El hilo también es el guardado: un reenvío con otro correlationId, o sin
-      // ninguno y con un eventId que no es un UUID RFC, partiría el flujo en dos.
+      // ninguno y con un eventId sin la forma de UUID, partiría el flujo en dos.
       // El occurredAt, igual y sin respaldo: es lo que ordena, y un reenvío con
       // otra fecha podría adelantar un evento viejo.
       const fila = await this.prisma.inboxEvent.findUniqueOrThrow({
@@ -200,7 +203,7 @@ export class InboxService {
       if (!esRedactado(fila.payload)) data = fila.payload as Record<string, unknown>;
       if (fila.correlationId) trace = { ...trace, correlationId: fila.correlationId };
       occurredAt = fila.occurredAt;
-      this.logger.log(`${envelope.eventType} (${messageId}) había fallado: se reintenta`);
+      this.logger.log(`${envelope.eventType} (${idLog}) había fallado: se reintenta`);
     }
 
     const handler = this.handlers.get(envelope.eventType);
@@ -210,7 +213,7 @@ export class InboxService {
       // registrado', pero no el contenido.
       await this.markProcessed(messageId, 'sin handler registrado');
       this.logger.warn(
-        `${envelope.eventType} (${messageId}) no tiene handler: se registra y se descarta`,
+        `${envelope.eventType} (${idLog}) no tiene handler: se registra y se descarta`,
       );
       return { status: 'ignored', detail: 'sin handler registrado' };
     }
@@ -218,7 +221,7 @@ export class InboxService {
     try {
       await eventContext.run(trace, () => handler(data, occurredAt));
       await this.markProcessed(messageId);
-      this.logger.log(`${envelope.eventType} (${messageId}) procesado`);
+      this.logger.log(`${envelope.eventType} (${idLog}) procesado`);
       return { status: 'processed' };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -226,7 +229,7 @@ export class InboxService {
         where: { messageId },
         data: { error: message.slice(0, 500) },
       });
-      this.logger.error(`${envelope.eventType} (${messageId}) falló: ${message}`);
+      this.logger.error(`${envelope.eventType} (${idLog}) falló: ${message}`);
       return { status: 'failed', detail: message };
     }
   }
