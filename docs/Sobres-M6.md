@@ -11,7 +11,7 @@ Anexo del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md). El Acuerdo dice **qué** 
 | **3** | Los mensajes que **recibimos** (M2, M3, M4, M7), con lo que leemos de cada uno |
 | **4** | Cómo respondemos a cada entrega y errores comunes |
 
-Todos los ejemplos son del 14 de octubre de 2026 y los identificadores son inventados. Los de la Parte 2 se validan contra los `.schema.json` de M6. Los de la Parte 3 son **lo que asumimos que mandan** (el de M2, según su contrato v1.77): el payload lo define cada módulo emisor, y si el suyo difiere, avísennos.
+Todos los ejemplos son del 14 de octubre de 2026 y los identificadores son inventados. Los de la Parte 2 se validan contra los `.schema.json` de M6. Los de la Parte 3 son **lo que asumimos que mandan** (el de M2, según su contrato v1.78): el payload lo define cada módulo emisor, y si el suyo difiere, avísennos.
 
 ---
 
@@ -100,7 +100,7 @@ Las otras variantes cambian `updateType` y `details`:
 | `RETURNED` | `{ "returnInfo": { "reasonCode": "REQUEST_TYPE_MISMATCH" } }` | `internalMessage` con el motivo del operador, siempre (M2 exige `publicMessage` o `internalMessage`) |
 | `REJECTED` | `{ "cancellation": { "reasonCode": "OUT_OF_SCOPE" } }` | `internalMessage` con el motivo del operador, siempre |
 
-`updatedBy` es `{ "type": "EXTERNAL_USER", "id": "<id>" }` cuando actúa una persona, y `{ "type": "SYSTEM", "id": null }` cuando es automático. Los adjuntos van en el formato de M2 (`fileName`, `contentType`, `url`, `sizeBytes?`), **sin** `attachmentId`.
+`updatedBy` es `{ "type": "EXTERNAL_USER", "id": "3b9f1c52-6a7e-4d08-9c41-5e2a8d7f0b13" }` cuando actúa una persona, y `{ "type": "SYSTEM", "id": null }` cuando es automático. Desde la v1.78 de M2 el `id` es un UUID o `null` (no se admiten códigos ni enteros); hoy mandamos el identificador del usuario autenticado, que puede no serlo: pendiente de adaptar, issue por abrir. Los adjuntos van en el formato de M2 (`fileName`, `contentType`, `url`, `sizeBytes?`), **sin** `attachmentId`.
 
 ✅ **Fecha y franja agendadas (M2, 20/10).** No hay campo estructurado: van como **texto en `publicMessage`**, con `STARTED` la primera vez (agendar cuenta como tomar la gestión) y `PROGRESS` al reprogramar. **Hoy todavía no las mandamos**; lo estamos implementando.
 

@@ -30,9 +30,15 @@ streetClosureEnded
 
 **El documento de referencia nuevo de M7 (30/08) agrega `closureRequestId` directamente en `streetClosureEnded`.** La correlación depende exclusivamente de ese campo: no hay mapeo propio de respaldo.
 
+## Corte aprobado que expira: M7 no publica nada (M7, 19/10)
+
+M7 solo publica `streetClosureEnded` cuando un corte `ACTIVE` vence su `endDate`. **Un corte `APPROVED` que nunca se activó pasa a `EXPIRED` sin publicar finalización.** Entonces, tras un `streetClosureApproved`, **puede no llegar nunca un `streetClosureEnded`**: nuestra `StreetClosureRequest` queda en `APPROVED` y lo que dependía del corte sigue habilitado sin que nadie lo libere. Hoy no hay ningún mecanismo nuestro que lo detecte (el consumer no mira `endDate` y no hay vencimiento por tiempo); la salida manual es el endpoint que pasa el corte a `ENDED`. Es un gap a resolver, a llevar a M7: confirmar si van a publicar algo al expirar, o si nosotros cerramos por `endDate`. Estado en [bloqueantes.md](../../bloqueantes.md#m7--tránsito-).
+
 ## El typo, ya resuelto
 
 **En la lista anterior de M7 figuraba como `streetClousureEnded`**, con una `u` de más. El documento de referencia (25/08) ya lo escribe bien: **`streetClosureEnded`**, coincidiendo con lo que usamos nosotros y M3.
+
+⚠️ **Riesgo abierto (M3 v0.6, 20/10):** M3 anota que el Core todavía debe corregir o confirmar la **declaración histórica `streetClousureEnded`** (con el typo) en su catálogo y en `q.obras`. Nos suscribimos a `streetClosureEnded`: si el Core registró el nombre con typo, la suscripción no recibiría el evento. Se verifica con el Core local ([#266](https://github.com/hllous/Backend-M6-DAPS2/issues/266), [#298](https://github.com/hllous/Backend-M6-DAPS2/issues/298), [#299](https://github.com/hllous/Backend-M6-DAPS2/issues/299)).
 
 ## Evento tardío o repetido
 

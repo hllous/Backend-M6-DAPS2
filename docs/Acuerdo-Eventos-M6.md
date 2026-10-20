@@ -67,7 +67,7 @@ Los campos que terminan en `At` son **fecha y hora**; `scheduledDate` es solo el
 
 ---
 
-**1. `updateTicketStatus` → M2** · *el payload lo define M2 en su contrato, vigente v1.77 (WIP)*
+**1. `updateTicketStatus` → M2** · *el payload lo define M2 en su contrato, vigente v1.78 (WIP)*
 
 ```
 ticketId, updateType,
@@ -77,6 +77,7 @@ attachments[]?, updatedBy, updateOccurredAt
 updateType: STARTED | PROGRESS | INFORMATION_REQUIRED |
             RETURNED | RESOLVED | REJECTED
 updatedBy:  { type: EXTERNAL_USER, id } | { type: SYSTEM, id: null }
+            id: UUID | null (v1.78: no se admiten códigos ni enteros)
 ```
 
 No lleva `status`: informamos el hecho y **M2 decide el estado**. Tampoco lleva `sourceRef` — su contrato prohíbe mandarles IDs de nuestras entidades internas, así que la correlación `ticketId ↔ serviceId` la guardamos de nuestro lado. `expectedTicketVersion` salió del contrato en la v1.5 y `publicId` no viaja en este evento (§8.1 de la v1.70): la correlación es solo por `ticketId`. El sobre del Core ya no lleva `subject` (era del sobre de M2): la correlación va por `data.ticketId`. El detalle de cada variante está en 1.2.
@@ -175,7 +176,7 @@ Antes de la unificación, M7 recibía este evento con forma distinta según el o
 
 ### `updateTicketStatus` — el único, con el contrato de M2
 
-Leímos el contrato, ahora en su **v1.77** (WIP; reemplaza a la v1.75, y antes la v1.74, la v1.73, la v1.70, la v1.6, la v1.5 y la v1.2 sobre la que habíamos escrito esto. En lo que enviamos y recibimos no cambió desde la v1.6), y **adoptamos su payload tal cual**. No pedimos campos nuevos ni proponemos alternativas: nos adaptamos a lo que ya definieron.
+Leímos el contrato, ahora en su **v1.78** (WIP; reemplaza a la v1.77 —el único cambio de contrato es que `updatedBy.id` pasa a UUID o `null`—, y antes la v1.75, la v1.74, la v1.73, la v1.70, la v1.6, la v1.5 y la v1.2 sobre la que habíamos escrito esto. En lo que enviamos y recibimos no cambió desde la v1.6, salvo el `updatedBy.id` de la v1.78), y **adoptamos su payload tal cual**. No pedimos campos nuevos ni proponemos alternativas: nos adaptamos a lo que ya definieron.
 
 ```
 ticketId, updateType,
@@ -186,6 +187,8 @@ attachments[]?, updatedBy, updateOccurredAt
 🔄 **Cambió respecto de la v1.2:** `publicId` y `expectedTicketVersion` salieron del contrato (nunca fueron parte del canal máquina-a-máquina; `publicId` volvió en la v1.70, pero solo en lo que publica M2); `message` se partió en `publicMessage`/`internalMessage`; y `progress` pasó a ser un campo común de tipo `Int` (porcentaje), no el objeto `progress.estimatedCompletionAt` que usábamos para la fecha agendada — ver más abajo.
 
 🔄 **Y cambió otra vez en la v1.6:** `statusChangedAt` se renombró a `updateOccurredAt`; el actor `AREA_USER` **no existe** en su enum y una persona que actúa desde otro módulo va como `EXTERNAL_USER`, un proceso automático como `SYSTEM`; el adjunto perdió `attachmentId`; y `resolution.type` cambió `INFORMATION_PROVIDED` por `INQUIRY_ANSWERED`.
+
+🔄 **Y en la v1.78:** `updatedBy.id` es un **UUID o `null`**; ya no admite códigos tipo `USR-M3-77` ni enteros. Para una persona de otro módulo (`EXTERNAL_USER`) es su UUID en el módulo de origen; si no hay una persona concreta identificable, va `null`. Hoy mandamos el identificador del usuario autenticado tal cual, que puede no ser un UUID: adaptarlo está pendiente (issue por abrir, ver [bloqueantes.md](bloqueantes.md)).
 
 Tres cosas que nos cambian la implementación y conviene dejar dichas:
 
@@ -315,7 +318,7 @@ Abajo, módulo por módulo, están los campos sin los cuales el flujo no funcion
 
 ## M2 — Atención ciudadana
 
-Leímos el contrato completo, ahora en su **v1.77** (WIP; en lo que usamos solo cambió lo que se detalla más abajo). **Adoptamos su modelo sin pedir eventos nuevos ni cambios de forma**, y entre la v1.5 y la v1.6 resolvieron por su cuenta cuatro de los pedidos que teníamos anotados abajo. De sus dos eventos publicados escuchamos uno solo:
+Leímos el contrato completo, ahora en su **v1.78** (WIP; en lo que usamos solo cambió lo que se detalla más abajo). **Adoptamos su modelo sin pedir eventos nuevos ni cambios de forma**, y entre la v1.5 y la v1.6 resolvieron por su cuenta cuatro de los pedidos que teníamos anotados abajo. De sus dos eventos publicados escuchamos uno solo:
 
 | Evento | Qué hacemos con él |
 |---|---|
@@ -339,7 +342,7 @@ Los `updateType` que nos importan:
 
 **Broadcast.** `ticketUpdated` llega a todos los módulos. Los de un ticket cuyo `responsibleAreaId` no es M6 se ignoran y no se persiste su contenido de negocio; la única excepción es cerrar nuestro expediente devuelto cuando el ticket pasa a otra área, y para eso usamos solo `ticketId` y `responsibleAreaId`.
 
-**Campos que necesitamos de `ticketUpdated / ROUTED`** (vigente v1.77):
+**Campos que necesitamos de `ticketUpdated / ROUTED`** (vigente v1.78):
 
 ```
 comunes:  ticketId, citizenId (UUID, null si isAnonymous), isAnonymous,
@@ -460,7 +463,7 @@ M9 respondió el 20/10 que `notificationSent` **no existe en su catálogo**: nin
 
 | # | Qué pasa | Con quién |
 |---|---|---|
-| 1 | **M2 publicó su contrato (ahora v1.77, WIP) y ningún otro módulo está escrito contra él.** M4, M5 y M8 siguen publicando `ticketInProgress`, `ticketUpdate`, `ticketCompleted` y `ticketRejected`, que M2 no consume: lo suyo va por `updateTicketStatus` con `updateType`. Y los seis eventos de ciclo de vida que M1, M3, M5, M7 y M8 esperan son hoy variantes de `ticketUpdated`, no eventos. **Los cinco tienen que releer el contrato**. El documento de M1 del 13/10 ya no lista esos eventos, pero sus ejemplos de `updateTicketStatus` de M2 (`COMPLETED`, `UPDATED`, `ADDITIONAL_INFO_REQUIRED`, `statusChangedAt`, `AREA_USER`) son del contrato viejo | M1, M3, M4, M5, M8 |
+| 1 | **M2 publicó su contrato (ahora v1.78, WIP) y ningún otro módulo está escrito contra él.** M4, M5 y M8 siguen publicando `ticketInProgress`, `ticketUpdate`, `ticketCompleted` y `ticketRejected`, que M2 no consume: lo suyo va por `updateTicketStatus` con `updateType`. Y los seis eventos de ciclo de vida que M1, M3, M5, M7 y M8 esperan son hoy variantes de `ticketUpdated`, no eventos. **Los cinco tienen que releer el contrato**. El documento de M1 del 13/10 ya no lista esos eventos, pero sus ejemplos de `updateTicketStatus` de M2 (`COMPLETED`, `UPDATED`, `ADDITIONAL_INFO_REQUIRED`, `statusChangedAt`, `AREA_USER`) son del contrato viejo | M1, M3, M4, M5, M8 |
 | 2 | **`commercialFineGenerated` figura rotulado solo hacia Rentas**, pero nosotros lo necesitamos para cerrar el expediente | M4 |
 | 3 | **M4 declara consumir `updateTicketStatus`.** Es el canal de entrada de M2 desde las áreas operativas: ningún otro módulo tendría que escucharlo | M4 |
 | 4 | ~~**`workOrderScheduled` reemplazó a `workOrderCreated`**~~ ✅ Cerrado el 5 oct 2026: se dispare al abrir o al agendar, no nos cambia nada | M3 |
@@ -495,7 +498,7 @@ Un huérfano es un evento que alguien espera y nadie publica. Esta lista se achi
 | `publicWorksProjectApproved`, `publicWorksProjectCompleted` | **nadie** | M3 | M3 los dirige a M1, que consume `constructionApproved`. Eran doce, quedaron dos |
 | Todo lo de M8 hacia M2 | **nadie** | M8 | M2 no consume nada de M8 |
 | `workOrderScheduled`, `workOrderCompleted`, `workOrderUpdated` hacia M2 | **nadie** | M3 | M2 no consume nada de M3 |
-| `additionalInfoRequired` | **nadie** | M1 | El contrato de M2 lo reemplazó por `updateTicketStatus / INFORMATION_REQUIRED`. El documento de M1 del 13/10 ya no lo lista como evento, pero sus ejemplos todavía usan `ADDITIONAL_INFO_REQUIRED`, que no existe en la v1.77 |
+| `additionalInfoRequired` | **nadie** | M1 | El contrato de M2 lo reemplazó por `updateTicketStatus / INFORMATION_REQUIRED`. El documento de M1 del 13/10 ya no lo lista como evento, pero sus ejemplos todavía usan `ADDITIONAL_INFO_REQUIRED`, que no existe en la v1.78 |
 | `representationExpired`, `citizenBlocked`, `citizenDeceased` | **nadie** | M1 | `citizenBlocked` y `citizenDeceased` ya no son eventos: son `citizenUpdated` con `updateType: BLOCKED` o `DECEASED`, que M1 manda a M2 y M5. `representationExpired` sigue publicado sin consumidor declarado. Conviene confirmarlo |
 | `eventRejected` | **nadie** | todos | ✅ **Resuelto el 20/10:** son del Core, nunca circularon y M9 los da de baja del catálogo |
 
