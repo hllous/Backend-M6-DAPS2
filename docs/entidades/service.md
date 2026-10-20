@@ -82,6 +82,8 @@ Una franja horaria ausente se trata como **todo el día**: es lo único honesto 
 - Al agendarse: [`urbanServiceScheduled`](../eventos/publicados/urbanServiceScheduled.md) → M7.
 - Si nació de un reclamo (`origin = TICKET`), cada cambio relevante dispara un [`updateTicketStatus`](../eventos/publicados/updateTicketStatus.md) → M2. **Si no hay `ticketId`, no sale nada hacia M2**: un servicio planificado —la recolección de todos los martes— no proyecta.
 
+Agendar (`POST /services`) y confirmar una reprogramación (`confirm-reschedule`) informan a M2 la fecha y la franja como **texto** en el `publicMessage` (es-AR, solo fecha y franja: nunca la cuadrilla ni las notas; M2 no tiene campo estructurado). Va como `STARTED` si el ticket todavía no está en gestión y como `PROGRESS` si ya está `IN_PROGRESS`; con el ticket pendiente de información o terminado no se publica. El estado del ticket lo llevamos en `ticket_m2_state` (ver [`updateTicketStatus`](../eventos/publicados/updateTicketStatus.md)). `reschedule` sin fecha nueva no avisa.
+
 Un aviso de demora sobre un servicio nacido de un reclamo sale como `updateTicketStatus / PROGRESS`: el motivo viaja como mensaje interno, al vecino se le dice que se demora y no por qué.
 
 Los hechos de inicio, demora, cierre y zona no atendida existen en el modelo pero **no salen al bus** como tales: ver [descartados.md](../eventos/publicados/descartados.md).

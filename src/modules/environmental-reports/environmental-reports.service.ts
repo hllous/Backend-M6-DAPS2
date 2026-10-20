@@ -16,6 +16,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
+import { leerEstado, startUpdate } from '../../events/ticket-state';
 import {
   CreateEnvironmentalReportDto,
   EnvironmentalReportResponseDto,
@@ -192,9 +193,12 @@ export class EnvironmentalReportsService {
   /** RECEIVED → UNDER_REVIEW */
   async startReview(id: string, actorId: string): Promise<EnvironmentalReportResponseDto> {
     const report = await this.getReport(id);
+    // Si agendar un servicio ya arrancó el ticket, repetir STARTED no es válido
+    // para M2: el mismo aviso viaja como PROGRESS (#303).
+    const estadoTicket = report.ticketId ? await leerEstado(this.prisma, report.ticketId) : null;
     return this.transition(report, S.UNDER_REVIEW, {}, [
       ...this.ticketEvents(report, actorId, {
-        updateType: 'STARTED',
+        updateType: startUpdate(estadoTicket),
         publicMessage: 'Su denuncia ambiental está en análisis.',
       }),
     ]);

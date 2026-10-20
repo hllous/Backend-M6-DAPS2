@@ -425,6 +425,16 @@ package "Integración (técnico, no de dominio)" #EFEFEF {
       causation_id : uuid     ' eventId consumido que lo causó; null si es acción directa
   }
 
+  ' Estado del ticket en M2 que llevamos nosotros (#303): elige STARTED o PROGRESS.
+  entity "ticket_m2_state" as ticket_m2_state {
+    * ticket_id : varchar <<PK>>
+    --
+    * status : varchar        ' valor de M2 (IN_PROGRESS, ROUTED, ...), no un enum nuestro
+    * source : enum <<TicketStateSource>> ' DEDUCED | RECEIVED
+      received_at : timestamp ' data.updatedAt del ticketUpdated: marca de orden
+    * updated_at : timestamp
+  }
+
   entity "inbox_event" as inbox_event {
     * id : uuid <<PK>>
     --

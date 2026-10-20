@@ -287,6 +287,12 @@ enum OutboxEventStatus {
   FAILED
 }
 
+// De dónde salió el estado guardado en TicketM2State.
+enum TicketStateSource {
+  DEDUCED // lo dedujimos de un updateTicketStatus que publicamos
+  RECEIVED // lo informó M2 en un ticketUpdated
+}
+
 // ════════════════════════════════════════════════════════════════
 // CONFIGURACIÓN Y PLANIFICACIÓN
 // ════════════════════════════════════════════════════════════════
@@ -975,4 +981,22 @@ model InboxEvent {
 
   @@index([processedAt])
   @@map("inbox_event")
+}
+
+// Último estado conocido de un ticket nuestro en M2 (#303).
+//
+// M2 no avisa el IN_PROGRESS (no hay un ticketUpdated espejo): nuestro STARTED
+// es la única fuente, así que lo llevamos nosotros para elegir entre STARTED y
+// PROGRESS al informar la programación. `status` es un string porque los
+// valores son de M2, no un enum nuestro.
+model TicketM2State {
+  ticketId   String            @id @map("ticket_id") // EXT M2
+  status     String
+  source     TicketStateSource
+  // data.updatedAt del ticketUpdated: la marca de orden de los recibidos.
+  // Null en una deducción que nunca fue pisada por un recibido.
+  receivedAt DateTime?         @map("received_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+
+  @@map("ticket_m2_state")
 }

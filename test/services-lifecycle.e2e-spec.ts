@@ -110,12 +110,27 @@ describe('Ciclo de vida de un servicio urbano (e2e)', () => {
     expect(res.body.zones).toHaveLength(1);
 
     const encolados = await prisma.outboxEvent.findMany({ where: { aggregateId: serviceId } });
-    expect(encolados).toHaveLength(1);
-    expect(encolados[0]).toMatchObject({
-      eventType: 'urbanServiceScheduled',
+    // Nacido de un reclamo: hacia M7 sale urbanServiceScheduled y hacia M2 el aviso de
+    // la programación (#303). Los dos se encolan en el mismo request y pueden empatar
+    // en occurredAt, así que no se asume el orden entre ellos.
+    expect(encolados.map((e) => e.eventType).sort()).toEqual([
+      'updateTicketStatus',
+      'urbanServiceScheduled',
+    ]);
+    expect(encolados.find((e) => e.eventType === 'urbanServiceScheduled')).toMatchObject({
       aggregateType: 'SERVICE',
       status: OutboxEventStatus.PENDING,
     });
+
+    // Con el ticket todavía sin estado conocido, la primera vez es STARTED con la
+    // fecha como texto en publicMessage; nunca un `progress` inventado.
+    const aviso = encolados.find((e) => e.eventType === 'updateTicketStatus');
+    expect(aviso?.payload).toMatchObject({
+      ticketId: 'TCK-E2E-0001',
+      updateType: 'STARTED',
+      publicMessage: expect.stringContaining('programado'),
+    });
+    expect(aviso?.payload).not.toHaveProperty('progress');
   });
 
   it('rechaza con 409 una transición que la tabla no admite', async () => {
@@ -165,18 +180,31 @@ describe('Ciclo de vida de un servicio urbano (e2e)', () => {
       select: { eventType: true, payload: true, status: true },
     });
 
-    expect(tipos.map((e) => e.eventType)).toEqual([
+    // El orden entre urbanServiceScheduled y el aviso de la programación (mismo request)
+    // no está garantizado; el de los updateTicketStatus sí: son requests distintos.
+    expect(tipos.map((e) => e.eventType).sort()).toEqual([
+      'updateTicketStatus',
+      'updateTicketStatus',
+      'updateTicketStatus',
       'urbanServiceScheduled',
-      'updateTicketStatus',
-      'updateTicketStatus',
     ]);
     // Nada se publicó: el dispatcher está stubbeado, así que la cola es la
     // prueba de que el evento se escribió junto al cambio de dominio.
     expect(tipos.every((e) => e.status === OutboxEventStatus.PENDING)).toBe(true);
 
-    const ticketIds = tipos
+    const avisos = tipos
       .filter((e) => e.eventType === 'updateTicketStatus')
-      .map((e) => (e.payload as { ticketId: string }).ticketId);
-    expect(ticketIds).toEqual(['TCK-E2E-0001', 'TCK-E2E-0001']);
+      .map((e) => e.payload as { ticketId: string; updateType: string });
+    expect(avisos.map((a) => a.ticketId)).toEqual(['TCK-E2E-0001', 'TCK-E2E-0001', 'TCK-E2E-0001']);
+    // Agendar manda STARTED; al iniciar el ticket ya figura IN_PROGRESS, así que no se
+    // repite STARTED sino PROGRESS (#303); al cerrar, RESOLVED.
+    expect(avisos.map((a) => a.updateType)).toEqual(['STARTED', 'PROGRESS', 'RESOLVED']);
+
+    // El estado del ticket en M2 se fue deduciendo de lo que publicamos, en la misma
+    // transacción que cada cambio.
+    const estado = await prisma.ticketM2State.findUniqueOrThrow({
+      where: { ticketId: 'TCK-E2E-0001' },
+    });
+    expect(estado).toMatchObject({ status: 'RESOLVED', source: 'DEDUCED' });
   });
 });

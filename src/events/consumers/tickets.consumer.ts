@@ -10,6 +10,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { aFecha, InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent, TicketUpdateType } from '../inbox/consumed-events';
 import { Data, esObjeto, esTexto, requerido } from '../inbox/payload-validation';
+import { esEstadoM2, leerEstado, registrarRecibido, startUpdate } from '../ticket-state';
+import { paraLog } from '../log-safe';
+import { OutboxService } from '../outbox/outbox.service';
+import { AggregateType, EventType } from '../event-types';
+import * as payloads from '../payloads';
 import { REPORT_TRANSITIONS } from '../../modules/environmental-reports/environmental-reports.service';
 
 /**
@@ -76,6 +81,7 @@ export class TicketsConsumer implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inbox: InboxService,
+    private readonly outbox: OutboxService,
   ) {}
 
   onModuleInit(): void {
@@ -154,6 +160,20 @@ export class TicketsConsumer implements OnModuleInit {
     if (!at && ORDENADOS.includes(updateType)) {
       this.logger.warn(
         `ticketUpdated/${updateType} (${ticketId}) sin occurredAt: se aplica sin poder ordenarlo`,
+      );
+    }
+
+    // El estado que M2 informa (#303). Solo de un ticket nuestro: el filtro de
+    // arriba ya descartó los ajenos, de los que no guardamos nada. Va para todo
+    // updateType, también los que no tienen otro efecto, porque `currentStatus`
+    // es campo común.
+    if (esEstadoM2(data.currentStatus)) {
+      await registrarRecibido(this.prisma, ticketId, data.currentStatus, at);
+    } else if (data.currentStatus !== undefined && data.currentStatus !== null) {
+      // Fuera de la lista de §3: no se guarda (no puede dejar un estado basura que
+      // calle el aviso de programación) y no rompe el handler. Valor de un tercero.
+      this.logger.warn(
+        `ticketUpdated/${paraLog(updateType)}: currentStatus ${paraLog(data.currentStatus, 40)} no es un estado de M2, no se guarda`,
       );
     }
 
@@ -267,9 +287,38 @@ export class TicketsConsumer implements OnModuleInit {
       // Re-derivación tras una devolución: se reactiva el expediente con el
       // snapshot nuevo en vez de crear otro. El estado va en el `where`: un
       // reproceso del mismo evento ya no lo encuentra en FORWARDED.
-      const { count } = await this.prisma.environmentalReport.updateMany({
-        where: { id: existente.id, status: S.FORWARDED, ...this.noAtrasado('ticketStatusAt', at) },
-        data: { ...snapshot, status: S.UNDER_REVIEW },
+      //
+      // M2 (20/10): reactivar es tomar la gestión otra vez, y el vecino tiene que
+      // verlo (#309). El aviso sale solo si este update tocó la fila, así que un
+      // reproceso no lo duplica, y en la misma transacción: sin el cambio no hay
+      // aviso, y sin el aviso no queda el cambio. El handler corre dentro de
+      // `eventContext`, así que el evento hereda el hilo y su causa es el ROUTED.
+      const count = await this.prisma.$transaction(async (tx) => {
+        const { count } = await tx.environmentalReport.updateMany({
+          where: {
+            id: existente.id,
+            status: S.FORWARDED,
+            ...this.noAtrasado('ticketStatusAt', at),
+          },
+          data: { ...snapshot, status: S.UNDER_REVIEW },
+        });
+        if (count && existente.ticketId) {
+          // Si por algún motivo el ticket ya está IN_PROGRESS, repetir STARTED no
+          // es válido para M2: va como PROGRESS.
+          const estado = await leerEstado(tx, existente.ticketId);
+          await this.outbox.enqueue(tx, {
+            eventType: EventType.UPDATE_TICKET_STATUS,
+            aggregateType: AggregateType.ENVIRONMENTAL_REPORT,
+            aggregateId: existente.id,
+            payload: payloads.updateTicketStatus({
+              ticketId: existente.ticketId,
+              updateType: startUpdate(estado),
+              updatedById: 'sistema',
+              publicMessage: 'Su denuncia ambiental está en análisis.',
+            }),
+          });
+        }
+        return count;
       });
       this.logger.log(
         count

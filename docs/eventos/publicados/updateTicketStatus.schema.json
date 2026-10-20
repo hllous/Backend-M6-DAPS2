@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uade.m6.grupo04/eventos/updateTicketStatus.schema.json",
   "title": "updateTicketStatus",
-  "description": "M6 → M2. Payload definido por el contrato v1.75 de M2 (WIP, reemplaza a la v1.74; este evento no cambió desde la v1.6) y adoptado sin cambios. No lleva publicId: §8.1 dice que ticketId UUID es referencia suficiente, y additionalProperties es false. Se publica solo cuando el Service o el EnvironmentalReport tiene ticketId. No lleva status ni sourceRef: M2 decide la transición (§8.1). El sobre del Core no lleva subject: la correlacion con M2 va por ticketId.",
+  "description": "M6 → M2. Payload definido por el contrato v1.78 de M2 (WIP, reemplaza a la v1.77; desde la v1.6 solo cambió updatedBy.id) y adoptado sin cambios. No lleva publicId: §8.1 dice que ticketId UUID es referencia suficiente, y additionalProperties es false. Se publica solo cuando el Service o el EnvironmentalReport tiene ticketId. No lleva status ni sourceRef: M2 decide la transición (§8.1). El sobre del Core no lleva subject: la correlacion con M2 va por ticketId.",
   "type": "object",
   "properties": {
     "ticketId": { "type": "string", "description": "De M2. Único campo de correlación." },
@@ -16,11 +16,11 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 100,
-      "description": "Porcentaje estimado. NO sirve para transportar la fecha/franja agendada — ver bloqueante en updateTicketStatus.md. En PROGRESS la v1.6 (§8.2) exige aportar al menos uno de progress, publicMessage, internalMessage o attachments."
+      "description": "Porcentaje estimado. NO sirve para transportar la fecha/franja agendada: esa va como texto en publicMessage (M2, 20/10; ver updateTicketStatus.md). En PROGRESS la v1.6 (§8.2) exige aportar al menos uno de progress, publicMessage, internalMessage o attachments."
     },
     "details": {
       "type": "object",
-      "description": "La forma depende del updateType. RESOLVED lleva resolution; REJECTED lleva cancellation; RETURNED lleva returnInfo; INFORMATION_REQUIRED lleva informationRequest. STARTED y PROGRESS siguen sin estructura de details en la v1.6 (§8.2, 'details obligatorio: Ninguno') — es el origen del bloqueante de la fecha agendada, abierto desde la v1.5.",
+      "description": "La forma depende del updateType. RESOLVED lleva resolution; REJECTED lleva cancellation; RETURNED lleva returnInfo; INFORMATION_REQUIRED lleva informationRequest. STARTED y PROGRESS no llevan details (§8.2, 'details obligatorio: Ninguno'): la fecha y la franja agendadas van como texto en publicMessage (M2, 20/10).",
       "properties": {
         "resolution": {
           "type": "object",

@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { EnvironmentalReportStatus as S } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
+import { OutboxService } from '../outbox/outbox.service';
 import { OutboundResponsesConsumer } from './outbound-responses.consumer';
 import { SanctionsConsumer } from './sanctions.consumer';
 import { TicketsConsumer } from './tickets.consumer';
@@ -88,7 +89,7 @@ async function correr(
   [
     new OutboundResponsesConsumer(p, inbox),
     new SanctionsConsumer(p, inbox),
-    new TicketsConsumer(p, inbox),
+    new TicketsConsumer(p, inbox, new OutboxService()),
     new WeatherConsumer(p, inbox),
   ].forEach((c) => c.onModuleInit());
   const { status } = await inbox.ingest({ eventId: EVENT_ID, eventType, occurredAt, data });
@@ -240,7 +241,11 @@ describe('sobre re-serializado por el Core (#296)', () => {
           },
         );
         const inbox = new InboxService(prisma as unknown as PrismaService);
-        new TicketsConsumer(prisma as unknown as PrismaService, inbox).onModuleInit();
+        new TicketsConsumer(
+          prisma as unknown as PrismaService,
+          inbox,
+          new OutboxService(),
+        ).onModuleInit();
         await inbox.ingest({
           eventId: EVENT_ID,
           eventType: 'ticketUpdated',

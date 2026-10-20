@@ -51,6 +51,8 @@ describe('EnvironmentalReportsService', () => {
         count: jest.fn().mockResolvedValue(1),
         update: jest.fn(),
       },
+      // Estado del ticket en M2 (#303): sin dato por defecto.
+      ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
       // Prisma acepta callback o array; los tests usan siempre el callback.
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
@@ -412,6 +414,36 @@ describe('EnvironmentalReportsService', () => {
         // Desde otro módulo, una persona es siempre EXTERNAL_USER (§5.2).
         updatedBy: { type: 'EXTERNAL_USER', id: ACTOR },
       });
+    });
+
+    // Si agendar un servicio ya arrancó el ticket, repetir STARTED no es válido (#303).
+    it('startReview con el ticket ya IN_PROGRESS manda PROGRESS con el mismo mensaje', async () => {
+      prisma.ticketM2State.findUnique.mockResolvedValue({ status: 'IN_PROGRESS' });
+
+      const { encolado } = await transicionar(S.RECEIVED, (s) => s.startReview(ID, ACTOR));
+
+      expect(encolado[0].payload).toMatchObject({
+        updateType: 'PROGRESS',
+        publicMessage: 'Su denuncia ambiental está en análisis.',
+      });
+    });
+
+    it.each(['ROUTED', 'IN_REVIEW'])('startReview con el ticket en %s manda STARTED', async (e) => {
+      prisma.ticketM2State.findUnique.mockResolvedValue({ status: e });
+
+      const { encolado } = await transicionar(S.RECEIVED, (s) => s.startReview(ID, ACTOR));
+
+      expect(encolado[0].payload).toMatchObject({ updateType: 'STARTED' });
+    });
+
+    it('startReview de un expediente sin ticketId no consulta el estado ni publica', async () => {
+      const { encolado } = await transicionar(S.RECEIVED, async (s) => {
+        prisma.environmentalReport.findUnique.mockResolvedValue(expediente({ ticketId: null }));
+        return s.startReview(ID, ACTOR);
+      });
+
+      expect(encolado).toEqual([]);
+      expect(prisma.ticketM2State.findUnique).not.toHaveBeenCalled();
     });
 
     /**

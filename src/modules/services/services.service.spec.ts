@@ -12,6 +12,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ServicesService } from './services.service';
 import { EnvironmentalInspectionsService } from '../environmental-inspections/environmental-inspections.service';
 import { ServiceTargetType } from './dto';
+import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from '../../events/m2-contract.testing';
 
 const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
 const TYPE_ID = '22222222-2222-2222-2222-222222222222';
@@ -107,6 +108,8 @@ describe('ServicesService', () => {
         count: jest.fn().mockResolvedValue(0),
       },
       outboxEvent: { create: jest.fn(), createMany: jest.fn() },
+      // Estado del ticket en M2 (#303): sin dato por defecto.
+      ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
       environmentalInspection: {
         findUnique: jest.fn().mockResolvedValue({ serviceId: null, outcome: null }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -1044,6 +1047,226 @@ describe('ServicesService', () => {
           disposalSiteId: SITE_ID,
         }),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // ─── Programación hacia M2 (#303) ─────────────────
+
+  describe('programación informada a M2 (#303)', () => {
+    const TICKET_ID = '77777777-7777-4777-8777-777777777777';
+    const ticketDto = { ...baseDto, origin: ServiceOrigin.TICKET, ticketId: TICKET_ID };
+
+    /** Los updateTicketStatus que se encolaron en todas las llamadas. */
+    const hacia = () =>
+      [
+        ...outbox.enqueue.mock.calls.map(([, e]: [unknown, unknown]) => [e]),
+        ...outbox.enqueueMany.mock.calls.map(([, es]: [unknown, unknown[]]) => es),
+      ]
+        .flat()
+        .filter((e) => e.eventType === 'updateTicketStatus')
+        .map((e) => e.payload);
+
+    const conTicketEn = (status: string | null) =>
+      prisma.ticketM2State.findUnique.mockResolvedValue(status ? { status } : null);
+
+    beforeEach(() => {
+      prisma.service.create.mockResolvedValue(
+        serviceRow({
+          origin: ServiceOrigin.TICKET,
+          ticketId: TICKET_ID,
+          windowFrom: new Date('1970-01-01T08:00:00.000Z'),
+          windowTo: new Date('1970-01-01T12:30:00.000Z'),
+          scheduledDate: new Date('2026-10-21T00:00:00.000Z'),
+        }),
+      );
+    });
+
+    it('un servicio sin ticketId no publica nada hacia M2', async () => {
+      prisma.service.create.mockResolvedValue(serviceRow());
+
+      await service.create(baseDto);
+
+      expect(hacia()).toEqual([]);
+      expect(prisma.ticketM2State.findUnique).not.toHaveBeenCalled();
+    });
+
+    it.each(['ROUTED', 'IN_REVIEW', null])(
+      'agendar con el ticket en %s manda STARTED con la programación',
+      async (estado) => {
+        conTicketEn(estado);
+
+        await service.create(ticketDto, 'user-1');
+
+        const [p] = hacia();
+        expect(hacia()).toHaveLength(1);
+        expect(p).toMatchObject({
+          ticketId: TICKET_ID,
+          updateType: 'STARTED',
+          publicMessage:
+            'Su servicio fue programado para el miércoles 21 de octubre de 2026, entre las 08:00 y las 12:30 hs.',
+        });
+      },
+    );
+
+    it('agendar con el ticket IN_PROGRESS manda PROGRESS', async () => {
+      conTicketEn('IN_PROGRESS');
+
+      await service.create(ticketDto);
+
+      expect(hacia()).toEqual([expect.objectContaining({ updateType: 'PROGRESS' })]);
+    });
+
+    it.each(['PENDING_INFORMATION', 'RESOLVED', 'CLOSED', 'CANCELLED', 'DUPLICATE'])(
+      'agendar con el ticket en %s no publica (M2 lo rechazaría)',
+      async (estado) => {
+        conTicketEn(estado);
+
+        await service.create(ticketDto);
+
+        expect(hacia()).toEqual([]);
+      },
+    );
+
+    it('no manda la cuadrilla ni las notas', async () => {
+      conTicketEn('ROUTED');
+      prisma.service.create.mockResolvedValue(
+        serviceRow({
+          ticketId: TICKET_ID,
+          crewId: CREW_ID,
+          notes: 'portón trasero',
+          scheduledDate: new Date('2026-10-21T00:00:00.000Z'),
+        }),
+      );
+
+      await service.create(ticketDto);
+
+      const texto = JSON.stringify(hacia());
+      expect(texto).not.toContain(CREW_ID);
+      expect(texto).not.toContain('portón');
+      expect(hacia()[0]).not.toHaveProperty('progress');
+      expect(hacia()[0]).not.toHaveProperty('details');
+    });
+
+    // Se saltea con aviso si el paquete de M2 no está (no está versionado).
+    (PAQUETE_M2_PRESENTE ? it.each : it.skip.each)(['ROUTED', 'IN_PROGRESS'])(
+      'el aviso con el ticket en %s valida contra el paquete de M2 v1.78',
+      async (estado) => {
+        conTicketEn(estado);
+
+        await service.create(ticketDto, '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f');
+
+        expect(erroresM2UpdateTicketStatus(hacia()[0])).toEqual([]);
+      },
+    );
+
+    it('el estado se lee con el cliente de la transacción', async () => {
+      conTicketEn('ROUTED');
+      const tx = { ...prisma, ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) } };
+      prisma.$transaction.mockImplementationOnce((fn: (t: unknown) => unknown) => fn(tx));
+
+      await service.create(ticketDto);
+
+      expect(tx.ticketM2State.findUnique).toHaveBeenCalled();
+      expect(prisma.ticketM2State.findUnique).not.toHaveBeenCalled();
+    });
+
+    describe('reprogramar', () => {
+      const reprogramado = (over: Record<string, unknown> = {}) =>
+        serviceRow({
+          status: ServiceStatus.RESCHEDULED,
+          ticketId: TICKET_ID,
+          windowFrom: new Date('1970-01-01T08:00:00.000Z'),
+          windowTo: new Date('1970-01-01T12:00:00.000Z'),
+          ...over,
+        });
+
+      it('reschedule sin fecha nueva no publica nada', async () => {
+        prisma.service.findUnique.mockResolvedValue(
+          serviceRow({ ticketId: TICKET_ID, status: ServiceStatus.SCHEDULED }),
+        );
+        conTicketEn('IN_PROGRESS');
+
+        await service.reschedule(SERVICE_ID, 'lluvia');
+
+        expect(hacia()).toEqual([]);
+      });
+
+      it('confirmar la fecha nueva con el ticket IN_PROGRESS manda PROGRESS', async () => {
+        prisma.service.findUnique.mockResolvedValue(reprogramado());
+        conTicketEn('IN_PROGRESS');
+
+        await service.confirmReschedule(
+          SERVICE_ID,
+          { scheduledDate: '2099-09-22', windowFrom: '09:00', windowTo: '11:00' },
+          'user-1',
+        );
+
+        expect(hacia()).toEqual([
+          expect.objectContaining({
+            updateType: 'PROGRESS',
+            publicMessage:
+              'Su servicio fue reprogramado para el martes 22 de septiembre de 2099, entre las 09:00 y las 11:00 hs.',
+          }),
+        ]);
+      });
+
+      it('sin franja nueva usa la que ya tenía el servicio', async () => {
+        prisma.service.findUnique.mockResolvedValue(reprogramado());
+        conTicketEn('ROUTED');
+
+        await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' });
+
+        expect(hacia()[0]).toMatchObject({
+          updateType: 'STARTED',
+          publicMessage: expect.stringContaining('entre las 08:00 y las 12:00 hs'),
+        });
+      });
+
+      it('con el ticket pendiente de información no publica', async () => {
+        prisma.service.findUnique.mockResolvedValue(reprogramado());
+        conTicketEn('PENDING_INFORMATION');
+
+        await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' });
+
+        expect(hacia()).toEqual([]);
+        expect(prisma.service.update).toHaveBeenCalled();
+      });
+
+      it('sin ticketId no publica', async () => {
+        prisma.service.findUnique.mockResolvedValue(reprogramado({ ticketId: null }));
+
+        await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' });
+
+        expect(hacia()).toEqual([]);
+      });
+    });
+
+    describe('iniciar el servicio', () => {
+      const iniciable = () =>
+        serviceRow({ crewId: CREW_ID, ticketId: TICKET_ID, origin: ServiceOrigin.TICKET });
+
+      it('con el ticket ya IN_PROGRESS manda PROGRESS y no repite STARTED', async () => {
+        prisma.service.findUnique.mockResolvedValue(iniciable());
+        conTicketEn('IN_PROGRESS');
+
+        await service.start(SERVICE_ID);
+
+        expect(hacia()).toEqual([
+          expect.objectContaining({
+            updateType: 'PROGRESS',
+            publicMessage: 'La cuadrilla comenzó a atender su reclamo.',
+          }),
+        ]);
+      });
+
+      it.each(['ROUTED', 'IN_REVIEW', null])('con el ticket en %s sigue en STARTED', async (e) => {
+        prisma.service.findUnique.mockResolvedValue(iniciable());
+        conTicketEn(e);
+
+        await service.start(SERVICE_ID);
+
+        expect(hacia()).toEqual([expect.objectContaining({ updateType: 'STARTED' })]);
+      });
     });
   });
 

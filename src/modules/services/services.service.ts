@@ -18,11 +18,18 @@ import {
   ZoneResultStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { paraLog } from '../../events/log-safe';
 import { toDateOnly, todayArgentina } from '../../common/utils/date-only';
 import { CONTAINER_TRANSITIONS } from '../containers/containers.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
+import {
+  leerEstado,
+  scheduleUpdate,
+  startUpdate,
+  textoProgramacion,
+} from '../../events/ticket-state';
 import { EnvironmentalInspectionsService } from '../environmental-inspections/environmental-inspections.service';
 import {
   AssignCrewDto,
@@ -257,6 +264,12 @@ export class ServicesService {
         aggregateId: created.id,
         payload: payloads.urbanServiceScheduled(created, serviceType),
       });
+
+      // Agendar cuenta como tomar la gestión del reclamo: M2 se entera por acá (#303).
+      await this.outbox.enqueueMany(
+        tx,
+        await this.scheduleEvents(tx, created, createdBy ?? 'sistema', false),
+      );
 
       return created;
     });
@@ -538,12 +551,16 @@ export class ServicesService {
       );
     }
 
+    // Si agendar ya arrancó el ticket (#303), repetir STARTED no es válido para
+    // M2: el mismo aviso viaja como PROGRESS.
+    const estadoTicket = current.ticketId ? await leerEstado(this.prisma, current.ticketId) : null;
+
     return this.transition(
       current,
       ServiceStatus.IN_PROGRESS,
       {},
       this.ticketEvents(current, actorId, {
-        updateType: 'STARTED',
+        updateType: startUpdate(estadoTicket),
         publicMessage: 'La cuadrilla comenzó a atender su reclamo.',
       }),
     );
@@ -751,8 +768,17 @@ export class ServicesService {
     return this.transition(current, ServiceStatus.RESCHEDULED, { statusReason: reason });
   }
 
-  /** RESCHEDULED → SCHEDULED, con la fecha nueva. */
-  async confirmReschedule(id: string, dto: ConfirmRescheduleDto): Promise<ServiceResponseDto> {
+  /**
+   * RESCHEDULED → SCHEDULED, con la fecha nueva.
+   *
+   * Es acá y no en `reschedule` donde M2 se entera: recién ahora hay una fecha
+   * para decirle al vecino (#303).
+   */
+  async confirmReschedule(
+    id: string,
+    dto: ConfirmRescheduleDto,
+    actorId = 'sistema',
+  ): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     this.assertWindowOrder(dto.windowFrom, dto.windowTo);
     const scheduledDate = toDateOnly(dto.scheduledDate);
@@ -763,11 +789,26 @@ export class ServicesService {
       );
     }
 
-    return this.transition(current, ServiceStatus.SCHEDULED, {
-      scheduledDate,
-      ...(dto.windowFrom !== undefined && { windowFrom: toTime(dto.windowFrom) }),
-      ...(dto.windowTo !== undefined && { windowTo: toTime(dto.windowTo) }),
-    });
+    this.assertTransition(current.status, ServiceStatus.SCHEDULED);
+    const windowFrom = dto.windowFrom !== undefined ? toTime(dto.windowFrom) : current.windowFrom;
+    const windowTo = dto.windowTo !== undefined ? toTime(dto.windowTo) : current.windowTo;
+    const events = await this.scheduleEvents(
+      this.prisma,
+      { id: current.id, ticketId: current.ticketId, scheduledDate, windowFrom, windowTo },
+      actorId,
+      true,
+    );
+
+    return this.transition(
+      current,
+      ServiceStatus.SCHEDULED,
+      {
+        scheduledDate,
+        ...(dto.windowFrom !== undefined && { windowFrom }),
+        ...(dto.windowTo !== undefined && { windowTo }),
+      },
+      events,
+    );
   }
 
   // ─── Aviso de demora ──────────────────────────────
@@ -1175,12 +1216,12 @@ export class ServicesService {
    * Un servicio planificado —la recoleccion de todos los martes— no proyecta
    * nada: sin ticketId no sale nada hacia M2 (docs/entidades/service.md).
    *
-   * La fecha y la franja agendadas NO viajan: `progress` en el contrato de M2 es un
-   * entero de porcentaje y no hay estructura de `details` para STARTED ni
-   * PROGRESS. Es un bloqueante abierto con ellos.
+   * La fecha y la franja agendadas viajan como texto en `publicMessage`, no en
+   * `progress` (un entero de porcentaje) ni en `details` (no existe para
+   * STARTED ni PROGRESS): es lo que M2 confirmó el 20/10. Ver `scheduleEvents`.
    */
   private ticketEvents(
-    service: ServiceWithRelations,
+    service: Pick<Service, 'id' | 'ticketId'>,
     actorId: string,
     update: {
       updateType: payloads.TicketUpdateType;
@@ -1203,6 +1244,35 @@ export class ServicesService {
         }),
       },
     ];
+  }
+
+  /**
+   * El aviso de que el servicio quedó agendado, para el vecino que lo reclamó.
+   *
+   * Solo texto con la fecha y la franja (M2 no tiene campo estructurado), y
+   * nunca la cuadrilla ni las notas. Va como `STARTED` o `PROGRESS` según el
+   * estado que conocemos del ticket, y no sale si M2 lo rechazaría (#303).
+   */
+  private async scheduleEvents(
+    db: Parameters<typeof leerEstado>[0],
+    service: Pick<Service, 'id' | 'ticketId' | 'scheduledDate' | 'windowFrom' | 'windowTo'>,
+    actorId: string,
+    reprogramado: boolean,
+  ): Promise<OutboxEntry[]> {
+    if (!service.ticketId) return [];
+
+    const estado = await leerEstado(db, service.ticketId);
+    const update = scheduleUpdate(
+      estado,
+      textoProgramacion(service.scheduledDate, service.windowFrom, service.windowTo, reprogramado),
+    );
+    if (!update) {
+      this.logger.warn(
+        `Servicio ${service.id}: el ticket ${paraLog(service.ticketId)} está en ${paraLog(String(estado))}, no se informa la programación a M2`,
+      );
+      return [];
+    }
+    return this.ticketEvents(service, actorId, update);
   }
 
   private assertTransition(from: ServiceStatus, to: ServiceStatus): void {
