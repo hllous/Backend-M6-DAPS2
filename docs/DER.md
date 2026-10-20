@@ -361,6 +361,13 @@ erDiagram
         varchar source_module "modulo emisor segun el sobre del Core"
         timestamp occurred_at "occurredAt del sobre, el reintento ordena con este"
     }
+    TICKET_M2_STATE {
+        varchar ticket_id PK
+        varchar status "valor de M2 (IN_PROGRESS, ROUTED...), no un enum nuestro"
+        enum source "DEDUCED o RECEIVED"
+        timestamp received_at "data.updatedAt del ticketUpdated, marca de orden"
+        timestamp updated_at
+    }
 
     %% ======== RELACIONES ========
     ZONE              ||--o{ ZONE_NEIGHBORHOOD : agrupa
@@ -417,6 +424,7 @@ erDiagram
 | 6 | `ENVIRONMENTAL_REPORT.deadline_at` (campo agregado) | El paso `NOTICE_ISSUED → CLOSED` por vencimiento de plazo es diseño explícito, no atajo. Necesita una fecha materializada para que un job la barra; no está en el doc porque el doc modela el *qué*, no el *cómo* |
 | 7 | `damage_type`, `severity`, `requires_public_works` como columnas nullables en `CONTAINER` | Solo se llenan en `DAMAGED`. La alternativa (tabla `CONTAINER_DAMAGE` con historial) es mejor si se quiere saber cuántas veces se rompió un contenedor: hoy el doc no lo pide |
 | 8 | `OUTBOX_EVENT` / `INBOX_EVENT` | No son dominio, pero el módulo publica 8 eventos y consume 10. Sin outbox transaccional, un commit que falla al publicar deja el estado y el bus desincronizados; sin inbox con `message_id` único, un evento reentregado por M4 duplica el `SANCTION_OUTCOME` |
+| 8b | `TICKET_M2_STATE` | M2 no avisa el `IN_PROGRESS`: el estado del ticket lo llevamos nosotros (deducido de lo que publicamos, corregido con el `currentStatus` que M2 informa) para elegir entre `STARTED` y `PROGRESS` al informar la programación (#303). Sin FK: el `ticket_id` es de M2 y puede no tener expediente ni servicio |
 | 9 | Los enums viven en el código, no en tablas de catálogo | Son valores cerrados versionados con el código (33 en total). `SERVICE_TYPE` y `ZONE` sí son tablas: esos los configura el municipio |
 | 10 | `ATTACHMENT` polimórfico y genérico con idempotencia | En vez de endpoints de subida aislados por recurso, `POST /evidence` acepta `owner_type` (`SERVICE`, `ZONE_RESULT`, `INSPECTION`, `CONTAINER`), guarda el archivo en Cloudflare R2 y exige `Idempotency-Key` respaldado por índice único `(owner_type, owner_id, idempotency_key)` para reintentos seguros |
 | 11 | `REPAIR_REQUEST.public_safety_risk` independiente de `severity` | Requerido por el esquema de M3 (`infrastructureRepairRequested`). No se deriva de `severity`: un daño leve puede implicar riesgo peatonal inminente |

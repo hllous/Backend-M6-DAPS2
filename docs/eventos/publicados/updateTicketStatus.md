@@ -30,7 +30,7 @@ attachments[]?, updatedBy, updateOccurredAt
 
 **Resuelto en #314:** `updateTicketStatus()` de `src/events/payloads.ts` manda `{ type: 'EXTERNAL_USER', id: <sub del JWT> }` solo si el `sub` tiene forma de UUID (8-4-4-4-12 hex, laxo como el Core); si no (el JWT es provisorio, [ADR-002](../../decisiones/adr-002-auth-provisoria.md), y M1 documenta `user_id` como `bigint`), manda `id: null` con el mismo `type`. El [schema local](updateTicketStatus.schema.json) ya exige UUID o `null`, y un spec valida los payloads reales contra el paquete de M2 v1.78 cuando está presente.
 
-Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED`/`PROGRESS` siguen sin estructura de `details`. El bloqueante de la fecha agendada sigue abierto — ver más abajo.
+Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED`/`PROGRESS` siguen sin estructura de `details`. La fecha agendada ya no es un bloqueante: M2 confirmó el 20/10 que va como texto en `publicMessage` (ver más abajo).
 
 | Campo | Nota |
 |---|---|
@@ -60,13 +60,29 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 - `STARTED` significa para M2 que el área tomó la gestión del ticket, y **agendar el servicio cuenta**: el ticket pasa a `IN_PROGRESS` y el ciudadano lo ve.
 - Dos formas válidas: **(a)** `STARTED` con la programación en su propio `publicMessage`, o **(b)** `STARTED` al abrir el expediente y la programación como `PROGRESS`. Una reprogramación posterior es otro `PROGRESS`.
 - **El estado del ticket lo tenemos que llevar nosotros** (M2, 20/10): no hay un `ticketUpdated` que avise `IN_PROGRESS`, nuestro `STARTED` es la única fuente. Un `PROGRESS` fuera de estado no rompe nada grave (en `ROUTED` M2 lo trata como prematuro y lo reintenta; en los demás estados inválidos lo registra y lo confirma sin aplicar). Con el ticket en `PENDING_INFORMATION` M2 no acepta `PROGRESS` ni `REJECTED`.
-- Hoy no lo mandamos: se implementa en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).
+
+**Implementado en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303), forma (a):**
+
+- **Qué se manda.** Solo si el servicio tiene `ticketId`. El texto es es-AR y lleva solo fecha y franja: «Su servicio fue programado para el miércoles 21 de octubre de 2026, entre las 08:00 y las 12:30 hs.» (en una reprogramación, «reprogramado»). Sin franja, o con una sola punta, va solo la fecha. Nunca la cuadrilla ni las notas, y sin `progress` ni `details`.
+- **Cuándo.** Al agendar (`POST /services`) y al confirmar una reprogramación (`confirm-reschedule`). `reschedule` sin fecha nueva no publica nada.
+- **Qué `updateType`**, según el estado que conocemos del ticket: `IN_PROGRESS` → `PROGRESS`; `ROUTED`, `IN_REVIEW` o desconocido → `STARTED`; `PENDING_INFORMATION`, terminal (`RESOLVED`, `CLOSED`, `CANCELLED`) o cualquier otro valor → no se publica (queda un log).
+- **Cómo llevamos el estado.** Tabla `ticket_m2_state` (`ticketId`, `status`, `source`, `receivedAt`, `updatedAt`). Se **deduce** al encolar cualquier `updateTicketStatus` (`STARTED` → `IN_PROGRESS`, `INFORMATION_REQUIRED` → `PENDING_INFORMATION`, `RETURNED` → `IN_REVIEW`, `RESOLVED` → `RESOLVED`, `REJECTED` → `CANCELLED`; `PROGRESS` no cambia), en la misma transacción, en un único punto (`OutboxService`). Y se **corrige** con el `currentStatus` de todo `ticketUpdated` de un ticket nuestro, ordenado por `data.updatedAt`: uno recibido manda sobre una deducción, pero uno más viejo que el último recibido no lo pisa. De un ticket ajeno no se guarda nada.
+- **Qué es «estado desconocido».** Solo `null`/`undefined`: un ticket que nunca vimos ni deducimos. Se trata como `ROUTED` (manda `STARTED`). Un `currentStatus` fuera de la lista cerrada de §3 (`REGISTERED`, `IN_REVIEW`, `ROUTED`, `IN_PROGRESS`, `PENDING_INFORMATION`, `DUPLICATE`, `RESOLVED`, `CLOSED`, `CANCELLED`) **no se persiste** (queda un warn saneado), así que no aparece como estado y no puede callar el aviso. El `ticketId` se persiste con un tope de 64 caracteres.
+- **No repetir `STARTED`.** `start()` del servicio y `startReview` del expediente mandan `PROGRESS` (mismo mensaje) si el ticket ya está `IN_PROGRESS`, porque agendar ya lo arrancó.
 
 *Histórico, antes de la respuesta:* `progress` no sirve para la fecha agendada.
 
-**Sexta versión seguida sin una estructura propia.** *Novedad del 13/10:* el paquete de schemas de M2 trae `updateTicketStatus_PROGRESS_programacion.json`, un ejemplo de M3 que informa la programación como **texto en `publicMessage`** de un `PROGRESS` (`progress: 10`). Es la opción de texto de nuestro pedido; su schema fuerza `details: null` en `STARTED` y `PROGRESS`, así que `details.schedule` no va a llegar. Falta que M2 lo confirme, y que decidamos nosotros cuándo mandarlo: `PROGRESS` exige el ticket en `IN_PROGRESS` y hoy `urbanServiceScheduled` no emite nada hacia M2 (ver la tabla de abajo). El campo común `progress` es un `Int` 0..100 (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.75 mantiene "details obligatorio: Ninguno". Necesitamos saber cómo mandar la fecha/franja agendada del servicio: ¿va como texto en `publicMessage`, o van a definir una estructura tipo `details.schedule`? Ver [bloqueantes.md](../../bloqueantes.md#tablero).
+**Sexta versión seguida sin una estructura propia.** *Novedad del 13/10:* el paquete de schemas de M2 trae `updateTicketStatus_PROGRESS_programacion.json`, un ejemplo de M3 que informa la programación como **texto en `publicMessage`** de un `PROGRESS` (`progress: 10`). Es la opción de texto de nuestro pedido; su schema fuerza `details: null` en `STARTED` y `PROGRESS`, así que `details.schedule` no va a llegar. *(M2 lo confirmó el 20/10 y está implementado en #303, ver arriba.)* El campo común `progress` es un `Int` 0..100 (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.75 mantiene "details obligatorio: Ninguno". *(Histórico: la pregunta de entonces —texto en `publicMessage` o una estructura tipo `details.schedule`— quedó resuelta el 20/10: texto en `publicMessage`, sin `details`.)*
 
 ⚠️ **Validación nueva en `PROGRESS`.** La v1.6 (§8.2) exige que aporte al menos uno de `progress`, `publicMessage`, `internalMessage` o `attachments`. Un `PROGRESS` vacío ahora es inválido: afectaría sobre todo al fan-out de `zoneNotServiced` si se implementa (hoy no lo está, ver más abajo).
+
+### Riesgos aceptados del estado del ticket (#303)
+
+1. **Tickets que ya estaban `IN_PROGRESS` antes del deploy no tienen fila**: el primer aviso manda `STARTED` (duplicado) y M2 lo registra y lo confirma sin aplicar, sin daño. No hay backfill.
+2. **Con el ticket en `PENDING_INFORMATION` o en un estado terminal la programación no se avisa**: queda un warn y no hay reintento.
+3. **Un `ticketUpdated` recibido tarde, con un `currentStatus` anterior, puede pisar una deducción posterior** (T1.5 > T1), con efecto leve. Mejora futura: compararlo con el `updatedAt` de la deducción, pero hay desfase de relojes entre M2 y M6.
+4. **La tabla `ticket_m2_state` no tiene purga**: crece un registro por ticket.
+5. **La deducción corre dentro de la transacción de `OutboxService.enqueue`**: si el upsert falla se pierde también el cambio de dominio. Aceptado.
 
 ### `STARTED` antes de `RESOLVED` dejó de ser necesario
 
@@ -99,8 +115,8 @@ Esta es la tabla con la que se implementa. **La columna izquierda son hechos int
 
 | Hecho nuestro | `updateType` | Qué mandamos |
 |---|---|---|
-| `urbanServiceScheduled` | `STARTED` (primera vez) o `PROGRESS` (reprogramación) | **No se emite hoy; definido por M2 el 20/10, implementación en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).** Fecha y franja como texto en `publicMessage`, sin `details`. Agendar un servicio solo dispara `urbanServiceScheduled` hacia M7 |
-| `urbanServiceStarted` | `STARTED` | vacío |
+| `urbanServiceScheduled` | `STARTED` (primera vez) o `PROGRESS` (reprogramación) | **Implementado en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).** Fecha y franja como texto en `publicMessage`, sin `details`. Sale al agendar y en `confirm-reschedule`, junto con (pero aparte de) el `urbanServiceScheduled` hacia M7. `STARTED` o `PROGRESS` según el estado del ticket; si no corresponde, no sale |
+| `urbanServiceStarted` | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage` fijo |
 | `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage`. **Solo con el servicio `IN_PROGRESS`**: antes de arrancar el ticket sigue `ROUTED` y §8.2 rechaza `PROGRESS`, así que un aviso de demora antes de arrancar (`delayType: START`) queda registrado pero no se proyecta (#146) |
 | `urbanServiceCompleted` | `RESOLVED` | `details.resolution.type` + `publicMessage`. **`attachments[]` no se manda**: el payload no lleva evidencia hoy, pendiente de decidir qué adjuntos ve el vecino — ver [bloqueantes.md](../../bloqueantes.md) |
 | `environmentalInspectionScheduled` | `STARTED` | vacío |

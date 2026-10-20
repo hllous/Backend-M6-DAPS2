@@ -62,3 +62,5 @@ El `OutboxDispatcher` se reemplaza por un stub sin `@Interval`. Si no, barre la 
 El job `e2e` de `.github/workflows/ci.yml` levanta `postgres:16` con `services:` y corre `npm run test:e2e`; las migraciones las aplica `global-setup.ts`, igual que en local.
 
 **No es check obligatorio** de la protección de ramas: ahí siguen solo `build` y `test`. La cobertura de los e2e tampoco se suma al 85%, que se sigue midiendo con los unitarios.
+
+**Specs contra el paquete de M2 (v1.78).** `payloads.spec.ts` y `services.service.spec.ts` validan los `updateTicketStatus` reales contra los schemas del paquete de M2 (helper `src/events/m2-contract.testing.ts`, excluido de la cobertura). El paquete vive en `docs/documentacion/`, que no se versiona: **en el CI esos specs se saltean** con un aviso (`console.warn`), no fallan. En local corren si la carpeta existe, o apuntando `M2_V178_SCHEMAS` a la carpeta `schemas/` del paquete.

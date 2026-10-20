@@ -44,7 +44,7 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 | `StreetClosureType` | `TOTAL`, `PARTIAL` |
 | `StreetClosureRequestStatus` | `REQUESTED`, `APPROVED`, `REJECTED`, `ENDED` |
 
-Son 33 enums de dominio (`prisma/schema.prisma` tiene 34: falta `OutboxEventStatus`, de infraestructura: `PENDING`, `SENT`, `FAILED`). `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
+Son 33 enums de dominio (`prisma/schema.prisma` tiene 35: faltan `OutboxEventStatus` —`PENDING`, `SENT`, `FAILED`— y `TicketStateSource` —`DEDUCED`, `RECEIVED`, de dónde salió el estado del ticket en M2 (#303)—, ambos de infraestructura). `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
 
 ## Divergencias con el acuerdo publicado — resueltas
 

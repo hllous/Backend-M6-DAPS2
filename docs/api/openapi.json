@@ -8768,7 +8768,7 @@
       "post": {
         "operationId": "ServicesController_confirmReschedule",
         "summary": "Confirmar la nueva fecha",
-        "description": "RESCHEDULED → SCHEDULED con la fecha y la ventana horaria nuevas.",
+        "description": "RESCHEDULED → SCHEDULED con la fecha y la ventana horaria nuevas. Si el servicio nació de un reclamo (ticketId), le informa la nueva fecha y franja a M2 como texto para el vecino, salvo que el ticket no admita el aviso (pendiente de información o terminado).",
         "parameters": [
           {
             "name": "id",

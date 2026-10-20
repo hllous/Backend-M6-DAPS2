@@ -10,6 +10,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { aFecha, InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent, TicketUpdateType } from '../inbox/consumed-events';
 import { Data, esObjeto, esTexto, requerido } from '../inbox/payload-validation';
+import { esEstadoM2, registrarRecibido } from '../ticket-state';
+import { paraLog } from '../log-safe';
 import { REPORT_TRANSITIONS } from '../../modules/environmental-reports/environmental-reports.service';
 
 /**
@@ -154,6 +156,20 @@ export class TicketsConsumer implements OnModuleInit {
     if (!at && ORDENADOS.includes(updateType)) {
       this.logger.warn(
         `ticketUpdated/${updateType} (${ticketId}) sin occurredAt: se aplica sin poder ordenarlo`,
+      );
+    }
+
+    // El estado que M2 informa (#303). Solo de un ticket nuestro: el filtro de
+    // arriba ya descartó los ajenos, de los que no guardamos nada. Va para todo
+    // updateType, también los que no tienen otro efecto, porque `currentStatus`
+    // es campo común.
+    if (esEstadoM2(data.currentStatus)) {
+      await registrarRecibido(this.prisma, ticketId, data.currentStatus, at);
+    } else if (data.currentStatus !== undefined && data.currentStatus !== null) {
+      // Fuera de la lista de §3: no se guarda (no puede dejar un estado basura que
+      // calle el aviso de programación) y no rompe el handler. Valor de un tercero.
+      this.logger.warn(
+        `ticketUpdated/${paraLog(updateType)}: currentStatus ${paraLog(data.currentStatus, 40)} no es un estado de M2, no se guarda`,
       );
     }
 

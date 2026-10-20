@@ -26,6 +26,10 @@ Depende del discriminador `updateType`. La v1.75 —vigente (WIP), reemplaza a l
 
 La cancelación llega por acá: no hace falta un `ticketCancelled`, que es uno de los huérfanos de la cohorte.
 
+### `currentStatus`: el estado del ticket que llevamos (#303)
+
+De todo `ticketUpdated` de un ticket **nuestro** (`responsibleAreaId = M6`), sea cual sea su `updateType` (también los que no tienen otro efecto), guardamos `data.currentStatus` en `ticket_m2_state` con `source = RECEIVED` y `receivedAt = data.updatedAt` (respaldo: el `occurredAt` del sobre). Sirve para elegir `STARTED` o `PROGRESS` al informar la programación a M2. Manda sobre una deducción nuestra, pero uno **más viejo** que el último recibido no lo pisa. De un ticket ajeno no se persiste nada. **Solo se guarda un `currentStatus` de la lista cerrada de §3** (`REGISTERED`, `IN_REVIEW`, `ROUTED`, `IN_PROGRESS`, `PENDING_INFORMATION`, `DUPLICATE`, `RESOLVED`, `CLOSED`, `CANCELLED`): otro valor se descarta con un warn saneado, sin romper el handler. Ver [`updateTicketStatus`](../publicados/updateTicketStatus.md).
+
 ### Orden: por `data.updatedAt`, no por llegada (#270)
 
 **Desde el 20/10 (M2) se ordena por `data.updatedAt`**, cuándo M2 persistió el cambio, y no por el `occurredAt` del sobre, que es cuándo se publicó y puede ser posterior si la publicación se demoró o se reintentó. El `occurredAt` queda de respaldo si `updatedAt` falta, es ilegible o está más de 5 minutos en el futuro. Los timestamps sirven para descartar un evento viejo que llega tarde, no para decidir el estado del ticket (eso lo define `currentStatus` de M2). No se comparan con timestamps de otro productor (por ejemplo, el `updateOccurredAt` de M3). Donde más abajo dice «`occurredAt`» en este apartado, leer «el timestamp de orden».

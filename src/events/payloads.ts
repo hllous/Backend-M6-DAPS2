@@ -283,12 +283,11 @@ const ACTOR_SISTEMA = 'sistema';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Payload del contrato v1.75 de M2 (sin cambios desde la v1.6), adoptado tal cual.
+ * Payload del contrato v1.78 de M2 (desde la v1.6 solo cambió `updatedBy.id`), adoptado tal cual.
  *
- * La fecha y la franja agendadas **siguen sin viajar**: `progress` es un entero
- * de porcentaje y §8.2 sigue diciendo "details obligatorio: Ninguno" para
- * `STARTED` y `PROGRESS`. Es un bloqueante abierto con M2 desde la v1.5
- * (sigue igual en la v1.75; ver el conteo en docs/bloqueantes.md) — mientras tanto la información va como texto en `publicMessage`.
+ * La fecha y la franja agendadas viajan como **texto en `publicMessage`** (M2,
+ * 20/10; #303): `progress` es un entero de porcentaje y §8.2 dice "details
+ * obligatorio: Ninguno" para `STARTED` y `PROGRESS`, así que no hay otro lugar.
  */
 export function updateTicketStatus(params: {
   ticketId: string;

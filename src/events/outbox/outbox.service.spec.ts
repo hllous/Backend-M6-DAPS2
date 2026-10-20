@@ -95,6 +95,50 @@ describe('OutboxService', () => {
     });
   });
 
+  /**
+   * El estado del ticket en M2 se deduce al encolar un updateTicketStatus, en la
+   * misma transacción: así lo cubren los emisores de servicios y de expedientes
+   * sin tocarlos uno por uno (#303).
+   */
+  describe('estado del ticket en M2 (#303)', () => {
+    const update = (updateType: string, ticketId = 'tck-1') =>
+      entrada({
+        eventType: EventType.UPDATE_TICKET_STATUS,
+        payload: { ticketId, updateType },
+      });
+
+    beforeEach(() => {
+      tx.ticketM2State = { upsert: jest.fn() };
+    });
+
+    it('enqueue deduce el estado de un updateTicketStatus', async () => {
+      await outbox.enqueue(tx, update('STARTED'));
+
+      expect(tx.ticketM2State.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { ticketId: 'tck-1' },
+          create: expect.objectContaining({ status: 'IN_PROGRESS', source: 'DEDUCED' }),
+        }),
+      );
+    });
+
+    it('enqueueMany deduce uno por cada updateTicketStatus', async () => {
+      await outbox.enqueueMany(tx, [update('STARTED', 'a'), entrada(), update('RESOLVED', 'b')]);
+
+      expect(tx.ticketM2State.upsert).toHaveBeenCalledTimes(2);
+    });
+
+    it('un PROGRESS no cambia el estado', async () => {
+      await outbox.enqueue(tx, update('PROGRESS'));
+      expect(tx.ticketM2State.upsert).not.toHaveBeenCalled();
+    });
+
+    it('los demás eventos no tocan la tabla', async () => {
+      await outbox.enqueue(tx, entrada());
+      expect(tx.ticketM2State.upsert).not.toHaveBeenCalled();
+    });
+  });
+
   describe('correlationId y causationId (#267)', () => {
     const TRAZA = {
       correlationId: '8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5',

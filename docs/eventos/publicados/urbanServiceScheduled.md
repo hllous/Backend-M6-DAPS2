@@ -8,9 +8,9 @@ Schema: [`urbanServiceScheduled.schema.json`](urbanServiceScheduled.schema.json)
 
 Al crear el [`Service`](../../entidades/service.md) (`POST /services`), con fecha y zona. Sale siempre, tenga o no `ticketId`, y **aunque todavía no tenga cuadrilla asignada** — `crewId` es opcional al programar.
 
-**No se reemite.** Asignar cuadrilla (`POST /services/:id/assign-crew`) o reprogramar (`reschedule` / `confirm-reschedule`) no vuelve a publicar este evento: sale una sola vez, al crear.
+**No se reemite.** Asignar cuadrilla (`POST /services/:id/assign-crew`) o reprogramar (`reschedule` / `confirm-reschedule`) no vuelve a publicar este evento hacia M7: sale una sola vez, al crear.
 
-**Hoy no dispara nada hacia M2.** M2 confirmó el 20/10 cómo informar la programación (texto en `publicMessage` de un `STARTED` o de un `PROGRESS`, ver `updateTicketStatus.md`); falta implementarlo en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).
+**Si el servicio nació de un reclamo, agendar también le avisa a M2** ([#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303)): un `updateTicketStatus` con la fecha y la franja como texto en `publicMessage` (`STARTED` la primera vez, `PROGRESS` si el ticket ya está `IN_PROGRESS`). Se publica en la misma transacción que este evento. Reprogramar sí avisa a M2, pero en `confirm-reschedule` (cuando hay fecha nueva), no en `reschedule`. Detalle en `updateTicketStatus.md`.
 
 ## Payload
 

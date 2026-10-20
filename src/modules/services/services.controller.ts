@@ -432,7 +432,8 @@ export class ServicesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Confirmar la nueva fecha',
-    description: 'RESCHEDULED → SCHEDULED con la fecha y la ventana horaria nuevas.',
+    description:
+      'RESCHEDULED → SCHEDULED con la fecha y la ventana horaria nuevas. Si el servicio nació de un reclamo (ticketId), le informa la nueva fecha y franja a M2 como texto para el vecino, salvo que el ticket no admita el aviso (pendiente de información o terminado).',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Servicio reprogramado', type: ServiceResponseDto })
@@ -449,8 +450,9 @@ export class ServicesController {
   async confirmReschedule(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ConfirmRescheduleDto,
+    @CurrentUser('userId') userId: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.confirmReschedule(id, dto);
+    return this.servicesService.confirmReschedule(id, dto, userId);
   }
 
   // ─── Resultado por zona ───────────────────────────

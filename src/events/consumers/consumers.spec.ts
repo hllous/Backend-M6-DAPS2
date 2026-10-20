@@ -49,6 +49,11 @@ describe('consumidores de eventos', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       sanctionOutcome: { create: jest.fn() },
+      // Estado del ticket en M2 (#303): sin dato por defecto.
+      ticketM2State: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        upsert: jest.fn().mockResolvedValue({}),
+      },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
@@ -594,6 +599,101 @@ describe('consumidores de eventos', () => {
       expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
       // El re-entregado (#170) tampoco reescribe marcas ni snapshot.
       expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
+    });
+
+    /**
+     * M2 informa el estado del ticket en `currentStatus` de todo `ticketUpdated`.
+     * Lo guardamos porque de eso depende elegir STARTED o PROGRESS al informar
+     * la programación (#303).
+     */
+    describe('estado del ticket en M2 (#303)', () => {
+      const nuestro = { ticketId: 'TCK-1', responsibleAreaId: 'M6' };
+
+      it('guarda el currentStatus como RECEIVED, con data.updatedAt como marca de orden', async () => {
+        await h({
+          ...nuestro,
+          updateType: 'ROUTED',
+          currentStatus: 'ROUTED',
+          updatedAt: '2026-10-20T10:00:00.000Z',
+        });
+
+        expect(prisma.ticketM2State.upsert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { ticketId: 'TCK-1' },
+            create: expect.objectContaining({
+              status: 'ROUTED',
+              source: 'RECEIVED',
+              receivedAt: new Date('2026-10-20T10:00:00.000Z'),
+            }),
+          }),
+        );
+      });
+
+      it('sin updatedAt usa el occurredAt del sobre', async () => {
+        const occurredAt = new Date('2026-10-20T09:00:00.000Z');
+
+        await h({ ...nuestro, updateType: 'CLOSED', currentStatus: 'CLOSED' }, occurredAt);
+
+        expect(prisma.ticketM2State.upsert.mock.calls[0][0].create.receivedAt).toEqual(occurredAt);
+      });
+
+      it('también lo guarda en un updateType que no tiene otro efecto', async () => {
+        await h({ ...nuestro, updateType: 'CONTENT_UPDATED', currentStatus: 'IN_PROGRESS' });
+
+        expect(prisma.ticketM2State.upsert).toHaveBeenCalledTimes(1);
+      });
+
+      it('uno más viejo que el último recibido no lo pisa', async () => {
+        prisma.ticketM2State.findUnique.mockResolvedValue({
+          receivedAt: new Date('2026-10-20T10:00:00.000Z'),
+        });
+
+        await h({
+          ...nuestro,
+          updateType: 'STATUS_CHANGED',
+          currentStatus: 'IN_REVIEW',
+          updatedAt: '2026-10-20T09:00:00.000Z',
+        });
+
+        expect(prisma.ticketM2State.upsert).not.toHaveBeenCalled();
+      });
+
+      it('no persiste nada de un ticket que no es nuestro', async () => {
+        await h({
+          ticketId: 'TCK-9',
+          responsibleAreaId: 'M3',
+          updateType: 'ROUTED',
+          currentStatus: 'ROUTED',
+        });
+
+        expect(prisma.ticketM2State.findUnique).not.toHaveBeenCalled();
+        expect(prisma.ticketM2State.upsert).not.toHaveBeenCalled();
+      });
+
+      it.each(['BASURA', 'X'.repeat(5000), 'IN_PROGRESS\nFALSO'])(
+        'un currentStatus fuera de la lista de M2 (%.20s) no se persiste y no rompe el handler',
+        async (valor) => {
+          const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+          await expect(
+            h({ ...nuestro, updateType: 'CLOSED', currentStatus: valor }),
+          ).resolves.toBeUndefined();
+
+          expect(prisma.ticketM2State.upsert).not.toHaveBeenCalled();
+          // El valor es de un tercero: al log va saneado y acotado.
+          const logueado = warn.mock.calls.map(([m]) => String(m)).join('\n');
+          expect(logueado).toContain('currentStatus');
+          expect(logueado).not.toContain('\n'.concat('FALSO'));
+          expect(logueado.length).toBeLessThan(400);
+          warn.mockRestore();
+        },
+      );
+
+      it.each([undefined, null, 7, ''])('con currentStatus %j no escribe', async (valor) => {
+        await h({ ...nuestro, updateType: 'CLOSED', currentStatus: valor });
+
+        expect(prisma.ticketM2State.upsert).not.toHaveBeenCalled();
+      });
     });
 
     describe('segundo ROUTED de un ticket devuelto (#170)', () => {

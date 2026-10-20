@@ -102,6 +102,7 @@
       "!main.ts",
       "!configure-app.ts",
       "!config/**",
+      "!events/m2-contract.testing.ts",
       "!prisma/**"
     ],
     "coverageThreshold": {
