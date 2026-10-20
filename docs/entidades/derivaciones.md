@@ -23,7 +23,7 @@ Un daño de infraestructura que detectamos pero que no nos corresponde arreglar:
 | Llega [`workOrderScheduled`](../eventos/consumidos/workOrderScheduled.md) | Pasa a en curso |
 | Llega [`workOrderCompleted`](../eventos/consumidos/workOrderCompleted.md) | Se cierra |
 
-Las dos respuestas dependen de que M3 devuelva nuestro `requestId` como `sourceRequestId`; el `sourceRequestId` es obligatorio (uuid) y confirmado. Que M3 dispare `workOrderScheduled` al abrir o al agendar no nos cambia nada (cerrado el 5 oct 2026, ver [bloqueantes.md](../bloqueantes.md#m3--obras-públicas)). La solicitud se cierra con `workOrderCompleted`; no esperamos `workOrderValidated`.
+Las dos respuestas dependen de que M3 devuelva nuestro `requestId` como `sourceRequestId`; el `sourceRequestId` es obligatorio (uuid) y confirmado. Que M3 dispare `workOrderScheduled` al abrir o al agendar no nos cambia nada (cerrado el 5 oct 2026, ver [bloqueantes.md](../integracion/m3.md#m3--obras-públicas)). La solicitud se cierra con `workOrderCompleted`; no esperamos `workOrderValidated`.
 
 Un [`Container`](container.md) con `requiresPublicWorks = true` también le llega a M3, pero por otra vía: el evento `containerDamaged`, no una `RepairRequest`.
 

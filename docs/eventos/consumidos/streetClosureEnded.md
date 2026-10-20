@@ -32,7 +32,7 @@ streetClosureEnded
 
 ## Corte aprobado que expira: M7 no publica nada (M7, 19/10)
 
-M7 solo publica `streetClosureEnded` cuando un corte `ACTIVE` vence su `endDate`. **Un corte `APPROVED` que nunca se activó pasa a `EXPIRED` sin publicar finalización.** Entonces, tras un `streetClosureApproved`, **puede no llegar nunca un `streetClosureEnded`**: nuestra `StreetClosureRequest` queda en `APPROVED` y lo que dependía del corte sigue habilitado sin que nadie lo libere. Hoy no hay ningún mecanismo nuestro que lo detecte (el consumer no mira `endDate` y no hay vencimiento por tiempo); la salida manual es el endpoint que pasa el corte a `ENDED`. Es un gap a resolver, a llevar a M7: confirmar si van a publicar algo al expirar, o si nosotros cerramos por `endDate`. Estado en [bloqueantes.md](../../bloqueantes.md#m7--tránsito-).
+M7 solo publica `streetClosureEnded` cuando un corte `ACTIVE` vence su `endDate`. **Un corte `APPROVED` que nunca se activó pasa a `EXPIRED` sin publicar finalización.** Entonces, tras un `streetClosureApproved`, **puede no llegar nunca un `streetClosureEnded`**: nuestra `StreetClosureRequest` queda en `APPROVED` y lo que dependía del corte sigue habilitado sin que nadie lo libere. Hoy no hay ningún mecanismo nuestro que lo detecte (el consumer no mira `endDate` y no hay vencimiento por tiempo); la salida manual es el endpoint que pasa el corte a `ENDED`. Es un gap a resolver, a llevar a M7: confirmar si van a publicar algo al expirar, o si nosotros cerramos por `endDate`. Estado en [bloqueantes.md](../../integracion/m7.md#m7--tránsito-).
 
 ## El typo, ya resuelto
 

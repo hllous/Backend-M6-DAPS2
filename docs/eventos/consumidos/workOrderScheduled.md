@@ -1,6 +1,6 @@
 # `workOrderScheduled` ← M3
 
-Acuse de la solicitud de reparación que les mandamos. **Contrato cerrado con M3 el 5 oct 2026** ([bloqueantes.md](../../bloqueantes.md#m3--obras-públicas)).
+Acuse de la solicitud de reparación que les mandamos. **Contrato cerrado con M3 el 5 oct 2026** ([bloqueantes.md](../../integracion/m3.md#m3--obras-públicas)).
 
 ## Qué hace M6 al recibirlo
 
@@ -28,7 +28,7 @@ El `data` que propone M3; en el sobre, `causationId` es el `eventId` de nuestro 
 }
 ```
 
-M3 pide a M6 tres cosas: validar sus schemas de `workOrderScheduled` y `workOrderCompleted`, confirmar `workOrderId` UUID con `workOrderNumber` opcional, y correr la prueba `requestId` → `sourceRequestId`. Estado en [bloqueantes.md](../../bloqueantes.md#m3--obras-públicas). El backend de M3 todavía no tiene adaptador RabbitMQ/Core, inbox/outbox ni todos los handlers (su documento, §9).
+M3 pide a M6 tres cosas: validar sus schemas de `workOrderScheduled` y `workOrderCompleted`, confirmar `workOrderId` UUID con `workOrderNumber` opcional, y correr la prueba `requestId` → `sourceRequestId`. Estado en [bloqueantes.md](../../integracion/m3.md#m3--obras-públicas). El backend de M3 todavía no tiene adaptador RabbitMQ/Core, inbox/outbox ni todos los handlers (su documento, §9).
 
 ## Cuándo se dispara
 

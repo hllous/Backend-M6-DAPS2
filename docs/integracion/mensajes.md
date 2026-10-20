@@ -1,0 +1,73 @@
+# Mensajes a otros módulos
+
+> Textos redactados para el canal de la cohorte, con la fecha en que se enviaron. Enviarlos y anotar la fecha es trabajo de una persona, no del repo. Reubicado el 20/10/2026 (#312).
+
+El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (el seguimiento a M9 de #300, que se redactó después, se mandó ese mismo día). Respondieron M9, M7 y M2; M1 no. Las filas ⚠️ de arriba que dicen "aviso pendiente" son los que siguen sin enviar. El texto está escrito para copiar y pegar en el canal de la cohorte; **enviarlos y anotar la fecha en la fila correspondiente es trabajo de una persona, no del repo.**
+
+**→ M2 (Atención Ciudadana)** — *enviado el 20 oct 2026 a las 07:45; M2 respondió el mismo día (ver la sección de M2). Se deja el texto como registro.*
+
+> Cruzamos la v1.75 y no cambia nada de lo que implementamos: el sobre del Core, `updateTicketStatus` y `ticketUpdated` coinciden con lo que ya enviamos y consumimos. `publicId` ya viaja en nuestro modelo como referencia humana y respetamos que no es credencial (no lo usamos para autorizar ni lo aceptamos en el seguimiento público). Nos queda un pedido que ya va por la sexta versión (v1.75): **necesitamos mandarles la fecha y la franja horaria agendadas de un servicio**, y hoy no hay campo. `progress` es un `Int` de porcentaje y §8.2 de la v1.75 mantiene "details obligatorio: Ninguno" para `STARTED`/`PROGRESS`. ¿Lo mandamos como texto dentro de `publicMessage`, o definen algo tipo `details.schedule { scheduledDate, windowFrom, windowTo }`? Con cualquiera de las dos respuestas cerramos el tema; lo que no podemos es seguir sin lugar donde ponerlo.
+
+> Y una confirmación: en el paquete de schemas, el ejemplo `PROGRESS_programacion` manda la fecha y la franja como texto en `publicMessage`. ¿Es la forma oficial de informar la programación? Si lo es, cerramos el pedido. ¿Esperan un `STARTED` antes, aunque el área todavía no haya empezado el trabajo? Y gracias por el paquete: contrastamos nuestros `updateTicketStatus` con su validador y no hay diferencias.
+
+> *(Sobre `occurredAt`: ya no hace falta consultarlo. El sobre del Core que M2 también adopta fija ISO 8601 con offset.)*
+
+**→ M7 (Obras / Espacio público)** — *enviado el 20/10 a las 07:45; M7 respondió el 20/10 (ver la sección de M7). Se deja el texto como registro.*
+
+> Tres diferencias de enums entre su documento y nuestro catálogo, que mandan nuestros valores (ADR-003): `ServiceOrigin` tiene cinco valores (`PLANNED`, `TICKET`, `WEATHER_ALERT`, `INSPECTION`, `MANUAL`), no `SCHEDULED`/`INTERNAL`; `TreeHealthStatus` conserva `WEAKENED` y `DISEASED` separados, no los colapsa en `DECLINING`; y `TreeInterventionType` distingue `FORMATION_PRUNING` de `SAFETY_PRUNING` y usa `REMOVAL`, no `FELLING`. Además, en `streetClosureRequested` mandamos `sourceModule: "M6"`, siguiendo su tabla de campos: su prosa decía `requestingModule` y nos quedamos con la tabla. Si prefieren al revés, avisen y lo cambiamos.
+
+> Y una precisión sobre el sobre nuevo del Core (el que fijó M9 el 7/10 para toda la cohorte): en `streetClosureRequested` el sobre va a traer `sourceModule: "ambiente"` y `data.sourceModule` sigue siendo `"M6"`, porque así lo exige el schema que acordamos. ¿Cuál de los dos leen para rutear la respuesta? Los tres eventos de respuesta nos siguen llegando con `closureRequestId`.
+
+**→ M3 (Infraestructura)** — *enviado el 5 oct 2026, dentro del cierre del contrato*
+
+> En `treeRiskDetected`, `TreeHealthStatus` conserva `WEAKENED` y `DISEASED` como valores separados; no existe `DECLINING` de nuestro lado (ADR-003).
+
+**→ M3 y M7, juntos** — *a M3 enviado el 5 oct 2026; a M7 enviado el 20 oct a las 07:45, respondió el mismo día*
+
+> Aviso operativo: `location.neighborhoodId` les va a llegar **vacío** hasta que M9 publique el catálogo de barrios. El campo pasó a opcional y viaja ausente. Mientras tanto, `location.street` lleva la dirección completa sin partir en calle y número, porque así la guarda nuestro modelo.
+
+**→ Interno**
+
+> Regenerar el PDF del acuerdo publicado (`Acuerdo-Eventos-M6.md` → PDF) y volver a circularlo a la cohorte. El `.md` ya tiene los enums corregidos por ADR-003 (5 oct 2026); el PDF que las contrapartes tienen en la mano todavía muestra los valores viejos.
+
+**→ M9 (Core)** — *enviado el 20/10 a las 07:45; M9 respondió el 20/10 (ver la sección de M9). Se deja el texto como registro de lo que se preguntó.*
+
+> Gracias por el contrato del 7/10: ya adaptamos M6 (exchange `muni.inbox` y cola `q.ambiente` en modo pasivo, sobre del Core, `nack` sin requeue, cliente del token de módulo). Dos cosas las asumimos nosotros y no hace falta que contesten: usamos `occurredAt` (el `occuredAt` de la tabla es un typo, su ejemplo lo escribe bien) y nuestro `sourceModule` es `"ambiente"`, como la cola. Nos quedan estas dudas, que cambian código según cómo se respondan:
+>
+> 1. Si publicamos por AMQP a `muni.inbox`, ¿dónde se valida que `sourceModule` coincida con el módulo del token? El 403 que describen es una respuesta HTTP. ¿Se valida por el usuario AMQP, va el token en un header, o hay un endpoint HTTP para publicar?
+> 2. ¿Hay un usuario AMQP por módulo, con qué permisos (configure/write/read), vhost, y se usa `amqps`?
+> 3. ¿`maxAttempts` es el largo de la cadena 15 s → 1 m → 5 m → 15 m? ¿Qué pasa si es otro valor?
+> 4. Cuando entregan en `q.ambiente`, ¿mandan el sobre tal cual se publicó o agregan campos (por ejemplo `receivedAt`)?
+> 5. ¿`muni.inbox` siempre tiene al menos una cola bindeada? Publicamos con `mandatory: true` y contamos un `basic.return` como fallo.
+> 6. ¿`q.ambiente` es clásica o quorum, y con qué argumentos? La verificamos en modo pasivo y queremos evitar sorpresas.
+> 7. Con la DLQ y la auditoría del Core, ¿siguen haciendo falta `eventProcessingFailed` y `eventRejected`? Proponemos sacarlos.
+> 8. Para `correlationId` y `causationId`, ¿qué validador de UUID usan: RFC estricto (versión y variante) o cualquier 8-4-4-4-12? ¿Y prefieren `causationId` omitido o en `null` cuando no hay causa? Hoy lo omitimos.
+> 9. Siguen sin respuesta desde agosto y septiembre: el catálogo de barrios con `neighborhoodId` estable, si "zona" de ustedes es lo mismo que nuestra zona operativa (que agrupa barrios), si alguien publica `notificationSent`, y la lista de eventos propios del Core.
+>
+> Y para poder probar: ¿se confirma la fecha de las URLs de los ambientes (aprox. 13/10) y cómo nos entregan las credenciales?
+
+**→ M9 (Core), seguimiento ([#300](https://github.com/hllous/Backend-M6-DAPS2/issues/300))** — *enviado el 20 oct 2026; sin respuesta todavía*
+
+> Hola M9, gracias por la respuesta, muy clara. Ya abrimos los issues de nuestro lado: publicar con `userId`, los ajustes por el re-serializado del sobre (`null`, `occurredAt`, UUID) y la prueba contra su Core local. Dos puntos en los que el enunciado no coincide con lo que nos cuentan, y que conviene resolver entre todos:
+>
+> 1. **Barrios y zonas.** El TPO, §9 Core, dice que el Core administra «Barrios, zonas y catálogos globales», y §11 que cada dato tiene un único módulo propietario. Ustedes responden que no tienen datos maestros y que podría ser de Ciudadanos, pero hasta donde vemos nadie más lo tiene asignado. Sin ese catálogo, M3, M6 y M7 mandamos los eventos sin barrio. ¿Lo pueden revisar? Si lo consideran de otro módulo, ¿de cuál y quién lo confirma? Si no nos ponemos de acuerdo, se lo llevamos a la cátedra. Sobre «zona»: tienen razón en que no hay choque, M6 administra sus zonas operativas (§6) y agrupan barrios.
+> 2. **`NotificacionEnviada` / `NotificacionFallida`.** El TPO pone las notificaciones en el Core (§9) y esos eventos figuran como consumidos por varios módulos, el nuestro incluido. Entendemos que hoy no existen en su catálogo. ¿Piensan publicarlos, o hay que sacarlos de todos los módulos? Mientras tanto no tenemos handler.
+>
+> Y dos preguntas técnicas:
+>
+> 3. ¿`exclude_none` también quita los `null` dentro de `data`? Si sí, un schema que exija un campo en `null` lo va a ver ausente.
+> 4. Sobre el usuario AMQP: ¿se va a llamar `ambiente`, como la cola y nuestro `sourceModule`? ¿Cuándo se activa la validación del `user-id`? Queremos tener listo el publisher.
+>
+> Sobre el despliegue: M3 y M7 esperan lo mismo que nosotros. ¿Hay un plazo aproximado para decidir dónde se despliega? Entretanto probamos contra el Core local. Y las credenciales, cuando existan, que lleguen por privado al PO. ¡Gracias! — M6 Ambiente
+
+**→ M1 (Ciudadanos), Issue #161** — *enviado el 20 oct 2026 a las 07:45; sin respuesta todavía*
+
+> Gracias por la lista de roles y por confirmar que el id es el `citizenId`. Para poder autorizar en M6 nos quedan estas dudas: **1)** El JWT: el login que tenemos documentado devuelve `{ user_id, dni, role, auth }` y no trae token. ¿Dónde viaja (en la respuesta, en un header, en una cookie)? ¿Con qué algoritmo está firmado y cómo obtenemos la clave para validarlo (JWKS o clave pública)? ¿Qué claims trae (`sub`, `role`, `exp`, `iss`, `aud`) y cuánto dura? Si pueden pasarnos un token de ejemplo, mejor. **2)** ¿El usuario tiene un área o módulo asociado? Un `RESPONSABLE_AREA` de Rentas y uno de Ambiente tienen el mismo rol: si el token no dice el área, no podemos darle permisos en M6 solo por ese rol. **3)** ¿El `user_id` del login es el mismo número que el `citizenId`? ¿Y el `USR-M1-14` que usan en `updatedBy.id` de los eventos? ¿Pueden mandarlo como string? Como `bigint`, en JSON pierde precisión por encima de 2^53. **4)** ¿Un usuario puede tener más de un rol? **5)** ¿Qué significa `auth: false`? ¿Un login fallido responde 401 o 200 con `auth: false`? **6)** ¿Quién tiene el rol `SERVICIO`? ¿Es lo mismo que el token de servicio que definió M9? Y aparte: en el catálogo v2 estaban `/refresh` y `/logout`, que no aparecen en este documento. ¿Siguen vigentes?
+
+> Sobre los eventos del mismo documento: **1)** `citizenInfoDelivered` y `organizationInfoDelivered` responden a una consulta de M6, pero no vemos qué evento la dispara ni con qué payload. Hoy no los consumimos; si algún día los necesitamos, ¿cómo se piden? **2)** Siguen en el sobre viejo de M2 (`producer`, `subject`, `eventId` `M1-EVT-…`). El Core fijó el suyo el 7/10 para toda la cohorte (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `sourceModule`, `correlationId`, `causationId`, `data`; sin campos extra). Nuestro inbox rechaza un `correlationId` que no es UUID, como el `M6-REQ-000045` de sus ejemplos. **3)** Sus ejemplos de `updateTicketStatus` de M2 (`COMPLETED`, `UPDATED`, `ADDITIONAL_INFO_REQUIRED`, `statusChangedAt`, `AREA_USER`) son del contrato viejo: vale el de M2 v1.75 (`STARTED`, `PROGRESS`, `INFORMATION_REQUIRED`, `RETURNED`, `RESOLVED`, `REJECTED`; `updatedBy` `EXTERNAL_USER` o `SYSTEM`). **4)** `organizationInfoDelivered` sigue con `cuit: 3311` (parece el `organizationId`) y `status: "ACTIVA"`, mientras `organizationRegistered` dice `ACTIVE`.
+
+**→ M2 (Atención Ciudadana), Issue #170** — *enviado el 20 oct 2026 a las 07:45; M2 respondió el mismo día. Se deja el texto como registro.*
+
+> ¿Un ticket puede derivarse dos veces al mismo módulo, con el mismo `ticketId`, después de una devolución (`RETURNED` → `IN_REVIEW` → `ROUTED`)? Si es así, ¿cómo distinguimos ese segundo `ROUTED` de un reintento del primero?
+>
+> Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.

@@ -1,6 +1,6 @@
 # `workOrderCompleted` ← M3
 
-La reparación terminó. Es el cierre de nuestra derivación hacia Obras Públicas. **Contrato cerrado con M3 el 5 oct 2026** ([bloqueantes.md](../../bloqueantes.md#m3--obras-públicas)).
+La reparación terminó. Es el cierre de nuestra derivación hacia Obras Públicas. **Contrato cerrado con M3 el 5 oct 2026** ([bloqueantes.md](../../integracion/m3.md#m3--obras-públicas)).
 
 ## Qué hace M6 al recibirlo
 

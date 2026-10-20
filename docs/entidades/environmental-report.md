@@ -2,7 +2,7 @@
 
 La denuncia ambiental tal como la tramitamos nosotros: ruidos, vertidos, microbasurales, emisiones. Puede nacer de un reclamo de M2 (`ticketId` presente) o de una detección de oficio del inspector.
 
-> **No confundir con el expediente digital de M1** (`caseFile`). En prosa se parecen; en código no, porque los nombres técnicos son distintos. El acta que emitimos **no** va al expediente digital — ver [bloqueantes.md](../bloqueantes.md#m1--ciudadanos--jwt-confirmado-sin-integración-de-dominio-actual).
+> **No confundir con el expediente digital de M1** (`caseFile`). En prosa se parecen; en código no, porque los nombres técnicos son distintos. El acta que emitimos **no** va al expediente digital — ver [bloqueantes.md](../integracion/m1.md#m1--ciudadanos--jwt-confirmado-sin-integración-de-dominio-actual).
 
 ## Campos
 
@@ -54,7 +54,7 @@ stateDiagram-v2
 
 **Un expediente `FORWARDED` también se mueve por lo que haga M2 con el ticket devuelto, sin acción del usuario** (M2, 20/10; #304, #308): si M2 vuelve a derivarlo a M6 llega un `ROUTED` nuevo (otro `eventId`) y el expediente pasa a `UNDER_REVIEW` con el snapshot actualizado; si lo reasigna a otra área (llega un `ROUTED` ajeno, que es un broadcast, del que solo se usan `ticketId` y área) o lo cancela administrativamente, pasa a `CLOSED`. Un `ROUTED` anterior a la devolución que llega tarde no hace ninguna de las dos cosas. Desde cualquier otro estado, un `ROUTED` repetido se ignora. Al reactivar todavía no se publica `STARTED` hacia M2 ([#309](https://github.com/hllous/Backend-M6-DAPS2/issues/309)).
 
-**`NOTICE_ISSUED → CLOSED` por vencimiento de plazo no es un atajo, es el diseño.** M4 no publica ningún evento cuando decide que no corresponde castigo, así que sin ese cierre el expediente quedaría abierto para siempre. Cierra sin `SanctionOutcome`: una desestimación y una demora de M4 se ven igual, y esa imprecisión se aceptó a cambio de no depender de que otro grupo agregue un evento. El barrido corre **cada hora y también al arrancar** (#150): en el free tier de Render el servicio duerme, y sin el barrido de arranque el cierre esperaba a que coincidieran el despertar y la hora en punto. Ver [bloqueantes.md](../bloqueantes.md#resueltos--no-repreguntar).
+**`NOTICE_ISSUED → CLOSED` por vencimiento de plazo no es un atajo, es el diseño.** M4 no publica ningún evento cuando decide que no corresponde castigo, así que sin ese cierre el expediente quedaría abierto para siempre. Cierra sin `SanctionOutcome`: una desestimación y una demora de M4 se ven igual, y esa imprecisión se aceptó a cambio de no depender de que otro grupo agregue un evento. El barrido corre **cada hora y también al arrancar** (#150): en el free tier de Render el servicio duerme, y sin el barrido de arranque el cierre esperaba a que coincidieran el despertar y la hora en punto. Ver [bloqueantes.md](../integracion/resueltos.md#resueltos--no-repreguntar).
 
 ## Qué publica y qué consume
 

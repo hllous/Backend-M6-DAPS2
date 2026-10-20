@@ -56,7 +56,8 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 - [eventos/consumidos/](eventos/consumidos/) — los 10 eventos que este módulo escucha
 - [Acuerdo-Eventos-M6.md](Acuerdo-Eventos-M6.md) — contrato de eventos que circula a las otras cohortes (fuente del PDF; ver [ADR-003](decisiones/adr-003-divergencias-enums.md) por los enums que ya divergen)
 - [Cruce-Eventos-M6.md](Cruce-Eventos-M6.md) — análisis interno del 17/08 que contrasta las listas de eventos de la cohorte; histórico, no se mantiene
-- [bloqueantes.md](bloqueantes.md) — estado vivo de la integración inter-módulo (fuente única)
+- [bloqueantes.md](bloqueantes.md) — tablero de lo abierto en la integración inter-módulo (fuente única)
+- [integracion/](integracion/README.md) — fichas por módulo (M1, M2, M3, M4, M7, M9), historial, resueltos, riesgos y mensajes enviados
 - [enumeraciones.md](enumeraciones.md) — catálogo de valores cerrados
 - [decisiones/](decisiones/) — ADRs (decisiones técnicas de arquitectura)
 - [manual-de-usuario.md](manual-de-usuario.md) — manual para el usuario final (Oficina y Campo), clasificado según Diátaxis; capturas en `manual-de-usuario/img/`
