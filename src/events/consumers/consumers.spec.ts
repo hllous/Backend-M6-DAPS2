@@ -596,6 +596,58 @@ describe('consumidores de eventos', () => {
       expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
     });
 
+    describe('segundo ROUTED de un ticket devuelto (#170)', () => {
+      const rerouted = {
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'ROUTED',
+        currentPriority: 'HIGH',
+        details: { routing: { summary: 'Ruido nuevo', location: { addressLine: 'Lima 100' } } },
+      };
+
+      it('reactiva el expediente devuelto con el snapshot nuevo, sin crear otro', async () => {
+        prisma.environmentalReport.findFirst.mockResolvedValue({
+          id: 'exp-1',
+          status: 'FORWARDED',
+        });
+
+        await h(rerouted);
+
+        expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+        const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+        expect(args.where).toEqual({ id: 'exp-1', status: 'FORWARDED' });
+        expect(args.data).toMatchObject({
+          status: 'UNDER_REVIEW',
+          address: 'Lima 100',
+          priority: 'HIGH',
+        });
+        expect(args.data).not.toHaveProperty('ticketId');
+      });
+
+      it.each(['DISMISSED', 'NO_VIOLATION', 'CLOSED', 'UNDER_REVIEW'])(
+        'un expediente en %s no se reactiva',
+        async (status) => {
+          prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'exp-1', status });
+
+          await h(rerouted);
+
+          expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+          expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
+        },
+      );
+
+      it('si el expediente cambió de estado entre la lectura y el update, no falla', async () => {
+        prisma.environmentalReport.findFirst.mockResolvedValue({
+          id: 'exp-1',
+          status: 'FORWARDED',
+        });
+        prisma.environmentalReport.updateMany.mockResolvedValue({ count: 0 });
+
+        await expect(h(rerouted)).resolves.not.toThrow();
+        expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+      });
+    });
+
     /**
      * ticketUpdated es un broadcast: llega a todos los modulos, y
      * responsibleAreaId dice a quien le toca (§2). Sin este filtro, un
