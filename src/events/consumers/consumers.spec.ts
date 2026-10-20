@@ -596,6 +596,58 @@ describe('consumidores de eventos', () => {
       expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
     });
 
+    describe('segundo ROUTED de un ticket devuelto (#170)', () => {
+      const rerouted = {
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'ROUTED',
+        currentPriority: 'HIGH',
+        details: { routing: { summary: 'Ruido nuevo', location: { addressLine: 'Lima 100' } } },
+      };
+
+      it('reactiva el expediente devuelto con el snapshot nuevo, sin crear otro', async () => {
+        prisma.environmentalReport.findFirst.mockResolvedValue({
+          id: 'exp-1',
+          status: 'FORWARDED',
+        });
+
+        await h(rerouted);
+
+        expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+        const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+        expect(args.where).toEqual({ id: 'exp-1', status: 'FORWARDED' });
+        expect(args.data).toMatchObject({
+          status: 'UNDER_REVIEW',
+          address: 'Lima 100',
+          priority: 'HIGH',
+        });
+        expect(args.data).not.toHaveProperty('ticketId');
+      });
+
+      it.each(['DISMISSED', 'NO_VIOLATION', 'CLOSED', 'UNDER_REVIEW'])(
+        'un expediente en %s no se reactiva',
+        async (status) => {
+          prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'exp-1', status });
+
+          await h(rerouted);
+
+          expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+          expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
+        },
+      );
+
+      it('si el expediente cambió de estado entre la lectura y el update, no falla', async () => {
+        prisma.environmentalReport.findFirst.mockResolvedValue({
+          id: 'exp-1',
+          status: 'FORWARDED',
+        });
+        prisma.environmentalReport.updateMany.mockResolvedValue({ count: 0 });
+
+        await expect(h(rerouted)).resolves.not.toThrow();
+        expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+      });
+    });
+
     /**
      * ticketUpdated es un broadcast: llega a todos los modulos, y
      * responsibleAreaId dice a quien le toca (§2). Sin este filtro, un
@@ -724,6 +776,25 @@ describe('consumidores de eventos', () => {
 
       const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
       expect(args.data.citizenResponse).toBe('Frente al 1240, de noche');
+    });
+
+    it('INFORMATION_PROVIDED de una reclasificación (purpose) se ignora aunque el área sea M6', async () => {
+      // Ejemplo de M2 v1.77: responsibleAreaId es el provisional, que para un ticket
+      // que devolvimos sigue siendo M6. No es una respuesta a un pedido nuestro.
+      await h({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'INFORMATION_PROVIDED',
+        currentStatus: 'IN_REVIEW',
+        details: {
+          informationResponse: {
+            message: 'M2 recibió los datos solicitados para revisar la clasificación.',
+            purpose: 'RECLASSIFICATION',
+          },
+        },
+      });
+
+      expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
     });
 
     it('INFORMATION_PROVIDED con solo adjuntos se registra sin romper', async () => {

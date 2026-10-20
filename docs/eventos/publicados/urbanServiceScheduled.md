@@ -10,7 +10,7 @@ Al crear el [`Service`](../../entidades/service.md) (`POST /services`), con fech
 
 **No se reemite.** Asignar cuadrilla (`POST /services/:id/assign-crew`) o reprogramar (`reschedule` / `confirm-reschedule`) no vuelve a publicar este evento: sale una sola vez, al crear.
 
-**No dispara nada hacia M2.** A pesar de que el diseño original preveía un [`updateTicketStatus / PROGRESS`](updateTicketStatus.md) con la fecha agendada, hoy `POST /services` no proyecta nada hacia M2 — ver el bloqueante en `updateTicketStatus.md`.
+**Hoy no dispara nada hacia M2.** M2 confirmó el 20/10 cómo informar la programación (texto en `publicMessage` de un `STARTED` o de un `PROGRESS`, ver `updateTicketStatus.md`); falta implementarlo en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).
 
 ## Payload
 

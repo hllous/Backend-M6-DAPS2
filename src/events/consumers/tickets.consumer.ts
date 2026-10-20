@@ -185,8 +185,13 @@ export class TicketsConsumer implements OnModuleInit {
     at: Date | null,
   ): Promise<void> {
     const existente = await this.prisma.environmentalReport.findFirst({ where: { ticketId } });
-    if (existente) {
-      this.logger.log(`ticketUpdated/ROUTED: el ticket ${ticketId} ya tiene expediente abierto`);
+    // Un reintento del mismo ROUTED no llega acá: el inbox lo descarta por
+    // `eventId`. Si llega, es una derivación nueva (M2, 20/10): solo puede ser
+    // de un ticket que devolvimos, así que lo único que se reactiva es FORWARDED.
+    if (existente && existente.status !== S.FORWARDED) {
+      this.logger.log(
+        `ticketUpdated/ROUTED: el ticket ${ticketId} ya tiene expediente (${existente.status}), no se reactiva`,
+      );
       return;
     }
 
@@ -202,38 +207,54 @@ export class TicketsConsumer implements OnModuleInit {
     // deja su propio occurredAt como marca.
     const marca = at && new Date(at.getTime() - 1);
 
+    const snapshot = {
+      // Campo común desde la v1.70 (§7.1). Solo para mostrar y buscar: la
+      // correlación sigue siendo por ticketId.
+      publicId: typeof data.publicId === 'string' ? data.publicId : null,
+      reportType: this.tipoDeDenuncia(nombre),
+      address: this.direccion(location),
+      // La v1.6 sacó latitude/longitude de `location` (§5.4): quedan en null
+      // salvo que M2 las mande igual. Se georreferencia por `address`.
+      lat: location.latitude != null ? Number(location.latitude) : null,
+      lng: location.longitude != null ? Number(location.longitude) : null,
+      priority,
+      // El snapshot trae el escalamiento vigente (§7.4). Si M2 lo escaló antes
+      // de derivar, no va a llegar un ESCALATION_CHANGED que lo marque.
+      escalated: escalated ?? false,
+      // El snapshot ya refleja lo anterior a su occurredAt: un cambio más
+      // viejo que el Core reintenta después no lo pisa, y uno más nuevo que
+      // llegó antes y falló sí aplica (#275). Solo marca lo que el snapshot
+      // trae: sin prioridad o sin escalamiento no hay qué proteger, y
+      // `citizenResponse` nunca viene, así que una respuesta anterior al
+      // ROUTED todavía puede guardarse.
+      ticketStatusAt: marca,
+      priorityChangedAt: priority ? marca : null,
+      escalationChangedAt: escalated !== null ? marca : null,
+      // Solo lo que el vecino aceptó exponer: si es anónimo no guardamos
+      // identidad.
+      reporterSnapshot: data.isAnonymous
+        ? { isAnonymous: true }
+        : { isAnonymous: false, citizenId: data.citizenId ?? null },
+    };
+
+    if (existente) {
+      // Re-derivación tras una devolución: se reactiva el expediente con el
+      // snapshot nuevo en vez de crear otro. El estado va en el `where`: un
+      // reproceso del mismo evento ya no lo encuentra en FORWARDED.
+      const { count } = await this.prisma.environmentalReport.updateMany({
+        where: { id: existente.id, status: S.FORWARDED },
+        data: { ...snapshot, status: S.UNDER_REVIEW },
+      });
+      this.logger.log(
+        count
+          ? `ticketUpdated/ROUTED: expediente ${existente.id} reactivado, M2 volvió a derivar el reclamo ${ticketId}`
+          : `ticketUpdated/ROUTED: el expediente ${existente.id} cambió de estado mientras tanto, no se reactiva`,
+      );
+      return;
+    }
+
     const report = await this.prisma.environmentalReport.create({
-      data: {
-        ticketId,
-        // Campo común desde la v1.70 (§7.1). Solo para mostrar y buscar: la
-        // correlación sigue siendo por ticketId.
-        publicId: typeof data.publicId === 'string' ? data.publicId : null,
-        reportType: this.tipoDeDenuncia(nombre),
-        address: this.direccion(location),
-        // La v1.6 sacó latitude/longitude de `location` (§5.4): quedan en null
-        // salvo que M2 las mande igual. Se georreferencia por `address`.
-        lat: location.latitude != null ? Number(location.latitude) : null,
-        lng: location.longitude != null ? Number(location.longitude) : null,
-        priority,
-        // El snapshot trae el escalamiento vigente (§7.4). Si M2 lo escaló antes
-        // de derivar, no va a llegar un ESCALATION_CHANGED que lo marque.
-        escalated: escalated ?? false,
-        // El snapshot ya refleja lo anterior a su occurredAt: un cambio más
-        // viejo que el Core reintenta después no lo pisa, y uno más nuevo que
-        // llegó antes y falló sí aplica (#275). Solo marca lo que el snapshot
-        // trae: sin prioridad o sin escalamiento no hay qué proteger, y
-        // `citizenResponse` nunca viene, así que una respuesta anterior al
-        // ROUTED todavía puede guardarse.
-        ticketStatusAt: marca,
-        priorityChangedAt: priority ? marca : null,
-        escalationChangedAt: escalated !== null ? marca : null,
-        // Solo lo que el vecino aceptó exponer: si es anónimo no guardamos
-        // identidad.
-        reporterSnapshot: data.isAnonymous
-          ? { isAnonymous: true }
-          : { isAnonymous: false, citizenId: data.citizenId ?? null },
-        status: S.RECEIVED,
-      },
+      data: { ticketId, ...snapshot, status: S.RECEIVED },
     });
 
     this.logger.log(
@@ -347,7 +368,16 @@ export class TicketsConsumer implements OnModuleInit {
     // (§7.6). `publicMessage` es la glosa de M2 ("El ciudadano aportó la
     // información solicitada."), no la respuesta: no se usa de respaldo.
     const details = (data.details ?? {}) as Record<string, unknown>;
-    const message = (details.informationResponse as Record<string, unknown> | undefined)?.message;
+    const response = details.informationResponse as Record<string, unknown> | undefined;
+    // v1.77 §2: una reclasificación es entre M2 y el vecino, y ningún módulo operativo
+    // actúa por ella aunque responsibleAreaId coincida (es el provisional).
+    if (response?.purpose === 'RECLASSIFICATION') {
+      this.logger.log(
+        `ticketUpdated/INFORMATION_PROVIDED de reclasificación (${ticketId}): se ignora`,
+      );
+      return;
+    }
+    const message = response?.message;
     // ponytail: los adjuntos quedan como texto porque el expediente no tiene
     // dónde guardarlos, y la url puede ser temporal (§5.3). Campo propio si hay
     // que conservar el archivo.
