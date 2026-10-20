@@ -963,7 +963,7 @@ describe('consumidores de eventos', () => {
 
         expect(prisma.environmentalReport.updateMany).toHaveBeenCalledWith({
           where: { id: 'exp-1', status: 'FORWARDED' },
-          data: { status: 'CLOSED' },
+          data: expect.objectContaining({ status: 'CLOSED', informationRequestedAt: null }),
         });
       });
 
@@ -1199,6 +1199,54 @@ describe('consumidores de eventos', () => {
         },
       );
 
+      // Solo los updateType que implican un cambio de estado cierran la solicitud: uno
+      // atrasado de otro tipo puede traer un currentStatus viejo (IN_PROGRESS) mientras
+      // M2 ya está en PENDING_INFORMATION.
+      it.each([
+        'STATUS_CHANGED',
+        'ROUTED',
+        'REOPENED',
+        'RESOLVED',
+        'CLOSED',
+        'CANCELLED',
+        'DUPLICATE_LINKED',
+      ])('%s con currentStatus IN_PROGRESS cierra la solicitud', async (updateType) => {
+        prisma.environmentalReport.findFirst.mockResolvedValue(null);
+        await h({ ...nuestro, updateType, currentStatus: 'IN_PROGRESS' }).catch(() => undefined);
+        expect(cierres()).toHaveLength(1);
+      });
+
+      it.each([
+        'PRIORITY_CHANGED',
+        'ESCALATION_CHANGED',
+        'CONTENT_UPDATED',
+        'PROGRESS',
+        'INFORMATION_REQUIRED',
+      ])('%s con currentStatus IN_PROGRESS NO cierra la solicitud', async (updateType) => {
+        await h({
+          ...nuestro,
+          updateType,
+          currentStatus: 'IN_PROGRESS',
+          currentPriority: 'HIGH',
+          details: { escalation: { active: true } },
+        }).catch(() => undefined);
+        expect(cierres()).toHaveLength(0);
+      });
+
+      it('una respuesta del vecino más nueva o del mismo instante no se pisa (lt estricto)', async () => {
+        await h({
+          ...nuestro,
+          updateType: 'STATUS_CHANGED',
+          currentStatus: 'IN_PROGRESS',
+          updatedAt: '2026-10-20T12:00:00Z',
+        });
+        const [[args]] = cierres();
+        // citizenResponseAt >= updatedAt del evento queda fuera: ni más nueva ni empate.
+        expect(args.where.OR[1]).toEqual({
+          citizenResponseAt: { lt: new Date('2026-10-20T12:00:00Z') },
+        });
+      });
+
       it('PENDING_INFORMATION no la cierra', async () => {
         await h({
           ...nuestro,
@@ -1216,7 +1264,7 @@ describe('consumidores de eventos', () => {
       it('una reclasificación (purpose) no la cierra aunque el ticket siga en revisión', async () => {
         await h({
           ...nuestro,
-          updateType: 'INFORMATION_PROVIDED',
+          updateType: 'STATUS_CHANGED',
           currentStatus: 'IN_REVIEW',
           details: { informationResponse: { message: 'm', purpose: 'RECLASSIFICATION' } },
         });
@@ -1315,8 +1363,44 @@ describe('consumidores de eventos', () => {
 
       expect(prisma.environmentalReport.updateMany).toHaveBeenCalledWith({
         where: { id: 'rep-1', status: S.UNDER_REVIEW },
-        data: { status: S.DISMISSED },
+        // Sale de UNDER_REVIEW: una solicitud pendiente quedaría pegada y bloquearía close().
+        data: {
+          status: S.DISMISSED,
+          informationRequestedAt: null,
+          informationRequestMessage: null,
+          informationRequestRequiredBy: null,
+        },
       });
+    });
+
+    it('CANCELLED sin currentStatus apaga la solicitud pendiente al descartar el expediente', async () => {
+      prisma.environmentalReport.findFirst.mockResolvedValue({
+        id: 'rep-1',
+        status: S.UNDER_REVIEW,
+        informationRequestedAt: new Date(),
+      });
+
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'CANCELLED' });
+
+      const dismiss = prisma.environmentalReport.updateMany.mock.calls.find(
+        ([a]: any) => a.data.status === S.DISMISSED,
+      );
+      expect(dismiss[0].data).toMatchObject({
+        informationRequestedAt: null,
+        informationRequestMessage: null,
+        informationRequestRequiredBy: null,
+      });
+    });
+
+    it('CANCELLED sobre un FORWARDED lo cierra y limpia la solicitud por simetría', async () => {
+      prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'rep-1', status: S.FORWARDED });
+
+      await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'CANCELLED' });
+
+      const cierre = prisma.environmentalReport.updateMany.mock.calls.find(
+        ([a]: any) => a.data.status === S.CLOSED,
+      );
+      expect(cierre[0].data).toMatchObject({ informationRequestedAt: null });
     });
 
     // ─── #270: un reintento atrasado no pisa un dato más nuevo ──

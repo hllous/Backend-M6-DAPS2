@@ -377,6 +377,11 @@ export class EnvironmentalReportsService {
   /**
    * Las mueve la inspección y el acta, no un endpoint propio del expediente.
    * Se exponen para que esos módulos las apliquen dentro de su transacción.
+   *
+   * A diferencia de `transition()`, no apaga la solicitud de información
+   * pendiente (#169). Hoy ningún llamador sale de UNDER_REVIEW por acá; el que lo
+   * haga tiene que limpiar `informationRequest*` en su `data`, o la marca queda
+   * pegada y `forward`/`dismiss`/`close` dan 409 para siempre.
    */
   async applyTransition(
     tx: Prisma.TransactionClient,
