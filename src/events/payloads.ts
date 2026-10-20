@@ -238,11 +238,10 @@ function seccion(s: ClosureStreet): string {
 /**
  * La solicitud de corte, en el esquema unificado con la de M3 (30/08).
  *
- * `sourceModule` va como `"M6"`, que es lo que dice la tabla de campos de M7.
- * Su mensaje del 02/09 se contradecía —la prosa hablaba de `requestingModule`
- * con valores "Obras"/"Ambiente"— y se resolvió a favor de la tabla. Sus tres
- * eventos de respuesta sí usan `requestingModule`; es probable que hayan
- * mezclado el campo de ida con el de vuelta. Ver bloqueantes.md.
+ * `sourceModule` va como `"M6"`, que es lo que dice la tabla de campos de M7
+ * y lo que M7 confirmó leer el 20/10. Sus respuestas devuelven `requestingModule`
+ * ("ambiente" para nosotros) dentro de `data`: son dos campos distintos, no se
+ * mezclaron. Ver bloqueantes.md.
  */
 export function streetClosureRequested(
   request: StreetClosureRequest & { streets: ClosureStreet[] },

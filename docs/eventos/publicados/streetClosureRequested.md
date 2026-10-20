@@ -21,7 +21,7 @@ closureType?, requestedAt
 | Campo | Nota |
 |---|---|
 | `closureRequestId` | Nuestro. Antes se llamaba `requestId` — renombrado para compartir esquema con la solicitud que manda M3 |
-| `sourceModule` | `M3` \| `M6`. Para nosotros, siempre `M6` |
+| `sourceModule` | `M3` \| `M6`. Para nosotros, siempre `M6`. M7 confirmó el 20/10 que lee este campo (el `sourceModule: "ambiente"` del sobre es solo el productor ante el Core) |
 | `sourceRef` | El `serviceId` o `interventionId` que origina el corte. En la solicitud de M3 cumple el mismo rol que su `workOrderId` |
 | `affectedSections[]` | Antes `streets[]` |
 | `requestedFrom`, `requestedTo` | Antes `from` / `to` |

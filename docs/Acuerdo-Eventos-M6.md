@@ -404,18 +404,18 @@ Lo único que puede interesarles: cuando constatamos una infracción ambiental e
 Payloads reales, del documento de referencia que publicó M7:
 ```
 streetClosureApproved
-  streetClosureId, closureRequestId, requestingModule (Obras|Ambiente),
+  streetClosureId, closureRequestId, requestingModule ("ambiente" para nosotros),
   startDate, endDate, affectedStreet[],
   detours[ { street, alternateRoute } ], conditions[]
 
 streetClosureRejected
-  closureRequestId, rejectionReason, requestingModule (Obras|Ambiente)
+  closureRequestId, rejectionReason, requestingModule ("ambiente" para nosotros)
 
 streetClosureEnded
   streetClosureId, closureRequestId, completionDateTime, notes
 ```
 
-✅ **Ya no es el diseño tentativo `sourceRequestId`/`sourceModule`/`from`/`to`.** Los nombres reales son `closureRequestId`, `requestingModule` (`"Obras"` | `"Ambiente"` — nosotros somos `"Ambiente"`) y `startDate`/`endDate`.
+✅ **Ya no es el diseño tentativo `sourceRequestId`/`sourceModule`/`from`/`to`.** Los nombres reales son `closureRequestId`, `requestingModule` (para nosotros, `"ambiente"` en minúscula, confirmado por M7 el 20/10) y `startDate`/`endDate`.
 
 ✅ **`streetClosureEnded` ya correlaciona por sí solo (30/08).** Hasta el 25/08 no traía `closureRequestId` y había que persistir `streetClosureId` desde el `streetClosureApproved` anterior para poder cerrar la dependencia. El documento de referencia nuevo ya lo incluye directamente.
 
