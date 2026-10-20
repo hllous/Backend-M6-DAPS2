@@ -16,6 +16,7 @@ import {
   EnvironmentalReportResponseDto,
   QueryEnvironmentalReportsDto,
   ReportStatusChangeDto,
+  RequestInformationDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, CurrentUser } from '../../common/decorators';
@@ -168,6 +169,41 @@ export class EnvironmentalReportsController {
     @CurrentUser('userId') userId: string,
   ): Promise<EnvironmentalReportResponseDto> {
     return this.reportsService.dismiss(id, dto.reason, userId);
+  }
+
+  @Post(':id/request-information')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Pedirle información al vecino',
+    description:
+      'Durante la revisión (UNDER_REVIEW, con reclamo de M2) le pide al vecino algo más, por ejemplo una foto. Hacia M2 sale como INFORMATION_REQUIRED y el ticket pasa a PENDING_INFORMATION. El expediente sigue en UNDER_REVIEW con la solicitud pendiente (informationRequestPending) hasta que M2 avisa la respuesta, que queda en citizenResponse. Solo puede haber una solicitud pendiente por reclamo.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID del expediente', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Solicitud registrada y enviada a M2',
+    type: EnvironmentalReportResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Mensaje vacío o demasiado largo, o requiredBy inválido o en el pasado',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse(AUTH)
+  @ApiResponse(NOT_FOUND)
+  @ApiResponse({
+    status: 409,
+    description:
+      'Expediente sin reclamo, fuera de UNDER_REVIEW, con una solicitud ya pendiente o con el ticket en un estado de M2 que no la admite',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse(SERVER)
+  async requestInformation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RequestInformationDto,
+    @CurrentUser('userId') userId: string,
+  ): Promise<EnvironmentalReportResponseDto> {
+    return this.reportsService.requestInformation(id, dto, userId);
   }
 
   @Post(':id/close')

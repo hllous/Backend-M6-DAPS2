@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { EnvironmentalReport, EnvironmentalReportStatus as S, Prisma } from '@prisma/client';
-import { QueryEnvironmentalReportsDto } from './dto';
+import { QueryEnvironmentalReportsDto, RequestInformationDto } from './dto';
+import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from '../../events/m2-contract.testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
 import { EnvironmentalReportsService, REPORT_TRANSITIONS } from './environmental-reports.service';
@@ -36,6 +37,9 @@ describe('EnvironmentalReportsService', () => {
       priority: 'HIGH',
       escalated: false,
       citizenResponse: null,
+      informationRequestedAt: null,
+      informationRequestMessage: null,
+      informationRequestRequiredBy: null,
       deadlineAt: null,
       createdAt: new Date('2026-08-01T10:00:00.000Z'),
       updatedAt: new Date('2026-08-02T10:00:00.000Z'),
@@ -50,6 +54,8 @@ describe('EnvironmentalReportsService', () => {
         findMany: jest.fn().mockResolvedValue([expediente()]),
         count: jest.fn().mockResolvedValue(1),
         update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn(),
       },
       // Estado del ticket en M2 (#303): sin dato por defecto.
       ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
@@ -575,6 +581,62 @@ describe('EnvironmentalReportsService', () => {
     });
   });
 
+  // ─── Solicitud de información pendiente (#169) ──────
+
+  describe('con una solicitud de información pendiente', () => {
+    const pendiente = (status: S) => expediente({ status, informationRequestedAt: new Date() });
+
+    it.each([
+      [
+        'forward',
+        (s: EnvironmentalReportsService) => s.forward(ID, 'motivo', ACTOR),
+        S.UNDER_REVIEW,
+      ],
+      [
+        'dismiss',
+        (s: EnvironmentalReportsService) => s.dismiss(ID, 'motivo', ACTOR),
+        S.UNDER_REVIEW,
+      ],
+      ['close', (s: EnvironmentalReportsService) => s.close(ID, ACTOR), S.NO_VIOLATION],
+      ['close', (s: EnvironmentalReportsService) => s.close(ID, ACTOR), S.FORWARDED],
+    ])('%s es 409 y no escribe ni publica (%#)', async (_n, accion, desde) => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(pendiente(desde));
+
+      await expect(accion(service)).rejects.toThrow(/solicitud de información al vecino pendiente/);
+      expect(prisma.environmentalReport.update).not.toHaveBeenCalled();
+      expect(outbox.enqueueMany).not.toHaveBeenCalled();
+    });
+
+    it('sin pendiente, close desde FORWARDED sigue yendo (no publica nada)', async () => {
+      const { escrito, encolado } = await transicionar(S.FORWARDED, (s) => s.close(ID, ACTOR));
+      expect(escrito.data.status).toBe(S.CLOSED);
+      expect(encolado).toEqual([]);
+    });
+
+    it('sin pendiente, forward y dismiss siguen yendo', async () => {
+      await transicionar(S.UNDER_REVIEW, (s) => s.forward(ID, 'motivo', ACTOR));
+      prisma.environmentalReport.update.mockClear();
+      const { escrito } = await transicionar(S.UNDER_REVIEW, (s) => s.dismiss(ID, 'motivo', ACTOR));
+      expect(escrito.data.status).toBe(S.DISMISSED);
+    });
+
+    // Una marca pegada bloquearía para siempre todo pedido nuevo: al salir de
+    // UNDER_REVIEW por cualquier camino de `transition` se apaga.
+    it('transition limpia la solicitud al salir de UNDER_REVIEW, y no al entrar', async () => {
+      const { escrito } = await transicionar(S.NOTICE_ISSUED, (s) => s.close(ID, ACTOR));
+      expect(escrito.data).toMatchObject({
+        status: S.CLOSED,
+        informationRequestedAt: null,
+        informationRequestMessage: null,
+        informationRequestRequiredBy: null,
+      });
+
+      prisma.environmentalReport.update.mockClear();
+      const { escrito: alEntrar } = await transicionar(S.RECEIVED, (s) => s.startReview(ID, ACTOR));
+      expect(alEntrar.data).toEqual({ status: S.UNDER_REVIEW });
+    });
+  });
+
   // ─── applyTransition, la puerta para inspección y acta ──
 
   describe('applyTransition', () => {
@@ -677,6 +739,180 @@ describe('EnvironmentalReportsService', () => {
 
       expect(dto.lat).toBe(-34.6037);
       expect(dto.lng).toBeNull();
+    });
+  });
+
+  // ─── Pedir información al vecino (#169) ─────────────
+
+  describe('requestInformation', () => {
+    const itM2 = PAQUETE_M2_PRESENTE ? it : it.skip;
+    const pedido = (over: Partial<RequestInformationDto> = {}): RequestInformationDto =>
+      ({ message: 'Necesito una foto más del frente.', ...over }) as RequestInformationDto;
+    const enRevision = (over: Partial<EnvironmentalReport> = {}) =>
+      expediente({ status: S.UNDER_REVIEW, ...over });
+
+    beforeEach(() => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(enRevision());
+      prisma.environmentalReport.findUniqueOrThrow.mockResolvedValue(
+        enRevision({ informationRequestedAt: new Date('2026-10-20T12:00:00.000Z') }),
+      );
+    });
+
+    it('marca la solicitud y encola INFORMATION_REQUIRED en la misma transacción', async () => {
+      const dto = await service.requestInformation(
+        ID,
+        pedido({ internalNote: 'La foto anterior salió movida.' }),
+        ACTOR,
+      );
+
+      const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+      // El where actúa de guard: estado y "sin pendiente" se verifican al escribir.
+      expect(args.where).toEqual({ id: ID, status: S.UNDER_REVIEW, informationRequestedAt: null });
+      expect(args.data).toMatchObject({
+        informationRequestMessage: 'Necesito una foto más del frente.',
+        informationRequestRequiredBy: null,
+      });
+      expect(args.data.informationRequestedAt).toBeInstanceOf(Date);
+      const [tx, eventos] = outbox.enqueueMany.mock.calls[0];
+      expect(tx).toBe(prisma);
+      expect(eventos).toHaveLength(1);
+      expect(eventos[0].payload).toMatchObject({
+        ticketId: 'TCK-2026-004512',
+        updateType: 'INFORMATION_REQUIRED',
+        publicMessage: 'Necesito una foto más del frente.',
+        internalMessage: 'La foto anterior salió movida.',
+        details: { informationRequest: { messageForCitizen: 'Necesito una foto más del frente.' } },
+        updatedBy: { type: 'EXTERNAL_USER', id: ACTOR },
+      });
+      expect(eventos[0].payload.details.informationRequest.requiredBy).toBeUndefined();
+      expect(dto.informationRequestPending).toBe(true);
+    });
+
+    it('una fecha YYYY-MM-DD vence a las 23:59:59 de ese día argentino', async () => {
+      await service.requestInformation(ID, pedido({ requiredBy: '2999-01-10' }), ACTOR);
+
+      const expected = new Date('2999-01-11T02:59:59.000Z');
+      const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+      expect(args.data.informationRequestRequiredBy).toEqual(expected);
+      const [, eventos] = outbox.enqueueMany.mock.calls[0];
+      expect(eventos[0].payload.details.informationRequest.requiredBy).toBe(expected.toISOString());
+    });
+
+    it('un ISO completo se respeta tal cual', async () => {
+      await service.requestInformation(
+        ID,
+        pedido({ requiredBy: '2999-01-10T12:00:00-03:00' }),
+        ACTOR,
+      );
+
+      const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+      expect(args.data.informationRequestRequiredBy).toEqual(new Date('2999-01-10T15:00:00.000Z'));
+    });
+
+    it('requiredBy en el pasado es 400 y no escribe nada', async () => {
+      await expect(
+        service.requestInformation(ID, pedido({ requiredBy: '2020-01-01' }), ACTOR),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
+    });
+
+    // El 400 es de la entrada: va antes de los 409 de estado, pero después del 404.
+    it('requiredBy pasado gana a los 409, pero no al 404', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(enRevision({ ticketId: null }));
+      await expect(
+        service.requestInformation(ID, pedido({ requiredBy: '2020-01-01' }), ACTOR),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      prisma.environmentalReport.findUnique.mockResolvedValue(null);
+      await expect(
+        service.requestInformation(ID, pedido({ requiredBy: '2020-01-01' }), ACTOR),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('una nota interna en blanco no viaja como internalMessage', async () => {
+      await service.requestInformation(ID, pedido({ internalNote: '' }), ACTOR);
+
+      const [, eventos] = outbox.enqueueMany.mock.calls[0];
+      expect(eventos[0].payload).not.toHaveProperty('internalMessage');
+    });
+
+    itM2('con nota en blanco el payload sigue validando contra M2 v1.78', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(
+        enRevision({ ticketId: '550e8400-e29b-41d4-a716-446655440000' }),
+      );
+      await service.requestInformation(ID, pedido({ internalNote: '' }), ACTOR);
+
+      const [, eventos] = outbox.enqueueMany.mock.calls[0];
+      expect(erroresM2UpdateTicketStatus(eventos[0].payload)).toEqual([]);
+    });
+
+    it('404 si el expediente no existe', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(null);
+      await expect(service.requestInformation(ID, pedido(), ACTOR)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('409 si el expediente no nació de un reclamo: no hay a quién preguntarle', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(enRevision({ ticketId: null }));
+      await expect(service.requestInformation(ID, pedido(), ACTOR)).rejects.toThrow(
+        /no tiene reclamo/,
+      );
+      expect(outbox.enqueueMany).not.toHaveBeenCalled();
+    });
+
+    it.each(ESTADOS.filter((e) => e !== S.UNDER_REVIEW))('409 si está en %s', async (estado) => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(expediente({ status: estado }));
+      await expect(service.requestInformation(ID, pedido(), ACTOR)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(outbox.enqueueMany).not.toHaveBeenCalled();
+    });
+
+    it('409 si ya hay una solicitud pendiente', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(
+        enRevision({ informationRequestedAt: new Date() }),
+      );
+      await expect(service.requestInformation(ID, pedido(), ACTOR)).rejects.toThrow(/pendiente/);
+      expect(outbox.enqueueMany).not.toHaveBeenCalled();
+    });
+
+    it('409 si otro pedido ganó la carrera entre la lectura y la escritura', async () => {
+      prisma.environmentalReport.updateMany.mockResolvedValue({ count: 0 });
+      await expect(service.requestInformation(ID, pedido(), ACTOR)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(outbox.enqueueMany).not.toHaveBeenCalled();
+    });
+
+    it.each(['PENDING_INFORMATION', 'RESOLVED', 'CLOSED', 'CANCELLED', 'IN_REVIEW'])(
+      '409 si M2 tiene el ticket en %s',
+      async (estado) => {
+        prisma.ticketM2State.findUnique.mockResolvedValue({ status: estado });
+        await expect(service.requestInformation(ID, pedido(), ACTOR)).rejects.toBeInstanceOf(
+          ConflictException,
+        );
+        expect(outbox.enqueueMany).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([null, 'IN_PROGRESS', 'ROUTED'])('acepta el ticket en %s', async (estado) => {
+      prisma.ticketM2State.findUnique.mockResolvedValue(estado && { status: estado });
+      await expect(service.requestInformation(ID, pedido(), ACTOR)).resolves.toBeDefined();
+    });
+
+    itM2('el payload valida contra el paquete de M2 v1.78', async () => {
+      // M2 exige UUID de verdad en ticketId; el de los demás casos es un código de fantasía.
+      prisma.environmentalReport.findUnique.mockResolvedValue(
+        enRevision({ ticketId: '550e8400-e29b-41d4-a716-446655440000' }),
+      );
+      await service.requestInformation(
+        ID,
+        pedido({ requiredBy: '2999-01-10', internalNote: 'Nota' }),
+        ACTOR,
+      );
+      const [, eventos] = outbox.enqueueMany.mock.calls[0];
+      expect(erroresM2UpdateTicketStatus(eventos[0].payload)).toEqual([]);
     });
   });
 });
