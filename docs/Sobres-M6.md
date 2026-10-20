@@ -1,6 +1,6 @@
 # Ejemplos de sobres — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 21 de octubre de 2026**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 20 de octubre de 2026**
 
 Anexo del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md). El Acuerdo dice **qué** campos tiene cada evento; este documento muestra **el mensaje completo**, tal como sale de M6 o tal como lo esperamos recibir, para que puedan copiarlo en sus pruebas.
 
@@ -55,11 +55,11 @@ Es el sobre que M9 fijó el 7/10/2026 para toda la cohorte. Reemplaza al de M2 (
 
 # Parte 2 — Lo que publicamos
 
-Los ocho, uno por uno. `data` sigue el schema en `docs/eventos/publicados/`. Los campos de fecha (`...At`) son fecha y hora; `scheduledDate` es solo el día.
+Los ocho, uno por uno. `data` sigue el schema JSON que les enviamos. Los campos de fecha (`...At`) son fecha y hora; `scheduledDate` es solo el día.
 
 ## 2.1 `updateTicketStatus` → M2
 
-Informamos el hecho, **M2 decide el estado**. Sin `status`, sin `sourceRef`, sin `publicId`. La correlación es solo por `ticketId`. Hay una variante por `updateType`; este es un cierre (`RESOLVED`):
+Informamos el hecho, **M2 decide el estado**. Sin `status`, sin `sourceRef`, sin `publicId`. La correlación es solo por `ticketId`. Hay una variante por `updateType`; este es el cierre de un servicio (`RESOLVED`), tal como lo arma M6:
 
 ```json
 {
@@ -72,23 +72,17 @@ Informamos el hecho, **M2 decide el estado**. Sin `status`, sin `sourceRef`, sin
   "data": {
     "ticketId": "0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a",
     "updateType": "RESOLVED",
-    "publicMessage": "Retiramos los residuos de la esquina. Gracias por avisarnos.",
+    "publicMessage": "El servicio se completó.",
     "details": {
       "resolution": { "type": "ACTION_COMPLETED" }
     },
-    "attachments": [
-      {
-        "fileName": "trabajo-terminado.jpg",
-        "contentType": "image/jpeg",
-        "url": "https://files.ejemplo.test/evidencia/trabajo-terminado.jpg",
-        "sizeBytes": 245123
-      }
-    ],
     "updatedBy": { "type": "SYSTEM", "id": null },
     "updateOccurredAt": "2026-10-14T15:20:00.000Z"
   }
 }
 ```
+
+Admitido por el contrato, **hoy no se manda**: el cierre puede llevar la foto del trabajo en `data.attachments`, por ejemplo `[{ "fileName": "trabajo-terminado.jpg", "contentType": "image/jpeg", "url": "https://files.ejemplo.test/evidencia/trabajo-terminado.jpg", "sizeBytes": 245123 }]`.
 
 Las otras variantes cambian `updateType` y `details`:
 
@@ -96,17 +90,21 @@ Las otras variantes cambian `updateType` y `details`:
 |---|---|---|
 | `STARTED` | no lleva | `publicMessage` opcional |
 | `PROGRESS` | no lleva | exige al menos uno de `progress`, `publicMessage`, `internalMessage` o `attachments` |
-| `INFORMATION_REQUIRED` | `{ "informationRequest": { "messageForCitizen": "...", "requiredBy": "2026-10-20T12:00:00.000Z" } }` | `requiredBy` opcional. **Diseñado, hoy no lo emitimos** |
+| `INFORMATION_REQUIRED` | `{ "informationRequest": { "messageForCitizen": "...", "requiredBy": "2026-10-20T12:00:00.000Z" } }` | `requiredBy` opcional. **Diseñado, hoy no lo emitimos**: es una decisión pendiente nuestra |
 | `RETURNED` | `{ "returnInfo": { "reasonCode": "REQUEST_TYPE_MISMATCH" } }` | `internalMessage` con el motivo del operador, siempre (M2 exige `publicMessage` o `internalMessage`) |
-| `REJECTED` | `{ "cancellation": { "reasonCode": "OUT_OF_SCOPE" } }` | `internalMessage` con el motivo del operador, siempre |
+| `REJECTED` | `{ "cancellation": { "reasonCode": "DOES_NOT_APPLY" } }` (`OTHER` al cancelar un servicio) | `internalMessage` con el motivo del operador, siempre |
 
 `updatedBy` es `{ "type": "EXTERNAL_USER", "id": "3b9f1c52-6a7e-4d08-9c41-5e2a8d7f0b13" }` cuando actúa una persona, y `{ "type": "SYSTEM", "id": null }` cuando es automático. Desde la v1.78 de M2 el `id` es un UUID o `null` (no se admiten códigos ni enteros): mandamos el identificador del usuario autenticado solo si tiene forma de UUID; si no, `"id": null` con `"type": "EXTERNAL_USER"`. Los adjuntos van en el formato de M2 (`fileName`, `contentType`, `url`, `sizeBytes?`), **sin** `attachmentId`.
 
-✅ **Fecha y franja agendadas (M2, 20/10).** No hay campo estructurado: van como **texto en `publicMessage`**, con `STARTED` la primera vez (agendar cuenta como tomar la gestión) y `PROGRESS` al reprogramar. **Ya las mandamos**, si el servicio nació de un reclamo: al agendar y al confirmar una reprogramación. El texto está en español rioplatense y lleva solo fecha y franja, por ejemplo «Su servicio fue programado para el miércoles 21 de octubre de 2026, entre las 08:00 y las 12:30 hs.» (sin franja, solo la fecha), sin `progress` ni `details`. Mandamos `STARTED` o `PROGRESS` según el estado del ticket que M6 deduce de lo que ya enviamos y de lo que M2 informa en `ticketUpdated`; con el ticket pendiente de información o terminado no mandamos nada.
+✅ **Fecha y franja agendadas (M2, 20/10).** No hay campo estructurado: van como **texto en `publicMessage`**. **Ya las mandamos**, si el servicio nació de un reclamo: al agendar y al confirmar una reprogramación. El texto lleva solo fecha y franja, sin cuadrilla ni notas, y no lleva `progress` ni `details`:
 
-**Secuencia:** `STARTED` va siempre antes de `PROGRESS`; el primer `updateTicketStatus` de un ticket es `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`. Si el ticket ya está `IN_PROGRESS` (por ejemplo porque agendar ya lo arrancó), el inicio del servicio y el inicio de la revisión de un acta mandan `PROGRESS` en vez de repetir `STARTED`. Cuando M2 vuelve a derivarnos un reclamo que habíamos devuelto y reactivamos el expediente, mandamos `STARTED` (o `PROGRESS` si ya está `IN_PROGRESS`) con «Su denuncia ambiental está en análisis.». Una demora (`PROGRESS`) solo sale con el servicio en curso.
+- Con franja completa: «Su servicio fue programado para el miércoles 21 de octubre de 2026, entre las 08:00 y las 12:30 hs.»
+- Sin franja (o con una sola punta): «Su servicio fue programado para el miércoles 21 de octubre de 2026.»
+- Al reprogramar dice «reprogramado» en vez de «programado»: «Su servicio fue reprogramado para el jueves 22 de octubre de 2026, entre las 08:00 y las 12:30 hs.»
 
-El ejemplo de arriba incluye un adjunto para mostrar la forma; hoy el cierre de un servicio **no** manda `attachments`.
+Qué `updateType` mandamos depende del estado del ticket que M6 deduce de lo que ya envió y de lo que M2 informa en `ticketUpdated`: `STARTED` si nunca lo vimos o está en `ROUTED` o `IN_REVIEW` (también al reprogramar, mientras siga en uno de esos estados); `PROGRESS` si está en `IN_PROGRESS`; con cualquier otro estado (`REGISTERED`, `DUPLICATE`, `PENDING_INFORMATION`, `RESOLVED`, `CLOSED`, `CANCELLED`) no mandamos nada.
+
+**Secuencia:** `STARTED` va siempre antes de `PROGRESS`; el primer `updateTicketStatus` de un ticket es `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`. Si el ticket ya está `IN_PROGRESS` (por ejemplo porque agendar ya lo arrancó), el inicio del servicio y el inicio de la revisión de un expediente (denuncia ambiental) mandan `PROGRESS` en vez de repetir `STARTED`. Cuando M2 vuelve a derivarnos un reclamo que habíamos devuelto y reactivamos el expediente, mandamos `STARTED` (o `PROGRESS` si ya está `IN_PROGRESS`) con «Su denuncia ambiental está en análisis.». Una demora (`PROGRESS`) solo sale con el servicio en curso.
 
 ## 2.2 `urbanServiceScheduled` → M7
 
@@ -315,7 +313,7 @@ Estos son los eventos que M6 procesa. Los sobres de los ejemplos son los del Cor
 
 ## 3.1 `ticketUpdated` ← M2
 
-Es nuestro único disparador de entrada. Llega a todos los módulos: **filtramos por `responsibleAreaId`** y solo actuamos si vale `"M6"`. De los trece `updateType` actuamos sobre seis (`ROUTED`, `INFORMATION_PROVIDED`, `CANCELLED`, `REOPENED`, `PRIORITY_CHANGED`, `ESCALATION_CHANGED`); los otros siete se aceptan y no hacen nada.
+Es nuestro único disparador de entrada. Llega a todos los módulos: **filtramos por `responsibleAreaId`** y solo actuamos si vale `"M6"`. De los trece `updateType` actuamos sobre seis (`ROUTED`, `INFORMATION_PROVIDED`, `CANCELLED`, `REOPENED`, `PRIORITY_CHANGED`, `ESCALATION_CHANGED`); los otros siete se aceptan y no hacen nada sobre el expediente. De todos (también de esos siete) guardamos el `currentStatus`, que influye en si al agendar un servicio mandamos `STARTED`, `PROGRESS` o nada.
 
 ```json
 {
@@ -355,7 +353,7 @@ Es nuestro único disparador de entrada. Llega a todos los módulos: **filtramos
 }
 ```
 
-El `sourceModule` de M2 es `atencion-ciudadana`; `responsibleAreaId` va con el código `M6`. Lo que **leemos**: `ticketId` y `updateType` (obligatorios: sin ellos el mensaje se rechaza), `responsibleAreaId`, `citizenId` (UUID, o `null` si `isAnonymous`), `isAnonymous` y, en `ROUTED`, `details.routing` (`requestType`, `summary`, `description`, `location`). `category`, `subcategory` y `reassignment` los aceptamos pero no los leemos. Si `details.routing` no está, caemos al nivel raíz. El sobre de M2 omite `causationId` cuando no hay causa.
+El `sourceModule` de M2 es `atencion-ciudadana`; `responsibleAreaId` va con el código `M6`. Lo que **leemos**: `ticketId` y `updateType` (obligatorios: sin ellos el mensaje se rechaza), `responsibleAreaId`, `citizenId` (UUID, o `null` si `isAnonymous`), `isAnonymous` y, en `ROUTED`, `details.routing` (`requestType`, `summary`, `description`, `location`). `category`, `subcategory` y `reassignment` los aceptamos pero no los leemos. Leemos además `currentStatus` y lo guardamos solo si es uno de los nueve estados de la §3 de M2 (`REGISTERED`, `IN_REVIEW`, `ROUTED`, `IN_PROGRESS`, `PENDING_INFORMATION`, `DUPLICATE`, `RESOLVED`, `CLOSED`, `CANCELLED`); otro valor se ignora con un log. Ese estado condiciona si mandamos `STARTED`, `PROGRESS` o nada. Si `details.routing` no está, caemos al nivel raíz. El sobre de M2 omite `causationId` cuando no hay causa.
 
 Otros `updateType`, solo los campos que cambian:
 
@@ -393,7 +391,16 @@ Otros `updateType`, solo los campos que cambian:
 
 Leemos `sourceRequestId` (obligatorio, UUID: el `requestId` de nuestro `infrastructureRepairRequested`) y `workOrderId`. Pasa la solicitud a en curso.
 
-🟡 **Propuesta de M3 (v0.6, 20/10), pendiente de validación:** que `workOrderId` sea el UUID técnico de la orden (ejemplo de M3: `1bb68ec6-56b2-43a8-956b-6949ac740b8a`) y que se agregue `workOrderNumber`, opcional, con la referencia humana (`"OT-2026-0098"`). **No está acordado.** Hoy aceptamos cualquier texto en `workOrderId` y no leemos `workOrderNumber`, así que los dos formatos pasan. Lo mismo vale para `workOrderCompleted`.
+🟡 **Propuesta de M3 (v0.6, 20/10), pendiente de validación:** que `workOrderId` sea el UUID técnico de la orden (ejemplo de M3: `1bb68ec6-56b2-43a8-956b-6949ac740b8a`) y que se agregue `workOrderNumber`, opcional, con la referencia humana (`"OT-2026-0098"`). **No está acordado.** Hoy aceptamos cualquier texto en `workOrderId` y no leemos `workOrderNumber`, así que los dos formatos pasan. Lo mismo vale para `workOrderCompleted`. El `data` de la propuesta (**propuesta, no acordado**):
+
+```json
+{
+  "sourceRequestId": "4f5a6b7c-8d9e-4f0a-9b1c-d3e4f5a6b7c8",
+  "workOrderId": "1bb68ec6-56b2-43a8-956b-6949ac740b8a",
+  "workOrderNumber": "OT-2026-0098",
+  "estimatedDuration": "PT4H"
+}
+```
 
 ## 3.3 `workOrderCompleted` ← M3
 
@@ -421,7 +428,7 @@ Leemos `sourceRequestId` (obligatorio, UUID: el `requestId` de nuestro `infrastr
 }
 ```
 
-Leemos `sourceRequestId` (obligatorio, UUID). `outcome` y `attachments[]` no se interpretan. Solo para `infrastructureRepairRequested`: M3 **no** debe emitirlo por `containerDamaged` ni `treeRiskDetected`.
+Leemos `sourceRequestId` (obligatorio, UUID). `outcome` y `attachments[]` no se interpretan. La propuesta de M3 de `workOrderId` UUID con `workOrderNumber` opcional (ver 3.2) también aplica acá y no está acordada. Solo para `infrastructureRepairRequested`: M3 **no** debe emitirlo por `containerDamaged` ni `treeRiskDetected`.
 
 ## 3.4 `commercialFineGenerated` ← M4
 
@@ -494,7 +501,7 @@ Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta)
 }
 ```
 
-Leemos `closureRequestId` (obligatorio, UUID: el `closureRequestId` que mandamos), `streetClosureId`, `startDate` y `endDate`. No leemos `requestingModule`. Habilita el trabajo que estaba bloqueado; si la ventana autorizada difiere de la pedida, reprogramamos dentro de ella. Guardamos `startDate` y `endDate` como ventana autorizada: si pasan 6 horas del `endDate` y no llegó `streetClosureEnded`, damos el corte por vencido (estado `EXPIRED`) y, si el servicio seguía agendado, queda para reprogramar. No publicamos nada hacia M7 por esto.
+Leemos `closureRequestId` (obligatorio, UUID: el `closureRequestId` que mandamos), `streetClosureId`, `startDate` y `endDate`. No leemos `requestingModule`. Habilita el trabajo que estaba bloqueado; si la ventana autorizada difiere de la pedida, reprogramamos dentro de ella. Guardamos `startDate` y `endDate` como ventana autorizada: si pasan 6 horas del `endDate` y no llegó `streetClosureEnded`, damos el corte por vencido (estado `EXPIRED`) y, si el servicio seguía agendado, queda para reprogramar. Solo vence un corte que llegó en un `streetClosureApproved` con un `endDate` legible: sin `endDate`, nunca vence. Una intervención de arbolado asociada al corte no se toca, y un servicio ya iniciado o cerrado tampoco: solo uno todavía agendado pasa a reprogramar. No publicamos nada hacia M7 por esto.
 
 ## 3.7 `streetClosureRejected` ← M7
 
@@ -575,4 +582,4 @@ Cada entrega por `q.ambiente` se contesta así:
 
 ---
 
-*Fuentes de este documento: los `.schema.json` de los ocho eventos de M6 y la decisión técnica ADR-007 (contrato de integración del Core, 7/10/2026). El estado de cada pedido abierto con cada módulo está en la Parte 3 del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md).*
+*Fuentes de este documento: los `.schema.json` de los ocho eventos de M6 y el contrato del Core del 7/10/2026. El estado de cada pedido abierto con cada módulo está en la Parte 3 del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md).*

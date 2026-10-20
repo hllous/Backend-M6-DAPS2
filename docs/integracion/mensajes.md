@@ -72,10 +72,10 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
-## Pendientes de enviar (21/10)
+## Pendientes de enviar (20/10)
 
 
-> Redactados el 21/10 para que el PO los envíe. **Al enviarlos, anotar la fecha acá y mover la respuesta de cada uno a su ficha (`mX.md`).** Dos de ellos suponen decisiones del equipo, marcadas con ⚠️.
+> Redactados el 20/10 para que el PO los envíe. **Al enviarlos, anotar la fecha acá y mover la respuesta de cada uno a su ficha (`mX.md`).** Dos de ellos suponen decisiones del equipo, marcadas con ⚠️.
 
 **→ M3 (Obras)**
 

@@ -1,6 +1,6 @@
 # Acuerdo de Eventos — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 21 de octubre de 2026**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 20 de octubre de 2026**
 
 Este documento sirve para cerrar el contrato de eventos antes de empezar a programar. Tiene tres partes y les pedimos tres cosas distintas:
 
@@ -63,7 +63,7 @@ De M1:        citizenId, organizationId
 
 `neighborhoodId` es **opcional** y hoy viaja ausente: sale del catálogo de barrios, que todavía no se publicó. Hay una discrepancia abierta sobre quién lo publica: M9 dice que no es del Core y el enunciado del TPO (§9) se lo asigna.
 
-Los campos que terminan en `At` son **fecha y hora**; `scheduledDate` es solo el día y la franja la da `timeWindow`. El formato es el del sobre del Core: `occurredAt` en ISO 8601 con offset (ver [bloqueantes.md](bloqueantes.md)).
+Los campos que terminan en `At` son **fecha y hora**; `scheduledDate` es solo el día y la franja la da `timeWindow`. El formato es el del sobre del Core: `occurredAt` en ISO 8601 con offset (ver Sobres, Parte 1).
 
 ---
 
@@ -202,26 +202,29 @@ Esta es la tabla con la que lo implementamos. La columna izquierda son **hechos 
 
 | Hecho nuestro | `updateType` | Qué mandamos |
 |---|---|---|
-| `urbanServiceScheduled` | `STARTED` la primera vez, `PROGRESS` al reprogramar | fecha y franja agendadas **como texto en `publicMessage`** (así lo confirmó M2 el 20/10: el contrato no tiene campo estructurado). Ya sale: al agendar y al confirmar una reprogramación, si el servicio nació de un reclamo. Elegimos `STARTED` o `PROGRESS` según el estado del ticket que deducimos de lo que enviamos y de lo que M2 nos informa en `ticketUpdated`; con el ticket pendiente de información o terminado no se manda |
+| `urbanServiceScheduled`: se agenda un servicio nacido de un reclamo, o se confirma su reprogramación | `STARTED` o `PROGRESS`, según el estado del ticket (ver abajo) | fecha y franja agendadas **como texto en `publicMessage`** (así lo confirmó M2 el 20/10: el contrato no tiene campo estructurado) |
 | Se reactiva un expediente devuelto porque M2 lo derivó otra vez | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «Su denuncia ambiental está en análisis.» |
-| `urbanServiceStarted` | `STARTED`, o `PROGRESS` si el ticket ya está `IN_PROGRESS` | vacío; `publicMessage` para el vecino. Agendar ya arrancó el ticket, así que no repetimos `STARTED` |
-| `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage`/`internalMessage`. Solo con el servicio en curso, es decir, con el ticket ya en `IN_PROGRESS` |
-| `urbanServiceCompleted` | `RESOLVED` | `details.resolution.type` + `publicMessage`. El contrato admite la foto del trabajo en `attachments[]`, pero hoy no la mandamos |
-| `environmentalInspectionScheduled` | `STARTED`, o `PROGRESS` si el ticket ya está `IN_PROGRESS` | vacío |
-| `environmentalInspectionCompleted`, sin irregularidad | `RESOLVED` | `details.resolution.type` + `publicMessage`: "no se encontraron irregularidades" |
-| `environmentalInspectionCompleted`, con acta | `PROGRESS` | el caso sigue en M4. Nunca el contenido del acta |
-| Se desestima el reporte | `REJECTED` | `details.cancellation.reasonCode` + el motivo del operador en `internalMessage`, siempre |
-| El reclamo no es de nuestra área | `RETURNED` | `details.returnInfo.reasonCode` + el motivo del operador en `internalMessage`, siempre. Vuelve a M2 para que lo re-derive, en vez de cancelárselo al vecino |
-| El inspector necesita un dato del vecino | `INFORMATION_REQUIRED` | `details.informationRequest.messageForCitizen` (+ `requiredBy` opcional) |
+| Inicia un servicio nacido de un reclamo | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «La cuadrilla comenzó a atender su reclamo.». Agendar ya arrancó el ticket, así que no repetimos `STARTED` |
+| Se inicia la revisión de un expediente (denuncia ambiental) | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «Su denuncia ambiental está en análisis.» |
+| Se avisa una demora de un servicio en curso | `PROGRESS` | motivo en `publicMessage`/`internalMessage`. Solo con el servicio en curso; una demora antes de arrancar no se informa |
+| Se completa un servicio | `RESOLVED` | `details.resolution.type` (`ACTION_COMPLETED`) y `publicMessage` («El servicio se completó.»). El contrato admite la foto del trabajo en `attachments[]`, pero hoy no la mandamos |
+| Se emite un acta ambiental | `PROGRESS` | `publicMessage`: «Se constató una infracción y se emitió el acta correspondiente.». El caso sigue en M4; nunca el contenido del acta |
+| Se cancela un servicio | `REJECTED` | `details.cancellation.reasonCode` (`OTHER`) + el motivo del operador en `internalMessage`, siempre |
+| Se desestima el expediente | `REJECTED` | `details.cancellation.reasonCode` (`DOES_NOT_APPLY`) + el motivo del operador en `internalMessage`, siempre |
+| El reclamo no es de nuestra área (se devuelve el expediente) | `RETURNED` | `details.returnInfo.reasonCode` (`REQUEST_TYPE_MISMATCH`) + el motivo del operador en `internalMessage`, siempre. Vuelve a M2 para que lo re-derive, en vez de cancelárselo al vecino |
+| Se cierra el expediente | `RESOLVED` | `details.resolution.type` (`ACTION_COMPLETED`) y `publicMessage` («Su denuncia ambiental fue cerrada.»). Si el expediente ya estaba devuelto o desestimado, no sale nada |
+| El inspector necesita un dato del vecino | `INFORMATION_REQUIRED` | **Hoy no lo emitimos**; es una decisión pendiente nuestra. El payload previsto es `details.informationRequest.messageForCitizen` (+ `requiredBy` opcional) |
 
-Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode` están publicados desde la v1.5 (antes no estaban enumerados; en la v1.6 `resolution.type` usa `INQUIRY_ANSWERED` en lugar de `INFORMATION_PROVIDED`) — están detallados en la ficha `M6-por-modulo/M6-para-M2.md`, en el repositorio de documentación.
+**Qué elegimos para la programación.** Según el estado del ticket que M6 deduce de lo que ya envió y de lo que M2 informa en `ticketUpdated`: `STARTED` si nunca lo vimos o está en `ROUTED` o `IN_REVIEW` (también al reprogramar, mientras siga en uno de esos estados); `PROGRESS` si está en `IN_PROGRESS`; con cualquier otro estado (`REGISTERED`, `DUPLICATE`, `PENDING_INFORMATION`, `RESOLVED`, `CLOSED`, `CANCELLED`) no mandamos nada.
+
+Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode` están publicados desde la v1.5 (antes no estaban enumerados; en la v1.6 `resolution.type` usa `INQUIRY_ANSWERED` en lugar de `INFORMATION_PROVIDED`).
 
 **Secuencia.** `STARTED` va siempre antes de `PROGRESS`, y no repetimos un `STARTED` con el ticket ya en `IN_PROGRESS` (va `PROGRESS`): M2 trata como prematuro un `PROGRESS` sobre un ticket que sigue en `ROUTED`. El primer `updateTicketStatus` de un ticket es siempre `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`. `RETURNED` y `REJECTED` llevan siempre un motivo (`internalMessage`, que M2 acepta como alternativa a `publicMessage`), porque el operador no puede derivar ni desestimar sin escribirlo.
 
 Los otros dos no tienen una traducción directa, y conviene que quede escrito por qué:
 
-- **`zoneNotServiced` no es un reclamo, es una zona.** Cuando un recorrido deja una zona sin atender no hay un `ticketId`, hay *n*. Lo que sale hacia M2 es **un `updateTicketStatus` con `PROGRESS` por cada reclamo abierto de esa zona**: el abanico lo abrimos nosotros, a partir de un hecho que del lado de M2 no tiene forma de representarse entero.
-- **`containerOverflowed` depende del origen.** Si el desborde lo reportó un vecino, hay `ticketId` y sale el `updateTicketStatus`. Si lo detectamos nosotros en la recorrida, no hay reclamo al que contestarle y hacia M2 no sale nada.
+- **`zoneNotServiced` no es un reclamo, es una zona.** Cuando un recorrido deja una zona sin atender no hay un `ticketId`, hay *n*. El diseño es **un `updateTicketStatus` con `PROGRESS` por cada reclamo abierto de esa zona** (el abanico lo abriríamos nosotros, a partir de un hecho que del lado de M2 no tiene forma de representarse entero), pero **hoy no lo emitimos**.
+- **`containerOverflowed` depende del origen.** Si el desborde lo reportó un vecino, hay `ticketId` y sale el `updateTicketStatus`. Si lo detectamos nosotros en la recorrida, no hay reclamo al que contestarle y hacia M2 no sale nada. Hoy tampoco sale el del vecino: es el diseño previsto.
 
 ### Lo que el contrato nos resolvió
 
@@ -337,7 +340,7 @@ Los `updateType` que nos importan:
 | `PRIORITY_CHANGED` | Reordenamos la cola de la cuadrilla |
 | `ESCALATION_CHANGED` | Lo marcamos como escalado y se lo mostramos al supervisor |
 
-`STATUS_CHANGED`, `RESOLVED` y `CLOSED` los escuchamos pero no hacemos nada con ellos: en esos casos el cierre lo originamos nosotros. `INFORMATION_REQUIRED` de M2 tampoco hace nada: es un pedido entre M2 y el vecino.
+`STATUS_CHANGED`, `RESOLVED` y `CLOSED` los escuchamos pero no hacemos nada con ellos sobre el expediente: en esos casos el cierre lo originamos nosotros (sí guardamos su `currentStatus`, ver abajo). `INFORMATION_REQUIRED` de M2 tampoco hace nada: es un pedido entre M2 y el vecino.
 
 **Orden.** Los `ticketUpdated` de un mismo ticket se ordenan por **`data.updatedAt`** (cuándo M2 persistió el cambio); el `occurredAt` del sobre, que puede ser posterior si se demoró la publicación, queda solo de respaldo. Los timestamps sirven para descartar un evento viejo que llega tarde, no para decidir el estado del ticket (eso lo define el `currentStatus` de M2), y no se comparan con los de otro productor.
 
@@ -353,6 +356,8 @@ details.routing:  requestType (string), category, subcategory, ticketType,
                    summary, description, formData?, location?,
                    resolutionDueAt?, escalation?, reassignment?
 ```
+
+**`currentStatus`.** De todo `ticketUpdated` de un ticket nuestro leemos y guardamos `currentStatus`, también de los `updateType` que no hacen nada más, pero solo si es uno de los nueve estados de la §3 de M2 (`REGISTERED`, `IN_REVIEW`, `ROUTED`, `IN_PROGRESS`, `PENDING_INFORMATION`, `DUPLICATE`, `RESOLVED`, `CLOSED`, `CANCELLED`); cualquier otro valor se ignora con un log. Ese estado decide si al agendar un servicio mandamos `STARTED`, `PROGRESS` o nada.
 
 ✅ **Cómo sabemos que un `ROUTED` es nuestro — resuelto desde la v1.5.** `responsibleAreaId` viaja como campo común de todo `ticketUpdated`. Ya no hace falta catálogo de `requestTypeId` ni adivinar entre las ocho áreas.
 
@@ -401,7 +406,7 @@ estimatedDuration: PT4H
 | `commercialFineGenerated` | ✅ `sourceViolationId` · 🟢 `decision`, `decidedAt`, `externalRef` confirmados (24/08) |
 | `closureUpdate` (`status: ORDERED | LIFTED`) | ✅ `sourceViolationId` · 🟢 `decision`, `decidedAt`, `externalRef` confirmados (24/08) |
 
-✅ **`sourceViolationId` ya viaja**, en `commercialFineGenerated` y en `closureUpdate`. Era nuestro bloqueante — queda cerrado. `establishmentId` es opcional pero lo aprovechamos.
+✅ **`sourceViolationId` ya viaja**, en `commercialFineGenerated` y en `closureUpdate`. Era un pedido nuestro — queda cerrado. `establishmentId` es opcional pero lo aprovechamos.
 
 🟢 **`decidedAt` y `externalRef` confirmados el 24/08.** Nos habían dicho que los sacaron del payload; nos avisaron que los reincorporan porque los necesitamos sí o sí. Pendiente de verlos en la próxima versión del documento.
 
@@ -447,7 +452,7 @@ streetClosureEnded
 
 ✅ **Typo corregido.** El documento ya escribe `streetClosureEnded` bien, sin la `u` de más.
 
-🆕 **Corte aprobado que vence sin aviso (20/10).** Guardamos `startDate` y `endDate` de `streetClosureApproved` como la ventana autorizada. Como no hay un evento para un corte que expira sin terminar, a las 6 horas del `endDate` sin recibir `streetClosureEnded` lo pasamos a un estado nuevo, `EXPIRED`; si el servicio que dependía de ese corte seguía agendado, queda para reprogramar. No publicamos nada hacia ustedes. Si después llega un `streetClosureEnded` de ese corte, lo aceptamos. Supuesto nuestro: **M7, confirmen** que una expiración sin `streetClosureEnded` es un caso posible y que esta lectura les sirve.
+🆕 **Corte aprobado que vence sin aviso (20/10).** Guardamos `startDate` y `endDate` de `streetClosureApproved` como la ventana autorizada. Como no hay un evento para un corte que expira sin terminar, a las 6 horas del `endDate` sin recibir `streetClosureEnded` lo pasamos a un estado nuevo, `EXPIRED`; si el servicio que dependía de ese corte seguía agendado, queda para reprogramar. No publicamos nada hacia ustedes. Solo vence un corte que llegó en un `streetClosureApproved` con un `endDate` legible: sin `endDate`, nunca vence. Una intervención de arbolado asociada al corte no se toca, y un servicio ya iniciado o cerrado tampoco: solo uno todavía agendado pasa a reprogramar. Si después llega un `streetClosureEnded` de ese corte, lo aceptamos. Supuesto nuestro: **M7, confirmen** que una expiración sin `streetClosureEnded` es un caso posible y que esta lectura les sirve.
 
 ✅ **Nuevo (30/08): `streetClosureRequested` unificado con M3.** Hasta ahora M7 recibía este evento con forma distinta según el origen (la nuestra y la de Obras). Propusieron un esquema único — ver §1.5 — y lo aceptamos: de nuestro lado implica renombrar `requestId→closureRequestId`, `streets[]→affectedSections` y `from`/`to`→`requestedFrom`/`requestedTo`.
 
