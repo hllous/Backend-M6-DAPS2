@@ -59,6 +59,7 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 - [bloqueantes.md](bloqueantes.md) — estado vivo de la integración inter-módulo (fuente única)
 - [enumeraciones.md](enumeraciones.md) — catálogo de valores cerrados
 - [decisiones/](decisiones/) — ADRs (decisiones técnicas de arquitectura)
+- [manual-de-usuario.md](manual-de-usuario.md) — manual para el usuario final (Oficina y Campo), clasificado según Diátaxis; capturas en `manual-de-usuario/img/`
 - [deploy.md](deploy.md) — despliegue, URLs, variables de entorno y estado operativo
 - [testing.md](testing.md) — tests unitarios y e2e contra Postgres: cómo correrlos y qué cubre cada suite
 - [gestion/](gestion/) — proceso Scrum: DoD, sprints y bitácoras
