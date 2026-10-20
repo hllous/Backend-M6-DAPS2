@@ -1,6 +1,6 @@
 # Ejemplos de sobres — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 20 de octubre de 2026**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 21 de octubre de 2026**
 
 Anexo del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md). El Acuerdo dice **qué** campos tiene cada evento; este documento muestra **el mensaje completo**, tal como sale de M6 o tal como lo esperamos recibir, para que puedan copiarlo en sus pruebas.
 
@@ -46,8 +46,8 @@ Es el sobre que M9 fijó el 7/10/2026 para toda la cohorte. Reemplaza al de M2 (
 - Leemos `eventId`, `eventType` y `data`; para la traza, también `correlationId` y `sourceModule`.
 - Aceptamos `eventVersion`, `occurredAt` y `causationId` (incluso `null`).
 - Mientras la cohorte migra, **seguimos aceptando el sobre viejo de M2**: `specVersion`, `producer` (string u objeto `{ moduleId, service }`) y `subject`. Se guardan o se ignoran, nunca se rechazan.
-- Si viene `correlationId` o `causationId`, tiene que tener forma de UUID (o `null` en `causationId`). Uno como `M6-REQ-000045` **rechaza el mensaje**.
-- El cuerpo que llega por la cola es el sobre, **sin campos nuevos** (M9, 20/10: lo desmiente la guía de M2, que decía que el Core agrega `receivedAt`). Lo del Core viaja en headers AMQP (`x-core-*`). El cuerpo se re-serializa: los `null` desaparecen y `occurredAt` se normaliza (`.5` pasa a `.500000`, mismo instante y offset), así que no se comparan fechas como texto. Si llegara un campo extra, por el bus lo toleramos; por `POST /events/inbox` da 400.
+- Si viene `correlationId` o `causationId`, tiene que tener la forma 8-4-4-4-12 en hex (o `null` en `causationId`), sin mirar versión ni variante: es lo mismo que valida el Core. Uno como `M6-REQ-000045` **rechaza el mensaje**. Los que heredamos para los eventos que publicamos solo necesitan esa forma.
+- El cuerpo que llega por la cola es el sobre, **sin campos nuevos** (M9, 20/10: lo desmiente la guía de M2, que decía que el Core agrega `receivedAt`). Lo del Core viaja en headers AMQP (`x-core-*`). El cuerpo se re-serializa: los `null` desaparecen y `occurredAt` se normaliza (`.5` pasa a `.500000`, mismo instante y offset), así que no se comparan fechas como texto. Un campo ausente lo tratamos igual que uno en `null`. Si llegara un campo extra, por el bus lo toleramos; por `POST /events/inbox` da 400.
 - Límites: `eventId` hasta 100 caracteres, `eventType` hasta 120, mensaje hasta 100 kB. `sourceModule` solo admite letras, números, guion y guion bajo (`atencion-ciudadana` es válido).
 - Un `occurredAt` presente tiene que ser ISO 8601 válido; si no, el mensaje se rechaza.
 
@@ -100,11 +100,13 @@ Las otras variantes cambian `updateType` y `details`:
 | `RETURNED` | `{ "returnInfo": { "reasonCode": "REQUEST_TYPE_MISMATCH" } }` | `internalMessage` con el motivo del operador, siempre (M2 exige `publicMessage` o `internalMessage`) |
 | `REJECTED` | `{ "cancellation": { "reasonCode": "OUT_OF_SCOPE" } }` | `internalMessage` con el motivo del operador, siempre |
 
-`updatedBy` es `{ "type": "EXTERNAL_USER", "id": "3b9f1c52-6a7e-4d08-9c41-5e2a8d7f0b13" }` cuando actúa una persona, y `{ "type": "SYSTEM", "id": null }` cuando es automático. Desde la v1.78 de M2 el `id` es un UUID o `null` (no se admiten códigos ni enteros); hoy mandamos el identificador del usuario autenticado, que puede no serlo: pendiente de adaptar, issue por abrir. Los adjuntos van en el formato de M2 (`fileName`, `contentType`, `url`, `sizeBytes?`), **sin** `attachmentId`.
+`updatedBy` es `{ "type": "EXTERNAL_USER", "id": "3b9f1c52-6a7e-4d08-9c41-5e2a8d7f0b13" }` cuando actúa una persona, y `{ "type": "SYSTEM", "id": null }` cuando es automático. Desde la v1.78 de M2 el `id` es un UUID o `null` (no se admiten códigos ni enteros): mandamos el identificador del usuario autenticado solo si tiene forma de UUID; si no, `"id": null` con `"type": "EXTERNAL_USER"`. Los adjuntos van en el formato de M2 (`fileName`, `contentType`, `url`, `sizeBytes?`), **sin** `attachmentId`.
 
-✅ **Fecha y franja agendadas (M2, 20/10).** No hay campo estructurado: van como **texto en `publicMessage`**, con `STARTED` la primera vez (agendar cuenta como tomar la gestión) y `PROGRESS` al reprogramar. **Hoy todavía no las mandamos**; lo estamos implementando.
+✅ **Fecha y franja agendadas (M2, 20/10).** No hay campo estructurado: van como **texto en `publicMessage`**, con `STARTED` la primera vez (agendar cuenta como tomar la gestión) y `PROGRESS` al reprogramar. **Ya las mandamos**, si el servicio nació de un reclamo: al agendar y al confirmar una reprogramación. El texto está en español rioplatense y lleva solo fecha y franja, por ejemplo «Su servicio fue programado para el miércoles 21 de octubre de 2026, entre las 08:00 y las 12:30 hs.» (sin franja, solo la fecha), sin `progress` ni `details`. Mandamos `STARTED` o `PROGRESS` según el estado del ticket que M6 deduce de lo que ya enviamos y de lo que M2 informa en `ticketUpdated`; con el ticket pendiente de información o terminado no mandamos nada.
 
-**Secuencia:** `STARTED` va siempre antes de `PROGRESS`; el primer `updateTicketStatus` de un ticket es `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`. `PROGRESS` solo sale con el servicio en curso.
+**Secuencia:** `STARTED` va siempre antes de `PROGRESS`; el primer `updateTicketStatus` de un ticket es `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`. Si el ticket ya está `IN_PROGRESS` (por ejemplo porque agendar ya lo arrancó), el inicio del servicio y el inicio de la revisión de un acta mandan `PROGRESS` en vez de repetir `STARTED`. Cuando M2 vuelve a derivarnos un reclamo que habíamos devuelto y reactivamos el expediente, mandamos `STARTED` (o `PROGRESS` si ya está `IN_PROGRESS`) con «Su denuncia ambiental está en análisis.». Una demora (`PROGRESS`) solo sale con el servicio en curso.
+
+El ejemplo de arriba incluye un adjunto para mostrar la forma; hoy el cierre de un servicio **no** manda `attachments`.
 
 ## 2.2 `urbanServiceScheduled` → M7
 
@@ -391,6 +393,8 @@ Otros `updateType`, solo los campos que cambian:
 
 Leemos `sourceRequestId` (obligatorio, UUID: el `requestId` de nuestro `infrastructureRepairRequested`) y `workOrderId`. Pasa la solicitud a en curso.
 
+🟡 **Propuesta de M3 (v0.6, 20/10), pendiente de validación:** que `workOrderId` sea el UUID técnico de la orden (ejemplo de M3: `1bb68ec6-56b2-43a8-956b-6949ac740b8a`) y que se agregue `workOrderNumber`, opcional, con la referencia humana (`"OT-2026-0098"`). **No está acordado.** Hoy aceptamos cualquier texto en `workOrderId` y no leemos `workOrderNumber`, así que los dos formatos pasan. Lo mismo vale para `workOrderCompleted`.
+
 ## 3.3 `workOrderCompleted` ← M3
 
 ```json
@@ -490,7 +494,7 @@ Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta)
 }
 ```
 
-Leemos `closureRequestId` (obligatorio, UUID: el `closureRequestId` que mandamos) y `streetClosureId`. No leemos `requestingModule`. Habilita el trabajo que estaba bloqueado; si la ventana autorizada difiere de la pedida, reprogramamos dentro de ella.
+Leemos `closureRequestId` (obligatorio, UUID: el `closureRequestId` que mandamos), `streetClosureId`, `startDate` y `endDate`. No leemos `requestingModule`. Habilita el trabajo que estaba bloqueado; si la ventana autorizada difiere de la pedida, reprogramamos dentro de ella. Guardamos `startDate` y `endDate` como ventana autorizada: si pasan 6 horas del `endDate` y no llegó `streetClosureEnded`, damos el corte por vencido (estado `EXPIRED`) y, si el servicio seguía agendado, queda para reprogramar. No publicamos nada hacia M7 por esto.
 
 ## 3.7 `streetClosureRejected` ← M7
 
@@ -531,7 +535,7 @@ Leemos `closureRequestId` (obligatorio, UUID) y `rejectionReason` (se copia al s
 }
 ```
 
-Leemos `closureRequestId` (obligatorio, UUID). Sin él no podemos correlacionar y el mensaje se rechaza.
+Leemos `closureRequestId` (obligatorio, UUID). Sin él no podemos correlacionar y el mensaje se rechaza. Lo aceptamos también sobre un corte que ya habíamos dado por vencido.
 
 ## 3.9 Los que no procesamos
 
@@ -564,7 +568,7 @@ Cada entrega por `q.ambiente` se contesta así:
 | `occuredAt` (una sola `r`) | El Core lo rechaza o el `occurredAt` queda ausente |
 | Un `eventId` repetido para eventos distintos | El segundo se descarta como duplicado |
 | `correlationId` o `causationId` que no tiene forma de UUID (por ejemplo `M6-REQ-000045`) | Rechazo del mensaje |
-| `correlationId` con forma de UUID pero sin versión o variante válida (por ejemplo todo ceros) | Lo aceptamos pero no lo propagamos: abrimos un hilo propio |
+| `correlationId` con forma 8-4-4-4-12 pero sin versión o variante válida (por ejemplo todo ceros) | Lo aceptamos y lo propagamos tal cual en lo que publicamos a partir de ese evento |
 | Mandar `specVersion`, `producer` o `subject` | El Core lo rechaza; nosotros lo toleramos al recibir |
 | Un id de correlación mal formado (`sourceRequestId`, `closureRequestId`, `sourceViolationId`) | Rechazo del mensaje |
 | Un id de correlación bien formado que no es nuestro | Se descarta con log, sin error |

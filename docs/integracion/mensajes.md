@@ -71,3 +71,5 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 > ¿Un ticket puede derivarse dos veces al mismo módulo, con el mismo `ticketId`, después de una devolución (`RETURNED` → `IN_REVIEW` → `ROUTED`)? Si es así, ¿cómo distinguimos ese segundo `ROUTED` de un reintento del primero?
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
+
+## Pendientes de enviar (21/10)
