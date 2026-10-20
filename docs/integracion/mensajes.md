@@ -93,12 +93,12 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 > Cuatro confirmaciones sobre su contrato de octubre: (1) en `environmentalViolationDetected` mandamos `suggestedAction` con cuatro valores: `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE`. Su documento lista tres; ¿toleran `FORMAL_NOTICE`? El campo no es vinculante. (2) ¿`commercialFineGenerated` también nos lo rutean a nosotros, o solo `closureUpdate`? (3) ¿`actId` y `externalRef` son el mismo dato? (4) ¿Dejaron de publicar `ticketInProgress`? Aclaración: `sourceViolationId` reproduce exactamente el `violationId` UUID que les mandamos.
 
-**→ M9 (Core)** — seguimiento de [#300](https://github.com/hllous/Backend-M6-DAPS2/issues/300) y respuesta a la guía común del 20/10 ([#328](https://github.com/hllous/Backend-M6-DAPS2/issues/328)) — *por enviar; falta solo la IP pública de salida de Render [COMPLETAR PO]*
+**→ M9 (Core)** — seguimiento de [#300](https://github.com/hllous/Backend-M6-DAPS2/issues/300) y respuesta a la guía común del 20/10 ([#328](https://github.com/hllous/Backend-M6-DAPS2/issues/328)) — *lista para enviar*
 
 > Gracias por la guía común. Lo que nos pide su §2:
 >
 > 1. **Módulo:** `ambiente` (Ambiente, Higiene y Servicios Urbanos). Responsables técnicos y canal de contacto: **Facu Iriarte** (+54 9 11 5139-3059, Discord `gordito12`) y **Benjamin Martinez** (+54 9 298 344-9923, Discord `taki9`).
-> 2. **IP pública de salida** del backend (Render): **[COMPLETAR PO: verificarla en el panel de Render; indicar si es fija o cambia]**. Un solo origen, producción.
+> 2. **IP pública de salida** del backend (Render): son dos rangos: `74.220.48.0/24` y `74.220.56.0/24` (los de salida de Render para nuestra región). Un solo origen, producción. Si Render los cambia, les avisamos antes de volver a probar.
 > 3. **Publicamos** (8): `urbanServiceScheduled`, `updateTicketStatus`, `containerDamaged`, `treeRiskDetected`, `treePruningScheduled`, `environmentalViolationDetected`, `infrastructureRepairRequested`, `streetClosureRequested`; `sourceModule` `ambiente`, `eventVersion` 1.0, con sus schemas JSON.
 > 4. **Consumimos** (8, `maxAttempts` 4): `ticketUpdated`, `workOrderScheduled`, `workOrderCompleted`, `commercialFineGenerated`, `closureUpdate`, `streetClosureApproved`, `streetClosureRejected`, `streetClosureEnded`.
 > 5. **Prueba coordinada:** **Les pedimos que nos pasen ustedes los horarios que tengan disponibles**; como el ambiente es compartido, ¿qué tipo de evento ficticio podemos usar en la primera prueba para que no llegue a otros módulos?
