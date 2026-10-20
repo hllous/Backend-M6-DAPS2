@@ -43,7 +43,7 @@ El Core reintenta un handler fallido con backoff (15 s → 1 m → 5 m → 15 m 
 - El reintento ordena con el `occurredAt` **guardado** en `inbox_event.occurred_at`, no con el del reenvío.
 - **Sin `occurredAt` en el sobre** (el de M2 puede no traerlo) no hay con qué comparar: se aplica como antes, sin tocar la marca, y queda un `warn`. Lo mismo con las filas anteriores a las columnas (marca null).
 - **Tope de futuro**: un `occurredAt` más de 5 minutos adelante del reloj de M6 se trata como ausente (se aplica sin ordenar, no deja marca y en `inbox_event.occurred_at` queda null), con un `warn`. Sin el tope, una fecha en 9999 —un reloj roto, o cualquiera con JWT por `POST /events/inbox`— congelaría el dato para siempre.
-- `ROUTED` no ordena: un segundo `ROUTED` no abre otro expediente.
+- `ROUTED` no ordena. Un segundo `ROUTED` **con el mismo `eventId`** (un reintento) lo descarta el inbox. Uno con **otro `eventId`** es una re-derivación real tras una devolución (M2, 20/10): hoy `routed()` lo ignora si ya hay expediente y debería reactivarlo; arreglo en [#170](https://github.com/hllous/Backend-M6-DAPS2/issues/170). Nunca abre un segundo expediente.
 
 ### Antes que su `ROUTED` (#275)
 

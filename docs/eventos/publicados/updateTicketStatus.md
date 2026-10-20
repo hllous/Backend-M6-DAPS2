@@ -48,7 +48,16 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 
 `updateType` no usa nuestro enum `TicketStatusUpdate`, que [ADR-003](../../decisiones/adr-003-divergencias-enums.md) eliminó del catálogo: el vocabulario lo define M2 y lo adoptamos tal cual.
 
-### 🔴 Bloqueante: `progress` no sirve para la fecha agendada
+### ✅ La fecha agendada va como texto en `publicMessage` (M2, 20/10)
+
+**Resuelto.** M2 confirmó que informar la fecha y la franja como **texto en `publicMessage`** es la forma vigente dentro de `eventVersion "1.0"`: el contrato no tiene campo estructurado y no lo va a tener salvo un cambio coordinado entre módulos. Reglas para mandarlo:
+
+- `PROGRESS` solo es válido con el ticket en `IN_PROGRESS`. En `ROUTED`, M2 hace `nack` y el Core reintenta hasta la DLQ.
+- `STARTED` significa para M2 que el área tomó la gestión del ticket, y **agendar el servicio cuenta**: el ticket pasa a `IN_PROGRESS` y el ciudadano lo ve.
+- Dos formas válidas: **(a)** `STARTED` con la programación en su propio `publicMessage`, o **(b)** `STARTED` al abrir el expediente y la programación como `PROGRESS`. Una reprogramación posterior es otro `PROGRESS`.
+- Hoy no lo mandamos: se implementa en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).
+
+*Histórico, antes de la respuesta:* `progress` no sirve para la fecha agendada.
 
 **Sexta versión seguida sin una estructura propia.** *Novedad del 13/10:* el paquete de schemas de M2 trae `updateTicketStatus_PROGRESS_programacion.json`, un ejemplo de M3 que informa la programación como **texto en `publicMessage`** de un `PROGRESS` (`progress: 10`). Es la opción de texto de nuestro pedido; su schema fuerza `details: null` en `STARTED` y `PROGRESS`, así que `details.schedule` no va a llegar. Falta que M2 lo confirme, y que decidamos nosotros cuándo mandarlo: `PROGRESS` exige el ticket en `IN_PROGRESS` y hoy `urbanServiceScheduled` no emite nada hacia M2 (ver la tabla de abajo). El campo común `progress` es un `Int` 0..100 (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.75 mantiene "details obligatorio: Ninguno". Necesitamos saber cómo mandar la fecha/franja agendada del servicio: ¿va como texto en `publicMessage`, o van a definir una estructura tipo `details.schedule`? Ver [bloqueantes.md](../../bloqueantes.md#tablero).
 
@@ -85,7 +94,7 @@ Esta es la tabla con la que se implementa. **La columna izquierda son hechos int
 
 | Hecho nuestro | `updateType` | Qué mandamos |
 |---|---|---|
-| `urbanServiceScheduled` | *(ninguno)* | **No se emite hoy.** Agendar un servicio solo dispara `urbanServiceScheduled` hacia M7; la fecha/franja agendada no tiene campo definido en el contrato de M2 — ver el bloqueante arriba |
+| `urbanServiceScheduled` | `STARTED` (primera vez) o `PROGRESS` (reprogramación) | **No se emite hoy; definido por M2 el 20/10, implementación en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).** Fecha y franja como texto en `publicMessage`, sin `details`. Agendar un servicio solo dispara `urbanServiceScheduled` hacia M7 |
 | `urbanServiceStarted` | `STARTED` | vacío |
 | `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage`. **Solo con el servicio `IN_PROGRESS`**: antes de arrancar el ticket sigue `ROUTED` y §8.2 rechaza `PROGRESS`, así que un aviso de demora antes de arrancar (`delayType: START`) queda registrado pero no se proyecta (#146) |
 | `urbanServiceCompleted` | `RESOLVED` | `details.resolution.type` + `publicMessage`. **`attachments[]` no se manda**: el payload no lleva evidencia hoy, pendiente de decidir qué adjuntos ve el vecino — ver [bloqueantes.md](../../bloqueantes.md) |
