@@ -120,6 +120,8 @@ No hay que hacer nada manual en el día a día.
 >
 > El vhost `core` va en la **ruta** de la URL del broker y la clave va **percent-encoded** (`/ ? # @ : %`). La validación de env rechaza `amqp://` y el usuario `guest` con `NODE_ENV=production`. Readiness del Core: `https://core-uade-2026.duckdns.org/health/ready`. La **contraseña de RabbitMQ, el `CORE_MODULE_SECRET`, el acceso al dashboard y la ficha se piden a M9 por privado**: nunca van al repo, a capturas, a logs ni a variables públicas del frontend. Además, el puerto 5671 solo abre para la IP pública de salida de Render que M9 haya dado de alta; si Render la cambia, avisar antes de volver a probar.
 
+> **IP de salida de Render (para el alta del puerto 5671 en el Core):** `74.220.48.0/24` y `74.220.56.0/24` (rangos que muestra el panel de Render para el servicio). Son públicos, por eso van versionados. **Son compartidos por todos los servicios de Render de la región**: al habilitarlos, M9 abre el 5671 a cualquier servicio alojado ahí, y lo que protege la conexión es la autenticación del usuario `module_ambiente`, no el origen. Si Render cambia los rangos, hay que avisarle a M9 antes de volver a probar.
+>
 > **Variables viejas de RabbitMQ**: si el panel de Render todavía tiene `RABBITMQ_EXCHANGE=municipalidad.events` o `RABBITMQ_QUEUE=m6.ambiente`, borrarlas (pisan los defaults nuevos y `checkExchange`/`checkQueue` dan 404). Lo mismo con `RABBITMQ_EXCHANGE_TYPE` y `RABBITMQ_DEAD_LETTER_EXCHANGE`, que ya no existen.
 
 > **Importante**: **NO** setear `PORT` a mano. Render inyecta su propio `PORT` automáticamente; pisarlo rompe el health check del deploy (la app corre en `10000` en free tier).
