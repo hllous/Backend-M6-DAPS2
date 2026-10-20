@@ -314,6 +314,9 @@ package "Control ambiental" #FBEEF0 {
       priority : enum <<Severity>>
     * escalated : boolean       ' ticketUpdated/ESCALATION_CHANGED
       citizen_response : text   ' ticketUpdated/INFORMATION_PROVIDED
+      information_requested_at : timestamp ' solicitud de información pendiente (null = ninguna)
+      information_request_message : text ' lo que se le pidió al vecino
+      information_request_required_by : timestamp ' plazo dado al vecino
       priority_changed_at : timestamp   ' occurredAt del último PRIORITY_CHANGED aplicado
       escalation_changed_at : timestamp ' occurredAt del último ESCALATION_CHANGED aplicado
       citizen_response_at : timestamp   ' occurredAt del último INFORMATION_PROVIDED aplicado

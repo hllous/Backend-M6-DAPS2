@@ -120,5 +120,5 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 **Decisiones internas que el PO tiene que tomar**
 
 1. **#294:** *resuelto el 20/10:* el filtro de fechas va por `updatedAt` (la columna «Actualizado»).
-2. **#169:** *resuelto el 20/10:* M6 **sí** puede pedirle información al vecino (`INFORMATION_REQUIRED`) durante una inspección; se está implementando.
+2. **#169:** *resuelto el 20/10:* M6 **sí** puede pedirle información al vecino (`INFORMATION_REQUIRED`) durante la revisión del expediente; **implementado** (`POST /environmental-reports/:id/request-information`, ver el [historial](historial.md)).
 3. **M3:** *resuelto el 20/10:* aceptada la propuesta de `workOrderId` UUID y `workOrderNumber`; falta avisarle a M3 (el mensaje a M3 ya está redactado arriba).
