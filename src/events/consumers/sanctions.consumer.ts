@@ -112,7 +112,9 @@ export class SanctionsConsumer implements OnModuleInit {
           // decidedAt y externalRef los confirmaron verbalmente el 24/08 pero
           // su documento todavía no los muestra en el payload de ejemplo.
           decidedAt: data.decidedAt ? new Date(String(data.decidedAt)) : null,
-          externalRef: (data.externalRef ?? data.actId) as string | null,
+          // `?? null`: el Core entrega ausente lo que M4 mande null (#296), y
+          // `undefined` ya no es lo mismo que null para quien lea el código.
+          externalRef: (data.externalRef ?? data.actId ?? null) as string | null,
         },
       });
 

@@ -219,6 +219,90 @@ describe('RabbitMqConsumer', () => {
       expect(channel.nack).not.toHaveBeenCalledWith(expect.anything(), false, true);
     });
 
+    describe('headers x-core-* (#296)', () => {
+      const conHeaders = (headers: Record<string, unknown>, body: unknown = sobre) =>
+        ({
+          content: json(body),
+          fields: { redelivered: false },
+          properties: { messageId: 'ev-1', headers },
+        }) as unknown as ConsumeMessage;
+
+      let warn: jest.SpyInstance;
+      let log: jest.SpyInstance;
+
+      beforeEach(() => {
+        warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+        log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      });
+      afterEach(() => jest.restoreAllMocks());
+
+      it('un nack loguea eventId, intento, traza y último error del Core', async () => {
+        const { onMessage } = await arrancar();
+        inbox.ingest.mockResolvedValueOnce({ status: 'failed', detail: 'boom' });
+
+        onMessage(
+          conHeaders({
+            'x-core-attempt': 2,
+            'x-core-trace-id': 'trace-abc',
+            'x-core-last-error': 'handler falló',
+          }),
+        );
+        await tick();
+
+        const linea = warn.mock.calls.map(([m]) => m).join('\n');
+        expect(linea).toContain('ev-1');
+        expect(linea).toContain('attempt=2');
+        expect(linea).toContain('trace=trace-abc');
+        expect(linea).toContain('lastError=handler falló');
+      });
+
+      it('un reintento que se procesa bien se loguea; el primer intento no', async () => {
+        const { onMessage } = await arrancar();
+
+        onMessage(conHeaders({ 'x-core-attempt': 1, 'x-core-trace-id': 't1' }));
+        await tick();
+        expect(log).not.toHaveBeenCalledWith(expect.stringContaining('attempt='));
+
+        onMessage(conHeaders({ 'x-core-attempt': 3, 'x-core-trace-id': 't3' }));
+        await tick();
+        expect(log).toHaveBeenCalledWith(expect.stringContaining('attempt=3'));
+      });
+
+      it('sin headers ni properties (o con valores raros) no rompe y sigue haciendo ack', async () => {
+        const { channel, onMessage } = await arrancar();
+        const sinProps = {
+          content: json(sobre),
+          fields: { redelivered: false },
+        } as ConsumeMessage;
+
+        onMessage(sinProps);
+        onMessage(
+          conHeaders({ 'x-core-attempt': { raro: true }, 'x-core-trace-id': Buffer.from('t') }),
+        );
+        await tick();
+
+        expect(channel.ack).toHaveBeenCalledTimes(2);
+      });
+
+      it('el último error se trunca, sin saltos de línea, y no se loguea nada del negocio', async () => {
+        const { onMessage } = await arrancar();
+        inbox.ingest.mockResolvedValueOnce({ status: 'failed', detail: 'boom' });
+
+        onMessage(
+          conHeaders(
+            { 'x-core-attempt': 2, 'x-core-last-error': `uno\ndos${'x'.repeat(2000)}` },
+            { ...sobre, data: { dato: 'SECRETO-DE-NEGOCIO' } },
+          ),
+        );
+        await tick();
+
+        const linea = warn.mock.calls.map(([m]) => m).join('\n');
+        expect(linea).not.toContain('SECRETO-DE-NEGOCIO');
+        expect(linea).not.toContain('\nuno');
+        expect(linea.length).toBeLessThan(900);
+      });
+    });
+
     it('un ack sobre un canal cerrado no se escapa como unhandled rejection', async () => {
       const { channel, onMessage } = await arrancar();
       channel.ack.mockImplementationOnce(() => {

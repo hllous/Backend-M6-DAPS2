@@ -506,6 +506,18 @@ describe('payloads de los eventos publicados', () => {
       expect(p.updatedBy).toEqual({ type: 'SYSTEM', id: null });
     });
 
+    // El Core re-serializa sin los null (#296): un SYSTEM sin `id` equivale a
+    // `id: null` y el schema no puede exigir el null explícito.
+    it('un SYSTEM sin id (el null llega ausente) también valida', () => {
+      const p = payloads.updateTicketStatus({
+        ticketId: 'TCK-1',
+        updateType: 'PROGRESS',
+        updatedById: 'sistema',
+      });
+
+      expectValido('updateTicketStatus', { ...p, updatedBy: { type: 'SYSTEM' } });
+    });
+
     // El rename de la v1.6 (§8.1). Se testea porque un campo con el nombre
     // viejo pasa el schema de tipos y lo rechaza M2 en runtime.
     it('el timestamp viaja como updateOccurredAt', () => {

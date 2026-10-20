@@ -420,27 +420,26 @@ describe('InboxService', () => {
     });
 
     /**
-     * `@IsUUID()` deja pasar el nulo y el máximo. Reenviarlos en nuestro sobre
-     * arriesga que el Core rechace el derivado: no se heredan, pero el
-     * consumido se procesa igual.
+     * El Core acepta cualquier UUID (`uuid.UUID` de Python) y lo entrega
+     * normalizado (#296): lo que él deja pasar no corta el hilo. Solo lo que no
+     * tiene la forma 8-4-4-4-12 no se hereda, y el consumido se procesa igual.
      */
     it.each(['00000000-0000-0000-0000-000000000000', 'ffffffff-ffff-ffff-ffff-ffffffffffff'])(
-      'un correlationId %s no se hereda y el evento se procesa',
+      'un correlationId %s se hereda',
       async (correlationId) => {
         const res = await inbox.ingest(sobre({ correlationId }));
 
         expect(res.status).toBe('processed');
-        expect(encolado()).toMatchObject({ correlationId: MESSAGE_ID, causationId: MESSAGE_ID });
+        expect(encolado()).toMatchObject({ correlationId, causationId: MESSAGE_ID });
       },
     );
 
-    it('un eventId UUID nulo no es causa: hilo nuevo, sin rechazar el evento', async () => {
-      const res = await inbox.ingest(
-        sobre({ eventId: '00000000-0000-0000-0000-000000000000', correlationId: CORRELATION }),
-      );
+    it('un eventId UUID nulo es causa: el Core lo aceptó y lo entrega normalizado', async () => {
+      const nulo = '00000000-0000-0000-0000-000000000000';
+      const res = await inbox.ingest(sobre({ eventId: nulo, correlationId: CORRELATION }));
 
       expect(res.status).toBe('processed');
-      expect(encolado()).toMatchObject({ correlationId: CORRELATION, causationId: null });
+      expect(encolado()).toMatchObject({ correlationId: CORRELATION, causationId: nulo });
     });
 
     /**

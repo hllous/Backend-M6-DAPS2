@@ -88,12 +88,12 @@
     },
     "updatedBy": {
       "type": "object",
-      "description": "Actor en el vocabulario de M2 (§5.2). Un hecho que llega desde otro módulo por integración es EXTERNAL_USER cualquiera sea el rol real; uno automático es SYSTEM, y ahí id puede ser null. M2 v1.78 exige que id sea UUID o null; este schema todavía acepta cualquier string hasta que el código lo cumpla. El AREA_USER que usábamos con la v1.5 nunca existió en su enum.",
+      "description": "Actor en el vocabulario de M2 (§5.2). Un hecho que llega desde otro módulo por integración es EXTERNAL_USER cualquiera sea el rol real; uno automático es SYSTEM, y ahí id puede ser null (o llegar ausente: el Core re-serializa sin los null, por eso el schema no exige el campo). M2 v1.78 exige que id sea UUID o null; este schema todavía acepta cualquier string hasta que el código lo cumpla. El AREA_USER que usábamos con la v1.5 nunca existió en su enum.",
       "properties": {
         "type": { "type": "string", "enum": ["EXTERNAL_USER", "SYSTEM"] },
         "id": { "type": ["string", "null"] }
       },
-      "required": ["type", "id"],
+      "required": ["type"],
       "additionalProperties": false
     },
     "updateOccurredAt": {

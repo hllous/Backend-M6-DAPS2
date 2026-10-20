@@ -109,6 +109,15 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
 
     const disposition = await this.handle(msg.content);
 
+    // Para cruzar un fallo nuestro con la auditoría del Core
+    // (`GET /api/v1/events/{eventId}`): solo sus headers, nunca el contenido.
+    const core = coreHeaders(msg);
+    if (disposition === 'nack') {
+      this.logger.warn(`Mensaje no procesado, queda para el reintento del Core: ${core.texto}`);
+    } else if (core.intento > 1) {
+      this.logger.log(`Reintento procesado: ${core.texto}`);
+    }
+
     try {
       // Nunca se reencola (pedido de M9): reencolado, el mensaje gira en nuestra cola
       // sin demora ni auditoría. Con `nack` sin reencolar el Core reintenta con
@@ -156,6 +165,32 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
       return 'nack';
     }
   }
+}
+
+/**
+ * Lo que el Core agrega en headers AMQP: `x-core-attempt` (desde 1),
+ * `x-core-trace-id` y `x-core-last-error` (solo en reintentos); el `eventId`
+ * viaja también como `message_id`. Son datos de un tercero: se pasan a texto,
+ * sin saltos de línea y acotados.
+ */
+function coreHeaders(msg: ConsumeMessage): { intento: number; texto: string } {
+  const h = msg.properties?.headers ?? {};
+  const texto = (v: unknown): string =>
+    typeof v === 'string' || typeof v === 'number' || Buffer.isBuffer(v)
+      ? String(v)
+          .replace(/[\r\n]+/g, ' ')
+          .slice(0, MAX_DETALLE)
+      : '-';
+  const intento = Number(h['x-core-attempt']);
+  const partes = [
+    `eventId=${texto(msg.properties?.messageId)}`,
+    `attempt=${texto(h['x-core-attempt'])}`,
+    `trace=${texto(h['x-core-trace-id'])}`,
+  ];
+  if (h['x-core-last-error'] !== undefined) {
+    partes.push(`lastError=${texto(h['x-core-last-error'])}`);
+  }
+  return { intento: Number.isFinite(intento) ? intento : 1, texto: partes.join(' ') };
 }
 
 function describe(error: unknown): string {
