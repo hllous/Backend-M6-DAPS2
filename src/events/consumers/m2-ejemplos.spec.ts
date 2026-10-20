@@ -36,6 +36,7 @@ describeM2('ejemplos válidos de M2 v1.78 contra nuestro inbox', () => {
   const ticketCreated = archivos('ticketCreated');
   let prisma: any;
   let inbox: InboxService;
+  let outbox: { enqueue: jest.Mock; enqueueMany: jest.Mock };
 
   beforeAll(() => {
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
@@ -63,9 +64,11 @@ describeM2('ejemplos válidos de M2 v1.78 contra nuestro inbox', () => {
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
-    new TicketsConsumer(prisma as unknown as PrismaService, inbox, {
+    outbox = {
       enqueue: jest.fn().mockResolvedValue(undefined),
-    } as never).onModuleInit();
+      enqueueMany: jest.fn().mockResolvedValue(undefined),
+    };
+    new TicketsConsumer(prisma as unknown as PrismaService, inbox, outbox as never).onModuleInit();
   });
 
   /** Pasa el sobre por el `ValidationPipe` real: el del bus (tolerante) o el de `POST /events/inbox`. */
@@ -79,8 +82,9 @@ describeM2('ejemplos válidos de M2 v1.78 contra nuestro inbox', () => {
 
   it('el directorio de ejemplos existe y trae los de ticketCreated y ticketUpdated', () => {
     expect(fs.existsSync(EJEMPLOS_M2_VALIDOS)).toBe(true);
-    expect(ticketUpdated.length).toBeGreaterThan(0);
-    expect(ticketCreated.length).toBeGreaterThan(0);
+    // Lo que trae el paquete v1.78: que no pase con un solo ejemplo.
+    expect(ticketUpdated.length).toBeGreaterThanOrEqual(18);
+    expect(ticketCreated.length).toBeGreaterThanOrEqual(2);
     // Para el resumen: cuántos corrieron.
     console.info(
       `Ejemplos de M2 v1.78: ${ticketCreated.length} ticketCreated + ${ticketUpdated.length} ticketUpdated (cada uno como M3 y como M6)`,
@@ -108,6 +112,18 @@ describeM2('ejemplos válidos de M2 v1.78 contra nuestro inbox', () => {
         expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
         expect(prisma.environmentalReport.update).not.toHaveBeenCalled();
         expect(prisma.ticketM2State.upsert).not.toHaveBeenCalled();
+        expect(outbox.enqueue).not.toHaveBeenCalled();
+        expect(prisma.service.updateMany).not.toHaveBeenCalled();
+        if (data.updateType === 'ROUTED') {
+          // Único efecto legítimo: cerrar el expediente devuelto (cerrarDevuelto),
+          // sin nada del contenido del ticket ajeno.
+          for (const [arg] of prisma.environmentalReport.updateMany.mock.calls) {
+            expect(arg.data).toEqual({ status: 'CLOSED' });
+          }
+        } else {
+          expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
+          expect(prisma.environmentalReport.findFirst).not.toHaveBeenCalled();
+        }
       },
     );
 
@@ -129,6 +145,12 @@ describeM2('ejemplos válidos de M2 v1.78 contra nuestro inbox', () => {
         expect(prisma.environmentalReport.update).not.toHaveBeenCalled();
         expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
         expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+        expect(outbox.enqueue).not.toHaveBeenCalled();
+        expect(outbox.enqueueMany).not.toHaveBeenCalled();
+        // Sí se guarda el `currentStatus` que informa M2 (#303, es campo común); nada más.
+        for (const [arg] of prisma.ticketM2State.upsert.mock.calls) {
+          expect(arg.create.source).toBe('RECEIVED');
+        }
       }
     });
   });
