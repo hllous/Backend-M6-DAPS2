@@ -877,8 +877,22 @@ export class ServicesService {
     // pasa con el STARTED de start(). Una demora antes de arrancar queda
     // registrada acá pero no se proyecta: M2 la rechazaría y el vecino no se
     // enteraría igual (#146).
+    // Además el ticket tiene que seguir IN_PROGRESS: si lo conocemos en otro
+    // estado (p. ej. pendiente de información o ya resuelto) M2 también lo
+    // rechazaría (#325). Sin estado conocido se publica: el servicio en curso
+    // implica que ya lo arrancamos.
+    const estadoTicket =
+      service.status === ServiceStatus.IN_PROGRESS && service.ticketId
+        ? await leerEstado(this.prisma, service.ticketId)
+        : null;
+    const ticketAdmiteProgress = !estadoTicket || estadoTicket === 'IN_PROGRESS';
+    if (!ticketAdmiteProgress) {
+      this.logger.warn(
+        `Servicio ${serviceId}: el ticket ${paraLog(service.ticketId)} está en ${paraLog(String(estadoTicket))}, el aviso de demora no se informa a M2`,
+      );
+    }
     const eventos =
-      service.status === ServiceStatus.IN_PROGRESS
+      service.status === ServiceStatus.IN_PROGRESS && ticketAdmiteProgress
         ? this.ticketEvents(service, actorId ?? 'sistema', {
             updateType: 'PROGRESS',
             publicMessage: 'El servicio se esta demorando. Estamos trabajando para normalizarlo.',

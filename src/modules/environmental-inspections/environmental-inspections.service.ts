@@ -17,6 +17,8 @@ import { AttachmentOwnerType } from '../attachments/attachment-owner-type';
 import { OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
+import { paraLog } from '../../events/log-safe';
+import { leerEstado, scheduleUpdate } from '../../events/ticket-state';
 import { EnvironmentalReportsService } from '../environmental-reports/environmental-reports.service';
 import {
   CompleteInspectionDto,
@@ -239,13 +241,23 @@ export class EnvironmentalInspectionsService {
       }
 
       // Lo que ve el vecino no lleva identidad del inspector ni contenido del acta.
-      await this.outbox.enqueueMany(
-        tx,
-        this.reports.ticketEvents(report, actorId, {
-          updateType: 'PROGRESS',
-          publicMessage: 'Se constató una infracción y se emitió el acta correspondiente.',
-        }),
-      );
+      // M2 solo acepta PROGRESS con el ticket IN_PROGRESS: si todavía no lo
+      // tomamos, constatar cuenta como tomar la gestión y va como STARTED (#325).
+      // El estado se lee con `tx`, igual que la escritura del outbox que lo deduce.
+      if (report.ticketId) {
+        const estado = await leerEstado(tx, report.ticketId);
+        const update = scheduleUpdate(
+          estado,
+          'Se constató una infracción y se emitió el acta correspondiente.',
+        );
+        if (update) {
+          await this.outbox.enqueueMany(tx, this.reports.ticketEvents(report, actorId, update));
+        } else {
+          this.logger.warn(
+            `Acta ${noticeNumber}: el ticket ${paraLog(report.ticketId)} está en ${paraLog(String(estado))}, no se informa a M2`,
+          );
+        }
+      }
 
       return row;
     });
