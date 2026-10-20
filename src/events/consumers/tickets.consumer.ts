@@ -483,7 +483,15 @@ export class TicketsConsumer implements OnModuleInit {
 
     const { count } = await this.prisma.environmentalReport.updateMany({
       where: { ticketId, ...this.noAtrasado('citizenResponseAt', at) },
-      data: { citizenResponse: respuesta.slice(0, 2000), ...(at && { citizenResponseAt: at }) },
+      data: {
+        citizenResponse: respuesta.slice(0, 2000),
+        ...(at && { citizenResponseAt: at }),
+        // Contestó: se cierra la solicitud pendiente (#169), en el mismo update para
+        // que el orden por citizenResponseAt valga también para cerrarla.
+        informationRequestedAt: null,
+        informationRequestMessage: null,
+        informationRequestRequiredBy: null,
+      },
     });
     if (!count) return this.sinFilas('INFORMATION_PROVIDED', 'citizenResponseAt', ticketId, at);
     this.logger.log(

@@ -21,6 +21,7 @@ import {
   CreateEnvironmentalReportDto,
   EnvironmentalReportResponseDto,
   QueryEnvironmentalReportsDto,
+  RequestInformationDto,
 } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
 
@@ -266,6 +267,96 @@ export class EnvironmentalReportsService {
     );
   }
 
+  /**
+   * Pide información al vecino durante la revisión (#169). El expediente sigue
+   * en UNDER_REVIEW: lo que cambia es la solicitud pendiente y el ticket en M2
+   * (PENDING_INFORMATION, que el outbox deduce del evento).
+   *
+   * M2 admite una sola solicitud activa por ticket y solo la acepta con el
+   * ticket en ROUTED o IN_PROGRESS (§8.2); el estado conocido (#303) evita
+   * mandar uno que M2 rechazaría y el Core reintentaría hasta la DLQ.
+   */
+  async requestInformation(
+    id: string,
+    dto: RequestInformationDto,
+    actorId: string,
+  ): Promise<EnvironmentalReportResponseDto> {
+    const report = await this.getReport(id);
+    if (!report.ticketId) {
+      throw new ConflictException(
+        'El expediente no tiene reclamo de origen: no hay un vecino a quien pedirle información',
+      );
+    }
+    if (report.status !== S.UNDER_REVIEW) {
+      throw new ConflictException(
+        `Solo se puede pedir información a un expediente en UNDER_REVIEW (está en '${report.status}')`,
+      );
+    }
+    if (report.informationRequestedAt) {
+      throw new ConflictException(
+        'Ya hay una solicitud de información pendiente: hay que esperar la respuesta del vecino',
+      );
+    }
+    const estadoTicket = await leerEstado(this.prisma, report.ticketId);
+    if (estadoTicket && estadoTicket !== 'IN_PROGRESS' && estadoTicket !== 'ROUTED') {
+      throw new ConflictException(
+        `M2 no admite pedir información con el ticket en '${estadoTicket}' (solo IN_PROGRESS o ROUTED)`,
+      );
+    }
+
+    const requiredBy = dto.requiredBy ? this.resolveRequiredBy(dto.requiredBy) : null;
+    const now = new Date();
+    if (requiredBy && requiredBy <= now) {
+      throw new BadRequestException('requiredBy tiene que ser una fecha futura');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // No pasa por `transition`: el estado del expediente no cambia. El where es
+      // el guard contra dos pedidos simultáneos (uno solo ve count 1).
+      const { count } = await tx.environmentalReport.updateMany({
+        where: { id, status: S.UNDER_REVIEW, informationRequestedAt: null },
+        data: {
+          informationRequestedAt: now,
+          informationRequestMessage: dto.message,
+          informationRequestRequiredBy: requiredBy,
+        },
+      });
+      if (!count) {
+        throw new ConflictException(
+          'El expediente cambió de estado o ya tiene una solicitud pendiente',
+        );
+      }
+      await this.outbox.enqueueMany(
+        tx,
+        this.ticketEvents(report, actorId, {
+          updateType: 'INFORMATION_REQUIRED',
+          publicMessage: dto.message,
+          internalMessage: dto.internalNote,
+          details: {
+            informationRequest: {
+              messageForCitizen: dto.message,
+              requiredBy: requiredBy?.toISOString(),
+            },
+          },
+        }),
+      );
+      return tx.environmentalReport.findUniqueOrThrow({
+        where: { id },
+        include: WITH_ASSIGNED_CREW,
+      });
+    });
+
+    this.logger.log(`Expediente ${id}: información pedida al vecino (reclamo ${report.ticketId})`);
+    return this.toResponseDto(updated);
+  }
+
+  /** YYYY-MM-DD vence al final de ese día argentino; un ISO completo se respeta. */
+  private resolveRequiredBy(value: string): Date {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value)
+      ? new Date(startOfDayArgentina(value).getTime() + DAY_MS - 1000)
+      : new Date(value);
+  }
+
   // ─── Transiciones que disparan otros módulos ──────
 
   /**
@@ -375,6 +466,10 @@ export class EnvironmentalReportsService {
       priority: report.priority,
       escalated: report.escalated,
       citizenResponse: report.citizenResponse,
+      informationRequestPending: report.informationRequestedAt != null,
+      informationRequestedAt: report.informationRequestedAt ?? null,
+      informationRequestMessage: report.informationRequestMessage ?? null,
+      informationRequestRequiredBy: report.informationRequestRequiredBy ?? null,
       deadlineAt: report.deadlineAt,
       assignedCrewId: report.inspections[0]?.service?.crewId ?? null,
       createdAt: report.createdAt,

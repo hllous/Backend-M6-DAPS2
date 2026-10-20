@@ -1128,6 +1128,32 @@ describe('consumidores de eventos', () => {
       expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
     });
 
+    // #169: la respuesta cierra la solicitud pendiente; en el mismo update, así que
+    // el orden por updatedAt vale para las dos cosas y una respuesta vieja no reabre nada.
+    it('INFORMATION_PROVIDED cierra la solicitud pendiente junto con guardar la respuesta', async () => {
+      await h({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'INFORMATION_PROVIDED',
+        updatedAt: '2026-10-20T12:00:00Z',
+        details: { informationResponse: { message: 'Acá va la foto' } },
+      });
+
+      const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+      expect(args.data).toMatchObject({
+        citizenResponse: 'Acá va la foto',
+        citizenResponseAt: new Date('2026-10-20T12:00:00Z'),
+        informationRequestedAt: null,
+        informationRequestMessage: null,
+        informationRequestRequiredBy: null,
+      });
+      // El guard por orden: uno más viejo que la última respuesta no se aplica.
+      expect(args.where.OR).toEqual([
+        { citizenResponseAt: null },
+        { citizenResponseAt: { lt: new Date('2026-10-20T12:00:00Z') } },
+      ]);
+    });
+
     it('INFORMATION_PROVIDED con solo adjuntos se registra sin romper', async () => {
       await h({
         ticketId: 'TCK-1',

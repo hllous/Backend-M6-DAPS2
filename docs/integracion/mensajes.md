@@ -104,5 +104,5 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 **Decisiones internas que el PO tiene que tomar**
 
 1. **#294:** el filtro de fechas va por `updatedAt` (la columna «Actualizado»). ¿O `createdAt`?
-2. **#169:** ¿M6 puede pedirle información al vecino (`INFORMATION_REQUIRED`) durante una inspección? Si no es un caso real, alcanza con dejar documentado que no lo emitimos.
+2. ~~**#169:** ¿M6 puede pedirle información al vecino?~~ Resuelto el 20/10: **sí**, durante la revisión del expediente; ver el [historial](historial.md).
 3. **M3:** confirmar que aceptamos su propuesta de `workOrderId` y `workOrderNumber` ⚠️.
