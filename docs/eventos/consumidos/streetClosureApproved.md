@@ -14,7 +14,7 @@ Correlaciona por `closureRequestId` (obligatorio, uuid) y guarda el `streetClosu
 
 ```
 streetClosureApproved
-  streetClosureId, closureRequestId, requestingModule (Obras|Ambiente),
+  streetClosureId, closureRequestId, requestingModule ("ambiente" para nosotros),
   startDate, endDate, affectedStreet[],
   detours[ { street, alternateRoute } ], conditions[]
 ```
@@ -22,7 +22,7 @@ streetClosureApproved
 | Campo | Nota |
 |---|---|
 | ✅ `closureRequestId` | El `requestId` que mandamos en [`streetClosureRequested`](../publicados/streetClosureRequested.md), de ida y vuelta. **No se llama `sourceRequestId`** como habíamos pedido, pero es el mismo dato |
-| ✅ `requestingModule` | La etiqueta de origen. Nosotros somos `"Ambiente"` |
+| ✅ `requestingModule` | La etiqueta de origen. Para nosotros viaja `"ambiente"`, en minúscula (M7, 20/10). El código no lo lee |
 | `startDate`, `endDate` | La ventana que autorizaron, que puede no ser la que pedimos |
 | `affectedStreet[]` | Las calles que quedan cortadas |
 

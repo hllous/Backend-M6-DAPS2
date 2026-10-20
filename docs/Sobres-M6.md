@@ -473,7 +473,7 @@ Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta)
   "data": {
     "streetClosureId": "CL-2026-0210",
     "closureRequestId": "5a6b7c8d-9e0f-4a1b-8c2d-e4f5a6b7c8d9",
-    "requestingModule": "Ambiente",
+    "requestingModule": "ambiente",
     "startDate": "2026-10-20T08:00:00.000Z",
     "endDate": "2026-10-20T12:00:00.000Z",
     "affectedStreet": ["Calle Mitre entre Av. Belgrano y Calle Sarmiento"],
@@ -498,7 +498,7 @@ Leemos `closureRequestId` (obligatorio, UUID: el `closureRequestId` que mandamos
   "data": {
     "closureRequestId": "5a6b7c8d-9e0f-4a1b-8c2d-e4f5a6b7c8d9",
     "rejectionReason": "Obra vial en la misma calle esa semana",
-    "requestingModule": "Ambiente"
+    "requestingModule": "ambiente"
   }
 }
 ```

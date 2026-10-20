@@ -87,6 +87,7 @@ describe('RabbitMqEventPublisher', () => {
       messageId: 'ev-1',
       type: 'urbanServiceScheduled',
       appId: 'ambiente',
+      userId: 'usuario',
       headers: { eventId: 'ev-1', eventType: 'urbanServiceScheduled', sourceModule: 'ambiente' },
     });
   });
@@ -120,6 +121,15 @@ describe('RabbitMqEventPublisher', () => {
 
     await publisher.publish(envelope);
     expect(connectMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('un 404 de checkExchange dice que el Core no declaró la topología, distinto de un basic.return', async () => {
+    channel.checkExchange.mockRejectedValueOnce(
+      new Error('Operation failed: ExchangeDeclare; 404 (NOT-FOUND)'),
+    );
+    const publisher = new RabbitMqEventPublisher(config);
+
+    await expect(publisher.publish(envelope)).rejects.toThrow(/muni\.inbox no existe.*Core/);
   });
 
   it('el nack del broker se propaga, para que el dispatcher deje la fila PENDING', async () => {

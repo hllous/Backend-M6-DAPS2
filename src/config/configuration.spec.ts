@@ -103,6 +103,12 @@ describe('configuration — RabbitMQ', () => {
     );
   });
 
+  it('en producción rechaza el usuario guest', () => {
+    expect(() =>
+      config({ NODE_ENV: 'production', RABBITMQ_URL: 'amqps://guest:guest@bus:5671/muni' }),
+    ).toThrow(/guest/);
+  });
+
   it('en producción exige amqps://', () => {
     expect(() => config({ NODE_ENV: 'production', RABBITMQ_URL: 'amqp://m6:c@bus' })).toThrow(
       /amqps/,

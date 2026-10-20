@@ -221,7 +221,8 @@ export class OutboundResponsesConsumer implements OnModuleInit {
       this.logger.warn('Evento de M7 sin closureRequestId: no se puede correlacionar, se descarta');
       return null;
     }
-    // requestingModule viene como "Obras"/"Ambiente"; si es de Obras no es nuestro.
+    // Una respuesta a un corte de Obras no corresponde a nuestro módulo y se descarta acá;
+    // `requestingModule` (para nosotros "ambiente") no se lee.
     const request = await this.prisma.streetClosureRequest.findUnique({ where: { id } });
     if (!request) {
       this.logger.warn(`closureRequestId '${id}' no corresponde a ningún corte nuestro`);
