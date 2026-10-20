@@ -80,6 +80,20 @@ describe('InboxService', () => {
     },
   );
 
+  // `eventId` es un string libre de un tercero: no puede partir ni falsificar una línea de log.
+  it('un eventId con saltos de línea y ESC no llega crudo a los logs', async () => {
+    inbox.register('streetClosureApproved', jest.fn().mockResolvedValue(undefined));
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    await inbox.ingest(sobre({ eventId: 'ev\n[ERROR] falso\u001b[31m' }));
+
+    const lineas = log.mock.calls.map(([m]) => String(m));
+    expect(lineas.length).toBeGreaterThan(0);
+    // eslint-disable-next-line no-control-regex
+    for (const l of lineas) expect(l).not.toMatch(/[\u0000-\u001f\u007f-\u009f]/);
+    log.mockRestore();
+  });
+
   // Una fecha futura congelaría la marca de orden: se trata como ausente.
   it('un occurredAt en el futuro llega como null, no se guarda y se avisa', async () => {
     const handler = jest.fn().mockResolvedValue(undefined);

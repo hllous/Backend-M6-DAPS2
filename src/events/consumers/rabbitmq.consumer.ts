@@ -9,6 +9,7 @@ import { Channel, ChannelModel, ConsumeMessage, RecoveringChannelModel, connect 
 import { globalPipes } from '../../configure-app';
 import { InboxService } from '../inbox/inbox.service';
 import { IngestEventDto, toInboundEnvelope } from '../inbox/ingest-event.dto';
+import { paraLog } from '../log-safe';
 import { brokerHost, CONNECT_TIMEOUT_MS, RabbitMqConfig } from '../rabbitmq';
 
 /**
@@ -167,30 +168,32 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
   }
 }
 
+/** Tope de la línea completa: cada campo tiene el suyo, pero la suma también se acota. */
+const MAX_LINEA_CORE = 400;
+/** `x-core-last-error` es texto libre del Core y puede citar valores de dominio. */
+const MAX_ULTIMO_ERROR = 200;
+
 /**
  * Lo que el Core agrega en headers AMQP: `x-core-attempt` (desde 1),
  * `x-core-trace-id` y `x-core-last-error` (solo en reintentos); el `eventId`
- * viaja también como `message_id`. Son datos de un tercero: se pasan a texto,
- * sin saltos de línea y acotados.
+ * viaja también como `message_id`. Son datos de un tercero: se sanean con
+ * `paraLog` y la línea final se acota.
  */
 function coreHeaders(msg: ConsumeMessage): { intento: number; texto: string } {
   const h = msg.properties?.headers ?? {};
-  const texto = (v: unknown): string =>
-    typeof v === 'string' || typeof v === 'number' || Buffer.isBuffer(v)
-      ? String(v)
-          .replace(/[\r\n]+/g, ' ')
-          .slice(0, MAX_DETALLE)
-      : '-';
   const intento = Number(h['x-core-attempt']);
   const partes = [
-    `eventId=${texto(msg.properties?.messageId)}`,
-    `attempt=${texto(h['x-core-attempt'])}`,
-    `trace=${texto(h['x-core-trace-id'])}`,
+    `eventId=${paraLog(msg.properties?.messageId)}`,
+    `attempt=${paraLog(h['x-core-attempt'], 10)}`,
+    `trace=${paraLog(h['x-core-trace-id'])}`,
   ];
   if (h['x-core-last-error'] !== undefined) {
-    partes.push(`lastError=${texto(h['x-core-last-error'])}`);
+    partes.push(`lastError=${paraLog(h['x-core-last-error'], MAX_ULTIMO_ERROR)}`);
   }
-  return { intento: Number.isFinite(intento) ? intento : 1, texto: partes.join(' ') };
+  return {
+    intento: Number.isFinite(intento) ? intento : 1,
+    texto: partes.join(' ').slice(0, MAX_LINEA_CORE),
+  };
 }
 
 function describe(error: unknown): string {

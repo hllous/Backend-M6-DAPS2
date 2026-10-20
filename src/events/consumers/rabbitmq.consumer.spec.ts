@@ -284,22 +284,62 @@ describe('RabbitMqConsumer', () => {
         expect(channel.ack).toHaveBeenCalledTimes(2);
       });
 
-      it('el último error se trunca, sin saltos de línea, y no se loguea nada del negocio', async () => {
+      const lineaCore = () =>
+        warn.mock.calls.map(([m]) => String(m)).find((m) => m.startsWith('Mensaje no procesado'))!;
+
+      it.each(['\u001b[31m', '\u0000', '\u0085', '\u2028', '\r\n'])(
+        'sanea los caracteres de control (%j) en cada campo',
+        async (c) => {
+          const { onMessage } = await arrancar();
+          inbox.ingest.mockResolvedValueOnce({ status: 'failed', detail: 'boom' });
+          const msg = conHeaders({
+            'x-core-attempt': `2${c}`,
+            'x-core-trace-id': `tr${c}ace`,
+            'x-core-last-error': `er${c}ror`,
+          });
+          (msg.properties as { messageId: string }).messageId = `ev${c}-1`;
+
+          onMessage(msg);
+          await tick();
+
+          // eslint-disable-next-line no-control-regex
+          expect(lineaCore()).not.toMatch(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/);
+          expect(lineaCore()).toContain('lastError=er');
+        },
+      );
+
+      it('el último error se recorta: un valor de negocio más allá del tope no se loguea', async () => {
         const { onMessage } = await arrancar();
         inbox.ingest.mockResolvedValueOnce({ status: 'failed', detail: 'boom' });
 
         onMessage(
-          conHeaders(
-            { 'x-core-attempt': 2, 'x-core-last-error': `uno\ndos${'x'.repeat(2000)}` },
-            { ...sobre, data: { dato: 'SECRETO-DE-NEGOCIO' } },
-          ),
+          conHeaders({
+            'x-core-attempt': 2,
+            'x-core-last-error': `${'x'.repeat(200)}NEGOCIO-SECRETO`,
+          }),
         );
         await tick();
 
-        const linea = warn.mock.calls.map(([m]) => m).join('\n');
-        expect(linea).not.toContain('SECRETO-DE-NEGOCIO');
-        expect(linea).not.toContain('\nuno');
-        expect(linea.length).toBeLessThan(900);
+        expect(lineaCore()).not.toContain('NEGOCIO-SECRETO');
+        expect(lineaCore()).toContain(`lastError=${'x'.repeat(200)}`);
+      });
+
+      it('la línea completa tiene un tope, aunque cada campo esté dentro del suyo', async () => {
+        const { onMessage } = await arrancar();
+        inbox.ingest.mockResolvedValueOnce({ status: 'failed', detail: 'boom' });
+        const msg = conHeaders({
+          'x-core-attempt': 2,
+          'x-core-trace-id': 't'.repeat(100),
+          'x-core-last-error': 'e'.repeat(200),
+        });
+        (msg.properties as { messageId: string }).messageId = 'i'.repeat(100);
+
+        onMessage(msg);
+        await tick();
+
+        const prefijo = 'Mensaje no procesado, queda para el reintento del Core: ';
+        expect(lineaCore().length - prefijo.length).toBeLessThanOrEqual(400);
+        expect(lineaCore()).not.toContain('e'.repeat(200));
       });
     });
 

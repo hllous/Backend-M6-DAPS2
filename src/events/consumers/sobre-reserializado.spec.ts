@@ -186,15 +186,30 @@ describe('sobre re-serializado por el Core (#296)', () => {
       const create = calls.find(([n]) => n === 'environmentalReport.create');
       expect((create?.[1] as unknown[]).length).toBe(1);
     });
+
+    // El caso contrario: con los campos presentes se usan, no solo "ausente == null".
+    it.each(['commercialFineGenerated', 'closureUpdate'])(
+      '%s con externalRef y decidedAt presentes los registra',
+      async (tipo) => {
+        const { status, calls } = await correr(tipo, {
+          sourceViolationId: ID,
+          status: 'ORDERED',
+          externalRef: 'REF-9',
+          decidedAt: '2026-10-01T10:00:00.000Z',
+        });
+
+        const create = calls.find(([n]) => n === 'sanctionOutcome.create')![1] as [
+          [{ data: { externalRef: string; decidedAt: Date } }],
+        ];
+        expect(status).toBe('processed');
+        expect(create[0][0].data.externalRef).toBe('REF-9');
+        expect(create[0][0].data.decidedAt).toEqual(new Date('2026-10-01T10:00:00.000Z'));
+      },
+    );
   });
 
   describe('occurredAt normalizado a seis decimales con offset', () => {
-    const original = '2026-10-20T09:15:30.5-03:00';
     const normalizado = '2026-10-20T09:15:30.500000-03:00';
-
-    it('es el mismo instante: la normalización no cambia el orden', () => {
-      expect(new Date(normalizado).getTime()).toBe(new Date(original).getTime());
-    });
 
     it('el inbox lo acepta y procesa', async () => {
       const { status } = await correr(

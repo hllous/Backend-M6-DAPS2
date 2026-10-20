@@ -36,7 +36,7 @@ Es el sobre que M9 fijó el 7/10/2026 para toda la cohorte. Reemplaza al de M2 (
 - `eventId` es el id de la fila de nuestro outbox: un reenvío por un corte sale con el mismo `eventId`.
 - `correlationId` viaja siempre. Si el evento nace de una acción propia (una request HTTP, un barrido programado) abre un hilo nuevo; si nace del handler de un evento recibido, hereda el `correlationId` de ese.
 - `causationId` solo aparece cuando el evento nace dentro del handler de otro que recibimos, y es el `eventId` de ese. En los demás casos la clave no está (no mandamos `null`).
-- Solo propagamos UUID estrictos (versión 1-8, variante RFC). Si lo que llega no lo es, abrimos un hilo propio y el evento se procesa igual.
+- Solo propagamos lo que tiene la forma 8-4-4-4-12 en hex (lo que generamos sigue siendo v4). Si lo que llega no la tiene, abrimos un hilo propio y el evento se procesa igual.
 - `sourceModule` es `ambiente` en todos, también en `streetClosureRequested`, aunque su `data.sourceModule` valga `"M6"` (lo exige el schema acordado con M7).
 - `sourceModule` es el slug del módulo en el Core (M2 §5.1): `ciudadanos` (M1), `atencion-ciudadana` (M2), `obras` (M3), `habilitaciones` (M4), `rentas` (M5), `ambiente` (M6), `transito` (M7), `desarrollo-social` (M8) y `core` (M9). Dentro de `data` los módulos siguen siendo `M1`…`M9` (`responsibleAreaId`).
 - Se publica a `muni.inbox` con `persistent`, `mandatory` y el `userId` del usuario AMQP (M9 lo va a verificar contra el `sourceModule`). La routing key es el `eventType`, pero con `fanout` no enruta nada.
