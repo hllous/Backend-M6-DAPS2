@@ -216,7 +216,7 @@ export class EnvironmentalReportsService {
     reason: string,
     actorId: string,
   ): Promise<EnvironmentalReportResponseDto> {
-    const report = await this.getReport(id);
+    const report = this.assertNoPendingRequest(await this.getReport(id));
     return this.transition(report, S.FORWARDED, {}, [
       ...this.ticketEvents(report, actorId, {
         updateType: 'RETURNED',
@@ -232,7 +232,7 @@ export class EnvironmentalReportsService {
     reason: string,
     actorId: string,
   ): Promise<EnvironmentalReportResponseDto> {
-    const report = await this.getReport(id);
+    const report = this.assertNoPendingRequest(await this.getReport(id));
     return this.transition(report, S.DISMISSED, {}, [
       ...this.ticketEvents(report, actorId, {
         updateType: 'REJECTED',
@@ -251,7 +251,7 @@ export class EnvironmentalReportsService {
    * Además le diría "fue cerrada" al vecino después de "no corresponde" (#146).
    */
   async close(id: string, actorId: string): Promise<EnvironmentalReportResponseDto> {
-    const report = await this.getReport(id);
+    const report = this.assertNoPendingRequest(await this.getReport(id));
     const yaInformado = report.status === S.FORWARDED || report.status === S.DISMISSED;
     return this.transition(
       report,
@@ -282,6 +282,12 @@ export class EnvironmentalReportsService {
     actorId: string,
   ): Promise<EnvironmentalReportResponseDto> {
     const report = await this.getReport(id);
+    // Error de la entrada: va después del 404 pero antes de los 409 de estado.
+    const requiredBy = dto.requiredBy ? this.resolveRequiredBy(dto.requiredBy) : null;
+    const now = new Date();
+    if (requiredBy && requiredBy <= now) {
+      throw new BadRequestException('requiredBy tiene que ser una fecha futura');
+    }
     if (!report.ticketId) {
       throw new ConflictException(
         'El expediente no tiene reclamo de origen: no hay un vecino a quien pedirle información',
@@ -302,12 +308,6 @@ export class EnvironmentalReportsService {
       throw new ConflictException(
         `M2 no admite pedir información con el ticket en '${estadoTicket}' (solo IN_PROGRESS o ROUTED)`,
       );
-    }
-
-    const requiredBy = dto.requiredBy ? this.resolveRequiredBy(dto.requiredBy) : null;
-    const now = new Date();
-    if (requiredBy && requiredBy <= now) {
-      throw new BadRequestException('requiredBy tiene que ser una fecha futura');
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -331,7 +331,8 @@ export class EnvironmentalReportsService {
         this.ticketEvents(report, actorId, {
           updateType: 'INFORMATION_REQUIRED',
           publicMessage: dto.message,
-          internalMessage: dto.internalNote,
+          // M2 exige null o algún carácter no blanco: una nota en blanco no viaja.
+          internalMessage: dto.internalNote?.trim() || undefined,
           details: {
             informationRequest: {
               messageForCitizen: dto.message,
@@ -348,6 +349,20 @@ export class EnvironmentalReportsService {
 
     this.logger.log(`Expediente ${id}: información pedida al vecino (reclamo ${report.ticketId})`);
     return this.toResponseDto(updated);
+  }
+
+  /**
+   * M2 solo acepta RETURNED, RESOLVED y REJECTED con el ticket en ROUTED o
+   * IN_PROGRESS: con una solicitud pendiente (PENDING_INFORMATION) publicaríamos
+   * un evento inválido y el estado deducido divergiría del de M2.
+   */
+  private assertNoPendingRequest(report: EnvironmentalReport): EnvironmentalReport {
+    if (report.informationRequestedAt) {
+      throw new ConflictException(
+        'Hay una solicitud de información al vecino pendiente: esperar la respuesta o su vencimiento',
+      );
+    }
+    return report;
   }
 
   /** YYYY-MM-DD vence al final de ese día argentino; un ISO completo se respeta. */
@@ -409,7 +424,17 @@ export class EnvironmentalReportsService {
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.environmentalReport.update({
         where: { id: report.id },
-        data: { status: target, ...data },
+        // La solicitud pendiente solo tiene sentido en UNDER_REVIEW: una marca que
+        // sobrevive al cambio de estado bloquearía todo pedido nuevo.
+        data: {
+          status: target,
+          ...(target !== S.UNDER_REVIEW && {
+            informationRequestedAt: null,
+            informationRequestMessage: null,
+            informationRequestRequiredBy: null,
+          }),
+          ...data,
+        },
         include: WITH_ASSIGNED_CREW,
       });
       await this.outbox.enqueueMany(tx, events);

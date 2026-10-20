@@ -168,7 +168,18 @@ export class TicketsConsumer implements OnModuleInit {
     // updateType, también los que no tienen otro efecto, porque `currentStatus`
     // es campo común.
     if (esEstadoM2(data.currentStatus)) {
-      await registrarRecibido(this.prisma, ticketId, data.currentStatus, at);
+      const aplicado = await registrarRecibido(this.prisma, ticketId, data.currentStatus, at);
+      // Cualquier estado distinto de PENDING_INFORMATION significa que la solicitud
+      // ya no está viva (respondida, vencida, cancelada o reabierta, #169).
+      // INFORMATION_PROVIDED la cierra en su propio update, junto con la respuesta.
+      if (
+        aplicado &&
+        data.currentStatus !== 'PENDING_INFORMATION' &&
+        updateType !== TicketUpdateType.INFORMATION_PROVIDED &&
+        !this.esReclasificacion(data)
+      ) {
+        await this.cerrarSolicitud(ticketId, at);
+      }
     } else if (data.currentStatus !== undefined && data.currentStatus !== null) {
       // Fuera de la lista de §3: no se guarda (no puede dejar un estado basura que
       // calle el aviso de programación) y no rompe el handler. Valor de un tercero.
@@ -193,6 +204,39 @@ export class TicketsConsumer implements OnModuleInit {
       default:
         // Los siete restantes se descartan a propósito.
         this.logger.log(`ticketUpdated/${updateType}: sin efecto operativo, se descarta`);
+    }
+  }
+
+  /** Una reclasificación es entre M2 y el vecino: el ticket sigue en revisión y no es nuestra. */
+  private esReclasificacion(data: Record<string, unknown>): boolean {
+    const details = (data.details ?? {}) as Record<string, Record<string, unknown> | undefined>;
+    return (
+      details.informationResponse?.purpose === 'RECLASSIFICATION' ||
+      details.informationRequest?.purpose === 'RECLASSIFICATION'
+    );
+  }
+
+  /**
+   * Apaga la solicitud de información pendiente (#169). Se ordena con
+   * `citizenResponseAt`, la marca de la respuesta del vecino, para no pisar una
+   * respuesta más nueva; y el llamador ya descartó lo más viejo que el último
+   * estado recibido (`registrarRecibido`). Sin pendiente no toca nada.
+   */
+  private async cerrarSolicitud(ticketId: string, at: Date | null): Promise<void> {
+    const { count } = await this.prisma.environmentalReport.updateMany({
+      where: {
+        ticketId,
+        informationRequestedAt: { not: null },
+        ...this.noAtrasado('citizenResponseAt', at),
+      },
+      data: {
+        informationRequestedAt: null,
+        informationRequestMessage: null,
+        informationRequestRequiredBy: null,
+      },
+    });
+    if (count) {
+      this.logger.log(`ticketUpdated: solicitud de información del ticket ${ticketId} cerrada`);
     }
   }
 

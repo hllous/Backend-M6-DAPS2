@@ -1154,6 +1154,108 @@ describe('consumidores de eventos', () => {
       ]);
     });
 
+    it('INFORMATION_PROVIDED sin solicitud pendiente guarda la respuesta igual', async () => {
+      await h({
+        ticketId: 'TCK-1',
+        responsibleAreaId: 'M6',
+        updateType: 'INFORMATION_PROVIDED',
+        details: { informationResponse: { message: 'Sin que se la pidieran' } },
+      });
+
+      const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+      expect(args.data.citizenResponse).toBe('Sin que se la pidieran');
+      expect(args.where.informationRequestedAt).toBeUndefined();
+    });
+
+    describe('cierre de la solicitud de información por el estado recibido (#169)', () => {
+      const nuestro = { ticketId: 'TCK-1', responsibleAreaId: 'M6' };
+      const cierres = () =>
+        prisma.environmentalReport.updateMany.mock.calls.filter(
+          ([a]: any) => a.where.informationRequestedAt?.not === null,
+        );
+
+      it.each(['CANCELLED', 'IN_PROGRESS', 'ROUTED', 'IN_REVIEW', 'CLOSED'])(
+        'un ticketUpdated con currentStatus %s limpia la solicitud pendiente',
+        async (currentStatus) => {
+          await h({
+            ...nuestro,
+            updateType: 'STATUS_CHANGED',
+            currentStatus,
+            updatedAt: '2026-10-20T12:00:00Z',
+          });
+
+          const [[args]] = cierres();
+          expect(args.where.ticketId).toBe('TCK-1');
+          expect(args.data).toEqual({
+            informationRequestedAt: null,
+            informationRequestMessage: null,
+            informationRequestRequiredBy: null,
+          });
+          // No pisa una respuesta más nueva: mismo guard por citizenResponseAt.
+          expect(args.where.OR).toEqual([
+            { citizenResponseAt: null },
+            { citizenResponseAt: { lt: new Date('2026-10-20T12:00:00Z') } },
+          ]);
+        },
+      );
+
+      it('PENDING_INFORMATION no la cierra', async () => {
+        await h({
+          ...nuestro,
+          updateType: 'INFORMATION_REQUIRED',
+          currentStatus: 'PENDING_INFORMATION',
+        });
+        expect(cierres()).toHaveLength(0);
+      });
+
+      it('un currentStatus fuera de los 9 de M2 no la cierra', async () => {
+        await h({ ...nuestro, updateType: 'STATUS_CHANGED', currentStatus: 'INVENTADO' });
+        expect(cierres()).toHaveLength(0);
+      });
+
+      it('una reclasificación (purpose) no la cierra aunque el ticket siga en revisión', async () => {
+        await h({
+          ...nuestro,
+          updateType: 'INFORMATION_PROVIDED',
+          currentStatus: 'IN_REVIEW',
+          details: { informationResponse: { message: 'm', purpose: 'RECLASSIFICATION' } },
+        });
+        await h({
+          ...nuestro,
+          updateType: 'INFORMATION_REQUIRED',
+          currentStatus: 'IN_REVIEW',
+          details: { informationRequest: { purpose: 'RECLASSIFICATION' } },
+        });
+        expect(cierres()).toHaveLength(0);
+      });
+
+      it('un ticketUpdated más viejo que el último estado recibido no la cierra', async () => {
+        prisma.ticketM2State.findUnique.mockResolvedValue({
+          status: 'PENDING_INFORMATION',
+          receivedAt: new Date('2026-10-20T13:00:00Z'),
+        });
+
+        await h({
+          ...nuestro,
+          updateType: 'STATUS_CHANGED',
+          currentStatus: 'IN_PROGRESS',
+          updatedAt: '2026-10-20T12:00:00Z',
+        });
+
+        expect(cierres()).toHaveLength(0);
+      });
+
+      it('de un ticket ajeno no toca nada', async () => {
+        await h({
+          ticketId: 'TCK-9',
+          responsibleAreaId: 'M3',
+          updateType: 'STATUS_CHANGED',
+          currentStatus: 'CANCELLED',
+        });
+        expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
+      });
+    });
+
     it('INFORMATION_PROVIDED con solo adjuntos se registra sin romper', async () => {
       await h({
         ticketId: 'TCK-1',

@@ -113,4 +113,29 @@ describe('Solicitud de información al vecino (e2e)', () => {
       .post(`/environmental-reports/${reportId}/request-information`, { message: 'Una más' })
       .expect(200);
   });
+
+  it('con una pendiente, forward es 409; un estado distinto de PENDING_INFORMATION la apaga', async () => {
+    await api
+      .post(`/environmental-reports/${reportId}/forward`, { reason: 'No es nuestro' })
+      .expect(409);
+
+    // El vencimiento de la solicitud en M2 vuelve el ticket a otro estado (supuesto a confirmar).
+    await api
+      .post('/events/inbox', {
+        eventId: randomUUID(),
+        eventType: 'ticketUpdated',
+        occurredAt: '2026-10-21T15:00:00.000Z',
+        data: {
+          ticketId,
+          responsibleAreaId: 'M6',
+          updateType: 'STATUS_CHANGED',
+          currentStatus: 'IN_PROGRESS',
+          updatedAt: '2026-10-21T15:00:00.000Z',
+        },
+      })
+      .expect(200);
+
+    const detalle = await api.get(`/environmental-reports/${reportId}`).expect(200);
+    expect(detalle.body.informationRequestPending).toBe(false);
+  });
 });
