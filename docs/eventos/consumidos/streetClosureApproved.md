@@ -32,11 +32,11 @@ streetClosureApproved
 
 **`startDate` y `endDate` pueden diferir de lo solicitado.** Si la ventana autorizada no coincide con la agendada, el servicio se reprograma dentro de la ventana, no al revés.
 
-El nombre está acordado entre los tres módulos: M3 corrigió su `streetClosureAuthorized` y adoptó este. Los campos de origen tienen otro nombre del que pedimos (`closureRequestId`/`requestingModule` en vez de `sourceRequestId`/`sourceModule`), pero el dato está — ver [bloqueantes.md](../../bloqueantes.md#m7--tránsito-).
+El nombre está acordado entre los tres módulos: M3 corrigió su `streetClosureAuthorized` y adoptó este. Los campos de origen tienen otro nombre del que pedimos (`closureRequestId`/`requestingModule` en vez de `sourceRequestId`/`sourceModule`), pero el dato está — ver [bloqueantes.md](../../integracion/m7.md#m7--tránsito-).
 
 ## Un corte aprobado puede expirar sin aviso (M7, 19/10)
 
-Según el documento «Payloads actualizados Core v4» de M7, un corte `APPROVED` que nunca se activó pasa a `EXPIRED` **sin publicar nada**. Tras este evento, entonces, puede no llegar nunca el [`streetClosureEnded`](streetClosureEnded.md#corte-aprobado-que-expira-m7-no-publica-nada-m7-1910) y la `StreetClosureRequest` queda en `APPROVED`. Además, el `endDate` autorizado prevalece sobre el `requestedTo` que pedimos (M3 y M7 coinciden). Es un gap sin resolver: ver [bloqueantes.md](../../bloqueantes.md#m7--tránsito-).
+Según el documento «Payloads actualizados Core v4» de M7, un corte `APPROVED` que nunca se activó pasa a `EXPIRED` **sin publicar nada**. Tras este evento, entonces, puede no llegar nunca el [`streetClosureEnded`](streetClosureEnded.md#corte-aprobado-que-expira-m7-no-publica-nada-m7-1910) y la `StreetClosureRequest` queda en `APPROVED`. Además, el `endDate` autorizado prevalece sobre el `requestedTo` que pedimos (M3 y M7 coinciden). Es un gap sin resolver: ver [bloqueantes.md](../../integracion/m7.md#m7--tránsito-).
 
 ## Evento tardío o repetido
 

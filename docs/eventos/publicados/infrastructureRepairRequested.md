@@ -27,7 +27,7 @@ Enums: `damageType` es `RepairDamageType`, `severity` es `Severity` — ver [enu
 
 ## Qué le pedimos al consumidor
 
-**Que devuelvan `requestId` como `sourceRequestId`** (uuid, obligatorio) en [`workOrderScheduled`](../consumidos/workOrderScheduled.md) y [`workOrderCompleted`](../consumidos/workOrderCompleted.md). Es el único de los tres eventos hacia M3 con respuesta: la `RepairRequest` se cierra con `workOrderCompleted`, sin esperar `workOrderValidated`. Cuándo dispara M3 su `workOrderScheduled` (al abrir o al agendar) no nos cambia nada: cerrado el 5 oct 2026, ver [bloqueantes.md](../../bloqueantes.md#m3--obras-públicas).
+**Que devuelvan `requestId` como `sourceRequestId`** (uuid, obligatorio) en [`workOrderScheduled`](../consumidos/workOrderScheduled.md) y [`workOrderCompleted`](../consumidos/workOrderCompleted.md). Es el único de los tres eventos hacia M3 con respuesta: la `RepairRequest` se cierra con `workOrderCompleted`, sin esperar `workOrderValidated`. Cuándo dispara M3 su `workOrderScheduled` (al abrir o al agendar) no nos cambia nada: cerrado el 5 oct 2026, ver [bloqueantes.md](../../integracion/m3.md#m3--obras-públicas).
 
 `ticketId` (opcional) es el nombre que usa la cohorte; M3 lo llamaba `complaintId`.
 

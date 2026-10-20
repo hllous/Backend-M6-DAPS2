@@ -104,7 +104,7 @@ Nice to have, si ya lo publican: `formData`, `resolutionDueAt`, `currentPriority
 
 ✅ **`RESOLVED` directo desde `ROUTED` quedó resuelto.** §8.2 de la v1.6: *"M2 no mantiene una configuración por RequestType para habilitar o impedir la resolución directa"*, y `STARTED`/`PROGRESS` son hechos opcionales. Ya no hay catálogo que esperar. Ver [`updateTicketStatus`](../publicados/updateTicketStatus.md).
 
-Detalle completo en [bloqueantes.md](../../bloqueantes.md#m2--atención-ciudadana--un-bloqueante-que-no-se-mueve-una-regresión).
+Detalle completo en [bloqueantes.md](../../integracion/m2.md#m2--atención-ciudadana--un-bloqueante-que-no-se-mueve-una-regresión).
 
 ## Nota de vocabulario
 

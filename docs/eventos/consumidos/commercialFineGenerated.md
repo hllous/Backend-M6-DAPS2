@@ -22,7 +22,7 @@ Nice to have: `establishmentId`, que ya tienen — lo aprovechamos, pero no reem
 
 ## Lo que falta confirmar
 
-⚠️ **Sigue rotulado solo "M4 → Core → Rentas"** en su documento vigente. Falta que confirmen que **también nos lo rutean a nosotros**: sin este evento no cerramos el expediente por la vía de la multa. Ver [bloqueantes.md](../../bloqueantes.md#m4--habilitaciones--con-dos-preguntas-abiertas).
+⚠️ **Sigue rotulado solo "M4 → Core → Rentas"** en su documento vigente. Falta que confirmen que **también nos lo rutean a nosotros**: sin este evento no cerramos el expediente por la vía de la multa. Ver [bloqueantes.md](../../integracion/m4.md#m4--habilitaciones--con-dos-preguntas-abiertas).
 
 🟡 **¿`actId` es lo mismo que `externalRef`?** Si es el mismo número con otro nombre, conviene decírselo para no duplicar el campo.
 

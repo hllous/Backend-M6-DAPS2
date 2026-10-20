@@ -111,7 +111,7 @@ Casos concretos:
 | Agregar o cambiar una entidad | `docs/entidades/*.md` y `docs/DER.puml` |
 | Nuevo enum o valor de enum | `docs/enumeraciones.md` |
 | Decisión de arquitectura o tecnología | Nuevo ADR en `docs/decisiones/` |
-| Confirmar o levantar un bloqueante con otro grupo | `docs/bloqueantes.md` |
+| Confirmar o levantar un bloqueante con otro grupo | `docs/integracion/historial.md` primero; si deja algo abierto, una fila en `docs/bloqueantes.md`; lo cerrado va a `docs/integracion/resueltos.md` |
 
 Si vas a hacer un cambio grande en la doc de dominio (`docs/entidades/`, `docs/eventos/`), avisá al equipo antes — puede impactar a otros PRs en curso.
 

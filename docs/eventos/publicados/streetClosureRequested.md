@@ -31,4 +31,4 @@ Enums: `closureType` es `StreetClosureType` — ver [enumeraciones.md](../../enu
 
 ## Qué le pedimos al consumidor
 
-**Que devuelvan `closureRequestId` y `requestingModule`** en las tres respuestas: [`streetClosureApproved`](../consumidos/streetClosureApproved.md), [`streetClosureRejected`](../consumidos/streetClosureRejected.md) y [`streetClosureEnded`](../consumidos/streetClosureEnded.md). Ya lo hacen los tres — ver [bloqueantes.md](../../bloqueantes.md#m7--tránsito-).
+**Que devuelvan `closureRequestId` y `requestingModule`** en las tres respuestas: [`streetClosureApproved`](../consumidos/streetClosureApproved.md), [`streetClosureRejected`](../consumidos/streetClosureRejected.md) y [`streetClosureEnded`](../consumidos/streetClosureEnded.md). Ya lo hacen los tres — ver [bloqueantes.md](../../integracion/m7.md#m7--tránsito-).
