@@ -93,26 +93,25 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 > Cuatro confirmaciones sobre su contrato de octubre: (1) en `environmentalViolationDetected` mandamos `suggestedAction` con cuatro valores: `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE`. Su documento lista tres; ¿toleran `FORMAL_NOTICE`? El campo no es vinculante. (2) ¿`commercialFineGenerated` también nos lo rutean a nosotros, o solo `closureUpdate`? (3) ¿`actId` y `externalRef` son el mismo dato? (4) ¿Dejaron de publicar `ticketInProgress`? Aclaración: `sourceViolationId` reproduce exactamente el `violationId` UUID que les mandamos.
 
-**→ M9 (Core)** — seguimiento de [#300](https://github.com/hllous/Backend-M6-DAPS2/issues/300) y respuesta a la guía común del 20/10 ([#328](https://github.com/hllous/Backend-M6-DAPS2/issues/328)) — *por enviar; el PO completa los campos [COMPLETAR PO]*
+**→ M9 (Core)** — seguimiento de [#300](https://github.com/hllous/Backend-M6-DAPS2/issues/300) y respuesta a la guía común del 20/10 ([#328](https://github.com/hllous/Backend-M6-DAPS2/issues/328)) — *por enviar; falta solo la IP pública de salida de Render [COMPLETAR PO]*
 
 > Gracias por la guía común. Lo que nos pide su §2:
 >
-> 1. **Módulo:** `ambiente` (Ambiente, Higiene y Servicios Urbanos). Responsable técnico y canal: **[COMPLETAR PO]**.
+> 1. **Módulo:** `ambiente` (Ambiente, Higiene y Servicios Urbanos). Responsables técnicos y canal de contacto: **Facu Iriarte** (+54 9 11 5139-3059, Discord `gordito12`) y **Benjamin Martinez** (+54 9 298 344-9923, Discord `taki9`).
 > 2. **IP pública de salida** del backend (Render): **[COMPLETAR PO: verificarla en el panel de Render; indicar si es fija o cambia]**. Un solo origen, producción.
 > 3. **Publicamos** (8): `urbanServiceScheduled`, `updateTicketStatus`, `containerDamaged`, `treeRiskDetected`, `treePruningScheduled`, `environmentalViolationDetected`, `infrastructureRepairRequested`, `streetClosureRequested`; `sourceModule` `ambiente`, `eventVersion` 1.0, con sus schemas JSON.
 > 4. **Consumimos** (8, `maxAttempts` 4): `ticketUpdated`, `workOrderScheduled`, `workOrderCompleted`, `commercialFineGenerated`, `closureUpdate`, `streetClosureApproved`, `streetClosureRejected`, `streetClosureEnded`.
-> 5. **Prueba coordinada:** **[COMPLETAR PO: horarios]**; como el ambiente es compartido, ¿qué tipo de evento ficticio podemos usar en la primera prueba para que no llegue a otros módulos?
-> 6. **Dashboard:** sí, **[COMPLETAR PO: 1 o 2 emails]**.
+> 5. **Prueba coordinada:** **Les pedimos que nos pasen ustedes los horarios que tengan disponibles**; como el ambiente es compartido, ¿qué tipo de evento ficticio podemos usar en la primera prueba para que no llegue a otros módulos?
+> 6. **Dashboard:** sí, para tres personas: `benmartinez@uade.edu.ar`, `fairiarte@uade.edu.ar` y `nico.llousas@gmail.com`.
 >
 > Pedimos la **ficha privada** con `module_ambiente`, el secret de máquina y el acceso al dashboard, por privado y de a uno.
 >
 > Preguntas:
 >
-> - **(a)** La cadena de reintentos de la guía (5 s, 30 s, 2 min, 10 min; `maxAttempts=4` = cuatro intentos totales) difiere de la que nos informaron el 20/10 (15 s, 1 m, 5 m, 15 m): ¿cuál rige y qué escalones usa cada intento con `maxAttempts=4`?
-> - **(b)** `streetClousureEnded` o `streetClosureEnded`: nosotros nos suscribimos a `streetClosureEnded`; si M7 publica el otro nombre no recibiríamos el evento. ¿Qué queda en el registro y siguen ambos alias?
-> - **(c)** `streetClosureActivated`: no lo publicamos ni consumimos; ¿alguien lo espera de nosotros?
-> - **(d)** Registro: vamos a consultar `GET /subscriptions` y `GET /publications` y crear solo lo que falte, sin repetir los POST. ¿Hay algo nuestro ya cargado? En el catálogo figuraba `zoneNotServiced` con owner `ambiente`, que descartamos: ¿pueden darlo de baja?
-> - **(e)** Siguen abiertos del 20/10: ¿el Core acepta el UUID nulo y el máximo como `correlationId`?, ¿`exclude_none` quita también los `null` dentro de `data`?, y lo de barrios y zonas y `notificationSent` frente al TPO §9.
+> - **(a)** `streetClousureEnded` o `streetClosureEnded`: nosotros nos suscribimos a `streetClosureEnded`; si M7 publica el otro nombre no recibiríamos el evento. ¿Qué queda en el registro y siguen ambos alias?
+> - **(b)** `streetClosureActivated`: no lo publicamos ni consumimos; ¿alguien lo espera de nosotros?
+> - **(c)** Registro: vamos a consultar `GET /subscriptions` y `GET /publications` y crear solo lo que falte, sin repetir los POST. ¿Hay algo nuestro ya cargado? En el catálogo figuraba `zoneNotServiced` con owner `ambiente`, que descartamos: ¿pueden darlo de baja?
+> - **(d)** Siguen abiertos del 20/10: ¿el Core acepta el UUID nulo y el máximo como `correlationId`?, ¿`exclude_none` quita también los `null` dentro de `data`?, y lo de barrios y zonas y `notificationSent` frente al TPO §9.
 
 **→ M2 (Atención Ciudadana)** — informativo y dos confirmaciones
 
