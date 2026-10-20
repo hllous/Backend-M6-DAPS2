@@ -1,4 +1,11 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { startOfDayArgentina, toDateOnly } from '../../common/utils/date-only';
 import {
   EnvironmentalReport,
   EnvironmentalReportStatus as S,
@@ -44,6 +51,13 @@ export const REPORT_TRANSITIONS: Record<S, S[]> = {
   SANCTIONED: [S.CLOSED],
   CLOSED: [S.UNDER_REVIEW],
 };
+
+/**
+ * Columna sobre la que filtran `from`/`to`: la que la cola muestra como «Actualizado».
+ * Pendiente de confirmar con el PO; si prefiere la fecha de alta, es solo cambiar acá a 'createdAt'.
+ */
+const DATE_FILTER_COLUMN = 'updatedAt' as const;
+const DAY_MS = 86_400_000;
 
 /**
  * Un servicio cancelado ya no es una asignación: la cuadrilla no va a ir. Lo
@@ -113,6 +127,20 @@ export class EnvironmentalReportsService {
     query: QueryEnvironmentalReportsDto,
   ): Promise<PaginatedResponseDto<EnvironmentalReportResponseDto>> {
     const where: Prisma.EnvironmentalReportWhereInput = {};
+
+    if (query.from && query.to && toDateOnly(query.from) > toDateOnly(query.to)) {
+      throw new BadRequestException(
+        `'from' (${query.from}) no puede ser posterior a 'to' (${query.to})`,
+      );
+    }
+    // `to` es inclusivo: hasta el final de ese día argentino, o sea antes de las
+    // 00:00 ART del día siguiente (los timestamps tienen hora, a diferencia de un @db.Date).
+    if (query.from || query.to) {
+      where[DATE_FILTER_COLUMN] = {
+        ...(query.from && { gte: startOfDayArgentina(query.from) }),
+        ...(query.to && { lt: new Date(startOfDayArgentina(query.to).getTime() + DAY_MS) }),
+      };
+    }
 
     if (query.status) where.status = query.status;
     if (query.reportType) where.reportType = query.reportType;
