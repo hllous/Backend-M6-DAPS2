@@ -110,6 +110,18 @@ export const envSchema = z
         message: 'En producción RABBITMQ_URL tiene que ser amqps://',
       });
     }
+    // M9 va a verificar el usuario AMQP contra el sourceModule: guest no es un módulo.
+    if (
+      env.NODE_ENV === 'production' &&
+      env.RABBITMQ_URL &&
+      /^guest$/i.test(new URL(env.RABBITMQ_URL).username)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['RABBITMQ_URL'],
+        message: 'En producción RABBITMQ_URL no puede usar el usuario guest',
+      });
+    }
     // El secret viaja en el body del pedido de token.
     if (env.NODE_ENV === 'production' && /^http:/i.test(env.CORE_API_URL ?? '')) {
       ctx.addIssue({

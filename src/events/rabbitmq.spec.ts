@@ -1,4 +1,4 @@
-import { brokerHost } from './rabbitmq';
+import { brokerHost, brokerUser } from './rabbitmq';
 
 describe('brokerHost', () => {
   it('saca usuario y clave de la URL', () => {
@@ -13,5 +13,16 @@ describe('brokerHost', () => {
 
   it('una URL ilegible no se loguea tal cual', () => {
     expect(brokerHost('no es una url:secreto')).toBe('(URL de RabbitMQ ilegible)');
+  });
+});
+
+describe('brokerUser', () => {
+  it('devuelve el usuario decodificado, sin la clave', () => {
+    expect(brokerUser('amqps://m%40m6:secreto@bus:5671/muni')).toBe('m@m6');
+  });
+
+  it('sin usuario o con una URL ilegible no hay userId', () => {
+    expect(brokerUser('amqp://bus:5672')).toBeUndefined();
+    expect(brokerUser('no es una url')).toBeUndefined();
   });
 });
