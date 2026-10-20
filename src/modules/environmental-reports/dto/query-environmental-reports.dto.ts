@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { SearchText, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
+import { IsDateOnly, SearchText, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
 import { EnvironmentalReportStatus, EnvironmentalReportType, Severity } from '@prisma/client';
-import { IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
@@ -57,7 +57,7 @@ export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
     format: 'date',
   })
   @IsOptional()
-  @IsDateString()
+  @IsDateOnly()
   from?: string;
 
   @ApiPropertyOptional({
@@ -67,7 +67,7 @@ export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
     format: 'date',
   })
   @IsOptional()
-  @IsDateString()
+  @IsDateOnly()
   to?: string;
 
   @ApiPropertyOptional({

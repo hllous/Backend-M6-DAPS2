@@ -53,16 +53,16 @@ export const REPORT_TRANSITIONS: Record<S, S[]> = {
 };
 
 /**
- * Un servicio cancelado ya no es una asignación: la cuadrilla no va a ir. Lo
- * comparten el `assignedCrewId` y el filtro `crewId` para que digan lo mismo.
- */
-/**
  * Columna sobre la que filtran `from`/`to`: la que la cola muestra como «Actualizado».
  * Pendiente de confirmar con el PO; si prefiere la fecha de alta, es solo cambiar acá a 'createdAt'.
  */
 const DATE_FILTER_COLUMN = 'updatedAt' as const;
 const DAY_MS = 86_400_000;
 
+/**
+ * Un servicio cancelado ya no es una asignación: la cuadrilla no va a ir. Lo
+ * comparten el `assignedCrewId` y el filtro `crewId` para que digan lo mismo.
+ */
 const ACTIVE_SERVICE = {
   status: { not: ServiceStatus.CANCELLED },
 } satisfies Prisma.ServiceWhereInput;

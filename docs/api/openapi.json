@@ -9955,6 +9955,7 @@
             "description": "Actualizados desde este día, inclusive (YYYY-MM-DD, día argentino UTC-3). Filtra por la fecha de última actualización («Actualizado» de la cola)",
             "schema": {
               "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
               "example": "2026-09-01",
               "type": "string"
             }
@@ -9966,6 +9967,7 @@
             "description": "Actualizados hasta este día, inclusive: hasta las 23:59:59 ART (YYYY-MM-DD). No puede ser anterior a `from`",
             "schema": {
               "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
               "example": "2026-09-30",
               "type": "string"
             }
