@@ -108,11 +108,10 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Preguntas:
 >
-> - **(a)** La cadena de reintentos de la guía (5 s, 30 s, 2 min, 10 min; `maxAttempts=4` = cuatro intentos totales) difiere de la que nos informaron el 20/10 (15 s, 1 m, 5 m, 15 m): ¿cuál rige y qué escalones usa cada intento con `maxAttempts=4`?
-> - **(b)** `streetClousureEnded` o `streetClosureEnded`: nosotros nos suscribimos a `streetClosureEnded`; si M7 publica el otro nombre no recibiríamos el evento. ¿Qué queda en el registro y siguen ambos alias?
-> - **(c)** `streetClosureActivated`: no lo publicamos ni consumimos; ¿alguien lo espera de nosotros?
-> - **(d)** Registro: vamos a consultar `GET /subscriptions` y `GET /publications` y crear solo lo que falte, sin repetir los POST. ¿Hay algo nuestro ya cargado? En el catálogo figuraba `zoneNotServiced` con owner `ambiente`, que descartamos: ¿pueden darlo de baja?
-> - **(e)** Siguen abiertos del 20/10: ¿el Core acepta el UUID nulo y el máximo como `correlationId`?, ¿`exclude_none` quita también los `null` dentro de `data`?, y lo de barrios y zonas y `notificationSent` frente al TPO §9.
+> - **(a)** `streetClousureEnded` o `streetClosureEnded`: nosotros nos suscribimos a `streetClosureEnded`; si M7 publica el otro nombre no recibiríamos el evento. ¿Qué queda en el registro y siguen ambos alias?
+> - **(b)** `streetClosureActivated`: no lo publicamos ni consumimos; ¿alguien lo espera de nosotros?
+> - **(c)** Registro: vamos a consultar `GET /subscriptions` y `GET /publications` y crear solo lo que falte, sin repetir los POST. ¿Hay algo nuestro ya cargado? En el catálogo figuraba `zoneNotServiced` con owner `ambiente`, que descartamos: ¿pueden darlo de baja?
+> - **(d)** Siguen abiertos del 20/10: ¿el Core acepta el UUID nulo y el máximo como `correlationId`?, ¿`exclude_none` quita también los `null` dentro de `data`?, y lo de barrios y zonas y `notificationSent` frente al TPO §9.
 
 **→ M2 (Atención Ciudadana)** — informativo y dos confirmaciones
 
