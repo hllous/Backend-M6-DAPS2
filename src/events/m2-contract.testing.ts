@@ -18,6 +18,9 @@ const PAQUETE =
 
 export const PAQUETE_M2_PRESENTE = fs.existsSync(PAQUETE);
 
+/** Los sobres de ejemplo válidos, hermanos de `schemas/` (el `.json` completo, con su sobre). */
+export const EJEMPLOS_M2_VALIDOS = path.join(PAQUETE, '..', 'examples', 'valid');
+
 if (!PAQUETE_M2_PRESENTE) {
   console.warn(
     `Paquete de M2 v1.78 ausente (${PAQUETE}): se saltea la validación contra su contrato.`,
