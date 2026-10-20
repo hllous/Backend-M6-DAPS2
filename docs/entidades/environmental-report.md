@@ -18,7 +18,7 @@ Enums: `reportType` es `EnvironmentalReportType`, `status` es `EnvironmentalRepo
 
 **`escalated` y `citizenResponse` los escribe M2, no nosotros.** Llegan por `ticketUpdated`: `ESCALATION_CHANGED` marca o desmarca el expediente como escalado (`details.escalation.active`) para que lo vea el supervisor, y el `ROUTED` ya trae el valor inicial. `INFORMATION_PROVIDED` trae lo que el vecino respondió a nuestro pedido de información: `citizenResponse` guarda `details.informationResponse.message` y, debajo, una línea `fileName: url` por adjunto. El expediente no tiene campo de adjuntos, y la URL de M2 puede ser temporal. El contrato de M2 no usa ID de correlación —impone como máximo una solicitud activa por ticket—, así que la respuesta siempre corresponde a la nuestra.
 
-**`priorityChangedAt`, `escalationChangedAt`, `citizenResponseAt` y `ticketStatusAt` son marcas de orden, no datos de negocio** (#270). Guardan el `occurredAt` del último `ticketUpdated` aplicado a `priority`, a `escalated`, a `citizenResponse` y al estado (`REOPENED`/`CANCELLED`, compartida) respectivamente. El Core no garantiza el orden y reintenta tarde, así que un evento que no es más nuevo que la marca de su dato se ignora en vez de pisarlo. Una por dato y no una sola: un cambio de prioridad nuevo no tiene por qué descartar un escalamiento atrasado. El `ROUTED` que abre el expediente deja `ticketStatusAt`, y `priorityChangedAt`/`escalationChangedAt` si su snapshot trae esos datos, en su propio `occurredAt` (#275): el snapshot ya refleja lo anterior. No salen en la API. Ver [`ticketUpdated`](../eventos/consumidos/ticketUpdated.md#orden-por-occurredat-no-por-llegada-270).
+**`priorityChangedAt`, `escalationChangedAt`, `citizenResponseAt` y `ticketStatusAt` son marcas de orden, no datos de negocio** (#270). Guardan la fecha de orden del último `ticketUpdated` aplicado (desde el 20/10 es `data.updatedAt`, cuándo M2 persistió el cambio; el `occurredAt` del sobre queda de respaldo si falta o es ilegible, #308) a `priority`, a `escalated`, a `citizenResponse` y al estado (`REOPENED`/`CANCELLED`, compartida) respectivamente. El Core no garantiza el orden y reintenta tarde, así que un evento que no es más nuevo que la marca de su dato se ignora en vez de pisarlo. Una por dato y no una sola: un cambio de prioridad nuevo no tiene por qué descartar un escalamiento atrasado. El `ROUTED` que abre el expediente deja `ticketStatusAt`, y `priorityChangedAt`/`escalationChangedAt` si su snapshot trae esos datos, en su propio `occurredAt` (#275): el snapshot ya refleja lo anterior. No salen en la API. Ver [`ticketUpdated`](../eventos/consumidos/ticketUpdated.md#orden-por-occurredat-no-por-llegada-270).
 
 **`deadlineAt` es el plazo que le damos a M4** para resolver el acta antes de cerrar el expediente por vencimiento. Se configura con `SANCTION_DEADLINE_DAYS`.
 
@@ -43,13 +43,16 @@ stateDiagram-v2
     DISMISSED --> CLOSED
     NO_VIOLATION --> CLOSED
     SANCTIONED --> CLOSED
-    FORWARDED --> UNDER_REVIEW : reapertura
+    FORWARDED --> UNDER_REVIEW : reapertura o M2 vuelve a derivar el ticket
+    FORWARDED --> CLOSED : M2 reasigna a otra área o cancela
     DISMISSED --> UNDER_REVIEW : reapertura
     NO_VIOLATION --> UNDER_REVIEW : reapertura
     CLOSED --> UNDER_REVIEW : reapertura
 ```
 
 **La reapertura llega por `ticketUpdated` con `REOPENED`**: el vecino rechazó la solución y el expediente vuelve a `UNDER_REVIEW` desde `FORWARDED`, `DISMISSED`, `NO_VIOLATION` o `CLOSED`. Un expediente `SANCTIONED` no se reabre (la tabla `REPORT_TRANSITIONS` solo lo deja pasar a `CLOSED`): eso ya lo resolvió M4.
+
+**Un expediente `FORWARDED` también se mueve por lo que haga M2 con el ticket devuelto, sin acción del usuario** (M2, 20/10; #304, #308): si M2 vuelve a derivarlo a M6 llega un `ROUTED` nuevo (otro `eventId`) y el expediente pasa a `UNDER_REVIEW` con el snapshot actualizado; si lo reasigna a otra área (llega un `ROUTED` ajeno, que es un broadcast, del que solo se usan `ticketId` y área) o lo cancela administrativamente, pasa a `CLOSED`. Un `ROUTED` anterior a la devolución que llega tarde no hace ninguna de las dos cosas. Desde cualquier otro estado, un `ROUTED` repetido se ignora. Al reactivar todavía no se publica `STARTED` hacia M2 ([#309](https://github.com/hllous/Backend-M6-DAPS2/issues/309)).
 
 **`NOTICE_ISSUED → CLOSED` por vencimiento de plazo no es un atajo, es el diseño.** M4 no publica ningún evento cuando decide que no corresponde castigo, así que sin ese cierre el expediente quedaría abierto para siempre. Cierra sin `SanctionOutcome`: una desestimación y una demora de M4 se ven igual, y esa imprecisión se aceptó a cambio de no depender de que otro grupo agregue un evento. El barrido corre **cada hora y también al arrancar** (#150): en el free tier de Render el servicio duerme, y sin el barrido de arranque el cierre esperaba a que coincidieran el despertar y la hora en punto. Ver [bloqueantes.md](../bloqueantes.md#resueltos--no-repreguntar).
 

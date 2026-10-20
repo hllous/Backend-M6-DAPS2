@@ -1,6 +1,6 @@
 # `updateTicketStatus` → M2
 
-El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — v1.75 (WIP), que reemplaza a la v1.74 WIP y no cambia este evento respecto de la v1.6; la v1.71, la v1.72 y la v1.74 nunca se cruzaron — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
+El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — vigente v1.78 (WIP), recibida y cruzada el 20/10; respecto de la v1.77 solo cambia `updatedBy.id` (UUID o `null`, ver abajo) y, antes de eso, desde la v1.6 no cambió este evento; la v1.71, la v1.72 y la v1.74 nunca se cruzaron — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
 
 Schema: [`updateTicketStatus.schema.json`](updateTicketStatus.schema.json).
 
@@ -10,7 +10,7 @@ Cuando cambia el estado de un [`Service`](../../entidades/service.md) o de una i
 
 > **La regla:** proyectamos si y solo si el `Service` o el [`EnvironmentalReport`](../../entidades/environmental-report.md) tiene `ticketId`. Sin esta regla, M2 recibe eventos de tickets que no existen.
 
-## Payload (v1.75, sin cambios desde la v1.6)
+## Payload (v1.78; solo `updatedBy.id` cambió desde la v1.6)
 
 ```
 ticketId, updateType,
@@ -26,6 +26,10 @@ attachments[]?, updatedBy, updateOccurredAt
 - `resolution.type` cambió `INFORMATION_PROVIDED` por **`INQUIRY_ANSWERED`** (§8.5).
 - El **sobre** ya no lleva `subject`: el sobre del Core no lo tiene, así que dejamos de mandar `tickets/{ticketId}` (§4 de M2) y la correlación con M2 va solo por `data.ticketId`. Ver [`envelope.ts`](../../../src/events/envelope.ts).
 
+🔴 **v1.78 (20/10): `updatedBy.id` es `UUID | null`.** La v1.77 admitía `string | integer | null` (el ejemplo era `"USR-M3-77"`); la v1.78 no admite códigos ni enteros. Para una acción en M2 es el `citizenId` del `ModuleUser`; para `EXTERNAL_USER` es el UUID de la persona en el módulo de origen; es `null` en `SYSTEM` o cuando no hay una persona concreta identificable. El paquete de M2 pasó a 68 casos inválidos (los dos nuevos: `actor.id` no UUID y numérico).
+
+**Pendiente nuestro (issue por abrir, sin implementar):** `updateTicketStatus()` de `src/events/payloads.ts` manda `{ type: 'EXTERNAL_USER', id: <sub del JWT> }`, y ese `sub` puede no ser un UUID (el JWT es provisorio, [ADR-002](../../decisiones/adr-002-auth-provisoria.md), y M1 documenta `user_id` como `bigint` en su login). Bajo la v1.78 M2 o el Core lo rechazarían. Remedio propuesto: si el actor no es un UUID, mandar `id: null`. El [schema local](updateTicketStatus.schema.json) todavía acepta cualquier string en `id`: no se endurece hasta que el código lo cumpla.
+
 Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED`/`PROGRESS` siguen sin estructura de `details`. El bloqueante de la fecha agendada sigue abierto — ver más abajo.
 
 | Campo | Nota |
@@ -37,7 +41,7 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 | `progress?` | `Int`, porcentaje estimado. **No sirve para la fecha/franja agendada** — ver bloqueante |
 | `details?` | Objeto cuya forma depende del `updateType` — ver la tabla de abajo |
 | `attachments[]?` | En el formato de M2: `{ fileName, contentType, url, sizeBytes? }`, no el nuestro. **Sin `attachmentId`** desde la v1.6 |
-| `updatedBy` | `{ type: EXTERNAL_USER, id }` para una persona; `{ type: SYSTEM, id: null }` si el hecho lo generó un proceso automático |
+| `updatedBy` | `{ type: EXTERNAL_USER, id }` para una persona (`id`: UUID o `null` desde la v1.78); `{ type: SYSTEM, id: null }` si el hecho lo generó un proceso automático |
 | `updateOccurredAt` | Cuándo ocurrió el hecho, no cuándo se publicó |
 
 **No lleva `status`.** Informamos el hecho y M2 decide la transición: nuestro modelo no vuelve a nombrar estados de M2 en ningún lado.
