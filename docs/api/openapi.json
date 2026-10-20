@@ -9849,7 +9849,7 @@
       "get": {
         "operationId": "EnvironmentalReportsController_findAll",
         "summary": "Listar expedientes ambientales",
-        "description": "Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen, cuadrilla (crewId: expedientes con alguna inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base para que la página y meta.total sean consistentes) y búsqueda por dirección.",
+        "description": "Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen, cuadrilla (crewId: expedientes con alguna inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base para que la página y meta.total sean consistentes) y búsqueda por dirección. Rango de fechas from/to (YYYY-MM-DD, inclusivo, día argentino) sobre la fecha de última actualización; meta.total refleja el filtro.",
         "parameters": [
           {
             "name": "page",
@@ -9965,6 +9965,30 @@
             }
           },
           {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Actualizados desde este día, inclusive (YYYY-MM-DD, día argentino UTC-3). Filtra por la fecha de última actualización («Actualizado» de la cola)",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-09-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Actualizados hasta este día, inclusive: hasta las 23:59:59 ART (YYYY-MM-DD). No puede ser anterior a `from`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-09-30",
+              "type": "string"
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
@@ -10003,7 +10027,7 @@
             }
           },
           "400": {
-            "description": "Filtro inválido (por ejemplo, crewId que no es UUID)",
+            "description": "Filtro inválido (por ejemplo, crewId que no es UUID, fecha mal formada o from posterior a to)",
             "content": {
               "application/json": {
                 "schema": {
