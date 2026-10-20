@@ -634,6 +634,9 @@ export class TicketsConsumer implements OnModuleInit {
    * Leemos `details.routing` primero y caemos al nivel raíz porque el contrato
    * sigue WIP y ya cambió de opinión una vez: aceptar las dos formas no cuesta
    * nada y nos deja indiferentes a cuál de las dos terminen publicando.
+   *
+   * `category`/`subcategory` (v1.77) no se leen, decisión cerrada (#307): los
+   * ejemplos de M2 son de otras áreas y no sabemos cómo vendrán los de Ambiente.
    */
   private routing(data: Record<string, unknown>): Record<string, unknown> {
     const details = (data.details ?? {}) as Record<string, unknown>;
@@ -675,6 +678,9 @@ export class TicketsConsumer implements OnModuleInit {
   }
 
   /**
+   * El texto sale de `requestType` + `summary`, no de `category`/`subcategory`
+   * (#307). Se reabre si el tipo sale mal con datos reales.
+   *
    * ponytail: mapea el texto del reclamo a nuestro catálogo por palabra clave,
    * y cae en OTHER si no reconoce nada. Es lo que se puede hacer sin el
    * catálogo de Request Types de M2; cuando lo publiquen, esto se reemplaza por
