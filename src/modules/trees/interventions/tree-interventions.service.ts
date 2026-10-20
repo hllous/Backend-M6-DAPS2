@@ -90,6 +90,9 @@ export class TreeInterventionsService {
     if (query.status) {
       where.status = query.status;
     }
+    if (query.priority) {
+      where.priority = query.priority;
+    }
     if (query.treeId) {
       where.trees = { some: { treeId: query.treeId } };
     }

@@ -5727,7 +5727,7 @@
       "get": {
         "operationId": "TreeInterventionsController_findAll",
         "summary": "Listar intervenciones sobre árboles",
-        "description": "Retorna un listado paginado de intervenciones. Se puede filtrar por tipo, estado y por árbol: con treeId vienen solo las intervenciones que incluyen ese árbol, para armar su ficha.",
+        "description": "Retorna un listado paginado de intervenciones. Se puede filtrar por tipo, estado, prioridad y por árbol: con treeId vienen solo las intervenciones que incluyen ese árbol, para armar su ficha.",
         "parameters": [
           {
             "name": "page",
@@ -5782,6 +5782,22 @@
                 "PENDING_AUTHORIZATION",
                 "AUTHORIZED",
                 "REJECTED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "priority",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por prioridad de la intervención (LOW, MEDIUM, HIGH, CRITICAL)",
+            "schema": {
+              "example": "HIGH",
+              "enum": [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL"
               ],
               "type": "string"
             }
