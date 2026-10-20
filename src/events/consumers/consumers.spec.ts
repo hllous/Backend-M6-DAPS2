@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
+import { OutboxService } from '../outbox/outbox.service';
 import { OutboundResponsesConsumer } from './outbound-responses.consumer';
 import { SanctionsConsumer } from './sanctions.consumer';
 import { TicketsConsumer } from './tickets.consumer';
@@ -447,10 +448,12 @@ describe('consumidores de eventos', () => {
 
   describe('ticketUpdated de M2', () => {
     let h: Handler;
+    let outbox: { enqueue: jest.Mock };
 
     beforeEach(() => {
+      outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
       h = registrar(
-        new TicketsConsumer(prisma as unknown as PrismaService, inbox),
+        new TicketsConsumer(prisma as unknown as PrismaService, inbox, outbox as never),
         inbox,
       )('ticketUpdated');
       prisma.environmentalReport.findFirst.mockResolvedValue(null);
@@ -722,6 +725,126 @@ describe('consumidores de eventos', () => {
           priority: 'HIGH',
         });
         expect(args.data).not.toHaveProperty('ticketId');
+      });
+
+      // M2 (20/10): reactivar es tomar la gestión otra vez, y el vecino lo ve
+      // como un STARTED (#309).
+      describe('avisa a M2 al reactivar (#309)', () => {
+        const forwarded = { id: 'exp-1', status: 'FORWARDED', ticketId: 'TCK-1' };
+
+        beforeEach(() => {
+          prisma.environmentalReport.findFirst.mockResolvedValue(forwarded);
+        });
+
+        it('publica un STARTED, una sola vez, en la misma operación', async () => {
+          await h(rerouted);
+
+          expect(outbox.enqueue).toHaveBeenCalledTimes(1);
+          const [tx, entry] = outbox.enqueue.mock.calls[0];
+          expect(tx).toBe(prisma);
+          expect(entry).toMatchObject({
+            eventType: 'updateTicketStatus',
+            aggregateType: 'ENVIRONMENTAL_REPORT',
+            aggregateId: 'exp-1',
+            payload: {
+              ticketId: 'TCK-1',
+              updateType: 'STARTED',
+              publicMessage: 'Su denuncia ambiental está en análisis.',
+              updatedBy: { type: 'SYSTEM', id: null },
+            },
+          });
+          expect(prisma.$transaction).toHaveBeenCalled();
+        });
+
+        it('con el ticket ya IN_PROGRESS manda PROGRESS', async () => {
+          prisma.ticketM2State.findUnique.mockResolvedValue({ status: 'IN_PROGRESS' });
+
+          await h({ ...rerouted, currentStatus: undefined });
+
+          expect(outbox.enqueue.mock.calls[0][1].payload).toMatchObject({
+            updateType: 'PROGRESS',
+            publicMessage: 'Su denuncia ambiental está en análisis.',
+          });
+        });
+
+        it('con el ROUTED recibido (currentStatus) manda STARTED', async () => {
+          prisma.ticketM2State.findUnique.mockResolvedValue({ status: 'ROUTED' });
+
+          await h({ ...rerouted, currentStatus: 'ROUTED' });
+
+          expect(outbox.enqueue.mock.calls[0][1].payload).toMatchObject({ updateType: 'STARTED' });
+        });
+
+        it('un reintento que ya no encuentra el expediente en FORWARDED no lo duplica', async () => {
+          prisma.environmentalReport.updateMany.mockResolvedValue({ count: 0 });
+
+          await h(rerouted);
+
+          expect(outbox.enqueue).not.toHaveBeenCalled();
+        });
+
+        it('un expediente que no está FORWARDED no publica nada', async () => {
+          prisma.environmentalReport.findFirst.mockResolvedValue({
+            ...forwarded,
+            status: 'UNDER_REVIEW',
+          });
+
+          await h(rerouted);
+
+          expect(outbox.enqueue).not.toHaveBeenCalled();
+        });
+
+        it('un expediente sin ticketId no publica', async () => {
+          prisma.environmentalReport.findFirst.mockResolvedValue({ ...forwarded, ticketId: null });
+
+          await h(rerouted);
+
+          expect(prisma.environmentalReport.updateMany).toHaveBeenCalled();
+          expect(outbox.enqueue).not.toHaveBeenCalled();
+        });
+
+        it('un ROUTED de otra área no publica nada', async () => {
+          await h({ ...rerouted, responsibleAreaId: 'M4' });
+
+          expect(outbox.enqueue).not.toHaveBeenCalled();
+        });
+
+        // Por el inbox y con el OutboxService real: el handler corre dentro de
+        // eventContext, así que el evento hereda el hilo y su causa es el ROUTED.
+        it('el evento sale con causationId = eventId del ROUTED y su correlationId', async () => {
+          const EVENT_ID = '646d19f5-5670-4a7b-9442-30e13b02ba11';
+          const CORRELATION = '5b0c0d39-8c1d-4c8a-9c50-0a8d3f1c6e11';
+          prisma.inboxEvent = {
+            create: jest.fn().mockResolvedValue({}),
+            update: jest.fn().mockResolvedValue({}),
+          };
+          prisma.outboxEvent = { create: jest.fn() };
+          // Un inbox propio: el de la suite ya tiene registrado su handler.
+          const inboxReal = new InboxService(prisma as unknown as PrismaService);
+          new TicketsConsumer(
+            prisma as unknown as PrismaService,
+            inboxReal,
+            new OutboxService(),
+          ).onModuleInit();
+
+          await inboxReal.ingest({
+            specVersion: '1.0',
+            eventId: EVENT_ID,
+            correlationId: CORRELATION,
+            eventType: 'ticketUpdated',
+            occurredAt: '2026-10-20T10:00:00.000Z',
+            producer: 'M2',
+            subject: 'TCK-1',
+            data: rerouted,
+          } as unknown as Parameters<InboxService['ingest']>[0]);
+
+          const { data } = prisma.outboxEvent.create.mock.calls[0][0];
+          expect(data).toMatchObject({
+            eventType: 'updateTicketStatus',
+            causationId: EVENT_ID,
+            correlationId: CORRELATION,
+          });
+        });
       });
 
       it('un ROUTED más viejo que el último cambio del expediente no lo reactiva', async () => {

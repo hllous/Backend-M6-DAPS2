@@ -83,7 +83,7 @@ describe('validación del payload en el inbox', () => {
     // Los handlers reales no se ejecutan acá: se reemplazan por stubs que
     // conservan la validación registrada.
     for (const c of [
-      new TicketsConsumer(p, inbox),
+      new TicketsConsumer(p, inbox, {} as never),
       new OutboundResponsesConsumer(p, inbox),
       new SanctionsConsumer(p, inbox),
       new WeatherConsumer(p, inbox),
