@@ -11154,7 +11154,8 @@
                 "REQUESTED",
                 "APPROVED",
                 "REJECTED",
-                "ENDED"
+                "ENDED",
+                "EXPIRED"
               ],
               "type": "string"
             }
@@ -11508,7 +11509,7 @@
       "post": {
         "operationId": "StreetClosureRequestsController_end",
         "summary": "Registrar el fin del corte",
-        "description": "Pasa a ENDED y libera la dependencia. **Normalmente lo dispara streetClosureEnded** (Fase 6), que desde el 30/08 ya trae el closureRequestId para poder correlacionarlo.",
+        "description": "Pasa a ENDED y libera la dependencia. Se admite desde REQUESTED, APPROVED y EXPIRED (un corte vencido por el barrido igual puede terminar). **Normalmente lo dispara streetClosureEnded** (Fase 6), que desde el 30/08 ya trae el closureRequestId para poder correlacionarlo.",
         "parameters": [
           {
             "name": "id",
@@ -17164,12 +17165,13 @@
           },
           "status": {
             "type": "string",
-            "description": "Estado de la solicitud. Lo mueven las tres respuestas de M7.",
+            "description": "Estado de la solicitud. Lo mueven las tres respuestas de M7 y, para EXPIRED, el barrido que vence los cortes aprobados cuya ventana autorizada ya pasó (M7 no avisa).",
             "enum": [
               "REQUESTED",
               "APPROVED",
               "REJECTED",
-              "ENDED"
+              "ENDED",
+              "EXPIRED"
             ]
           },
           "closureId": {

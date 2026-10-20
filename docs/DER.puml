@@ -392,6 +392,8 @@ package "Derivaciones salientes" #F7F2E7 {
       closure_type : enum <<StreetClosureType>>
       closure_from : timestamp
       closure_to : timestamp
+      approved_from : timestamp ' ventana autorizada por M7
+      approved_to : timestamp
     * status : enum <<StreetClosureRequestStatus>>
       closure_id : varchar <<EXT M7>>
   }

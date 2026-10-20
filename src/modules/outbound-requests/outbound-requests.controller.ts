@@ -263,7 +263,7 @@ export class StreetClosureRequestsController {
   @ApiOperation({
     summary: 'Registrar el fin del corte',
     description:
-      'Pasa a ENDED y libera la dependencia. **Normalmente lo dispara streetClosureEnded** (Fase 6), que desde el 30/08 ya trae el closureRequestId para poder correlacionarlo.',
+      'Pasa a ENDED y libera la dependencia. Se admite desde REQUESTED, APPROVED y EXPIRED (un corte vencido por el barrido igual puede terminar). **Normalmente lo dispara streetClosureEnded** (Fase 6), que desde el 30/08 ya trae el closureRequestId para poder correlacionarlo.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la solicitud', format: 'uuid' })
   @ApiResponse({

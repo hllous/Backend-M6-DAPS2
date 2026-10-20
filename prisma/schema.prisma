@@ -279,6 +279,7 @@ enum StreetClosureRequestStatus {
   APPROVED
   REJECTED
   ENDED
+  EXPIRED
 }
 
 enum OutboxEventStatus {
@@ -902,17 +903,20 @@ model RepairRequest {
 }
 
 model StreetClosureRequest {
-  id          String                     @id @default(uuid()) @db.Uuid
-  reason      String
-  sourceType  String                     @map("source_type") // SERVICE | TREE_INTERVENTION
-  sourceId    String                     @map("source_id") @db.Uuid // polimórfico
-  closureType StreetClosureType?         @map("closure_type")
-  closureFrom DateTime?                  @map("closure_from")
-  closureTo   DateTime?                  @map("closure_to")
-  status      StreetClosureRequestStatus @default(REQUESTED)
-  closureId   String?                    @map("closure_id") // EXT M7
-  createdAt   DateTime                   @default(now()) @map("created_at")
-  updatedAt   DateTime                   @updatedAt @map("updated_at")
+  id           String                     @id @default(uuid()) @db.Uuid
+  reason       String
+  sourceType   String                     @map("source_type") // SERVICE | TREE_INTERVENTION
+  sourceId     String                     @map("source_id") @db.Uuid // polimórfico
+  closureType  StreetClosureType?         @map("closure_type")
+  closureFrom  DateTime?                  @map("closure_from")
+  closureTo    DateTime?                  @map("closure_to")
+  // Ventana que M7 autorizó (streetClosureApproved); prevalece sobre closureFrom/To.
+  approvedFrom DateTime?                  @map("approved_from")
+  approvedTo   DateTime?                  @map("approved_to")
+  status       StreetClosureRequestStatus @default(REQUESTED)
+  closureId    String?                    @map("closure_id") // EXT M7
+  createdAt    DateTime                   @default(now()) @map("created_at")
+  updatedAt    DateTime                   @updatedAt @map("updated_at")
 
   streets ClosureStreet[]
 

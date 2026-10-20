@@ -34,9 +34,16 @@ streetClosureApproved
 
 El nombre está acordado entre los tres módulos: M3 corrigió su `streetClosureAuthorized` y adoptó este. Los campos de origen tienen otro nombre del que pedimos (`closureRequestId`/`requestingModule` en vez de `sourceRequestId`/`sourceModule`), pero el dato está — ver [bloqueantes.md](../../integracion/m7.md#m7--tránsito-).
 
-## Un corte aprobado puede expirar sin aviso (M7, 19/10)
+## Un corte aprobado puede expirar sin aviso: lo vencemos nosotros (#321)
 
-Según el documento «Payloads actualizados Core v4» de M7, un corte `APPROVED` que nunca se activó pasa a `EXPIRED` **sin publicar nada**. Tras este evento, entonces, puede no llegar nunca el [`streetClosureEnded`](streetClosureEnded.md#corte-aprobado-que-expira-m7-no-publica-nada-m7-1910) y la `StreetClosureRequest` queda en `APPROVED`. Además, el `endDate` autorizado prevalece sobre el `requestedTo` que pedimos (M3 y M7 coinciden). Es un gap sin resolver: ver [bloqueantes.md](../../integracion/m7.md#m7--tránsito-).
+Según el documento «Payloads actualizados Core v4» de M7 (19/10), un corte `APPROVED` que nunca se activó pasa a `EXPIRED` **sin publicar nada**. Lo resolvemos por tiempo, con el mismo criterio que `ReportDeadlineSweeper`:
+
+- **Se guarda la ventana autorizada.** `startDate` y `endDate` van a `approvedFrom` y `approvedTo` de la `StreetClosureRequest`, sin pisar `closureFrom`/`closureTo` (lo pedido). La ventana autorizada prevalece sobre la pedida. Ausentes o ilegibles no tumban el handler: se omiten y ese corte no se vence nunca (no se inventan fechas; vale también para los aprobados antes del cambio y para el `POST /street-closure-requests/:id/approve` manual, que tampoco guarda ventana y por eso no vence). Un reintento del evento se descarta entero (el corte ya no está `REQUESTED`), así que no pisa la ventana guardada.
+- **Barrido.** `StreetClosureExpirySweeper` (cron horario y al arrancar, idempotente) pasa a `EXPIRED` los `APPROVED` con `approvedTo` + **6 horas de gracia** vencido. La gracia evita competir con el [`streetClosureEnded`](streetClosureEnded.md) que M7 publica al vencer un corte que sí estuvo `ACTIVE`.
+- **Efecto sobre lo que dependía.** En la misma transacción, un `Service` todavía `SCHEDULED` pasa a `RESCHEDULED` con el motivo «venció la ventana autorizada del corte» (M6 no sabe si el corte llegó a estar activo: `streetClosureActivated` es interno de M7; se reprograma con `confirm-reschedule`); uno iniciado o cerrado no se toca. La `TreeIntervention` tampoco se toca, igual que ante un rechazo.
+- **No se publica nada hacia M7**: el corte ya expiró de su lado.
+
+El costo asumido es que una expiración y una demora de M7 se ven igual. Ver [m7.md](../../integracion/m7.md#m7--tránsito-).
 
 ## Evento tardío o repetido
 
