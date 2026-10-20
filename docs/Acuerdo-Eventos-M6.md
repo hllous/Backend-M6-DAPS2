@@ -33,7 +33,7 @@ Ocho eventos, **todos con consumidor declarado**. No publicamos nada que nadie e
 
 > **Eran quince y quedaron ocho: la decisión y el porqué.** Cuando M2 confirmó que todo lo suyo va por `updateTicketStatus`, siete eventos de dominio —`urbanServiceStarted`, `urbanServiceDelayed`, `urbanServiceCompleted`, `zoneNotServiced`, `containerOverflowed`, `environmentalInspectionScheduled` y `environmentalInspectionCompleted`— se quedaron sin ningún consumidor.
 >
-> **Los sacamos del contrato.** Los hechos siguen existiendo en nuestro modelo y son los que disparan cada `updateTicketStatus`, pero **no los publicamos al bus**: un cambio de estado interno se escribe en nuestra base, no se anuncia. Publicar un evento cuesta schema, publisher, test y documentación, y no íbamos a pagarlo por siete suscripciones que no existen. Si alguno les hace falta, pídanlo y lo publicamos: el payload ya está diseñado.
+> **Los sacamos del contrato.** Los hechos siguen existiendo en nuestro modelo y son los que, cuando corresponde, disparan un `updateTicketStatus`, pero **no los publicamos al bus**: un cambio de estado interno se escribe en nuestra base, no se anuncia. Publicar un evento cuesta schema, publisher, test y documentación, y no íbamos a pagarlo por siete suscripciones que no existen. Si alguno les hace falta, pídanlo y lo publicamos: el payload ya está diseñado.
 
 ---
 
@@ -192,7 +192,7 @@ attachments[]?, updatedBy, updateOccurredAt
 
 Tres cosas que nos cambian la implementación y conviene dejar dichas:
 
-- **No mandamos el estado, mandamos el hecho.** `updateType` dice qué pasó y M2 decide la transición. Nuestro modelo no vuelve a nombrar estados de M2 en ningún lado.
+- **No mandamos el estado, mandamos el hecho.** `updateType` dice qué pasó y M2 decide la transición. No le mandamos a M2 un estado: le mandamos el hecho.
 - **La correlación es solo por `ticketId`.** La v1.70 volvió a publicar `publicId` en `ticketUpdated` como referencia humana: lo guardamos en el expediente para mostrarlo y buscarlo, pero no viaja en `updateTicketStatus` (§8.1) ni es credencial. No hay versión que devolver.
 - **No mandamos `sourceRef`.** Su contrato prohíbe transportar IDs de entidades internas de otros módulos, así que la correlación `ticketId ↔ serviceId ↔ inspectionId` queda en una tabla nuestra.
 
@@ -231,7 +231,7 @@ Los otros dos no tienen una traducción directa, y conviene que quede escrito po
 Tres cosas que teníamos anotadas como problema dejaron de serlo:
 
 - **`detail` ya no es todo el canal.** Era nuestra objeción principal: el vecino iba a ver solo prosa. Con `resolution.type` el cierre tiene un texto propio en `publicMessage` y con `attachments[]` podemos mandar la foto del trabajo terminado. La **fecha agendada** también quedó resuelta el 20/10: el campo común `progress` sigue siendo un `Int` (porcentaje) y no hay estructura de `details` para `STARTED`/`PROGRESS`, pero M2 confirmó que la fecha y la franja van como **texto en `publicMessage`**, y ya lo mandamos así.
-- **Podemos pedirle información al ciudadano.** `INFORMATION_REQUIRED` era el canal que dábamos por perdido cuando desapareció `additionalInfoRequired`. No desapareció: se convirtió en una variante. El inspector que necesita una referencia más precisa o una foto nocturna ya tiene por dónde pedirla. La v1.5 ya no correlaciona por `informationRequestId` (ese campo nunca llegó a existir formalmente): la respuesta siempre corresponde a la única solicitud activa que puede haber por ticket.
+- **Podemos pedirle información al ciudadano.** `INFORMATION_REQUIRED` era el canal que dábamos por perdido cuando desapareció `additionalInfoRequired`. No desapareció: se convirtió en una variante. El inspector que necesita una referencia más precisa o una foto nocturna ya tiene por dónde pedirla: el canal existe en el contrato, pero hoy no lo usamos. La v1.5 ya no correlaciona por `informationRequestId` (ese campo nunca llegó a existir formalmente): la respuesta siempre corresponde a la única solicitud activa que puede haber por ticket.
 - **`RETURNED` es mejor que rechazar.** Cuando un reclamo no es nuestro, devolverlo a M2 para que lo re-derive es distinto de cancelárselo al vecino. Antes teníamos un solo `REJECTED` para las dos cosas.
 
 ### Lo que se cae
@@ -240,7 +240,7 @@ Los diez eventos de dominio que les ofrecíamos como detalle **ya no se los mand
 
 ### Los siete que sacamos del contrato
 
-Estos hechos existen en nuestro modelo y son los que disparan cada `updateTicketStatus`, pero **dejamos de publicarlos**: `urbanServiceStarted`, `urbanServiceDelayed`, `urbanServiceCompleted`, `zoneNotServiced`, `containerOverflowed`, `environmentalInspectionScheduled` y `environmentalInspectionCompleted`.
+Estos hechos existen en nuestro modelo y son los que, cuando corresponde, disparan un `updateTicketStatus`, pero **dejamos de publicarlos**: `urbanServiceStarted`, `urbanServiceDelayed`, `urbanServiceCompleted`, `zoneNotServiced`, `containerOverflowed`, `environmentalInspectionScheduled` y `environmentalInspectionCompleted`.
 
 Los teníamos en el contrato porque se los ofrecíamos a M2 como detalle de lo que pasaba con el reclamo. Cuando M2 definió que todo lo suyo entra por `updateTicketStatus`, se quedaron sin ningún consumidor, y un evento que nadie escucha no es parte de un contrato de integración: es código que hay que escribir, versionar y mantener para nadie.
 
@@ -452,7 +452,7 @@ streetClosureEnded
 
 ✅ **Typo corregido.** El documento ya escribe `streetClosureEnded` bien, sin la `u` de más.
 
-🆕 **Corte aprobado que vence sin aviso (20/10).** Guardamos `startDate` y `endDate` de `streetClosureApproved` como la ventana autorizada. Como no hay un evento para un corte que expira sin terminar, a las 6 horas del `endDate` sin recibir `streetClosureEnded` lo pasamos a un estado nuevo, `EXPIRED`; si el servicio que dependía de ese corte seguía agendado, queda para reprogramar. No publicamos nada hacia ustedes. Solo vence un corte que llegó en un `streetClosureApproved` con un `endDate` legible: sin `endDate`, nunca vence. Una intervención de arbolado asociada al corte no se toca, y un servicio ya iniciado o cerrado tampoco: solo uno todavía agendado pasa a reprogramar. Si después llega un `streetClosureEnded` de ese corte, lo aceptamos. Supuesto nuestro: **M7, confirmen** que una expiración sin `streetClosureEnded` es un caso posible y que esta lectura les sirve.
+🆕 **Corte aprobado que vence sin aviso (20/10).** Guardamos `startDate` y `endDate` de `streetClosureApproved` como la ventana autorizada. Como no hay un evento para un corte que expira sin terminar, a partir de las 6 horas del `endDate` sin recibir `streetClosureEnded` lo pasamos a un estado nuevo, `EXPIRED`; si el servicio que dependía de ese corte seguía agendado, queda para reprogramar. No publicamos nada hacia ustedes. Solo vence un corte que llegó en un `streetClosureApproved` con un `endDate` legible: sin `endDate`, nunca vence. Una intervención de arbolado asociada al corte no se toca, y un servicio ya iniciado o cerrado tampoco: solo uno todavía agendado pasa a reprogramar. Si después llega un `streetClosureEnded` de ese corte, lo aceptamos. Supuesto nuestro: **M7, confirmen** que una expiración sin `streetClosureEnded` es un caso posible y que esta lectura les sirve.
 
 ✅ **Nuevo (30/08): `streetClosureRequested` unificado con M3.** Hasta ahora M7 recibía este evento con forma distinta según el origen (la nuestra y la de Obras). Propusieron un esquema único — ver §1.5 — y lo aceptamos: de nuestro lado implica renombrar `requestId→closureRequestId`, `streets[]→affectedSections` y `from`/`to`→`requestedFrom`/`requestedTo`.
 

@@ -313,7 +313,7 @@ Estos son los eventos que M6 procesa. Los sobres de los ejemplos son los del Cor
 
 ## 3.1 `ticketUpdated` ← M2
 
-Es nuestro único disparador de entrada. Llega a todos los módulos: **filtramos por `responsibleAreaId`** y solo actuamos si vale `"M6"`. De los trece `updateType` actuamos sobre seis (`ROUTED`, `INFORMATION_PROVIDED`, `CANCELLED`, `REOPENED`, `PRIORITY_CHANGED`, `ESCALATION_CHANGED`); los otros siete se aceptan y no hacen nada sobre el expediente. De todos (también de esos siete) guardamos el `currentStatus`, que influye en si al agendar un servicio mandamos `STARTED`, `PROGRESS` o nada.
+Es nuestro único disparador de entrada. Llega a todos los módulos: **filtramos por `responsibleAreaId`** y solo actuamos si vale `"M6"`. De los trece `updateType` actuamos sobre seis (`ROUTED`, `INFORMATION_PROVIDED`, `CANCELLED`, `REOPENED`, `PRIORITY_CHANGED`, `ESCALATION_CHANGED`); los otros siete se aceptan y no hacen nada sobre el expediente. De todos los de tickets nuestros (también de esos siete) guardamos el `currentStatus`, solo si es uno de los nueve estados de la §3 de M2, que influye en si al agendar un servicio mandamos `STARTED`, `PROGRESS` o nada.
 
 ```json
 {
@@ -501,7 +501,7 @@ Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta)
 }
 ```
 
-Leemos `closureRequestId` (obligatorio, UUID: el `closureRequestId` que mandamos), `streetClosureId`, `startDate` y `endDate`. No leemos `requestingModule`. Habilita el trabajo que estaba bloqueado; si la ventana autorizada difiere de la pedida, reprogramamos dentro de ella. Guardamos `startDate` y `endDate` como ventana autorizada: si pasan 6 horas del `endDate` y no llegó `streetClosureEnded`, damos el corte por vencido (estado `EXPIRED`) y, si el servicio seguía agendado, queda para reprogramar. Solo vence un corte que llegó en un `streetClosureApproved` con un `endDate` legible: sin `endDate`, nunca vence. Una intervención de arbolado asociada al corte no se toca, y un servicio ya iniciado o cerrado tampoco: solo uno todavía agendado pasa a reprogramar. No publicamos nada hacia M7 por esto.
+Leemos `closureRequestId` (obligatorio, UUID: el `closureRequestId` que mandamos), `streetClosureId`, `startDate` y `endDate`. No leemos `requestingModule`. Habilita el trabajo que estaba bloqueado; si la ventana autorizada difiere de la pedida, reprogramamos dentro de ella. Guardamos `startDate` y `endDate` como ventana autorizada: a partir de las 6 horas del `endDate`, si no llegó `streetClosureEnded`, damos el corte por vencido (estado `EXPIRED`) y, si el servicio seguía agendado, queda para reprogramar. Solo vence un corte que llegó en un `streetClosureApproved` con un `endDate` legible: sin `endDate`, nunca vence. Una intervención de arbolado asociada al corte no se toca, y un servicio ya iniciado o cerrado tampoco: solo uno todavía agendado pasa a reprogramar. No publicamos nada hacia M7 por esto.
 
 ## 3.7 `streetClosureRejected` ← M7
 
