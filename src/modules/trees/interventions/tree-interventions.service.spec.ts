@@ -309,6 +309,10 @@ describe('TreeInterventionsService', () => {
       await service.assignService(ID, { serviceId: SRV });
 
       expect(prisma.treeIntervention.update.mock.calls[0][0].data).toEqual({ serviceId: SRV });
+      // Deja la marca para que una edición posterior del servicio no lo repita (#324).
+      expect(prisma.treeIntervention.update.mock.calls[1][0].data).toEqual({
+        pruningScheduledAt: expect.any(Date),
+      });
       expect(outbox.enqueue).toHaveBeenCalledTimes(1);
       const [tx, entrada] = outbox.enqueue.mock.calls[0];
       expect(tx).toBe(prisma);
@@ -332,7 +336,8 @@ describe('TreeInterventionsService', () => {
 
       await service.assignService(ID, { serviceId: SRV });
 
-      expect(prisma.treeIntervention.update).toHaveBeenCalled();
+      // Un solo update: sin marca, para que ServicesService lo emita despues (#324).
+      expect(prisma.treeIntervention.update).toHaveBeenCalledTimes(1);
       expect(outbox.enqueue).not.toHaveBeenCalled();
     });
 

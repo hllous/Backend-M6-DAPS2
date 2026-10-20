@@ -373,21 +373,25 @@ export class ServicesService {
         : [];
     this.assertOverrideNote(conflictos, dto.overrideNote);
 
-    const service = await this.prisma.service.update({
-      where: { id },
-      data: {
-        ...(conflictos.length > 0 &&
-          dto.overrideNote && {
-            assignmentOverrideNote: dto.overrideNote,
-            assignmentOverrideBy: actorId ?? null,
-            assignmentOverrideAt: new Date(),
-          }),
-        ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
-        ...(dto.windowFrom !== undefined && { windowFrom: toTime(dto.windowFrom) }),
-        ...(dto.windowTo !== undefined && { windowTo: toTime(dto.windowTo) }),
-        ...(dto.notes !== undefined && { notes: dto.notes }),
-      },
-      include: SERVICE_INCLUDE,
+    const service = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.service.update({
+        where: { id },
+        data: {
+          ...(conflictos.length > 0 &&
+            dto.overrideNote && {
+              assignmentOverrideNote: dto.overrideNote,
+              assignmentOverrideBy: actorId ?? null,
+              assignmentOverrideAt: new Date(),
+            }),
+          ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
+          ...(dto.windowFrom !== undefined && { windowFrom: toTime(dto.windowFrom) }),
+          ...(dto.windowTo !== undefined && { windowTo: toTime(dto.windowTo) }),
+          ...(dto.notes !== undefined && { notes: dto.notes }),
+        },
+        include: SERVICE_INCLUDE,
+      });
+      await this.emitirPodaProgramada(tx, row);
+      return row;
     });
 
     this.logger.log(`Servicio actualizado: ${service.id}`);
@@ -414,21 +418,25 @@ export class ServicesService {
     const conflictos = await this.findAssignmentConflicts(current, dto.crewId, dto.vehicleId);
     this.assertOverrideNote(conflictos, dto.overrideNote);
 
-    const service = await this.prisma.service.update({
-      where: { id },
-      data: {
-        crewId: dto.crewId,
-        ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
-        // La nota solo se guarda si hubo algo que justificar: mandarla sin
-        // solapamiento no deja rastro de un override que no ocurrio.
-        ...(conflictos.length > 0 &&
-          dto.overrideNote && {
-            assignmentOverrideNote: dto.overrideNote,
-            assignmentOverrideBy: actorId ?? null,
-            assignmentOverrideAt: new Date(),
-          }),
-      },
-      include: SERVICE_INCLUDE,
+    const service = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.service.update({
+        where: { id },
+        data: {
+          crewId: dto.crewId,
+          ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
+          // La nota solo se guarda si hubo algo que justificar: mandarla sin
+          // solapamiento no deja rastro de un override que no ocurrio.
+          ...(conflictos.length > 0 &&
+            dto.overrideNote && {
+              assignmentOverrideNote: dto.overrideNote,
+              assignmentOverrideBy: actorId ?? null,
+              assignmentOverrideAt: new Date(),
+            }),
+        },
+        include: SERVICE_INCLUDE,
+      });
+      await this.emitirPodaProgramada(tx, row);
+      return row;
     });
 
     this.logger.log(
@@ -1195,6 +1203,9 @@ export class ServicesService {
           include: SERVICE_INCLUDE,
         });
         await this.outbox.enqueueMany(tx, events);
+        // Volver a SCHEDULED es el único cambio de estado que puede completar
+        // la franja (confirm-reschedule); el resto no toca cuadrilla ni franja.
+        if (targetStatus === ServiceStatus.SCHEDULED) await this.emitirPodaProgramada(tx, row);
         return row;
       })
       .catch((error: unknown) => {
@@ -1208,6 +1219,53 @@ export class ServicesService {
 
     this.logger.log(`Servicio ${current.id}: ${current.status} → ${targetStatus}`);
     return this.toResponseDto(updated);
+  }
+
+  /**
+   * Emite el treePruningScheduled que `TreeInterventionsService.assignService`
+   * difirió porque al asociar el servicio faltaban cuadrilla o franja (#324).
+   *
+   * Corre dentro de la transacción de la edición, en cada camino que puede
+   * completar esos datos (assign-crew, PATCH, confirm-reschedule). **Sale una
+   * sola vez**: `pruningScheduledAt` se marca con un updateMany condicionado a
+   * null, que actúa de guard atómico si dos pedidos completan el servicio a la
+   * vez. No se reemite ante cambios posteriores de cuadrilla o fecha: M7 no
+   * define un evento de reprogramación de poda. Encola directo en el outbox, sin
+   * importar TreeInterventionsService, para no acoplar los módulos.
+   */
+  private async emitirPodaProgramada(
+    tx: Prisma.TransactionClient,
+    service: ServiceWithRelations,
+  ): Promise<void> {
+    if (!service.crewId || !service.windowFrom || !service.windowTo) return;
+
+    const intervention = await tx.treeIntervention.findUnique({
+      where: { serviceId: service.id },
+      include: { trees: true },
+    });
+    if (!intervention || intervention.pruningScheduledAt) return;
+
+    const primerArbol = intervention.trees[0]
+      ? await tx.tree.findUnique({ where: { id: intervention.trees[0].treeId } })
+      : null;
+    const payload = payloads.treePruningScheduled(intervention, service, primerArbol);
+    if (!payload) return;
+
+    const { count } = await tx.treeIntervention.updateMany({
+      where: { id: intervention.id, pruningScheduledAt: null },
+      data: { pruningScheduledAt: new Date() },
+    });
+    if (count === 0) return;
+
+    await this.outbox.enqueue(tx, {
+      eventType: EventType.TREE_PRUNING_SCHEDULED,
+      aggregateType: AggregateType.TREE_INTERVENTION,
+      aggregateId: intervention.id,
+      payload,
+    });
+    this.logger.log(
+      `Intervención ${intervention.id}: treePruningScheduled emitido al completarse el servicio ${service.id}`,
+    );
   }
 
   /**

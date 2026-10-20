@@ -25,7 +25,7 @@ Los siete que se cayeron del contrato están en [descartados.md](descartados.md)
 | `updateTicketStatus` | ✅ emitido | `start`, `complete` y `cancel` de un servicio con `ticketId` |
 | `containerDamaged` | ✅ emitido | `POST /containers/:id/report-damage` |
 | `treeRiskDetected` | ✅ emitido | un relevamiento con `riskLevel` `HIGH` o `CRITICAL` |
-| `treePruningScheduled` | ⚠️ emitido, con reserva | `POST /tree-interventions/:id/assign-service`, **solo si el servicio ya tiene cuadrilla y franja horaria**: M7 los declara requeridos y en nuestro modelo son opcionales. Si faltan, el evento se difiere y queda un warning en el log |
+| `treePruningScheduled` | ✅ emitido | `POST /tree-interventions/:id/assign-service` si el servicio ya tiene cuadrilla y franja horaria; si no, se difiere y sale, una sola vez, cuando `assign-crew`, `PATCH /services/:id` o `confirm-reschedule` los completan (#324) |
 | `environmentalViolationDetected` | ✅ emitido | `POST /environmental-inspections/:id/violation-notice`, **solo si el acta tiene `establishmentId`** |
 | `infrastructureRepairRequested` | ✅ emitido | `POST /repair-requests` |
 | `streetClosureRequested` | ✅ emitido | `POST /street-closure-requests`, con `sourceModule = "M6"` |

@@ -232,7 +232,13 @@ export class TreeInterventionsService {
         // son opcionales hasta que se asignan: si todavia faltan, el payload
         // sale null y el evento se difiere en vez de emitirse incompleto.
         const payload = treePruningScheduled(row, service, primerArbol);
+        // Si se difiere, sale despues desde ServicesService al completarse el
+        // servicio (#324); la marca evita que se repita.
         if (payload) {
+          await tx.treeIntervention.update({
+            where: { id },
+            data: { pruningScheduledAt: new Date() },
+          });
           await this.outbox.enqueue(tx, {
             eventType: EventType.TREE_PRUNING_SCHEDULED,
             aggregateType: AggregateType.TREE_INTERVENTION,

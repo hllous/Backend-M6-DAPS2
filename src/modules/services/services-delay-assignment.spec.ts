@@ -67,6 +67,8 @@ describe('ServicesService — demora y doble reserva', () => {
       vehicle: {
         findUnique: jest.fn().mockResolvedValue({ id: VEHICLE, active: true, plate: 'AB123CD' }),
       },
+      // Sin intervención de arbolado vinculada (#324).
+      treeIntervention: { findUnique: jest.fn().mockResolvedValue(null) },
       serviceDelayNotice: {
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),

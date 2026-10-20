@@ -277,6 +277,7 @@ package "Inventario urbano" #EAF6EE {
       authorized_by_user_id : varchar <<solo REMOVAL>>
       authorized_at : timestamp <<solo REMOVAL>>
       justification : text <<solo REMOVAL>>
+      pruning_scheduled_at : timestamp <<marca de treePruningScheduled emitido>>
   }
 
   entity "intervention_tree" as intervention_tree {
