@@ -74,8 +74,8 @@ Se reemplaza Kafka por **RabbitMQ** como broker de eventos, detrás de los mismo
 - Publisher confirms, durabilidad y persistencia de mensajes como requisito o como buena práctica local.
 - Límites de tamaño de mensaje.
 - Ambiente de prueba compartido, y fecha en que va a estar disponible.
-- Qué pasa con `eventProcessingFailed`/`eventRejected` en un broker real (ver el riesgo "Tormenta de eventos técnicos" en [bloqueantes.md](../bloqueantes.md)).
-- Los pendientes viejos que siguen abiertos: lista de eventos del Core, catálogo de barrios, token de servicio, `notificationSent`.
+- ~~Qué pasa con `eventProcessingFailed`/`eventRejected` en un broker real~~ Resuelto el 20/10: M9 los da de baja (ver [bloqueantes.md](../bloqueantes.md)).
+- Los pendientes viejos: la lista de eventos del Core y el token de servicio se respondieron (7/10 y 20/10). Siguen abiertos el catálogo de barrios y `notificationSent`, en disputa con el TPO (ver [bloqueantes.md](../bloqueantes.md)).
 
 ## Referencias
 
