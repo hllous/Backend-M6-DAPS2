@@ -122,8 +122,8 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
     try {
       // Nunca se reencola (pedido de M9): reencolado, el mensaje gira en nuestra cola
       // sin demora ni auditoría. Con `nack` sin reencolar el Core reintenta con
-      // su backoff (escalones por confirmar con M9; la guía común del 20/10 difiere de lo
-      // dicho antes, ver docs/integracion/m9.md) y después lo manda a su DLQ.
+      // su backoff (escalones de 5 s, 30 s, 2 min y 10 min según el intento, guía común
+      // de M9; ver docs/integracion/m9.md) y después lo manda a su DLQ.
       if (disposition === 'ack') channel.ack(msg);
       else channel.nack(msg, false, false);
     } catch (error) {
