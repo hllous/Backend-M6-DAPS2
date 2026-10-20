@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsUUID } from 'class-validator';
-import { TreeInterventionType, TreeInterventionStatus } from '@prisma/client';
+import { TreeInterventionType, TreeInterventionStatus, Severity } from '@prisma/client';
 import { PaginationQueryDto } from '../../../../common/dto';
 
 export class QueryTreeInterventionsDto extends PaginationQueryDto {
@@ -21,6 +21,15 @@ export class QueryTreeInterventionsDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(TreeInterventionStatus)
   status?: TreeInterventionStatus;
+
+  @ApiPropertyOptional({
+    description: 'Filtrar por prioridad de la intervención (LOW, MEDIUM, HIGH, CRITICAL)',
+    enum: Severity,
+    example: Severity.HIGH,
+  })
+  @IsOptional()
+  @IsEnum(Severity)
+  priority?: Severity;
 
   @ApiPropertyOptional({
     description: 'Filtrar las intervenciones que incluyen este árbol',

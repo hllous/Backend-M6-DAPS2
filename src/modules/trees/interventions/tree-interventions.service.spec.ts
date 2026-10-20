@@ -229,6 +229,20 @@ describe('TreeInterventionsService', () => {
       });
     });
 
+    it('filtra por prioridad combinada con tipo y estado', async () => {
+      await service.findAll(
+        Object.assign(new QueryTreeInterventionsDto(), {
+          interventionType: T.REMOVAL,
+          status: I.AUTHORIZED,
+          priority: 'HIGH',
+        }),
+      );
+
+      const where = { interventionType: T.REMOVAL, status: I.AUTHORIZED, priority: 'HIGH' };
+      expect(prisma.treeIntervention.findMany.mock.calls[0][0].where).toEqual(where);
+      expect(prisma.treeIntervention.count).toHaveBeenCalledWith({ where });
+    });
+
     /** El árbol no es un campo de la intervención: viaja en la tabla InterventionTree. */
     it('filtra por árbol con el mismo where en listado y conteo', async () => {
       const TREE = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
