@@ -96,7 +96,7 @@ Revisadas contra los lugares donde se arma el evento (`ticketEvents` en `Environ
 
 | Regla de M2 | Cómo la cumplimos |
 |---|---|
-| `PROGRESS` solo con el ticket `IN_PROGRESS`; si no, M2 lo `nack`ea (queda reintentando hasta la DLQ). **Informar `STARTED` antes** | La demora solo se proyecta con el servicio `IN_PROGRESS` (#146); el aviso por acta sale después del `STARTED` de `startReview` |
+| `PROGRESS` solo con el ticket `IN_PROGRESS`; si no, M2 lo `nack`ea (queda reintentando hasta la DLQ). **Informar `STARTED` antes** | La demora solo se proyecta con el servicio `IN_PROGRESS` (#146); el aviso por acta lee el estado del ticket: `PROGRESS` si está `IN_PROGRESS`, `STARTED` si está `ROUTED`, `IN_REVIEW` o es desconocido, y no sale con `PENDING_INFORMATION` o terminal (#325) |
 | `RESOLVED` exige `details.resolution.type` y `publicMessage` | Siempre `ACTION_COMPLETED` y un `publicMessage` fijo |
 | `RETURNED` y `REJECTED` exigen `publicMessage` o `internalMessage` | Mandamos `internalMessage` (el motivo del operador, que no se le muestra al vecino) |
 | `INFORMATION_REQUIRED` exige `informationRequest.messageForCitizen` | No lo emitimos todavía (ver abajo) |
@@ -118,11 +118,11 @@ Esta es la tabla con la que se implementa. **La columna izquierda son hechos int
 | `urbanServiceScheduled` | `STARTED` (primera vez) o `PROGRESS` (reprogramación) | **Implementado en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).** Fecha y franja como texto en `publicMessage`, sin `details`. Sale al agendar y en `confirm-reschedule`, junto con (pero aparte de) el `urbanServiceScheduled` hacia M7. `STARTED` o `PROGRESS` según el estado del ticket; si no corresponde, no sale |
 | Se reactiva un expediente `FORWARDED` por un `ROUTED` repetido ([#309](https://github.com/hllous/Backend-M6-DAPS2/issues/309)) | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «Su denuncia ambiental está en análisis.». Lo publica el consumer de `ticketUpdated`, con `causationId` = `eventId` del `ROUTED` y `updatedBy` `SYSTEM`; un reproceso no lo duplica |
 | `urbanServiceStarted` | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage` fijo |
-| `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage`. **Solo con el servicio `IN_PROGRESS`**: antes de arrancar el ticket sigue `ROUTED` y §8.2 rechaza `PROGRESS`, así que un aviso de demora antes de arrancar (`delayType: START`) queda registrado pero no se proyecta (#146) |
+| `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage`. **Solo con el servicio `IN_PROGRESS` y el ticket sin estado conocido o `IN_PROGRESS`** (#325): antes de arrancar el ticket sigue `ROUTED` y §8.2 rechaza `PROGRESS`, así que un aviso de demora antes de arrancar (`delayType: START`) queda registrado pero no se proyecta (#146) |
 | `urbanServiceCompleted` | `RESOLVED` | `details.resolution.type` + `publicMessage`. **`attachments[]` no se manda**: el payload no lleva evidencia hoy, pendiente de decidir qué adjuntos ve el vecino — ver [bloqueantes.md](../../bloqueantes.md) |
 | `environmentalInspectionScheduled` | `STARTED` | vacío |
 | `environmentalInspectionCompleted`, sin irregularidad | `RESOLVED` | `details.resolution.type` + `publicMessage`: "no se encontraron irregularidades" |
-| `environmentalInspectionCompleted`, con acta | `PROGRESS` | El caso sigue en M4. **Nunca el contenido del acta** |
+| Emisión del acta (`violation-notice`) | `PROGRESS` si el ticket está `IN_PROGRESS`; `STARTED` si está `ROUTED`, `IN_REVIEW` o es desconocido (constatar cuenta como tomar la gestión); nada con `PENDING_INFORMATION` o terminal ([#325](https://github.com/hllous/Backend-M6-DAPS2/issues/325)) | Mismo `publicMessage` en ambos: «Se constató una infracción y se emitió el acta correspondiente.». El caso sigue en M4. **Nunca el contenido del acta** |
 | Se desestima el reporte | `REJECTED` | `details.cancellation.reasonCode` + `publicMessage`/`internalMessage` |
 | El reclamo no es de nuestra área | `RETURNED` | `details.returnInfo.reasonCode` + `publicMessage`/`internalMessage`. Vuelve a M2 para que lo re-derive, en vez de cancelárselo al vecino |
 | El inspector necesita un dato del vecino | `INFORMATION_REQUIRED` | **Diseñado, sin implementar.** No hay call site que lo dispare hoy: `details.informationRequest.messageForCitizen` (+ `requiredBy` opcional) es el payload previsto, no uno que salga |
