@@ -93,9 +93,25 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 > Cuatro confirmaciones sobre su contrato de octubre: (1) en `environmentalViolationDetected` mandamos `suggestedAction` con cuatro valores: `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE`. Su documento lista tres; ¿toleran `FORMAL_NOTICE`? El campo no es vinculante. (2) ¿`commercialFineGenerated` también nos lo rutean a nosotros, o solo `closureUpdate`? (3) ¿`actId` y `externalRef` son el mismo dato? (4) ¿Dejaron de publicar `ticketInProgress`? Aclaración: `sourceViolationId` reproduce exactamente el `violationId` UUID que les mandamos.
 
-**→ M9 (Core)** — seguimiento de [#300](https://github.com/hllous/Backend-M6-DAPS2/issues/300), sin respuesta desde el 20/10
+**→ M9 (Core)** — seguimiento de [#300](https://github.com/hllous/Backend-M6-DAPS2/issues/300) y respuesta a la guía común del 20/10 ([#328](https://github.com/hllous/Backend-M6-DAPS2/issues/328)) — *por enviar; falta solo la IP pública de salida de Render [COMPLETAR PO]*
 
-> Retomamos lo pendiente: (1) barrios y zonas: el TPO §9 dice que son del Core y ustedes que no; (2) `notificationSent`/`NotificacionEnviada`, que el TPO también les asigna. Dos preguntas técnicas nuevas: (3) ¿el Core acepta el UUID nulo y el máximo como `correlationId`? Los heredamos con la forma 8-4-4-4-12; (4) ¿`exclude_none` también quita los `null` dentro de `data`? Y para poder probar: (5) ¿pueden pasarnos el repo del Core local y los pasos para levantarlo?, (6) ¿hay fecha de despliegue y entrega de credenciales?, (7) ¿el nombre del tipo es `streetClosureEnded` o `streetClousureEnded` en el catálogo, y pueden dar de baja `zoneNotServiced`?
+> Gracias por la guía común. Lo que nos pide su §2:
+>
+> 1. **Módulo:** `ambiente` (Ambiente, Higiene y Servicios Urbanos). Responsables técnicos y canal de contacto: **Facu Iriarte** (+54 9 11 5139-3059, Discord `gordito12`) y **Benjamin Martinez** (+54 9 298 344-9923, Discord `taki9`).
+> 2. **IP pública de salida** del backend (Render): **[COMPLETAR PO: verificarla en el panel de Render; indicar si es fija o cambia]**. Un solo origen, producción.
+> 3. **Publicamos** (8): `urbanServiceScheduled`, `updateTicketStatus`, `containerDamaged`, `treeRiskDetected`, `treePruningScheduled`, `environmentalViolationDetected`, `infrastructureRepairRequested`, `streetClosureRequested`; `sourceModule` `ambiente`, `eventVersion` 1.0, con sus schemas JSON.
+> 4. **Consumimos** (8, `maxAttempts` 4): `ticketUpdated`, `workOrderScheduled`, `workOrderCompleted`, `commercialFineGenerated`, `closureUpdate`, `streetClosureApproved`, `streetClosureRejected`, `streetClosureEnded`.
+> 5. **Prueba coordinada:** **Les pedimos que nos pasen ustedes los horarios que tengan disponibles**; como el ambiente es compartido, ¿qué tipo de evento ficticio podemos usar en la primera prueba para que no llegue a otros módulos?
+> 6. **Dashboard:** sí, para tres personas: `benmartinez@uade.edu.ar`, `fairiarte@uade.edu.ar` y `nico.llousas@gmail.com`.
+>
+> Pedimos la **ficha privada** con `module_ambiente`, el secret de máquina y el acceso al dashboard, por privado y de a uno.
+>
+> Preguntas:
+>
+> - **(a)** `streetClousureEnded` o `streetClosureEnded`: nosotros nos suscribimos a `streetClosureEnded`; si M7 publica el otro nombre no recibiríamos el evento. ¿Qué queda en el registro y siguen ambos alias?
+> - **(b)** `streetClosureActivated`: no lo publicamos ni consumimos; ¿alguien lo espera de nosotros?
+> - **(c)** Registro: vamos a consultar `GET /subscriptions` y `GET /publications` y crear solo lo que falte, sin repetir los POST. ¿Hay algo nuestro ya cargado? En el catálogo figuraba `zoneNotServiced` con owner `ambiente`, que descartamos: ¿pueden darlo de baja?
+> - **(d)** Siguen abiertos del 20/10: ¿el Core acepta el UUID nulo y el máximo como `correlationId`?, ¿`exclude_none` quita también los `null` dentro de `data`?, y lo de barrios y zonas y `notificationSent` frente al TPO §9.
 
 **→ M2 (Atención Ciudadana)** — informativo y dos confirmaciones
 
@@ -103,6 +119,6 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 **Decisiones internas que el PO tiene que tomar**
 
-1. **#294:** el filtro de fechas va por `updatedAt` (la columna «Actualizado»). ¿O `createdAt`?
-2. ~~**#169:** ¿M6 puede pedirle información al vecino?~~ Resuelto el 20/10: **sí**, durante la revisión del expediente; ver el [historial](historial.md).
-3. **M3:** confirmar que aceptamos su propuesta de `workOrderId` y `workOrderNumber` ⚠️.
+1. **#294:** *resuelto el 20/10:* el filtro de fechas va por `updatedAt` (la columna «Actualizado»).
+2. **#169:** *resuelto el 20/10:* M6 **sí** puede pedirle información al vecino (`INFORMATION_REQUIRED`) durante la revisión del expediente; **implementado** (`POST /environmental-reports/:id/request-information`, ver el [historial](historial.md)).
+3. **M3:** *resuelto el 20/10:* aceptada la propuesta de `workOrderId` UUID y `workOrderNumber`; falta avisarle a M3 (el mensaje a M3 ya está redactado arriba).

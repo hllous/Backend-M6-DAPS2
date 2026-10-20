@@ -69,6 +69,7 @@ describe('ServicesService — demora y doble reserva', () => {
       },
       // Sin intervención de arbolado vinculada (#324).
       treeIntervention: { findUnique: jest.fn().mockResolvedValue(null) },
+      ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
       serviceDelayNotice: {
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
@@ -446,6 +447,47 @@ describe('ServicesService — demora y doble reserva', () => {
 
       expect(prisma.serviceDelayNotice.create).toHaveBeenCalled();
       expect(outbox.enqueueMany).toHaveBeenCalledWith(prisma, []);
+    });
+
+    /** #325: PROGRESS solo vale con el ticket IN_PROGRESS en M2. */
+    it.each(['PENDING_INFORMATION', 'RESOLVED', 'ROUTED'])(
+      'con el ticket conocido en %s la demora se registra pero no se proyecta',
+      async (status) => {
+        prisma.service.findUnique.mockResolvedValue(
+          servicio({ ticketId: 'TCK-1', status: ServiceStatus.IN_PROGRESS }),
+        );
+        prisma.ticketM2State.findUnique.mockResolvedValue({ status });
+
+        await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+
+        expect(prisma.serviceDelayNotice.create).toHaveBeenCalled();
+        expect(outbox.enqueueMany).toHaveBeenCalledWith(prisma, []);
+      },
+    );
+
+    /** Decisión deliberada (#325): un servicio en curso implica que ya mandamos el STARTED. */
+    it('con el estado del ticket desconocido y el servicio IN_PROGRESS informa PROGRESS', async () => {
+      prisma.service.findUnique.mockResolvedValue(
+        servicio({ ticketId: 'TCK-1', status: ServiceStatus.IN_PROGRESS }),
+      );
+      prisma.ticketM2State.findUnique.mockResolvedValue(null);
+
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+
+      const eventos = outbox.enqueueMany.mock.calls[0][1];
+      expect(eventos).toHaveLength(1);
+      expect(eventos[0].payload.updateType).toBe('PROGRESS');
+    });
+
+    it('con el ticket conocido en IN_PROGRESS informa PROGRESS', async () => {
+      prisma.service.findUnique.mockResolvedValue(
+        servicio({ ticketId: 'TCK-1', status: ServiceStatus.IN_PROGRESS }),
+      );
+      prisma.ticketM2State.findUnique.mockResolvedValue({ status: 'IN_PROGRESS' });
+
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+
+      expect(outbox.enqueueMany.mock.calls[0][1]).toHaveLength(1);
     });
 
     it('una detección de oficio no avisa a nadie', async () => {

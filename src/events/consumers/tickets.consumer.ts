@@ -67,7 +67,7 @@ const PRIORIDAD: Record<string, Severity> = {
  * INFORMATION_REQUIRED, STATUS_CHANGED, RESOLVED y CLOSED.
  *
  * **El orden de llegada no es el de M2** (#270): el Core reintenta un handler
- * fallido hasta ~21 min después, detrás de eventos más nuevos del mismo
+ * fallido unos minutos después (según el backoff del Core), detrás de eventos más nuevos del mismo
  * ticket. Lo que pisa un dato compara su `occurredAt` con la marca de ese dato
  * en el expediente y, si no es más nuevo, se ignora (sale `processed`:
  * reintentarlo no lo haría más nuevo). Si en cambio el expediente todavía no
@@ -648,7 +648,7 @@ export class TicketsConsumer implements OnModuleInit {
    * el update y esta lectura: la marca sigue siendo más vieja y se reintenta.
    *
    * El costo: si el ROUTED no llega nunca (se perdió o agotó sus reintentos),
-   * este evento también agota los suyos (~21 min) y termina en la DLQ del Core.
+   * este evento también agota los suyos (unos minutos, según el backoff del Core) y termina en la DLQ del Core.
    * Es visible y acotado; procesarlo en silencio lo perdería igual.
    */
   private async sinFilas(
