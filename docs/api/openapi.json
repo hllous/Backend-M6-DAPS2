@@ -11154,7 +11154,8 @@
                 "REQUESTED",
                 "APPROVED",
                 "REJECTED",
-                "ENDED"
+                "ENDED",
+                "EXPIRED"
               ],
               "type": "string"
             }
@@ -17169,7 +17170,8 @@
               "REQUESTED",
               "APPROVED",
               "REJECTED",
-              "ENDED"
+              "ENDED",
+              "EXPIRED"
             ]
           },
           "closureId": {

@@ -19,6 +19,7 @@
 
 | Con quién | Qué falta | Estado | Última act. |
 |---|---|---|---|
+| **M7** | **Gap: un corte aprobado que expira no publica nada.** Lo resolvimos nosotros por `endDate` (#321): se guarda la ventana autorizada (`approvedFrom`/`approvedTo`), el `StreetClosureExpirySweeper` pasa a `EXPIRED` los `APPROVED` con `approvedTo` + 6 h de gracia vencido, su servicio no iniciado queda `RESCHEDULED`, y un `streetClosureEnded` posterior sobre `EXPIRED` se acepta. No se pide nada a M7; se asume que una expiración y una demora se ven igual | ✅ Resuelto de nuestro lado | 20 oct 2026 |
 | **M2** | `responsibleAreaId`, `citizenId` e `isAnonymous` siguen siendo campos comunes de `ticketUpdated` en la v1.6 | ✅ Cerrado | 8 sep 2026 |
 | **M2** | **La v1.6 revirtió `requestType`, `summary`, `description` y `location`**: dejaron de ser comunes y viven solo en `details.routing` (§7.4). Además `requestType` es string plano sin ID (§5.5) y `location` perdió `latitude`/`longitude` (§5.4) | ✅ Resuelto de nuestro lado (Issue #128), avisar que nos afectó | 8 sep 2026 |
 | **M2** | La v1.6 renombró `statusChangedAt`→`updateOccurredAt`, eliminó `AREA_USER` del enum de actor (§5.2), sacó `attachmentId` del adjunto (§5.3), cambió `resolution.type` `INFORMATION_PROVIDED`→`INQUIRY_ANSWERED` y exige `subject: tickets/{ticketId}` (§4). *Histórico en lo del `subject`: el sobre de M2 quedó reemplazado por el del Core el 7 oct 2026, ya no se manda* | ✅ Adoptado (Issue #128) | 8 sep 2026 |

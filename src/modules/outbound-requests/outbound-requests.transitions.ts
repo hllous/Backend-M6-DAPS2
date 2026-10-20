@@ -21,7 +21,11 @@ export const CLOSURE_TRANSITIONS: Record<StreetClosureRequestStatus, StreetClosu
       StreetClosureRequestStatus.REJECTED,
       StreetClosureRequestStatus.ENDED,
     ],
-    APPROVED: [StreetClosureRequestStatus.ENDED],
+    APPROVED: [StreetClosureRequestStatus.ENDED, StreetClosureRequestStatus.EXPIRED],
+    // M7 no avisa cuando un corte aprobado expira: lo vence el sweeper por
+    // `approvedTo`. Si el `streetClosureEnded` llega igual (M7 lo publicó tarde,
+    // o el corte sí estuvo ACTIVE), se acepta desde acá en vez de perderlo.
+    EXPIRED: [StreetClosureRequestStatus.ENDED],
     REJECTED: [],
     ENDED: [],
   };

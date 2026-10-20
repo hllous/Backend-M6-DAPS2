@@ -342,7 +342,7 @@ describe('OutboundRequestsService', () => {
       await expect(service.approveClosure(REQUEST_ID, {})).resolves.toBeDefined();
 
       closureAt(StreetClosureRequestStatus.APPROVED);
-      await expect(service.approveClosure(REQUEST_ID, {})).rejects.toThrow(/\[ENDED\]/);
+      await expect(service.approveClosure(REQUEST_ID, {})).rejects.toThrow(/\[ENDED, EXPIRED\]/);
     });
 
     it('finalizar desde REQUESTED es válido: streetClosureEnded puede adelantarse a Approved', async () => {

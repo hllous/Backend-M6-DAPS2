@@ -17,6 +17,17 @@ const validarM3 = (d: Data): string[] =>
 const validarM7 = (d: Data): string[] =>
   requerido(d, ['closureRequestId', 'sourceRequestId'], 'uuid', esUuid);
 
+/** `startDate`/`endDate` del corte aprobado como fechas; los que no se pueden leer se omiten. */
+function ventana(data: Data): { approvedFrom?: Date; approvedTo?: Date } {
+  const leer = (v: unknown): Date | undefined => {
+    const fecha = typeof v === 'string' ? new Date(v) : undefined;
+    return fecha && !isNaN(fecha.getTime()) ? fecha : undefined;
+  };
+  const approvedFrom = leer(data.startDate);
+  const approvedTo = leer(data.endDate);
+  return { ...(approvedFrom && { approvedFrom }), ...(approvedTo && { approvedTo }) };
+}
+
 /**
  * Las respuestas de M3 y M7 a lo que les derivamos.
  *
@@ -110,6 +121,10 @@ export class OutboundResponsesConsumer implements OnModuleInit {
       data: {
         status: StreetClosureRequestStatus.APPROVED,
         closureId: (data.streetClosureId as string) ?? (data.closureId as string) ?? null,
+        // La ventana autorizada prevalece sobre la pedida y es la que vence el
+        // StreetClosureExpirySweeper. Ausente o ilegible no tumba el handler:
+        // el corte queda sin vencimiento. Va aparte de closureFrom/To.
+        ...ventana(data),
       },
     });
     if (this.applied(count, `Corte ${request.id}`, 'streetClosureApproved')) {

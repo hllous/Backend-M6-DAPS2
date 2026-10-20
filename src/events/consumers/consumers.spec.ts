@@ -150,6 +150,37 @@ describe('consumidores de eventos', () => {
       expect(args.data.statusReason).toContain('fuera de horario');
     });
 
+    it('el corte aprobado persiste la ventana autorizada en approvedFrom/approvedTo', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, sourceType: 'SERVICE' });
+
+      await h('streetClosureApproved')({
+        closureRequestId: ID,
+        streetClosureId: 'CL-1',
+        startDate: '2030-01-01T08:00:00Z',
+        endDate: '2030-01-02T18:00:00Z',
+      });
+
+      const [[args]] = prisma.streetClosureRequest.updateMany.mock.calls;
+      expect(args.data.approvedFrom).toEqual(new Date('2030-01-01T08:00:00Z'));
+      expect(args.data.approvedTo).toEqual(new Date('2030-01-02T18:00:00Z'));
+    });
+
+    it('fechas ausentes o ilegibles no tumban el handler ni se guardan', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, sourceType: 'SERVICE' });
+
+      await expect(
+        h('streetClosureApproved')({
+          closureRequestId: ID,
+          startDate: 'no-es-fecha',
+          endDate: 12345,
+        }),
+      ).resolves.toBeUndefined();
+
+      const [[args]] = prisma.streetClosureRequest.updateMany.mock.calls;
+      expect(args.data).not.toHaveProperty('approvedFrom');
+      expect(args.data).not.toHaveProperty('approvedTo');
+    });
+
     it('el corte aprobado guarda el identificador de M7', async () => {
       prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, sourceType: 'SERVICE' });
 
@@ -188,7 +219,7 @@ describe('consumidores de eventos', () => {
       warn.mockRestore();
     });
 
-    it('streetClosureEnded sobre un corte REJECTED o ENDED se descarta; REQUESTED y APPROVED se aceptan', async () => {
+    it('streetClosureEnded sobre un corte REJECTED o ENDED se descarta; REQUESTED, APPROVED y EXPIRED se aceptan', async () => {
       prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, status: 'ENDED' });
       prisma.streetClosureRequest.updateMany.mockResolvedValue({ count: 0 });
       const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
@@ -197,7 +228,11 @@ describe('consumidores de eventos', () => {
 
       const [[args]] = prisma.streetClosureRequest.updateMany.mock.calls;
       expect(args.where.status).toEqual({
-        in: [StreetClosureRequestStatus.REQUESTED, StreetClosureRequestStatus.APPROVED],
+        in: [
+          StreetClosureRequestStatus.REQUESTED,
+          StreetClosureRequestStatus.APPROVED,
+          StreetClosureRequestStatus.EXPIRED,
+        ],
       });
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('descartado'));
       warn.mockRestore();
@@ -216,7 +251,11 @@ describe('consumidores de eventos', () => {
         where: {
           id: ID,
           status: {
-            in: [StreetClosureRequestStatus.REQUESTED, StreetClosureRequestStatus.APPROVED],
+            in: [
+              StreetClosureRequestStatus.REQUESTED,
+              StreetClosureRequestStatus.APPROVED,
+              StreetClosureRequestStatus.EXPIRED,
+            ],
           },
         },
         data: { status: StreetClosureRequestStatus.ENDED, closureId: 'CL-9' },
@@ -318,7 +357,11 @@ describe('consumidores de eventos', () => {
         where: {
           id: ID,
           status: {
-            in: [StreetClosureRequestStatus.REQUESTED, StreetClosureRequestStatus.APPROVED],
+            in: [
+              StreetClosureRequestStatus.REQUESTED,
+              StreetClosureRequestStatus.APPROVED,
+              StreetClosureRequestStatus.EXPIRED,
+            ],
           },
         },
         data: { status: StreetClosureRequestStatus.ENDED, closureId: undefined },

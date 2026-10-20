@@ -323,6 +323,8 @@ erDiagram
         enum closure_type "StreetClosureType"
         timestamp closure_from
         timestamp closure_to
+        timestamp approved_from
+        timestamp approved_to
         enum status "StreetClosureRequestStatus"
         varchar closure_id "EXT M7"
     }

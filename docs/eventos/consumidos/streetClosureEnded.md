@@ -30,9 +30,11 @@ streetClosureEnded
 
 **El documento de referencia nuevo de M7 (30/08) agrega `closureRequestId` directamente en `streetClosureEnded`.** La correlación depende exclusivamente de ese campo: no hay mapeo propio de respaldo.
 
-## Corte aprobado que expira: M7 no publica nada (M7, 19/10)
+## Corte aprobado que expira: lo vence el sweeper, y este evento se acepta igual (#321)
 
-M7 solo publica `streetClosureEnded` cuando un corte `ACTIVE` vence su `endDate`. **Un corte `APPROVED` que nunca se activó pasa a `EXPIRED` sin publicar finalización.** Entonces, tras un `streetClosureApproved`, **puede no llegar nunca un `streetClosureEnded`**: nuestra `StreetClosureRequest` queda en `APPROVED` y lo que dependía del corte sigue habilitado sin que nadie lo libere. Hoy no hay ningún mecanismo nuestro que lo detecte (el consumer no mira `endDate` y no hay vencimiento por tiempo); la salida manual es el endpoint que pasa el corte a `ENDED`. Es un gap a resolver, a llevar a M7: confirmar si van a publicar algo al expirar, o si nosotros cerramos por `endDate`. Estado en [bloqueantes.md](../../integracion/m7.md#m7--tránsito-).
+M7 solo publica `streetClosureEnded` cuando un corte `ACTIVE` vence su `endDate`; uno `APPROVED` que nunca se activó pasa a `EXPIRED` sin publicar nada. Por eso el `StreetClosureExpirySweeper` pasa a `EXPIRED` los `APPROVED` con `approvedTo` + 6 horas de gracia vencido (ver [`streetClosureApproved`](streetClosureApproved.md#un-corte-aprobado-puede-expirar-sin-aviso-lo-vencemos-nosotros-321)). La gracia da tiempo a que este evento llegue primero para un corte que sí estuvo activo.
+
+**Si llega sobre un corte `EXPIRED`, se acepta** y el corte pasa a `ENDED`: `EXPIRED → ENDED` está en la tabla de transiciones. No se pierde ni se rechaza, porque puede ser un corte que sí estuvo activo y cuyo evento se demoró más que la gracia.
 
 ## El typo, ya resuelto
 
@@ -42,4 +44,4 @@ M7 solo publica `streetClosureEnded` cuando un corte `ACTIVE` vence su `endDate`
 
 ## Evento tardío o repetido
 
-Se acepta desde `APPROVED` y también desde `REQUESTED`: el Core no garantiza el orden entre eventos (y un reintento vuelve después de lo publicado más tarde), así que `streetClosureEnded` puede adelantarse a `streetClosureApproved`. En ese caso se guarda el `streetClosureId` como `closureId` si no lo teníamos, y el `streetClosureApproved` que llegue después se descarta (`ENDED` es terminal). Desde `REJECTED` o `ENDED` se descarta con un `warn`, sin error: el inbox responde `processed`.
+Se acepta desde `APPROVED`, desde `EXPIRED` y también desde `REQUESTED`: el Core no garantiza el orden entre eventos (y un reintento vuelve después de lo publicado más tarde), así que `streetClosureEnded` puede adelantarse a `streetClosureApproved`. En ese caso se guarda el `streetClosureId` como `closureId` si no lo teníamos, y el `streetClosureApproved` que llegue después se descarta (`ENDED` es terminal). Desde `REJECTED` o `ENDED` se descarta con un `warn`, sin error: el inbox responde `processed`.
