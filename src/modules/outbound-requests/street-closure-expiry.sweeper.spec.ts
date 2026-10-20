@@ -56,7 +56,7 @@ describe('StreetClosureExpirySweeper', () => {
     const [[svc]] = prisma.service.updateMany.mock.calls;
     expect(svc.where).toEqual({ id: 's1', status: ServiceStatus.SCHEDULED });
     expect(svc.data.status).toBe(ServiceStatus.RESCHEDULED);
-    expect(svc.data.statusReason).toBe('el corte autorizado venció sin activarse');
+    expect(svc.data.statusReason).toBe('venció la ventana autorizada del corte');
   });
 
   it('si el corte ya no esta APPROVED (carrera con Ended) no toca el servicio', async () => {
@@ -79,6 +79,23 @@ describe('StreetClosureExpirySweeper', () => {
 
     expect(prisma.streetClosureRequest.updateMany).toHaveBeenCalledTimes(1);
     expect(prisma.service.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('si la transaccion de un corte falla, los demas se procesan y no lanza', async () => {
+    prisma.streetClosureRequest.findMany.mockResolvedValue(
+      ['c1', 'c2', 'c3'].map((id) => ({ id, sourceType: 'TREE_INTERVENTION', sourceId: id })),
+    );
+    let n = 0;
+    prisma.$transaction.mockImplementation((cb: (tx: unknown) => unknown) =>
+      ++n === 2 ? Promise.reject(new Error('boom')) : cb(prisma),
+    );
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    await expect(sweeper.expireClosures()).resolves.toBeUndefined();
+
+    const ids = prisma.streetClosureRequest.updateMany.mock.calls.map(([a]: any) => a.where.id);
+    expect(ids).toEqual(['c1', 'c3']);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('c2'));
   });
 
   it('onModuleInit barre al arrancar y no propaga el error', async () => {

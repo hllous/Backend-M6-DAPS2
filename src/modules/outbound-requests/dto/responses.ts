@@ -106,7 +106,8 @@ export class StreetClosureRequestResponseDto {
   closureType: StreetClosureType | null;
 
   @ApiProperty({
-    description: 'Estado de la solicitud. Lo mueven las tres respuestas de M7.',
+    description:
+      'Estado de la solicitud. Lo mueven las tres respuestas de M7 y, para EXPIRED, el barrido que vence los cortes aprobados cuya ventana autorizada ya pasó (M7 no avisa).',
     enum: StreetClosureRequestStatus,
   })
   status: StreetClosureRequestStatus;

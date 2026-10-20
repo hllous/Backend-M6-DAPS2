@@ -34,7 +34,7 @@ streetClosureEnded
 
 M7 solo publica `streetClosureEnded` cuando un corte `ACTIVE` vence su `endDate`; uno `APPROVED` que nunca se activó pasa a `EXPIRED` sin publicar nada. Por eso el `StreetClosureExpirySweeper` pasa a `EXPIRED` los `APPROVED` con `approvedTo` + 6 horas de gracia vencido (ver [`streetClosureApproved`](streetClosureApproved.md#un-corte-aprobado-puede-expirar-sin-aviso-lo-vencemos-nosotros-321)). La gracia da tiempo a que este evento llegue primero para un corte que sí estuvo activo.
 
-**Si llega sobre un corte `EXPIRED`, se acepta** y el corte pasa a `ENDED`: `EXPIRED → ENDED` está en la tabla de transiciones. No se pierde ni se rechaza, porque puede ser un corte que sí estuvo activo y cuyo evento se demoró más que la gracia.
+**Si llega sobre un corte `EXPIRED`, se acepta** y el corte pasa a `ENDED`: `EXPIRED → ENDED` está en la tabla de transiciones. No se pierde ni se rechaza, porque puede ser un corte que sí estuvo activo y cuyo evento se demoró más que la gracia. Cambia el corte a `ENDED` pero **no revierte** el `RESCHEDULED` del servicio: reprogramarlo sigue siendo decisión del operador.
 
 ## El typo, ya resuelto
 

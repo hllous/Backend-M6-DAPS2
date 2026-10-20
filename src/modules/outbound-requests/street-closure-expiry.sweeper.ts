@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ServiceStatus, StreetClosureRequestStatus } from '@prisma/client';
+import { paraLog } from '../../events/log-safe';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
@@ -52,40 +53,54 @@ export class StreetClosureExpirySweeper implements OnModuleInit {
     for (const corte of vencidos) {
       // Una transacción por corte: el corte y su servicio cambian juntos, y uno
       // que falla no frena a los demás (se reintenta en la próxima hora).
-      const applied = await this.prisma.$transaction(async (tx) => {
-        // `updateMany` no pasa por assertTransition: el estado y la fecha en el
-        // `where` son el guard (APPROVED→EXPIRED está en CLOSURE_TRANSITIONS) y
-        // lo hacen atómico frente a un `streetClosureEnded` concurrente.
-        const { count } = await tx.streetClosureRequest.updateMany({
-          where: {
-            id: corte.id,
-            status: StreetClosureRequestStatus.APPROVED,
-            approvedTo: { lt: limit },
-          },
-          data: { status: StreetClosureRequestStatus.EXPIRED },
-        });
-        if (count === 0) return false;
-
-        // Mismo criterio acotado que el rechazo (closureRejected): solo un
-        // servicio todavía SCHEDULED se marca para reprogramar; uno iniciado o
-        // cerrado no se toca. Una TreeIntervention tampoco: el rechazo no la
-        // modifica, así que expirar no puede ser más agresivo.
-        if (corte.sourceType === 'SERVICE') {
-          await tx.service.updateMany({
-            where: { id: corte.sourceId, status: ServiceStatus.SCHEDULED },
-            data: {
-              status: ServiceStatus.RESCHEDULED,
-              statusReason: 'el corte autorizado venció sin activarse',
-            },
-          });
-        }
-        return true;
-      });
-      if (applied) expired += 1;
+      try {
+        if (await this.expireOne(corte, limit)) expired += 1;
+      } catch (error) {
+        this.logger.warn(
+          `No se pudo vencer el corte ${paraLog(corte.id)}; se reintenta en la próxima hora: ${paraLog((error as Error).message)}`,
+        );
+      }
     }
 
     if (expired > 0) {
-      this.logger.log(`${expired} corte/s aprobado/s vencido/s sin activarse (M7 no avisa)`);
+      this.logger.log(
+        `${expired} corte/s aprobado/s vencido/s por su ventana autorizada (M7 no avisa)`,
+      );
     }
+  }
+
+  private async expireOne(
+    corte: { id: string; sourceType: string; sourceId: string },
+    limit: Date,
+  ): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      // `updateMany` no pasa por assertTransition: el estado y la fecha en el
+      // `where` son el guard (APPROVED→EXPIRED está en CLOSURE_TRANSITIONS) y
+      // lo hacen atómico frente a un `streetClosureEnded` concurrente.
+      const { count } = await tx.streetClosureRequest.updateMany({
+        where: {
+          id: corte.id,
+          status: StreetClosureRequestStatus.APPROVED,
+          approvedTo: { lt: limit },
+        },
+        data: { status: StreetClosureRequestStatus.EXPIRED },
+      });
+      if (count === 0) return false;
+
+      // Mismo criterio acotado que el rechazo (closureRejected): solo un
+      // servicio todavía SCHEDULED se marca para reprogramar; uno iniciado o
+      // cerrado no se toca. Una TreeIntervention tampoco: el rechazo no la
+      // modifica, así que expirar no puede ser más agresivo.
+      if (corte.sourceType === 'SERVICE') {
+        await tx.service.updateMany({
+          where: { id: corte.sourceId, status: ServiceStatus.SCHEDULED },
+          data: {
+            status: ServiceStatus.RESCHEDULED,
+            statusReason: 'venció la ventana autorizada del corte',
+          },
+        });
+      }
+      return true;
+    });
   }
 }

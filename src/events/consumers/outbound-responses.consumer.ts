@@ -18,6 +18,7 @@ const validarM7 = (d: Data): string[] =>
   requerido(d, ['closureRequestId', 'sourceRequestId'], 'uuid', esUuid);
 
 /** `startDate`/`endDate` del corte aprobado como fechas; los que no se pueden leer se omiten. */
+// No usa `aFecha`: descarta fechas a más de 5 min en el futuro y la ventana autorizada es justamente futura.
 function ventana(data: Data): { approvedFrom?: Date; approvedTo?: Date } {
   const leer = (v: unknown): Date | undefined => {
     const fecha = typeof v === 'string' ? new Date(v) : undefined;

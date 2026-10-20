@@ -107,7 +107,7 @@ describe('Vencimiento de cortes aprobados (e2e)', () => {
     expect(vencido.status).toBe('EXPIRED');
     const servicio = await prisma.service.findUniqueOrThrow({ where: { id: servicioId } });
     expect(servicio.status).toBe('RESCHEDULED');
-    expect(servicio.statusReason).toBe('el corte autorizado venció sin activarse');
+    expect(servicio.statusReason).toBe('venció la ventana autorizada del corte');
 
     // Nada hacia M7: el corte ya expiró de su lado.
     const aM7 = await prisma.outboxEvent.count({

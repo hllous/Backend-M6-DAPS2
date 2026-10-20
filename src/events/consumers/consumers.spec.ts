@@ -165,6 +165,21 @@ describe('consumidores de eventos', () => {
       expect(args.data.approvedTo).toEqual(new Date('2030-01-02T18:00:00Z'));
     });
 
+    it('un reintento de Approved sobre un corte ya APPROVED no pisa la ventana', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, status: 'APPROVED' });
+      prisma.streetClosureRequest.updateMany.mockResolvedValue({ count: 0 });
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+      await h('streetClosureApproved')({ closureRequestId: ID, endDate: '2031-01-01T00:00:00Z' });
+
+      const [[args]] = prisma.streetClosureRequest.updateMany.mock.calls;
+      expect(args.where).toEqual({
+        id: ID,
+        status: { in: [StreetClosureRequestStatus.REQUESTED] },
+      });
+      warn.mockRestore();
+    });
+
     it('fechas ausentes o ilegibles no tumban el handler ni se guardan', async () => {
       prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, sourceType: 'SERVICE' });
 
