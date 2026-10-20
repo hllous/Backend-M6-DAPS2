@@ -85,7 +85,7 @@ En cuanto se cree el proyecto NestJS, se suman en la raíz: `src/`, `prisma/`, `
 
 **Contexto vigente.** La referencia de M2 es la v1.75 (WIP). El contrato con M3 quedó cerrado el 5 de octubre. El bus es RabbitMQ ([ADR-006](docs/decisiones/adr-006-rabbitmq-como-bus.md), reemplazado en parte por [ADR-007](docs/decisiones/adr-007-contrato-de-integracion-del-core.md)): M9 anunció el cambio desde Kafka el 27 de septiembre y el 7 de octubre fijó el contrato de integración (sobre, `muni.inbox`, reintentos). El JWT lo emite M1, no M9.
 
-**Bloqueantes abiertos** (🔴 en [`docs/bloqueantes.md`](docs/bloqueantes.md)): la fecha/franja agendada de M2, el contrato técnico del JWT de M1, y de M9 las URLs de ambientes y las credenciales del broker, el catálogo de barrios y la lista de eventos del Core. Hay además avisos pendientes, entre ellos reenviar a M7 los cambios de enums y de `neighborhoodId`, y regenerar el PDF del acuerdo de eventos. M3 y M4 no tienen bloqueantes.
+**Bloqueantes abiertos** (🔴 en [`docs/bloqueantes.md`](docs/bloqueantes.md)): la fecha/franja agendada de M2, el contrato técnico del JWT de M1, y de M9 el despliegue del Core (sin ambientes ni fecha, M9 del 20/10) con las credenciales del broker, y el catálogo de barrios, que M9 dice que no es suyo y el TPO §9 le asigna. Hay además avisos pendientes, entre ellos reenviar a M7 los cambios de enums y de `neighborhoodId`, y regenerar el PDF del acuerdo de eventos. M3 y M4 no tienen bloqueantes.
 
 ## Referencia importante
 

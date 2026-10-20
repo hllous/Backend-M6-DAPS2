@@ -59,7 +59,7 @@ reason, notes?, proposedDate?, recordedAt
 
 `neighborhoodIds[]` iba explícito para que M2 pudiera ubicar a los vecinos afectados sin conocer nuestras zonas. `reason` es `NotServicedReason`.
 
-**No tiene traducción uno a uno**: una zona sin atender no es un reclamo, son *n*. Lo que sale es un `updateTicketStatus / PROGRESS` **por cada reclamo abierto de esa zona** — el abanico lo abrimos nosotros.
+**No tiene traducción uno a uno**: una zona sin atender no es un reclamo, son *n*. *(20/10: M9 contó que este tipo sigue en el catálogo del Core con owner `ambiente`, como si lo publicáramos. Hay que limpiarlo: #298.)* Lo que sale es un `updateTicketStatus / PROGRESS` **por cada reclamo abierto de esa zona** — el abanico lo abrimos nosotros.
 
 ### `containerOverflowed`
 
