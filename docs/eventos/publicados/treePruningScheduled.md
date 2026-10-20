@@ -6,9 +6,9 @@ Schema: [`treePruningScheduled.schema.json`](treePruningScheduled.schema.json).
 
 ## Cuándo se dispara
 
-Al asociar una [`TreeIntervention`](../../entidades/tree-intervention.md) a un [`Service`](../../entidades/service.md) (`POST /tree-interventions/:id/assign-service`). La fecha, la ventana y la cuadrilla salen del servicio, que va identificado por si M7 quiere seguirlo.
+Cuando el [`Service`](../../entidades/service.md) que ejecuta una [`TreeIntervention`](../../entidades/tree-intervention.md) queda con **cuadrilla y franja horaria**, y el evento todavía no salió. Normalmente es al asociarlos (`POST /tree-interventions/:id/assign-service`, si el servicio ya los tiene); si faltaban, se difiere y sale después, en la edición del servicio que completa los dos datos (`assign-crew`, `PATCH /services/:id` o `confirm-reschedule`). La fecha, la ventana y la cuadrilla salen del servicio, que va identificado por si M7 quiere seguirlo.
 
-⚠️ **Pendiente conocido: si al asociar el servicio todavía falta cuadrilla o franja horaria, el evento se difiere y hoy no se reemite.** M7 declara `crewId` y `timeWindow` como requeridos, y en nuestro modelo son opcionales hasta que se asignan — si cualquiera de los dos falta en ese momento, la publicación se salta (se loguea el motivo) y no hay ningún disparador que la retome después, cuando se complete la cuadrilla o la ventana.
+**Se emite una sola vez.** M7 declara `crewId` y `timeWindow` como requeridos y en nuestro modelo son opcionales hasta que se asignan (#324). `TreeIntervention.pruningScheduledAt` recuerda que ya salió: un cambio posterior de cuadrilla, fecha o franja **no lo reenvía**, porque M7 no define un evento de reprogramación de poda. Un servicio en `RESCHEDULED` tampoco lo emite aunque se le complete la cuadrilla o la franja: espera a `confirm-reschedule`, para que viaje la fecha definitiva.
 
 ## Payload
 

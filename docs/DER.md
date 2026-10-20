@@ -223,6 +223,7 @@ erDiagram
         varchar authorized_by_user_id "solo REMOVAL"
         timestamp authorized_at "solo REMOVAL"
         text justification "solo REMOVAL"
+        timestamp pruning_scheduled_at "marca: treePruningScheduled ya emitido"
     }
     INTERVENTION_TREE {
         uuid intervention_id PK

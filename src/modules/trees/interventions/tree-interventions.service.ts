@@ -231,8 +231,21 @@ export class TreeInterventionsService {
         // M7 declara crewId y timeWindow como requeridos, y en nuestro modelo
         // son opcionales hasta que se asignan: si todavia faltan, el payload
         // sale null y el evento se difiere en vez de emitirse incompleto.
-        const payload = treePruningScheduled(row, service, primerArbol);
+        // Se relee el servicio dentro de la tx, ya con el vinculo escrito: ante un
+        // assign-crew concurrente, o esta lectura ve el servicio completo, o el
+        // assign-crew ve la intervencion (ServicesService busca por serviceId).
+        const actual = await tx.service.findUnique({
+          where: { id: dto.serviceId },
+          include: { zones: { orderBy: { sequence: 'asc' } } },
+        });
+        const payload = actual ? treePruningScheduled(row, actual, primerArbol) : null;
+        // Si se difiere, sale despues desde ServicesService al completarse el
+        // servicio (#324); la marca evita que se repita.
         if (payload) {
+          await tx.treeIntervention.update({
+            where: { id },
+            data: { pruningScheduledAt: new Date() },
+          });
           await this.outbox.enqueue(tx, {
             eventType: EventType.TREE_PRUNING_SCHEDULED,
             aggregateType: AggregateType.TREE_INTERVENTION,
