@@ -63,7 +63,7 @@ const TOLERANCIA_FUTURO_MS = 5 * 60_000;
  * `POST /events/inbox`) dejaría la marca de orden ahí y todo evento legítimo
  * posterior se ignoraría como atrasado, sin arreglo salvo por SQL (#270).
  */
-function aFecha(valor: string | undefined): Date | null {
+export function aFecha(valor: string | undefined): Date | null {
   const fecha = valor ? new Date(valor) : null;
   if (!fecha || isNaN(fecha.getTime())) return null;
   return fecha.getTime() > Date.now() + TOLERANCIA_FUTURO_MS ? null : fecha;

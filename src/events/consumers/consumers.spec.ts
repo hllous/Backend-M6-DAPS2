@@ -624,6 +624,21 @@ describe('consumidores de eventos', () => {
         expect(args.data).not.toHaveProperty('ticketId');
       });
 
+      it('un ROUTED más viejo que el último cambio del expediente no lo reactiva', async () => {
+        prisma.environmentalReport.findFirst.mockResolvedValue({
+          id: 'exp-1',
+          status: 'FORWARDED',
+        });
+
+        await h({ ...rerouted, updatedAt: '2026-10-05T10:00:00.000Z' });
+
+        const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+        expect(args.where.OR).toEqual([
+          { ticketStatusAt: null },
+          { ticketStatusAt: { lt: new Date('2026-10-05T10:00:00.000Z') } },
+        ]);
+      });
+
       it.each(['DISMISSED', 'NO_VIOLATION', 'CLOSED', 'UNDER_REVIEW'])(
         'un expediente en %s no se reactiva',
         async (status) => {
@@ -635,6 +650,41 @@ describe('consumidores de eventos', () => {
           expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
         },
       );
+
+      it('un ROUTED de otra área cierra el expediente que habíamos devuelto, sin leer su contenido', async () => {
+        await h({
+          ticketId: 'TCK-1',
+          responsibleAreaId: 'M4',
+          updateType: 'ROUTED',
+          updatedAt: '2026-10-05T10:00:00.000Z',
+          details: { routing: { summary: 'no se persiste' } },
+        });
+
+        const [[args]] = prisma.environmentalReport.updateMany.mock.calls;
+        expect(args.where).toMatchObject({ ticketId: 'TCK-1', status: 'FORWARDED' });
+        expect(args.data).toEqual({ status: 'CLOSED' });
+        expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+      });
+
+      it('un evento de otra área que no es ROUTED no toca el expediente', async () => {
+        await h({ ticketId: 'TCK-1', responsibleAreaId: 'M4', updateType: 'PRIORITY_CHANGED' });
+
+        expect(prisma.environmentalReport.updateMany).not.toHaveBeenCalled();
+      });
+
+      it('si M2 cancela el ticket que habíamos devuelto, el expediente se cierra', async () => {
+        prisma.environmentalReport.findFirst.mockResolvedValue({
+          id: 'exp-1',
+          status: 'FORWARDED',
+        });
+
+        await h({ ticketId: 'TCK-1', responsibleAreaId: 'M6', updateType: 'CANCELLED' });
+
+        expect(prisma.environmentalReport.updateMany).toHaveBeenCalledWith({
+          where: { id: 'exp-1', status: 'FORWARDED' },
+          data: { status: 'CLOSED' },
+        });
+      });
 
       it('si el expediente cambió de estado entre la lectura y el update, no falla', async () => {
         prisma.environmentalReport.findFirst.mockResolvedValue({
@@ -976,6 +1026,36 @@ describe('consumidores de eventos', () => {
         await h(evento(updateType, nuevo), T2);
 
         expect(fila[campo]).toEqual(campo === 'priority' ? Severity.HIGH : true);
+      });
+
+      it('ordena por data.updatedAt y no por el occurredAt del sobre, que puede ser de una publicación demorada (M2, 20/10)', async () => {
+        const T3 = new Date('2026-10-01T10:10:00.000Z');
+        await h(
+          evento('PRIORITY_CHANGED', { currentPriority: 'HIGH', updatedAt: T2.toISOString() }),
+          T2,
+        );
+        // El cambio viejo se publicó tarde: su occurredAt (T3) es posterior, su updatedAt (T1) no.
+        await h(
+          evento('PRIORITY_CHANGED', { currentPriority: 'LOW', updatedAt: T1.toISOString() }),
+          T3,
+        );
+
+        expect(fila.priority).toEqual(Severity.HIGH);
+        expect(fila.priorityChangedAt).toEqual(T2);
+      });
+
+      it('con un updatedAt ilegible o en el futuro ordena por el occurredAt del sobre', async () => {
+        await h(evento('PRIORITY_CHANGED', { currentPriority: 'HIGH', updatedAt: 'ayer' }), T2);
+        await h(
+          evento('PRIORITY_CHANGED', {
+            currentPriority: 'LOW',
+            updatedAt: new Date(Date.now() + 3_600_000).toISOString(),
+          }),
+          T1,
+        );
+
+        expect(fila.priority).toEqual(Severity.HIGH);
+        expect(fila.priorityChangedAt).toEqual(T2);
       });
 
       it('una marca por campo: un PRIORITY_CHANGED nuevo no descarta un ESCALATION_CHANGED atrasado', async () => {
