@@ -50,7 +50,7 @@ describe('Inbox de eventos entrantes (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor(['SUPERVISOR']));
+    api = new Api(app, tokenFor());
     await truncateAll(prisma);
 
     const zona = await crearZona(api);

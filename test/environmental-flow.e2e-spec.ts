@@ -33,7 +33,7 @@ describe('Flujo del expediente ambiental (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor(['INSPECTOR']));
+    api = new Api(app, tokenFor());
     await truncateAll(prisma);
   });
 

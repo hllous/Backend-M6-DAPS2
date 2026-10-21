@@ -91,9 +91,9 @@ No hay que hacer nada manual en el día a día.
 | Variable | Valor | Requerida |
 |---|---|---|
 | `DATABASE_URL` | Connection string de Supabase (URI directa, puerto `5432`, con `?schema=public`) | ✅ Sí |
-| `JWT_SECRET` | Secreto ≥ 8 caracteres (generar random) | ✅ Sí |
+| `JWT_SECRET` | `APP_JWT_SECRET` de M1: clave HS256 en **base64**, decodifica a ≥ 32 bytes (256 bits). Se pide a M1 por el grupo de POs; nunca al repo. Con el valor viejo (texto plano) el servicio no arranca | ✅ Sí |
+| `JWT_ISSUER` | `modulo1-ciudadanos` (`iss` exigido en el token) | No (default `modulo1-ciudadanos`) |
 | `CORS_ORIGINS` | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
-| `JWT_EXPIRATION` | `3600` | No (default 3600s) |
 | `NODE_ENV` | `production` | ✅ Sí |
 | `SANCTION_DEADLINE_DAYS` | `30` | No (default 30 días para cierre de expediente ambiental sin resolución M4) |
 | `R2_ACCOUNT_ID` | Account ID de Cloudflare R2 | Para subida de adjuntos (`/evidence`). Sin esta variable, `POST /evidence` responde 503 |
@@ -143,7 +143,7 @@ No hay que hacer nada manual en el día a día.
 |---|---|
 | `M6_AUTH_MODE` | `backend-development` (demo contra el backend real) |
 | `M6_BACKEND_ORIGIN` | `https://m6-backend-m64k.onrender.com` |
-| `M6_DEV_JWT` | JWT firmado con el `JWT_SECRET` del backend (payload `{ sub, exp }`) |
+| `M6_DEV_JWT` | Access token con el contrato de M1 (`node scripts/generate-demo-jwt.mjs <JWT_SECRET base64>`; dura 15 min) |
 | `M6_SESSION_SECRET` | Clave secreta para sellar la cookie de sesión del Next.js BFF |
 
 > `M6_AUTH_MODE=backend-development` reenvía cada petición del BFF al backend con `M6_DEV_JWT` como Bearer. `M6_BACKEND_ORIGIN`, `M6_DEV_JWT` y `M6_SESSION_SECRET` se leen en runtime (server-side), así que se pueden cambiar sin rebuild. `NEXT_PUBLIC_API_URL` quedó obsoleto: el código actual no lo usa.
@@ -183,7 +183,7 @@ La infraestructura está deployada, las migraciones corren solas en cada deploy 
 |---|---|---|
 | 1 | **Migraciones de Prisma** | ✅ Resuelto (PR #49). El `CMD` del Dockerfile corre `npx prisma migrate deploy` antes de arrancar. Si la migración falla, el contenedor no levanta |
 | 2 | **Services de dominio** | ✅ Fases 1 a 7 completas (135 endpoints en 23 tags): catálogos, recursos (cuadrillas, vehículos), contenedores, arbolado, espacios verdes, `Service` (máquina de estados, ZoneResults, CollectionRecords), control ambiental (expedientes, inspecciones, actas, sanciones), derivaciones (M3 reparaciones, M7 cortes), tablero de indicadores (`/indicators`) y portal ciudadano (`/public`) |
-| 3 | **Autenticación** | ⚠️ Provisoria. Todo endpoint exige JWT (guard global), pero la verificación es HS256 contra `JWT_SECRET` hasta que M1 publique su contrato de firma y claims. La autorización por rol server-side está diferida hasta que M1 defina su taxonomía; el frontend realiza control de permisos optimista en UI (ver [ADR-002](decisiones/adr-002-auth-provisoria.md)) |
+| 3 | **Autenticación** | ⚠️ Provisoria. Todo endpoint exige JWT (guard global), pero la verificación ya sigue el contrato de M1 (HS256 con `JWT_SECRET` en base64, `iss`, `typ=access`, `rol`). La autorización por rol server-side está diferida hasta que M1 defina su taxonomía; el frontend realiza control de permisos optimista en UI (ver [ADR-002](decisiones/adr-002-auth-provisoria.md)) |
 | 4 | **Eventos** | ✅ Outbox transaccional (Fase 3), Inbox con handlers (Fase 6) y adaptador/consumidor de RabbitMQ (#234) implementados. El Core de M9 **ya está desplegado en AWS** (ambiente único y compartido, guía común del 20/10); lo que falta es la ficha privada y el alta de nuestra IP de salida (#328), y hasta entonces se prueba contra el Core local (#299). Sin `RABBITMQ_URL` configurada, los eventos se encolan en outbox y se registran en log. Con ella, la app publica al exchange `muni.inbox` y consume `q.ambiente`, que crea el Core al registrar nuestras suscripciones: hasta entonces `checkQueue` falla (404) y el consumidor reintenta la conexión. La ingesta manual puede ejercitarse vía `POST /events/inbox` |
 | 5 | **Evidencia y adjuntos** | ✅ Resuelto (Fase 7). `POST /evidence` genérico sobre Cloudflare R2 con `Idempotency-Key` obligatoria respaldada por constraint único en DB (`SERVICE`, `ZONE_RESULT`, `INSPECTION`, `CONTAINER`) |
 | 6 | **Frontend (Next.js)** | ⏳ En desarrollo. Etapa de mapa de Wayfinder completada: diseño (DESIGN.md con paleta Azul Institucional y WCAG 2.2 AA), contratos (CONTRACTS.md), BFF session (ADR-0004) y prototipos interactivos validados |
@@ -206,7 +206,7 @@ curl https://m6-backend-m64k.onrender.com/zones
 
 **Un 401 acá es la respuesta correcta, no un error.** Significa que la base tiene esquema y que el guard está funcionando. Si devuelve `500`, ahí sí hay algo roto.
 
-Para probar con datos, generá un JWT firmado con el mismo `JWT_SECRET` del servicio y pegalo en el botón **Authorize** del [Swagger UI](https://m6-backend-m64k.onrender.com/api/docs).
+Para probar con datos, generá un access token con `node scripts/generate-demo-jwt.mjs <JWT_SECRET base64> [ROL]` (mismo contrato que M1, dura 15 min) y pegalo en el botón **Authorize** del [Swagger UI](https://m6-backend-m64k.onrender.com/api/docs).
 
 ---
 

@@ -29,6 +29,9 @@ function validarUrlAmqp(value: string, ctx: z.RefinementCtx): void {
   }
 }
 
+/** Valor del .env.example: público, así que en producción no protege nada. */
+const JWT_SECRET_EJEMPLO = 'Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==';
+
 export const envSchema = z
   .object({
     // Server
@@ -44,9 +47,19 @@ export const envSchema = z
     // cierra un CSRF: es higiene, no un limite de seguridad.
     CORS_ORIGINS: z.string().optional(),
 
-    // JWT — placeholder hasta que M1 publique su contrato de firma y claims
-    JWT_SECRET: z.string().min(8),
-    JWT_EXPIRATION: z.coerce.number().default(3600),
+    // JWT de M1: HS256 con la clave simétrica compartida (`APP_JWT_SECRET` de M1),
+    // en BASE64 y de al menos 256 bits. Nunca en el repo.
+    JWT_SECRET: z
+      .string()
+      // Base64 estándar (no base64url) y con relleno completo: es lo que decodifica M1.
+      .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'JWT_SECRET tiene que estar en base64 estándar')
+      .refine((v) => v.length % 4 === 0, 'JWT_SECRET: largo inválido para base64')
+      .refine(
+        (v) => Buffer.from(v, 'base64').length >= 32,
+        'JWT_SECRET: mínimo 256 bits (32 bytes)',
+      ),
+    // `iss` que exigimos en el token.
+    JWT_ISSUER: z.string().min(1).default('modulo1-ciudadanos'),
 
     // Plazo que le damos a M4 para resolver un acta antes de cerrar el
     // expediente por vencimiento. Ver ReportDeadlineSweeper.
@@ -114,6 +127,19 @@ export const envSchema = z
     R2_PUBLIC_URL_BASE: z.string().optional(),
   })
   .superRefine((env, ctx) => {
+    // Secretos que están en el repo (ejemplo, tests, openapi: Buffer.alloc(32[, 9]))
+    // o cualquiera de un solo byte repetido. El mensaje no imprime el valor.
+    if (env.NODE_ENV === 'production') {
+      const bytes = Buffer.from(env.JWT_SECRET, 'base64');
+      if (env.JWT_SECRET === JWT_SECRET_EJEMPLO || bytes.every((b) => b === bytes[0])) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['JWT_SECRET'],
+          message:
+            'En producción JWT_SECRET no puede ser un valor de ejemplo ni de un byte repetido: usar el de M1',
+        });
+      }
+    }
     // En producción la clave no viaja en claro.
     if (env.NODE_ENV === 'production' && /^amqp:/i.test(env.RABBITMQ_URL ?? '')) {
       ctx.addIssue({

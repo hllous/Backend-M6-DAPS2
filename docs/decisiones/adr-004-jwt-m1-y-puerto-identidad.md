@@ -45,7 +45,7 @@ M1 entregó el contrato real del JWT ([#353](https://github.com/hllous/Backend-M
 - **HS256 con secreto compartido en base64** (`APP_JWT_SECRET` de M1, mínimo 256 bits), no JWKS ni clave pública. El valor se pide a M1 por privado. «Sin firma, claves ni emisor» deja de ser un bloqueo salvo por el secreto.
 - **Claims:** `iss` = `modulo1-ciudadanos` (verificar), `sub` (id numérico), `sub_type`, `rol` (un solo string, no `roles[]`), `typ` = `access` (rechazar si no), `iat`, `exp`. TTL de 15 min y sin `aud`.
 - **Rol único y sin área:** el rol de M1 no alcanza para autorizar en M6; sigue el modelo híbrido (adaptador + tabla local de asignaciones, #161).
-- **Qué cambia en el código:** `src/auth/jwt.strategy.ts` hoy asume `sub` + `roles[]` y un secreto de texto plano. Hay que decodificar el secreto de base64, verificar `iss` y `typ`, y leer `rol`. Todavía no se hizo.
+- **Código (hecho en [#354](https://github.com/hllous/Backend-M6-DAPS2/issues/354)):** `src/auth/jwt.strategy.ts` decodifica el secreto de base64, fija `HS256`, exige `iss` y `exp`, rechaza `typ` distinto de `access` y lee `rol` (queda en `request.user` como `roles: [rol]` más `subType`). Variables: `JWT_SECRET` (base64, ≥ 32 bytes) y `JWT_ISSUER`; `JWT_EXPIRATION` se eliminó, no se usaba (M1 fija el TTL).
 
 ## Referencias
 

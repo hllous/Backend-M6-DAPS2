@@ -34,7 +34,7 @@ Los endpoints sin token se marcan explícitamente con `@Public()`. **Diferimos l
 ### Positivas
 
 - La API deja de estar abierta, y el Swagger deja de mentir con sus 401.
-- El frontend y QA pueden trabajar ya: firman tokens locales con el mismo `JWT_SECRET`.
+- El frontend y QA pueden trabajar ya: firman tokens locales con el mismo `JWT_SECRET` (base64) y el contrato de M1 (`scripts/generate-demo-jwt.mjs`).
 - La deuda con M1 queda contenida en `validate()` y `secretOrKey`. Ni los guards, ni los controllers, ni los DTOs se tocan cuando llegue la definición real.
 - Se cierra el criterio del DoD sobre endpoints protegidos, sin depender de un tercero.
 
