@@ -149,6 +149,42 @@ No hay que hacer nada manual en el día a día.
 
 > `M6_AUTH_MODE=backend-development` reenvía cada petición del BFF al backend con `M6_DEV_JWT` como Bearer. `M6_BACKEND_ORIGIN`, `M6_DEV_JWT` y `M6_SESSION_SECRET` se leen en runtime (server-side), así que se pueden cambiar sin rebuild. `NEXT_PUBLIC_API_URL` quedó obsoleto: el código actual no lo usa.
 
+### Checklist de despliegue para DevOps
+
+Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promover `develop` a `main`. Los valores **secretos no van en el chat ni en el repo**: se cargan directo en el panel. La referencia de cada variable está en [`.env.example`](../.env.example) y en la tabla de arriba.
+
+**Render (backend)**
+
+| Lugar | Variable | Qué va | Por qué | A quién pedirlo | Cuándo | Secreto |
+|---|---|---|---|---|---|---|
+| Render | `JWT_SECRET` | Base64 de 32 bytes o más. Provisorio: `openssl rand -base64 32` | La validación del token de M1 cambió (#354). Con el valor viejo en texto plano **el servicio no arranca** | Al PO de M6: M1 manda el definitivo por el grupo de POs | **Antes del deploy** | Sí |
+| Render | `M6_BOOTSTRAP_ADMIN_USER_IDS` | `user_id` de M1 del primer admin (varios, separados por coma) | Sin él nadie puede asignar roles (#161) | Al PO de M6: el `user_id` del login de M1 de un empleado con rol `RESPONSABLE_AREA` | Con el deploy de la base de roles | No |
+| Render | `RABBITMQ_URL` | `amqps://module_ambiente:<clave>@core-uade-2026.duckdns.org:5671/core` (clave percent-encoded si lleva `/ ? # @ : %`) | Conecta con el bus del Core. Sin ella la app arranca, pero no publica ni consume | Al PO de M6: ficha privada de M9, usuario `module_ambiente` | Cuando llegue la ficha | **Sí** |
+| Render | `CORE_API_URL` | `https://core-uade-2026.duckdns.org` | API REST del Core (token de módulo y registro de suscripciones) | No hace falta pedirla: es un dato conocido | Con la ficha | No |
+| Render | `CORE_MODULE_SECRET` | El secret de máquina de M9 | Pide el token de módulo al Core; obligatoria si hay `CORE_API_URL` | Al PO de M6: ficha privada de M9 | Cuando llegue la ficha | **Sí** |
+| Render | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL_BASE` | Datos de Cloudflare R2 (bucket `m6-evidence`) | Subida de evidencia; sin ellas `POST /evidence` responde 503 | A quien tenga la cuenta de Cloudflare | Si todavía no están | Las dos claves |
+| Render | `DATABASE_URL`, `CORS_ORIGINS`, `NODE_ENV=production` | Supabase (puerto 5432, `?schema=public`), URL del frontend en Vercel, `production` | Ya deberían estar | – | Solo verificar | `DATABASE_URL` |
+
+**Borrar de Render** (overrides viejos que hacen que el broker responda 404): `RABBITMQ_EXCHANGE`, `RABBITMQ_QUEUE`, `RABBITMQ_EXCHANGE_TYPE`, `RABBITMQ_DEAD_LETTER_EXCHANGE`, `KAFKA_*` y `JWT_EXPIRATION`.
+
+**Vercel (frontend)**
+
+| Lugar | Variable | Qué va | Por qué | A quién pedirlo | Cuándo | Secreto |
+|---|---|---|---|---|---|---|
+| Vercel | `M6_DEV_JWT` | Se genera con `node scripts/generate-demo-jwt.mjs <JWT_SECRET de Render>` | Token de demo del BFF. **Dura 15 minutos** y tiene que ser de un empleado | Lo genera DevOps con el secreto de Render | Después de cargar el `JWT_SECRET` | Sí |
+| Vercel | `M6_SESSION_SECRET` | Valor aleatorio propio | Sella la cookie de sesión del BFF | Lo genera DevOps | Si no existe | Sí |
+| Vercel | `M6_AUTH_MODE`, `M6_BACKEND_ORIGIN` | `backend-development` y `https://m6-backend-m64k.onrender.com` | Modo demo contra el backend real | – | Solo verificar | No |
+
+**Del lado de M9** (lo coordina el PO): que hayan dado de alta los rangos de salida de Render, `74.220.48.0/24` y `74.220.56.0/24`. Sin eso el puerto 5671 no abre.
+
+**Orden sugerido**
+
+1. Cargar `JWT_SECRET` y borrar los overrides viejos.
+2. Desplegar y mirar en los logs que se apliquen las migraciones (`prisma migrate deploy` corre solo al arrancar).
+3. Cargar `M6_BOOTSTRAP_ADMIN_USER_IDS` y comprobarlo con `GET /me` y el log de arranque (dice cuántos admins hay).
+4. Regenerar `M6_DEV_JWT` en Vercel.
+5. Cuando llegue la ficha de M9: cargar `RABBITMQ_URL`, `CORE_API_URL` y `CORE_MODULE_SECRET` y reiniciar. Verificar el registro con `GET /api/v1/event-types/map`.
+
 ---
 
 ## 5. Gotchas conocidos
