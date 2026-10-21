@@ -17,7 +17,11 @@ export class TreeSurveysService {
     private readonly outbox: OutboxService,
   ) {}
 
-  async create(treeId: string, dto: CreateTreeSurveyDto): Promise<TreeSurveyResponseDto> {
+  async create(
+    treeId: string,
+    dto: CreateTreeSurveyDto,
+    userId: string,
+  ): Promise<TreeSurveyResponseDto> {
     // Se compara por día en Argentina, no por instante: el frontend manda el mediodía UTC
     // del día de hoy y antes de las 09:00 locales ese instante todavía es futuro.
     // Un relevamiento de día futuro pasaría a ser el `lastSurvey` y taparía a los reales.
@@ -43,7 +47,8 @@ export class TreeSurveysService {
         data: {
           treeId,
           surveyedAt: new Date(dto.surveyedAt),
-          inspectorId: dto.inspectorId ?? null,
+          // El relevamiento lo firma quien lo carga (token); dto.inspectorId está deprecado e ignorado.
+          inspectorId: userId,
           healthStatus: dto.healthStatus,
           riskLevel: dto.riskLevel,
           riskType: dto.riskType ?? null,

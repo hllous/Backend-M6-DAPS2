@@ -146,6 +146,8 @@ Cada tipo de endpoint debe documentar como mínimo:
 | `PUT` / `PATCH` | 200, 400, 401, 403, 404, 500 |
 | `DELETE` | 204, 401, 403, 404, 500 |
 
+**El 403 no se escribe a mano.** Toda escritura declara `@Roles(...ROLES_X)` (grupos en `src/auth/role-groups.ts`) y ese decorador agrega el `@ApiForbiddenResponse` con `ErrorResponseDto`, nombrando los roles requeridos y el `code` `ROLE_REQUIRED`. No lo repitas con un `@ApiResponse` propio: lo pisaría. Una escritura sin `@Roles` se rechaza para todos (y un spec falla). `ErrorResponseDto.code` es opcional y solo viene en ese 403. Un GET no declara `@Roles`: exige cualquier rol de M6 y no documenta el 403 a mano.
+
 Además, si aplica reglas de negocio que pueden fallar (por ejemplo intentar iniciar un servicio sin cuadrilla asignada), agregar **409 Conflict** con la descripción.
 
 ### 3.2 Ejemplo mínimo aceptable

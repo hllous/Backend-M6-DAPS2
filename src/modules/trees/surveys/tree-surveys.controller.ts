@@ -3,7 +3,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { TreeSurveysService } from './tree-surveys.service';
 import { CreateTreeSurveyDto, TreeSurveyResponseDto, QueryTreeSurveysDto } from './dto';
 import { ErrorResponseDto } from '../../../common/dto';
-import { ApiPaginatedResponse } from '../../../common/decorators';
+import { ApiPaginatedResponse, CurrentUser, Roles } from '../../../common/decorators';
+import { ROLES_CUADRILLA } from '../../../auth/role-groups';
 
 @ApiTags('tree-surveys')
 @ApiBearerAuth('JWT-auth')
@@ -12,6 +13,7 @@ export class TreeSurveysController {
   constructor(private readonly treeSurveysService: TreeSurveysService) {}
 
   @Post()
+  @Roles(...ROLES_CUADRILLA)
   @ApiOperation({
     summary: 'Registrar un relevamiento fitosanitario',
     description:
@@ -29,18 +31,14 @@ export class TreeSurveysController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para registrar relevamientos',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({ status: 404, description: 'Árbol no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async create(
     @Param('treeId', ParseUUIDPipe) treeId: string,
     @Body() dto: CreateTreeSurveyDto,
+    @CurrentUser('userId') userId: string,
   ): Promise<TreeSurveyResponseDto> {
-    return this.treeSurveysService.create(treeId, dto);
+    return this.treeSurveysService.create(treeId, dto, userId);
   }
 
   @Get()

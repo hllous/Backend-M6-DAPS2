@@ -303,12 +303,31 @@ describe('EnvironmentalInspectionsService', () => {
       prisma.environmentalInspection.update.mockResolvedValue(inspection());
     });
 
+    it('registra como inspector al usuario del token, no al del body', async () => {
+      await service.complete(
+        INSPECTION_ID,
+        {
+          inspectedAt: '2026-09-10T11:30:00.000Z',
+          outcome: InspectionOutcome.NO_VIOLATION,
+          inspectorId: 'otro',
+        } as CompleteInspectionDto,
+        'user-7',
+      );
+
+      const [[args]] = prisma.environmentalInspection.update.mock.calls;
+      expect(args.data.inspectorId).toBe('user-7');
+    });
+
     it('VIOLATION_FOUND lleva el expediente hasta VIOLATION_FOUND', async () => {
-      await service.complete(INSPECTION_ID, {
-        inspectedAt: '2026-09-10T11:30:00.000Z',
-        outcome: InspectionOutcome.VIOLATION_FOUND,
-        nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
-      });
+      await service.complete(
+        INSPECTION_ID,
+        {
+          inspectedAt: '2026-09-10T11:30:00.000Z',
+          outcome: InspectionOutcome.VIOLATION_FOUND,
+          nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
+        },
+        'user-7',
+      );
 
       const estados = prisma.environmentalReport.update.mock.calls.map(
         ([a]: [{ data: { status: string } }]) => a.data.status,
@@ -318,28 +337,40 @@ describe('EnvironmentalInspectionsService', () => {
 
     it('inspectedAt en el futuro da 400', async () => {
       await expect(
-        service.complete(INSPECTION_ID, {
-          inspectedAt: '2030-01-01T00:00:00.000Z',
-          outcome: InspectionOutcome.NO_VIOLATION,
-        }),
+        service.complete(
+          INSPECTION_ID,
+          {
+            inspectedAt: '2030-01-01T00:00:00.000Z',
+            outcome: InspectionOutcome.NO_VIOLATION,
+          },
+          'user-7',
+        ),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.environmentalInspection.update).not.toHaveBeenCalled();
     });
 
     it('VIOLATION_FOUND sin nextStep da 400', async () => {
       await expect(
-        service.complete(INSPECTION_ID, {
-          inspectedAt: '2026-09-10T11:30:00.000Z',
-          outcome: InspectionOutcome.VIOLATION_FOUND,
-        }),
+        service.complete(
+          INSPECTION_ID,
+          {
+            inspectedAt: '2026-09-10T11:30:00.000Z',
+            outcome: InspectionOutcome.VIOLATION_FOUND,
+          },
+          'user-7',
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('NO_VIOLATION lleva el expediente hasta NO_VIOLATION', async () => {
-      await service.complete(INSPECTION_ID, {
-        inspectedAt: '2026-09-10T11:30:00.000Z',
-        outcome: InspectionOutcome.NO_VIOLATION,
-      });
+      await service.complete(
+        INSPECTION_ID,
+        {
+          inspectedAt: '2026-09-10T11:30:00.000Z',
+          outcome: InspectionOutcome.NO_VIOLATION,
+        },
+        'user-7',
+      );
 
       const estados = prisma.environmentalReport.update.mock.calls.map(
         ([a]: [{ data: { status: string } }]) => a.data.status,
@@ -348,10 +379,14 @@ describe('EnvironmentalInspectionsService', () => {
     });
 
     it('INCONCLUSIVE lo deja en INSPECTED, esperando otra inspeccion', async () => {
-      await service.complete(INSPECTION_ID, {
-        inspectedAt: '2026-09-10T11:30:00.000Z',
-        outcome: InspectionOutcome.INCONCLUSIVE,
-      });
+      await service.complete(
+        INSPECTION_ID,
+        {
+          inspectedAt: '2026-09-10T11:30:00.000Z',
+          outcome: InspectionOutcome.INCONCLUSIVE,
+        },
+        'user-7',
+      );
 
       const estados = prisma.environmentalReport.update.mock.calls.map(
         ([a]: [{ data: { status: string } }]) => a.data.status,
@@ -363,19 +398,27 @@ describe('EnvironmentalInspectionsService', () => {
       prisma.environmentalInspection.findUnique.mockResolvedValue(inspection());
 
       await expect(
-        service.complete(INSPECTION_ID, {
-          inspectedAt: '2026-09-10T11:30:00.000Z',
-          outcome: InspectionOutcome.NO_VIOLATION,
-        }),
+        service.complete(
+          INSPECTION_ID,
+          {
+            inspectedAt: '2026-09-10T11:30:00.000Z',
+            outcome: InspectionOutcome.NO_VIOLATION,
+          },
+          'user-7',
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
     it('con checklist, reemplaza los items existentes', async () => {
-      await service.complete(INSPECTION_ID, {
-        inspectedAt: '2026-09-10T11:30:00.000Z',
-        outcome: InspectionOutcome.NO_VIOLATION,
-        checklist: [{ itemCode: 'C1', label: 'Ventilación', result: true }],
-      } as CompleteInspectionDto);
+      await service.complete(
+        INSPECTION_ID,
+        {
+          inspectedAt: '2026-09-10T11:30:00.000Z',
+          outcome: InspectionOutcome.NO_VIOLATION,
+          checklist: [{ itemCode: 'C1', label: 'Ventilación', result: true }],
+        } as CompleteInspectionDto,
+        'user-7',
+      );
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
       expect(args.data.checklistItems.deleteMany).toEqual({});
@@ -385,10 +428,14 @@ describe('EnvironmentalInspectionsService', () => {
     });
 
     it('sin checklist, no toca los items existentes', async () => {
-      await service.complete(INSPECTION_ID, {
-        inspectedAt: '2026-09-10T11:30:00.000Z',
-        outcome: InspectionOutcome.NO_VIOLATION,
-      });
+      await service.complete(
+        INSPECTION_ID,
+        {
+          inspectedAt: '2026-09-10T11:30:00.000Z',
+          outcome: InspectionOutcome.NO_VIOLATION,
+        },
+        'user-7',
+      );
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
       expect(args.data).not.toHaveProperty('checklistItems');
@@ -404,12 +451,16 @@ describe('EnvironmentalInspectionsService', () => {
       };
       prisma.environmentalInspection.update.mockResolvedValue(inspection(cierre));
 
-      const res = await service.complete(INSPECTION_ID, {
-        inspectedAt: '2026-09-10T11:30:00.000Z',
-        outcome: InspectionOutcome.VIOLATION_FOUND,
-        nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
-        ...cierre,
-      });
+      const res = await service.complete(
+        INSPECTION_ID,
+        {
+          inspectedAt: '2026-09-10T11:30:00.000Z',
+          outcome: InspectionOutcome.VIOLATION_FOUND,
+          nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
+          ...cierre,
+        },
+        'user-7',
+      );
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
       expect(args.data).toMatchObject(cierre);
@@ -417,10 +468,14 @@ describe('EnvironmentalInspectionsService', () => {
     });
 
     it('sin los campos de cierre, los guarda en null', async () => {
-      await service.complete(INSPECTION_ID, {
-        inspectedAt: '2026-09-10T11:30:00.000Z',
-        outcome: InspectionOutcome.INCONCLUSIVE,
-      });
+      await service.complete(
+        INSPECTION_ID,
+        {
+          inspectedAt: '2026-09-10T11:30:00.000Z',
+          outcome: InspectionOutcome.INCONCLUSIVE,
+        },
+        'user-7',
+      );
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
       expect(args.data).toMatchObject({
@@ -474,6 +529,13 @@ describe('EnvironmentalInspectionsService', () => {
       await expect(
         service.create(REPORT_ID, { serviceId: 'svc-1' } as CreateInspectionDto),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('el inspectorId del body se ignora: quien programa no es el inspector', async () => {
+      await service.create(REPORT_ID, { inspectorId: 'otro' } as CreateInspectionDto);
+
+      const [[args]] = prisma.environmentalInspection.create.mock.calls;
+      expect(args.data.inspectorId).toBeNull();
     });
 
     it('sin serviceId no consulta el servicio', async () => {

@@ -162,6 +162,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -279,7 +289,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para crear zonas",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -552,7 +562,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para actualizar zonas",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -622,7 +632,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para desactivar zonas",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -721,7 +731,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para modificar zonas",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -802,7 +812,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para modificar zonas",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -890,7 +900,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para crear tipos de servicio",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -1195,7 +1205,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para actualizar tipos de servicio",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -1265,7 +1275,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para desactivar tipos de servicio",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -1353,7 +1363,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para crear sitios de disposición",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -1642,7 +1652,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para actualizar sitios de disposición",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -1712,7 +1722,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para desactivar sitios de disposición",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -1800,7 +1810,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para crear recorridos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -2084,7 +2094,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para actualizar recorridos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -2154,7 +2164,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para desactivar recorridos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -2253,7 +2263,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para editar recorridos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -2341,7 +2351,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para crear frecuencias",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -2663,7 +2673,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para actualizar frecuencias",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -2743,7 +2753,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para cerrar frecuencias",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -2831,7 +2841,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para crear cuadrillas",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3113,7 +3123,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para actualizar cuadrillas",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3183,7 +3193,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para desactivar cuadrillas",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3282,7 +3292,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para modificar cuadrillas",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3363,7 +3373,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para modificar cuadrillas",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3451,7 +3461,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para registrar vehículos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3731,7 +3741,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para actualizar vehículos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3811,7 +3821,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para desactivar vehículos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3899,7 +3909,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para registrar contenedores",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -4217,7 +4227,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para actualizar contenedores",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -4287,6 +4297,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -4394,6 +4414,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Contenedor no encontrado",
             "content": {
@@ -4465,6 +4495,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -4552,6 +4592,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Contenedor no encontrado",
             "content": {
@@ -4631,6 +4681,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Contenedor no encontrado",
             "content": {
@@ -4702,6 +4762,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -4809,6 +4879,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Contenedor no encontrado",
             "content": {
@@ -4880,6 +4960,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -4977,7 +5067,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para registrar árboles",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -5268,7 +5358,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -5338,7 +5428,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -5437,7 +5527,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para registrar relevamientos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -5743,7 +5833,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para solicitar intervenciones",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6056,6 +6146,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Intervención no encontrada",
             "content": {
@@ -6101,7 +6201,7 @@
       "post": {
         "operationId": "TreeInterventionsController_authorize",
         "summary": "Autorizar una intervención",
-        "description": "Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó y cuándo.",
+        "description": "Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó (el usuario del token) y cuándo.",
         "parameters": [
           {
             "name": "id",
@@ -6137,6 +6237,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6216,6 +6326,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6324,7 +6444,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6422,7 +6542,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para registrar espacios verdes",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6723,7 +6843,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para actualizar espacios verdes",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6793,7 +6913,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para desactivar espacios verdes",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6881,7 +7001,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para registrar puntos verdes",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7191,7 +7311,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para actualizar puntos verdes",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7261,7 +7381,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos para deshabilitar puntos verdes",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7349,7 +7469,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7771,7 +7891,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7880,7 +8000,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8088,7 +8208,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8247,7 +8367,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8356,7 +8476,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8445,7 +8565,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8554,7 +8674,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8663,7 +8783,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8772,7 +8892,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8881,7 +9001,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8990,7 +9110,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -9169,7 +9289,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre servicios urbanos",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -9348,7 +9468,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre inspecciones ambientales",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -9596,7 +9716,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre inspecciones ambientales",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_INSPECTOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -9705,7 +9825,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre inspecciones ambientales",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -9875,7 +9995,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre expedientes ambientales",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL, M6_CAMPO_INSPECTOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -10240,7 +10360,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre expedientes ambientales",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -10349,7 +10469,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre expedientes ambientales",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -10458,7 +10578,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre expedientes ambientales",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -10566,6 +10686,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Expediente no encontrado",
             "content": {
@@ -10646,7 +10776,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre expedientes ambientales",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -10744,7 +10874,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre derivaciones",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -11043,7 +11173,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre derivaciones",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -11132,7 +11262,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre derivaciones",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -11230,7 +11360,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre derivaciones",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -11510,7 +11640,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre derivaciones",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -11619,7 +11749,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre derivaciones",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -11708,7 +11838,7 @@
             }
           },
           "403": {
-            "description": "Sin permisos sobre derivaciones",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -12157,6 +12287,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA, M6_CAMPO_INSPECTOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -12727,7 +12867,7 @@
             }
           },
           "403": {
-            "description": "Requiere el rol M6_ADMIN",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -12806,7 +12946,7 @@
             }
           },
           "403": {
-            "description": "Requiere el rol M6_ADMIN",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -12893,7 +13033,7 @@
             }
           },
           "403": {
-            "description": "Requiere el rol M6_ADMIN",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -12973,7 +13113,7 @@
             }
           },
           "403": {
-            "description": "Requiere el rol M6_ADMIN",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -13203,6 +13343,11 @@
           "error": {
             "type": "string",
             "example": "Not Found"
+          },
+          "code": {
+            "type": "string",
+            "example": "ROLE_REQUIRED",
+            "description": "Código estable, solo en algunos errores (403 por falta de rol de M6)"
           },
           "timestamp": {
             "type": "string",
@@ -15138,7 +15283,8 @@
           "inspectorId": {
             "type": "string",
             "maxLength": 100,
-            "description": "ID del inspector que realizó el relevamiento (usuario interno M6)",
+            "deprecated": true,
+            "description": "DEPRECADO e ignorado: el inspector es el usuario del token. Se acepta para no romper clientes viejos, pero su valor no se usa",
             "example": "usr-00015"
           },
           "requiresStreetClosure": {
@@ -15455,7 +15601,8 @@
           "authorizedByUserId": {
             "type": "string",
             "maxLength": 100,
-            "description": "ID del usuario que autoriza la extracción",
+            "deprecated": true,
+            "description": "DEPRECADO e ignorado: quien autoriza es el usuario del token. Se acepta para no romper clientes viejos, pero su valor no se usa",
             "example": "usr-00003"
           },
           "justification": {
@@ -16792,7 +16939,8 @@
           },
           "inspectorId": {
             "type": "string",
-            "description": "Inspector asignado. Interno: nunca sale hacia M2.",
+            "deprecated": true,
+            "description": "DEPRECADO e ignorado: el inspector se registra al completar la inspección, desde el token. Se acepta para no romper clientes viejos",
             "example": "user-014",
             "maxLength": 64
           }

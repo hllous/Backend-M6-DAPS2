@@ -21,7 +21,8 @@ import {
   AddCrewMembersDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_ADMIN } from '../../auth/role-groups';
 
 @ApiTags('crews')
 @ApiBearerAuth('JWT-auth')
@@ -32,6 +33,7 @@ export class CrewsController {
   // ─── CRUD ──────────────────────────────────────────
 
   @Post()
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Crear una cuadrilla',
     description:
@@ -50,11 +52,6 @@ export class CrewsController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para crear cuadrillas',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -118,6 +115,7 @@ export class CrewsController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Actualizar una cuadrilla',
     description:
@@ -140,11 +138,6 @@ export class CrewsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para actualizar cuadrillas',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 404,
     description: 'Cuadrilla no encontrada',
     type: ErrorResponseDto,
@@ -162,6 +155,7 @@ export class CrewsController {
   }
 
   @Delete(':id')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Desactivar una cuadrilla',
@@ -176,11 +170,6 @@ export class CrewsController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para desactivar cuadrillas',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -200,6 +189,7 @@ export class CrewsController {
   // ─── Miembros (sub-recurso) ─────────────────────────
 
   @Post(':id/members')
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Agregar miembros a una cuadrilla',
     description:
@@ -222,11 +212,6 @@ export class CrewsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para modificar cuadrillas',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 404,
     description: 'Cuadrilla no encontrada',
     type: ErrorResponseDto,
@@ -244,6 +229,7 @@ export class CrewsController {
   }
 
   @Delete(':id/members/:userId')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Quitar un miembro de una cuadrilla',
@@ -261,11 +247,6 @@ export class CrewsController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para modificar cuadrillas',
     type: ErrorResponseDto,
   })
   @ApiResponse({

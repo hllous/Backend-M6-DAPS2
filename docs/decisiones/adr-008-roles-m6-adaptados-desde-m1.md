@@ -66,8 +66,19 @@ M6 no tiene un directorio de M1: no sabe qué rol tiene un `userId` hasta que es
 
 ### Neutras
 
-- Este PR no activa el `RolesGuard` global ni pone `@Roles` en los demás endpoints (PR 2): hoy solo `role-assignments` exige `M6_ADMIN`. La pertenencia (Campo solo sobre lo suyo) es una fase aparte.
+- La pertenencia (Campo solo sobre lo suyo) es una fase aparte (#365).
 - `userId` es siempre texto: los ids de M1 son numéricos pero un `bigint` pierde precisión en JSON.
+
+## Nota 21/10/2026: corte de seguridad (PR 2 de #161)
+
+Hecho: `RolesGuard` pasó a ser el segundo `APP_GUARD`, después de `JwtAuthGuard` (un spec fija el orden). Reglas: `@Public()` lo saltea; con `@Roles(...)` hace falta alguno de esos roles; sin `@Roles`, un GET/HEAD exige algún rol de M6 (el auditor incluido) y una escritura **falla cerrado** para todos, con un log de error de configuración. El 403 por rol lleva `code: ROLE_REQUIRED` y no dice qué rol faltaba; los 403 de `sub_type` (#359) no cambian. `GET /me` queda con `@AnyEmployee()` para que un empleado sin roles pueda enterarse de que no tiene ninguno.
+
+- La matriz vive en `src/auth/role-groups.ts` y se aplica con `@Roles(...)` en todas las escrituras. `M6_ADMIN` entra en lo de Oficina, no en lo de Campo (ADR-005); `M6_AUDITOR` no figura en ninguna escritura. `POST /events/inbox` y la carga manual de respuestas de M3/M7 (`/repair-requests/:id/start|close`, `/street-closure-requests/:id/approve|reject|end`) son solo de `M6_ADMIN`.
+- `@Roles` documenta solo el 403 en Swagger (decorador compuesto); `ErrorResponseDto` suma `code` opcional.
+- `authorizedByUserId` (autorizar intervención) e `inspectorId` (relevamiento de arbolado, completar inspección) salen del token. Los campos del body siguen aceptándose, marcados deprecated en Swagger, y su valor **se ignora**. En `POST /environmental-reports/:id/inspections` el `inspectorId` también se ignora: quien programa (Oficina) no es el inspector, que queda registrado al completar.
+- `src/auth/route-roles.spec.ts` recorre todos los handlers y falla si una escritura no declara `@Roles`, si usa un valor fuera de `M6Role`, si el auditor aparece en una escritura o si el inbox no es solo de `M6_ADMIN`. La columna "Rol" de `docs/api/endpoints.md` se genera de la misma metadata (`npm run docs:roles`) y el mismo spec falla si queda vieja.
+- Asignar un rol que el rol de M1 del destinatario no permite **no** da 400: M6 no conoce el rol de M1 de otros al asignar, rige por la intersección al iniciar sesión (cambia respecto de la propuesta de #235).
+- `test/auth-roles.e2e-spec.ts` cubre la matriz (cierra #235). Los e2e existentes siembran actores con `seedActores` y usan `Api.porRol`.
 
 ## Referencias
 

@@ -18,6 +18,7 @@ import { Request, Response } from 'express';
  *   statusCode: number,
  *   message: string,
  *   error: string,
+ *   code?: string,   // solo en algunos errores (403 ROLE_REQUIRED)
  *   timestamp: string,
  *   path: string
  * }
@@ -69,6 +70,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Error interno del servidor';
     let error = 'Internal Server Error';
+    let code: string | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -79,6 +81,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       } else if (typeof exceptionResponse === 'object') {
         const resp = exceptionResponse as Record<string, unknown>;
         message = (resp.message as string) || message;
+        // Código estable opcional (p. ej. ROLE_REQUIRED) para que el cliente no parsee el mensaje.
+        if (typeof resp.code === 'string') code = resp.code;
 
         // class-validator devuelve un array de mensajes
         if (Array.isArray(resp.message)) {
@@ -107,6 +111,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       statusCode: status,
       message,
       error,
+      ...(code && { code }),
       timestamp: new Date().toISOString(),
       path: request.url,
     });

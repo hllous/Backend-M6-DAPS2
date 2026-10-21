@@ -21,8 +21,8 @@ describe('TreeSurveysController', () => {
 
   it('create delega treeId y dto', async () => {
     const dto = {} as CreateTreeSurveyDto;
-    await expect(controller.create(TREE_ID, dto)).resolves.toBe(RESULT);
-    expect(service.create).toHaveBeenCalledWith(TREE_ID, dto);
+    await expect(controller.create(TREE_ID, dto, 'user-7')).resolves.toBe(RESULT);
+    expect(service.create).toHaveBeenCalledWith(TREE_ID, dto, 'user-7');
   });
 
   it('findAll delega treeId y query', async () => {

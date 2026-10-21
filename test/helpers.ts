@@ -10,9 +10,10 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import { OutboxEventStatus } from '@prisma/client';
+import { M6Role, OutboxEventStatus } from '@prisma/client';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { listRoutes, RouteRoles } from '../src/auth/route-roles';
 import { configureApp } from '../src/configure-app';
 import { OutboxDispatcher } from '../src/events/outbox/outbox-dispatcher.service';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -108,36 +109,106 @@ export function unique(prefijo: string): string {
   return `${prefijo}-${contador.toString().padStart(4, '0')}`;
 }
 
-/** Cliente HTTP autenticado contra la app, para no repetir el header en cada pedido. */
+// ─── Roles de M6 ─────────────────────────────────────
+// Con el RolesGuard global, un token sin filas en user_role_assignment recibe 403
+// en todo. Un usuario real tiene UN grupo (Oficina y Campo no conviven, ADR-005),
+// así que los flujos que cruzan grupos (alta de catálogo -> programar -> ejecutar)
+// necesitan varios actores.
+
+export type Actor = 'admin' | 'operaciones' | 'ambiental' | 'cuadrilla' | 'inspector' | 'auditor';
+
+/** Rol de M1 que admite el rol de M6 de cada actor (ver M1RoleAdapter). */
+export const ACTORES: Record<Actor, { userId: string; m1Role: string; role: M6Role }> = {
+  admin: { userId: '9001', m1Role: 'RESPONSABLE_AREA', role: M6Role.M6_ADMIN },
+  operaciones: { userId: '9002', m1Role: 'ADMINISTRATIVO', role: M6Role.M6_OFICINA_OPERACIONES },
+  ambiental: { userId: '9003', m1Role: 'ADMINISTRATIVO', role: M6Role.M6_OFICINA_AMBIENTAL },
+  cuadrilla: { userId: '9004', m1Role: 'ADMINISTRATIVO', role: M6Role.M6_CAMPO_CUADRILLA },
+  inspector: { userId: '9005', m1Role: 'ADMINISTRATIVO', role: M6Role.M6_CAMPO_INSPECTOR },
+  auditor: { userId: '9006', m1Role: 'AUDITOR', role: M6Role.M6_AUDITOR },
+};
+
+/** Escribe filas en user_role_assignment (lo que haría un M6_ADMIN con PUT /role-assignments). */
+export async function grantRoles(
+  prisma: PrismaService,
+  userId: string,
+  roles: M6Role[],
+): Promise<void> {
+  await prisma.userRoleAssignment.createMany({
+    data: roles.map((role) => ({ userId, role })),
+    skipDuplicates: true,
+  });
+}
+
+/** Un usuario por rol, listos para `Api.porRol`. `truncateAll` borra las filas: sembrar después. */
+export async function seedActores(prisma: PrismaService): Promise<void> {
+  for (const a of Object.values(ACTORES)) await grantRoles(prisma, a.userId, [a.role]);
+}
+
+export function tokenDe(actor: Actor): string {
+  const a = ACTORES[actor];
+  return tokenFor(a.m1Role, a.userId);
+}
+
+let rutas: (RouteRoles & { re: RegExp })[] | undefined;
+/** El actor que puede llamar a método+ruta, según la metadata de @Roles (el auditor nunca escribe). */
+function actorPara(method: string, path: string): Actor {
+  rutas ??= listRoutes(AppModule).map((r) => ({
+    ...r,
+    re: new RegExp(`^${r.path.replace(/:[^/]+/g, '[^/]+')}$`),
+  }));
+  const pathname = path.split('?')[0];
+  const ruta = rutas.find((r) => r.method === method && r.re.test(pathname));
+  if (!ruta?.roles?.length) return 'admin';
+  // Prefiere admin; si no, el primero de Oficina/Campo que figure.
+  const orden: Actor[] = ['admin', 'operaciones', 'ambiental', 'cuadrilla', 'inspector'];
+  return orden.find((a) => ruta.roles?.includes(ACTORES[a].role)) ?? 'admin';
+}
+
+/**
+ * Cliente HTTP autenticado contra la app, para no repetir el header en cada pedido.
+ *
+ * Con un token, manda siempre ese. Con `Api.porRol`, cada pedido va con el actor
+ * que la ruta admite, para los flujos que cruzan grupos. El guard igual corre de
+ * verdad: si la matriz cambia, el pedido sale con otro actor, no se saltea nada.
+ * La matriz en sí la verifica auth-roles.e2e-spec.ts con roles escritos a mano.
+ */
 export class Api {
   constructor(
     private readonly app: NestExpressApplication,
-    private readonly token: string,
+    private readonly token: string | null,
   ) {}
+
+  static porRol(app: NestExpressApplication): Api {
+    return new Api(app, null);
+  }
+
+  private auth(method: string, path: string) {
+    return bearer(this.token ?? tokenDe(actorPara(method, path)));
+  }
 
   post(path: string, body?: unknown) {
     return request(this.app.getHttpServer())
       .post(path)
-      .set(bearer(this.token))
+      .set(this.auth('POST', path))
       .send(body ?? {});
   }
 
   put(path: string, body?: unknown) {
     return request(this.app.getHttpServer())
       .put(path)
-      .set(bearer(this.token))
+      .set(this.auth('PUT', path))
       .send(body ?? {});
   }
 
   patch(path: string, body?: unknown) {
     return request(this.app.getHttpServer())
       .patch(path)
-      .set(bearer(this.token))
+      .set(this.auth('PATCH', path))
       .send(body ?? {});
   }
 
   get(path: string) {
-    return request(this.app.getHttpServer()).get(path).set(bearer(this.token));
+    return request(this.app.getHttpServer()).get(path).set(this.auth('GET', path));
   }
 }
 

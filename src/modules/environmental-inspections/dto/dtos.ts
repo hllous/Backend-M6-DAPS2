@@ -33,7 +33,9 @@ export class CreateInspectionDto {
   serviceId?: string;
 
   @ApiPropertyOptional({
-    description: 'Inspector asignado. Interno: nunca sale hacia M2.',
+    deprecated: true,
+    description:
+      'DEPRECADO e ignorado: el inspector se registra al completar la inspección, desde el token. Se acepta para no romper clientes viejos',
     example: 'user-014',
     maxLength: 64,
   })

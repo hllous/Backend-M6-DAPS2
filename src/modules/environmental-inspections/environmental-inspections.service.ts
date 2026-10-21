@@ -66,7 +66,9 @@ export class EnvironmentalInspectionsService {
         data: {
           reportId,
           serviceId: dto.serviceId ?? null,
-          inspectorId: dto.inspectorId ?? null,
+          // Quien programa (Oficina) no es el inspector: el inspector se registra al
+          // completar, desde el token. dto.inspectorId está deprecado e ignorado.
+          inspectorId: null,
         },
         include: INSPECTION_INCLUDE,
       });
@@ -88,7 +90,11 @@ export class EnvironmentalInspectionsService {
    * Un `INCONCLUSIVE` deja el expediente en INSPECTED, a la espera de otra
    * inspección.
    */
-  async complete(id: string, dto: CompleteInspectionDto): Promise<InspectionResponseDto> {
+  async complete(
+    id: string,
+    dto: CompleteInspectionDto,
+    userId: string,
+  ): Promise<InspectionResponseDto> {
     // Margen de 5 minutos por desfase de reloj entre el dispositivo del inspector y el servidor.
     if (new Date(dto.inspectedAt).getTime() > Date.now() + 5 * 60_000) {
       throw new BadRequestException(
@@ -115,6 +121,7 @@ export class EnvironmentalInspectionsService {
         where: { id },
         data: {
           inspectedAt: new Date(dto.inspectedAt),
+          inspectorId: userId,
           outcome: dto.outcome,
           nextStep: dto.nextStep ?? null,
           findings: dto.findings ?? null,

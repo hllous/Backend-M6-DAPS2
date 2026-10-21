@@ -81,20 +81,21 @@ describe('TreeInterventionsService', () => {
     it('no deja autorizar una extracción que sigue en REQUESTED', async () => {
       prisma.treeIntervention.findUnique.mockResolvedValue(intervencion());
 
-      await expect(service.authorize(ID, {})).rejects.toThrow(ConflictException);
+      await expect(service.authorize(ID, {}, 'user-7')).rejects.toThrow(ConflictException);
       expect(prisma.treeIntervention.update).not.toHaveBeenCalled();
     });
 
-    it('autoriza una extracción que ya pasó por PENDING_AUTHORIZATION', async () => {
+    it('autoriza una extracción que ya pasó por PENDING_AUTHORIZATION, a nombre del token', async () => {
       prisma.treeIntervention.findUnique.mockResolvedValue(
         intervencion({ status: I.PENDING_AUTHORIZATION }),
       );
 
-      await service.authorize(ID, { authorizedByUserId: 'user-1' });
+      // El body trae otro id (campo deprecado): no cambia quién queda registrado.
+      await service.authorize(ID, { authorizedByUserId: 'user-1' }, 'user-7');
 
       expect(prisma.treeIntervention.update.mock.calls[0][0].data).toMatchObject({
         status: I.AUTHORIZED,
-        authorizedByUserId: 'user-1',
+        authorizedByUserId: 'user-7',
       });
     });
 
@@ -103,7 +104,7 @@ describe('TreeInterventionsService', () => {
         intervencion({ interventionType: T.SAFETY_PRUNING }),
       );
 
-      await service.authorize(ID, {});
+      await service.authorize(ID, {}, 'user-7');
 
       expect(prisma.treeIntervention.update).toHaveBeenCalled();
     });
@@ -113,7 +114,7 @@ describe('TreeInterventionsService', () => {
         intervencion({ status: I.PENDING_AUTHORIZATION }),
       );
 
-      await service.authorize(ID, {});
+      await service.authorize(ID, {}, 'user-7');
 
       expect(prisma.treeIntervention.update.mock.calls[0][0].data.authorizedAt).toBeInstanceOf(
         Date,
@@ -125,10 +126,10 @@ describe('TreeInterventionsService', () => {
         intervencion({ status: I.PENDING_AUTHORIZATION }),
       );
 
-      await service.authorize(ID, {});
+      await service.authorize(ID, {}, 'user-7');
       expect(prisma.treeIntervention.update.mock.calls[0][0].data.justification).toBeUndefined();
 
-      await service.authorize(ID, { justification: 'Riesgo de caída' });
+      await service.authorize(ID, { justification: 'Riesgo de caída' }, 'user-7');
       expect(prisma.treeIntervention.update.mock.calls[1][0].data.justification).toBe(
         'Riesgo de caída',
       );
@@ -171,7 +172,7 @@ describe('TreeInterventionsService', () => {
     it('una intervención inexistente da 404', async () => {
       prisma.treeIntervention.findUnique.mockResolvedValue(null);
 
-      await expect(service.authorize(ID, {})).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.authorize(ID, {}, 'user-7')).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 

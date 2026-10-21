@@ -1,7 +1,7 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { Api, createTestApp, tokenFor, truncateAll } from './helpers';
+import { Api, createTestApp, seedActores, truncateAll } from './helpers';
 
 /**
  * #325: el aviso del acta a M2 depende del estado del ticket. PROGRESS solo
@@ -16,8 +16,9 @@ describe('Acta ambiental: aviso a M2 según el estado del ticket (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor());
+    api = Api.porRol(app);
     await truncateAll(prisma);
+    await seedActores(prisma);
   });
 
   afterAll(async () => {

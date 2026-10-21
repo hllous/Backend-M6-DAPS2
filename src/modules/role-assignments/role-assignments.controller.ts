@@ -8,13 +8,11 @@ import {
   Param,
   Put,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { M6Role } from '../../auth/m6-role';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto';
-import { RolesGuard } from '../../common/guards';
 import { ParseNumericIdPipe } from '../../common/pipes/numeric-id.pipe';
 import { QueryRoleAssignmentsDto, ReplaceRolesDto, RoleAssignmentResponseDto } from './dto';
 import { RoleAssignmentsService } from './role-assignments.service';
@@ -25,10 +23,9 @@ const USER_ID_PARAM = {
   example: '42',
 };
 
-// El RolesGuard todavía no es global (PR 2 de #161): se aplica acá, a mano.
+// A nivel de clase: todo el recurso es de M6_ADMIN. El RolesGuard global lo hace cumplir.
 @ApiTags('role-assignments')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(RolesGuard)
 @Roles(M6Role.M6_ADMIN)
 @Controller('role-assignments')
 export class RoleAssignmentsController {
@@ -43,7 +40,6 @@ export class RoleAssignmentsController {
   @ApiPaginatedResponse(RoleAssignmentResponseDto, 'Listado paginado de asignaciones')
   @ApiResponse({ status: 400, description: 'Parámetros inválidos', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({ status: 403, description: 'Requiere el rol M6_ADMIN', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   findAll(@Query() query: QueryRoleAssignmentsDto) {
     return this.service.findAll(query);
@@ -59,7 +55,6 @@ export class RoleAssignmentsController {
   @ApiResponse({ status: 200, description: 'Roles asignados', type: RoleAssignmentResponseDto })
   @ApiResponse({ status: 400, description: 'Id de usuario no numérico', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({ status: 403, description: 'Requiere el rol M6_ADMIN', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   findOne(@Param('userId', ParseNumericIdPipe) userId: string): Promise<RoleAssignmentResponseDto> {
     return this.service.findOne(userId);
@@ -83,7 +78,6 @@ export class RoleAssignmentsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({ status: 403, description: 'Requiere el rol M6_ADMIN', type: ErrorResponseDto })
   @ApiResponse({
     status: 409,
     description: 'Quitaría el último M6_ADMIN, o hubo un cambio simultáneo',
@@ -109,7 +103,6 @@ export class RoleAssignmentsController {
   @ApiResponse({ status: 204, description: 'Roles quitados (o no había)' })
   @ApiResponse({ status: 400, description: 'Id de usuario no numérico', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({ status: 403, description: 'Requiere el rol M6_ADMIN', type: ErrorResponseDto })
   @ApiResponse({
     status: 409,
     description: 'Quitaría el último M6_ADMIN, o hubo un cambio simultáneo',

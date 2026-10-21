@@ -23,6 +23,8 @@ import { UploadEvidenceDto, EvidenceResponseDto, QueryEvidenceDto } from './dto'
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { MAX_EVIDENCE_SIZE_BYTES } from './evidence-mime';
 import { ErrorResponseDto } from '../../common/dto';
+import { Roles } from '../../common/decorators';
+import { ROLES_CAMPO } from '../../auth/role-groups';
 
 @ApiTags('evidence')
 @ApiBearerAuth('JWT-auth')
@@ -31,6 +33,7 @@ export class AttachmentsController {
   constructor(private readonly attachmentsService: AttachmentsService) {}
 
   @Post()
+  @Roles(...ROLES_CAMPO)
   // Sin límite, multer bufferea en memoria lo que venga antes de que el
   // service pueda rechazarlo por tamaño.
   @UseInterceptors(

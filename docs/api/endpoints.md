@@ -13,7 +13,7 @@ El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se
 Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo para leer esta tabla:
 
 - **Autenticación**: todo exige `Authorization: Bearer <JWT>` salvo lo marcado como público. El `JwtAuthGuard` está registrado como guard global, así que un endpoint nuevo nace protegido; los públicos se marcan explícitamente con `@Public()`. **Solo personal municipal**: el guard exige `sub_type: EMPLEADO`; un token válido de ciudadano (`sub_type: CIUDADANO`) recibe **403** (`Este sistema es solo para personal municipal`) en todo endpoint no público, incluido `POST /events/inbox`. Sin token o con token inválido sigue siendo 401. Ver [ADR-002](../decisiones/adr-002-auth-provisoria.md).
-- **Autorización por rol**: la base está (PR 1 de #161, [ADR-008](../decisiones/adr-008-roles-m6-adaptados-desde-m1.md)) pero **solo `role-assignments` la exige** (rol `M6_ADMIN`, columna "Rol" de abajo). El resto de los endpoints sigue abierto a cualquier empleado autenticado hasta el PR 2, que activa el `RolesGuard` global y pone `@Roles` en cada escritura. Los roles de M6 son efectivos = asignados por un `M6_ADMIN` ∩ lo que permite el rol de M1; se leen por request (`GET /me` los muestra). No aplica a los `@Public()` (`health` y los cuatro de `citizen-portal`): esos ni siquiera piden JWT.
+- **Autorización por rol**: el `RolesGuard` es global, después del `JwtAuthGuard` ([ADR-008](../decisiones/adr-008-roles-m6-adaptados-desde-m1.md)). Cada escritura declara `@Roles` (tabla "Rol requerido por endpoint" de abajo); sin el rol, **403** con `code: "ROLE_REQUIRED"`. Un GET sin `@Roles` exige cualquier rol de M6 (el auditor incluido): un empleado sin ningún rol de M6 recibe 403 también en lectura, salvo en `GET /me`. Una escritura sin `@Roles` se rechaza para todos. Los roles de M6 son efectivos = asignados por un `M6_ADMIN` ∩ lo que permite el rol de M1; se leen por request (`GET /me` los muestra). No aplica a los `@Public()` (`health` y los cuatro de `citizen-portal`): esos ni siquiera piden JWT.
 - **Listados**: paginados con `?page` (default 1) y `?pageSize` (default 20, máx 100). Devuelven `{ data: [...], meta: { total, page, pageSize, totalPages } }`.
 - **Booleanos**: en filtros (`?active=`) y en bodies se acepta `true` o `false`, sin distinguir mayúsculas. Cualquier otro valor (`0`, `1`, vacío, `maybe`) da 400.
 - **Textos**: `code`, `name`, `plate` y `surveyCode` se recortan (bordes) antes de validar y guardar. Un valor que quede vacío (solo espacios) da 400. Lo mismo vale para los textos obligatorios de motivo y dirección (`reason`, `address` de reubicación, `streetName`, `fromCross`, `toCross`, `itemCode`, `label`). Cualquier string con el carácter nulo (`\u0000`) en body o query, a cualquier profundidad, da 400 (Postgres no lo acepta).
@@ -23,6 +23,157 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **CORS**: los orígenes permitidos salen de `CORS_ORIGINS`. Sin esa variable se acepta cualquiera, que es lo que hace falta en desarrollo. El JWT viaja en un header y no en una cookie, así que esto no cierra un CSRF — es higiene, no un límite de seguridad.
 - **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 23 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
+
+## Rol requerido por endpoint
+
+Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si queda desactualizada. "Cualquier rol de M6" = un GET sin `@Roles`: lo pueden todos los roles de M6, el auditor incluido, pero no un empleado sin roles. Una escritura sin `@Roles` se rechaza para todos.
+
+<!-- roles:start (generado por npm run docs:roles, no editar a mano) -->
+
+| Método | Ruta | Rol |
+| --- | --- | --- |
+| GET | `/containers` | cualquier rol de M6 |
+| POST | `/containers` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/containers/:id` | cualquier rol de M6 |
+| PATCH | `/containers/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/containers/:id/complete-repair` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/containers/:id/confirm-relocation` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/containers/:id/empty` | `M6_CAMPO_CUADRILLA` |
+| POST | `/containers/:id/relocate` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/containers/:id/remove` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/containers/:id/report-damage` | `M6_CAMPO_CUADRILLA` |
+| POST | `/containers/:id/report-overflow` | `M6_CAMPO_CUADRILLA` |
+| POST | `/containers/:id/start-repair` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/crews` | cualquier rol de M6 |
+| POST | `/crews` | `M6_ADMIN` |
+| DELETE | `/crews/:id` | `M6_ADMIN` |
+| GET | `/crews/:id` | cualquier rol de M6 |
+| PATCH | `/crews/:id` | `M6_ADMIN` |
+| POST | `/crews/:id/members` | `M6_ADMIN` |
+| DELETE | `/crews/:id/members/:userId` | `M6_ADMIN` |
+| GET | `/disposal-sites` | cualquier rol de M6 |
+| POST | `/disposal-sites` | `M6_ADMIN` |
+| DELETE | `/disposal-sites/:id` | `M6_ADMIN` |
+| GET | `/disposal-sites/:id` | cualquier rol de M6 |
+| PATCH | `/disposal-sites/:id` | `M6_ADMIN` |
+| GET | `/environmental-inspections/:id` | cualquier rol de M6 |
+| POST | `/environmental-inspections/:id/complete` | `M6_CAMPO_INSPECTOR` |
+| GET | `/environmental-inspections/:id/violation-notice` | cualquier rol de M6 |
+| POST | `/environmental-inspections/:id/violation-notice` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| GET | `/environmental-reports` | cualquier rol de M6 |
+| POST | `/environmental-reports` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL`, `M6_CAMPO_INSPECTOR` |
+| GET | `/environmental-reports/:id` | cualquier rol de M6 |
+| POST | `/environmental-reports/:id/close` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| POST | `/environmental-reports/:id/dismiss` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| POST | `/environmental-reports/:id/forward` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| POST | `/environmental-reports/:id/request-information` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| POST | `/environmental-reports/:id/start-review` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| GET | `/environmental-reports/:reportId/inspections` | cualquier rol de M6 |
+| POST | `/environmental-reports/:reportId/inspections` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| GET | `/events/handlers` | cualquier rol de M6 |
+| POST | `/events/inbox` | `M6_ADMIN` |
+| GET | `/evidence` | cualquier rol de M6 |
+| POST | `/evidence` | `M6_CAMPO_CUADRILLA`, `M6_CAMPO_INSPECTOR` |
+| GET | `/green-points` | cualquier rol de M6 |
+| POST | `/green-points` | `M6_ADMIN` |
+| DELETE | `/green-points/:id` | `M6_ADMIN` |
+| GET | `/green-points/:id` | cualquier rol de M6 |
+| PATCH | `/green-points/:id` | `M6_ADMIN` |
+| GET | `/green-spaces` | cualquier rol de M6 |
+| POST | `/green-spaces` | `M6_ADMIN` |
+| DELETE | `/green-spaces/:id` | `M6_ADMIN` |
+| GET | `/green-spaces/:id` | cualquier rol de M6 |
+| PATCH | `/green-spaces/:id` | `M6_ADMIN` |
+| GET | `/health` | público |
+| GET | `/health/ready` | público |
+| GET | `/indicators/compliance` | cualquier rol de M6 |
+| GET | `/indicators/coverage` | cualquier rol de M6 |
+| GET | `/indicators/incidents` | cualquier rol de M6 |
+| GET | `/indicators/waste` | cualquier rol de M6 |
+| GET | `/me` | cualquier empleado |
+| GET | `/public/green-points` | público |
+| GET | `/public/reports/:ticketId` | público |
+| GET | `/public/services` | público |
+| GET | `/public/zones` | público |
+| GET | `/repair-requests` | cualquier rol de M6 |
+| POST | `/repair-requests` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/repair-requests/:id` | cualquier rol de M6 |
+| POST | `/repair-requests/:id/close` | `M6_ADMIN` |
+| POST | `/repair-requests/:id/start` | `M6_ADMIN` |
+| GET | `/role-assignments` | `M6_ADMIN` |
+| DELETE | `/role-assignments/:userId` | `M6_ADMIN` |
+| GET | `/role-assignments/:userId` | `M6_ADMIN` |
+| PUT | `/role-assignments/:userId` | `M6_ADMIN` |
+| GET | `/routes` | cualquier rol de M6 |
+| POST | `/routes` | `M6_ADMIN` |
+| DELETE | `/routes/:id` | `M6_ADMIN` |
+| GET | `/routes/:id` | cualquier rol de M6 |
+| PATCH | `/routes/:id` | `M6_ADMIN` |
+| PUT | `/routes/:id/stops` | `M6_ADMIN` |
+| GET | `/service-frequencies` | cualquier rol de M6 |
+| POST | `/service-frequencies` | `M6_ADMIN` |
+| DELETE | `/service-frequencies/:id` | `M6_ADMIN` |
+| GET | `/service-frequencies/:id` | cualquier rol de M6 |
+| PATCH | `/service-frequencies/:id` | `M6_ADMIN` |
+| GET | `/service-types` | cualquier rol de M6 |
+| POST | `/service-types` | `M6_ADMIN` |
+| DELETE | `/service-types/:id` | `M6_ADMIN` |
+| GET | `/service-types/:id` | cualquier rol de M6 |
+| PATCH | `/service-types/:id` | `M6_ADMIN` |
+| GET | `/services` | cualquier rol de M6 |
+| POST | `/services` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/services/:id` | cualquier rol de M6 |
+| PATCH | `/services/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/services/:id/assign-crew` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/services/:id/assignment-conflicts` | cualquier rol de M6 |
+| POST | `/services/:id/cancel` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/services/:id/collection-records` | cualquier rol de M6 |
+| POST | `/services/:id/collection-records` | `M6_CAMPO_CUADRILLA` |
+| POST | `/services/:id/complete` | `M6_CAMPO_CUADRILLA` |
+| POST | `/services/:id/confirm-reschedule` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/services/:id/delay-notices` | cualquier rol de M6 |
+| POST | `/services/:id/delay-notices` | `M6_CAMPO_CUADRILLA` |
+| POST | `/services/:id/reschedule` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/services/:id/resume` | `M6_CAMPO_CUADRILLA` |
+| POST | `/services/:id/start` | `M6_CAMPO_CUADRILLA` |
+| POST | `/services/:id/suspend` | `M6_CAMPO_CUADRILLA` |
+| GET | `/services/:id/zone-results` | cualquier rol de M6 |
+| POST | `/services/:id/zone-results` | `M6_CAMPO_CUADRILLA` |
+| GET | `/street-closure-requests` | cualquier rol de M6 |
+| POST | `/street-closure-requests` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/street-closure-requests/:id` | cualquier rol de M6 |
+| POST | `/street-closure-requests/:id/approve` | `M6_ADMIN` |
+| POST | `/street-closure-requests/:id/end` | `M6_ADMIN` |
+| POST | `/street-closure-requests/:id/reject` | `M6_ADMIN` |
+| GET | `/tree-interventions` | cualquier rol de M6 |
+| POST | `/tree-interventions` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/tree-interventions/:id` | cualquier rol de M6 |
+| POST | `/tree-interventions/:id/assign-service` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/tree-interventions/:id/authorize` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/tree-interventions/:id/reject` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/tree-interventions/:id/submit-for-authorization` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/trees` | cualquier rol de M6 |
+| POST | `/trees` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| DELETE | `/trees/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/trees/:id` | cualquier rol de M6 |
+| PATCH | `/trees/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/trees/:treeId/surveys` | cualquier rol de M6 |
+| POST | `/trees/:treeId/surveys` | `M6_CAMPO_CUADRILLA` |
+| GET | `/trees/:treeId/surveys/:surveyId` | cualquier rol de M6 |
+| GET | `/vehicles` | cualquier rol de M6 |
+| POST | `/vehicles` | `M6_ADMIN` |
+| DELETE | `/vehicles/:id` | `M6_ADMIN` |
+| GET | `/vehicles/:id` | cualquier rol de M6 |
+| PATCH | `/vehicles/:id` | `M6_ADMIN` |
+| GET | `/zones` | cualquier rol de M6 |
+| POST | `/zones` | `M6_ADMIN` |
+| DELETE | `/zones/:id` | `M6_ADMIN` |
+| GET | `/zones/:id` | cualquier rol de M6 |
+| PATCH | `/zones/:id` | `M6_ADMIN` |
+| POST | `/zones/:id/neighborhoods` | `M6_ADMIN` |
+| DELETE | `/zones/:id/neighborhoods/:neighborhoodId` | `M6_ADMIN` |
+
+<!-- roles:end -->
 
 ---
 
