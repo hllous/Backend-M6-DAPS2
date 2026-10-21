@@ -107,6 +107,28 @@ describe('CoreRegistryService', () => {
     await expect(servicio(core).sync()).rejects.toThrow(/POST .* HTTP 503/);
   });
 
+  it('una respuesta paginada (meta.total mayor a lo recibido) no crea nada', async () => {
+    const request = jest
+      .fn()
+      .mockResolvedValue(json({ data: [{ eventType: 'ticketUpdated' }], meta: { total: 9 } }));
+    await expect(
+      servicio({ enabled: true, request } as unknown as CoreClient).sync(),
+    ).rejects.toThrow(/paginada/);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignora nombres sin forma de evento y corta la lista en 200 entradas', async () => {
+    const basura = ['ok\nFORJADO', 'x'.repeat(61), 'con espacio'];
+    const validos = Array.from({ length: 300 }, (_, i) => `tipo${i}`);
+    const { core } = coreSimulado({ subs: [...basura, ...validos], pubs: [...basura, ...validos] });
+    const { sobrantes } = await servicio(core).sync();
+
+    // 3 de basura ocupan lugar en las primeras 200: quedan 197 válidas por lista.
+    expect(sobrantes).toHaveLength(2 * 197);
+    expect(sobrantes.some((s) => /FORJADO|espacio|x{61}/.test(s))).toBe(false);
+    expect(sobrantes).not.toContain('suscripción tipo250');
+  });
+
   describe('al arrancar', () => {
     it('sin CORE_API_URL no hace nada', () => {
       const request = jest.fn();
@@ -121,10 +143,14 @@ describe('CoreRegistryService', () => {
     });
 
     it('no bloquea el arranque y termina de registrar', async () => {
+      jest.useFakeTimers();
       const { core, posts } = coreSimulado();
-      servicio(core).onApplicationBootstrap();
-      await new Promise((r) => setTimeout(r, 20));
+      const s = servicio(core);
+      s.onApplicationBootstrap();
+      expect(posts).toHaveLength(0);
+      await jest.advanceTimersByTimeAsync(0);
       expect(posts).toHaveLength(TOTAL);
+      s.onModuleDestroy();
     });
 
     it('una falla del Core no tira la app: se reintenta con backoff y se completa', async () => {

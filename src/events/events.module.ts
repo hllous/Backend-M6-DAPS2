@@ -36,9 +36,11 @@ export function createEventPublisher(config: ConfigService): EventPublisher {
   // frena el arranque: el nombre exacto del usuario es propuesta de M9.
   const moduleId = config.get<string>('core.moduleId');
   const user = brokerUser(rabbit.url);
-  if (typeof moduleId === 'string' && user && user !== moduleId) {
+  // `module_ambiente` es el usuario real de la ficha de M9 para el módulo `ambiente`.
+  const esperados = typeof moduleId === 'string' ? [moduleId, `module_${moduleId}`] : [];
+  if (user && esperados.length && !esperados.some((e) => e.toLowerCase() === user.toLowerCase())) {
     logger.warn(
-      `El usuario de RABBITMQ_URL (${user}) no coincide con CORE_MODULE_ID (${moduleId}): M9 va a rechazar lo que publiquemos si no son iguales`,
+      `El usuario de RABBITMQ_URL (${user}) no es CORE_MODULE_ID (${moduleId}) ni module_${moduleId}: M9 todavía no confirmó cómo valida el usuario contra sourceModule, conviene revisarlo`,
     );
   }
 

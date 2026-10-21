@@ -262,6 +262,8 @@ describe('createEventPublisher', () => {
       }) as unknown as ConfigService;
 
     createEventPublisher(conModulo('ambiente'));
+    createEventPublisher(conModulo('module_ambiente'));
+    createEventPublisher(conModulo('Module_Ambiente'));
     expect(warn).not.toHaveBeenCalled();
     createEventPublisher(conModulo('otro'));
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('(otro)'));

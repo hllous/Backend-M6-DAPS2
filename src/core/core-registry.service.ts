@@ -14,6 +14,9 @@ const SIN_PUBLICADOR: readonly string[] = [ConsumedEvent.WEATHER_ALERT_ISSUED];
 const ESPERA_INICIAL_MS = 5_000;
 const ESPERA_MAX_MS = 300_000;
 const INTENTOS_MAX = 6;
+/** Forma de un nombre de evento (camelCase, tope 60 como el Core) y cuántas entradas se leen. */
+const EVENT_TYPE = /^[A-Za-z][A-Za-z0-9]{0,59}$/;
+const MAX_ENTRADAS = 200;
 
 export interface RegistroResultado {
   suscripcionesCreadas: string[];
@@ -93,8 +96,10 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
     try {
       await this.sync();
     } catch (err) {
+      // App cerrándose: el fallo es esperable y no merece un error en el log.
+      if (this.cerrado) return;
       const msg = (err as Error).message;
-      if (this.cerrado || intento >= INTENTOS_MAX) {
+      if (intento >= INTENTOS_MAX) {
         this.logger.error(`Registro en el Core abandonado tras ${intento} intentos: ${msg}`);
         return;
       }
@@ -108,15 +113,29 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
   /** Los `eventType` ya registrados. Acepta un array o `{ data | items: [...] }`. */
   private async listar(path: string): Promise<Set<string>> {
     const res = await this.core.request(path);
-    if (!res.ok) throw new Error(`GET ${path} respondió HTTP ${res.status}`);
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      throw new Error(`GET ${path} respondió HTTP ${res.status}`);
+    }
     const body = (await res.json().catch(() => undefined)) as
-      { data?: unknown; items?: unknown } | unknown[] | undefined;
+      { data?: unknown; items?: unknown; meta?: { total?: unknown } } | unknown[] | undefined;
     const lista = Array.isArray(body) ? body : (body?.data ?? body?.items);
     if (!Array.isArray(lista)) throw new Error(`GET ${path} devolvió algo que no es una lista`);
+    // Una página parcial haría creer que falta lo que ya existe, y el POST
+    // repetido reactiva la suscripción y pisa su maxAttempts.
+    const total = Array.isArray(body) ? undefined : body?.meta?.total;
+    if (typeof total === 'number' && total > lista.length) {
+      throw new Error(
+        `GET ${path} devolvió ${lista.length} de ${total}: respuesta paginada, no se crea nada`,
+      );
+    }
+    // Única fuente no confiable que llega a los logs (los sobrantes): solo
+    // pasan nombres con forma de evento y se corta la lista.
     return new Set(
       lista
+        .slice(0, MAX_ENTRADAS)
         .map((x) => (x as { eventType?: unknown } | null)?.eventType)
-        .filter((e): e is string => typeof e === 'string'),
+        .filter((e): e is string => typeof e === 'string' && EVENT_TYPE.test(e)),
     );
   }
 
@@ -127,6 +146,7 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
       body: JSON.stringify(body),
     });
     if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
       throw new Error(`POST ${path} (${String(body.eventType)}) respondió HTTP ${res.status}`);
     }
   }

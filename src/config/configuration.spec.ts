@@ -158,6 +158,9 @@ describe('configuration — Core', () => {
     expect(core.registerOnBoot).toBe(false);
     expect(() => config({ CORE_SUBSCRIPTION_MAX_ATTEMPTS: '0' })).toThrow();
     expect(() => config({ CORE_REGISTER_ON_BOOT: 'quizas' })).toThrow();
+    expect(config({ CORE_REGISTER_ON_BOOT: ' FALSE ' }).core.registerOnBoot).toBe(false);
+    expect(config({ CORE_REGISTER_ON_BOOT: '0' }).core.registerOnBoot).toBe(false);
+    expect(config({ CORE_REGISTER_ON_BOOT: '1' }).core.registerOnBoot).toBe(true);
   });
 
   it('con CORE_API_URL exige CORE_MODULE_SECRET', () => {
