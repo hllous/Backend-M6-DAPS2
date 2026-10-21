@@ -370,6 +370,13 @@ describe('EnvironmentalReportsService', () => {
       expect(lista.meta.total).toBe(7);
     });
 
+    it('sin status el where no trae la clave', async () => {
+      await service.findAll(consulta({}));
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).not.toHaveProperty(
+        'status',
+      );
+    });
+
     it('acepta solo from o solo to', async () => {
       await service.findAll(consulta({ from: '2026-09-01' }));
       expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual({

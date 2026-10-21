@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDateOnly, SearchText, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
 import { EnvironmentalReportStatus, EnvironmentalReportType, Severity } from '@prisma/client';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { ArrayNotEmpty, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
@@ -25,6 +25,8 @@ export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
     );
     return [...new Set(values)];
   })
+  // Una lista vacía (`status[]`) filtraría con `in: []` y devolvería todo vacío: 400.
+  @ArrayNotEmpty()
   @IsEnum(EnvironmentalReportStatus, { each: true })
   status?: EnvironmentalReportStatus[];
 
