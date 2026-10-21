@@ -84,6 +84,33 @@ describe('RoleAssignmentsService', () => {
     ).resolves.toBeDefined();
   });
 
+  it('rechaza con 400 un rol de Campo para un admin de bootstrap', async () => {
+    const { service, prisma } = setup({ bootstrap: [TARGET] });
+    await expect(
+      service.replace(ACTOR, TARGET, [M6Role.M6_CAMPO_INSPECTOR]),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    // Oficina sí, y Campo para otro usuario también.
+    await expect(
+      service.replace(ACTOR, TARGET, [M6Role.M6_OFICINA_AMBIENTAL]),
+    ).resolves.toBeDefined();
+    await expect(service.replace(ACTOR, '43', [M6Role.M6_CAMPO_INSPECTOR])).resolves.toBeDefined();
+  });
+
+  it('devuelve los roles en el orden del enum', async () => {
+    const { service, prisma } = setup();
+    prisma.userRoleAssignment.findMany.mockResolvedValue([
+      { userId: TARGET, role: M6Role.M6_AUDITOR },
+      { userId: TARGET, role: M6Role.M6_OFICINA_AMBIENTAL },
+      { userId: TARGET, role: M6Role.M6_ADMIN },
+    ]);
+    expect((await service.findOne(TARGET)).roles).toEqual([
+      M6Role.M6_ADMIN,
+      M6Role.M6_OFICINA_AMBIENTAL,
+      M6Role.M6_AUDITOR,
+    ]);
+  });
+
   it('409 al quitar el último M6_ADMIN sin admins de bootstrap', async () => {
     const { service, tx } = setup({ current: [M6Role.M6_ADMIN], otherAdmins: 0 });
     await expect(service.replace(ACTOR, TARGET, [])).rejects.toBeInstanceOf(ConflictException);
@@ -115,6 +142,24 @@ describe('RoleAssignmentsService', () => {
     });
     await service.remove(ACTOR, TARGET);
     expect(tx.userRoleAssignment.deleteMany).toHaveBeenCalled();
+  });
+
+  it('la transacción es Serializable (garantía del último admin)', async () => {
+    const { service, prisma } = setup();
+    await service.replace(ACTOR, TARGET, [M6Role.M6_AUDITOR]);
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    });
+  });
+
+  it('P2002 (mismo userId+role en dos PUT simultáneos) se informa como 409', async () => {
+    const { service, prisma } = setup();
+    prisma.$transaction.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('x', { code: 'P2002', clientVersion: '5' }),
+    );
+    await expect(service.replace(ACTOR, TARGET, [M6Role.M6_AUDITOR])).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 
   it('un conflicto de serialización se informa como 409', async () => {

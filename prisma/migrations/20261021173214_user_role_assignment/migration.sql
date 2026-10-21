@@ -33,7 +33,7 @@ CREATE UNIQUE INDEX "user_role_assignment_user_id_role_key" ON "user_role_assign
 CREATE INDEX "role_assignment_audit_target_user_id_created_at_idx" ON "role_assignment_audit"("target_user_id", "created_at");
 
 -- Auditoría append-only: ni el código ni una consulta manual pueden reescribirla.
--- TRUNCATE queda fuera a propósito (los e2e vacían la base entre suites).
+-- TRUNCATE lo cubre la migración siguiente.
 CREATE FUNCTION "role_assignment_audit_append_only"() RETURNS trigger AS $$
 BEGIN
   RAISE EXCEPTION 'role_assignment_audit es append-only (% no permitido)', TG_OP;

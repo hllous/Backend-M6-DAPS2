@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, RoleAssignmentAction } from '@prisma/client';
-import { CAMPO_ROLES, M6Role, OFICINA_ROLES } from '../../auth/m6-role';
+import { CAMPO_ROLES, M6_ROLES, M6Role, OFICINA_ROLES } from '../../auth/m6-role';
 import { PaginatedResponseDto } from '../../common/dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueryRoleAssignmentsDto, RoleAssignmentResponseDto } from './dto';
@@ -18,16 +18,22 @@ import { QueryRoleAssignmentsDto, RoleAssignmentResponseDto } from './dto';
  * tiene un `userId` hasta que ese usuario llega con un token. Rige al leer, por
  * la intersección de JwtStrategy: un rol asignado que M1 no permite no es efectivo.
  */
+/** Orden estable y documentado de los roles en las respuestas: el del enum M6Role. */
+const enumOrder = (roles: M6Role[]): M6Role[] =>
+  [...roles].sort((a, b) => M6_ROLES.indexOf(a) - M6_ROLES.indexOf(b));
+
 @Injectable()
 export class RoleAssignmentsService implements OnModuleInit {
   private readonly logger = new Logger(RoleAssignmentsService.name);
+  private readonly bootstrapAdmins: ReadonlySet<string>;
   private readonly bootstrapAdminCount: number;
 
   constructor(
     private readonly prisma: PrismaService,
     config: ConfigService,
   ) {
-    this.bootstrapAdminCount = (config.get<string[]>('bootstrapAdminUserIds') ?? []).length;
+    this.bootstrapAdmins = new Set(config.get<string[]>('bootstrapAdminUserIds') ?? []);
+    this.bootstrapAdminCount = this.bootstrapAdmins.size;
   }
 
   onModuleInit(): void {
@@ -52,11 +58,10 @@ export class RoleAssignmentsService implements OnModuleInit {
     const ids = groups.map((g) => g.userId).slice(query.skip, query.skip + query.take);
     const rows = await this.prisma.userRoleAssignment.findMany({
       where: { userId: { in: ids } },
-      orderBy: { role: 'asc' },
     });
     const data = ids.map((userId) => ({
       userId,
-      roles: rows.filter((r) => r.userId === userId).map((r) => r.role),
+      roles: enumOrder(rows.filter((r) => r.userId === userId).map((r) => r.role)),
     }));
     return new PaginatedResponseDto(data, groups.length, query.page, query.pageSize);
   }
@@ -64,9 +69,8 @@ export class RoleAssignmentsService implements OnModuleInit {
   async findOne(userId: string): Promise<RoleAssignmentResponseDto> {
     const rows = await this.prisma.userRoleAssignment.findMany({
       where: { userId },
-      orderBy: { role: 'asc' },
     });
-    return { userId, roles: rows.map((r) => r.role) };
+    return { userId, roles: enumOrder(rows.map((r) => r.role)) };
   }
 
   /**
@@ -86,6 +90,13 @@ export class RoleAssignmentsService implements OnModuleInit {
     ) {
       throw new BadRequestException(
         'Los roles de Oficina (M6_ADMIN, M6_OFICINA_*) y de Campo (M6_CAMPO_*) son excluyentes',
+      );
+    }
+    // El admin de bootstrap es M6_ADMIN (Oficina) sin fila: un rol de Campo
+    // lo dejaría con los dos lados (ADR-005).
+    if (this.bootstrapAdmins.has(userId) && wanted.some((r) => CAMPO_ROLES.includes(r))) {
+      throw new BadRequestException(
+        'Este usuario es admin de bootstrap (Oficina): no puede tener roles de Campo (M6_CAMPO_*)',
       );
     }
 
@@ -137,8 +148,11 @@ export class RoleAssignmentsService implements OnModuleInit {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
     } catch (error) {
-      // P2034: conflicto de serialización con otro cambio simultáneo.
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
+      // P2034: conflicto de serialización; P2002: dos PUT simultáneos insertando el mismo (userId, role).
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        ['P2034', 'P2002'].includes(error.code)
+      ) {
         throw new ConflictException('Otro cambio de roles se estaba aplicando: reintentá');
       }
       throw error;

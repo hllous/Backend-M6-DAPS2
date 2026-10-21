@@ -12653,7 +12653,7 @@
       "get": {
         "operationId": "RoleAssignmentsController_findAll",
         "summary": "Listar usuarios con roles de M6 asignados",
-        "description": "Listado paginado de usuarios que tienen al menos un rol asignado, ordenado por id. Son los roles asignados, no los efectivos.",
+        "description": "Listado paginado de usuarios que tienen al menos un rol asignado, ordenado por id como texto (\"10\" antes que \"2\"; el id de M1 no se ordena numéricamente). Son los roles asignados, no los efectivos.",
         "parameters": [
           {
             "name": "page",
@@ -12761,7 +12761,7 @@
       "get": {
         "operationId": "RoleAssignmentsController_findOne",
         "summary": "Roles de M6 asignados a un usuario",
-        "description": "Devuelve los roles asignados al usuario (lista vacía si no tiene). No dice si son efectivos: eso depende del rol que el usuario tenga en M1 (ver GET /me).",
+        "description": "Devuelve los roles ASIGNADOS al usuario (lista vacía si no tiene), en el orden del enum. No dice si son efectivos: eso depende del rol que el usuario tenga en M1, y lo que rige para quien llama se ve en GET /me. La UI de administración debería mostrar ambos.",
         "parameters": [
           {
             "name": "userId",
@@ -12838,7 +12838,7 @@
       "put": {
         "operationId": "RoleAssignmentsController_replace",
         "summary": "Reemplazar los roles de M6 de un usuario",
-        "description": "Fija el conjunto completo de roles del usuario y audita cada alta y baja en la misma transacción. Oficina (M6_ADMIN, M6_OFICINA_*) y Campo (M6_CAMPO_*) son excluyentes. No valida contra el rol de M1 del destinatario (M6 no lo conoce): un rol que su rol de M1 no permite queda asignado pero no es efectivo. No se puede quitar el último M6_ADMIN si no hay admins de bootstrap.",
+        "description": "Fija el conjunto completo de roles del usuario y audita cada alta y baja en la misma transacción. Oficina (M6_ADMIN, M6_OFICINA_*) y Campo (M6_CAMPO_*) son excluyentes, y un admin de bootstrap no admite roles de Campo. No valida contra el rol de M1 del destinatario (M6 no lo conoce): un rol que su rol de M1 no permite queda asignado pero no es efectivo. No se puede quitar el último M6_ADMIN si no hay admins de bootstrap.",
         "parameters": [
           {
             "name": "userId",

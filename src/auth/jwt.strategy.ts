@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { M1RoleAdapter } from './m1-role.adapter';
-import { M6Role } from './m6-role';
+import { CAMPO_ROLES, M6Role, OFICINA_ROLES } from './m6-role';
 
 /**
  * Claims del access token de M1 (docs/integracion/m1.md). Firma, `iss` y
@@ -86,6 +86,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
     const assigned = new Set<M6Role>(rows.map((r) => r.role));
     if (this.bootstrapAdmins.has(userId)) assigned.add(M6Role.M6_ADMIN);
-    return allowed.filter((r) => assigned.has(r));
+    const effective = allowed.filter((r) => assigned.has(r));
+    // ADR-005: Oficina y Campo no conviven. Si el bootstrap o una fila cargada a
+    // mano los mezcla, ganan los de Oficina (el admin no pierde su acceso).
+    if (
+      effective.some((r) => CAMPO_ROLES.includes(r)) &&
+      effective.some((r) => OFICINA_ROLES.includes(r))
+    ) {
+      return effective.filter((r) => !CAMPO_ROLES.includes(r));
+    }
+    return effective;
   }
 }

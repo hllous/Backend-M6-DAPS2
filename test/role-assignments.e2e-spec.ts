@@ -61,7 +61,7 @@ describe('Roles de M6 (e2e)', () => {
       .expect(200);
 
     const me = await http().get('/me').set(destinatario()).expect(200);
-    expect([...me.body.roles].sort()).toEqual(['M6_OFICINA_AMBIENTAL', 'M6_OFICINA_OPERACIONES']);
+    expect(me.body.roles).toEqual(['M6_OFICINA_OPERACIONES', 'M6_OFICINA_AMBIENTAL']);
 
     const audit = await prisma.roleAssignmentAudit.findMany({ where: { targetUserId: '200' } });
     expect(audit).toHaveLength(2);
@@ -69,7 +69,7 @@ describe('Roles de M6 (e2e)', () => {
 
     const list = await http().get('/role-assignments').set(admin()).expect(200);
     expect(list.body.data).toEqual([
-      { userId: '200', roles: ['M6_OFICINA_AMBIENTAL', 'M6_OFICINA_OPERACIONES'] },
+      { userId: '200', roles: ['M6_OFICINA_OPERACIONES', 'M6_OFICINA_AMBIENTAL'] },
     ]);
   });
 
@@ -94,7 +94,30 @@ describe('Roles de M6 (e2e)', () => {
       .send({ roles: ['M6_OFICINA_OPERACIONES', 'M6_CAMPO_CUADRILLA'] })
       .expect(400);
     const res = await http().get('/role-assignments/200').set(admin()).expect(200);
-    expect(res.body.roles).toEqual(['M6_OFICINA_AMBIENTAL', 'M6_OFICINA_OPERACIONES']);
+    expect(res.body.roles).toEqual(['M6_OFICINA_OPERACIONES', 'M6_OFICINA_AMBIENTAL']);
+  });
+
+  it('un admin de bootstrap no puede recibir roles de Campo (400)', async () => {
+    await http()
+      .put('/role-assignments/100')
+      .set(admin())
+      .send({ roles: ['M6_CAMPO_INSPECTOR'] })
+      .expect(400);
+    expect(await prisma.userRoleAssignment.count({ where: { userId: '100' } })).toBe(0);
+  });
+
+  it('una fila de Campo cargada a mano no le quita Oficina al admin de bootstrap', async () => {
+    await prisma.userRoleAssignment.create({ data: { userId: '100', role: 'M6_CAMPO_INSPECTOR' } });
+    const me = await http().get('/me').set(admin()).expect(200);
+    expect(me.body.roles).toEqual(['M6_ADMIN']);
+    await prisma.userRoleAssignment.deleteMany({ where: { userId: '100' } });
+  });
+
+  it('RESPONSABLE_AREA sin fila ni bootstrap no administra roles (403)', async () => {
+    await http()
+      .get('/role-assignments')
+      .set(bearer(tokenFor('RESPONSABLE_AREA', '600')))
+      .expect(403);
   });
 
   it('rol inexistente, repetido o id no numérico: 400', async () => {
@@ -122,7 +145,10 @@ describe('Roles de M6 (e2e)', () => {
     expect(me.body.roles).toEqual([]);
   });
 
-  it('la auditoría es append-only: el trigger rechaza UPDATE y DELETE', async () => {
+  it('la auditoría es append-only: el trigger rechaza UPDATE, DELETE y TRUNCATE', async () => {
+    await expect(prisma.$executeRawUnsafe('TRUNCATE "role_assignment_audit"')).rejects.toThrow(
+      /append-only/,
+    );
     await expect(prisma.roleAssignmentAudit.deleteMany({})).rejects.toThrow(/append-only/);
     await expect(
       prisma.roleAssignmentAudit.updateMany({ data: { actorUserId: 'x' } }),

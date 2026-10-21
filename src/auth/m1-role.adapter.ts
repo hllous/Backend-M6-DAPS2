@@ -24,14 +24,19 @@ const ASIGNABLES: Readonly<Record<string, readonly M6Role[]>> = {
 @Injectable()
 export class M1RoleAdapter {
   private readonly logger = new Logger(M1RoleAdapter.name);
+  // Acotado (50): un token firmado no debería traer valores nuevos sin parar.
+  private readonly warned = new Set<string>();
 
   assignableRoles(m1Role: string): readonly M6Role[] {
     // hasOwn: 'constructor' o '__proto__' no son roles.
     if (Object.prototype.hasOwnProperty.call(ASIGNABLES, m1Role)) return ASIGNABLES[m1Role];
     // Denegar por defecto. El valor viene de un token firmado, pero se acota igual.
-    this.logger.warn(
-      `Rol de M1 desconocido, sin acceso a M6: ${JSON.stringify(m1Role.slice(0, 40))}`,
-    );
+    // Una vez por valor: esto corre en cada request y un rol nuevo de M1 llenaría el log.
+    const shown = m1Role.slice(0, 40);
+    if (!this.warned.has(shown) && this.warned.size < 50) {
+      this.warned.add(shown);
+      this.logger.warn(`Rol de M1 desconocido, sin acceso a M6: ${JSON.stringify(shown)}`);
+    }
     return [];
   }
 }

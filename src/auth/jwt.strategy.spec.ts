@@ -97,6 +97,25 @@ describe('JwtStrategy', () => {
     expect(sinRol.user).toMatchObject({ roles: [] });
   });
 
+  it('bootstrap + fila de Campo: ganan los de Oficina (ADR-005)', async () => {
+    assigned = [M6Role.M6_CAMPO_INSPECTOR, M6Role.M6_AUDITOR];
+    const r = await authenticate(sign({ sub: 99, rol: 'RESPONSABLE_AREA' }));
+    expect(r.user).toMatchObject({ roles: [M6Role.M6_ADMIN] });
+  });
+
+  it('sin bootstrapAdminUserIds en la config no hay admins de bootstrap', async () => {
+    const sinBootstrap = { ...config, get: () => undefined } as unknown as ConfigService;
+    const s = new JwtStrategy(sinBootstrap, prisma, adapter);
+    const user = await s.validate({
+      sub: 99,
+      sub_type: 'EMPLEADO',
+      rol: 'RESPONSABLE_AREA',
+      typ: 'access',
+      exp: 1,
+    });
+    expect(user.roles).toEqual([]);
+  });
+
   it('un rol de M1 sin roles asignables ni consulta la tabla', async () => {
     assigned = [M6Role.M6_ADMIN];
     const r = await authenticate(sign({ rol: 'MESA_ENTRADAS' }));
