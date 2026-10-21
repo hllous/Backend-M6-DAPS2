@@ -9,7 +9,7 @@ describe('OutboxService', () => {
   let outbox: OutboxService;
 
   const entrada = (over: Partial<OutboxEntry> = {}): OutboxEntry => ({
-    eventType: EventType.URBAN_SERVICE_SCHEDULED,
+    eventType: EventType.UPDATE_TICKET_STATUS,
     aggregateType: AggregateType.SERVICE,
     aggregateId: '99999999-9999-9999-9999-999999999999',
     payload: { serviceId: 'srv-1' },
@@ -32,7 +32,7 @@ describe('OutboxService', () => {
 
       expect(tx.outboxEvent.create).toHaveBeenCalledTimes(1);
       expect(tx.outboxEvent.create.mock.calls[0][0].data).toMatchObject({
-        eventType: 'urbanServiceScheduled',
+        eventType: 'updateTicketStatus',
         aggregateType: 'SERVICE',
         payload: { serviceId: 'srv-1' },
       });

@@ -6,7 +6,7 @@ Este documento sirve para cerrar el contrato de eventos antes de empezar a progr
 
 | Parte | Qué contiene | Qué les pedimos |
 |---|---|---|
-| **1** | Los 8 eventos que publicamos, con su estructura y todos sus campos | **Confírmennos que los consumen.** Están agrupados por destinatario |
+| **1** | Los 6 eventos que publicamos, con su estructura y todos sus campos | **Confírmennos que los consumen.** Están agrupados por destinatario |
 | **2** | Los eventos suyos que consumimos | **Devuélvannos el payload**, con los campos que les marcamos como imprescindibles |
 | **3** | Las incongruencias que encontramos en la lista común | **Respondan las que les tocan** |
 
@@ -18,26 +18,25 @@ Notación: `?` es campo opcional o que puede venir en nulo, `[]` es lista. Todos
 
 # Parte 1 — Lo que publicamos
 
-Ocho eventos, **todos con consumidor declarado**. No publicamos nada que nadie escuche.
+Seis eventos, **todos con consumidor declarado**. No publicamos nada que nadie escuche.
 
 | Evento | Va a | Se dispara cuando |
 |---|---|---|
 | `updateTicketStatus` | **M2** | Cambia el estado de algo nacido de un reclamo |
-| `urbanServiceScheduled` | **M7** | Se agenda un servicio |
 | `containerDamaged` | **M3** | Se detecta un contenedor dañado o faltante |
-| `treeRiskDetected` | **M3**, **M7** | Un relevamiento arroja riesgo `HIGH` o `CRITICAL` |
-| `treePruningScheduled` | **M7** | Se programa una poda |
+| `treeRiskDetected` | **M3** | Un relevamiento arroja riesgo `HIGH` o `CRITICAL` |
 | `environmentalViolationDetected` | **M4** | Se emite un acta ambiental |
 | `infrastructureRepairRequested` | **M3** | Detectamos un daño de infraestructura ajeno |
-| `streetClosureRequested` | **M7** | Un servicio o intervención requiere cortar la calle |
+| `streetClosureRequested` | **M7** | Un servicio o una poda requiere cortar la calle |
 
-> **Eran quince y quedaron ocho: la decisión y el porqué.** Cuando M2 confirmó que todo lo suyo va por `updateTicketStatus`, siete eventos de dominio —`urbanServiceStarted`, `urbanServiceDelayed`, `urbanServiceCompleted`, `zoneNotServiced`, `containerOverflowed`, `environmentalInspectionScheduled` y `environmentalInspectionCompleted`— se quedaron sin ningún consumidor.
+> **Eran quince y quedaron seis: la decisión y el porqué.** Cuando M2 confirmó que todo lo suyo va por `updateTicketStatus`, siete eventos de dominio —`urbanServiceStarted`, `urbanServiceDelayed`, `urbanServiceCompleted`, `zoneNotServiced`, `containerOverflowed`, `environmentalInspectionScheduled` y `environmentalInspectionCompleted`— se quedaron sin ningún consumidor.
 >
 > **Los sacamos del contrato.** Los hechos siguen existiendo en nuestro modelo y son los que, cuando corresponde, disparan un `updateTicketStatus`, pero **no los publicamos al bus**: un cambio de estado interno se escribe en nuestra base, no se anuncia. Publicar un evento cuesta schema, publisher, test y documentación, y no íbamos a pagarlo por siete suscripciones que no existen. Si alguno les hace falta, pídanlo y lo publicamos: el payload ya está diseñado.
-
+>
+> **Descartados el 21/10: `urbanServiceScheduled` y `treePruningScheduled`.** M7 confirmó que solo consume `streetClosureRequested`, así que dejamos de emitirlos. El corte de calle se pide siempre con `streetClosureRequested`, con `sourceRef` apuntando al servicio o a la poda. `treeRiskDetected` va solo a M3.
 ---
 
-## 1.1 Los ocho payloads
+## 1.1 Los seis payloads
 
 Cada evento con sus campos, y abajo de cada uno los valores que puede tomar cada campo cerrado. `?` es opcional, `[]` es lista, `{ }` es un objeto anidado.
 
@@ -45,7 +44,6 @@ Cada evento con sus campos, y abajo de cada uno los valores que puede tomar cada
 
 ```
 location       { street, number?, neighborhoodId?, lat?, lng? }
-timeWindow     { from, to }                     horas HH:mm
 attachments[]  { url, mimeType, description? }
 evidence[]     { url, mimeType, description? }
 ```
@@ -63,7 +61,7 @@ De M1:        citizenId, organizationId
 
 `neighborhoodId` es **opcional** y hoy viaja ausente: sale del catálogo de barrios, que todavía no se publicó. Hay una discrepancia abierta sobre quién lo publica: M9 dice que no es del Core y el enunciado del TPO (§9) se lo asigna.
 
-Los campos que terminan en `At` son **fecha y hora**; `scheduledDate` es solo el día y la franja la da `timeWindow`. El formato es el del sobre del Core: `occurredAt` en ISO 8601 con offset (ver Sobres, Parte 1).
+Los campos que terminan en `At` son **fecha y hora**. El formato es el del sobre del Core: `occurredAt` en ISO 8601 con offset (ver Sobres, Parte 1).
 
 ---
 
@@ -82,19 +80,7 @@ updatedBy:  { type: EXTERNAL_USER, id } | { type: SYSTEM, id: null }
 
 No lleva `status`: informamos el hecho y **M2 decide el estado**. Tampoco lleva `sourceRef` — su contrato prohíbe mandarles IDs de nuestras entidades internas, así que la correlación `ticketId ↔ serviceId` la guardamos de nuestro lado. `expectedTicketVersion` salió del contrato en la v1.5 y `publicId` no viaja en este evento (§8.1 de la v1.70): la correlación es solo por `ticketId`. El sobre del Core ya no lleva `subject` (era del sobre de M2): la correlación va por `data.ticketId`. El detalle de cada variante está en 1.2.
 
-**2. `urbanServiceScheduled` → M7**
-
-```
-serviceId, serviceTypeCode, category, mode,
-zoneIds[], routeId?, targetRef?,
-scheduledDate, timeWindow { from, to },
-crewId?, vehicleId?, origin, ticketId?
-
-mode:   ROUTE | POINT
-origin: PLANNED | TICKET | WEATHER_ALERT | INSPECTION | MANUAL
-```
-
-**3. `containerDamaged` → M3**
+**2. `containerDamaged` → M3**
 
 ```
 containerId, containerCode, zoneId, location,
@@ -105,7 +91,7 @@ requiresPublicWorks: booleano — en true, el arreglo le corresponde a M3
 damageType:          sale de nuestro catálogo, viaja como texto
 ```
 
-**4. `treeRiskDetected` → M3, M7**
+**3. `treeRiskDetected` → M3**
 
 ```
 treeId, surveyCode, species, zoneId, location,
@@ -120,17 +106,7 @@ requiresStreetClosure: booleano
 requiresPublicWorks:   booleano
 ```
 
-**5. `treePruningScheduled` → M7**
-
-```
-interventionId, serviceId, interventionType, treeIds[], zoneId, location,
-scheduledDate, timeWindow { from, to }, crewId, requiresStreetClosure
-
-interventionType:      FORMATION_PRUNING | SAFETY_PRUNING | REMOVAL | PLANTING | TREATMENT
-requiresStreetClosure: booleano — en true, después les llega la solicitud de corte
-```
-
-**6. `environmentalViolationDetected` → M4**
+**4. `environmentalViolationDetected` → M4**
 
 ```
 violationId, noticeNumber, issuedAt,
@@ -146,7 +122,7 @@ priorNoticeCount: entero, actas previas al mismo establecimiento
 violationType:    sale de nuestro catálogo, viaja como texto
 ```
 
-**7. `infrastructureRepairRequested` → M3**
+**5. `infrastructureRepairRequested` → M3**
 
 ```
 requestId, damageType, severity, location,
@@ -157,7 +133,7 @@ publicSafetyRisk: booleano
 detectedIn:       nuestro serviceId o inspectionId que originó la detección
 ```
 
-**8. `streetClosureRequested` → M7** · *esquema unificado con la solicitud de M3 (30/08)*
+**6. `streetClosureRequested` → M7** · *esquema unificado con la solicitud de M3 (30/08)*
 
 ```
 closureRequestId, sourceModule, sourceRef,
@@ -198,11 +174,11 @@ Tres cosas que nos cambian la implementación y conviene dejar dichas:
 
 ### De qué hecho nuestro sale cada `updateType`
 
-Esta es la tabla con la que lo implementamos. La columna izquierda son **hechos internos de nuestro modelo**, no eventos publicados: salvo `urbanServiceScheduled`, ninguno sale al bus. Cuando ocurre el hecho, publicamos el `updateTicketStatus` que le corresponde.
+Esta es la tabla con la que lo implementamos. La columna izquierda son **hechos internos de nuestro modelo**, no eventos publicados: ninguno sale al bus (`urbanServiceScheduled` dejó de emitirse el 21/10). Cuando ocurre el hecho, publicamos el `updateTicketStatus` que le corresponde.
 
 | Hecho nuestro | `updateType` | Qué mandamos |
 |---|---|---|
-| `urbanServiceScheduled`: se agenda un servicio nacido de un reclamo, o se confirma su reprogramación | `STARTED` o `PROGRESS`, según el estado del ticket (ver abajo) | fecha y franja agendadas **como texto en `publicMessage`** (así lo confirmó M2 el 20/10: el contrato no tiene campo estructurado) |
+| Se agenda un servicio nacido de un reclamo, o se confirma su reprogramación | `STARTED` o `PROGRESS`, según el estado del ticket (ver abajo) | fecha y franja agendadas **como texto en `publicMessage`** (así lo confirmó M2 el 20/10: el contrato no tiene campo estructurado) |
 | Se reactiva un expediente devuelto porque M2 lo derivó otra vez | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «Su denuncia ambiental está en análisis.» |
 | Inicia un servicio nacido de un reclamo | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «La cuadrilla comenzó a atender su reclamo.». Agendar ya arrancó el ticket, así que no repetimos `STARTED` |
 | Se inicia la revisión de un expediente (denuncia ambiental) | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «Su denuncia ambiental está en análisis.» |
@@ -252,7 +228,7 @@ Si alguno les hace falta —M9 para un tablero de cumplimiento de recorridos, o 
 
 ## 1.3 Para M3 — Obras públicas
 
-Tres eventos, y ya confirmaron que los consumen los tres: `infrastructureRepairRequested` (7), `containerDamaged` (3) y `treeRiskDetected` (4).
+Tres eventos, y ya confirmaron que los consumen los tres: `infrastructureRepairRequested` (5), `containerDamaged` (2) y `treeRiskDetected` (3).
 
 `requiresPublicWorks = true` es la señal de que el daño les corresponde a ustedes. `treeRiskDetected` solo se dispara con `riskLevel` en `HIGH` o `CRITICAL`.
 
@@ -262,7 +238,7 @@ Tres eventos, y ya confirmaron que los consumen los tres: `infrastructureRepairR
 
 ## 1.4 Para M4 — Habilitaciones
 
-Un evento: `environmentalViolationDetected` (6).
+Un evento: `environmentalViolationDetected` (4).
 
 - **`establishmentId` es obligatorio y viaja siempre** (el formato del identificador es de M4: los ejemplos usan `EST-004512`, a confirmar con ellos). Intimar, clausurar y multar se le aplican a un comercio habilitado; un acta sin establecimiento no les serviría, así que esas las cerramos nosotros y no se las mandamos.
 - **`suggestedAction` no es vinculante.** La decisión es de ustedes.
@@ -276,11 +252,9 @@ Un evento: `environmentalViolationDetected` (6).
 
 ## 1.5 Para M7 — Tránsito
 
-Cuatro eventos, y ya confirmaron que los reciben los cuatro.
+Un solo evento: `streetClosureRequested` (6). M7 confirmó que es lo único que consume de nosotros, así que desde el 21/10 no les enviamos `urbanServiceScheduled` ni `treePruningScheduled`, y `treeRiskDetected` va solo a M3.
 
-El que dispara acción es `streetClosureRequested` (8), con el esquema unificado que propusieron y aceptamos el 30/08 — mismo payload que la solicitud que les manda M3. `sourceModule` viene en `M6`, que es el campo que ustedes mismos pidieron. `sourceRef` apunta al servicio o a la intervención que origina el corte.
-
-Los otros tres son informativos: `urbanServiceScheduled` (2) —para que sepan que hay un camión circulando—, `treePruningScheduled` (5) con `requiresStreetClosure` —la poda que va a necesitar corte les llega antes que la solicitud— y `treeRiskDetected` (4).
+Es el que dispara acción, con el esquema unificado que propusieron y aceptamos el 30/08 — mismo payload que la solicitud que les manda M3. `sourceModule` viene en `M6`, que es el campo que ustedes mismos pidieron. `sourceRef` apunta al servicio o a la poda que origina el corte. Cuando un servicio o una poda necesita cortar la calle, la solicitud se pide siempre con este evento.
 
 ✅ **Pedido cerrado: ya devuelven el origen de la solicitud, en las tres respuestas.** Publicaron el payload completo de las tres respuestas de corte: `closureRequestId` (nuestro `closureRequestId`, de ida y vuelta) y `requestingModule` (valores `"Obras"` / `"Ambiente"` — nosotros somos `"Ambiente"`) viajan en `streetClosureApproved`, `streetClosureRejected` **y, desde el 30/08, también en `streetClosureEnded`**, que hasta entonces era la excepción. Era el pedido de prioridad alta.
 

@@ -111,11 +111,11 @@ Revisadas contra los lugares donde se arma el evento (`ticketEvents` en `Environ
 
 ## De qué hecho interno sale cada `updateType`
 
-Esta es la tabla con la que se implementa. **La columna izquierda son hechos internos de nuestro modelo, no eventos publicados**: salvo `urbanServiceScheduled`, ninguno sale al bus (ver [descartados.md](descartados.md)). Cuando ocurre el hecho, publicamos el `updateTicketStatus` que le corresponde.
+Esta es la tabla con la que se implementa. **La columna izquierda son hechos internos de nuestro modelo, no eventos publicados**: ninguno sale al bus, ni siquiera `urbanServiceScheduled`, que dejamos de emitir el 21/10 (ver [descartados.md](descartados.md)). Cuando ocurre el hecho, publicamos el `updateTicketStatus` que le corresponde.
 
 | Hecho nuestro | `updateType` | Qué mandamos |
 |---|---|---|
-| `urbanServiceScheduled` | `STARTED` (primera vez) o `PROGRESS` (reprogramación) | **Implementado en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).** Fecha y franja como texto en `publicMessage`, sin `details`. Sale al agendar y en `confirm-reschedule`, junto con (pero aparte de) el `urbanServiceScheduled` hacia M7. `STARTED` o `PROGRESS` según el estado del ticket; si no corresponde, no sale |
+| Se agenda un servicio (antes `urbanServiceScheduled`) | `STARTED` (primera vez) o `PROGRESS` (reprogramación) | **Implementado en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).** Fecha y franja como texto en `publicMessage`, sin `details`. Sale al agendar y en `confirm-reschedule`. `STARTED` o `PROGRESS` según el estado del ticket; si no corresponde, no sale |
 | Se reactiva un expediente `FORWARDED` por un `ROUTED` repetido ([#309](https://github.com/hllous/Backend-M6-DAPS2/issues/309)) | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «Su denuncia ambiental está en análisis.». Lo publica el consumer de `ticketUpdated`, con `causationId` = `eventId` del `ROUTED` y `updatedBy` `SYSTEM`; un reproceso no lo duplica |
 | `urbanServiceStarted` | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage` fijo |
 | `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage`. **Solo con el servicio `IN_PROGRESS` y el ticket sin estado conocido o `IN_PROGRESS`** (#325): antes de arrancar el ticket sigue `ROUTED` y §8.2 rechaza `PROGRESS`, así que un aviso de demora antes de arrancar (`delayType: START`) queda registrado pero no se proyecta (#146) |

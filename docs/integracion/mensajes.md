@@ -72,6 +72,26 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Pendientes de enviar (21/10)
+
+> Redactados el 21/10 para que el PO los envíe (#345). **Al enviarlos, anotar la fecha acá, mover la respuesta a la ficha (`m7.md`, `m9.md`) y cerrar la fila de M7 del tablero.**
+
+**→ M7 (Tránsito)** — respuesta a sus dos mensajes del 20/10 — *pendiente de enviar*
+
+> Gracias por las respuestas, nos ordenan mucho. Sí, estamos de acuerdo: a partir de ahora **dejamos de emitir `urbanServiceScheduled` y `treePruningScheduled`**, y `treeRiskDetected` va solo a M3. Lo único que les mandamos es `streetClosureRequested`. Cuando un servicio o una poda necesita cortar la calle, la solicitud la pedimos siempre con ese evento, con `sourceRef` apuntando al servicio o a la poda que origina el corte. No cambia nada de su lado ni del payload que ya tienen.
+>
+> Y gracias por contestar los cuatro puntos: (1) los cortes `ACTIVE` vencidos los cierran ustedes y siempre publican `streetClosureEnded`; (2) los `APPROVED` que nunca se activan vencen sin evento y nuestro margen de 6 horas es el mecanismo correcto; (3) el nombre que se publica es `streetClosureEnded` y el `streetClousureEnded` del catálogo es un error de carga que coordinan con M9; (4) no necesitan cuadrilla en el corte, solo la franja completa `requestedFrom` / `requestedTo`. Con eso cerramos de nuestro lado.
+
+**→ M9 (Core)** — corrección al registro — *pendiente de enviar*
+
+> Una corrección a lo que les contamos para el registro de publicaciones: **M6 publica 6 eventos, no 8**. Quedan `updateTicketStatus`, `containerDamaged`, `treeRiskDetected`, `environmentalViolationDetected`, `infrastructureRepairRequested` y `streetClosureRequested`. **No registren `urbanServiceScheduled` ni `treePruningScheduled`**: M7 no los consume y dejamos de emitirlos. Las suscripciones no cambian.
+
+**→ M2 (Atención Ciudadana)** — emitimos `INFORMATION_REQUIRED` — *pendiente de enviar*
+
+> Les avisamos que M6 pasa a ser productor real de `updateTicketStatus` con `updateType: INFORMATION_REQUIRED`. Lo emitimos cuando el operador le pide más información al vecino durante la revisión de la denuncia: lleva `publicMessage` con lo que se le pide y `requiredBy` (fecha límite, siempre futura); solo sale si el ticket está `IN_PROGRESS` o `ROUTED`, o si todavía no conocemos su estado. Dos confirmaciones: (1) cuando la solicitud vence o se cancela, ¿M2 emite un `ticketUpdated` con el estado al que vuelve el ticket? Nosotros cerramos la solicitud al recibir cualquier `ticketUpdated` de cambio de estado cuyo `currentStatus` ya no sea `PENDING_INFORMATION`. (2) Si mandamos `STARTED` con el ticket ya `IN_PROGRESS`, ¿lo registran y confirman sin aplicar, sin `nack`?
+>
+> Además, en el contrato nuevo (el Acuerdo y los Sobres del 21/10) M6 publica 6 eventos; los dos que dejamos de emitir (`urbanServiceScheduled` y `treePruningScheduled`) no los consumía M2, así que no cambia nada de su lado.
+
 ## Pendientes de enviar (20/10)
 
 
@@ -81,7 +101,7 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 > Recibimos su contrato v0.6, gracias. Sobre sus tres pedidos: (1) **aceptamos** `workOrderId` como UUID técnico y `workOrderNumber` como referencia humana opcional ⚠️ (decisión del equipo: nuestro consumidor ya tolera ambos). (2) Todavía **no nos llegaron los archivos de schema** de `workOrderScheduled` y `workOrderCompleted`, solo los ejemplos del PDF: ¿nos los pasan para validarlos? Pedimos `sourceRequestId` con `format: "uuid"`. (3) La prueba `requestId → sourceRequestId` la hacemos apenas tengan el adaptador RabbitMQ/Core; nos avisan. Además: ustedes mencionan que el Core tiene registrada `streetClousureEnded` con el error de tipeo en `q.obras`; lo vamos a verificar contra el Core local. Del lado nuestro no cambia ningún evento que les mandamos.
 
-**→ M7 (Tránsito)**
+**→ M7 (Tránsito)** — *respondido el 20/10; superado por la sección del 21/10 (#345)*
 
 > Cuatro puntos del documento «Payloads actualizados Core v4»: (1) Su lista de eventos que reciben de Obras y Ambiente incluye solo `streetClosureRequested`: no figuran `urbanServiceScheduled`, `treePruningScheduled` ni `treeRiskDetected`, que nosotros les enviamos. ¿Los van a consumir? Si no, los sacamos de nuestros destinatarios. (2) Un corte `APPROVED` que nunca se activa pasa a `EXPIRED` **sin publicar nada** de su lado. Lo resolvimos por tiempo: pasados `endDate` + **6 horas de gracia** sin recibir `streetClosureEnded`, lo damos por vencido y dejamos para reprogramar el servicio que dependía. ¿Les sirve esa gracia? ¿Un corte `ACTIVE` publica siempre su `Ended` al vencer `endDate`? (3) Confirmen que publican `streetClosureEnded` bien escrito, porque M3 dice que el catálogo del Core tiene `streetClousureEnded`. (4) `treePruningScheduled` lo emitimos solo cuando el servicio ya tiene cuadrilla y franja, que ustedes exigen.
 
@@ -99,7 +119,7 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > 1. **Módulo:** `ambiente` (Ambiente, Higiene y Servicios Urbanos). Responsables técnicos y canal de contacto: **Facu Iriarte** (+54 9 11 5139-3059, Discord `gordito12`) y **Benjamin Martinez** (+54 9 298 344-9923, Discord `taki9`).
 > 2. **IP pública de salida** del backend (Render): son dos rangos: `74.220.48.0/24` y `74.220.56.0/24` (los de salida de Render para nuestra región). Un solo origen, producción. Si Render los cambia, les avisamos antes de volver a probar.
-> 3. **Publicamos** (8): `urbanServiceScheduled`, `updateTicketStatus`, `containerDamaged`, `treeRiskDetected`, `treePruningScheduled`, `environmentalViolationDetected`, `infrastructureRepairRequested`, `streetClosureRequested`; `sourceModule` `ambiente`, `eventVersion` 1.0, con sus schemas JSON.
+> 3. **Publicamos** (6; *corregido el 21/10, ver el mensaje de arriba*): `updateTicketStatus`, `containerDamaged`, `treeRiskDetected`, `environmentalViolationDetected`, `infrastructureRepairRequested`, `streetClosureRequested`; `sourceModule` `ambiente`, `eventVersion` 1.0, con sus schemas JSON.
 > 4. **Consumimos** (8, `maxAttempts` 4): `ticketUpdated`, `workOrderScheduled`, `workOrderCompleted`, `commercialFineGenerated`, `closureUpdate`, `streetClosureApproved`, `streetClosureRejected`, `streetClosureEnded`.
 > 5. **Prueba coordinada:** **Les pedimos que nos pasen ustedes los horarios que tengan disponibles**; como el ambiente es compartido, ¿qué tipo de evento ficticio podemos usar en la primera prueba para que no llegue a otros módulos?
 > 6. **Dashboard:** sí, para tres personas: `benmartinez@uade.edu.ar`, `fairiarte@uade.edu.ar` y `nico.llousas@gmail.com`.

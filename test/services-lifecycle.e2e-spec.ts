@@ -89,7 +89,7 @@ describe('Ciclo de vida de un servicio urbano (e2e)', () => {
     expect(enListado.stops).toEqual(detalle.body.stops);
   });
 
-  it('programa el servicio y encola urbanServiceScheduled en el outbox', async () => {
+  it('programa el servicio y encola solo el aviso a M2 (sin urbanServiceScheduled)', async () => {
     const zona = await crearZona(api);
     zoneId = zona.id;
     const ruta = await crearRuta(api, [zoneId]);
@@ -110,14 +110,10 @@ describe('Ciclo de vida de un servicio urbano (e2e)', () => {
     expect(res.body.zones).toHaveLength(1);
 
     const encolados = await prisma.outboxEvent.findMany({ where: { aggregateId: serviceId } });
-    // Nacido de un reclamo: hacia M7 sale urbanServiceScheduled y hacia M2 el aviso de
-    // la programación (#303). Los dos se encolan en el mismo request y pueden empatar
-    // en occurredAt, así que no se asume el orden entre ellos.
-    expect(encolados.map((e) => e.eventType).sort()).toEqual([
-      'updateTicketStatus',
-      'urbanServiceScheduled',
-    ]);
-    expect(encolados.find((e) => e.eventType === 'urbanServiceScheduled')).toMatchObject({
+    // Nacido de un reclamo: sale solo el aviso a M2 de la programación (#303). M7 solo
+    // consume streetClosureRequested, así que no se encola urbanServiceScheduled (#345).
+    expect(encolados.map((e) => e.eventType)).toEqual(['updateTicketStatus']);
+    expect(encolados[0]).toMatchObject({
       aggregateType: 'SERVICE',
       status: OutboxEventStatus.PENDING,
     });
@@ -180,13 +176,10 @@ describe('Ciclo de vida de un servicio urbano (e2e)', () => {
       select: { eventType: true, payload: true, status: true },
     });
 
-    // El orden entre urbanServiceScheduled y el aviso de la programación (mismo request)
-    // no está garantizado; el de los updateTicketStatus sí: son requests distintos.
-    expect(tipos.map((e) => e.eventType).sort()).toEqual([
+    expect(tipos.map((e) => e.eventType)).toEqual([
       'updateTicketStatus',
       'updateTicketStatus',
       'updateTicketStatus',
-      'urbanServiceScheduled',
     ]);
     // Nada se publicó: el dispatcher está stubbeado, así que la cola es la
     // prueba de que el evento se escribió junto al cambio de dominio.

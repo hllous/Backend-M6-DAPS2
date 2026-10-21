@@ -45,7 +45,7 @@ Requisitos:
 | **Contrato de eventos** | [`docs/Acuerdo-Eventos-M6.md`](docs/Acuerdo-Eventos-M6.md) — es lo que circula a los otros grupos |
 | **Estado de la integración** | [`docs/bloqueantes.md`](docs/bloqueantes.md) — fuente única de qué está confirmado y qué falta |
 | **Modelo de datos** | [`docs/entidades/`](docs/entidades/) |
-| **Eventos publicados** | [`docs/eventos/publicados/`](docs/eventos/publicados/) — 8 eventos con JSON Schema |
+| **Eventos publicados** | [`docs/eventos/publicados/`](docs/eventos/publicados/) — 6 eventos con JSON Schema |
 | **Eventos consumidos** | [`docs/eventos/consumidos/`](docs/eventos/consumidos/) — 10 eventos de 5 módulos, 9 con handler |
 
 Para orientarse en el repo, el punto de entrada recomendado es [`AGENTS.md`](AGENTS.md).
@@ -72,7 +72,7 @@ El pipeline de documentación que genera los entregables para la cátedra —`fu
 
 M6 se comunica con el resto de la plataforma **por eventos asincrónicos** vía el bus del Core (M9). REST síncrono se usa solo para casos justificados (búsqueda de establecimiento a M4, catálogo de barrios a M9).
 
-- Publicamos **8 eventos**, todos con consumidor declarado.
+- Publicamos **6 eventos**, todos con consumidor declarado.
 - Consumimos **10 eventos**: 9 de M2, M3, M4, M7 y M9 más una alerta meteorológica simulada internamente. 9 tienen handler; `notificationSent` (M9) no, porque nadie lo publica.
 
 Ver detalle en [`docs/eventos/`](docs/eventos/) y estado vivo en [`docs/bloqueantes.md`](docs/bloqueantes.md).

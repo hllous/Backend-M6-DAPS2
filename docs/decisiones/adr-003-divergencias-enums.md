@@ -6,6 +6,8 @@
 
 > Nota del 2026-10-04: la decisión ya estaba en vigor. El schema de Prisma, el código y [`enumeraciones.md`](../enumeraciones.md) usan los valores del catálogo interno, y [`bloqueantes.md`](../bloqueantes.md) trata las divergencias como resueltas. Se formaliza el estado, sin cambios en la decisión.
 
+> Nota del 2026-10-21: `urbanServiceScheduled` y `treePruningScheduled` dejaron de emitirse porque M7 solo consume `streetClosureRequested` (ver [descartados](../eventos/publicados/descartados.md)). Las divergencias 2 y 4 se resolvieron igual sobre el catálogo; ya no hay a quién avisarle por esos dos eventos. `ServiceOrigin` ya no viaja en ningún evento.
+
 ## Contexto
 
 Seis enums difieren entre el catálogo interno ([`enumeraciones.md`](../enumeraciones.md)) y lo que quedó escrito en [`Acuerdo-Eventos-M6.md`](../Acuerdo-Eventos-M6.md) §1.1, que es el documento que ya circuló a los otros grupos. La divergencia está registrada como bloqueante interno desde el **18/08** y nunca se resolvió.
@@ -79,5 +81,5 @@ Detalle por divergencia:
 - [`enumeraciones.md`](../enumeraciones.md) — el catálogo, y la tabla de divergencias que este ADR cierra
 - [`Acuerdo-Eventos-M6.md`](../Acuerdo-Eventos-M6.md) §1.1 — el documento que circuló y hay que corregir
 - [`bloqueantes.md`](../bloqueantes.md) — fila "Interno" del tablero, abierta desde el 18/08
-- Schemas afectados: [`urbanServiceScheduled`](../eventos/publicados/urbanServiceScheduled.schema.json), [`treeRiskDetected`](../eventos/publicados/treeRiskDetected.schema.json), [`environmentalViolationDetected`](../eventos/publicados/environmentalViolationDetected.schema.json)
+- Schemas afectados: `urbanServiceScheduled` (hoy en [descartados](../eventos/publicados/descartados.md)), [`treeRiskDetected`](../eventos/publicados/treeRiskDetected.schema.json), [`environmentalViolationDetected`](../eventos/publicados/environmentalViolationDetected.schema.json)
 - [ADR-001](adr-001-stack-tecnologico.md) — Prisma como ORM, que es lo que hace que el catálogo esté materializado en la base

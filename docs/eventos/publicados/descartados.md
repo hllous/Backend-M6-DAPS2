@@ -1,18 +1,18 @@
-# Los siete que no publicamos
+# Los nueve que no publicamos
 
-Estos hechos **existen en nuestro modelo** y son los que disparan cada [`updateTicketStatus`](updateTicketStatus.md), pero no salen al bus.
+Siete hechos **existen en nuestro modelo** y son los que disparan cada [`updateTicketStatus`](updateTicketStatus.md), pero no salen al bus. Otros dos, `urbanServiceScheduled` y `treePruningScheduled`, sí salían y los sacamos el 21/10 (ver más abajo).
 
 ## Por qué se cayeron
 
 Estaban en el contrato porque se los ofrecíamos a M2 como detalle del avance de un reclamo. **Cuando M2 definió que todo lo suyo entra por `updateTicketStatus`, los siete se quedaron sin ningún consumidor.** Un evento que nadie escucha es schema, publisher, test y documentación para nadie.
 
-Eran quince eventos publicados; quedaron ocho, y los ocho tienen consumidor declarado.
+Eran quince eventos publicados; quedaron ocho, y el 21/10 bajaron a seis (ver más abajo). Los seis tienen consumidor declarado.
 
 **El dato no se pierde del todo.** El cierre viaja como `details.resolution` + `publicMessage` en el `RESOLVED` de [`updateTicketStatus`](updateTicketStatus.md). La fecha agendada sigue sin campo definido en el contrato de M2 — bloqueante, ver ahí — y la evidencia (`attachments[]`) todavía no se manda. Lo que queda afuera son nuestros identificadores internos, que el propio contrato de M2 prohíbe transportar.
 
 **Si alguno hace falta, se pide y se publica.** El payload ya está diseñado y no hay que rediseñar nada. Lo que no hacemos es publicarlo por las dudas.
 
-No llevan `.schema.json`: no se publican, no hay nada que validar todavía.
+No llevan `.schema.json`: no se publican, no hay nada que validar todavía. Los dos del 21/10 tenían y se borraron; quedan en el historial de git.
 
 ## Los payloads
 
@@ -91,6 +91,36 @@ inspectedAt, outcome, publicSummary, nextStep
 Dispara `RESOLVED` si no hubo irregularidad, o `PROGRESS` si se emitió acta —el caso sigue en M4—. `outcome` es `InspectionOutcome`, `nextStep` es `InspectionNextStep`.
 
 Los dos de inspección llevan la **proyección pública**: sin identidad del inspector, checklist, hallazgos internos ni contenido del acta. `publicSummary` es el texto que lee el vecino y `nextStep` dice qué sigue —acta, reinspección o cierre— sin adelantar la sanción.
+
+## Los dos que dejamos de emitir (21/10)
+
+**M7 solo consume `streetClosureRequested`.** Lo confirmó con el documento «Payloads actualizados Core v4» (20/10): no escucha `urbanServiceScheduled` ni `treePruningScheduled`, así que no tenían consumidor. Los dejamos de emitir y el corte de calle sigue pidiéndose siempre con [`streetClosureRequested`](streetClosureRequested.md), con `sourceRef` apuntando al servicio o la poda (hoy `sourceType` solo admite `SERVICE` y `TREE_INTERVENTION`). `Service` y `TreeIntervention` no cambian; `TreeIntervention.pruningScheduledAt` sigue como columna pero ya no marca ninguna emisión. `updateTicketStatus` hacia M2 al agendar no se toca.
+
+### `urbanServiceScheduled`
+
+Salía al crear el `Service` (`POST /services`), con o sin `ticketId` y con o sin cuadrilla. Una sola vez.
+
+```
+serviceId, serviceTypeCode, category, mode,
+zoneIds[], routeId?, targetRef?,
+scheduledDate, timeWindow { from, to },
+crewId?, vehicleId?, origin, ticketId?
+```
+
+`zoneIds[]` nunca vacío (una zona en `POINT`, las del recorrido en `ROUTE`); `routeId?` solo en `ROUTE`; `targetRef?` solo en `POINT`. `category` es `ServiceCategory`, `mode` es `ServiceMode`, `origin` es `ServiceOrigin` — ver [enumeraciones.md](../../enumeraciones.md).
+
+### `treePruningScheduled`
+
+Salía cuando el servicio de una `TreeIntervention` quedaba con cuadrilla y franja horaria (una sola vez, diferida si faltaban; #324).
+
+```
+interventionId, serviceId, interventionType, treeIds[],
+zoneId, location,
+scheduledDate, timeWindow { from, to },
+crewId, requiresStreetClosure
+```
+
+`interventionType` es `TreeInterventionType` — ver [enumeraciones.md](../../enumeraciones.md).
 
 ## Otros cuatro que nunca estuvieron
 

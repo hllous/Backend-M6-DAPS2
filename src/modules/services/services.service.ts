@@ -258,13 +258,6 @@ export class ServicesService {
         created.inspection = { id: dto.inspectionId };
       }
 
-      await this.outbox.enqueue(tx, {
-        eventType: EventType.URBAN_SERVICE_SCHEDULED,
-        aggregateType: AggregateType.SERVICE,
-        aggregateId: created.id,
-        payload: payloads.urbanServiceScheduled(created, serviceType),
-      });
-
       // Agendar cuenta como tomar la gestión del reclamo: M2 se entera por acá (#303).
       await this.outbox.enqueueMany(
         tx,
@@ -390,7 +383,6 @@ export class ServicesService {
         },
         include: SERVICE_INCLUDE,
       });
-      await this.emitirPodaProgramada(tx, row);
       return row;
     });
 
@@ -435,7 +427,6 @@ export class ServicesService {
         },
         include: SERVICE_INCLUDE,
       });
-      await this.emitirPodaProgramada(tx, row);
       return row;
     });
 
@@ -1217,9 +1208,6 @@ export class ServicesService {
           include: SERVICE_INCLUDE,
         });
         await this.outbox.enqueueMany(tx, events);
-        // Volver a SCHEDULED es el único cambio de estado que puede completar
-        // la franja (confirm-reschedule); el resto no toca cuadrilla ni franja.
-        if (targetStatus === ServiceStatus.SCHEDULED) await this.emitirPodaProgramada(tx, row);
         return row;
       })
       .catch((error: unknown) => {
@@ -1233,56 +1221,6 @@ export class ServicesService {
 
     this.logger.log(`Servicio ${current.id}: ${current.status} → ${targetStatus}`);
     return this.toResponseDto(updated);
-  }
-
-  /**
-   * Emite el treePruningScheduled que `TreeInterventionsService.assignService`
-   * difirió porque al asociar el servicio faltaban cuadrilla o franja (#324).
-   *
-   * Corre dentro de la transacción de la edición, en cada camino que puede
-   * completar esos datos (assign-crew, PATCH, confirm-reschedule). **Sale una
-   * sola vez**: `pruningScheduledAt` se marca con un updateMany condicionado a
-   * null, que actúa de guard atómico si dos pedidos completan el servicio a la
-   * vez. No se reemite ante cambios posteriores de cuadrilla o fecha: M7 no
-   * define un evento de reprogramación de poda. Encola directo en el outbox, sin
-   * importar TreeInterventionsService, para no acoplar los módulos.
-   */
-  private async emitirPodaProgramada(
-    tx: Prisma.TransactionClient,
-    service: ServiceWithRelations,
-  ): Promise<void> {
-    // RESCHEDULED es editable pero la fecha vigente es la vieja: se espera a
-    // confirm-reschedule (que vuelve a SCHEDULED), porque el evento no se reemite.
-    if (service.status !== ServiceStatus.SCHEDULED) return;
-    if (!service.crewId || !service.windowFrom || !service.windowTo) return;
-
-    const intervention = await tx.treeIntervention.findUnique({
-      where: { serviceId: service.id },
-      include: { trees: true },
-    });
-    if (!intervention || intervention.pruningScheduledAt) return;
-
-    const primerArbol = intervention.trees[0]
-      ? await tx.tree.findUnique({ where: { id: intervention.trees[0].treeId } })
-      : null;
-    const payload = payloads.treePruningScheduled(intervention, service, primerArbol);
-    if (!payload) return;
-
-    const { count } = await tx.treeIntervention.updateMany({
-      where: { id: intervention.id, pruningScheduledAt: null },
-      data: { pruningScheduledAt: new Date() },
-    });
-    if (count === 0) return;
-
-    await this.outbox.enqueue(tx, {
-      eventType: EventType.TREE_PRUNING_SCHEDULED,
-      aggregateType: AggregateType.TREE_INTERVENTION,
-      aggregateId: intervention.id,
-      payload,
-    });
-    this.logger.log(
-      `Intervención ${intervention.id}: treePruningScheduled emitido al completarse el servicio ${service.id}`,
-    );
   }
 
   /**

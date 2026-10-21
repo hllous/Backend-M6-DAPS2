@@ -10,13 +10,8 @@ import {
   DamageType,
   RiskLevel,
   RiskType,
-  ServiceCategory,
-  ServiceMode,
-  ServiceOrigin,
-  ServiceStatus,
   Severity,
   TreeHealthStatus,
-  TreeInterventionStatus,
   TreeInterventionType,
 } from '@prisma/client';
 import * as payloads from './payloads';
@@ -66,74 +61,7 @@ function expectValido(evento: string, payload: unknown) {
 const UUID_ACTOR = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
 const ID = (n: number) => `${n}`.repeat(8) + '-1111-1111-1111-111111111111';
 
-const serviceBase = {
-  id: ID(1),
-  serviceTypeId: ID(2),
-  mode: ServiceMode.ROUTE,
-  routeId: ID(3),
-  targetType: null,
-  targetId: null,
-  scheduledDate: new Date('2026-09-15T00:00:00.000Z'),
-  windowFrom: new Date('1970-01-01T08:00:00.000Z'),
-  windowTo: new Date('1970-01-01T12:00:00.000Z'),
-  crewId: ID(4),
-  vehicleId: ID(5),
-  status: ServiceStatus.SCHEDULED,
-  statusReason: null,
-  origin: ServiceOrigin.PLANNED,
-  ticketId: null,
-  notes: null,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  createdBy: null,
-  zones: [{ zoneId: ID(6) }],
-} as never;
-
-const serviceType = {
-  id: ID(2),
-  code: 'REC-DOM',
-  name: 'Recolección domiciliaria',
-  category: ServiceCategory.WASTE_COLLECTION,
-  mode: ServiceMode.ROUTE,
-  requiresVehicle: true,
-  active: true,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-} as never;
-
 describe('payloads de los eventos publicados', () => {
-  describe('urbanServiceScheduled', () => {
-    it('valida con todos los campos', () => {
-      expectValido(
-        'urbanServiceScheduled',
-        payloads.urbanServiceScheduled(serviceBase, serviceType),
-      );
-    });
-
-    it('valida sin ventana horaria: en el modelo es opcional', () => {
-      const sinVentana = { ...(serviceBase as object), windowFrom: null, windowTo: null } as never;
-      const p = payloads.urbanServiceScheduled(sinVentana, serviceType);
-
-      expect(p.timeWindow).toBeUndefined();
-      expectValido('urbanServiceScheduled', p);
-    });
-
-    it('no manda routeId ni ticketId cuando no aplican', () => {
-      const point = {
-        ...(serviceBase as object),
-        mode: ServiceMode.POINT,
-        routeId: null,
-        targetId: ID(7),
-      } as never;
-      const p = payloads.urbanServiceScheduled(point, serviceType);
-
-      expect(p).not.toHaveProperty('routeId');
-      expect(p).not.toHaveProperty('ticketId');
-      expect(p.targetRef).toBe(ID(7));
-      expectValido('urbanServiceScheduled', p);
-    });
-  });
-
   describe('containerDamaged', () => {
     const container = {
       id: ID(1),
@@ -225,49 +153,6 @@ describe('payloads de los eventos publicados', () => {
 
       expect(p).not.toHaveProperty('suggestedIntervention');
       expectValido('treeRiskDetected', p);
-    });
-  });
-
-  describe('treePruningScheduled', () => {
-    const intervention = {
-      id: ID(1),
-      interventionType: TreeInterventionType.SAFETY_PRUNING,
-      serviceId: ID(2),
-      address: 'Calle Falsa 200',
-      requiresStreetClosure: true,
-      status: TreeInterventionStatus.AUTHORIZED,
-      priority: null,
-      authorizedByUserId: null,
-      authorizedAt: null,
-      justification: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      trees: [{ treeId: ID(3) }],
-    } as never;
-
-    const tree = {
-      address: 'Calle Falsa 200',
-      lat: -34.6,
-      lng: -58.4,
-    } as never;
-
-    it('valida cuando el servicio ya tiene cuadrilla y franja', () => {
-      const p = payloads.treePruningScheduled(intervention, serviceBase, tree);
-
-      expect(p).not.toBeNull();
-      expectValido('treePruningScheduled', p);
-    });
-
-    it('devuelve null si falta la cuadrilla: M7 la exige', () => {
-      const sinCuadrilla = { ...(serviceBase as object), crewId: null } as never;
-
-      expect(payloads.treePruningScheduled(intervention, sinCuadrilla, tree)).toBeNull();
-    });
-
-    it('devuelve null si falta la franja horaria: M7 la exige', () => {
-      const sinVentana = { ...(serviceBase as object), windowFrom: null, windowTo: null } as never;
-
-      expect(payloads.treePruningScheduled(intervention, sinVentana, tree)).toBeNull();
     });
   });
 

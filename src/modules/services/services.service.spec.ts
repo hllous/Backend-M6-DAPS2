@@ -1081,6 +1081,17 @@ describe('ServicesService', () => {
       );
     });
 
+    /** M7 solo consume streetClosureRequested: el alta no emite urbanServiceScheduled (#345). */
+    it('el alta solo encola el aviso a M2, nunca urbanServiceScheduled', async () => {
+      await service.create(ticketDto);
+
+      expect(outbox.enqueue).not.toHaveBeenCalled();
+      const encolados = outbox.enqueueMany.mock.calls.flatMap(([, es]: [unknown, unknown[]]) => es);
+      expect(encolados.map((e: { eventType: string }) => e.eventType)).toEqual([
+        'updateTicketStatus',
+      ]);
+    });
+
     it('un servicio sin ticketId no publica nada hacia M2', async () => {
       prisma.service.create.mockResolvedValue(serviceRow());
 

@@ -52,7 +52,7 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 - [api/](api/) — estándar Swagger y 135 endpoints REST del backend
 - [entidades/](entidades/) — modelo conceptual de datos y máquinas de estados
 - [DER.md](DER.md) — modelo relacional entidad-relación (diagrama Mermaid y reglas de esquema)
-- [eventos/publicados/](eventos/publicados/) — los 8 eventos que este módulo emite (con sus `.schema.json`)
+- [eventos/publicados/](eventos/publicados/) — los 6 eventos que este módulo emite (con sus `.schema.json`)
 - [eventos/consumidos/](eventos/consumidos/) — los 10 eventos que este módulo escucha
 - [Acuerdo-Eventos-M6.md](Acuerdo-Eventos-M6.md) — contrato de eventos que circula a las otras cohortes (fuente del PDF; ver [ADR-003](decisiones/adr-003-divergencias-enums.md) por los enums que ya divergen)
 - [Cruce-Eventos-M6.md](Cruce-Eventos-M6.md) — análisis interno del 17/08 que contrasta las listas de eventos de la cohorte; histórico, no se mantiene

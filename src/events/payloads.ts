@@ -5,11 +5,8 @@ import {
   EnvironmentalInspection,
   EnvironmentalReport,
   RepairRequest,
-  Service,
-  ServiceType,
   StreetClosureRequest,
   Tree,
-  TreeIntervention,
   TreeSurvey,
   ViolationNotice,
 } from '@prisma/client';
@@ -21,16 +18,6 @@ import {
  * contra los `.schema.json` de docs/eventos/publicados/ en un test, que es la
  * única forma de saber que lo que emitimos es lo que documentamos.
  */
-
-/** `HH:mm` desde el DateTime que Prisma usa para las columnas @db.Time. */
-function hhmm(value: Date | null): string | undefined {
-  return value ? value.toISOString().slice(11, 16) : undefined;
-}
-
-/** `YYYY-MM-DD` desde una columna @db.Date. */
-function isoDate(value: Date): string {
-  return value.toISOString().slice(0, 10);
-}
 
 /**
  * La ubicación tal como la podemos armar hoy.
@@ -51,12 +38,6 @@ function location(source: {
   return loc;
 }
 
-function timeWindow(from: Date | null, to: Date | null): Record<string, string> | undefined {
-  const f = hhmm(from);
-  const t = hhmm(to);
-  return f && t ? { from: f, to: t } : undefined;
-}
-
 /**
  * Los adjuntos nuestros, en la forma que define el contrato para `evidence`.
  *
@@ -72,29 +53,6 @@ function evidence(attachments: Attachment[]): Record<string, unknown>[] {
 /** Saca las claves en undefined: los schemas usan `additionalProperties: false`. */
 function compact<T extends Record<string, unknown>>(obj: T): T {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
-}
-
-// ─── urbanServiceScheduled → M7 ───────────────────
-
-export function urbanServiceScheduled(
-  service: Service & { zones: { zoneId: string }[] },
-  serviceType: ServiceType,
-): Record<string, unknown> {
-  return compact({
-    serviceId: service.id,
-    serviceTypeCode: serviceType.code,
-    category: serviceType.category,
-    mode: service.mode,
-    zoneIds: service.zones.map((z) => z.zoneId),
-    routeId: service.routeId ?? undefined,
-    targetRef: service.targetId ?? undefined,
-    scheduledDate: isoDate(service.scheduledDate),
-    timeWindow: timeWindow(service.windowFrom, service.windowTo),
-    crewId: service.crewId ?? undefined,
-    vehicleId: service.vehicleId ?? undefined,
-    origin: service.origin,
-    ticketId: service.ticketId ?? undefined,
-  });
 }
 
 // ─── containerDamaged → M3 ────────────────────────
@@ -113,7 +71,7 @@ export function containerDamaged(container: Container, ticketId?: string): Recor
   });
 }
 
-// ─── treeRiskDetected → M3, M7 ────────────────────
+// ─── treeRiskDetected → M3 ────────────────────
 
 export function treeRiskDetected(tree: Tree, survey: TreeSurvey): Record<string, unknown> {
   return compact({
@@ -129,39 +87,6 @@ export function treeRiskDetected(tree: Tree, survey: TreeSurvey): Record<string,
     requiresStreetClosure: survey.requiresStreetClosure,
     requiresPublicWorks: survey.requiresPublicWorks,
     surveyedAt: survey.surveyedAt.toISOString(),
-  });
-}
-
-// ─── treePruningScheduled → M7 ────────────────────
-
-/**
- * Devuelve `null` si el servicio todavía no tiene cuadrilla o franja horaria.
- *
- * M7 declara los dos campos como requeridos y en nuestro modelo son opcionales
- * hasta que se asignan, así que el evento se difiere en vez de emitirse
- * incompleto. Es el desajuste que salió de su tabla del 02/09.
- */
-export function treePruningScheduled(
-  intervention: TreeIntervention & { trees: { treeId: string }[] },
-  service: Service & { zones: { zoneId: string }[] },
-  anyTree: Tree | null,
-): Record<string, unknown> | null {
-  const window = timeWindow(service.windowFrom, service.windowTo);
-  if (!service.crewId || !window) return null;
-
-  return compact({
-    interventionId: intervention.id,
-    serviceId: service.id,
-    interventionType: intervention.interventionType,
-    treeIds: intervention.trees.map((t) => t.treeId),
-    zoneId: service.zones[0]?.zoneId,
-    location: anyTree
-      ? location(anyTree)
-      : location({ address: intervention.address, lat: null, lng: null }),
-    scheduledDate: isoDate(service.scheduledDate),
-    timeWindow: window,
-    crewId: service.crewId,
-    requiresStreetClosure: intervention.requiresStreetClosure,
   });
 }
 
