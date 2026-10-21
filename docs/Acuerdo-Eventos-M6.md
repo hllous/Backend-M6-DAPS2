@@ -1,6 +1,6 @@
 # Acuerdo de Eventos — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 20 de octubre de 2026**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 21 de octubre de 2026**
 
 Este documento sirve para cerrar el contrato de eventos antes de empezar a programar. Tiene tres partes y les pedimos tres cosas distintas:
 
@@ -213,13 +213,15 @@ Esta es la tabla con la que lo implementamos. La columna izquierda son **hechos 
 | Se desestima el expediente | `REJECTED` | `details.cancellation.reasonCode` (`DOES_NOT_APPLY`) + el motivo del operador en `internalMessage`, siempre |
 | El reclamo no es de nuestra área (se devuelve el expediente) | `RETURNED` | `details.returnInfo.reasonCode` (`REQUEST_TYPE_MISMATCH`) + el motivo del operador en `internalMessage`, siempre. Vuelve a M2 para que lo re-derive, en vez de cancelárselo al vecino |
 | Se cierra el expediente | `RESOLVED` | `details.resolution.type` (`ACTION_COMPLETED`) y `publicMessage` («Su denuncia ambiental fue cerrada.»). Si el expediente ya estaba devuelto o desestimado, no sale nada |
-| El inspector necesita un dato del vecino | `INFORMATION_REQUIRED` | **Hoy no lo emitimos**; es una decisión pendiente nuestra. El payload previsto es `details.informationRequest.messageForCitizen` (+ `requiredBy` opcional) |
+| El operador necesita un dato del vecino (expediente con reclamo, en revisión y sin otra solicitud pendiente) | `INFORMATION_REQUIRED` | **Ya lo emitimos.** `details.informationRequest.messageForCitizen` (obligatorio, hasta 500 caracteres; es el mismo texto que `publicMessage`) y `requiredBy` opcional (fecha límite, ISO con zona; si el operador manda solo una fecha, vence a las 23:59:59 hora argentina); `internalMessage` con una nota interna opcional que el vecino no ve. Sin `progress` ni adjuntos. Solo sale con el ticket en `IN_PROGRESS` o `ROUTED`, o sin estado conocido (ver abajo) |
 
 **Qué elegimos para la programación.** Según el estado del ticket que M6 deduce de lo que ya envió y de lo que M2 informa en `ticketUpdated`: `STARTED` si nunca lo vimos o está en `ROUTED` o `IN_REVIEW` (también al reprogramar, mientras siga en uno de esos estados); `PROGRESS` si está en `IN_PROGRESS`; con cualquier otro estado (`REGISTERED`, `DUPLICATE`, `PENDING_INFORMATION`, `RESOLVED`, `CLOSED`, `CANCELLED`) no mandamos nada.
 
 Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode` están publicados desde la v1.5 (antes no estaban enumerados; en la v1.6 `resolution.type` usa `INQUIRY_ANSWERED` en lugar de `INFORMATION_PROVIDED`).
 
-**Secuencia.** `STARTED` va siempre antes de `PROGRESS`, y no repetimos un `STARTED` con el ticket ya en `IN_PROGRESS` (va `PROGRESS`): M2 trata como prematuro un `PROGRESS` sobre un ticket que sigue en `ROUTED`. El primer `updateTicketStatus` de un ticket es siempre `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`. `RETURNED` y `REJECTED` llevan siempre un motivo (`internalMessage`, que M2 acepta como alternativa a `publicMessage`), porque el operador no puede derivar ni desestimar sin escribirlo.
+**Secuencia.** `STARTED` va siempre antes de `PROGRESS`, y no repetimos un `STARTED` con el ticket ya en `IN_PROGRESS` (va `PROGRESS`): M2 trata como prematuro un `PROGRESS` sobre un ticket que sigue en `ROUTED`. El primer `updateTicketStatus` de un ticket es siempre `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`, o `INFORMATION_REQUIRED` si todavía no conocemos su estado. `RETURNED` y `REJECTED` llevan siempre un motivo (`internalMessage`, que M2 acepta como alternativa a `publicMessage`), porque el operador no puede derivar ni desestimar sin escribirlo.
+
+**Pedido de información al vecino (`INFORMATION_REQUIRED`).** Solo sale si M6 conoce o supone el ticket en `IN_PROGRESS` o `ROUTED`, o todavía no tiene un estado conocido para él; con `PENDING_INFORMATION`, `IN_REVIEW` o un estado terminal no mandamos nada y el pedido del operador se rechaza. Una sola solicitud pendiente por expediente. Esperamos de vuelta un `ticketUpdated / INFORMATION_PROVIDED` con la respuesta del vecino: la guardamos y damos la solicitud por cerrada (el que trae `purpose = "RECLASSIFICATION"` no cuenta como respuesta). Mientras hay una solicitud pendiente, M6 no devuelve, desestima ni cierra ese expediente. **Supuesto nuestro, que le pedimos a M2 que confirme:** si la solicitud vence o se cancela de su lado, esperamos un `ticketUpdated` con el estado restaurado; ante un cambio de estado cuyo `currentStatus` no sea `PENDING_INFORMATION` damos la solicitud por cerrada. Es un `updateType` que ya existía en el contrato de M2; M6 pasa a ser productor. El ejemplo completo está en [Sobres-M6.md](Sobres-M6.md).
 
 Los otros dos no tienen una traducción directa, y conviene que quede escrito por qué:
 
@@ -231,7 +233,7 @@ Los otros dos no tienen una traducción directa, y conviene que quede escrito po
 Tres cosas que teníamos anotadas como problema dejaron de serlo:
 
 - **`detail` ya no es todo el canal.** Era nuestra objeción principal: el vecino iba a ver solo prosa. Con `resolution.type` el cierre tiene un texto propio en `publicMessage` y con `attachments[]` podemos mandar la foto del trabajo terminado. La **fecha agendada** también quedó resuelta el 20/10: el campo común `progress` sigue siendo un `Int` (porcentaje) y no hay estructura de `details` para `STARTED`/`PROGRESS`, pero M2 confirmó que la fecha y la franja van como **texto en `publicMessage`**, y ya lo mandamos así.
-- **Podemos pedirle información al ciudadano.** `INFORMATION_REQUIRED` era el canal que dábamos por perdido cuando desapareció `additionalInfoRequired`. No desapareció: se convirtió en una variante. El inspector que necesita una referencia más precisa o una foto nocturna ya tiene por dónde pedirla: el canal existe en el contrato, pero hoy no lo usamos. La v1.5 ya no correlaciona por `informationRequestId` (ese campo nunca llegó a existir formalmente): la respuesta siempre corresponde a la única solicitud activa que puede haber por ticket.
+- **Podemos pedirle información al ciudadano.** `INFORMATION_REQUIRED` era el canal que dábamos por perdido cuando desapareció `additionalInfoRequired`. No desapareció: se convirtió en una variante. El operador que necesita una referencia más precisa o una foto nocturna ya tiene por dónde pedirla, y desde el 21/10 lo usamos (ver la Parte 1). La v1.5 ya no correlaciona por `informationRequestId` (ese campo nunca llegó a existir formalmente): la respuesta siempre corresponde a la única solicitud activa que puede haber por ticket.
 - **`RETURNED` es mejor que rechazar.** Cuando un reclamo no es nuestro, devolverlo a M2 para que lo re-derive es distinto de cancelárselo al vecino. Antes teníamos un solo `REJECTED` para las dos cosas.
 
 ### Lo que se cae

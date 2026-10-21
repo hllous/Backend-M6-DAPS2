@@ -1,6 +1,6 @@
 # Ejemplos de sobres — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 20 de octubre de 2026**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 21 de octubre de 2026**
 
 Anexo del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md). El Acuerdo dice **qué** campos tiene cada evento; este documento muestra **el mensaje completo**, tal como sale de M6 o tal como lo esperamos recibir, para que puedan copiarlo en sus pruebas.
 
@@ -90,9 +90,38 @@ Las otras variantes cambian `updateType` y `details`:
 |---|---|---|
 | `STARTED` | no lleva | `publicMessage` opcional |
 | `PROGRESS` | no lleva | exige al menos uno de `progress`, `publicMessage`, `internalMessage` o `attachments` |
-| `INFORMATION_REQUIRED` | `{ "informationRequest": { "messageForCitizen": "...", "requiredBy": "2026-10-20T12:00:00.000Z" } }` | `requiredBy` opcional. **Diseñado, hoy no lo emitimos**: es una decisión pendiente nuestra |
+| `INFORMATION_REQUIRED` | `{ "informationRequest": { "messageForCitizen": "...", "requiredBy": "2026-11-04T02:59:59.000Z" } }` | `publicMessage` con el mismo texto que `messageForCitizen`; `requiredBy` e `internalMessage` opcionales; sin `progress` ni `attachments`. **Ya lo emitimos**: ver el ejemplo y las reglas más abajo |
 | `RETURNED` | `{ "returnInfo": { "reasonCode": "REQUEST_TYPE_MISMATCH" } }` | `internalMessage` con el motivo del operador, siempre (M2 exige `publicMessage` o `internalMessage`) |
 | `REJECTED` | `{ "cancellation": { "reasonCode": "DOES_NOT_APPLY" } }` (`OTHER` al cancelar un servicio) | `internalMessage` con el motivo del operador, siempre |
+
+**`INFORMATION_REQUIRED`: así lo arma M6.** Lo manda el operador desde un expediente que nació de un reclamo, está en revisión y no tiene otra solicitud pendiente. `messageForCitizen` (obligatorio, hasta 500 caracteres) es el mismo texto que `publicMessage`; `requiredBy` es la fecha límite (opcional, futura; si el operador manda solo una fecha vence a las 23:59:59 hora argentina de ese día); `internalMessage` es una nota interna opcional que el vecino no ve.
+
+```json
+{
+  "eventId": "8d2e4f6a-1b3c-4d5e-9f7a-0b1c2d3e4f5a",
+  "eventType": "updateTicketStatus",
+  "eventVersion": "1.0",
+  "occurredAt": "2026-10-21T14:10:00.000Z",
+  "sourceModule": "ambiente",
+  "correlationId": "d4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f70",
+  "data": {
+    "ticketId": "0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a",
+    "updateType": "INFORMATION_REQUIRED",
+    "publicMessage": "Necesitamos una foto más del frente del local, tomada de noche.",
+    "internalMessage": "La foto anterior salió movida.",
+    "details": {
+      "informationRequest": {
+        "messageForCitizen": "Necesitamos una foto más del frente del local, tomada de noche.",
+        "requiredBy": "2026-11-04T02:59:59.000Z"
+      }
+    },
+    "updatedBy": { "type": "EXTERNAL_USER", "id": "3b9f1c52-6a7e-4d08-9c41-5e2a8d7f0b13" },
+    "updateOccurredAt": "2026-10-21T14:10:00.000Z"
+  }
+}
+```
+
+Solo sale si M6 conoce o supone el ticket en `IN_PROGRESS` o `ROUTED`, o si todavía no tiene un estado conocido para él. Con el ticket en `PENDING_INFORMATION`, `IN_REVIEW` o un estado terminal no mandamos nada y el pedido del operador se rechaza. Esperamos de vuelta un `ticketUpdated / INFORMATION_PROVIDED` con la respuesta del vecino: la guardamos y damos la solicitud por cerrada (el que trae `details.informationResponse.purpose = "RECLASSIFICATION"` no cuenta como respuesta). Mientras hay una solicitud pendiente, M6 no devuelve, desestima ni cierra ese expediente. **Supuesto nuestro, que le pedimos a M2 que confirme:** si la solicitud vence o se cancela de su lado, esperamos un `ticketUpdated` con el estado restaurado; con un `currentStatus` distinto de `PENDING_INFORMATION` en un cambio de estado damos la solicitud por cerrada.
 
 `updatedBy` es `{ "type": "EXTERNAL_USER", "id": "3b9f1c52-6a7e-4d08-9c41-5e2a8d7f0b13" }` cuando actúa una persona, y `{ "type": "SYSTEM", "id": null }` cuando es automático. Desde la v1.78 de M2 el `id` es un UUID o `null` (no se admiten códigos ni enteros): mandamos el identificador del usuario autenticado solo si tiene forma de UUID; si no, `"id": null` con `"type": "EXTERNAL_USER"`. Los adjuntos van en el formato de M2 (`fileName`, `contentType`, `url`, `sizeBytes?`), **sin** `attachmentId`.
 
@@ -104,7 +133,7 @@ Las otras variantes cambian `updateType` y `details`:
 
 Qué `updateType` mandamos depende del estado del ticket que M6 deduce de lo que ya envió y de lo que M2 informa en `ticketUpdated`: `STARTED` si nunca lo vimos o está en `ROUTED` o `IN_REVIEW` (también al reprogramar, mientras siga en uno de esos estados); `PROGRESS` si está en `IN_PROGRESS`; con cualquier otro estado (`REGISTERED`, `DUPLICATE`, `PENDING_INFORMATION`, `RESOLVED`, `CLOSED`, `CANCELLED`) no mandamos nada.
 
-**Secuencia:** `STARTED` va siempre antes de `PROGRESS`; el primer `updateTicketStatus` de un ticket es `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`. Si el ticket ya está `IN_PROGRESS` (por ejemplo porque agendar ya lo arrancó), el inicio del servicio y el inicio de la revisión de un expediente (denuncia ambiental) mandan `PROGRESS` en vez de repetir `STARTED`. Cuando M2 vuelve a derivarnos un reclamo que habíamos devuelto y reactivamos el expediente, mandamos `STARTED` (o `PROGRESS` si ya está `IN_PROGRESS`) con «Su denuncia ambiental está en análisis.». Una demora (`PROGRESS`) solo sale con el servicio en curso. Al emitirse un acta ambiental sale un `PROGRESS` con «Se constató una infracción y se emitió el acta correspondiente.» (nunca el contenido del acta).
+**Secuencia:** `STARTED` va siempre antes de `PROGRESS`; el primer `updateTicketStatus` de un ticket es `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`, o `INFORMATION_REQUIRED` si todavía no conocemos su estado. Si el ticket ya está `IN_PROGRESS` (por ejemplo porque agendar ya lo arrancó), el inicio del servicio y el inicio de la revisión de un expediente (denuncia ambiental) mandan `PROGRESS` en vez de repetir `STARTED`. Cuando M2 vuelve a derivarnos un reclamo que habíamos devuelto y reactivamos el expediente, mandamos `STARTED` (o `PROGRESS` si ya está `IN_PROGRESS`) con «Su denuncia ambiental está en análisis.». Una demora (`PROGRESS`) solo sale con el servicio en curso. Al emitirse un acta ambiental sale un `PROGRESS` con «Se constató una infracción y se emitió el acta correspondiente.» (nunca el contenido del acta).
 
 ## 2.2 `urbanServiceScheduled` → M7
 
@@ -562,7 +591,7 @@ Cada entrega por `q.ambiente` se contesta así:
 | Resultado | Qué pasa | Qué hace el Core |
 |---|---|---|
 | Procesado, duplicado (mismo `eventId`) o ignorado (tipo sin handler) | `ack` | Nada más |
-| El handler falló, o el mensaje es inválido, o pesa más de 100 kB | `nack` **sin reencolar** | Reintenta (15 s → 1 m → 5 m → 15 m) y termina en la DLQ |
+| El handler falló, o el mensaje es inválido, o pesa más de 100 kB | `nack` **sin reencolar** | Reintenta con escalones de 5 s, 30 s, 2 min y 10 min según el intento (`maxAttempts=4`: cuatro intentos totales, incluido el inicial); al agotarlos queda una entrega fallida y una dead letter en el Core |
 
 - Reenviar el `eventId` de un evento **cuyo handler falló** vuelve a correr el handler. Uno ya procesado o en curso sale como duplicado.
 - Un mensaje inválido no se guarda: no ocupa el `eventId` y se puede reenviar corregido con el mismo.
