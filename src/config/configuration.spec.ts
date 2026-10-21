@@ -3,7 +3,8 @@ import configuration from './configuration';
 /** El mínimo que el esquema exige para poder construir la config. */
 const BASE = {
   DATABASE_URL: 'postgresql://u:p@localhost:5432/db?schema=public',
-  JWT_SECRET: Buffer.alloc(32, 7).toString('base64'),
+  // Bytes distintos: en producción un byte repetido se rechaza.
+  JWT_SECRET: Buffer.from(Array.from({ length: 32 }, (_, i) => i * 7 + 1)).toString('base64'),
 };
 
 function config(extra: Record<string, string> = {}) {
@@ -26,6 +27,41 @@ describe('configuration — JWT', () => {
     expect(() => config({ JWT_SECRET: 'un secreto con espacios' })).toThrow(/base64/);
     expect(() => config({ JWT_SECRET: Buffer.alloc(31).toString('base64') })).toThrow(/256/);
     expect(() => config({ JWT_SECRET: '' })).toThrow();
+  });
+
+  it('exige base64 estándar: rechaza base64url, largo no múltiplo de 4 y espacios o saltos', () => {
+    const buf = Buffer.alloc(33, 0xfb); // 0xfb.. produce `+` y `/` en estándar
+    expect(config({ JWT_SECRET: buf.toString('base64') }).jwt.secret).toBe(buf.toString('base64'));
+    expect(() => config({ JWT_SECRET: buf.toString('base64url') })).toThrow(/base64/);
+    expect(() =>
+      config({ JWT_SECRET: Buffer.alloc(32, 7).toString('base64').slice(0, -1) }),
+    ).toThrow(/largo|base64/);
+    const ok = Buffer.alloc(32, 7).toString('base64');
+    expect(() => config({ JWT_SECRET: ` ${ok}` })).toThrow(/base64/);
+    expect(() => config({ JWT_SECRET: `${ok.slice(0, 8)}\n${ok.slice(8)}` })).toThrow(/base64/);
+  });
+
+  it('en producción rechaza secretos públicos o de un byte repetido, sin imprimirlos', () => {
+    const ejemplo = 'Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==';
+    for (const s of [
+      ejemplo,
+      Buffer.alloc(32).toString('base64'),
+      Buffer.alloc(32, 9).toString('base64'),
+      Buffer.alloc(40, 0x41).toString('base64'),
+    ]) {
+      let msg = '';
+      try {
+        config({ NODE_ENV: 'production', JWT_SECRET: s });
+      } catch (e) {
+        msg = String(e);
+      }
+      expect(msg).toMatch(/JWT_SECRET no puede ser/);
+      expect(msg).not.toContain(s);
+    }
+    // Fuera de producción el de ejemplo sigue sirviendo, y uno real pasa en producción.
+    expect(config({ JWT_SECRET: ejemplo }).jwt.secret).toBe(ejemplo);
+    const real = Buffer.from(Array.from({ length: 32 }, (_, i) => i * 7 + 1)).toString('base64');
+    expect(config({ NODE_ENV: 'production', JWT_SECRET: real }).jwt.secret).toBe(real);
   });
 });
 

@@ -29,6 +29,9 @@ function validarUrlAmqp(value: string, ctx: z.RefinementCtx): void {
   }
 }
 
+/** Valor del .env.example: público, así que en producción no protege nada. */
+const JWT_SECRET_EJEMPLO = 'Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==';
+
 export const envSchema = z
   .object({
     // Server
@@ -48,7 +51,9 @@ export const envSchema = z
     // en BASE64 y de al menos 256 bits. Nunca en el repo.
     JWT_SECRET: z
       .string()
-      .regex(/^[A-Za-z0-9+/_-]+={0,2}$/, 'JWT_SECRET tiene que estar en base64')
+      // Base64 estándar (no base64url) y con relleno completo: es lo que decodifica M1.
+      .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'JWT_SECRET tiene que estar en base64 estándar')
+      .refine((v) => v.length % 4 === 0, 'JWT_SECRET: largo inválido para base64')
       .refine(
         (v) => Buffer.from(v, 'base64').length >= 32,
         'JWT_SECRET: mínimo 256 bits (32 bytes)',
@@ -110,6 +115,19 @@ export const envSchema = z
     R2_PUBLIC_URL_BASE: z.string().optional(),
   })
   .superRefine((env, ctx) => {
+    // Secretos que están en el repo (ejemplo, tests, openapi: Buffer.alloc(32[, 9]))
+    // o cualquiera de un solo byte repetido. El mensaje no imprime el valor.
+    if (env.NODE_ENV === 'production') {
+      const bytes = Buffer.from(env.JWT_SECRET, 'base64');
+      if (env.JWT_SECRET === JWT_SECRET_EJEMPLO || bytes.every((b) => b === bytes[0])) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['JWT_SECRET'],
+          message:
+            'En producción JWT_SECRET no puede ser un valor de ejemplo ni de un byte repetido: usar el de M1',
+        });
+      }
+    }
     // En producción la clave no viaja en claro.
     if (env.NODE_ENV === 'production' && /^amqp:/i.test(env.RABBITMQ_URL ?? '')) {
       ctx.addIssue({

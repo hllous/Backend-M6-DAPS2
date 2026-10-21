@@ -8,8 +8,8 @@ import { ROLES_KEY } from '../decorators/roles.decorator';
  *
  * Si el endpoint no tiene @Roles(), permite el acceso (no restringe).
  *
- * Nota: el shape de `user.roles` depende del claim set de M1 — pendiente.
- * Por ahora se asume que el JwtStrategy pone un array de strings en user.roles.
+ * Nota: `user.roles` es `[rol]`, el único rol que trae el token de M1 (sin
+ * área). Ningún endpoint lo usa todavía; el modelo de roles de M6 es el #161.
  */
 @Injectable()
 export class RolesGuard implements CanActivate {
