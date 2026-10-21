@@ -55,7 +55,7 @@ describe('Cierre de servicio que transiciona el contenedor (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor(['SUPERVISOR']));
+    api = new Api(app, tokenFor());
     await truncateAll(prisma);
 
     zoneId = (await crearZona(api)).id;

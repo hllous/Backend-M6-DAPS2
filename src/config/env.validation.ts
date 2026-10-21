@@ -44,9 +44,17 @@ export const envSchema = z
     // cierra un CSRF: es higiene, no un limite de seguridad.
     CORS_ORIGINS: z.string().optional(),
 
-    // JWT — placeholder hasta que M1 publique su contrato de firma y claims
-    JWT_SECRET: z.string().min(8),
-    JWT_EXPIRATION: z.coerce.number().default(3600),
+    // JWT de M1: HS256 con la clave simétrica compartida (`APP_JWT_SECRET` de M1),
+    // en BASE64 y de al menos 256 bits. Nunca en el repo.
+    JWT_SECRET: z
+      .string()
+      .regex(/^[A-Za-z0-9+/_-]+={0,2}$/, 'JWT_SECRET tiene que estar en base64')
+      .refine(
+        (v) => Buffer.from(v, 'base64').length >= 32,
+        'JWT_SECRET: mínimo 256 bits (32 bytes)',
+      ),
+    // `iss` que exigimos en el token.
+    JWT_ISSUER: z.string().min(1).default('modulo1-ciudadanos'),
 
     // Plazo que le damos a M4 para resolver un acta antes de cerrar el
     // expediente por vencimiento. Ver ReportDeadlineSweeper.

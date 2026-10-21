@@ -44,7 +44,7 @@ describe('Vencimiento de cortes aprobados (e2e)', () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
     sweeper = app.get(StreetClosureExpirySweeper);
-    api = new Api(app, tokenFor(['SUPERVISOR']));
+    api = new Api(app, tokenFor());
     await truncateAll(prisma);
     rutaId = (await crearRuta(api, [(await crearZona(api)).id])).id;
     tipoId = (await crearTipoServicio(api, { mode: 'ROUTE' })).id;

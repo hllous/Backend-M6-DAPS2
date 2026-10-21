@@ -3,7 +3,7 @@ import configuration from './configuration';
 /** El mínimo que el esquema exige para poder construir la config. */
 const BASE = {
   DATABASE_URL: 'postgresql://u:p@localhost:5432/db?schema=public',
-  JWT_SECRET: 'un-secreto-de-desarrollo',
+  JWT_SECRET: Buffer.alloc(32, 7).toString('base64'),
 };
 
 function config(extra: Record<string, string> = {}) {
@@ -15,6 +15,19 @@ function config(extra: Record<string, string> = {}) {
     process.env = previo;
   }
 }
+
+describe('configuration — JWT', () => {
+  it('el emisor por defecto es el de M1', () => {
+    expect(config().jwt.issuer).toBe('modulo1-ciudadanos');
+    expect(config({ JWT_ISSUER: 'otro' }).jwt.issuer).toBe('otro');
+  });
+
+  it('rechaza un secreto que no es base64 o tiene menos de 256 bits', () => {
+    expect(() => config({ JWT_SECRET: 'un secreto con espacios' })).toThrow(/base64/);
+    expect(() => config({ JWT_SECRET: Buffer.alloc(31).toString('base64') })).toThrow(/256/);
+    expect(() => config({ JWT_SECRET: '' })).toThrow();
+  });
+});
 
 describe('configuration — CORS', () => {
   /**

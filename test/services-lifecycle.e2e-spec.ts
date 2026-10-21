@@ -34,7 +34,7 @@ describe('Ciclo de vida de un servicio urbano (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor(['SUPERVISOR']));
+    api = new Api(app, tokenFor());
     await truncateAll(prisma);
   });
 

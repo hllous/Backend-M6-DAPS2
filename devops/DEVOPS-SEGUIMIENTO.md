@@ -121,7 +121,7 @@ Para ver los archivos nuevos directamente: `Dockerfile`, `.dockerignore`, `.gith
 Backend:
 ```bash
 docker build -t m6-backend .
-docker run --rm -p 3000:3000 -e DATABASE_URL=postgresql://... -e JWT_SECRET=12345678 m6-backend
+docker run --rm -p 3000:3000 -e DATABASE_URL=postgresql://... -e JWT_SECRET=<base64 de >=32 bytes> m6-backend
 ```
 
 Frontend:
@@ -285,8 +285,7 @@ Se crearon dos documentos detallados en `docs/`:
 **Backend (Render)**:
 ```
 DATABASE_URL=<Internal Database URL de Render>
-JWT_SECRET=<random seguro generado con openssl>
-JWT_EXPIRATION=3600
+JWT_SECRET=<openssl rand -base64 32>
 NODE_ENV=production
 PORT=3000
 ```

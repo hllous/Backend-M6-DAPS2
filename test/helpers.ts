@@ -25,14 +25,20 @@ assertBaseLocal(process.env.DATABASE_URL);
 // e2e locales firmaban con el secreto del entorno desplegado, o sea que cada
 // corrida acunaba bearers validos contra la API real. El secreto solo tiene que
 // coincidir consigo mismo: lo usan tokenFor() y la JwtStrategy en este proceso.
-process.env.JWT_SECRET = 'e2e-jwt-secret-sin-valor-real';
+const E2E_SECRET = Buffer.alloc(32, 9);
+process.env.JWT_SECRET = E2E_SECRET.toString('base64');
+process.env.JWT_ISSUER = 'modulo1-ciudadanos';
 process.env.NODE_ENV ??= 'test';
 
-const jwt = new JwtService({ secret: process.env.JWT_SECRET });
+// Como M1: la clave se usa decodificada de base64.
+const jwt = new JwtService({ secret: E2E_SECRET });
 
-/** Un token HS256 con los claims que espera `JwtStrategy`: `sub` y `roles`. */
-export function tokenFor(roles: string[] = [], sub = 'e2e-user'): string {
-  return jwt.sign({ sub, roles }, { expiresIn: '1h' });
+/** Un access token con el contrato de M1: `iss`, `typ`, `sub` numérico, `sub_type` y `rol` único. */
+export function tokenFor(rol = 'ADMINISTRATIVO', sub = '1'): string {
+  return jwt.sign(
+    { sub, sub_type: rol === 'CIUDADANO' ? 'CIUDADANO' : 'EMPLEADO', rol, typ: 'access' },
+    { expiresIn: '15m', issuer: process.env.JWT_ISSUER },
+  );
 }
 
 export function bearer(token: string): { Authorization: string } {

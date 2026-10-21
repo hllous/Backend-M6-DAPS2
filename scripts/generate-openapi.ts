@@ -22,7 +22,7 @@ import { buildSwaggerConfig } from '../src/swagger-config';
 // El esquema de entorno exige estas dos. Son de mentira a propósito: generar el
 // contrato no toca la base ni firma ningún token.
 process.env.DATABASE_URL ??= 'postgresql://openapi:openapi@localhost:5432/openapi?schema=public';
-process.env.JWT_SECRET ??= 'solo-para-generar-el-contrato';
+process.env.JWT_SECRET ??= Buffer.alloc(32).toString('base64');
 
 const SALIDA = join(__dirname, '..', 'docs', 'api', 'openapi.json');
 

@@ -10,7 +10,7 @@ export default () => {
     },
     jwt: {
       secret: parsed.JWT_SECRET,
-      expirationSeconds: parsed.JWT_EXPIRATION,
+      issuer: parsed.JWT_ISSUER,
     },
     sanctionDeadlineDays: parsed.SANCTION_DEADLINE_DAYS,
     rabbitmq: {
