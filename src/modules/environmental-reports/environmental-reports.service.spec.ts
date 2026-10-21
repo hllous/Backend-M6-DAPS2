@@ -665,6 +665,23 @@ describe('EnvironmentalReportsService', () => {
       expect(tx.environmentalReport.update).not.toHaveBeenCalled();
     });
 
+    it('apaga la solicitud de información pendiente al salir de UNDER_REVIEW', async () => {
+      const tx = { environmentalReport: { update: jest.fn() } };
+
+      await service.applyTransition(
+        tx as any,
+        expediente({ status: S.UNDER_REVIEW, informationRequestedAt: new Date() } as any),
+        S.INSPECTION_SCHEDULED,
+      );
+
+      expect(tx.environmentalReport.update.mock.calls[0][0].data).toEqual({
+        status: S.INSPECTION_SCHEDULED,
+        informationRequestedAt: null,
+        informationRequestMessage: null,
+        informationRequestRequiredBy: null,
+      });
+    });
+
     it('deja pasar datos extra junto con el estado', async () => {
       const tx = { environmentalReport: { update: jest.fn() } };
       const deadlineAt = new Date('2026-10-01T00:00:00.000Z');
