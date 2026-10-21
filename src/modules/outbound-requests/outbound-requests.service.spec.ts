@@ -342,7 +342,15 @@ describe('OutboundRequestsService', () => {
       await expect(service.approveClosure(REQUEST_ID, {})).resolves.toBeDefined();
 
       closureAt(StreetClosureRequestStatus.APPROVED);
-      await expect(service.approveClosure(REQUEST_ID, {})).rejects.toThrow(/\[ENDED\]/);
+      await expect(service.approveClosure(REQUEST_ID, {})).rejects.toThrow(/\[ENDED, EXPIRED\]/);
+    });
+
+    it('finalizar desde EXPIRED es válido: un streetClosureEnded tardío o el /end manual', async () => {
+      closureAt(StreetClosureRequestStatus.EXPIRED);
+      await service.endClosure(REQUEST_ID);
+
+      const [[args]] = prisma.streetClosureRequest.update.mock.calls;
+      expect(args.data.status).toBe(StreetClosureRequestStatus.ENDED);
     });
 
     it('finalizar desde REQUESTED es válido: streetClosureEnded puede adelantarse a Approved', async () => {

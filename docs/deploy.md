@@ -101,14 +101,27 @@ No hay que hacer nada manual en el día a día.
 | `R2_SECRET_ACCESS_KEY` | Secret de API de Cloudflare R2 | Para subida de adjuntos (`/evidence`) |
 | `R2_BUCKET` | Nombre del bucket R2, p. ej. `m6-evidence` | Para subida de adjuntos (`/evidence`) |
 | `R2_PUBLIC_URL_BASE` | Dominio público del bucket, p. ej. `https://pub-xxxx.r2.dev` (sin barra final) | Para devolver URLs directas en `/evidence`. Sin esta variable, `POST /evidence` responde 503 |
-| `RABBITMQ_URL` | `amqp[s]://usuario:clave@host:5672/vhost` (clave percent-encoded; `amqps://` obligatorio con `NODE_ENV=production`) | Opcional hasta que M9 provea broker |
+| `RABBITMQ_URL` | `amqp[s]://usuario:clave@host:puerto/vhost` (con el Core real: `amqps://module_ambiente:<clave>@core-uade-2026.duckdns.org:5671/core`; clave percent-encoded; `amqps://` obligatorio con `NODE_ENV=production`) | Opcional hasta tener la ficha de M9; ver el recuadro de abajo |
 | `RABBITMQ_EXCHANGE` | `muni.inbox` (default): el fanout al que publicamos. Lo crea el Core y la app solo verifica que exista (`checkExchange`), no lo declara | No |
 | `RABBITMQ_QUEUE` | `q.ambiente` (default): la cola de la que consumimos. La crea el Core al registrar nuestras suscripciones y la app solo verifica que exista (`checkQueue`), sin bindings propios | No |
 | `RABBITMQ_PREFETCH` | `1` (default): cuántos mensajes sin ack puede tener la app a la vez. No garantiza orden: el Core reintenta y reordena | No |
 | `CORE_MODULE_ID` | `ambiente` (default): nuestro módulo ante el Core, va como `sourceModule` en el sobre y en el pedido de token | No |
-| `CORE_API_URL` | URL base de la API REST del Core (M9), p. ej. `https://core.example.com`; `https://` obligatorio con `NODE_ENV=production` | Opcional hasta que M9 publique la URL de cada ambiente. Sin ella la app arranca igual y no se le pide nada al Core |
+| `CORE_API_URL` | URL base de la API REST del Core (M9), con el Core real `https://core-uade-2026.duckdns.org`; `https://` obligatorio con `NODE_ENV=production` | Opcional hasta tener la ficha de M9. Sin ella la app arranca igual y no se le pide nada al Core |
 | `CORE_MODULE_SECRET` | Secret de máquina para pedir el token de módulo (`POST /api/v1/auth/module-token`). Lo entrega M9; se carga **solo en el panel de Render**, nunca en el repo ni en `.env.example`, y la app no lo loguea | ✅ Sí si hay `CORE_API_URL` (sin él la app no arranca) |
 
+> **Core de M9 (ambiente real, guía común del 20/10).** El Core está desplegado en AWS: ambiente **único y compartido**, sin testing separado (un evento de prueba puede llegar a otros módulos; coordinar antes de publicar, ver [m9.md](integracion/m9.md#guía-común-de-integración-del-core-2010)). Valores **no secretos** a cargar en el panel de Render cuando M9 entregue la ficha:
+>
+> | Variable | Valor |
+> |---|---|
+> | `RABBITMQ_URL` | `amqps://module_ambiente:<clave percent-encoded>@core-uade-2026.duckdns.org:5671/core` |
+> | `CORE_API_URL` | `https://core-uade-2026.duckdns.org` (la app agrega `/api/v1/...`) |
+> | `CORE_MODULE_ID` | `ambiente` (default) |
+> | `CORE_MODULE_SECRET` | **lo entrega M9 por privado** |
+>
+> El vhost `core` va en la **ruta** de la URL del broker y la clave va **percent-encoded** (`/ ? # @ : %`). La validación de env rechaza `amqp://` y el usuario `guest` con `NODE_ENV=production`. Readiness del Core: `https://core-uade-2026.duckdns.org/health/ready`. La **contraseña de RabbitMQ, el `CORE_MODULE_SECRET`, el acceso al dashboard y la ficha se piden a M9 por privado**: nunca van al repo, a capturas, a logs ni a variables públicas del frontend. Además, el puerto 5671 solo abre para la IP pública de salida de Render que M9 haya dado de alta; si Render la cambia, avisar antes de volver a probar.
+
+> **IP de salida de Render (para el alta del puerto 5671 en el Core):** `74.220.48.0/24` y `74.220.56.0/24` (rangos que muestra el panel de Render para el servicio). Son públicos, por eso van versionados. **Son compartidos por todos los servicios de Render de la región**: al habilitarlos, M9 abre el 5671 a cualquier servicio alojado ahí, y lo que protege la conexión es la autenticación del usuario `module_ambiente`, no el origen. Si Render cambia los rangos, hay que avisarle a M9 antes de volver a probar.
+>
 > **Variables viejas de RabbitMQ**: si el panel de Render todavía tiene `RABBITMQ_EXCHANGE=municipalidad.events` o `RABBITMQ_QUEUE=m6.ambiente`, borrarlas (pisan los defaults nuevos y `checkExchange`/`checkQueue` dan 404). Lo mismo con `RABBITMQ_EXCHANGE_TYPE` y `RABBITMQ_DEAD_LETTER_EXCHANGE`, que ya no existen.
 
 > **Importante**: **NO** setear `PORT` a mano. Render inyecta su propio `PORT` automáticamente; pisarlo rompe el health check del deploy (la app corre en `10000` en free tier).
@@ -151,16 +164,16 @@ No hay que hacer nada manual en el día a día.
 
 ## 6. Estado de la app end-to-end
 
-> Conteos contrastados con el código el 04/10/2026 (134 rutas en 23 tags Swagger). El estado en vivo de Render y Vercel hay que confirmarlo con los `curl` de abajo: no se asume.
+> Conteos contrastados con el código el 04/10/2026 (135 rutas en 23 tags Swagger). El estado en vivo de Render y Vercel hay que confirmarlo con los `curl` de abajo: no se asume.
 
 La infraestructura está deployada, las migraciones corren solas en cada deploy y la API sirve datos reales.
 
 | # | Qué | Estado |
 |---|---|---|
 | 1 | **Migraciones de Prisma** | ✅ Resuelto (PR #49). El `CMD` del Dockerfile corre `npx prisma migrate deploy` antes de arrancar. Si la migración falla, el contenedor no levanta |
-| 2 | **Services de dominio** | ✅ Fases 1 a 7 completas (134 endpoints en 23 tags): catálogos, recursos (cuadrillas, vehículos), contenedores, arbolado, espacios verdes, `Service` (máquina de estados, ZoneResults, CollectionRecords), control ambiental (expedientes, inspecciones, actas, sanciones), derivaciones (M3 reparaciones, M7 cortes), tablero de indicadores (`/indicators`) y portal ciudadano (`/public`) |
+| 2 | **Services de dominio** | ✅ Fases 1 a 7 completas (135 endpoints en 23 tags): catálogos, recursos (cuadrillas, vehículos), contenedores, arbolado, espacios verdes, `Service` (máquina de estados, ZoneResults, CollectionRecords), control ambiental (expedientes, inspecciones, actas, sanciones), derivaciones (M3 reparaciones, M7 cortes), tablero de indicadores (`/indicators`) y portal ciudadano (`/public`) |
 | 3 | **Autenticación** | ⚠️ Provisoria. Todo endpoint exige JWT (guard global), pero la verificación es HS256 contra `JWT_SECRET` hasta que M1 publique su contrato de firma y claims. La autorización por rol server-side está diferida hasta que M1 defina su taxonomía; el frontend realiza control de permisos optimista en UI (ver [ADR-002](decisiones/adr-002-auth-provisoria.md)) |
-| 4 | **Eventos** | ✅ Outbox transaccional (Fase 3), Inbox con handlers (Fase 6) y adaptador/consumidor de RabbitMQ (#234) implementados. Lo que resta es el broker del Core (M9): sin `RABBITMQ_URL` configurada, los eventos se encolan en outbox y se registran en log. Con ella, la app publica al exchange `muni.inbox` y consume `q.ambiente`, que crea el Core al registrar nuestras suscripciones: hasta entonces `checkQueue` falla (404) y el consumidor reintenta la conexión. La ingesta manual puede ejercitarse vía `POST /events/inbox` |
+| 4 | **Eventos** | ✅ Outbox transaccional (Fase 3), Inbox con handlers (Fase 6) y adaptador/consumidor de RabbitMQ (#234) implementados. El Core de M9 **ya está desplegado en AWS** (ambiente único y compartido, guía común del 20/10); lo que falta es la ficha privada y el alta de nuestra IP de salida (#328), y hasta entonces se prueba contra el Core local (#299). Sin `RABBITMQ_URL` configurada, los eventos se encolan en outbox y se registran en log. Con ella, la app publica al exchange `muni.inbox` y consume `q.ambiente`, que crea el Core al registrar nuestras suscripciones: hasta entonces `checkQueue` falla (404) y el consumidor reintenta la conexión. La ingesta manual puede ejercitarse vía `POST /events/inbox` |
 | 5 | **Evidencia y adjuntos** | ✅ Resuelto (Fase 7). `POST /evidence` genérico sobre Cloudflare R2 con `Idempotency-Key` obligatoria respaldada por constraint único en DB (`SERVICE`, `ZONE_RESULT`, `INSPECTION`, `CONTAINER`) |
 | 6 | **Frontend (Next.js)** | ⏳ En desarrollo. Etapa de mapa de Wayfinder completada: diseño (DESIGN.md con paleta Azul Institucional y WCAG 2.2 AA), contratos (CONTRACTS.md), BFF session (ADR-0004) y prototipos interactivos validados |
 

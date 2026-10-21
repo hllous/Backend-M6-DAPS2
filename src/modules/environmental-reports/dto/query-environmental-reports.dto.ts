@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { SearchText, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
+import { IsDateOnly, SearchText, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
 import { EnvironmentalReportStatus, EnvironmentalReportType, Severity } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto';
@@ -49,6 +49,26 @@ export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
   @IsOptional()
   @IsUUID()
   crewId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Actualizados desde este día, inclusive (YYYY-MM-DD, día argentino UTC-3). Filtra por la fecha de última actualización («Actualizado» de la cola)',
+    example: '2026-09-01',
+    format: 'date',
+  })
+  @IsOptional()
+  @IsDateOnly()
+  from?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Actualizados hasta este día, inclusive: hasta las 23:59:59 ART (YYYY-MM-DD). No puede ser anterior a `from`',
+    example: '2026-09-30',
+    format: 'date',
+  })
+  @IsOptional()
+  @IsDateOnly()
+  to?: string;
 
   @ApiPropertyOptional({
     description: 'Buscar por dirección (parcial, case-insensitive)',

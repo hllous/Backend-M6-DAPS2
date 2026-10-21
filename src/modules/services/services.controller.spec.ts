@@ -156,10 +156,10 @@ describe('ServicesController', () => {
     expect(service.reschedule).toHaveBeenCalledWith(ID, 'x');
   });
 
-  it('confirmReschedule delega id y dto', async () => {
+  it('confirmReschedule delega id, dto y quién actuó', async () => {
     const dto = {} as ConfirmRescheduleDto;
-    await controller.confirmReschedule(ID, dto);
-    expect(service.confirmReschedule).toHaveBeenCalledWith(ID, dto);
+    await controller.confirmReschedule(ID, dto, 'user-1');
+    expect(service.confirmReschedule).toHaveBeenCalledWith(ID, dto, 'user-1');
   });
 
   it('addZoneResult delega id y dto', async () => {

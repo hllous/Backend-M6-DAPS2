@@ -277,6 +277,7 @@ package "Inventario urbano" #EAF6EE {
       authorized_by_user_id : varchar <<solo REMOVAL>>
       authorized_at : timestamp <<solo REMOVAL>>
       justification : text <<solo REMOVAL>>
+      pruning_scheduled_at : timestamp <<sin uso: antes marca de treePruningScheduled>>
   }
 
   entity "intervention_tree" as intervention_tree {
@@ -313,6 +314,9 @@ package "Control ambiental" #FBEEF0 {
       priority : enum <<Severity>>
     * escalated : boolean       ' ticketUpdated/ESCALATION_CHANGED
       citizen_response : text   ' ticketUpdated/INFORMATION_PROVIDED
+      information_requested_at : timestamp ' solicitud de información pendiente (null = ninguna)
+      information_request_message : text ' lo que se le pidió al vecino
+      information_request_required_by : timestamp ' plazo dado al vecino
       priority_changed_at : timestamp   ' occurredAt del último PRIORITY_CHANGED aplicado
       escalation_changed_at : timestamp ' occurredAt del último ESCALATION_CHANGED aplicado
       citizen_response_at : timestamp   ' occurredAt del último INFORMATION_PROVIDED aplicado
@@ -392,6 +396,8 @@ package "Derivaciones salientes" #F7F2E7 {
       closure_type : enum <<StreetClosureType>>
       closure_from : timestamp
       closure_to : timestamp
+      approved_from : timestamp ' ventana autorizada por M7
+      approved_to : timestamp
     * status : enum <<StreetClosureRequestStatus>>
       closure_id : varchar <<EXT M7>>
   }
@@ -423,6 +429,16 @@ package "Integración (técnico, no de dominio)" #EFEFEF {
       published_at : timestamp
     * correlation_id : uuid   ' hilo del flujo, heredado del evento consumido
       causation_id : uuid     ' eventId consumido que lo causó; null si es acción directa
+  }
+
+  ' Estado del ticket en M2 que llevamos nosotros (#303): elige STARTED o PROGRESS.
+  entity "ticket_m2_state" as ticket_m2_state {
+    * ticket_id : varchar <<PK>>
+    --
+    * status : varchar        ' valor de M2 (IN_PROGRESS, ROUTED, ...), no un enum nuestro
+    * source : enum <<TicketStateSource>> ' DEDUCED | RECEIVED
+      received_at : timestamp ' data.updatedAt del ticketUpdated: marca de orden
+    * updated_at : timestamp
   }
 
   entity "inbox_event" as inbox_event {

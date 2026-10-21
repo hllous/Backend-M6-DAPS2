@@ -9,6 +9,7 @@ import { Channel, ChannelModel, ConsumeMessage, RecoveringChannelModel, connect 
 import { globalPipes } from '../../configure-app';
 import { InboxService } from '../inbox/inbox.service';
 import { IngestEventDto, toInboundEnvelope } from '../inbox/ingest-event.dto';
+import { paraLog } from '../log-safe';
 import { brokerHost, CONNECT_TIMEOUT_MS, RabbitMqConfig } from '../rabbitmq';
 
 /**
@@ -109,10 +110,20 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
 
     const disposition = await this.handle(msg.content);
 
+    // Para cruzar un fallo nuestro con la auditoría del Core
+    // (`GET /api/v1/events/{eventId}`): solo sus headers, nunca el contenido.
+    const core = coreHeaders(msg);
+    if (disposition === 'nack') {
+      this.logger.warn(`Mensaje no procesado, queda para el reintento del Core: ${core.texto}`);
+    } else if (core.intento > 1) {
+      this.logger.log(`Reintento procesado: ${core.texto}`);
+    }
+
     try {
       // Nunca se reencola (pedido de M9): reencolado, el mensaje gira en nuestra cola
       // sin demora ni auditoría. Con `nack` sin reencolar el Core reintenta con
-      // backoff (15 s → 1 m → 5 m → 15 m) y después lo manda a su DLQ.
+      // su backoff (escalones de 5 s, 30 s, 2 min y 10 min según el intento, guía común
+      // de M9; ver docs/integracion/m9.md) y después lo manda a su DLQ.
       if (disposition === 'ack') channel.ack(msg);
       else channel.nack(msg, false, false);
     } catch (error) {
@@ -156,6 +167,34 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
       return 'nack';
     }
   }
+}
+
+/** Tope de la línea completa: cada campo tiene el suyo, pero la suma también se acota. */
+const MAX_LINEA_CORE = 400;
+/** `x-core-last-error` es texto libre del Core y puede citar valores de dominio. */
+const MAX_ULTIMO_ERROR = 200;
+
+/**
+ * Lo que el Core agrega en headers AMQP: `x-core-attempt` (desde 1),
+ * `x-core-trace-id` y `x-core-last-error` (solo en reintentos); el `eventId`
+ * viaja también como `message_id`. Son datos de un tercero: se sanean con
+ * `paraLog` y la línea final se acota.
+ */
+function coreHeaders(msg: ConsumeMessage): { intento: number; texto: string } {
+  const h = msg.properties?.headers ?? {};
+  const intento = Number(h['x-core-attempt']);
+  const partes = [
+    `eventId=${paraLog(msg.properties?.messageId)}`,
+    `attempt=${paraLog(h['x-core-attempt'], 10)}`,
+    `trace=${paraLog(h['x-core-trace-id'])}`,
+  ];
+  if (h['x-core-last-error'] !== undefined) {
+    partes.push(`lastError=${paraLog(h['x-core-last-error'], MAX_ULTIMO_ERROR)}`);
+  }
+  return {
+    intento: Number.isFinite(intento) ? intento : 1,
+    texto: partes.join(' ').slice(0, MAX_LINEA_CORE),
+  };
 }
 
 function describe(error: unknown): string {

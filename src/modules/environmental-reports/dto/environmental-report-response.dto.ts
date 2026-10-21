@@ -64,6 +64,40 @@ export class EnvironmentalReportResponseDto {
   })
   citizenResponse: string | null;
 
+  @ApiProperty({
+    description:
+      'Hay una solicitud de información al vecino sin responder (POST /environmental-reports/:id/request-information). Mientras sea true no se puede pedir otra. Se apaga cuando M2 avisa la respuesta.',
+    type: Boolean,
+    example: false,
+  })
+  informationRequestPending: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Cuándo se hizo la solicitud pendiente. Null si no hay ninguna.',
+    type: String,
+    format: 'date-time',
+    nullable: true,
+  })
+  informationRequestedAt: Date | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Lo que se le pidió al vecino (el mismo texto que ve en M2). Null si no hay solicitud pendiente.',
+    type: String,
+    example: 'Necesitamos una foto más del frente del local, tomada de noche.',
+    nullable: true,
+  })
+  informationRequestMessage: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Fecha límite que se le dio al vecino. Null si no hay solicitud pendiente o no se fijó plazo.',
+    type: String,
+    format: 'date-time',
+    nullable: true,
+  })
+  informationRequestRequiredBy: Date | null;
+
   @ApiPropertyOptional({
     description:
       'Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.',

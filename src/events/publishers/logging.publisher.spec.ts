@@ -17,7 +17,7 @@ describe('LoggingEventPublisher', () => {
     const publisher = new LoggingEventPublisher();
     const envelope: EventEnvelope = {
       eventId: 'ev-1',
-      eventType: 'urbanServiceScheduled',
+      eventType: 'updateTicketStatus',
       eventVersion: '1.0',
       occurredAt: '2026-01-01T00:00:00.000Z',
       sourceModule: 'ambiente',
@@ -28,8 +28,6 @@ describe('LoggingEventPublisher', () => {
     expect(publisher.transport).toBe('log');
     await publisher.publish(envelope);
 
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('urbanServiceScheduled eventId=ev-1'),
-    );
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('updateTicketStatus eventId=ev-1'));
   });
 });

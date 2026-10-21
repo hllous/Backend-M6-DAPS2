@@ -1,5 +1,7 @@
 # Cruce de Eventos M6
 
+> Nota del 21/10/2026: este análisis es histórico. Hoy M6 publica **6 eventos**; `urbanServiceScheduled` y `treePruningScheduled` se dejaron de emitir porque M7 no los consume (#345). Las menciones de abajo a 8 eventos son del momento del cruce.
+
 **Grupo 04 — Módulo 6, Ambiente, Higiene y Servicios Urbanos**
 Fecha: 17 de agosto de 2026 (cruce original). Métrica de bloqueantes actualizada al 5 de octubre de 2026; M1 y M2 actualizados al 13 de octubre de 2026
 Fuente: listas de eventos publicados y consumidos de M1–M8 (`Eventos.txt`)
@@ -338,9 +340,11 @@ No nos afectan directamente, pero el ruteo del Core los va a chocar de frente. U
 | `workOrderScheduled`, `workOrderAssigned`, `workOrderStarted`, resto de M3 hacia M2 | nadie | M3 | 🔴 Ídem |
 | `additionalInfoRequired` | nadie | M1 | El contrato de M2 (v1.5) lo reemplazó por `updateTicketStatus / INFORMATION_REQUIRED` |
 | `representationExpired`, `citizenBlocked`, `citizenDeceased` | nadie | M1 | Sin consumidor declarado. Puede ser correcto, pero conviene confirmarlo |
-| `eventRejected` | nadie | todos | Todos lo publican y nadie lo consume. Debería consumirlo M9 |
+| `eventProcessingFailed`, `eventRejected` | nadie | todos | ✅ **Dados de baja (M9, 20/10):** eran del Core, nunca circuló ninguno. El reemplazo es `GET /api/v1/dlq`, `/dlq/{id}/audit` y `/events/{eventId}` |
 
 ## Riesgo técnico en el bloque común
+
+✅ **Resuelto el 20/10:** M9 confirmó que `eventProcessingFailed` y `eventRejected` son del Core, que nunca circuló ninguno y que los da de baja. Lo que sigue es el planteo original, que ya no aplica; el reemplazo es `GET /api/v1/dlq`, `/dlq/{id}/audit` y `/events/{eventId}`.
 
 Todos los módulos publicamos `eventProcessingFailed` **y** todos lo consumimos. Si el procesamiento de un `eventProcessingFailed` falla, se publica otro: una tormenta de eventos técnicos que se retroalimenta y que ninguna DLQ frena, porque el problema no es el reintento sino el ciclo.
 

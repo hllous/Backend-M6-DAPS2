@@ -9,7 +9,7 @@ describe('OutboxService', () => {
   let outbox: OutboxService;
 
   const entrada = (over: Partial<OutboxEntry> = {}): OutboxEntry => ({
-    eventType: EventType.URBAN_SERVICE_SCHEDULED,
+    eventType: EventType.UPDATE_TICKET_STATUS,
     aggregateType: AggregateType.SERVICE,
     aggregateId: '99999999-9999-9999-9999-999999999999',
     payload: { serviceId: 'srv-1' },
@@ -32,7 +32,7 @@ describe('OutboxService', () => {
 
       expect(tx.outboxEvent.create).toHaveBeenCalledTimes(1);
       expect(tx.outboxEvent.create.mock.calls[0][0].data).toMatchObject({
-        eventType: 'urbanServiceScheduled',
+        eventType: 'updateTicketStatus',
         aggregateType: 'SERVICE',
         payload: { serviceId: 'srv-1' },
       });
@@ -92,6 +92,50 @@ describe('OutboxService', () => {
       const [primera, segunda] = tx.outboxEvent.createMany.mock.calls[0][0].data;
       expect(primera.occurredAt).toEqual(cuando);
       expect(segunda.occurredAt).not.toEqual(cuando);
+    });
+  });
+
+  /**
+   * El estado del ticket en M2 se deduce al encolar un updateTicketStatus, en la
+   * misma transacción: así lo cubren los emisores de servicios y de expedientes
+   * sin tocarlos uno por uno (#303).
+   */
+  describe('estado del ticket en M2 (#303)', () => {
+    const update = (updateType: string, ticketId = 'tck-1') =>
+      entrada({
+        eventType: EventType.UPDATE_TICKET_STATUS,
+        payload: { ticketId, updateType },
+      });
+
+    beforeEach(() => {
+      tx.ticketM2State = { upsert: jest.fn() };
+    });
+
+    it('enqueue deduce el estado de un updateTicketStatus', async () => {
+      await outbox.enqueue(tx, update('STARTED'));
+
+      expect(tx.ticketM2State.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { ticketId: 'tck-1' },
+          create: expect.objectContaining({ status: 'IN_PROGRESS', source: 'DEDUCED' }),
+        }),
+      );
+    });
+
+    it('enqueueMany deduce uno por cada updateTicketStatus', async () => {
+      await outbox.enqueueMany(tx, [update('STARTED', 'a'), entrada(), update('RESOLVED', 'b')]);
+
+      expect(tx.ticketM2State.upsert).toHaveBeenCalledTimes(2);
+    });
+
+    it('un PROGRESS no cambia el estado', async () => {
+      await outbox.enqueue(tx, update('PROGRESS'));
+      expect(tx.ticketM2State.upsert).not.toHaveBeenCalled();
+    });
+
+    it('los demás eventos no tocan la tabla', async () => {
+      await outbox.enqueue(tx, entrada());
+      expect(tx.ticketM2State.upsert).not.toHaveBeenCalled();
     });
   });
 

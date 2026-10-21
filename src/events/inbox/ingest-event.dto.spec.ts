@@ -88,6 +88,28 @@ describe('IngestEventDto', () => {
       },
     );
 
+    // El Core valida con `uuid.UUID` y entrega normalizado (#296): lo que acepta
+    // no puede rechazarlo nuestro inbox, o el evento entero va a la DLQ.
+    it.each([
+      ['variante inválida', '646d19f5-5670-4a7b-c442-30e13b02ba11'],
+      ['nulo', '00000000-0000-0000-0000-000000000000'],
+      ['máximo', 'ffffffff-ffff-ffff-ffff-ffffffffffff'],
+      ['versión 0', '646d19f5-5670-0a7b-9442-30e13b02ba11'],
+      ['mayúsculas', '646D19F5-5670-4A7B-9442-30E13B02BA11'],
+    ])('acepta un correlationId y un causationId con %s', async (_caso, uuid) => {
+      await expect(validarCore({ correlationId: uuid, causationId: uuid })).resolves.toMatchObject({
+        correlationId: uuid,
+        causationId: uuid,
+      });
+    });
+
+    it.each(['646d19f556704a7b944230e13b02ba11', '{646d19f5-5670-4a7b-9442-30e13b02ba11}'])(
+      'rechaza %s: el Core ya lo entrega normalizado',
+      async (correlationId) => {
+        await expect(validarCore({ correlationId })).rejects.toBeInstanceOf(BadRequestException);
+      },
+    );
+
     it('un eventId que no es UUID sigue entrando: no se exige para no rechazar a quien no migró', async () => {
       await expect(validarCore({ eventId: 'e-1' })).resolves.toMatchObject({ eventId: 'e-1' });
     });

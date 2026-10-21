@@ -1,4 +1,11 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { startOfDayArgentina, toDateOnly } from '../../common/utils/date-only';
 import {
   EnvironmentalReport,
   EnvironmentalReportStatus as S,
@@ -9,10 +16,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
+import { leerEstado, startUpdate } from '../../events/ticket-state';
 import {
   CreateEnvironmentalReportDto,
   EnvironmentalReportResponseDto,
   QueryEnvironmentalReportsDto,
+  RequestInformationDto,
 } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
 
@@ -44,6 +53,13 @@ export const REPORT_TRANSITIONS: Record<S, S[]> = {
   SANCTIONED: [S.CLOSED],
   CLOSED: [S.UNDER_REVIEW],
 };
+
+/**
+ * Columna sobre la que filtran `from`/`to`: la que la cola muestra como «Actualizado».
+ * Pendiente de confirmar con el PO; si prefiere la fecha de alta, es solo cambiar acá a 'createdAt'.
+ */
+const DATE_FILTER_COLUMN = 'updatedAt' as const;
+const DAY_MS = 86_400_000;
 
 /**
  * Un servicio cancelado ya no es una asignación: la cuadrilla no va a ir. Lo
@@ -114,6 +130,20 @@ export class EnvironmentalReportsService {
   ): Promise<PaginatedResponseDto<EnvironmentalReportResponseDto>> {
     const where: Prisma.EnvironmentalReportWhereInput = {};
 
+    if (query.from && query.to && toDateOnly(query.from) > toDateOnly(query.to)) {
+      throw new BadRequestException(
+        `'from' (${query.from}) no puede ser posterior a 'to' (${query.to})`,
+      );
+    }
+    // `to` es inclusivo: hasta el final de ese día argentino, o sea antes de las
+    // 00:00 ART del día siguiente (los timestamps tienen hora, a diferencia de un @db.Date).
+    if (query.from || query.to) {
+      where[DATE_FILTER_COLUMN] = {
+        ...(query.from && { gte: startOfDayArgentina(query.from) }),
+        ...(query.to && { lt: new Date(startOfDayArgentina(query.to).getTime() + DAY_MS) }),
+      };
+    }
+
     if (query.status) where.status = query.status;
     if (query.reportType) where.reportType = query.reportType;
     if (query.priority) where.priority = query.priority;
@@ -164,9 +194,12 @@ export class EnvironmentalReportsService {
   /** RECEIVED → UNDER_REVIEW */
   async startReview(id: string, actorId: string): Promise<EnvironmentalReportResponseDto> {
     const report = await this.getReport(id);
+    // Si agendar un servicio ya arrancó el ticket, repetir STARTED no es válido
+    // para M2: el mismo aviso viaja como PROGRESS (#303).
+    const estadoTicket = report.ticketId ? await leerEstado(this.prisma, report.ticketId) : null;
     return this.transition(report, S.UNDER_REVIEW, {}, [
       ...this.ticketEvents(report, actorId, {
-        updateType: 'STARTED',
+        updateType: startUpdate(estadoTicket),
         publicMessage: 'Su denuncia ambiental está en análisis.',
       }),
     ]);
@@ -183,7 +216,7 @@ export class EnvironmentalReportsService {
     reason: string,
     actorId: string,
   ): Promise<EnvironmentalReportResponseDto> {
-    const report = await this.getReport(id);
+    const report = this.assertNoPendingRequest(await this.getReport(id));
     return this.transition(report, S.FORWARDED, {}, [
       ...this.ticketEvents(report, actorId, {
         updateType: 'RETURNED',
@@ -199,7 +232,7 @@ export class EnvironmentalReportsService {
     reason: string,
     actorId: string,
   ): Promise<EnvironmentalReportResponseDto> {
-    const report = await this.getReport(id);
+    const report = this.assertNoPendingRequest(await this.getReport(id));
     return this.transition(report, S.DISMISSED, {}, [
       ...this.ticketEvents(report, actorId, {
         updateType: 'REJECTED',
@@ -218,7 +251,7 @@ export class EnvironmentalReportsService {
    * Además le diría "fue cerrada" al vecino después de "no corresponde" (#146).
    */
   async close(id: string, actorId: string): Promise<EnvironmentalReportResponseDto> {
-    const report = await this.getReport(id);
+    const report = this.assertNoPendingRequest(await this.getReport(id));
     const yaInformado = report.status === S.FORWARDED || report.status === S.DISMISSED;
     return this.transition(
       report,
@@ -234,11 +267,120 @@ export class EnvironmentalReportsService {
     );
   }
 
+  /**
+   * Pide información al vecino durante la revisión (#169). El expediente sigue
+   * en UNDER_REVIEW: lo que cambia es la solicitud pendiente y el ticket en M2
+   * (PENDING_INFORMATION, que el outbox deduce del evento).
+   *
+   * M2 admite una sola solicitud activa por ticket y solo la acepta con el
+   * ticket en ROUTED o IN_PROGRESS (§8.2); el estado conocido (#303) evita
+   * mandar uno que M2 rechazaría y el Core reintentaría hasta la DLQ.
+   */
+  async requestInformation(
+    id: string,
+    dto: RequestInformationDto,
+    actorId: string,
+  ): Promise<EnvironmentalReportResponseDto> {
+    const report = await this.getReport(id);
+    // Error de la entrada: va después del 404 pero antes de los 409 de estado.
+    const requiredBy = dto.requiredBy ? this.resolveRequiredBy(dto.requiredBy) : null;
+    const now = new Date();
+    if (requiredBy && requiredBy <= now) {
+      throw new BadRequestException('requiredBy tiene que ser una fecha futura');
+    }
+    if (!report.ticketId) {
+      throw new ConflictException(
+        'El expediente no tiene reclamo de origen: no hay un vecino a quien pedirle información',
+      );
+    }
+    if (report.status !== S.UNDER_REVIEW) {
+      throw new ConflictException(
+        `Solo se puede pedir información a un expediente en UNDER_REVIEW (está en '${report.status}')`,
+      );
+    }
+    if (report.informationRequestedAt) {
+      throw new ConflictException(
+        'Ya hay una solicitud de información pendiente: hay que esperar la respuesta del vecino',
+      );
+    }
+    const estadoTicket = await leerEstado(this.prisma, report.ticketId);
+    if (estadoTicket && estadoTicket !== 'IN_PROGRESS' && estadoTicket !== 'ROUTED') {
+      throw new ConflictException(
+        `M2 no admite pedir información con el ticket en '${estadoTicket}' (solo IN_PROGRESS o ROUTED)`,
+      );
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // No pasa por `transition`: el estado del expediente no cambia. El where es
+      // el guard contra dos pedidos simultáneos (uno solo ve count 1).
+      const { count } = await tx.environmentalReport.updateMany({
+        where: { id, status: S.UNDER_REVIEW, informationRequestedAt: null },
+        data: {
+          informationRequestedAt: now,
+          informationRequestMessage: dto.message,
+          informationRequestRequiredBy: requiredBy,
+        },
+      });
+      if (!count) {
+        throw new ConflictException(
+          'El expediente cambió de estado o ya tiene una solicitud pendiente',
+        );
+      }
+      await this.outbox.enqueueMany(
+        tx,
+        this.ticketEvents(report, actorId, {
+          updateType: 'INFORMATION_REQUIRED',
+          publicMessage: dto.message,
+          // M2 exige null o algún carácter no blanco: una nota en blanco no viaja.
+          internalMessage: dto.internalNote?.trim() || undefined,
+          details: {
+            informationRequest: {
+              messageForCitizen: dto.message,
+              requiredBy: requiredBy?.toISOString(),
+            },
+          },
+        }),
+      );
+      return tx.environmentalReport.findUniqueOrThrow({
+        where: { id },
+        include: WITH_ASSIGNED_CREW,
+      });
+    });
+
+    this.logger.log(`Expediente ${id}: información pedida al vecino (reclamo ${report.ticketId})`);
+    return this.toResponseDto(updated);
+  }
+
+  /**
+   * M2 solo acepta RETURNED, RESOLVED y REJECTED con el ticket en ROUTED o
+   * IN_PROGRESS: con una solicitud pendiente (PENDING_INFORMATION) publicaríamos
+   * un evento inválido y el estado deducido divergiría del de M2.
+   */
+  private assertNoPendingRequest(report: EnvironmentalReport): EnvironmentalReport {
+    if (report.informationRequestedAt) {
+      throw new ConflictException(
+        'Hay una solicitud de información al vecino pendiente: esperar la respuesta o su vencimiento',
+      );
+    }
+    return report;
+  }
+
+  /** YYYY-MM-DD vence al final de ese día argentino; un ISO completo se respeta. */
+  private resolveRequiredBy(value: string): Date {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value)
+      ? new Date(startOfDayArgentina(value).getTime() + DAY_MS - 1000)
+      : new Date(value);
+  }
+
   // ─── Transiciones que disparan otros módulos ──────
 
   /**
    * Las mueve la inspección y el acta, no un endpoint propio del expediente.
    * Se exponen para que esos módulos las apliquen dentro de su transacción.
+   *
+   * Igual que `transition()`, apaga la solicitud de información pendiente (#169)
+   * cuando el expediente sale de UNDER_REVIEW: si no, la marca queda pegada y
+   * `forward`/`dismiss`/`close` dan 409 para siempre.
    */
   async applyTransition(
     tx: Prisma.TransactionClient,
@@ -249,7 +391,17 @@ export class EnvironmentalReportsService {
     this.assertTransition(report.status, target);
     await tx.environmentalReport.update({
       where: { id: report.id },
-      data: { status: target, ...data },
+      data: {
+        status: target,
+        ...(report.informationRequestedAt && target !== S.UNDER_REVIEW
+          ? {
+              informationRequestedAt: null,
+              informationRequestMessage: null,
+              informationRequestRequiredBy: null,
+            }
+          : {}),
+        ...data,
+      },
     });
     this.logger.log(`Expediente ${report.id}: ${report.status} → ${target}`);
   }
@@ -286,7 +438,17 @@ export class EnvironmentalReportsService {
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.environmentalReport.update({
         where: { id: report.id },
-        data: { status: target, ...data },
+        // La solicitud pendiente solo tiene sentido en UNDER_REVIEW: una marca que
+        // sobrevive al cambio de estado bloquearía todo pedido nuevo.
+        data: {
+          status: target,
+          ...(target !== S.UNDER_REVIEW && {
+            informationRequestedAt: null,
+            informationRequestMessage: null,
+            informationRequestRequiredBy: null,
+          }),
+          ...data,
+        },
         include: WITH_ASSIGNED_CREW,
       });
       await this.outbox.enqueueMany(tx, events);
@@ -343,6 +505,10 @@ export class EnvironmentalReportsService {
       priority: report.priority,
       escalated: report.escalated,
       citizenResponse: report.citizenResponse,
+      informationRequestPending: report.informationRequestedAt != null,
+      informationRequestedAt: report.informationRequestedAt ?? null,
+      informationRequestMessage: report.informationRequestMessage ?? null,
+      informationRequestRequiredBy: report.informationRequestRequiredBy ?? null,
       deadlineAt: report.deadlineAt,
       assignedCrewId: report.inspections[0]?.service?.crewId ?? null,
       createdAt: report.createdAt,

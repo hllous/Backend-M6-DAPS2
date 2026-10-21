@@ -4,10 +4,11 @@ import {
   StreetClosureRequestsController,
 } from './outbound-requests.controller';
 import { OutboundRequestsService } from './outbound-requests.service';
+import { StreetClosureExpirySweeper } from './street-closure-expiry.sweeper';
 
 @Module({
   controllers: [RepairRequestsController, StreetClosureRequestsController],
-  providers: [OutboundRequestsService],
+  providers: [OutboundRequestsService, StreetClosureExpirySweeper],
   exports: [OutboundRequestsService],
 })
 export class OutboundRequestsModule {}

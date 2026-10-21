@@ -7,9 +7,14 @@ import {
   Severity,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { InboxService } from '../inbox/inbox.service';
+import { aFecha, InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent, TicketUpdateType } from '../inbox/consumed-events';
 import { Data, esObjeto, esTexto, requerido } from '../inbox/payload-validation';
+import { esEstadoM2, leerEstado, registrarRecibido, startUpdate } from '../ticket-state';
+import { paraLog } from '../log-safe';
+import { OutboxService } from '../outbox/outbox.service';
+import { AggregateType, EventType } from '../event-types';
+import * as payloads from '../payloads';
 import { REPORT_TRANSITIONS } from '../../modules/environmental-reports/environmental-reports.service';
 
 /**
@@ -30,6 +35,34 @@ const TIPO_POR_PALABRA: [RegExp, EnvironmentalReportType][] = [
 ];
 
 /** La marca de orden de cada dato que M2 pisa (#270). Ver `noAtrasado()`. */
+/** Las tres columnas de la solicitud de información al vecino (#169), apagadas. */
+const SIN_SOLICITUD = {
+  informationRequestedAt: null,
+  informationRequestMessage: null,
+  informationRequestRequiredBy: null,
+};
+
+/**
+ * Los updateType de M2 (§7.2) que implican un cambio de estado del ticket, y por
+ * eso pueden cerrar una solicitud de información pendiente (#169). Los demás
+ * traen `currentStatus` pero no lo cambian, y uno atrasado puede llevar un estado
+ * viejo mientras M2 ya está en PENDING_INFORMATION: cerraría la solicitud por error.
+ *   incluidos: STATUS_CHANGED, ROUTED (nueva derivación), REOPENED, RESOLVED,
+ *     CLOSED, CANCELLED y DUPLICATE_LINKED (el ticket quedó DUPLICATE).
+ *   excluidos: PRIORITY_CHANGED, ESCALATION_CHANGED, CONTENT_UPDATED y PROGRESS
+ *     (no cambian de estado), INFORMATION_REQUIRED (es PENDING_INFORMATION) e
+ *     INFORMATION_PROVIDED (se cierra en su propio update, con la respuesta).
+ */
+const CAMBIAN_EL_ESTADO: readonly string[] = [
+  'STATUS_CHANGED',
+  'ROUTED',
+  'REOPENED',
+  'RESOLVED',
+  'CLOSED',
+  'CANCELLED',
+  'DUPLICATE_LINKED',
+];
+
 type Marca = 'priorityChangedAt' | 'escalationChangedAt' | 'citizenResponseAt' | 'ticketStatusAt';
 
 /** Los que escriben "gana el último" y por eso ordenan por occurredAt (#270). */
@@ -62,7 +95,7 @@ const PRIORIDAD: Record<string, Severity> = {
  * INFORMATION_REQUIRED, STATUS_CHANGED, RESOLVED y CLOSED.
  *
  * **El orden de llegada no es el de M2** (#270): el Core reintenta un handler
- * fallido hasta ~21 min después, detrás de eventos más nuevos del mismo
+ * fallido unos minutos después (según el backoff del Core), detrás de eventos más nuevos del mismo
  * ticket. Lo que pisa un dato compara su `occurredAt` con la marca de ese dato
  * en el expediente y, si no es más nuevo, se ignora (sale `processed`:
  * reintentarlo no lo haría más nuevo). Si en cambio el expediente todavía no
@@ -76,6 +109,7 @@ export class TicketsConsumer implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inbox: InboxService,
+    private readonly outbox: OutboxService,
   ) {}
 
   onModuleInit(): void {
@@ -119,7 +153,13 @@ export class TicketsConsumer implements OnModuleInit {
     return data.responsibleAreaId === AREA_M6;
   }
 
-  private async handle(data: Record<string, unknown>, at: Date | null): Promise<void> {
+  private async handle(data: Record<string, unknown>, occurredAt: Date | null): Promise<void> {
+    // M2 (20/10): se ordena por `data.updatedAt`, cuándo persistió el cambio. El
+    // `occurredAt` del sobre es cuándo se publicó y puede ser posterior si se demoró
+    // o se reintentó, así que solo queda de respaldo. Dentro del mismo productor:
+    // no se compara con timestamps nuestros. Mismo tope de futuro que el inbox.
+    const updatedAt = typeof data.updatedAt === 'string' ? data.updatedAt : undefined;
+    const at = aFecha(updatedAt) ?? occurredAt;
     const updateType = String(data.updateType ?? '');
     const ticketId = data.ticketId as string | undefined;
 
@@ -135,6 +175,10 @@ export class TicketsConsumer implements OnModuleInit {
     // de la infraestructura. Sin esto, un reclamo derivado a cualquier otro
     // modulo abriria igual un expediente de este lado.
     if (!this.esNuestro(data)) {
+      // Un ticket que devolvimos y M2 reasignó a otra área: el ROUTED ajeno es la
+      // señal para cerrar nuestro expediente devuelto. Solo ticketId y área, nada
+      // del contenido de un ticket que no es nuestro.
+      if (updateType === TicketUpdateType.ROUTED) await this.cerrarDevuelto(ticketId, at);
       this.logger.log(
         `ticketUpdated/${updateType}: responsibleAreaId=${String(data.responsibleAreaId ?? '(ausente)').slice(0, 32)} no es nuestro, se descarta`,
       );
@@ -144,6 +188,32 @@ export class TicketsConsumer implements OnModuleInit {
     if (!at && ORDENADOS.includes(updateType)) {
       this.logger.warn(
         `ticketUpdated/${updateType} (${ticketId}) sin occurredAt: se aplica sin poder ordenarlo`,
+      );
+    }
+
+    // El estado que M2 informa (#303). Solo de un ticket nuestro: el filtro de
+    // arriba ya descartó los ajenos, de los que no guardamos nada. Va para todo
+    // updateType, también los que no tienen otro efecto, porque `currentStatus`
+    // es campo común.
+    if (esEstadoM2(data.currentStatus)) {
+      const aplicado = await registrarRecibido(this.prisma, ticketId, data.currentStatus, at);
+      // Un cambio de estado a algo distinto de PENDING_INFORMATION significa que la
+      // solicitud ya no está viva (vencida, cancelada, reabierta, #169). Solo cuentan
+      // los updateType de CAMBIO_DE_ESTADO; INFORMATION_PROVIDED la cierra en su propio
+      // update, junto con la respuesta.
+      if (
+        aplicado &&
+        data.currentStatus !== 'PENDING_INFORMATION' &&
+        CAMBIAN_EL_ESTADO.includes(updateType) &&
+        !this.esReclasificacion(data)
+      ) {
+        await this.cerrarSolicitud(ticketId, at);
+      }
+    } else if (data.currentStatus !== undefined && data.currentStatus !== null) {
+      // Fuera de la lista de §3: no se guarda (no puede dejar un estado basura que
+      // calle el aviso de programación) y no rompe el handler. Valor de un tercero.
+      this.logger.warn(
+        `ticketUpdated/${paraLog(updateType)}: currentStatus ${paraLog(data.currentStatus, 40)} no es un estado de M2, no se guarda`,
       );
     }
 
@@ -166,6 +236,51 @@ export class TicketsConsumer implements OnModuleInit {
     }
   }
 
+  /** Una reclasificación es entre M2 y el vecino: el ticket sigue en revisión y no es nuestra. */
+  private esReclasificacion(data: Record<string, unknown>): boolean {
+    const details = (data.details ?? {}) as Record<string, Record<string, unknown> | undefined>;
+    return (
+      details.informationResponse?.purpose === 'RECLASSIFICATION' ||
+      details.informationRequest?.purpose === 'RECLASSIFICATION'
+    );
+  }
+
+  /**
+   * Apaga la solicitud de información pendiente (#169). Se ordena con
+   * `citizenResponseAt`, la marca de la respuesta del vecino, para no pisar una
+   * respuesta más nueva; y el llamador ya descartó lo más viejo que el último
+   * estado recibido (`registrarRecibido`). Sin pendiente no toca nada.
+   */
+  private async cerrarSolicitud(ticketId: string, at: Date | null): Promise<void> {
+    const { count } = await this.prisma.environmentalReport.updateMany({
+      where: {
+        ticketId,
+        informationRequestedAt: { not: null },
+        ...this.noAtrasado('citizenResponseAt', at),
+      },
+      data: SIN_SOLICITUD,
+    });
+    if (count) {
+      this.logger.log(`ticketUpdated: solicitud de información del ticket ${ticketId} cerrada`);
+    }
+  }
+
+  /**
+   * El ticket que devolvimos (`FORWARDED`) pasó a otra área: lo cerramos. La marca
+   * evita que un ROUTED viejo, de antes de la devolución, que llega tarde lo cierre.
+   */
+  private async cerrarDevuelto(ticketId: string, at: Date | null): Promise<void> {
+    const { count } = await this.prisma.environmentalReport.updateMany({
+      where: { ticketId, status: S.FORWARDED, ...this.noAtrasado('ticketStatusAt', at) },
+      data: { status: S.CLOSED },
+    });
+    if (count) {
+      this.logger.log(
+        `ticketUpdated/ROUTED: ${ticketId} pasó a otra área, expediente devuelto cerrado`,
+      );
+    }
+  }
+
   /**
    * La entrada. Abre el expediente ambiental.
    *
@@ -185,8 +300,13 @@ export class TicketsConsumer implements OnModuleInit {
     at: Date | null,
   ): Promise<void> {
     const existente = await this.prisma.environmentalReport.findFirst({ where: { ticketId } });
-    if (existente) {
-      this.logger.log(`ticketUpdated/ROUTED: el ticket ${ticketId} ya tiene expediente abierto`);
+    // Un reintento del mismo ROUTED no llega acá: el inbox lo descarta por
+    // `eventId`. Si llega, es una derivación nueva (M2, 20/10): solo puede ser
+    // de un ticket que devolvimos, así que lo único que se reactiva es FORWARDED.
+    if (existente && existente.status !== S.FORWARDED) {
+      this.logger.log(
+        `ticketUpdated/ROUTED: el ticket ${ticketId} ya tiene expediente (${existente.status}), no se reactiva`,
+      );
       return;
     }
 
@@ -202,38 +322,83 @@ export class TicketsConsumer implements OnModuleInit {
     // deja su propio occurredAt como marca.
     const marca = at && new Date(at.getTime() - 1);
 
+    const snapshot = {
+      // Campo común desde la v1.70 (§7.1). Solo para mostrar y buscar: la
+      // correlación sigue siendo por ticketId.
+      publicId: typeof data.publicId === 'string' ? data.publicId : null,
+      reportType: this.tipoDeDenuncia(nombre),
+      address: this.direccion(location),
+      // La v1.6 sacó latitude/longitude de `location` (§5.4): quedan en null
+      // salvo que M2 las mande igual. Se georreferencia por `address`.
+      lat: location.latitude != null ? Number(location.latitude) : null,
+      lng: location.longitude != null ? Number(location.longitude) : null,
+      priority,
+      // El snapshot trae el escalamiento vigente (§7.4). Si M2 lo escaló antes
+      // de derivar, no va a llegar un ESCALATION_CHANGED que lo marque.
+      escalated: escalated ?? false,
+      // El snapshot ya refleja lo anterior a su occurredAt: un cambio más
+      // viejo que el Core reintenta después no lo pisa, y uno más nuevo que
+      // llegó antes y falló sí aplica (#275). Solo marca lo que el snapshot
+      // trae: sin prioridad o sin escalamiento no hay qué proteger, y
+      // `citizenResponse` nunca viene, así que una respuesta anterior al
+      // ROUTED todavía puede guardarse.
+      ticketStatusAt: marca,
+      priorityChangedAt: priority ? marca : null,
+      escalationChangedAt: escalated !== null ? marca : null,
+      // Solo lo que el vecino aceptó exponer: si es anónimo no guardamos
+      // identidad.
+      reporterSnapshot: data.isAnonymous
+        ? { isAnonymous: true }
+        : { isAnonymous: false, citizenId: data.citizenId ?? null },
+    };
+
+    if (existente) {
+      // Re-derivación tras una devolución: se reactiva el expediente con el
+      // snapshot nuevo en vez de crear otro. El estado va en el `where`: un
+      // reproceso del mismo evento ya no lo encuentra en FORWARDED.
+      //
+      // M2 (20/10): reactivar es tomar la gestión otra vez, y el vecino tiene que
+      // verlo (#309). El aviso sale solo si este update tocó la fila, así que un
+      // reproceso no lo duplica, y en la misma transacción: sin el cambio no hay
+      // aviso, y sin el aviso no queda el cambio. El handler corre dentro de
+      // `eventContext`, así que el evento hereda el hilo y su causa es el ROUTED.
+      const count = await this.prisma.$transaction(async (tx) => {
+        const { count } = await tx.environmentalReport.updateMany({
+          where: {
+            id: existente.id,
+            status: S.FORWARDED,
+            ...this.noAtrasado('ticketStatusAt', at),
+          },
+          data: { ...snapshot, status: S.UNDER_REVIEW },
+        });
+        if (count && existente.ticketId) {
+          // Si por algún motivo el ticket ya está IN_PROGRESS, repetir STARTED no
+          // es válido para M2: va como PROGRESS.
+          const estado = await leerEstado(tx, existente.ticketId);
+          await this.outbox.enqueue(tx, {
+            eventType: EventType.UPDATE_TICKET_STATUS,
+            aggregateType: AggregateType.ENVIRONMENTAL_REPORT,
+            aggregateId: existente.id,
+            payload: payloads.updateTicketStatus({
+              ticketId: existente.ticketId,
+              updateType: startUpdate(estado),
+              updatedById: 'sistema',
+              publicMessage: 'Su denuncia ambiental está en análisis.',
+            }),
+          });
+        }
+        return count;
+      });
+      this.logger.log(
+        count
+          ? `ticketUpdated/ROUTED: expediente ${existente.id} reactivado, M2 volvió a derivar el reclamo ${ticketId}`
+          : `ticketUpdated/ROUTED: el expediente ${existente.id} cambió de estado mientras tanto, no se reactiva`,
+      );
+      return;
+    }
+
     const report = await this.prisma.environmentalReport.create({
-      data: {
-        ticketId,
-        // Campo común desde la v1.70 (§7.1). Solo para mostrar y buscar: la
-        // correlación sigue siendo por ticketId.
-        publicId: typeof data.publicId === 'string' ? data.publicId : null,
-        reportType: this.tipoDeDenuncia(nombre),
-        address: this.direccion(location),
-        // La v1.6 sacó latitude/longitude de `location` (§5.4): quedan en null
-        // salvo que M2 las mande igual. Se georreferencia por `address`.
-        lat: location.latitude != null ? Number(location.latitude) : null,
-        lng: location.longitude != null ? Number(location.longitude) : null,
-        priority,
-        // El snapshot trae el escalamiento vigente (§7.4). Si M2 lo escaló antes
-        // de derivar, no va a llegar un ESCALATION_CHANGED que lo marque.
-        escalated: escalated ?? false,
-        // El snapshot ya refleja lo anterior a su occurredAt: un cambio más
-        // viejo que el Core reintenta después no lo pisa, y uno más nuevo que
-        // llegó antes y falló sí aplica (#275). Solo marca lo que el snapshot
-        // trae: sin prioridad o sin escalamiento no hay qué proteger, y
-        // `citizenResponse` nunca viene, así que una respuesta anterior al
-        // ROUTED todavía puede guardarse.
-        ticketStatusAt: marca,
-        priorityChangedAt: priority ? marca : null,
-        escalationChangedAt: escalated !== null ? marca : null,
-        // Solo lo que el vecino aceptó exponer: si es anónimo no guardamos
-        // identidad.
-        reporterSnapshot: data.isAnonymous
-          ? { isAnonymous: true }
-          : { isAnonymous: false, citizenId: data.citizenId ?? null },
-        status: S.RECEIVED,
-      },
+      data: { ticketId, ...snapshot, status: S.RECEIVED },
     });
 
     this.logger.log(
@@ -279,7 +444,17 @@ export class TicketsConsumer implements OnModuleInit {
         // entre la lectura y acá, no se pisa.
         await tx.environmentalReport.updateMany({
           where: { id: report.id, status: S.UNDER_REVIEW },
-          data: { status: S.DISMISSED },
+          // Sale de UNDER_REVIEW: la solicitud pendiente quedaría pegada (y close()
+          // daría 409 para siempre), y este camino no depende de que venga currentStatus.
+          data: { status: S.DISMISSED, ...SIN_SOLICITUD },
+        });
+      }
+
+      if (report?.status === S.FORWARDED) {
+        // M2 canceló administrativamente el ticket que habíamos devuelto.
+        await tx.environmentalReport.updateMany({
+          where: { id: report.id, status: S.FORWARDED },
+          data: { status: S.CLOSED, ...SIN_SOLICITUD },
         });
       }
 
@@ -347,7 +522,16 @@ export class TicketsConsumer implements OnModuleInit {
     // (§7.6). `publicMessage` es la glosa de M2 ("El ciudadano aportó la
     // información solicitada."), no la respuesta: no se usa de respaldo.
     const details = (data.details ?? {}) as Record<string, unknown>;
-    const message = (details.informationResponse as Record<string, unknown> | undefined)?.message;
+    const response = details.informationResponse as Record<string, unknown> | undefined;
+    // v1.77 §2: una reclasificación es entre M2 y el vecino, y ningún módulo operativo
+    // actúa por ella aunque responsibleAreaId coincida (es el provisional).
+    if (response?.purpose === 'RECLASSIFICATION') {
+      this.logger.log(
+        `ticketUpdated/INFORMATION_PROVIDED de reclasificación (${ticketId}): se ignora`,
+      );
+      return;
+    }
+    const message = response?.message;
     // ponytail: los adjuntos quedan como texto porque el expediente no tiene
     // dónde guardarlos, y la url puede ser temporal (§5.3). Campo propio si hay
     // que conservar el archivo.
@@ -370,7 +554,13 @@ export class TicketsConsumer implements OnModuleInit {
 
     const { count } = await this.prisma.environmentalReport.updateMany({
       where: { ticketId, ...this.noAtrasado('citizenResponseAt', at) },
-      data: { citizenResponse: respuesta.slice(0, 2000), ...(at && { citizenResponseAt: at }) },
+      data: {
+        citizenResponse: respuesta.slice(0, 2000),
+        ...(at && { citizenResponseAt: at }),
+        // Contestó: se cierra la solicitud pendiente (#169), en el mismo update para
+        // que el orden por citizenResponseAt valga también para cerrarla.
+        ...SIN_SOLICITUD,
+      },
     });
     if (!count) return this.sinFilas('INFORMATION_PROVIDED', 'citizenResponseAt', ticketId, at);
     this.logger.log(
@@ -483,7 +673,7 @@ export class TicketsConsumer implements OnModuleInit {
    * el update y esta lectura: la marca sigue siendo más vieja y se reintenta.
    *
    * El costo: si el ROUTED no llega nunca (se perdió o agotó sus reintentos),
-   * este evento también agota los suyos (~21 min) y termina en la DLQ del Core.
+   * este evento también agota los suyos (unos minutos, según el backoff del Core) y termina en la DLQ del Core.
    * Es visible y acotado; procesarlo en silencio lo perdería igual.
    */
   private async sinFilas(
@@ -521,6 +711,9 @@ export class TicketsConsumer implements OnModuleInit {
    * Leemos `details.routing` primero y caemos al nivel raíz porque el contrato
    * sigue WIP y ya cambió de opinión una vez: aceptar las dos formas no cuesta
    * nada y nos deja indiferentes a cuál de las dos terminen publicando.
+   *
+   * `category`/`subcategory` (v1.77) no se leen, decisión cerrada (#307): los
+   * ejemplos de M2 son de otras áreas y no sabemos cómo vendrán los de Ambiente.
    */
   private routing(data: Record<string, unknown>): Record<string, unknown> {
     const details = (data.details ?? {}) as Record<string, unknown>;
@@ -562,6 +755,9 @@ export class TicketsConsumer implements OnModuleInit {
   }
 
   /**
+   * El texto sale de `requestType` + `summary`, no de `category`/`subcategory`
+   * (#307). Se reabre si el tipo sale mal con datos reales.
+   *
    * ponytail: mapea el texto del reclamo a nuestro catálogo por palabra clave,
    * y cae en OTHER si no reconoce nada. Es lo que se puede hacer sin el
    * catálogo de Request Types de M2; cuando lo publiquen, esto se reemplaza por

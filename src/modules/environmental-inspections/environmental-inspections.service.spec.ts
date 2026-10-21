@@ -85,6 +85,7 @@ describe('EnvironmentalInspectionsService', () => {
         findUnique: jest.fn().mockResolvedValue({ id: 'svc-1', mode: ServiceMode.POINT }),
       },
       attachment: { findMany: jest.fn().mockResolvedValue([]) },
+      ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
@@ -239,6 +240,57 @@ describe('EnvironmentalInspectionsService', () => {
       );
 
       expect(result.noticeNumber).toMatch(/^ACTA-\d{4}-000012$/);
+    });
+
+    /**
+     * #325: M2 solo acepta PROGRESS con el ticket IN_PROGRESS. El tipo sale del
+     * estado conocido, igual que en la programación del servicio (#303).
+     */
+    describe('aviso a M2 según el estado del ticket', () => {
+      const avisos = () =>
+        (outbox.enqueueMany.mock.calls[0]?.[1] ?? []) as { payload: { updateType: string } }[];
+      const MENSAJE = 'Se constató una infracción y se emitió el acta correspondiente.';
+
+      const emitir = async (estado: string | null, ticketId: string | null = 'TCK-1') => {
+        prisma.environmentalReport.findUnique.mockResolvedValue(report({ ticketId }));
+        prisma.ticketM2State.findUnique.mockResolvedValue(estado ? { status: estado } : null);
+        await service.issueNotice(INSPECTION_ID, noticeDto, 'user-1');
+      };
+
+      it('con el ticket IN_PROGRESS informa PROGRESS', async () => {
+        await emitir('IN_PROGRESS');
+        expect(avisos()).toHaveLength(1);
+        expect(avisos()[0].payload).toMatchObject({
+          updateType: 'PROGRESS',
+          publicMessage: MENSAJE,
+        });
+      });
+
+      it.each(['ROUTED', 'IN_REVIEW', null])(
+        'con el ticket en %s informa STARTED con el mismo mensaje',
+        async (estado) => {
+          await emitir(estado);
+          expect(avisos()).toHaveLength(1);
+          expect(avisos()[0].payload).toMatchObject({
+            updateType: 'STARTED',
+            publicMessage: MENSAJE,
+          });
+        },
+      );
+
+      it.each(['PENDING_INFORMATION', 'RESOLVED', 'CLOSED', 'CANCELLED', 'DUPLICATE'])(
+        'con el ticket en %s no publica nada a M2',
+        async (estado) => {
+          await emitir(estado);
+          expect(avisos()).toEqual([]);
+        },
+      );
+
+      it('sin ticketId no publica ni consulta el estado', async () => {
+        await emitir('IN_PROGRESS', null);
+        expect(avisos()).toEqual([]);
+        expect(prisma.ticketM2State.findUnique).not.toHaveBeenCalled();
+      });
     });
   });
 

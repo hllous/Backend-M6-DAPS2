@@ -6,6 +6,8 @@
 
 > Corregido el 2026-10-08: el 7/10/2026 M9 fijó el contrato de integración de la cohorte y [ADR-007](adr-007-contrato-de-integracion-del-core.md) lo adopta. **Sigue vigente:** RabbitMQ como transporte detrás de `EventPublisher`, el patrón outbox/inbox, el consumidor que entra por el mismo camino que `POST /events/inbox`, la conexión perezosa con timeout de handshake, el modo `recovery` de amqplib, el tope de 100 kB y la publicación con confirm channel y `mandatory`. **Ya no vale:** los defaults provisorios (`municipalidad.events`, `m6.ambiente`, exchange `topic`); declarar exchange, cola, bindings y DLX desde M6 (ahora son del Core y M6 solo los verifica en modo pasivo); la routing key igual al nombre del evento (el exchange `muni.inbox` es `fanout`); el sobre de M2 y sus headers `producer`; la política de ack con `nack` reencolando y `ack` ante un `failed` (ahora todo no-ack es `nack` sin reencolar y el inbox re-corre el evento fallido); las variables `RABBITMQ_EXCHANGE_TYPE` y `RABBITMQ_DEAD_LETTER_EXCHANGE`; y la sección "Qué queda pendiente de M9", cuyo estado actual está en [bloqueantes.md](../bloqueantes.md). El cuerpo de abajo se conserva como se aceptó.
 
+> Nota del 2026-10-21: el ejemplo de routing key `urbanServiceScheduled` es ilustrativo. Ese evento ya no se emite (M7 no lo consume); M6 publica seis eventos, ver [publicados](../eventos/publicados/README.md).
+
 ## Contexto
 
 [ADR-001](adr-001-stack-tecnologico.md) eligió Kafka como broker "confirmado por M9". Nunca hubo broker expuesto: el circuito de outbox/inbox se implementó completo (Fases 3 y 6) contra esa promesa, sin nada del otro lado para enchufar (ver [bloqueantes.md](../bloqueantes.md)).
@@ -74,8 +76,8 @@ Se reemplaza Kafka por **RabbitMQ** como broker de eventos, detrás de los mismo
 - Publisher confirms, durabilidad y persistencia de mensajes como requisito o como buena práctica local.
 - Límites de tamaño de mensaje.
 - Ambiente de prueba compartido, y fecha en que va a estar disponible.
-- Qué pasa con `eventProcessingFailed`/`eventRejected` en un broker real (ver el riesgo "Tormenta de eventos técnicos" en [bloqueantes.md](../bloqueantes.md)).
-- Los pendientes viejos que siguen abiertos: lista de eventos del Core, catálogo de barrios, token de servicio, `notificationSent`.
+- ~~Qué pasa con `eventProcessingFailed`/`eventRejected` en un broker real~~ Resuelto el 20/10: M9 los dio de baja del catálogo; el reemplazo es `GET /api/v1/dlq`, `/dlq/{id}/audit` y `/events/{eventId}` (ver el [historial](../integracion/historial.md)).
+- Los pendientes viejos: la lista de eventos del Core y el token de servicio se respondieron (7/10 y 20/10). Siguen abiertos el catálogo de barrios y `notificationSent`, en disputa con el TPO (ver [bloqueantes.md](../bloqueantes.md)).
 
 ## Referencias
 

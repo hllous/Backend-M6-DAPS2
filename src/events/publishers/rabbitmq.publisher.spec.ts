@@ -41,7 +41,7 @@ describe('RabbitMqEventPublisher', () => {
 
   const envelope: EventEnvelope = {
     eventId: 'ev-1',
-    eventType: 'urbanServiceScheduled',
+    eventType: 'updateTicketStatus',
     eventVersion: '1.0',
     occurredAt: '2026-01-01T00:00:00.000Z',
     sourceModule: 'ambiente',
@@ -78,16 +78,17 @@ describe('RabbitMqEventPublisher', () => {
 
     const [exchange, routingKey, body, options] = channel.publish.mock.calls[0];
     expect(exchange).toBe('muni.inbox');
-    expect(routingKey).toBe('urbanServiceScheduled');
+    expect(routingKey).toBe('updateTicketStatus');
     expect(JSON.parse(body.toString())).toEqual(envelope);
     expect(options).toEqual({
       persistent: true,
       mandatory: true,
       contentType: 'application/json',
       messageId: 'ev-1',
-      type: 'urbanServiceScheduled',
+      type: 'updateTicketStatus',
       appId: 'ambiente',
-      headers: { eventId: 'ev-1', eventType: 'urbanServiceScheduled', sourceModule: 'ambiente' },
+      userId: 'usuario',
+      headers: { eventId: 'ev-1', eventType: 'updateTicketStatus', sourceModule: 'ambiente' },
     });
   });
 
@@ -120,6 +121,15 @@ describe('RabbitMqEventPublisher', () => {
 
     await publisher.publish(envelope);
     expect(connectMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('un 404 de checkExchange dice que el Core no declaró la topología, distinto de un basic.return', async () => {
+    channel.checkExchange.mockRejectedValueOnce(
+      new Error('Operation failed: ExchangeDeclare; 404 (NOT-FOUND)'),
+    );
+    const publisher = new RabbitMqEventPublisher(config);
+
+    await expect(publisher.publish(envelope)).rejects.toThrow(/muni\.inbox no existe.*Core/);
   });
 
   it('el nack del broker se propaga, para que el dispatcher deje la fila PENDING', async () => {
