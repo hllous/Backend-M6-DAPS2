@@ -86,6 +86,12 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 > Una corrección a lo que les contamos para el registro de publicaciones: **M6 publica 6 eventos, no 8**. Quedan `updateTicketStatus`, `containerDamaged`, `treeRiskDetected`, `environmentalViolationDetected`, `infrastructureRepairRequested` y `streetClosureRequested`. **No registren `urbanServiceScheduled` ni `treePruningScheduled`**: M7 no los consume y dejamos de emitirlos. Las suscripciones no cambian.
 
+**→ M2 (Atención Ciudadana)** — emitimos `INFORMATION_REQUIRED` — *pendiente de enviar*
+
+> Les avisamos que M6 pasa a ser productor real de `updateTicketStatus` con `updateType: INFORMATION_REQUIRED`. Lo emitimos cuando el operador le pide más información al vecino durante la revisión de la denuncia: lleva `publicMessage` con lo que se le pide y `requiredBy` (fecha límite, siempre futura); solo sale si el ticket está `IN_PROGRESS` o `ROUTED`, o si todavía no conocemos su estado. Dos confirmaciones: (1) cuando la solicitud vence o se cancela, ¿M2 emite un `ticketUpdated` con el estado al que vuelve el ticket? Nosotros cerramos la solicitud al recibir cualquier `ticketUpdated` de cambio de estado cuyo `currentStatus` ya no sea `PENDING_INFORMATION`. (2) Si mandamos `STARTED` con el ticket ya `IN_PROGRESS`, ¿lo registran y confirman sin aplicar, sin `nack`?
+>
+> Además, en el contrato nuevo (el Acuerdo y los Sobres del 21/10) M6 publica 6 eventos; los dos que dejamos de emitir (`urbanServiceScheduled` y `treePruningScheduled`) no los consumía M2, así que no cambia nada de su lado.
+
 ## Pendientes de enviar (20/10)
 
 
