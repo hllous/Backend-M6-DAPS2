@@ -46,7 +46,8 @@ describe('JwtAuthGuard', () => {
   describe('handleRequest', () => {
     const user = (subType: 'EMPLEADO' | 'CIUDADANO') => ({
       userId: '1',
-      roles: ['ADMINISTRATIVO'],
+      m1Role: 'ADMINISTRATIVO',
+      roles: [],
       subType,
     });
 

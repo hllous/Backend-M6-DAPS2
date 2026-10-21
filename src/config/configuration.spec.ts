@@ -17,6 +17,23 @@ function config(extra: Record<string, string> = {}) {
   }
 }
 
+describe('configuration — admins de bootstrap', () => {
+  it('sin la variable (o vacía) no hay admins', () => {
+    expect(config().bootstrapAdminUserIds).toEqual([]);
+    expect(config({ M6_BOOTSTRAP_ADMIN_USER_IDS: '' }).bootstrapAdminUserIds).toEqual([]);
+  });
+
+  it('parsea la lista, tolera espacios y normaliza ceros a la izquierda', () => {
+    expect(
+      config({ M6_BOOTSTRAP_ADMIN_USER_IDS: '1, 042 ,9007199254740993' }).bootstrapAdminUserIds,
+    ).toEqual(['1', '42', '9007199254740993']);
+  });
+
+  it.each(['abc', '1,,2', '1,', ',1', '1;2', '-1', '1.5'])('rechaza %p', (v) => {
+    expect(() => config({ M6_BOOTSTRAP_ADMIN_USER_IDS: v })).toThrow(/ids numéricos/);
+  });
+});
+
 describe('configuration — JWT', () => {
   it('el emisor por defecto es el de M1', () => {
     expect(config().jwt.issuer).toBe('modulo1-ciudadanos');

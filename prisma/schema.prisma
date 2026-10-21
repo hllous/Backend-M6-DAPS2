@@ -1014,3 +1014,48 @@ model TicketM2State {
 
   @@map("ticket_m2_state")
 }
+
+// ── Roles de M6 (#161, ADR-008) ──────────────────────────────────────────────
+
+// Roles propios de M6. Ninguno viene de M1: los asigna un M6_ADMIN y el rol de
+// M1 solo dice cuáles se le pueden asignar a la persona.
+enum M6Role {
+  M6_ADMIN
+  M6_OFICINA_OPERACIONES
+  M6_OFICINA_AMBIENTAL
+  M6_CAMPO_CUADRILLA
+  M6_CAMPO_INSPECTOR
+  M6_AUDITOR
+}
+
+enum RoleAssignmentAction {
+  GRANT
+  REVOKE
+}
+
+// Asignación local de un rol de M6 a un usuario de M1. `userId` es el `sub` del
+// token (id numérico de M1) guardado como TEXTO: un bigint pierde precisión en
+// JSON y M6 no hace cuentas con él.
+model UserRoleAssignment {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") // EXT M1
+  role      M6Role
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, role])
+  @@map("user_role_assignment")
+}
+
+// Registro append-only de cada alta/baja de rol. Sin UPDATE ni DELETE: lo
+// impone un trigger en la migración, no solo el código.
+model RoleAssignmentAudit {
+  id           String               @id @default(uuid()) @db.Uuid
+  actorUserId  String               @map("actor_user_id") // quién cambió (M1)
+  targetUserId String               @map("target_user_id") // a quién (M1)
+  action       RoleAssignmentAction
+  role         M6Role
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  @@index([targetUserId, createdAt])
+  @@map("role_assignment_audit")
+}
