@@ -13,6 +13,7 @@ import {
   hoy,
   tokenFor,
   truncateAll,
+  seedActores,
 } from './helpers';
 
 /** El sobre de la cohorte v1.70: `producer` viaja como objeto, no como string. */
@@ -50,8 +51,9 @@ describe('Inbox de eventos entrantes (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor());
+    api = Api.porRol(app);
     await truncateAll(prisma);
+    await seedActores(prisma);
 
     const zona = await crearZona(api);
     zoneId = zona.id;

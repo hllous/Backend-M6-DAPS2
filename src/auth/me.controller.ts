@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { CurrentUser } from '../common/decorators';
+import { AnyEmployee, CurrentUser } from '../common/decorators';
 import { ErrorResponseDto } from '../common/dto';
 import { AuthenticatedUser, SUB_TYPES, SubType } from './jwt.strategy';
 import { M6_ROLES, M6Role } from './m6-role';
@@ -33,6 +33,8 @@ export class MeResponseDto {
 @Controller('me')
 export class MeController {
   @Get()
+  // Sin rol de M6 también: es como el frontend se entera de que no tiene ninguno.
+  @AnyEmployee()
   @ApiOperation({
     summary: 'Quién soy y qué puedo hacer',
     description:

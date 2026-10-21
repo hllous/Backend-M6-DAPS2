@@ -1,3 +1,4 @@
+import { M6Role } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { EnvironmentalReportsController } from './environmental-reports.controller';
@@ -30,10 +31,11 @@ describe('EnvironmentalReportsController', () => {
     controller = new EnvironmentalReportsController(service);
   });
 
-  it('create delega el dto', async () => {
+  it('create delega el dto y los roles del token', async () => {
     const dto = {} as CreateEnvironmentalReportDto;
-    await expect(controller.create(dto)).resolves.toBe(RESULT);
-    expect(service.create).toHaveBeenCalledWith(dto);
+    const roles = [M6Role.M6_OFICINA_AMBIENTAL];
+    await expect(controller.create(dto, roles)).resolves.toBe(RESULT);
+    expect(service.create).toHaveBeenCalledWith(dto, roles);
   });
 
   it('findAll delega la query', async () => {

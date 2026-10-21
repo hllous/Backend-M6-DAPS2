@@ -20,7 +20,8 @@ import {
   UpdateServiceTypeDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_ADMIN } from '../../auth/role-groups';
 
 @ApiTags('service-types')
 @ApiBearerAuth('JWT-auth')
@@ -29,6 +30,7 @@ export class ServiceTypesController {
   constructor(private readonly serviceTypesService: ServiceTypesService) {}
 
   @Post()
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Crear un tipo de servicio',
     description:
@@ -43,11 +45,6 @@ export class ServiceTypesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para crear tipos de servicio',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -104,6 +101,7 @@ export class ServiceTypesController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Actualizar un tipo de servicio',
     description:
@@ -122,11 +120,6 @@ export class ServiceTypesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para actualizar tipos de servicio',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 404,
     description: 'Tipo de servicio no encontrado',
     type: ErrorResponseDto,
@@ -140,6 +133,7 @@ export class ServiceTypesController {
   }
 
   @Delete(':id')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Desactivar un tipo de servicio',
@@ -151,11 +145,6 @@ export class ServiceTypesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para desactivar tipos de servicio',
     type: ErrorResponseDto,
   })
   @ApiResponse({

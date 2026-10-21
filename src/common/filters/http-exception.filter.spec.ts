@@ -1,4 +1,9 @@
-import { ArgumentsHost, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { HttpExceptionFilter } from './http-exception.filter';
 
@@ -29,6 +34,22 @@ describe('HttpExceptionFilter', () => {
       error: 'Not Found', // no 'NOT_FOUND'
       path: '/containers/abc',
     });
+  });
+
+  it('conserva el code de la excepción (403 ROLE_REQUIRED) y no agrega uno si no hay', () => {
+    filter.catch(
+      new ForbiddenException({ statusCode: 403, message: 'Sin rol', code: 'ROLE_REQUIRED' }),
+      host,
+    );
+    expect(captured()).toMatchObject({
+      statusCode: 403,
+      message: 'Sin rol',
+      code: 'ROLE_REQUIRED',
+    });
+
+    json.mockClear();
+    filter.catch(new NotFoundException('x'), host);
+    expect(captured()).not.toHaveProperty('code');
   });
 
   it('junta los mensajes de class-validator en uno solo', () => {

@@ -1,5 +1,5 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { OutboxEventStatus } from '@prisma/client';
+import { M6Role, OutboxEventStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -7,9 +7,10 @@ import {
   crearTipoServicio,
   crearZona,
   createTestApp,
+  grantRoles,
   hoy,
-  tokenFor,
   truncateAll,
+  seedActores,
 } from './helpers';
 
 /**
@@ -33,8 +34,9 @@ describe('Flujo del expediente ambiental (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor());
+    api = Api.porRol(app);
     await truncateAll(prisma);
+    await seedActores(prisma);
   });
 
   afterAll(async () => {
@@ -66,11 +68,14 @@ describe('Flujo del expediente ambiental (e2e)', () => {
   });
 
   it('programa la inspección y deja el expediente en INSPECTION_SCHEDULED', async () => {
+    // Oficina asigna a un inspector (9007) que no es el que después cierra (9005).
+    await grantRoles(prisma, '9007', [M6Role.M6_CAMPO_INSPECTOR]);
     const res = await api
-      .post(`/environmental-reports/${reportId}/inspections`, { inspectorId: 'user-e2e' })
+      .post(`/environmental-reports/${reportId}/inspections`, { inspectorId: '9007' })
       .expect(201);
 
     inspectionId = res.body.id;
+    expect(res.body).toMatchObject({ inspectorId: '9007', completedByUserId: null });
 
     const expediente = await prisma.environmentalReport.findUniqueOrThrow({
       where: { id: reportId },
@@ -133,6 +138,12 @@ describe('Flujo del expediente ambiental (e2e)', () => {
 
     expect(res.body.outcome).toBe('VIOLATION_FOUND');
     expect(res.body).toMatchObject(cierre);
+    // Cerró el inspector del token (9005); el asignado (9007) no se pisa.
+    expect(res.body).toMatchObject({ completedByUserId: '9005', inspectorId: '9007' });
+    const guardada = await prisma.environmentalInspection.findUniqueOrThrow({
+      where: { id: inspectionId },
+    });
+    expect(guardada).toMatchObject({ completedByUserId: '9005', inspectorId: '9007' });
 
     const detalle = await api.get(`/environmental-inspections/${inspectionId}`).expect(200);
     expect(detalle.body).toMatchObject(cierre);

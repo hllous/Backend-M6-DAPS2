@@ -89,20 +89,26 @@ describe('TreeSurveysService', () => {
     it('un árbol inexistente da 404 sin escribir nada', async () => {
       prisma.tree.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(TREE, dto())).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.create(TREE, dto(), 'user-7')).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.treeSurvey.create).not.toHaveBeenCalled();
     });
 
     it('los booleanos ausentes quedan en false, no en null', async () => {
-      await service.create(TREE, dto());
+      await service.create(TREE, dto(), 'user-7');
 
       expect(prisma.treeSurvey.create.mock.calls[0][0].data).toMatchObject({
         requiresStreetClosure: false,
         requiresPublicWorks: false,
-        inspectorId: null,
+        inspectorId: 'user-7',
         riskType: null,
         suggestedIntervention: null,
       });
+    });
+
+    it('el inspector sale del token: el inspectorId del body se ignora', async () => {
+      await service.create(TREE, dto({ inspectorId: 'otro-usuario' }), 'user-7');
+
+      expect(prisma.treeSurvey.create.mock.calls[0][0].data.inspectorId).toBe('user-7');
     });
 
     describe('surveyedAt y el día en Argentina', () => {
@@ -121,7 +127,7 @@ describe('TreeSurveysService', () => {
       ])('%s da 400 sin escribir nada', async (_n, ahora, surveyedAt) => {
         reloj(ahora);
 
-        await expect(service.create(TREE, dto({ surveyedAt }))).rejects.toBeInstanceOf(
+        await expect(service.create(TREE, dto({ surveyedAt }), 'user-7')).rejects.toBeInstanceOf(
           BadRequestException,
         );
         expect(prisma.treeSurvey.create).not.toHaveBeenCalled();
@@ -134,14 +140,14 @@ describe('TreeSurveysService', () => {
       ])('%s da 201', async (_n, ahora, surveyedAt) => {
         reloj(ahora);
 
-        await expect(service.create(TREE, dto({ surveyedAt }))).resolves.toBeDefined();
+        await expect(service.create(TREE, dto({ surveyedAt }), 'user-7')).resolves.toBeDefined();
       });
     });
 
     it.each([RiskLevel.HIGH, RiskLevel.CRITICAL])(
       'un riesgo %s sin riskType da 400 sin escribir nada',
       async (riskLevel) => {
-        await expect(service.create(TREE, dto({ riskLevel }))).rejects.toBeInstanceOf(
+        await expect(service.create(TREE, dto({ riskLevel }), 'user-7')).rejects.toBeInstanceOf(
           BadRequestException,
         );
         expect(prisma.treeSurvey.create).not.toHaveBeenCalled();
@@ -150,7 +156,7 @@ describe('TreeSurveysService', () => {
     );
 
     it('el payload publicado cumple el schema del evento', async () => {
-      await service.create(TREE, dtoAlto({ healthStatus: 'DISEASED' }));
+      await service.create(TREE, dtoAlto({ healthStatus: 'DISEASED' }), 'user-7');
 
       const [, entrada] = outbox.enqueue.mock.calls[0];
       expect(validarTreeRiskDetected(entrada.payload)).toBe(true);
@@ -161,7 +167,7 @@ describe('TreeSurveysService', () => {
     it.each([RiskLevel.HIGH, RiskLevel.CRITICAL])(
       'un riesgo %s publica treeRiskDetected',
       async (riskLevel) => {
-        await service.create(TREE, dtoAlto({ riskLevel }));
+        await service.create(TREE, dtoAlto({ riskLevel }), 'user-7');
 
         expect(outbox.enqueue).toHaveBeenCalledTimes(1);
         const [, entrada] = outbox.enqueue.mock.calls[0];
@@ -180,7 +186,7 @@ describe('TreeSurveysService', () => {
     it.each([RiskLevel.LOW, RiskLevel.MEDIUM])(
       'un riesgo %s se guarda pero no publica nada',
       async (riskLevel) => {
-        await service.create(TREE, dto({ riskLevel }));
+        await service.create(TREE, dto({ riskLevel }), 'user-7');
 
         expect(prisma.treeSurvey.create).toHaveBeenCalledTimes(1);
         expect(outbox.enqueue).not.toHaveBeenCalled();
@@ -188,7 +194,7 @@ describe('TreeSurveysService', () => {
     );
 
     it('el evento y el relevamiento van en la misma transacción', async () => {
-      await service.create(TREE, dtoAlto({ riskLevel: RiskLevel.CRITICAL }));
+      await service.create(TREE, dtoAlto({ riskLevel: RiskLevel.CRITICAL }), 'user-7');
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       const [tx] = outbox.enqueue.mock.calls[0];
@@ -200,14 +206,14 @@ describe('TreeSurveysService', () => {
      * planilla. El dispatcher barre en orden de ocurrencia.
      */
     it('el evento ocurre en la fecha del relevamiento, no en la de carga', async () => {
-      await service.create(TREE, dtoAlto());
+      await service.create(TREE, dtoAlto(), 'user-7');
 
       const [, entrada] = outbox.enqueue.mock.calls[0];
       expect(entrada.occurredAt).toEqual(new Date('2026-08-20T10:00:00.000Z'));
     });
 
     it('la fecha llega como string y se guarda como Date', async () => {
-      await service.create(TREE, dto());
+      await service.create(TREE, dto(), 'user-7');
 
       expect(prisma.treeSurvey.create.mock.calls[0][0].data.surveyedAt).toBeInstanceOf(Date);
     });

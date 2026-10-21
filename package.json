@@ -25,6 +25,7 @@
     "core:register": "ts-node -P tsconfig.json scripts/core-register.ts",
     "openapi:generate": "ts-node -P tsconfig.json scripts/generate-openapi.ts",
     "docs:check": "node scripts/check-docs-integracion.mjs",
+    "docs:roles": "ts-node -P tsconfig.json scripts/generate-roles-table.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",

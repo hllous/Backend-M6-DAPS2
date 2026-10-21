@@ -20,7 +20,8 @@ import {
   UpdateServiceFrequencyDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_ADMIN } from '../../auth/role-groups';
 
 @ApiTags('service-frequencies')
 @ApiBearerAuth('JWT-auth')
@@ -29,6 +30,7 @@ export class ServiceFrequenciesController {
   constructor(private readonly serviceFrequenciesService: ServiceFrequenciesService) {}
 
   @Post()
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Crear una frecuencia de servicio',
     description:
@@ -46,11 +48,6 @@ export class ServiceFrequenciesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para crear frecuencias',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({
     status: 404,
     description: 'El tipo de servicio o el recorrido referenciado no existe',
@@ -99,6 +96,7 @@ export class ServiceFrequenciesController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Actualizar una frecuencia',
     description:
@@ -116,11 +114,6 @@ export class ServiceFrequenciesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para actualizar frecuencias',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({ status: 404, description: 'Frecuencia no encontrada', type: ErrorResponseDto })
   @ApiResponse({
     status: 409,
@@ -137,6 +130,7 @@ export class ServiceFrequenciesController {
   }
 
   @Delete(':id')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Cerrar la vigencia de una frecuencia',
@@ -146,11 +140,6 @@ export class ServiceFrequenciesController {
   @ApiParam({ name: 'id', description: 'UUID de la frecuencia', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Vigencia cerrada exitosamente' })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para cerrar frecuencias',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({ status: 404, description: 'Frecuencia no encontrada', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {

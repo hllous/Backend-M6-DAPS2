@@ -20,7 +20,8 @@ import {
   UpdateDisposalSiteDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_ADMIN } from '../../auth/role-groups';
 
 @ApiTags('disposal-sites')
 @ApiBearerAuth('JWT-auth')
@@ -29,6 +30,7 @@ export class DisposalSitesController {
   constructor(private readonly disposalSitesService: DisposalSitesService) {}
 
   @Post()
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Crear un sitio de disposición',
     description:
@@ -43,11 +45,6 @@ export class DisposalSitesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para crear sitios de disposición',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -104,6 +101,7 @@ export class DisposalSitesController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Actualizar un sitio de disposición',
     description:
@@ -122,11 +120,6 @@ export class DisposalSitesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para actualizar sitios de disposición',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 404,
     description: 'Sitio de disposición no encontrado',
     type: ErrorResponseDto,
@@ -140,6 +133,7 @@ export class DisposalSitesController {
   }
 
   @Delete(':id')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Desactivar un sitio de disposición',
@@ -151,11 +145,6 @@ export class DisposalSitesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para desactivar sitios de disposición',
     type: ErrorResponseDto,
   })
   @ApiResponse({

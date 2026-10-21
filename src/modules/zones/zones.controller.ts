@@ -21,7 +21,8 @@ import {
   AddNeighborhoodsDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_ADMIN } from '../../auth/role-groups';
 
 @ApiTags('zones')
 @ApiBearerAuth('JWT-auth')
@@ -32,6 +33,7 @@ export class ZonesController {
   // ─── CRUD ──────────────────────────────────────────
 
   @Post()
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Crear una zona operativa',
     description:
@@ -50,11 +52,6 @@ export class ZonesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para crear zonas',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -123,6 +120,7 @@ export class ZonesController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Actualizar una zona operativa',
     description:
@@ -145,11 +143,6 @@ export class ZonesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para actualizar zonas',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 404,
     description: 'Zona no encontrada',
     type: ErrorResponseDto,
@@ -167,6 +160,7 @@ export class ZonesController {
   }
 
   @Delete(':id')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Desactivar una zona operativa',
@@ -181,11 +175,6 @@ export class ZonesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para desactivar zonas',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -205,6 +194,7 @@ export class ZonesController {
   // ─── Barrios (sub-recurso) ──────────────────────────
 
   @Post(':id/neighborhoods')
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Asignar barrios a una zona',
     description:
@@ -227,11 +217,6 @@ export class ZonesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para modificar zonas',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 404,
     description: 'Zona no encontrada',
     type: ErrorResponseDto,
@@ -249,6 +234,7 @@ export class ZonesController {
   }
 
   @Delete(':id/neighborhoods/:neighborhoodId')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Quitar un barrio de una zona',
@@ -266,11 +252,6 @@ export class ZonesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para modificar zonas',
     type: ErrorResponseDto,
   })
   @ApiResponse({

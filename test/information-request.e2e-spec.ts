@@ -1,7 +1,7 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { Api, createTestApp, tokenFor, truncateAll } from './helpers';
+import { Api, createTestApp, seedActores, truncateAll } from './helpers';
 
 /**
  * Pedir información al vecino (#169) contra la base real: la columna pendiente,
@@ -19,8 +19,9 @@ describe('Solicitud de información al vecino (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor());
+    api = Api.porRol(app);
     await truncateAll(prisma);
+    await seedActores(prisma);
   });
 
   afterAll(async () => {

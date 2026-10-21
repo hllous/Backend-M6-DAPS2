@@ -18,6 +18,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -33,13 +34,14 @@ export class CreateInspectionDto {
   serviceId?: string;
 
   @ApiPropertyOptional({
-    description: 'Inspector asignado. Interno: nunca sale hacia M2.',
-    example: 'user-014',
-    maxLength: 64,
+    description:
+      'Inspector que Oficina asigna (id numérico de M1). Opcional. Esa persona tiene que tener el rol M6_CAMPO_INSPECTOR, si no es 400. Interno: nunca sale hacia M2. Quien cierra la inspección se registra aparte (`completedByUserId`), desde el token',
+    example: '42',
+    maxLength: 19,
   })
   @IsOptional()
   @IsString()
-  @MaxLength(64)
+  @Matches(/^\d{1,19}$/, { message: 'inspectorId debe ser el id numérico de M1 (solo dígitos)' })
   inspectorId?: string;
 }
 

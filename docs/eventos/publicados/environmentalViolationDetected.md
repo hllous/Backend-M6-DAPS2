@@ -25,6 +25,7 @@ evidence[], suggestedAction
 | `priorNoticeCount` | Entero: cuántas actas previas tiene ese establecimiento en nuestro histórico. Les adelanta la reincidencia |
 | `suggestedAction` | **No es vinculante.** La decisión es de M4 |
 | `violationType` | Sale de nuestro catálogo y **viaja como texto** |
+| (sin campo) | **Ningún id de inspector viaja en este evento.** `inspectorId` (asignado) y `completedByUserId` (quien cerró la inspección) son internos de M6; el acta y su `violationId` identifican al hecho, no a la persona |
 | `evidence[]` | Prueba documental del acta: las fotos y PDF que el inspector cargó **en la inspección**, como `{url, mimeType}`. El acta no tiene adjuntos propios — formaliza lo que la inspección encontró. Requerido: una inspección sin fotos manda la lista vacía |
 | `ticketId?` | Solo si el expediente nació de un reclamo |
 

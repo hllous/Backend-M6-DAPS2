@@ -9,7 +9,9 @@ import { MAX_EXTERNAL_ID_LENGTH } from '../../../../common/decorators';
 export class AuthorizeInterventionDto {
   @ApiPropertyOptional({
     maxLength: MAX_EXTERNAL_ID_LENGTH,
-    description: 'ID del usuario que autoriza la extracción',
+    deprecated: true,
+    description:
+      'DEPRECADO e ignorado: quien autoriza es el usuario del token. Se acepta para no romper clientes viejos, pero su valor no se usa',
     example: 'usr-00003',
   })
   @IsOptional()

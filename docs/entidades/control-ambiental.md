@@ -4,7 +4,7 @@ Las tres entidades del tramo sancionatorio, aguas abajo del [`EnvironmentalRepor
 
 | Entidad | Campos principales |
 |---|---|
-| `EnvironmentalInspection` | `reportId`, `serviceId`, `inspectorId`, `inspectedAt`, `checklist[]`, `findings`, `attachments[]`, `outcome`, `conclusion`, `violationType`, `severity`, `suggestedAction` |
+| `EnvironmentalInspection` | `reportId`, `serviceId`, `inspectorId` (asignado por Oficina, opcional), `completedByUserId` (quien la cerró, del token), `inspectedAt`, `checklist[]`, `findings`, `attachments[]`, `outcome`, `conclusion`, `violationType`, `severity`, `suggestedAction` |
 | `ViolationNotice` | El acta. `noticeNumber`, `inspectionId`, `issuedAt`, `establishmentId`, `violationType`, `severity`, `suggestedAction`. **Inmutable** |
 | `SanctionOutcome` | La resolución de M4, espejada de solo lectura para poder cerrar el expediente. `violationNoticeId`, `decision`, `decidedAt`, `externalRef`, `dismissalReason` |
 
@@ -16,7 +16,7 @@ La inspección se **ejecuta como un [`Service`](service.md)**: `serviceId` dice 
 
 Al cerrarla, el inspector puede dejar su `conclusion` y, si hubo infracción, `violationType`, `severity` y `suggestedAction`. Son orientativos: el acta los vuelve a pedir y es la que vale ante M4.
 
-`checklist[]`, `findings`, `conclusion` e `inspectorId` son internos: **nunca salen hacia M2**. Lo que el vecino ve es la proyección pública, sin identidad del inspector ni contenido del acta.
+`checklist[]`, `findings`, `conclusion`, `inspectorId` y `completedByUserId` son internos: **nunca salen hacia M2**. Lo que el vecino ve es la proyección pública, sin identidad del inspector ni contenido del acta.
 
 ## `ViolationNotice` — el acta
 

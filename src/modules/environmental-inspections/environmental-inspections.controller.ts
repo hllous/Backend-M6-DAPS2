@@ -28,14 +28,10 @@ import {
   ViolationNoticeResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { CurrentUser } from '../../common/decorators';
+import { CurrentUser, Roles } from '../../common/decorators';
+import { ROLES_ACTA_LECTURA, ROLES_AMBIENTAL, ROLES_INSPECTOR } from '../../auth/role-groups';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
-const FORBIDDEN = {
-  status: 403,
-  description: 'Sin permisos sobre inspecciones ambientales',
-  type: ErrorResponseDto,
-};
 const NOT_FOUND = { status: 404, description: 'Inspección no encontrada', type: ErrorResponseDto };
 const SERVER = { status: 500, description: 'Error interno del servidor', type: ErrorResponseDto };
 
@@ -46,6 +42,7 @@ export class EnvironmentalInspectionsController {
   constructor(private readonly inspectionsService: EnvironmentalInspectionsService) {}
 
   @Post('environmental-reports/:reportId/inspections')
+  @Roles(...ROLES_AMBIENTAL)
   @ApiOperation({
     summary: 'Programar la inspección de un expediente',
     description:
@@ -59,7 +56,6 @@ export class EnvironmentalInspectionsController {
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
-  @ApiResponse(FORBIDDEN)
   @ApiResponse({
     status: 404,
     description: 'Expediente o servicio no encontrado',
@@ -114,6 +110,7 @@ export class EnvironmentalInspectionsController {
   }
 
   @Post('environmental-inspections/:id/complete')
+  @Roles(...ROLES_INSPECTOR)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cerrar la inspección con su resultado',
@@ -129,7 +126,6 @@ export class EnvironmentalInspectionsController {
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
-  @ApiResponse(FORBIDDEN)
   @ApiResponse(NOT_FOUND)
   @ApiResponse({
     status: 409,
@@ -140,11 +136,13 @@ export class EnvironmentalInspectionsController {
   async complete(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CompleteInspectionDto,
+    @CurrentUser('userId') userId: string,
   ): Promise<InspectionResponseDto> {
-    return this.inspectionsService.complete(id, dto);
+    return this.inspectionsService.complete(id, dto, userId);
   }
 
   @Post('environmental-inspections/:id/violation-notice')
+  @Roles(...ROLES_AMBIENTAL)
   @ApiOperation({
     summary: 'Emitir el acta de constatación',
     description:
@@ -158,7 +156,6 @@ export class EnvironmentalInspectionsController {
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
-  @ApiResponse(FORBIDDEN)
   @ApiResponse(NOT_FOUND)
   @ApiResponse({
     status: 409,
@@ -175,6 +172,7 @@ export class EnvironmentalInspectionsController {
   }
 
   @Get('environmental-inspections/:id/violation-notice')
+  @Roles(...ROLES_ACTA_LECTURA)
   @ApiExtraModels(ViolationNoticeResponseDto)
   @ApiOperation({
     summary: 'Obtener el acta de una inspección',

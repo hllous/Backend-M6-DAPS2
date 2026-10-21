@@ -1,8 +1,6 @@
 import 'reflect-metadata';
-import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { M6Role } from '../../auth/m6-role';
 import { ROLES_KEY } from '../../common/decorators';
-import { RolesGuard } from '../../common/guards';
 import { RoleAssignmentsController } from './role-assignments.controller';
 import { RoleAssignmentsService } from './role-assignments.service';
 
@@ -15,8 +13,7 @@ describe('RoleAssignmentsController', () => {
   };
   const controller = new RoleAssignmentsController(service as unknown as RoleAssignmentsService);
 
-  it('está protegido localmente: RolesGuard + solo M6_ADMIN', () => {
-    expect(Reflect.getMetadata(GUARDS_METADATA, RoleAssignmentsController)).toContain(RolesGuard);
+  it('todo el recurso es solo de M6_ADMIN (lo aplica el RolesGuard global)', () => {
     expect(Reflect.getMetadata(ROLES_KEY, RoleAssignmentsController)).toEqual([M6Role.M6_ADMIN]);
   });
 

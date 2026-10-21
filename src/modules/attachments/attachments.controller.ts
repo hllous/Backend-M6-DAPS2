@@ -23,6 +23,9 @@ import { UploadEvidenceDto, EvidenceResponseDto, QueryEvidenceDto } from './dto'
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { MAX_EVIDENCE_SIZE_BYTES } from './evidence-mime';
 import { ErrorResponseDto } from '../../common/dto';
+import { CurrentUser, Roles } from '../../common/decorators';
+import { M6Role } from '@prisma/client';
+import { ROLES_CAMPO } from '../../auth/role-groups';
 
 @ApiTags('evidence')
 @ApiBearerAuth('JWT-auth')
@@ -31,6 +34,7 @@ export class AttachmentsController {
   constructor(private readonly attachmentsService: AttachmentsService) {}
 
   @Post()
+  @Roles(...ROLES_CAMPO)
   // Sin límite, multer bufferea en memoria lo que venga antes de que el
   // service pueda rechazarlo por tamaño.
   @UseInterceptors(
@@ -90,8 +94,9 @@ export class AttachmentsController {
     @Body() dto: UploadEvidenceDto,
     @UploadedFile() file: Express.Multer.File,
     @Headers('Idempotency-Key') idempotencyKey: string,
+    @CurrentUser('roles') roles: M6Role[],
   ): Promise<EvidenceResponseDto> {
-    return this.attachmentsService.upload(dto, file, idempotencyKey);
+    return this.attachmentsService.upload(dto, file, idempotencyKey, roles);
   }
 
   @Get()

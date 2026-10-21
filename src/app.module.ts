@@ -9,7 +9,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
 import { CoreModule } from './core/core.module';
-import { JwtAuthGuard } from './common/guards';
+import { JwtAuthGuard, RolesGuard } from './common/guards';
 
 // Módulos de dominio
 import { ZonesModule } from './modules/zones/zones.module';
@@ -72,7 +72,9 @@ import { RoleAssignmentsModule } from './modules/role-assignments/role-assignmen
   ],
   providers: [
     // Todo endpoint exige JWT por defecto. Los publicos se marcan con @Public().
+    // El orden importa: RolesGuard lee el usuario que deja JwtAuthGuard.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AppModule {}
