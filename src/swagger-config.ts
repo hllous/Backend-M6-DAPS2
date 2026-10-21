@@ -17,7 +17,7 @@ export function buildSwaggerConfig() {
     new DocumentBuilder()
       .setTitle('M6 - Ambiente e Higiene API')
       .setDescription(
-        'API del módulo 6 de la Municipalidad UADE. Gestiona servicios urbanos, contenedores, arbolado, espacios verdes y control ambiental.',
+        'API del módulo 6 de la Municipalidad UADE. Gestiona servicios urbanos, contenedores, arbolado, espacios verdes y control ambiental. Solo para personal municipal: un token válido de ciudadano (sub_type CIUDADANO) recibe 403 en todo endpoint no público.',
       )
       .setVersion('1.0')
       .addBearerAuth(

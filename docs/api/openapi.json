@@ -12594,7 +12594,7 @@
   },
   "info": {
     "title": "M6 - Ambiente e Higiene API",
-    "description": "API del módulo 6 de la Municipalidad UADE. Gestiona servicios urbanos, contenedores, arbolado, espacios verdes y control ambiental.",
+    "description": "API del módulo 6 de la Municipalidad UADE. Gestiona servicios urbanos, contenedores, arbolado, espacios verdes y control ambiental. Solo para personal municipal: un token válido de ciudadano (sub_type CIUDADANO) recibe 403 en todo endpoint no público.",
     "version": "1.0",
     "contact": {}
   },

@@ -356,4 +356,19 @@ describe('Inbox de eventos entrantes (e2e)', () => {
     // Queda el marcador de idempotencia, no el contenido de negocio ajeno.
     expect(fila.payload).toEqual({ redacted: 'contenido no persistido' });
   });
+
+  describe('solo personal municipal (#359)', () => {
+    it('un token de ciudadano recibe 403 en lectura, escritura e inbox; el de empleado pasa', async () => {
+      const vecino = new Api(app, tokenFor('CIUDADANO'));
+
+      const lectura = await vecino.get('/zones').expect(403);
+      expect(lectura.body.message).toBe('Este sistema es solo para personal municipal');
+      await vecino.post('/zones', { code: 'X', name: 'X' }).expect(403);
+      await vecino
+        .post('/events/inbox', sobre(randomUUID(), 'eventoQueNadieEscucha', { algo: 1 }))
+        .expect(403);
+
+      await api.get('/zones').expect(200);
+    });
+  });
 });
