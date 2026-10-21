@@ -92,6 +92,18 @@ export const envSchema = z
       z.string().trim().min(1).optional(),
     ),
 
+    // Registro en el catálogo del Core (src/core/core-registry.service.ts).
+    // 4 = la cadena de reintentos de la guía común del Core: cuatro intentos totales.
+    CORE_SUBSCRIPTION_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(4),
+    // 'false' apaga la sincronización al arrancar (el script core:register sigue andando).
+    CORE_REGISTER_ON_BOOT: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .pipe(z.enum(['true', 'false', '1', '0']))
+      .default('true')
+      .transform((v) => v === 'true' || v === '1'),
+
     // Cloudflare R2 (S3-compatible) para evidencia/adjuntos — Issue #64.
     // Opcionales: sin credenciales la app arranca igual, pero POST /evidence
     // falla al subir. Ver src/modules/attachments/storage/r2-evidence.storage.ts.
