@@ -1,7 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { createHmac } from 'node:crypto';
+import { PrismaService } from '../prisma/prisma.service';
 import { JwtStrategy } from './jwt.strategy';
+import { M1RoleAdapter } from './m1-role.adapter';
+import { M6Role } from './m6-role';
 
 // Clave de juguete: 32 bytes en base64, como la que entrega M1.
 const SECRET_B64 = Buffer.alloc(32, 7).toString('base64');
@@ -9,7 +12,19 @@ const ISSUER = 'modulo1-ciudadanos';
 
 const config = {
   getOrThrow: (key: string) => ({ 'jwt.secret': SECRET_B64, 'jwt.issuer': ISSUER })[key],
+  get: (key: string) => ({ bootstrapAdminUserIds: ['99'] })[key],
 } as unknown as ConfigService;
+
+// Filas de la tabla de asignaciones que devuelve el mock; cada test las pisa.
+let assigned: M6Role[] = [];
+const findMany = jest.fn(async () => assigned.map((role) => ({ role })));
+const prisma = { userRoleAssignment: { findMany } } as unknown as PrismaService;
+const adapter = new M1RoleAdapter();
+
+beforeEach(() => {
+  assigned = [];
+  findMany.mockClear();
+});
 
 const b64u = (v: unknown) => Buffer.from(JSON.stringify(v)).toString('base64url');
 
@@ -35,7 +50,7 @@ function sign(
 
 /** Pasa el token por el flujo real de passport-jwt (firma, alg, iss, exp) y devuelve el resultado. */
 function authenticate(token: string): Promise<{ user?: unknown; failed?: boolean }> {
-  const strategy = new JwtStrategy(config);
+  const strategy = new JwtStrategy(config, prisma, adapter);
   return new Promise((resolve) => {
     Object.assign(strategy, {
       success: (user: unknown) => resolve({ user }),
@@ -48,17 +63,75 @@ function authenticate(token: string): Promise<{ user?: unknown; failed?: boolean
 }
 
 describe('JwtStrategy', () => {
-  it('acepta un access token de M1 y lo mapea', async () => {
+  it('acepta un access token de M1 y lo mapea a roles de M6', async () => {
+    assigned = [M6Role.M6_CAMPO_CUADRILLA];
     expect((await authenticate(sign())).user).toEqual({
       userId: '42',
-      roles: ['ADMINISTRATIVO'],
       subType: 'EMPLEADO',
+      m1Role: 'ADMINISTRATIVO',
+      roles: [M6Role.M6_CAMPO_CUADRILLA],
     });
   });
 
-  it('acepta un ciudadano', async () => {
+  it('sin filas en la tabla no hay roles efectivos (el rol de M1 solo no autoriza)', async () => {
+    expect((await authenticate(sign())).user).toMatchObject({ roles: [] });
+  });
+
+  it('un rol de la tabla que el rol de M1 ya no permite no es efectivo', async () => {
+    assigned = [M6Role.M6_ADMIN, M6Role.M6_CAMPO_INSPECTOR];
+    const r = await authenticate(sign({ rol: 'ADMINISTRATIVO' })); // ya no RESPONSABLE_AREA
+    expect(r.user).toMatchObject({ roles: [M6Role.M6_CAMPO_INSPECTOR] });
+  });
+
+  it('RESPONSABLE_AREA conserva M6_ADMIN', async () => {
+    assigned = [M6Role.M6_ADMIN];
+    expect((await authenticate(sign({ rol: 'RESPONSABLE_AREA' }))).user).toMatchObject({
+      roles: [M6Role.M6_ADMIN],
+    });
+  });
+
+  it('admin de bootstrap: M6_ADMIN sin fila, pero solo si M1 lo permite', async () => {
+    const ok = await authenticate(sign({ sub: 99, rol: 'RESPONSABLE_AREA' }));
+    expect(ok.user).toMatchObject({ roles: [M6Role.M6_ADMIN] });
+    const sinRol = await authenticate(sign({ sub: 99, rol: 'ADMINISTRATIVO' }));
+    expect(sinRol.user).toMatchObject({ roles: [] });
+  });
+
+  it('bootstrap + fila de Campo: ganan los de Oficina (ADR-005)', async () => {
+    assigned = [M6Role.M6_CAMPO_INSPECTOR, M6Role.M6_AUDITOR];
+    const r = await authenticate(sign({ sub: 99, rol: 'RESPONSABLE_AREA' }));
+    expect(r.user).toMatchObject({ roles: [M6Role.M6_ADMIN] });
+  });
+
+  it('sin bootstrapAdminUserIds en la config no hay admins de bootstrap', async () => {
+    const sinBootstrap = { ...config, get: () => undefined } as unknown as ConfigService;
+    const s = new JwtStrategy(sinBootstrap, prisma, adapter);
+    const user = await s.validate({
+      sub: 99,
+      sub_type: 'EMPLEADO',
+      rol: 'RESPONSABLE_AREA',
+      typ: 'access',
+      exp: 1,
+    });
+    expect(user.roles).toEqual([]);
+  });
+
+  it('un rol de M1 sin roles asignables ni consulta la tabla', async () => {
+    assigned = [M6Role.M6_ADMIN];
+    const r = await authenticate(sign({ rol: 'MESA_ENTRADAS' }));
+    expect(r.user).toMatchObject({ m1Role: 'MESA_ENTRADAS', roles: [] });
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it('lee la tabla en cada request, sin caché', async () => {
+    await authenticate(sign());
+    await authenticate(sign());
+    expect(findMany).toHaveBeenCalledTimes(2);
+  });
+
+  it('acepta un ciudadano, sin roles de M6', async () => {
     const r = await authenticate(sign({ sub_type: 'CIUDADANO', rol: 'CIUDADANO' }));
-    expect(r.user).toMatchObject({ roles: ['CIUDADANO'], subType: 'CIUDADANO' });
+    expect(r.user).toMatchObject({ roles: [], m1Role: 'CIUDADANO', subType: 'CIUDADANO' });
   });
 
   it.each([

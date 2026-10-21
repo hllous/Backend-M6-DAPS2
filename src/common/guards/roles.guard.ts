@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
@@ -8,11 +8,13 @@ import { ROLES_KEY } from '../decorators/roles.decorator';
  *
  * Si el endpoint no tiene @Roles(), permite el acceso (no restringe).
  *
- * Nota: `user.roles` es `[rol]`, el único rol que trae el token de M1 (sin
- * área). Ningún endpoint lo usa todavía; el modelo de roles de M6 es el #161.
+ * `user.roles` son los roles de M6 efectivos (JwtStrategy, ADR-008), no el rol
+ * de M1. Todavía no es global: solo lo usa role-assignments (PR 2 de #161).
  */
 @Injectable()
 export class RolesGuard implements CanActivate {
+  private readonly logger = new Logger(RolesGuard.name);
+
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -25,12 +27,16 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest();
+    const { user } = request;
 
-    if (!user || !user.roles) {
-      return false;
+    const allowed = !!user?.roles && requiredRoles.some((role) => user.roles.includes(role));
+    if (!allowed) {
+      // Para detectar abuso. Nunca el token ni el header Authorization.
+      this.logger.warn(
+        `Acceso denegado: usuario=${user?.userId ?? 'anónimo'} ${request.method} ${request.path} requiere=[${requiredRoles}]`,
+      );
     }
-
-    return requiredRoles.some((role) => user.roles.includes(role));
+    return allowed;
   }
 }

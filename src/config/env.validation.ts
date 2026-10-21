@@ -61,6 +61,20 @@ export const envSchema = z
     // `iss` que exigimos en el token.
     JWT_ISSUER: z.string().min(1).default('modulo1-ciudadanos'),
 
+    // Ids de M1 (`sub`, numéricos) de los M6_ADMIN iniciales, separados por coma.
+    // Sin ellos nadie puede asignar roles (ADR-008). Además necesitan el rol
+    // RESPONSABLE_AREA en M1. Vacía cuenta como ausente.
+    M6_BOOTSTRAP_ADMIN_USER_IDS: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z
+        .string()
+        .regex(
+          /^\s*\d{1,20}(\s*,\s*\d{1,20})*\s*$/,
+          'M6_BOOTSTRAP_ADMIN_USER_IDS: lista de ids numéricos separados por coma',
+        )
+        .optional(),
+    ),
+
     // Plazo que le damos a M4 para resolver un acta antes de cerrar el
     // expediente por vencimiento. Ver ReportDeadlineSweeper.
     SANCTION_DEADLINE_DAYS: z.coerce.number().int().positive().default(30),

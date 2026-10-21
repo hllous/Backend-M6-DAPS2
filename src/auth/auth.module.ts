@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
+import { M1RoleAdapter } from './m1-role.adapter';
+import { MeController } from './me.controller';
 
 /**
  * Registra la estrategia JWT que usa el JwtAuthGuard global.
@@ -10,6 +12,8 @@ import { JwtStrategy } from './jwt.strategy';
  */
 @Module({
   imports: [PassportModule],
-  providers: [JwtStrategy],
+  controllers: [MeController],
+  providers: [JwtStrategy, M1RoleAdapter],
+  exports: [M1RoleAdapter],
 })
 export class AuthModule {}

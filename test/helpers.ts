@@ -88,7 +88,13 @@ export async function truncateAll(prisma: PrismaService): Promise<void> {
   if (tables.length === 0) return;
 
   const lista = tables.map((t) => `"public"."${t.tablename}"`).join(', ');
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${lista} RESTART IDENTITY CASCADE`);
+  // role_assignment_audit tiene un trigger que prohíbe TRUNCATE (append-only).
+  // `replica` lo salta, pero solo en esta transacción (SET LOCAL) y pide
+  // superusuario: lo es el usuario del contenedor de los e2e y el del CI.
+  await prisma.$transaction([
+    prisma.$executeRawUnsafe(`SET LOCAL session_replication_role = replica`),
+    prisma.$executeRawUnsafe(`TRUNCATE TABLE ${lista} RESTART IDENTITY CASCADE`),
+  ]);
 }
 
 // ─── Datos por suite ────────────────────────────────

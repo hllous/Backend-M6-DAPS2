@@ -93,6 +93,7 @@ No hay que hacer nada manual en el día a día.
 | `DATABASE_URL` | Connection string de Supabase (URI directa, puerto `5432`, con `?schema=public`) | ✅ Sí |
 | `JWT_SECRET` | `APP_JWT_SECRET` de M1: clave HS256 en **base64**, decodifica a ≥ 32 bytes (256 bits). Se pide a M1 por el grupo de POs; nunca al repo. Con el valor viejo (texto plano) el servicio no arranca | ✅ Sí |
 | `JWT_ISSUER` | `modulo1-ciudadanos` (`iss` exigido en el token) | No (default `modulo1-ciudadanos`) |
+| `M6_BOOTSTRAP_ADMIN_USER_IDS` | Ids de M1 (el `sub`, numéricos) de los `M6_ADMIN` iniciales, separados por coma (ej. `1,42`). Cada uno necesita además `RESPONSABLE_AREA` en M1. Al arrancar se loguea solo cuántos hay, no los ids | No, pero **sin ella nadie puede asignar roles** (ver [ADR-008](decisiones/adr-008-roles-m6-adaptados-desde-m1.md)) |
 | `CORS_ORIGINS` | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
 | `NODE_ENV` | `production` | ✅ Sí |
 | `SANCTION_DEADLINE_DAYS` | `30` | No (default 30 días para cierre de expediente ambiental sin resolución M4) |
@@ -175,7 +176,7 @@ No hay que hacer nada manual en el día a día.
 
 ## 6. Estado de la app end-to-end
 
-> Conteos contrastados con el código el 04/10/2026 (135 rutas en 23 tags Swagger). El estado en vivo de Render y Vercel hay que confirmarlo con los `curl` de abajo: no se asume.
+> Conteos contrastados con el código el 04/10/2026 (135 rutas en 23 tags Swagger al 04/10; hoy 140 en 25). El estado en vivo de Render y Vercel hay que confirmarlo con los `curl` de abajo: no se asume.
 
 La infraestructura está deployada, las migraciones corren solas en cada deploy y la API sirve datos reales.
 
@@ -183,7 +184,7 @@ La infraestructura está deployada, las migraciones corren solas en cada deploy 
 |---|---|---|
 | 1 | **Migraciones de Prisma** | ✅ Resuelto (PR #49). El `CMD` del Dockerfile corre `npx prisma migrate deploy` antes de arrancar. Si la migración falla, el contenedor no levanta |
 | 2 | **Services de dominio** | ✅ Fases 1 a 7 completas (135 endpoints en 23 tags): catálogos, recursos (cuadrillas, vehículos), contenedores, arbolado, espacios verdes, `Service` (máquina de estados, ZoneResults, CollectionRecords), control ambiental (expedientes, inspecciones, actas, sanciones), derivaciones (M3 reparaciones, M7 cortes), tablero de indicadores (`/indicators`) y portal ciudadano (`/public`) |
-| 3 | **Autenticación** | ⚠️ Provisoria. Todo endpoint exige JWT (guard global), pero la verificación ya sigue el contrato de M1 (HS256 con `JWT_SECRET` en base64, `iss`, `typ=access`, `rol`). La autorización por rol server-side está diferida hasta que M1 defina su taxonomía; el frontend realiza control de permisos optimista en UI (ver [ADR-002](decisiones/adr-002-auth-provisoria.md)) |
+| 3 | **Autenticación** | ⚠️ Provisoria. Todo endpoint exige JWT (guard global), pero la verificación ya sigue el contrato de M1 (HS256 con `JWT_SECRET` en base64, `iss`, `typ=access`, `rol`). Roles de M6 desde #161 ([ADR-008](decisiones/adr-008-roles-m6-adaptados-desde-m1.md)): hoy solo `role-assignments` exige `M6_ADMIN`; el resto de los endpoints se cierra en el PR 2. El frontend sigue con control de permisos optimista en UI (ver [ADR-002](decisiones/adr-002-auth-provisoria.md)) |
 | 4 | **Eventos** | ✅ Outbox transaccional (Fase 3), Inbox con handlers (Fase 6) y adaptador/consumidor de RabbitMQ (#234) implementados. El Core de M9 **ya está desplegado en AWS** (ambiente único y compartido, guía común del 20/10); lo que falta es la ficha privada y el alta de nuestra IP de salida (#328), y hasta entonces se prueba contra el Core local (#299). Sin `RABBITMQ_URL` configurada, los eventos se encolan en outbox y se registran en log. Con ella, la app publica al exchange `muni.inbox` y consume `q.ambiente`, que crea el Core al registrar nuestras suscripciones: hasta entonces `checkQueue` falla (404) y el consumidor reintenta la conexión. La ingesta manual puede ejercitarse vía `POST /events/inbox` |
 | 5 | **Evidencia y adjuntos** | ✅ Resuelto (Fase 7). `POST /evidence` genérico sobre Cloudflare R2 con `Idempotency-Key` obligatoria respaldada por constraint único en DB (`SERVICE`, `ZONE_RESULT`, `INSPECTION`, `CONTAINER`) |
 | 6 | **Frontend (Next.js)** | ⏳ En desarrollo. Etapa de mapa de Wayfinder completada: diseño (DESIGN.md con paleta Azul Institucional y WCAG 2.2 AA), contratos (CONTRACTS.md), BFF session (ADR-0004) y prototipos interactivos validados |
