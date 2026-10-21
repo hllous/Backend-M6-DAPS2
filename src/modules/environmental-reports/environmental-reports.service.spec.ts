@@ -227,7 +227,7 @@ describe('EnvironmentalReportsService', () => {
         pageSize: 20,
         skip: 0,
         take: 20,
-        status: S.UNDER_REVIEW,
+        status: [S.UNDER_REVIEW],
         reportType: 'NOISE',
         priority: 'HIGH',
         ticketId: 'TCK-1',
@@ -236,7 +236,7 @@ describe('EnvironmentalReportsService', () => {
       } as any);
 
       expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual({
-        status: S.UNDER_REVIEW,
+        status: { in: [S.UNDER_REVIEW] },
         reportType: 'NOISE',
         priority: 'HIGH',
         ticketId: 'TCK-1',
@@ -343,11 +343,13 @@ describe('EnvironmentalReportsService', () => {
     const consulta = (q: object) => Object.assign(new QueryEnvironmentalReportsDto(), q);
 
     it('from/to filtran updatedAt por días argentinos, to inclusivo, combinado con otros filtros', async () => {
-      await service.findAll(consulta({ status: 'RECEIVED', from: '2026-09-01', to: '2026-09-30' }));
+      await service.findAll(
+        consulta({ status: ['RECEIVED'], from: '2026-09-01', to: '2026-09-30' }),
+      );
 
       // 00:00 ART del 01/09 = 03:00 UTC; el 30/09 entero cierra a las 03:00 UTC del 01/10 (exclusivo).
       const where = {
-        status: 'RECEIVED',
+        status: { in: ['RECEIVED'] },
         updatedAt: {
           gte: new Date('2026-09-01T03:00:00.000Z'),
           lt: new Date('2026-10-01T03:00:00.000Z'),
@@ -355,6 +357,24 @@ describe('EnvironmentalReportsService', () => {
       };
       expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual(where);
       expect(prisma.environmentalReport.count).toHaveBeenCalledWith({ where });
+    });
+
+    it('status con varios valores filtra con in y count usa el mismo where (meta.total filtrado)', async () => {
+      prisma.environmentalReport.count.mockResolvedValue(7);
+
+      const lista = await service.findAll(consulta({ status: ['RECEIVED', 'UNDER_REVIEW'] }));
+
+      const where = { status: { in: ['RECEIVED', 'UNDER_REVIEW'] } };
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual(where);
+      expect(prisma.environmentalReport.count).toHaveBeenCalledWith({ where });
+      expect(lista.meta.total).toBe(7);
+    });
+
+    it('sin status el where no trae la clave', async () => {
+      await service.findAll(consulta({}));
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).not.toHaveProperty(
+        'status',
+      );
     });
 
     it('acepta solo from o solo to', async () => {

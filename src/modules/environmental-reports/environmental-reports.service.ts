@@ -144,7 +144,7 @@ export class EnvironmentalReportsService {
       };
     }
 
-    if (query.status) where.status = query.status;
+    if (query.status) where.status = { in: query.status };
     if (query.reportType) where.reportType = query.reportType;
     if (query.priority) where.priority = query.priority;
     if (query.ticketId) where.ticketId = query.ticketId;
