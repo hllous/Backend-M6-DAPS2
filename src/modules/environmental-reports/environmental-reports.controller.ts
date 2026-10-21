@@ -66,7 +66,7 @@ export class EnvironmentalReportsController {
   @ApiResponse({
     status: 400,
     description:
-      'Filtro inválido (por ejemplo, crewId que no es UUID, fecha mal formada o from posterior a to)',
+      'Filtro inválido (por ejemplo, un status desconocido, crewId que no es UUID, fecha mal formada o from posterior a to)',
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
