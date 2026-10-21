@@ -57,6 +57,64 @@
         ]
       }
     },
+    "/me": {
+      "get": {
+        "operationId": "MeController_me",
+        "summary": "Quién soy y qué puedo hacer",
+        "description": "Devuelve la identidad del token y los roles de M6 efectivos (asignaciones locales ∩ lo que permite el rol de M1). Se calcula en cada request: un cambio de asignación rige en la próxima llamada. El frontend usa esto en vez de deducir permisos del token.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Identidad y roles efectivos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token válido de un ciudadano: M6 es solo para personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
     "/events/inbox": {
       "post": {
         "operationId": "InboxController_ingest",
@@ -12590,6 +12648,370 @@
           }
         ]
       }
+    },
+    "/role-assignments": {
+      "get": {
+        "operationId": "RoleAssignmentsController_findAll",
+        "summary": "Listar usuarios con roles de M6 asignados",
+        "description": "Listado paginado de usuarios que tienen al menos un rol asignado, ordenado por id. Son los roles asignados, no los efectivos.",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-indexed)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Registros por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado de asignaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RoleAssignmentResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere el rol M6_ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "role-assignments"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/role-assignments/{userId}": {
+      "get": {
+        "operationId": "RoleAssignmentsController_findOne",
+        "summary": "Roles de M6 asignados a un usuario",
+        "description": "Devuelve los roles asignados al usuario (lista vacía si no tiene). No dice si son efectivos: eso depende del rol que el usuario tenga en M1 (ver GET /me).",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "Id del usuario en M1 (el `sub` de su token), numérico",
+            "schema": {
+              "example": "42",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Roles asignados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Id de usuario no numérico",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere el rol M6_ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "role-assignments"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "RoleAssignmentsController_replace",
+        "summary": "Reemplazar los roles de M6 de un usuario",
+        "description": "Fija el conjunto completo de roles del usuario y audita cada alta y baja en la misma transacción. Oficina (M6_ADMIN, M6_OFICINA_*) y Campo (M6_CAMPO_*) son excluyentes. No valida contra el rol de M1 del destinatario (M6 no lo conoce): un rol que su rol de M1 no permite queda asignado pero no es efectivo. No se puede quitar el último M6_ADMIN si no hay admins de bootstrap.",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "Id del usuario en M1 (el `sub` de su token), numérico",
+            "schema": {
+              "example": "42",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceRolesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Roles asignados tras el cambio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rol inexistente, repetido, mezcla de Oficina y Campo o id no numérico",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere el rol M6_ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Quitaría el último M6_ADMIN, o hubo un cambio simultáneo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "role-assignments"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "RoleAssignmentsController_remove",
+        "summary": "Quitar todos los roles de M6 de un usuario",
+        "description": "Equivale a PUT con la lista vacía: audita cada baja. Es idempotente. No se puede quitar el último M6_ADMIN si no hay admins de bootstrap.",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "Id del usuario en M1 (el `sub` de su token), numérico",
+            "schema": {
+              "example": "42",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Roles quitados (o no había)"
+          },
+          "400": {
+            "description": "Id de usuario no numérico",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere el rol M6_ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Quitaría el último M6_ADMIN, o hubo un cambio simultáneo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "role-assignments"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
     }
   },
   "info": {
@@ -12682,6 +13104,14 @@
     {
       "name": "indicators",
       "description": "Indicadores de cobertura, cumplimiento, incidencias y residuos"
+    },
+    {
+      "name": "auth",
+      "description": "Identidad del token y roles de M6 efectivos"
+    },
+    {
+      "name": "role-assignments",
+      "description": "Asignación de roles de M6 (solo M6_ADMIN)"
     },
     {
       "name": "citizen-portal",
@@ -12789,6 +13219,54 @@
           "error",
           "timestamp",
           "path"
+        ]
+      },
+      "MeResponseDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "example": "42",
+            "description": "Id del usuario en M1 (`sub` del token), como texto"
+          },
+          "subType": {
+            "type": "string",
+            "enum": [
+              "CIUDADANO",
+              "EMPLEADO"
+            ],
+            "example": "EMPLEADO",
+            "description": "`sub_type` del token de M1"
+          },
+          "m1Role": {
+            "type": "string",
+            "example": "ADMINISTRATIVO",
+            "description": "Rol único del usuario en M1, tal cual vino en el token"
+          },
+          "roles": {
+            "type": "array",
+            "example": [
+              "M6_OFICINA_OPERACIONES"
+            ],
+            "description": "Roles de M6 efectivos ahora: los asignados que el rol de M1 todavía permite. Vacío = sin acceso a la lógica de M6",
+            "items": {
+              "type": "string",
+              "enum": [
+                "M6_ADMIN",
+                "M6_OFICINA_OPERACIONES",
+                "M6_OFICINA_AMBIENTAL",
+                "M6_CAMPO_CUADRILLA",
+                "M6_CAMPO_INSPECTOR",
+                "M6_AUDITOR"
+              ]
+            }
+          }
+        },
+        "required": [
+          "userId",
+          "subType",
+          "m1Role",
+          "roles"
         ]
       },
       "IngestEventDto": {
@@ -18284,6 +18762,65 @@
           "totals",
           "byWasteType",
           "byDisposalSite"
+        ]
+      },
+      "RoleAssignmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "example": "42",
+            "description": "Id del usuario en M1 (numérico, como texto)"
+          },
+          "roles": {
+            "type": "array",
+            "example": [
+              "M6_CAMPO_CUADRILLA"
+            ],
+            "description": "Roles ASIGNADOS en M6. No son los efectivos: el rol del usuario en M1 puede no permitir alguno (ver GET /me)",
+            "items": {
+              "type": "string",
+              "enum": [
+                "M6_ADMIN",
+                "M6_OFICINA_OPERACIONES",
+                "M6_OFICINA_AMBIENTAL",
+                "M6_CAMPO_CUADRILLA",
+                "M6_CAMPO_INSPECTOR",
+                "M6_AUDITOR"
+              ]
+            }
+          }
+        },
+        "required": [
+          "userId",
+          "roles"
+        ]
+      },
+      "ReplaceRolesDto": {
+        "type": "object",
+        "properties": {
+          "roles": {
+            "type": "array",
+            "example": [
+              "M6_OFICINA_OPERACIONES",
+              "M6_OFICINA_AMBIENTAL"
+            ],
+            "description": "Conjunto completo de roles de M6 del usuario: reemplaza al anterior. Vacío equivale a quitarle todos. No se pueden mezclar roles de Oficina (M6_ADMIN, M6_OFICINA_*) con roles de Campo (M6_CAMPO_*)",
+            "items": {
+              "type": "string",
+              "enum": [
+                "M6_ADMIN",
+                "M6_OFICINA_OPERACIONES",
+                "M6_OFICINA_AMBIENTAL",
+                "M6_CAMPO_CUADRILLA",
+                "M6_CAMPO_INSPECTOR",
+                "M6_AUDITOR"
+              ]
+            }
+          }
+        },
+        "required": [
+          "roles"
         ]
       }
     }

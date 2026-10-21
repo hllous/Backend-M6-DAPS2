@@ -23,3 +23,4 @@ Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeraci�
 | [005](adr-005-alineacion-frontend-sesion-y-seguridad.md) | Alineación de arquitectura de sesión BFF, separación de actores y postura de seguridad con el Frontend | Aceptado | 2026-09-03 |
 | [006](adr-006-rabbitmq-como-bus.md) | RabbitMQ como bus de eventos (reemplaza a Kafka) | Reemplazado parcialmente por ADR-007 | 2026-09-27 |
 | [007](adr-007-contrato-de-integracion-del-core.md) | Contrato de integración del Core (sobre, topología, reintentos, catálogo y token) | Aceptado | 2026-10-07 |
+| [008](adr-008-roles-m6-adaptados-desde-m1.md) | Roles de M6 adaptados desde el rol único de M1 y asignados localmente | Aceptado | 2026-10-21 |
