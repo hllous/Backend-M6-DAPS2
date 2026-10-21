@@ -1,14 +1,34 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDateOnly, SearchText, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
 import { EnvironmentalReportStatus, EnvironmentalReportType, Severity } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { ArrayNotEmpty, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
-  @ApiPropertyOptional({ description: 'Filtrar por estado', enum: EnvironmentalReportStatus })
+  @ApiPropertyOptional({
+    description:
+      'Filtrar por uno o varios estados (OR). Formato canónico: parámetro repetido (`status=RECEIVED&status=UNDER_REVIEW`); también se acepta separado por comas (`status=RECEIVED,UNDER_REVIEW`). Los duplicados se ignoran y un valor desconocido da 400',
+    enum: EnvironmentalReportStatus,
+    isArray: true,
+    example: ['RECEIVED', 'UNDER_REVIEW'],
+  })
   @IsOptional()
-  @IsEnum(EnvironmentalReportStatus)
-  status?: EnvironmentalReportStatus;
+  // Se lee el valor crudo: con enableImplicitConversion el tipo Array no se
+  // normaliza solo y un solo valor llegaría como string. Un token vacío
+  // (`status=` o `a,`) queda como '' y IsEnum lo rechaza con 400, igual que antes.
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) => {
+    const raw = obj[key];
+    if (raw === undefined || raw === null) return raw;
+    const values = (Array.isArray(raw) ? raw : [raw]).flatMap((v) =>
+      typeof v === 'string' ? v.split(',').map((t) => t.trim()) : [v],
+    );
+    return [...new Set(values)];
+  })
+  // Una lista vacía (`status[]`) filtraría con `in: []` y devolvería todo vacío: 400.
+  @ArrayNotEmpty()
+  @IsEnum(EnvironmentalReportStatus, { each: true })
+  status?: EnvironmentalReportStatus[];
 
   @ApiPropertyOptional({ description: 'Filtrar por tipo', enum: EnvironmentalReportType })
   @IsOptional()

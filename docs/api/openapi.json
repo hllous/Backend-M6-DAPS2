@@ -9879,22 +9879,29 @@
             "name": "status",
             "required": false,
             "in": "query",
-            "description": "Filtrar por estado",
+            "description": "Filtrar por uno o varios estados (OR). Formato canónico: parámetro repetido (`status=RECEIVED&status=UNDER_REVIEW`); también se acepta separado por comas (`status=RECEIVED,UNDER_REVIEW`). Los duplicados se ignoran y un valor desconocido da 400",
             "schema": {
-              "enum": [
+              "example": [
                 "RECEIVED",
-                "UNDER_REVIEW",
-                "FORWARDED",
-                "DISMISSED",
-                "INSPECTION_SCHEDULED",
-                "INSPECTED",
-                "NO_VIOLATION",
-                "VIOLATION_FOUND",
-                "NOTICE_ISSUED",
-                "SANCTIONED",
-                "CLOSED"
+                "UNDER_REVIEW"
               ],
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "RECEIVED",
+                  "UNDER_REVIEW",
+                  "FORWARDED",
+                  "DISMISSED",
+                  "INSPECTION_SCHEDULED",
+                  "INSPECTED",
+                  "NO_VIOLATION",
+                  "VIOLATION_FOUND",
+                  "NOTICE_ISSUED",
+                  "SANCTIONED",
+                  "CLOSED"
+                ]
+              }
             }
           },
           {
@@ -10027,7 +10034,7 @@
             }
           },
           "400": {
-            "description": "Filtro inválido (por ejemplo, crewId que no es UUID, fecha mal formada o from posterior a to)",
+            "description": "Filtro inválido (por ejemplo, un status desconocido, crewId que no es UUID, fecha mal formada o from posterior a to)",
             "content": {
               "application/json": {
                 "schema": {
