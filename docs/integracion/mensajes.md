@@ -92,6 +92,23 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Además, en el contrato nuevo (el Acuerdo y los Sobres del 21/10) M6 publica 6 eventos; los dos que dejamos de emitir (`urbanServiceScheduled` y `treePruningScheduled`) no los consumía M2, así que no cambia nada de su lado.
 
+## Pendientes de enviar (21/10, M1 y M2)
+
+> Redactado el 21/10 para que el PO lo envíe. **Pendiente de enviar.** Al enviarlos, anotar la fecha acá y mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — seguimiento a su guía v2.1 y a lo que aclaró el PO — *pendiente de enviar*
+
+> Gracias por la guía v2.1 y por las aclaraciones: con la lista de roles (`CIUDADANO`, `MESA_ENTRADAS`, `ADMINISTRATIVO`, `RESPONSABLE_AREA`, `AUDITOR`, `SERVICIO`), el `user_id` igual al `citizenId` y el contrato del token (HS256, clave compartida en base64, claims `iss`, `sub`, `rol`, `typ`, 15 minutos, sin `aud`) ya sabemos cómo validar. Nos quedan unos puntos:
+>
+> 1. **Secreto:** quedamos a la espera del valor de `APP_JWT_SECRET` por el grupo de POs. Sin él no podemos validar tokens reales en el despliegue.
+> 2. **Refresh y logout:** el PO nos dijo que ya no están, pero el PDF todavía documenta `POST /auth/refresh` y el logout. ¿Cuál vale? A nosotros no nos cambia (no aceptamos refresh), pero queremos que el contrato quede claro.
+> 3. **Sobre de eventos:** el del documento sigue siendo el viejo (`producer`, `subject`, `eventId` `M1-EVT-…`). Para publicar por el Core tienen que usar el sobre del Core, y el `correlationId` tiene que ser un UUID: un valor como `M6-REQ-000045` lo rechaza el Core y también nuestro buzón de entrada.
+> 4. **`auth: false`:** ¿qué significa en la respuesta del login? ¿Un login fallido responde 401 o 200 con `auth: false`?
+
+**→ M2 (Atención Ciudadana)** — ids numéricos en `updatedBy.id` — *pendiente de enviar*
+
+> M1 nos confirma que sus ids de usuario son numéricos: el `user_id` del login es el `citizenId`, y su base es numérica. Nos dice también que ustedes van a tener que adaptar `updatedBy.id`, que en la v1.78 exige un UUID. Mientras tanto mandamos `id: null` (salvo que el identificador ya sea un UUID). ¿Qué acepta M2 para identificar a quien actúa desde otro módulo: un número, un string o `null`?
+
 ## Pendientes de enviar (20/10)
 
 
