@@ -6,6 +6,7 @@
 
 | Qué | Cómo quedó |
 |---|---|
+| **Interno: #161 y #235 roles de M6** ([PR #366](https://github.com/hllous/Backend-M6-DAPS2/pull/366), [PR #369](https://github.com/hllous/Backend-M6-DAPS2/pull/369)) | Autorización por rol en toda la API: adaptador del rol de M1, asignaciones locales con auditoría, `GET /me`, `RolesGuard` global con falla cerrada y `@Roles` en las 84 escrituras, y la suite `auth-roles` con la matriz. `MESA_ENTRADAS` y `SERVICIO` sin rol de M6. Seguimiento: pertenencia en #365 |
 | **Interno: #354 JWT de M1** ([PR #358](https://github.com/hllous/Backend-M6-DAPS2/pull/358)) | El backend valida el contrato real de M1: HS256, secreto base64, `iss` = `modulo1-ciudadanos`, `typ` = `access`, `exp` obligatorio, claim `rol` único y `sub_type`. El secreto real de M1 y el despliegue siguen en el tablero |
 | **Interno: #340 filtro `status` múltiple** ([PR #357](https://github.com/hllous/Backend-M6-DAPS2/pull/357)) | `GET /environmental-reports` acepta `status` repetido o con comas, 400 ante un valor desconocido o vacío; el estado es `UNDER_REVIEW`, no `IN_REVIEW`. Avisado al frontend (#646) |
 | **Interno: #295 `userId` y errores del publisher** ([PR #356](https://github.com/hllous/Backend-M6-DAPS2/pull/356)) | `userId` = usuario de la URL, `guest` falla en producción, errores distintos para `basic.return` y el 404 de `checkExchange`, aviso si el usuario AMQP no coincide con `CORE_MODULE_ID` (acepta `module_<id>`). La validación efectiva del usuario sigue del lado de M9 |
