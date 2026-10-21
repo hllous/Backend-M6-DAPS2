@@ -1,6 +1,6 @@
 # Estado de la integración
 
-> Qué está **abierto** hoy con cada contraparte. Última revisión general: **21 oct 2026**. Abiertos: **35** (🔴 6 · ⚠️ 25 · 🟡 4).
+> Qué está **abierto** hoy con cada contraparte. Última revisión general: **21 oct 2026**. Abiertos: **36** (🔴 6 · ⚠️ 26 · 🟡 4).
 >
 > Lo acordado con cada grupo está en las fichas de [`integracion/`](integracion/README.md); lo que pasó y cuándo, en el [historial](integracion/historial.md); lo cerrado, en [resueltos](integracion/resueltos.md); los textos enviados, en [mensajes](integracion/mensajes.md).
 >
@@ -16,6 +16,7 @@
 | **M1** | Sigue en el **sobre viejo (también en la v2.1 del 21/10) de M2** (`producer`, `subject`, `eventId` tipo `M1-EVT-000123`). El inbox lo tolera, incluido el `eventId` que no es UUID, pero **rechaza un `correlationId` que no sea UUID**: y **el propio Core también** (M9, 20/10: valida con `uuid.UUID` de Python y rechaza lo que no se interpreta como UUID), así que sus eventos de respuesta (`M6-REQ-…`) no llegarían a ninguna cola: falla su publicación, no nuestra entrega. Hay que pedirles el sobre del Core antes de suscribirnos. Aviso enviado a M1 el 20/10 a las 07:45 | ⚠️ Esperando a M1 | 21 oct 2026 |
 | **M1** | Sus ejemplos de `updateTicketStatus` de M2 están desactualizados contra la v1.75 (`COMPLETED`, `UPDATED`, `ADDITIONAL_INFO_REQUIRED`, `statusChangedAt`, `AREA_USER`, `attachmentId`, `ticketId` entero). Vale lo de M2, que es el dueño del contrato. Aviso enviado a M1 el 20/10 a las 07:45 | ⚠️ Esperando a M1 | 20 oct 2026 |
 | **M1** | **Qué significa `auth: false` en su login:** y si un login fallido responde 401 o 200 con ese valor. Sin respuesta del 21/10 | ⚠️ A aclarar con M1 | 21 oct 2026 |
+| **M1 / M9** | **`sub_type` del token de `SERVICIO`** ([#363](https://github.com/hllous/Backend-M6-DAPS2/issues/363)): M1 solo documenta `CIUDADANO` y `EMPLEADO` y dice que `SERVICIO` lo tiene M9. M6 rechaza con 401 cualquier otro valor y no le da rol de M6 (decisión del 21/10). Hay que saber cuál lleva antes de aceptar llamadas intermódulo por HTTP (hoy ninguna: los eventos entran por RabbitMQ) | ⚠️ A confirmar | 21 oct 2026 |
 | **M1** | Decidir si el acta ambiental va al expediente digital. Nuestra postura: no — el hecho les llega vía M4 | ⚠️ A definir | 17 ago 2026 |
 | **M3** | **Su backend todavía no está implementado:** según su §9, al 20/10 M3 no tiene adaptador RabbitMQ/Core, inbox/outbox ni los handlers de todos estos eventos; el contrato no equivale a una integración probada. Lo que M3 anota como pendiente del Core: si el schema registrado valida `data` o el evento completo, resolver `ticketCreated`, el casing de M1 (`casefileResolved` o `caseFileResolved`) y la declaración histórica `streetClousureEnded` (ver la fila del Core) | ⚠️ Sin integración real posible todavía | 20 oct 2026 |
 | **M3** | Validación cruzada: M3 nos manda los schemas autoritativos de `workOrderScheduled` y `workOrderCompleted`; hay que cruzarlos contra [`consumidos/`](eventos/consumidos/) y pedir `sourceRequestId` con `format: "uuid"` | 🟡 Esperando a M3 | 19 oct 2026 |
