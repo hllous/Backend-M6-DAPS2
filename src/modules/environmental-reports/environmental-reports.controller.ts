@@ -19,6 +19,7 @@ import {
   RequestInformationDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { M6Role } from '@prisma/client';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { ROLES_AMBIENTAL, ROLES_EXPEDIENTE_ALTA } from '../../auth/role-groups';
 
@@ -45,11 +46,19 @@ export class EnvironmentalReportsController {
     description: 'Expediente abierto',
     type: EnvironmentalReportResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Datos inválidos', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Datos inválidos, o un inspector (solo Campo) mandó ticketId: el alta con reclamo es de Oficina Ambiental',
+    type: ErrorResponseDto,
+  })
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
-  async create(@Body() dto: CreateEnvironmentalReportDto): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.create(dto);
+  async create(
+    @Body() dto: CreateEnvironmentalReportDto,
+    @CurrentUser('roles') roles: M6Role[],
+  ): Promise<EnvironmentalReportResponseDto> {
+    return this.reportsService.create(dto, roles);
   }
 
   @Get()

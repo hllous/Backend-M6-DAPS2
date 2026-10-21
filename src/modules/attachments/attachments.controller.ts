@@ -23,7 +23,8 @@ import { UploadEvidenceDto, EvidenceResponseDto, QueryEvidenceDto } from './dto'
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { MAX_EVIDENCE_SIZE_BYTES } from './evidence-mime';
 import { ErrorResponseDto } from '../../common/dto';
-import { Roles } from '../../common/decorators';
+import { CurrentUser, Roles } from '../../common/decorators';
+import { M6Role } from '@prisma/client';
 import { ROLES_CAMPO } from '../../auth/role-groups';
 
 @ApiTags('evidence')
@@ -93,8 +94,9 @@ export class AttachmentsController {
     @Body() dto: UploadEvidenceDto,
     @UploadedFile() file: Express.Multer.File,
     @Headers('Idempotency-Key') idempotencyKey: string,
+    @CurrentUser('roles') roles: M6Role[],
   ): Promise<EvidenceResponseDto> {
-    return this.attachmentsService.upload(dto, file, idempotencyKey);
+    return this.attachmentsService.upload(dto, file, idempotencyKey, roles);
   }
 
   @Get()

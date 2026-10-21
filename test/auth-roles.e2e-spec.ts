@@ -4,6 +4,7 @@ import { M6Role } from '@prisma/client';
 import * as request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
+  ACTORES,
   Actor,
   bearer,
   createTestApp,
@@ -28,7 +29,14 @@ describe('Roles de M6: matriz por rol (e2e)', () => {
   const http = () => request(app.getHttpServer());
 
   const U = randomUUID();
-  type Fila = { grupo: string; method: 'post' | 'get'; path: string; permitidos: Actor[] };
+  type Fila = {
+    grupo: string;
+    method: 'post' | 'put' | 'get';
+    path: string;
+    permitidos: Actor[];
+    body?: Record<string, unknown>;
+  };
+  const TODOS: Actor[] = ['admin', 'operaciones', 'ambiental', 'cuadrilla', 'inspector', 'auditor'];
   const MATRIZ: Fila[] = [
     { grupo: 'catálogos', method: 'post', path: '/zones', permitidos: ['admin'] },
     {
@@ -56,24 +64,73 @@ describe('Roles de M6: matriz por rol (e2e)', () => {
       permitidos: ['inspector'],
     },
     { grupo: 'inbox', method: 'post', path: '/events/inbox', permitidos: ['admin'] },
+    { grupo: 'lectura', method: 'get', path: '/zones', permitidos: TODOS },
+    { grupo: 'recursos (crews)', method: 'post', path: '/crews', permitidos: ['admin'] },
     {
-      grupo: 'lectura',
-      method: 'get',
-      path: '/zones',
-      permitidos: ['admin', 'operaciones', 'ambiental', 'cuadrilla', 'inspector', 'auditor'],
+      grupo: 'inventario (green-spaces)',
+      method: 'post',
+      path: '/green-spaces',
+      permitidos: ['admin', 'operaciones'],
     },
-  ];
-  const ACTORES: Actor[] = [
-    'admin',
-    'operaciones',
-    'ambiental',
-    'cuadrilla',
-    'inspector',
-    'auditor',
+    {
+      grupo: 'inventario (green-points)',
+      method: 'post',
+      path: '/green-points',
+      permitidos: ['admin', 'operaciones'],
+    },
+    {
+      grupo: 'role-assignments (lectura)',
+      method: 'get',
+      path: '/role-assignments/1',
+      permitidos: ['admin'],
+    },
+    {
+      grupo: 'role-assignments (alta)',
+      method: 'put',
+      path: '/role-assignments/9999',
+      permitidos: ['admin'],
+      body: { roles: [] },
+    },
+    {
+      grupo: 'acta (emitir)',
+      method: 'post',
+      path: `/environmental-inspections/${U}/violation-notice`,
+      permitidos: ['admin', 'ambiental'],
+    },
+    {
+      grupo: 'acta (leer, Nivel 2)',
+      method: 'get',
+      path: `/environmental-inspections/${U}/violation-notice`,
+      permitidos: ['admin', 'ambiental', 'inspector', 'auditor'],
+    },
+    {
+      grupo: 'respuesta de M7 (approve)',
+      method: 'post',
+      path: `/street-closure-requests/${U}/approve`,
+      permitidos: ['admin'],
+    },
+    {
+      grupo: 'respuesta de M3 (close)',
+      method: 'post',
+      path: `/repair-requests/${U}/close`,
+      permitidos: ['admin'],
+    },
+    // La evidencia depende del ownerType: el rol se chequea en el service, antes que el archivo.
+    ...(['INSPECTION', 'SERVICE', 'ZONE_RESULT', 'CONTAINER'] as const).map((ownerType): Fila => ({
+      grupo: `evidencia ${ownerType}`,
+      method: 'post',
+      path: '/evidence',
+      permitidos: [ownerType === 'INSPECTION' ? 'inspector' : 'cuadrilla'],
+      body: { ownerType, ownerId: U },
+    })),
   ];
 
-  const llamar = (m: 'post' | 'get', path: string, auth: { Authorization: string }) =>
-    m === 'get' ? http().get(path).set(auth) : http().post(path).set(auth).send({});
+  const llamar = (
+    m: Fila['method'],
+    path: string,
+    auth: { Authorization: string },
+    body: Record<string, unknown> = {},
+  ) => (m === 'get' ? http().get(path).set(auth) : http()[m](path).set(auth).send(body));
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -86,13 +143,19 @@ describe('Roles de M6: matriz por rol (e2e)', () => {
     await app.close();
   });
 
-  describe.each(MATRIZ)('$grupo: $method $path', ({ method, path, permitidos }) => {
+  describe.each(MATRIZ)('$grupo: $method $path', ({ method, path, permitidos, body }) => {
     it('sin token da 401', async () => {
-      await (method === 'get' ? http().get(path) : http().post(path).send({})).expect(401);
+      await (
+        method === 'get'
+          ? http().get(path)
+          : http()
+              [method](path)
+              .send(body ?? {})
+      ).expect(401);
     });
 
-    it.each(ACTORES)('actor %s', async (actor) => {
-      const res = await llamar(method, path, bearer(tokenDe(actor)));
+    it.each(TODOS)('actor %s', async (actor) => {
+      const res = await llamar(method, path, bearer(tokenDe(actor)), body);
       if (permitidos.includes(actor)) {
         // Pasó el guard: lo que sigue es validación o 404 del recurso, nunca 401/403.
         expect([401, 403]).not.toContain(res.status);
@@ -101,6 +164,61 @@ describe('Roles de M6: matriz por rol (e2e)', () => {
         expect(res.status).toBe(403);
         expect(res.body).toMatchObject({ statusCode: 403, code: 'ROLE_REQUIRED' });
       }
+    });
+  });
+
+  describe('POST /environmental-reports: ticketId solo con Oficina Ambiental', () => {
+    const alta = (actor: Actor, ticketId?: string) =>
+      http()
+        .post('/environmental-reports')
+        .set(bearer(tokenDe(actor)))
+        .send({ reportType: 'NOISE', ...(ticketId && { ticketId }) });
+
+    it.each([
+      ['admin', 201],
+      ['ambiental', 201],
+      ['inspector', 400],
+    ] as [Actor, number][])('%s con ticketId: %s', async (actor, status) => {
+      const res = await alta(actor, unique('TCK'));
+      expect(res.status).toBe(status);
+      if (status === 400) expect(res.body.message).toMatch(/Oficina Ambiental/);
+    });
+
+    it.each(['admin', 'ambiental', 'inspector'] as Actor[])(
+      '%s sin ticketId (de oficio): 201',
+      async (actor) => {
+        await alta(actor).expect(201);
+      },
+    );
+
+    it.each(['operaciones', 'cuadrilla', 'auditor'] as Actor[])('%s: 403', async (actor) => {
+      await alta(actor).expect(403);
+    });
+  });
+
+  describe('inspectorId al programar la inspección', () => {
+    it('solo se asigna a quien tiene M6_CAMPO_INSPECTOR (400 si no) y se guarda', async () => {
+      const exp = await http()
+        .post('/environmental-reports')
+        .set(bearer(tokenDe('ambiental')))
+        .send({ reportType: 'NOISE' })
+        .expect(201);
+      await http()
+        .post(`/environmental-reports/${exp.body.id}/start-review`)
+        .set(bearer(tokenDe('ambiental')))
+        .expect(200);
+      const programar = (inspectorId: string) =>
+        http()
+          .post(`/environmental-reports/${exp.body.id}/inspections`)
+          .set(bearer(tokenDe('ambiental')))
+          .send({ inspectorId });
+
+      const sinRol = await programar(ACTORES.cuadrilla.userId).expect(400);
+      expect(sinRol.body.message).toMatch(/rol de inspector/);
+      await programar('no-numerico').expect(400);
+
+      const ok = await programar(ACTORES.inspector.userId).expect(201);
+      expect(ok.body.inspectorId).toBe(ACTORES.inspector.userId);
     });
   });
 

@@ -4,6 +4,7 @@ export {
   ROLES_KEY,
   ANY_EMPLOYEE_KEY,
   ROLE_REQUIRED_CODE,
+  roleRequiredException,
 } from './roles.decorator';
 export { Public, IS_PUBLIC_KEY } from './public.decorator';
 export { CurrentUser } from './current-user.decorator';

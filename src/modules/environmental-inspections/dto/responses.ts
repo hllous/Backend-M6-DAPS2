@@ -40,11 +40,20 @@ export class InspectionResponseDto {
   serviceId: string | null;
 
   @ApiPropertyOptional({
-    description: 'Inspector asignado. **Interno: nunca sale hacia M2.**',
+    description:
+      'Inspector que Oficina asignó al programar, si lo hizo. **Interno: nunca sale hacia M2.**',
     nullable: true,
     type: String,
   })
   inspectorId: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Usuario que cerró la inspección (siempre el del token, aunque no sea el asignado). Null hasta que se cierra. **Interno: nunca sale hacia M2.**',
+    nullable: true,
+    type: String,
+  })
+  completedByUserId: string | null;
 
   @ApiPropertyOptional({
     description: 'Cuándo se realizó',

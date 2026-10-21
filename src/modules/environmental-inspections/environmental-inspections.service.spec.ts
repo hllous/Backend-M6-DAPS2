@@ -43,7 +43,8 @@ describe('EnvironmentalInspectionsService', () => {
     id: INSPECTION_ID,
     reportId: REPORT_ID,
     serviceId: null,
-    inspectorId: 'user-014',
+    inspectorId: '14',
+    completedByUserId: null,
     inspectedAt: new Date('2026-09-10T11:30:00.000Z'),
     findings: 'Vertido sin tratar',
     outcome: InspectionOutcome.VIOLATION_FOUND,
@@ -84,6 +85,7 @@ describe('EnvironmentalInspectionsService', () => {
       service: {
         findUnique: jest.fn().mockResolvedValue({ id: 'svc-1', mode: ServiceMode.POINT }),
       },
+      userRoleAssignment: { findFirst: jest.fn().mockResolvedValue({ id: 'fila-1' }) },
       attachment: { findMany: jest.fn().mockResolvedValue([]) },
       ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
@@ -303,7 +305,7 @@ describe('EnvironmentalInspectionsService', () => {
       prisma.environmentalInspection.update.mockResolvedValue(inspection());
     });
 
-    it('registra como inspector al usuario del token, no al del body', async () => {
+    it('completedByUserId sale del token y no pisa el inspector asignado', async () => {
       await service.complete(
         INSPECTION_ID,
         {
@@ -315,7 +317,8 @@ describe('EnvironmentalInspectionsService', () => {
       );
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
-      expect(args.data.inspectorId).toBe('user-7');
+      expect(args.data.completedByUserId).toBe('user-7');
+      expect(args.data).not.toHaveProperty('inspectorId');
     });
 
     it('VIOLATION_FOUND lleva el expediente hasta VIOLATION_FOUND', async () => {
@@ -531,9 +534,30 @@ describe('EnvironmentalInspectionsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('el inspectorId del body se ignora: quien programa no es el inspector', async () => {
-      await service.create(REPORT_ID, { inspectorId: 'otro' } as CreateInspectionDto);
+    it('guarda el inspector asignado si tiene fila M6_CAMPO_INSPECTOR (id normalizado)', async () => {
+      await service.create(REPORT_ID, { inspectorId: '0042' } as CreateInspectionDto);
 
+      expect(prisma.userRoleAssignment.findFirst).toHaveBeenCalledWith({
+        where: { userId: '42', role: 'M6_CAMPO_INSPECTOR' },
+        select: { id: true },
+      });
+      const [[args]] = prisma.environmentalInspection.create.mock.calls;
+      expect(args.data.inspectorId).toBe('42');
+    });
+
+    it('un inspectorId sin rol de inspector da 400 y no escribe nada', async () => {
+      prisma.userRoleAssignment.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.create(REPORT_ID, { inspectorId: '42' } as CreateInspectionDto),
+      ).rejects.toThrow(/no tiene el rol de inspector/);
+      expect(prisma.environmentalInspection.create).not.toHaveBeenCalled();
+    });
+
+    it('sin inspectorId no consulta roles y queda null', async () => {
+      await service.create(REPORT_ID, {});
+
+      expect(prisma.userRoleAssignment.findFirst).not.toHaveBeenCalled();
       const [[args]] = prisma.environmentalInspection.create.mock.calls;
       expect(args.data.inspectorId).toBeNull();
     });

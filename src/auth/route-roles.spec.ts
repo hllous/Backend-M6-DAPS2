@@ -9,12 +9,31 @@ import { M6_ROLES, M6Role } from './m6-role';
  * (por metadata, sin levantar la app) para que una escritura nueva sin @Roles,
  * o con un rol inventado, rompa el build en vez de quedar abierta o inservible.
  */
+const RUTAS_ESPERADAS = 140;
+
 describe('cobertura de @Roles por ruta', () => {
   const routes = listRoutes(AppModule);
   const label = (r: { method: string; path: string }) => `${r.method} ${r.path}`;
 
-  it('encuentra las rutas de la app', () => {
-    expect(routes.length).toBeGreaterThan(100);
+  // Exacta a propósito: una ruta nueva obliga a tocar este número y, de paso, a
+  // mirar la tabla de roles. Una ruta que el escaneo no ve haría bajar el número.
+  it('encuentra todas las rutas de la app', () => {
+    expect(routes).toHaveLength(RUTAS_ESPERADAS);
+  });
+
+  it('@AnyEmployee (sin rol de M6) está solo en GET /me', () => {
+    expect(routes.filter((r) => r.anyEmployee).map(label)).toEqual(['GET /me']);
+  });
+
+  it('los GET con @Roles explícito son los esperados (lo demás exige cualquier rol de M6)', () => {
+    const gets = routes
+      .filter((r) => r.method === 'GET' && !r.isPublic && r.roles?.length)
+      .map((r) => `${label(r)} -> ${r.roles}`);
+    expect(gets).toEqual([
+      'GET /environmental-inspections/:id/violation-notice -> M6_ADMIN,M6_OFICINA_AMBIENTAL,M6_CAMPO_INSPECTOR,M6_AUDITOR',
+      'GET /role-assignments -> M6_ADMIN',
+      'GET /role-assignments/:userId -> M6_ADMIN',
+    ]);
   });
 
   it('toda escritura no pública declara @Roles', () => {
@@ -39,12 +58,16 @@ describe('cobertura de @Roles por ruta', () => {
     expect(conAuditor).toEqual([]);
   });
 
-  it('Oficina y Campo no se mezclan en un mismo @Roles, salvo abrir expediente de oficio', () => {
+  it('Oficina y Campo no se mezclan en un mismo @Roles, salvo las excepciones', () => {
     const campo: string[] = [M6Role.M6_CAMPO_CUADRILLA, M6Role.M6_CAMPO_INSPECTOR];
     const mezclados = routes
       .filter((r) => r.roles?.includes(M6Role.M6_ADMIN) && r.roles.some((x) => campo.includes(x)))
       .map(label);
-    expect(mezclados).toEqual(['POST /environmental-reports']);
+    // Abrir expediente de oficio, y el acta (la leen Ambiental y el inspector).
+    expect(mezclados).toEqual([
+      'GET /environmental-inspections/:id/violation-notice',
+      'POST /environmental-reports',
+    ]);
   });
 
   it('POST /events/inbox es solo de M6_ADMIN', () => {

@@ -21,7 +21,7 @@ import {
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, Roles } from '../../common/decorators';
-import { ROLES_ADMIN } from '../../auth/role-groups';
+import { ROLES_OPERACIONES } from '../../auth/role-groups';
 
 @ApiTags('green-spaces')
 @ApiBearerAuth('JWT-auth')
@@ -30,7 +30,7 @@ export class GreenSpacesController {
   constructor(private readonly greenSpacesService: GreenSpacesService) {}
 
   @Post()
-  @Roles(...ROLES_ADMIN)
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Registrar un espacio verde',
     description:
@@ -121,7 +121,7 @@ export class GreenSpacesController {
   }
 
   @Patch(':id')
-  @Roles(...ROLES_ADMIN)
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Actualizar un espacio verde',
     description:
@@ -165,7 +165,7 @@ export class GreenSpacesController {
   }
 
   @Delete(':id')
-  @Roles(...ROLES_ADMIN)
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Desactivar un espacio verde',

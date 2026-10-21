@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   EnvironmentalReportStatus as S,
   InspectionOutcome,
+  M6Role,
   Prisma,
   ServiceMode,
 } from '@prisma/client';
@@ -61,14 +62,14 @@ export class EnvironmentalInspectionsService {
       await this.assertPointService(dto.serviceId);
     }
 
+    const inspectorId = dto.inspectorId ? await this.assertInspector(dto.inspectorId) : null;
+
     const inspection = await this.prisma.$transaction(async (tx) => {
       const row = await tx.environmentalInspection.create({
         data: {
           reportId,
           serviceId: dto.serviceId ?? null,
-          // Quien programa (Oficina) no es el inspector: el inspector se registra al
-          // completar, desde el token. dto.inspectorId está deprecado e ignorado.
-          inspectorId: null,
+          inspectorId,
         },
         include: INSPECTION_INCLUDE,
       });
@@ -121,7 +122,8 @@ export class EnvironmentalInspectionsService {
         where: { id },
         data: {
           inspectedAt: new Date(dto.inspectedAt),
-          inspectorId: userId,
+          // Siempre el del token; el inspectorId asignado (si hay) no se pisa.
+          completedByUserId: userId,
           outcome: dto.outcome,
           nextStep: dto.nextStep ?? null,
           findings: dto.findings ?? null,
@@ -397,12 +399,33 @@ export class EnvironmentalInspectionsService {
     return inspection;
   }
 
+  /**
+   * El inspector asignado tiene que existir como tal en M6: una fila
+   * M6_CAMPO_INSPECTOR. Es el techo del rol de M1 el que decide si esa fila rige
+   * al iniciar sesión; acá solo se evita asignar a quien no es inspector.
+   * Devuelve el id normalizado (sin ceros a la izquierda), como lo guarda la tabla.
+   */
+  private async assertInspector(raw: string): Promise<string> {
+    const userId = BigInt(raw).toString();
+    const fila = await this.prisma.userRoleAssignment.findFirst({
+      where: { userId, role: M6Role.M6_CAMPO_INSPECTOR },
+      select: { id: true },
+    });
+    if (!fila) {
+      throw new BadRequestException(
+        `El usuario '${userId}' no tiene el rol de inspector (M6_CAMPO_INSPECTOR): no se le puede asignar la inspección`,
+      );
+    }
+    return userId;
+  }
+
   private toResponseDto(inspection: InspectionWithItems): InspectionResponseDto {
     return {
       id: inspection.id,
       reportId: inspection.reportId,
       serviceId: inspection.serviceId,
       inspectorId: inspection.inspectorId,
+      completedByUserId: inspection.completedByUserId,
       inspectedAt: inspection.inspectedAt,
       findings: inspection.findings,
       outcome: inspection.outcome,

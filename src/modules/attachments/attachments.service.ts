@@ -1,12 +1,26 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { M6Role, Prisma } from '@prisma/client';
+import { roleRequiredException } from '../../common/decorators';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { EvidenceResponseDto, QueryEvidenceDto, UploadEvidenceDto } from './dto';
 import { EVIDENCE_EXTENSION_BY_MIME, MAX_EVIDENCE_SIZE_BYTES } from './evidence-mime';
 import { sanitizeFilename, sniffMime, stripMetadata } from './evidence-file';
 import { EVIDENCE_STORAGE, EvidenceStorage } from './storage/evidence-storage.interface';
+
+/**
+ * Quién puede subir evidencia de cada tipo de recurso. Lo de la inspección es del
+ * inspector; lo del servicio, la zona y el contenedor es de la cuadrilla. Un
+ * M6_ADMIN no tiene Campo (ADR-005), así que no sube evidencia.
+ * La pertenencia (solo sobre lo suyo) es #365.
+ */
+const UPLOAD_ROLES: Record<AttachmentOwnerType, readonly M6Role[]> = {
+  [AttachmentOwnerType.INSPECTION]: [M6Role.M6_CAMPO_INSPECTOR],
+  [AttachmentOwnerType.SERVICE]: [M6Role.M6_CAMPO_CUADRILLA],
+  [AttachmentOwnerType.ZONE_RESULT]: [M6Role.M6_CAMPO_CUADRILLA],
+  [AttachmentOwnerType.CONTAINER]: [M6Role.M6_CAMPO_CUADRILLA],
+};
 
 @Injectable()
 export class AttachmentsService {
@@ -21,7 +35,12 @@ export class AttachmentsService {
     dto: UploadEvidenceDto,
     file: Express.Multer.File,
     idempotencyKey: string,
+    roles: readonly M6Role[],
   ): Promise<EvidenceResponseDto> {
+    // Primero el rol: un 403 no debe depender de qué tan bien armado venga el resto.
+    if (!UPLOAD_ROLES[dto.ownerType].some((r) => roles.includes(r))) {
+      throw roleRequiredException();
+    }
     if (!file) {
       throw new BadRequestException('Falta el archivo (campo "file")');
     }

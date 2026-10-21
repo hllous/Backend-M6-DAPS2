@@ -3,13 +3,15 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ForbiddenException } from '@nestjs/common';
+import { M6Role, Prisma } from '@prisma/client';
 import { AttachmentsService } from './attachments.service';
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { EvidenceStorage } from './storage/evidence-storage.interface';
 
 const CONTAINER_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const ATTACHMENT_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+const CAMPO = [M6Role.M6_CAMPO_CUADRILLA, M6Role.M6_CAMPO_INSPECTOR];
 const IDEMPOTENCY_KEY = '99999999-9999-9999-9999-999999999999';
 
 /** Un JPEG de verdad: SOI, un Exif con GPS, y los bytes de imagen. */
@@ -34,6 +36,63 @@ const jpegFile = (over: Partial<Express.Multer.File> = {}): Express.Multer.File 
   }) as Express.Multer.File;
 
 describe('AttachmentsService', () => {
+  describe('rol por tipo de recurso', () => {
+    const { M6_CAMPO_CUADRILLA: CUADRILLA, M6_CAMPO_INSPECTOR: INSPECTOR } = M6Role;
+    const casos: [AttachmentOwnerType, M6Role, M6Role[]][] = [
+      [AttachmentOwnerType.INSPECTION, INSPECTOR, [CUADRILLA, M6Role.M6_ADMIN, M6Role.M6_AUDITOR]],
+      [
+        AttachmentOwnerType.SERVICE,
+        CUADRILLA,
+        [INSPECTOR, M6Role.M6_ADMIN, M6Role.M6_OFICINA_OPERACIONES],
+      ],
+      [AttachmentOwnerType.ZONE_RESULT, CUADRILLA, [INSPECTOR, M6Role.M6_ADMIN]],
+      [AttachmentOwnerType.CONTAINER, CUADRILLA, [INSPECTOR, M6Role.M6_ADMIN]],
+    ];
+
+    it.each(casos)(
+      '%s: solo %s; los demás roles reciben 403 ROLE_REQUIRED',
+      async (tipo, ok, otros) => {
+        for (const rol of otros) {
+          const error = await service
+            .upload(
+              { ownerType: tipo, ownerId: CONTAINER_ID } as never,
+              jpegFile(),
+              IDEMPOTENCY_KEY,
+              [rol],
+            )
+            .catch((e) => e);
+          expect(error).toBeInstanceOf(ForbiddenException);
+          expect(error.getResponse()).toMatchObject({ code: 'ROLE_REQUIRED' });
+          expect(JSON.stringify(error.getResponse())).not.toContain('M6_');
+        }
+        expect(prisma.attachment.create).not.toHaveBeenCalled();
+        expect(storage.upload).not.toHaveBeenCalled();
+
+        // Con el rol correcto el chequeo de rol no frena (puede fallar luego por otra razón).
+        const res = await service
+          .upload(
+            { ownerType: tipo, ownerId: CONTAINER_ID } as never,
+            jpegFile(),
+            IDEMPOTENCY_KEY,
+            [ok],
+          )
+          .catch((e) => e);
+        expect(res).not.toBeInstanceOf(ForbiddenException);
+      },
+    );
+
+    it('sin roles en el request también es 403', async () => {
+      await expect(
+        service.upload(
+          { ownerType: 'CONTAINER', ownerId: CONTAINER_ID } as never,
+          jpegFile(),
+          IDEMPOTENCY_KEY,
+          [],
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
   let prisma: any;
   let storage: jest.Mocked<EvidenceStorage>;
   let service: AttachmentsService;
@@ -70,6 +129,7 @@ describe('AttachmentsService', () => {
         { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
         jpegFile(),
         IDEMPOTENCY_KEY,
+        CAMPO,
       );
 
       expect(prisma.container.count).toHaveBeenCalledWith({ where: { id: CONTAINER_ID } });
@@ -111,6 +171,7 @@ describe('AttachmentsService', () => {
         { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
         jpegFile(),
         IDEMPOTENCY_KEY,
+        CAMPO,
       );
 
       expect(prisma.attachment.findUnique).toHaveBeenCalledWith({
@@ -135,6 +196,7 @@ describe('AttachmentsService', () => {
           { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
           jpegFile(),
           IDEMPOTENCY_KEY,
+          CAMPO,
         ),
       ).rejects.toThrow(NotFoundException);
       expect(storage.upload).not.toHaveBeenCalled();
@@ -146,6 +208,7 @@ describe('AttachmentsService', () => {
           { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
           undefined as unknown as Express.Multer.File,
           IDEMPOTENCY_KEY,
+          CAMPO,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -156,6 +219,7 @@ describe('AttachmentsService', () => {
           { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
           jpegFile(),
           '',
+          CAMPO,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -166,6 +230,7 @@ describe('AttachmentsService', () => {
           { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
           jpegFile({ mimetype: 'application/zip' }),
           IDEMPOTENCY_KEY,
+          CAMPO,
         ),
       ).rejects.toThrow(BadRequestException);
       expect(storage.upload).not.toHaveBeenCalled();
@@ -184,6 +249,7 @@ describe('AttachmentsService', () => {
           { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
           jpegFile({ buffer: exe, size: exe.length }),
           IDEMPOTENCY_KEY,
+          CAMPO,
         ),
       ).rejects.toThrow(BadRequestException);
       expect(storage.upload).not.toHaveBeenCalled();
@@ -197,6 +263,7 @@ describe('AttachmentsService', () => {
           { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
           jpegFile({ buffer: png, size: png.length }),
           IDEMPOTENCY_KEY,
+          CAMPO,
         ),
       ).rejects.toThrow(/image\/png/);
     });
@@ -207,6 +274,7 @@ describe('AttachmentsService', () => {
         { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
         jpegFile(),
         IDEMPOTENCY_KEY,
+        CAMPO,
       );
 
       const [[args]] = storage.upload.mock.calls;
@@ -219,6 +287,7 @@ describe('AttachmentsService', () => {
         { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
         jpegFile({ size: 999_999 }),
         IDEMPOTENCY_KEY,
+        CAMPO,
       );
 
       const [[args]] = prisma.attachment.create.mock.calls;
@@ -234,6 +303,7 @@ describe('AttachmentsService', () => {
         { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
         jpegFile(),
         IDEMPOTENCY_KEY,
+        CAMPO,
       );
 
       const [[args]] = prisma.attachment.create.mock.calls;
@@ -245,6 +315,7 @@ describe('AttachmentsService', () => {
         { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
         jpegFile(),
         IDEMPOTENCY_KEY,
+        CAMPO,
       );
 
       const [[args]] = storage.upload.mock.calls;
@@ -257,6 +328,7 @@ describe('AttachmentsService', () => {
         { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
         jpegFile({ originalname: '../../../etc/passwd' }),
         IDEMPOTENCY_KEY,
+        CAMPO,
       );
 
       const [[args]] = prisma.attachment.create.mock.calls;
@@ -275,6 +347,7 @@ describe('AttachmentsService', () => {
           { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
           jpegFile(),
           IDEMPOTENCY_KEY,
+          CAMPO,
         ),
       ).rejects.toThrow('la base se cayo');
 
@@ -301,6 +374,7 @@ describe('AttachmentsService', () => {
         { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
         jpegFile(),
         IDEMPOTENCY_KEY,
+        CAMPO,
       );
 
       expect(result.filename).toBe('ganador.jpg');
@@ -313,6 +387,7 @@ describe('AttachmentsService', () => {
           { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
           jpegFile({ size: 999_999_999 }),
           IDEMPOTENCY_KEY,
+          CAMPO,
         ),
       ).rejects.toThrow(BadRequestException);
       expect(storage.upload).not.toHaveBeenCalled();
@@ -326,7 +401,7 @@ describe('AttachmentsService', () => {
       });
 
       it('el camino válido responde 503 y no persiste nada (la Idempotency-Key queda libre)', async () => {
-        await expect(service.upload(owner, jpegFile(), IDEMPOTENCY_KEY)).rejects.toThrow(
+        await expect(service.upload(owner, jpegFile(), IDEMPOTENCY_KEY, CAMPO)).rejects.toThrow(
           ServiceUnavailableException,
         );
         expect(prisma.attachment.create).not.toHaveBeenCalled();
@@ -334,18 +409,21 @@ describe('AttachmentsService', () => {
 
       it('las validaciones previas siguen dando 400/404 y no llegan al storage', async () => {
         await expect(
-          service.upload(owner, jpegFile({ size: 999_999_999 }), IDEMPOTENCY_KEY),
+          service.upload(owner, jpegFile({ size: 999_999_999 }), IDEMPOTENCY_KEY, CAMPO),
         ).rejects.toThrow(BadRequestException);
         await expect(
           service.upload(
             owner,
             jpegFile({ mimetype: 'text/plain', buffer: Buffer.from('hola') }),
             IDEMPOTENCY_KEY,
+            CAMPO,
           ),
         ).rejects.toThrow(BadRequestException);
-        await expect(service.upload(owner, jpegFile(), '')).rejects.toThrow(BadRequestException);
+        await expect(service.upload(owner, jpegFile(), '', CAMPO)).rejects.toThrow(
+          BadRequestException,
+        );
         prisma.container.count.mockResolvedValue(0);
-        await expect(service.upload(owner, jpegFile(), IDEMPOTENCY_KEY)).rejects.toThrow(
+        await expect(service.upload(owner, jpegFile(), IDEMPOTENCY_KEY, CAMPO)).rejects.toThrow(
           NotFoundException,
         );
         expect(storage.upload).not.toHaveBeenCalled();

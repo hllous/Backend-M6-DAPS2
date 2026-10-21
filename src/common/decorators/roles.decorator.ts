@@ -1,4 +1,4 @@
-import { applyDecorators, SetMetadata } from '@nestjs/common';
+import { applyDecorators, ForbiddenException, SetMetadata } from '@nestjs/common';
 import { ApiForbiddenResponse } from '@nestjs/swagger';
 import { M6Role } from '../../auth/m6-role';
 import { ErrorResponseDto } from '../dto/error-response.dto';
@@ -8,6 +8,14 @@ export const ANY_EMPLOYEE_KEY = 'anyEmployee';
 
 /** Código del cuerpo del 403 por rol: el frontend distingue "falta rol" de otros 403. */
 export const ROLE_REQUIRED_CODE = 'ROLE_REQUIRED';
+
+/** El 403 por rol, igual para el guard y para los chequeos dentro de un service. No dice qué rol falta. */
+export const roleRequiredException = () =>
+  new ForbiddenException({
+    statusCode: 403,
+    message: 'No tiene el rol requerido para esta operación',
+    code: ROLE_REQUIRED_CODE,
+  });
 
 /**
  * Roles de M6 que pueden invocar el endpoint (basta uno). Lo hace cumplir el

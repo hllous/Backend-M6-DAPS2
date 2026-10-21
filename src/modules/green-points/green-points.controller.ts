@@ -21,7 +21,7 @@ import {
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, Roles } from '../../common/decorators';
-import { ROLES_ADMIN } from '../../auth/role-groups';
+import { ROLES_OPERACIONES } from '../../auth/role-groups';
 
 @ApiTags('green-points')
 @ApiBearerAuth('JWT-auth')
@@ -30,7 +30,7 @@ export class GreenPointsController {
   constructor(private readonly greenPointsService: GreenPointsService) {}
 
   @Post()
-  @Roles(...ROLES_ADMIN)
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Registrar un punto verde',
     description:
@@ -86,7 +86,7 @@ export class GreenPointsController {
   }
 
   @Patch(':id')
-  @Roles(...ROLES_ADMIN)
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Actualizar un punto verde',
     description:
@@ -114,7 +114,7 @@ export class GreenPointsController {
   }
 
   @Delete(':id')
-  @Roles(...ROLES_ADMIN)
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Deshabilitar un punto verde',

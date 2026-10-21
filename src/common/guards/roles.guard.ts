@@ -1,14 +1,8 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import { ANY_EMPLOYEE_KEY, ROLE_REQUIRED_CODE, ROLES_KEY } from '../decorators/roles.decorator';
+import { ANY_EMPLOYEE_KEY, roleRequiredException, ROLES_KEY } from '../decorators/roles.decorator';
 
 const LECTURA = new Set(['GET', 'HEAD']);
 
@@ -57,11 +51,7 @@ export class RolesGuard implements CanActivate {
       this.logger.warn(
         `Acceso denegado: usuario=${user?.userId ?? 'anónimo'} ${route} requiere=[${requiredRoles}]`,
       );
-      throw new ForbiddenException({
-        statusCode: 403,
-        message: 'No tiene el rol requerido para esta operación',
-        code: ROLE_REQUIRED_CODE,
-      });
+      throw roleRequiredException();
     }
     return true;
   }

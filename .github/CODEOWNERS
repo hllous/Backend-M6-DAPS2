@@ -13,3 +13,11 @@
 /.dockerignore       @bcanteli-dev
 /docker/             @bcanteli-dev
 /docker-compose.yml  @bcanteli-dev
+
+# 4. Autorización y contrato (la última regla que coincide gana: va al final)
+# La matriz de roles, su tabla generada, el escaneo de rutas y las migraciones
+# cambian quién puede qué: las revisa el dueño del repositorio.
+/docs/api/endpoints.md      @hllous
+/src/auth/role-groups.ts    @hllous
+/src/auth/route-roles.ts    @hllous
+/prisma/migrations/         @hllous

@@ -29,7 +29,7 @@ import {
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 import { CurrentUser, Roles } from '../../common/decorators';
-import { ROLES_AMBIENTAL, ROLES_INSPECTOR } from '../../auth/role-groups';
+import { ROLES_ACTA_LECTURA, ROLES_AMBIENTAL, ROLES_INSPECTOR } from '../../auth/role-groups';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
 const NOT_FOUND = { status: 404, description: 'Inspección no encontrada', type: ErrorResponseDto };
@@ -172,6 +172,7 @@ export class EnvironmentalInspectionsController {
   }
 
   @Get('environmental-inspections/:id/violation-notice')
+  @Roles(...ROLES_ACTA_LECTURA)
   @ApiExtraModels(ViolationNoticeResponseDto)
   @ApiOperation({
     summary: 'Obtener el acta de una inspección',

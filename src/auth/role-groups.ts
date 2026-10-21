@@ -15,5 +15,12 @@ export const ROLES_AMBIENTAL = [M6Role.M6_ADMIN, M6Role.M6_OFICINA_AMBIENTAL] as
 export const ROLES_CUADRILLA = [M6Role.M6_CAMPO_CUADRILLA] as const;
 export const ROLES_INSPECTOR = [M6Role.M6_CAMPO_INSPECTOR] as const;
 export const ROLES_CAMPO = [M6Role.M6_CAMPO_CUADRILLA, M6Role.M6_CAMPO_INSPECTOR] as const;
+// Leer el acta (Nivel 2: identifica al infractor): Oficina Ambiental, el inspector que
+// la originó y el auditor. Ni Operaciones ni la cuadrilla la necesitan.
+export const ROLES_ACTA_LECTURA = [
+  ...ROLES_AMBIENTAL,
+  M6Role.M6_CAMPO_INSPECTOR,
+  M6Role.M6_AUDITOR,
+] as const;
 // Abrir expediente: Oficina Ambiental, o el inspector de oficio.
 export const ROLES_EXPEDIENTE_ALTA = [...ROLES_AMBIENTAL, M6Role.M6_CAMPO_INSPECTOR] as const;

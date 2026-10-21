@@ -6542,7 +6542,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6843,7 +6843,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6913,7 +6913,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7001,7 +7001,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7311,7 +7311,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7381,7 +7381,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -9916,6 +9916,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL, M6_CAMPO_INSPECTOR, M6_AUDITOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Inspección no encontrada",
             "content": {
@@ -9975,7 +9985,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos, o un inspector (solo Campo) mandó ticketId: el alta con reclamo es de Oficina Ambiental",
             "content": {
               "application/json": {
                 "schema": {
@@ -16939,10 +16949,9 @@
           },
           "inspectorId": {
             "type": "string",
-            "deprecated": true,
-            "description": "DEPRECADO e ignorado: el inspector se registra al completar la inspección, desde el token. Se acepta para no romper clientes viejos",
-            "example": "user-014",
-            "maxLength": 64
+            "description": "Inspector que Oficina asigna (id numérico de M1). Opcional. Esa persona tiene que tener el rol M6_CAMPO_INSPECTOR, si no es 400. Interno: nunca sale hacia M2. Quien cierra la inspección se registra aparte (`completedByUserId`), desde el token",
+            "example": "42",
+            "maxLength": 19
           }
         }
       },
@@ -17001,7 +17010,12 @@
           },
           "inspectorId": {
             "type": "string",
-            "description": "Inspector asignado. **Interno: nunca sale hacia M2.**",
+            "description": "Inspector que Oficina asignó al programar, si lo hizo. **Interno: nunca sale hacia M2.**",
+            "nullable": true
+          },
+          "completedByUserId": {
+            "type": "string",
+            "description": "Usuario que cerró la inspección (siempre el del token, aunque no sea el asignado). Null hasta que se cierra. **Interno: nunca sale hacia M2.**",
             "nullable": true
           },
           "inspectedAt": {
