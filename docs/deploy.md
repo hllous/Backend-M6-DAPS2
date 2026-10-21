@@ -108,6 +108,17 @@ No hay que hacer nada manual en el día a día.
 | `CORE_MODULE_ID` | `ambiente` (default): nuestro módulo ante el Core, va como `sourceModule` en el sobre y en el pedido de token | No |
 | `CORE_API_URL` | URL base de la API REST del Core (M9), con el Core real `https://core-uade-2026.duckdns.org`; `https://` obligatorio con `NODE_ENV=production` | Opcional hasta tener la ficha de M9. Sin ella la app arranca igual y no se le pide nada al Core |
 | `CORE_MODULE_SECRET` | Secret de máquina para pedir el token de módulo (`POST /api/v1/auth/module-token`). Lo entrega M9; se carga **solo en el panel de Render**, nunca en el repo ni en `.env.example`, y la app no lo loguea | ✅ Sí si hay `CORE_API_URL` (sin él la app no arranca) |
+| `CORE_SUBSCRIPTION_MAX_ATTEMPTS` | `maxAttempts` de cada suscripción que se registra en el Core (default `4`, la cadena de reintentos de la guía común) | No |
+| `CORE_REGISTER_ON_BOOT` | `false` o `0` desactiva el registro al arrancar (default `true`; acepta true/false/1/0 sin distinguir mayúsculas) | No |
+
+> **Registro en el catálogo del Core (#266).** Con `CORE_API_URL`, al arrancar (sin bloquear el arranque) la app consulta `GET /api/v1/subscriptions` y `GET /api/v1/publications` y crea **solo lo que falta**: 8 suscripciones (`ConsumedEvent` menos `weatherAlertIssued`, que nadie publica) con `maxAttempts` 4, y 6 publicaciones (`EventType`). Correrlo de nuevo no duplica nada (un POST repetido reactivaría la suscripción y pisaría `maxAttempts`). Lo que el Core tenga a nombre de M6 y el código ya no declare se loguea como advertencia y **no se borra** (retirarlo a mano con `DELETE /api/v1/subscriptions/{id}` o `/publications/{id}`). Si el Core falla, la app arranca igual: se loguea y se reintenta con backoff (5 s, 15 s, 45 s... tope 5 min, hasta 6 intentos). Agregar un evento a `ConsumedEvent` o `EventType` lo registra solo.
+>
+> - **Verificar:** `GET /api/v1/event-types/map` (con el token de módulo) debe mostrar a `ambiente` suscripto a los 8 y publicando los 6; confirmar además que `q.ambiente` existe (el 201 del POST no lo prueba).
+> - **A mano:** `npm run core:register` (lee `.env`; imprime lo creado y lo sobrante).
+> - **`maxAttempts` solo rige al crear:** cambiar `CORE_SUBSCRIPTION_MAX_ATTEMPTS` después no actualiza las suscripciones ya registradas.
+> - **Varias réplicas:** cada una sincroniza al arrancar y pueden pisarse; conviene `CORE_REGISTER_ON_BOOT=false` y correr `npm run core:register` como paso del deploy.
+> - **Suposiciones a confirmar con M9:** la forma del `GET` (array, o `{data}`/`{items}` con `eventType`), si pagina (con `meta.total` mayor a lo recibido el servicio no crea nada y falla) y si devuelve solo lo del módulo del token.
+> - **Desactivar:** `CORE_REGISTER_ON_BOOT=false` apaga solo el registro; sin `CORE_API_URL` no se le pide nada al Core.
 
 > **Core de M9 (ambiente real, guía común del 20/10).** El Core está desplegado en AWS: ambiente **único y compartido**, sin testing separado (un evento de prueba puede llegar a otros módulos; coordinar antes de publicar, ver [m9.md](integracion/m9.md#guía-común-de-integración-del-core-2010)). Valores **no secretos** a cargar en el panel de Render cuando M9 entregue la ficha:
 >

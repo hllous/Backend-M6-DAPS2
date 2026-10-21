@@ -133,6 +133,8 @@ describe('configuration — Core', () => {
       moduleId: 'ambiente',
       apiUrl: undefined,
       moduleSecret: undefined,
+      subscriptionMaxAttempts: 4,
+      registerOnBoot: true,
     });
     expect(config({ CORE_API_URL: '', CORE_MODULE_SECRET: '' }).core.apiUrl).toBeUndefined();
   });
@@ -140,7 +142,25 @@ describe('configuration — Core', () => {
   it('toma la URL y el secret', () => {
     expect(
       config({ CORE_API_URL: 'http://localhost:4000', CORE_MODULE_SECRET: 's3cr3t' }).core,
-    ).toEqual({ moduleId: 'ambiente', apiUrl: 'http://localhost:4000', moduleSecret: 's3cr3t' });
+    ).toMatchObject({
+      moduleId: 'ambiente',
+      apiUrl: 'http://localhost:4000',
+      moduleSecret: 's3cr3t',
+    });
+  });
+
+  it('maxAttempts y el registro al arrancar se configuran', () => {
+    const core = config({
+      CORE_SUBSCRIPTION_MAX_ATTEMPTS: '6',
+      CORE_REGISTER_ON_BOOT: 'false',
+    }).core;
+    expect(core.subscriptionMaxAttempts).toBe(6);
+    expect(core.registerOnBoot).toBe(false);
+    expect(() => config({ CORE_SUBSCRIPTION_MAX_ATTEMPTS: '0' })).toThrow();
+    expect(() => config({ CORE_REGISTER_ON_BOOT: 'quizas' })).toThrow();
+    expect(config({ CORE_REGISTER_ON_BOOT: ' FALSE ' }).core.registerOnBoot).toBe(false);
+    expect(config({ CORE_REGISTER_ON_BOOT: '0' }).core.registerOnBoot).toBe(false);
+    expect(config({ CORE_REGISTER_ON_BOOT: '1' }).core.registerOnBoot).toBe(true);
   });
 
   it('con CORE_API_URL exige CORE_MODULE_SECRET', () => {

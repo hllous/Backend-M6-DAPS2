@@ -23,6 +23,8 @@ export default () => {
       moduleId: parsed.CORE_MODULE_ID,
       apiUrl: parsed.CORE_API_URL,
       moduleSecret: parsed.CORE_MODULE_SECRET,
+      subscriptionMaxAttempts: parsed.CORE_SUBSCRIPTION_MAX_ATTEMPTS,
+      registerOnBoot: parsed.CORE_REGISTER_ON_BOOT,
     },
     corsOrigins: parsed.CORS_ORIGINS?.split(',')
       .map((o) => o.trim())
