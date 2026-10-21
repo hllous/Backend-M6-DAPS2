@@ -2694,21 +2694,9 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
 
   const servicio = (clave: string) => buscar(servicios, clave, 'el servicio');
 
-  // Lo que el outbox ya publicó de la operación: la agenda hacia M7 y los
-  // cambios de estado de los reclamos hacia M2.
+  // Lo que el outbox ya publicó de la operación: los cambios de
+  // estado de los reclamos hacia M2.
   for (const [p, s] of porPlan) {
-    if (p.dia >= 0 && !p.recorrido) {
-      eventos.push({
-        eventType: EventType.URBAN_SERVICE_SCHEDULED,
-        aggregateType: AggregateType.SERVICE,
-        aggregateId: s.id,
-        payload: payloads.urbanServiceScheduled(
-          s,
-          buscar(cat.tipos, p.tipo, 'el tipo de servicio'),
-        ),
-        occurredAt: s.createdAt,
-      });
-    }
     if (!s.ticketId || p.dia < -5) continue;
     const ticket = (updateType: payloads.TicketUpdateType, cuando: Date, extra = {}) =>
       eventos.push({
@@ -3030,23 +3018,6 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
       include: { trees: true },
     });
 
-    if (datos.servicio) {
-      const s = servicio(datos.servicio);
-      const payload = payloads.treePruningScheduled(
-        row,
-        s,
-        await tx.tree.findUnique({ where: { id: row.trees[0].treeId } }),
-      );
-      if (payload) {
-        eventos.push({
-          eventType: EventType.TREE_PRUNING_SCHEDULED,
-          aggregateType: AggregateType.TREE_INTERVENTION,
-          aggregateId: row.id,
-          payload,
-          occurredAt: s.createdAt,
-        });
-      }
-    }
     return row;
   };
 

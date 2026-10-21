@@ -55,9 +55,9 @@ Son 33 enums de dominio (`prisma/schema.prisma` tiene 35: faltan `OutboxEventSta
 | # | Enum | Qué queda | Qué decía el acuerdo | A quién hay que avisarle |
 |---|---|---|---|---|
 | 1 | `TicketStatusUpdate` | **Se elimina del catálogo.** El vocabulario es de M2 | `updateType`: `STARTED`, `PROGRESS`, `INFORMATION_REQUIRED`, `RETURNED`, `RESOLVED`, `REJECTED` | Nadie: adoptamos el suyo tal cual |
-| 2 | `ServiceOrigin` | `PLANNED`, `TICKET`, `WEATHER_ALERT`, `INSPECTION`, `MANUAL` | `SCHEDULED`, `TICKET`, `INSPECTION`, `INTERNAL` | **M7**, en [`urbanServiceScheduled`](eventos/publicados/urbanServiceScheduled.md) |
-| 3 | `TreeHealthStatus` | `HEALTHY`, `WEAKENED`, `DISEASED`, `DEAD` | `HEALTHY`, `DECLINING`, `DEAD` | **M3 y M7**, en [`treeRiskDetected`](eventos/publicados/treeRiskDetected.md) |
-| 4 | `TreeInterventionType` | `FORMATION_PRUNING`, `SAFETY_PRUNING`, `REMOVAL`, `PLANTING`, `TREATMENT` | `PRUNING`, `FELLING`, `PLANTING`, `TREATMENT` | **M7**, en [`treePruningScheduled`](eventos/publicados/treePruningScheduled.md) y `treeRiskDetected` |
+| 2 | `ServiceOrigin` | `PLANNED`, `TICKET`, `WEATHER_ALERT`, `INSPECTION`, `MANUAL` | `SCHEDULED`, `TICKET`, `INSPECTION`, `INTERNAL` | Nadie desde el 21/10: solo viajaba en `urbanServiceScheduled`, que dejamos de emitir ([descartados](eventos/publicados/descartados.md)) |
+| 3 | `TreeHealthStatus` | `HEALTHY`, `WEAKENED`, `DISEASED`, `DEAD` | `HEALTHY`, `DECLINING`, `DEAD` | **M3**, en [`treeRiskDetected`](eventos/publicados/treeRiskDetected.md) |
+| 4 | `TreeInterventionType` | `FORMATION_PRUNING`, `SAFETY_PRUNING`, `REMOVAL`, `PLANTING`, `TREATMENT` | `PRUNING`, `FELLING`, `PLANTING`, `TREATMENT` | **M3**, en [`treeRiskDetected`](eventos/publicados/treeRiskDetected.md) (`suggestedIntervention`). Antes también M7, en `treePruningScheduled`, que dejamos de emitir el 21/10 |
 | 5 | `SuggestedAction` | `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE` | `WARNING`, `FINE`, `CLOSURE` | **M4**, en [`environmentalViolationDetected`](eventos/publicados/environmentalViolationDetected.md). Es el caso más expuesto: M4 actúa sobre el valor, aunque el campo es no vinculante |
 | 6 | `RiskLevel` | `NONE`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` | `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` | Nadie: el evento solo se publica con `HIGH` o `CRITICAL`, `NONE` nunca sale del módulo |
 

@@ -7,7 +7,7 @@ Anexo del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md). El Acuerdo dice **qué** 
 | Parte | Qué hay |
 |---|---|
 | **1** | El sobre del Core y las reglas que M6 aplica al enviar y al recibir |
-| **2** | Los 8 mensajes que **publicamos**, con un ejemplo completo cada uno |
+| **2** | Los 6 mensajes que **publicamos**, con un ejemplo completo cada uno |
 | **3** | Los mensajes que **recibimos** (M2, M3, M4, M7), con lo que leemos de cada uno |
 | **4** | Cómo respondemos a cada entrega y errores comunes |
 
@@ -22,7 +22,7 @@ Es el sobre que M9 fijó el 7/10/2026 para toda la cohorte. Reemplaza al de M2 (
 | Campo | Tipo | Obligatorio | Qué lleva |
 |---|---|---|---|
 | `eventId` | string (UUID) | ✅ | Identificador único del mensaje. **Es la clave de idempotencia**: el mismo `eventId` dos veces se procesa una sola |
-| `eventType` | string | ✅ | Nombre del evento en camelCase: `urbanServiceScheduled` |
+| `eventType` | string | ✅ | Nombre del evento en camelCase: `containerDamaged` |
 | `eventVersion` | string | ✅ al publicar | `"1.0"` |
 | `occurredAt` | string (ISO 8601) | ✅ | Cuándo ocurrió el hecho, **no** cuándo se publicó. Con offset; la `Z` cuenta. Se escribe con **doble r** |
 | `sourceModule` | string | ✅ | Módulo emisor. El nuestro es **`ambiente`** |
@@ -55,7 +55,9 @@ Es el sobre que M9 fijó el 7/10/2026 para toda la cohorte. Reemplaza al de M2 (
 
 # Parte 2 — Lo que publicamos
 
-Los ocho, uno por uno. `data` sigue el schema JSON que les enviamos. Los campos de fecha (`...At`) son fecha y hora; `scheduledDate` es solo el día.
+Los seis, uno por uno. `data` sigue el schema JSON que les enviamos. Los campos de fecha (`...At`) son fecha y hora.
+
+`urbanServiceScheduled` y `treePruningScheduled` **ya no se publican** (21/10): M7 solo consume `streetClosureRequested`.
 
 ## 2.1 `updateTicketStatus` → M2
 
@@ -135,35 +137,7 @@ Qué `updateType` mandamos depende del estado del ticket que M6 deduce de lo que
 
 **Secuencia:** `STARTED` va siempre antes de `PROGRESS`; el primer `updateTicketStatus` de un ticket es `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`, o `INFORMATION_REQUIRED` si todavía no conocemos su estado. Si el ticket ya está `IN_PROGRESS` (por ejemplo porque agendar ya lo arrancó), el inicio del servicio y el inicio de la revisión de un expediente (denuncia ambiental) mandan `PROGRESS` en vez de repetir `STARTED`. Cuando M2 vuelve a derivarnos un reclamo que habíamos devuelto y reactivamos el expediente, mandamos `STARTED` (o `PROGRESS` si ya está `IN_PROGRESS`) con «Su denuncia ambiental está en análisis.». Una demora (`PROGRESS`) solo sale con el servicio en curso. Al emitirse un acta ambiental mandamos «Se constató una infracción y se emitió el acta correspondiente.» (nunca el contenido del acta): `PROGRESS` si el ticket está `IN_PROGRESS`, `STARTED` si está en `ROUTED`, `IN_REVIEW` o no conocemos su estado, y nada si está en `PENDING_INFORMATION` o en un estado terminal.
 
-## 2.2 `urbanServiceScheduled` → M7
-
-```json
-{
-  "eventId": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-  "eventType": "urbanServiceScheduled",
-  "eventVersion": "1.0",
-  "occurredAt": "2026-10-14T13:05:10.000Z",
-  "sourceModule": "ambiente",
-  "correlationId": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
-  "data": {
-    "serviceId": "7e8f9a0b-1c2d-4e3f-a4b5-c6d7e8f9a0b1",
-    "serviceTypeCode": "WASTE_COLLECTION_RESIDENTIAL",
-    "category": "WASTE_COLLECTION",
-    "mode": "ROUTE",
-    "zoneIds": ["2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e"],
-    "routeId": "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f",
-    "scheduledDate": "2026-10-16",
-    "timeWindow": { "from": "06:00", "to": "10:00" },
-    "crewId": "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f80",
-    "vehicleId": "5e6f7a8b-9c0d-4e1f-a03b-4c5d6e7f8091",
-    "origin": "PLANNED"
-  }
-}
-```
-
-`mode: "POINT"` lleva `targetRef` en vez de `routeId`; `origin: "TICKET"` lleva `ticketId`. `timeWindow`, `crewId` y `vehicleId` pueden faltar.
-
-## 2.3 `containerDamaged` → M3
+## 2.2 `containerDamaged` → M3
 
 ```json
 {
@@ -188,7 +162,7 @@ Qué `updateType` mandamos depende del estado del ticket que M6 deduce de lo que
 
 Es un aviso: no esperamos respuesta. `damageType` viaja como texto (`STRUCTURAL`, `BURNT`, `LID_BROKEN`, `WHEELS_BROKEN`, `VANDALIZED`, `MISSING`). `ticketId` solo si lo reportó un vecino.
 
-## 2.4 `treeRiskDetected` → M3 y M7
+## 2.3 `treeRiskDetected` → M3
 
 Solo se publica con `riskLevel` `HIGH` o `CRITICAL`.
 
@@ -217,36 +191,9 @@ Solo se publica con `riskLevel` `HIGH` o `CRITICAL`.
 }
 ```
 
-`species` y `suggestedIntervention` son opcionales (sin intervención sugerida solo corresponde monitorear). Con `requiresStreetClosure: true`, M7 recibe después un `streetClosureRequested`.
+`species` y `suggestedIntervention` son opcionales (sin intervención sugerida solo corresponde monitorear). Con `requiresStreetClosure: true`, el corte se pide aparte con `streetClosureRequested`; M7 no recibe este evento.
 
-## 2.5 `treePruningScheduled` → M7
-
-Se publica recién cuando el servicio ya tiene cuadrilla y franja horaria.
-
-```json
-{
-  "eventId": "a1b2c3d4-0003-4d0e-9f2a-3b4c5d6e7f03",
-  "eventType": "treePruningScheduled",
-  "eventVersion": "1.0",
-  "occurredAt": "2026-10-14T14:00:00.000Z",
-  "sourceModule": "ambiente",
-  "correlationId": "f4a5b6c7-d8e9-4f0a-9b2c-3d4e5f607182",
-  "data": {
-    "interventionId": "0b1c2d3e-4f5a-4b6c-97d8-f9a0b1c2d3e4",
-    "serviceId": "7e8f9a0b-1c2d-4e3f-a4b5-c6d7e8f9a0b1",
-    "interventionType": "SAFETY_PRUNING",
-    "treeIds": ["9a0b1c2d-3e4f-4a5b-86c7-e8f9a0b1c2d3"],
-    "zoneId": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
-    "location": { "street": "Calle Mitre 845" },
-    "scheduledDate": "2026-10-20",
-    "timeWindow": { "from": "08:00", "to": "12:00" },
-    "crewId": "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f80",
-    "requiresStreetClosure": true
-  }
-}
-```
-
-## 2.6 `environmentalViolationDetected` → M4
+## 2.4 `environmentalViolationDetected` → M4
 
 Solo se publica si el acta tiene `establishmentId`.
 
@@ -284,7 +231,7 @@ Solo se publica si el acta tiene `establishmentId`.
 
 `suggestedAction` no es vinculante. `violationType` viaja como texto (`NOISE_LIMIT`, `ILLEGAL_DUMPING`, `UNTREATED_DISCHARGE`, `HAZARDOUS_WASTE`, `AIR_EMISSION`, `NO_WASTE_MANAGEMENT`, `INSPECTION_OBSTRUCTION`). `evidence[]` usa el formato de M6 (`url`, `mimeType`, `description?`), no el de M2. `violationId` es el que esperamos de vuelta como `sourceViolationId`.
 
-## 2.7 `infrastructureRepairRequested` → M3
+## 2.5 `infrastructureRepairRequested` → M3
 
 ```json
 {
@@ -308,7 +255,7 @@ Solo se publica si el acta tiene `establishmentId`.
 
 Abre una solicitud con seguimiento: M3 nos devuelve `requestId` como `sourceRequestId` en `workOrderScheduled` y `workOrderCompleted`. `damageType`: `BROKEN_PAVEMENT`, `BROKEN_SIDEWALK`, `BROKEN_STREETLIGHT`, `BLOCKED_DRAIN`, `DAMAGED_STRUCTURE`.
 
-## 2.8 `streetClosureRequested` → M7
+## 2.6 `streetClosureRequested` → M7
 
 ```json
 {
@@ -332,7 +279,7 @@ Abre una solicitud con seguimiento: M3 nos devuelve `requestId` como `sourceRequ
 }
 ```
 
-⚠️ **Dos `sourceModule` distintos y los dos son intencionales.** El del sobre es `ambiente` (el módulo ante el Core); el de `data` es `"M6"`, que es lo que dice la tabla de campos de M7. **M7: confirmen cuál leen.** Las respuestas nos tienen que devolver `closureRequestId`.
+⚠️ **Dos `sourceModule` distintos y los dos son intencionales.** El del sobre es `ambiente` (el módulo ante el Core); el de `data` es `"M6"`, que es lo que dice la tabla de campos de M7. M7 confirmó el 20/10 que lee el de `data`. `sourceRef` es el `serviceId` del servicio o el `interventionId` de la poda que origina el corte; es el único evento que les mandamos. Las respuestas nos tienen que devolver `closureRequestId`.
 
 ---
 
@@ -611,4 +558,4 @@ Cada entrega por `q.ambiente` se contesta así:
 
 ---
 
-*Fuentes de este documento: los `.schema.json` de los ocho eventos de M6 y el contrato del Core del 7/10/2026. El estado de cada pedido abierto con cada módulo está en la Parte 3 del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md).*
+*Fuentes de este documento: los `.schema.json` de los seis eventos de M6 y el contrato del Core del 7/10/2026. El estado de cada pedido abierto con cada módulo está en la Parte 3 del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md).*

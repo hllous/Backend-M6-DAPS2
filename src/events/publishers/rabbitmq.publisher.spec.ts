@@ -41,7 +41,7 @@ describe('RabbitMqEventPublisher', () => {
 
   const envelope: EventEnvelope = {
     eventId: 'ev-1',
-    eventType: 'urbanServiceScheduled',
+    eventType: 'updateTicketStatus',
     eventVersion: '1.0',
     occurredAt: '2026-01-01T00:00:00.000Z',
     sourceModule: 'ambiente',
@@ -78,17 +78,17 @@ describe('RabbitMqEventPublisher', () => {
 
     const [exchange, routingKey, body, options] = channel.publish.mock.calls[0];
     expect(exchange).toBe('muni.inbox');
-    expect(routingKey).toBe('urbanServiceScheduled');
+    expect(routingKey).toBe('updateTicketStatus');
     expect(JSON.parse(body.toString())).toEqual(envelope);
     expect(options).toEqual({
       persistent: true,
       mandatory: true,
       contentType: 'application/json',
       messageId: 'ev-1',
-      type: 'urbanServiceScheduled',
+      type: 'updateTicketStatus',
       appId: 'ambiente',
       userId: 'usuario',
-      headers: { eventId: 'ev-1', eventType: 'urbanServiceScheduled', sourceModule: 'ambiente' },
+      headers: { eventId: 'ev-1', eventType: 'updateTicketStatus', sourceModule: 'ambiente' },
     });
   });
 

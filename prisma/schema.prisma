@@ -717,8 +717,8 @@ model TreeIntervention {
   authorizedByUserId    String?                @map("authorized_by_user_id") // solo REMOVAL
   authorizedAt          DateTime?              @map("authorized_at") // solo REMOVAL
   justification         String?                @db.Text // solo REMOVAL
-  // Marca de que treePruningScheduled ya salió: el evento se emite una sola vez,
-  // cuando el servicio queda con cuadrilla y franja (#324).
+  // Sin uso desde #345: treePruningScheduled dejó de emitirse (M7 solo consume
+  // streetClosureRequested). La columna queda sin migrar.
   pruningScheduledAt    DateTime?              @map("pruning_scheduled_at")
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")

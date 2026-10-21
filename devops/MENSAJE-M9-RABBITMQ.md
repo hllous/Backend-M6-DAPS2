@@ -12,8 +12,8 @@ Para dejarlo conectado y correcto necesitamos de ustedes estos datos:
    vayan por el repo.
 3. Exchange: nombre y tipo (topic o direct), y si hay uno común a toda la
    cohorte o uno por módulo.
-4. Routing key: ¿es el nombre del evento a secas (ej. urbanServiceScheduled)
-   o va prefijado (ej. M6.urbanServiceScheduled o modulo.entidad.accion)?
+4. Routing key: ¿es el nombre del evento a secas (ej. streetClosureRequested)
+   o va prefijado (ej. M6.streetClosureRequested o modulo.entidad.accion)?
    Esto nos define si hay que tocar código.
 5. Nombre de cola: ¿cada módulo declara la suya (y con qué convención) o las
    crean centralizadamente ustedes?

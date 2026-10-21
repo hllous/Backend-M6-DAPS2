@@ -6,7 +6,7 @@ TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal d
 
 1. [docs/README.md](docs/README.md) — qué hace el módulo + glosario propio (`Zone`, `Service`, `Crew`, etc.)
 2. [docs/entidades/](docs/entidades/) — modelo de datos, con diagramas de estado
-3. [docs/eventos/publicados/](docs/eventos/publicados/) — los 8 eventos que emite el módulo, con payload y consumidores
+3. [docs/eventos/publicados/](docs/eventos/publicados/) — los 6 eventos que emite el módulo, con payload y consumidores
 4. [docs/eventos/consumidos/](docs/eventos/consumidos/) — los 10 eventos que escucha de otros módulos
 5. [docs/bloqueantes.md](docs/bloqueantes.md) — tablero de lo **abierto** en la integración; el resto vive en [docs/integracion/](docs/integracion/README.md) (fichas por módulo, historial, resueltos, mensajes). **Fuente única** del estado. Leer antes de tocar cualquier evento o payload. Regla: una novedad entra primero en `integracion/historial.md`; solo si deja algo abierto se toca una fila del tablero; correr `npm run docs:check` antes del PR
 6. [docs/enumeraciones.md](docs/enumeraciones.md) — catálogo de valores cerrados usados en entidades y eventos
@@ -49,7 +49,7 @@ Documentación interna (equipo + IA que programe el módulo), no lo entregado a 
 ## Convenciones
 
 - Nombres de evento y campo en **camelCase**
-- Archivo de evento = nombre del evento: `docs/eventos/publicados/urbanServiceScheduled.md`
+- Archivo de evento = nombre del evento: `docs/eventos/publicados/containerDamaged.md`
 - Cada evento publicado tiene un `.schema.json` hermano (payload en JSON Schema) — fuente para validar/generar tipos, no para leer prosa
 - Eventos consumidos no tienen schema propio (el payload lo define el módulo emisor); documentamos solo los campos que usamos
 - `Eventos.txt` = volcado histórico de la cohorte, ya no se edita; los bloqueantes abiertos viven en `docs/bloqueantes.md` y el detalle en `docs/integracion/`

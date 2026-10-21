@@ -6,7 +6,6 @@ import {
   TreeInterventionType as T,
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { OutboxService } from '../../../events/outbox/outbox.service';
 import { TreeInterventionsService } from './tree-interventions.service';
 import { QueryTreeInterventionsDto } from './dto';
 
@@ -15,7 +14,6 @@ const SRV = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 describe('TreeInterventionsService', () => {
   let prisma: any;
-  let outbox: any;
   let service: TreeInterventionsService;
 
   const intervencion = (over: Record<string, unknown> = {}) => ({
@@ -70,11 +68,7 @@ describe('TreeInterventionsService', () => {
       service: { findUnique: jest.fn().mockResolvedValue(servicio()) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
-    outbox = { enqueue: jest.fn().mockResolvedValue(undefined), enqueueMany: jest.fn() };
-    service = new TreeInterventionsService(
-      prisma as unknown as PrismaService,
-      outbox as unknown as OutboxService,
-    );
+    service = new TreeInterventionsService(prisma as unknown as PrismaService);
   });
 
   // ─── Autorización ───────────────────────────────────
@@ -305,65 +299,17 @@ describe('TreeInterventionsService', () => {
       );
     });
 
-    it('asocia el servicio y publica treePruningScheduled', async () => {
+    /** M7 solo consume streetClosureRequested: asociar el servicio no emite nada (#345). */
+    it('asocia el servicio sin encolar eventos', async () => {
       await service.assignService(ID, { serviceId: SRV });
 
-      expect(prisma.treeIntervention.update.mock.calls[0][0].data).toEqual({ serviceId: SRV });
-      // Deja la marca para que una edición posterior del servicio no lo repita (#324).
-      expect(prisma.treeIntervention.update.mock.calls[1][0].data).toEqual({
-        pruningScheduledAt: expect.any(Date),
-      });
-      expect(outbox.enqueue).toHaveBeenCalledTimes(1);
-      const [tx, entrada] = outbox.enqueue.mock.calls[0];
-      expect(tx).toBe(prisma);
-      expect(entrada.eventType).toBe('treePruningScheduled');
-      expect(entrada.payload).toMatchObject({
-        interventionId: ID,
-        serviceId: SRV,
-        treeIds: ['ar-1'],
-        zoneId: 'z-centro',
-        crewId: 'crew-1',
-      });
-    });
-
-    /** Carrera con assign-crew: la lectura previa puede estar vieja, la de la tx no. */
-    it('arma el payload con el servicio releído dentro de la transacción', async () => {
-      prisma.service.findUnique
-        .mockResolvedValueOnce(servicio({ crewId: null }))
-        .mockResolvedValueOnce(servicio());
-
-      await service.assignService(ID, { serviceId: SRV });
-
-      expect(outbox.enqueue).toHaveBeenCalledTimes(1);
-      expect(outbox.enqueue.mock.calls[0][1].payload).toMatchObject({ crewId: 'crew-1' });
-    });
-
-    /**
-     * M7 declara `crewId` y `timeWindow` como requeridos y en nuestro modelo son
-     * opcionales hasta que se asignan. Antes que emitir un evento incompleto que
-     * su validador va a rechazar, se difiere.
-     */
-    it('sin cuadrilla el evento se difiere, pero la asociación se guarda', async () => {
-      prisma.service.findUnique.mockResolvedValue(servicio({ crewId: null }));
-
-      await service.assignService(ID, { serviceId: SRV });
-
-      // Un solo update: sin marca, para que ServicesService lo emita despues (#324).
       expect(prisma.treeIntervention.update).toHaveBeenCalledTimes(1);
-      expect(outbox.enqueue).not.toHaveBeenCalled();
-    });
-
-    it('sin franja horaria también se difiere', async () => {
-      prisma.service.findUnique.mockResolvedValue(servicio({ windowFrom: null, windowTo: null }));
-
-      await service.assignService(ID, { serviceId: SRV });
-
-      expect(outbox.enqueue).not.toHaveBeenCalled();
+      expect(prisma.treeIntervention.update.mock.calls[0][0].data).toEqual({ serviceId: SRV });
     });
 
     /** Un servicio ejecuta una sola intervención: `serviceId` es @unique. */
     it('un servicio que ya ejecuta otra intervención da 409', async () => {
-      prisma.$transaction.mockRejectedValue(
+      prisma.treeIntervention.update.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('dup', {
           code: 'P2002',
           clientVersion: '5.22.0',
@@ -376,27 +322,11 @@ describe('TreeInterventionsService', () => {
     });
 
     it('un error ajeno a Prisma se propaga', async () => {
-      prisma.$transaction.mockRejectedValue(new Error('la base se cayó'));
+      prisma.treeIntervention.update.mockRejectedValue(new Error('la base se cayó'));
 
       await expect(service.assignService(ID, { serviceId: SRV })).rejects.toThrow(
         'la base se cayó',
       );
-    });
-
-    it('una intervención sin árboles ubica el evento por la dirección', async () => {
-      prisma.treeIntervention.findUnique.mockResolvedValue(
-        intervencion({ status: I.AUTHORIZED, trees: [] }),
-      );
-      prisma.treeIntervention.update.mockResolvedValue(
-        intervencion({ status: I.AUTHORIZED, trees: [] }),
-      );
-
-      await service.assignService(ID, { serviceId: SRV });
-
-      expect(prisma.tree.findUnique).not.toHaveBeenCalled();
-      expect(outbox.enqueue.mock.calls[0][1].payload.location).toEqual({
-        street: 'Av. Mitre 1200',
-      });
     });
   });
 });

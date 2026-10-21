@@ -1,5 +1,7 @@
 # Cruce de Eventos M6
 
+> Nota del 21/10/2026: este análisis es histórico. Hoy M6 publica **6 eventos**; `urbanServiceScheduled` y `treePruningScheduled` se dejaron de emitir porque M7 no los consume (#345). Las menciones de abajo a 8 eventos son del momento del cruce.
+
 **Grupo 04 — Módulo 6, Ambiente, Higiene y Servicios Urbanos**
 Fecha: 17 de agosto de 2026 (cruce original). Métrica de bloqueantes actualizada al 5 de octubre de 2026; M1 y M2 actualizados al 13 de octubre de 2026
 Fuente: listas de eventos publicados y consumidos de M1–M8 (`Eventos.txt`)

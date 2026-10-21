@@ -1,21 +1,17 @@
 /**
- * Los ocho eventos que M6 publica. Nombres en camelCase: el Core matchea el
- * tipo como string literal, así que `UrbanServiceScheduled` y
- * `urbanServiceScheduled` serían dos eventos distintos y ninguno llegaría.
+ * Los seis eventos que M6 publica. Nombres en camelCase: el Core matchea el
+ * tipo como string literal, así que `UpdateTicketStatus` y
+ * `updateTicketStatus` serían dos eventos distintos y ninguno llegaría.
  *
  * Cada uno tiene su `.schema.json` en docs/eventos/publicados/.
  */
 export const EventType = {
   /** → M2. Cambia el estado de algo nacido de un reclamo. */
   UPDATE_TICKET_STATUS: 'updateTicketStatus',
-  /** → M7. Se agenda un servicio. */
-  URBAN_SERVICE_SCHEDULED: 'urbanServiceScheduled',
   /** → M3. Se detecta un contenedor dañado o faltante. */
   CONTAINER_DAMAGED: 'containerDamaged',
-  /** → M3, M7. Un relevamiento arroja riesgo HIGH o CRITICAL. */
+  /** → M3. Un relevamiento arroja riesgo HIGH o CRITICAL. */
   TREE_RISK_DETECTED: 'treeRiskDetected',
-  /** → M7. Se programa una poda. */
-  TREE_PRUNING_SCHEDULED: 'treePruningScheduled',
   /** → M4. Se emite un acta ambiental. Fase 4. */
   ENVIRONMENTAL_VIOLATION_DETECTED: 'environmentalViolationDetected',
   /** → M3. Detectamos un daño de infraestructura ajeno. Fase 5. */

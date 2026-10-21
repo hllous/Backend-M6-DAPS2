@@ -1,6 +1,6 @@
-# `treeRiskDetected` → M3, M7
+# `treeRiskDetected` → M3
 
-Un árbol con riesgo alto. Va a dos módulos: M3 por el componente de infraestructura (una raíz que levantó la vereda), M7 por el corte de calle que la intervención puede necesitar.
+Un árbol con riesgo alto. Va solo a M3, por el componente de infraestructura (una raíz que levantó la vereda). M7 salió de los destinatarios el 21/10: solo consume [`streetClosureRequested`](streetClosureRequested.md).
 
 Schema: [`treeRiskDetected.schema.json`](treeRiskDetected.schema.json).
 
@@ -27,7 +27,7 @@ surveyedAt
 
 Enums: `riskLevel` es `RiskLevel`, `riskType` es `RiskType`, `healthStatus` es `TreeHealthStatus`, `suggestedIntervention` es `TreeInterventionType` — ver [enumeraciones.md](../../enumeraciones.md).
 
-✅ **Los dos enums quedaron resueltos** por [ADR-003](../../decisiones/adr-003-divergencias-enums.md): `healthStatus` conserva `WEAKENED` y `DISEASED` en vez de colapsarlos en `DECLINING` (divergencia 3), e `interventionType` conserva los cinco valores del catálogo (divergencia 4). El `MONITORING` que el acuerdo agregaba **se descarta**: monitorear no es una intervención sino la ausencia de una, así que `suggestedIntervention` pasa a ser **opcional** y su ausencia es la que lo expresa. Avisado a M3 el 5 oct 2026; a M7 sigue pendiente.
+✅ **Los dos enums quedaron resueltos** por [ADR-003](../../decisiones/adr-003-divergencias-enums.md): `healthStatus` conserva `WEAKENED` y `DISEASED` en vez de colapsarlos en `DECLINING` (divergencia 3), e `interventionType` conserva los cinco valores del catálogo (divergencia 4). El `MONITORING` que el acuerdo agregaba **se descarta**: monitorear no es una intervención sino la ausencia de una, así que `suggestedIntervention` pasa a ser **opcional** y su ausencia es la que lo expresa. Avisado a M3 el 5 oct 2026.
 
 ## Qué le pedimos al consumidor
 

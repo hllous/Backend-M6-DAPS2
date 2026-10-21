@@ -7,9 +7,6 @@ import {
 } from '@nestjs/common';
 import { Prisma, ServiceMode, TreeInterventionStatus, TreeInterventionType } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { OutboxService } from '../../../events/outbox/outbox.service';
-import { AggregateType, EventType } from '../../../events/event-types';
-import { treePruningScheduled } from '../../../events/payloads';
 import {
   AssignInterventionServiceDto,
   CreateTreeInterventionDto,
@@ -38,10 +35,7 @@ const VALID_TRANSITIONS: Record<TreeInterventionStatus, TreeInterventionStatus[]
 export class TreeInterventionsService {
   private readonly logger = new Logger(TreeInterventionsService.name);
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly outbox: OutboxService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateTreeInterventionDto): Promise<TreeInterventionResponseDto> {
     // Verificar que todos los árboles existen
@@ -202,10 +196,7 @@ export class TreeInterventionsService {
       );
     }
 
-    const service = await this.prisma.service.findUnique({
-      where: { id: dto.serviceId },
-      include: { zones: { orderBy: { sequence: 'asc' } } },
-    });
+    const service = await this.prisma.service.findUnique({ where: { id: dto.serviceId } });
     if (!service) {
       throw new NotFoundException(`Servicio con id '${dto.serviceId}' no encontrado`);
     }
@@ -215,49 +206,12 @@ export class TreeInterventionsService {
       );
     }
 
-    // La ubicacion del evento sale de uno de los arboles de la intervencion.
-    const primerArbol = intervention.trees[0]
-      ? await this.prisma.tree.findUnique({ where: { id: intervention.trees[0].treeId } })
-      : null;
-
     try {
-      const updated = await this.prisma.$transaction(async (tx) => {
-        const row = await tx.treeIntervention.update({
-          where: { id },
-          data: { serviceId: dto.serviceId },
-          include: { trees: true },
-        });
-
-        // M7 declara crewId y timeWindow como requeridos, y en nuestro modelo
-        // son opcionales hasta que se asignan: si todavia faltan, el payload
-        // sale null y el evento se difiere en vez de emitirse incompleto.
-        // Se relee el servicio dentro de la tx, ya con el vinculo escrito: ante un
-        // assign-crew concurrente, o esta lectura ve el servicio completo, o el
-        // assign-crew ve la intervencion (ServicesService busca por serviceId).
-        const actual = await tx.service.findUnique({
-          where: { id: dto.serviceId },
-          include: { zones: { orderBy: { sequence: 'asc' } } },
-        });
-        const payload = actual ? treePruningScheduled(row, actual, primerArbol) : null;
-        // Si se difiere, sale despues desde ServicesService al completarse el
-        // servicio (#324); la marca evita que se repita.
-        if (payload) {
-          await tx.treeIntervention.update({
-            where: { id },
-            data: { pruningScheduledAt: new Date() },
-          });
-          await this.outbox.enqueue(tx, {
-            eventType: EventType.TREE_PRUNING_SCHEDULED,
-            aggregateType: AggregateType.TREE_INTERVENTION,
-            aggregateId: row.id,
-            payload,
-          });
-        } else {
-          this.logger.warn(
-            `Intervención ${id}: treePruningScheduled diferido — el servicio ${dto.serviceId} todavía no tiene cuadrilla o franja horaria, que M7 exige`,
-          );
-        }
-        return row;
+      // Sin evento hacia M7: solo consume streetClosureRequested (#345).
+      const updated = await this.prisma.treeIntervention.update({
+        where: { id },
+        data: { serviceId: dto.serviceId },
+        include: { trees: true },
       });
 
       this.logger.log(`Intervención ${id}: asociada al servicio ${dto.serviceId}`);

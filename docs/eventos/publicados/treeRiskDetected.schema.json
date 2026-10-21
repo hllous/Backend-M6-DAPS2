@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uade.m6.grupo04/eventos/treeRiskDetected.schema.json",
   "title": "treeRiskDetected",
-  "description": "M6 → M3, M7. Un relevamiento arrojó riesgo HIGH o CRITICAL sobre un árbol. Con cualquier otro riskLevel el evento no se publica.",
+  "description": "M6 → M3. Un relevamiento arrojó riesgo HIGH o CRITICAL sobre un árbol. Con cualquier otro riskLevel el evento no se publica.",
   "type": "object",
   "properties": {
     "treeId": {
@@ -63,7 +63,7 @@
     },
     "requiresStreetClosure": {
       "type": "boolean",
-      "description": "En true, después le llega a M7 un streetClosureRequested."
+      "description": "En true, el corte se pide aparte con streetClosureRequested (a M7); este evento va solo a M3."
     },
     "requiresPublicWorks": {
       "type": "boolean",

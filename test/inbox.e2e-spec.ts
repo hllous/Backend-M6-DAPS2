@@ -328,7 +328,17 @@ describe('Inbox de eventos entrantes (e2e)', () => {
   });
 
   it('lo que publica un endpoint abre un hilo nuevo y no tiene causa', async () => {
-    const [encolado] = await prisma.outboxEvent.findMany({ where: { aggregateId: serviceId } });
+    // Solo un servicio nacido de un reclamo encola algo al programarse (aviso a M2).
+    const res = await api
+      .post('/services', {
+        serviceTypeId: tipoId,
+        routeId: rutaId,
+        scheduledDate: hoy(),
+        origin: 'TICKET',
+        ticketId: `TCK-${randomUUID()}`,
+      })
+      .expect(201);
+    const [encolado] = await prisma.outboxEvent.findMany({ where: { aggregateId: res.body.id } });
 
     expect(encolado.correlationId).toMatch(/^[0-9a-f-]{36}$/);
     expect(encolado.causationId).toBeNull();
