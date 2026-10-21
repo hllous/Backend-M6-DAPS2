@@ -34,9 +34,13 @@ process.env.NODE_ENV ??= 'test';
 const jwt = new JwtService({ secret: E2E_SECRET });
 
 /** Un access token con el contrato de M1: `iss`, `typ`, `sub` numérico, `sub_type` y `rol` único. */
-export function tokenFor(rol = 'ADMINISTRATIVO', sub = '1'): string {
+export function tokenFor(
+  rol = 'ADMINISTRATIVO',
+  sub = '1',
+  subType: 'EMPLEADO' | 'CIUDADANO' = 'EMPLEADO',
+): string {
   return jwt.sign(
-    { sub, sub_type: rol === 'CIUDADANO' ? 'CIUDADANO' : 'EMPLEADO', rol, typ: 'access' },
+    { sub, sub_type: subType, rol, typ: 'access' },
     { expiresIn: '15m', issuer: process.env.JWT_ISSUER },
   );
 }

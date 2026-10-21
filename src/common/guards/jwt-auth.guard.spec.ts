@@ -63,7 +63,7 @@ describe('JwtAuthGuard', () => {
 
     it('sin usuario o con error de passport sigue siendo 401', () => {
       expect(() => guard.handleRequest(null, false)).toThrow(UnauthorizedException);
-      expect(() => guard.handleRequest(new Error('x'), user('EMPLEADO'))).toThrow();
+      expect(() => guard.handleRequest(new Error('x'), user('EMPLEADO'))).toThrow('x');
     });
   });
 });

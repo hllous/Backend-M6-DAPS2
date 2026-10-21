@@ -359,7 +359,9 @@ describe('Inbox de eventos entrantes (e2e)', () => {
 
   describe('solo personal municipal (#359)', () => {
     it('un token de ciudadano recibe 403 en lectura, escritura e inbox; el de empleado pasa', async () => {
-      const vecino = new Api(app, tokenFor('CIUDADANO'));
+      // M1 emite al vecino con rol PERSONA; el rol CIUDADANO se cubre por si cambia.
+      const vecino = new Api(app, tokenFor('PERSONA', '1', 'CIUDADANO'));
+      await new Api(app, tokenFor('CIUDADANO', '1', 'CIUDADANO')).get('/zones').expect(403);
 
       const lectura = await vecino.get('/zones').expect(403);
       expect(lectura.body.message).toBe('Este sistema es solo para personal municipal');
