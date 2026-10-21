@@ -72,21 +72,21 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
-## Pendientes de enviar (21/10)
+## Enviados el 21/10
 
-> Redactados el 21/10 para que el PO los envíe (#345). **Al enviarlos, anotar la fecha acá, mover la respuesta a la ficha (`m7.md`, `m9.md`) y cerrar la fila de M7 del tablero.**
+> Redactados el 21/10 y enviados ese mismo día por el PO (#345, #347). Cuando respondan, mover la respuesta a la ficha (`m2.md`, `m7.md`, `m9.md`).
 
-**→ M7 (Tránsito)** — respuesta a sus dos mensajes del 20/10 — *pendiente de enviar*
+**→ M7 (Tránsito)** — respuesta a sus dos mensajes del 20/10 — *enviado el 21 oct 2026, sin respuesta todavía*
 
 > Gracias por las respuestas, nos ordenan mucho. Sí, estamos de acuerdo: a partir de ahora **dejamos de emitir `urbanServiceScheduled` y `treePruningScheduled`**, y `treeRiskDetected` va solo a M3. Lo único que les mandamos es `streetClosureRequested`. Cuando un servicio o una poda necesita cortar la calle, la solicitud la pedimos siempre con ese evento, con `sourceRef` apuntando al servicio o a la poda que origina el corte. No cambia nada de su lado ni del payload que ya tienen.
 >
 > Y gracias por contestar los cuatro puntos: (1) los cortes `ACTIVE` vencidos los cierran ustedes y siempre publican `streetClosureEnded`; (2) los `APPROVED` que nunca se activan vencen sin evento y nuestro margen de 6 horas es el mecanismo correcto; (3) el nombre que se publica es `streetClosureEnded` y el `streetClousureEnded` del catálogo es un error de carga que coordinan con M9; (4) no necesitan cuadrilla en el corte, solo la franja completa `requestedFrom` / `requestedTo`. Con eso cerramos de nuestro lado.
 
-**→ M9 (Core)** — corrección al registro — *pendiente de enviar*
+**→ M9 (Core)** — corrección al registro — *enviado el 21 oct 2026, sin respuesta todavía*
 
 > Una corrección a lo que les contamos para el registro de publicaciones: **M6 publica 6 eventos, no 8**. Quedan `updateTicketStatus`, `containerDamaged`, `treeRiskDetected`, `environmentalViolationDetected`, `infrastructureRepairRequested` y `streetClosureRequested`. **No registren `urbanServiceScheduled` ni `treePruningScheduled`**: M7 no los consume y dejamos de emitirlos. Las suscripciones no cambian.
 
-**→ M2 (Atención Ciudadana)** — emitimos `INFORMATION_REQUIRED` — *pendiente de enviar*
+**→ M2 (Atención Ciudadana)** — emitimos `INFORMATION_REQUIRED` — *enviado el 21 oct 2026, sin respuesta todavía*
 
 > Les avisamos que M6 pasa a ser productor real de `updateTicketStatus` con `updateType: INFORMATION_REQUIRED`. Lo emitimos cuando el operador le pide más información al vecino durante la revisión de la denuncia: lleva `publicMessage` con lo que se le pide y `requiredBy` (fecha límite, siempre futura); solo sale si el ticket está `IN_PROGRESS` o `ROUTED`, o si todavía no conocemos su estado. Dos confirmaciones: (1) cuando la solicitud vence o se cancela, ¿M2 emite un `ticketUpdated` con el estado al que vuelve el ticket? Nosotros cerramos la solicitud al recibir cualquier `ticketUpdated` de cambio de estado cuyo `currentStatus` ya no sea `PENDING_INFORMATION`. (2) Si mandamos `STARTED` con el ticket ya `IN_PROGRESS`, ¿lo registran y confirman sin aplicar, sin `nack`?
 >

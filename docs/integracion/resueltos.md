@@ -6,6 +6,7 @@
 
 | Qué | Cómo quedó |
 |---|---|
+| **M7: qué eventos consume** ([#345](https://github.com/hllous/Backend-M6-DAPS2/issues/345)) | M7 solo consume `streetClosureRequested`. Desde el 21/10 M6 no emite `urbanServiceScheduled` ni `treePruningScheduled` (6 eventos publicados); `treeRiskDetected` va solo a M3. El corte se pide siempre con `streetClosureRequested` + `sourceRef` (servicio o poda). Mensajes a M7 y M9 (registrar 6 publicaciones) enviados el 21/10. M7 además confirmó: cierra solo los cortes `ACTIVE` vencidos y publica siempre `streetClosureEnded`; los `APPROVED` sin activar vencen sin evento (nuestro margen de 6 h, #321); no pide cuadrilla, solo `requestedFrom`/`requestedTo` completos |
 | `complaint` → `ticket` | Migrado. M2 es el dueño del dato y la cohorte entera usa `ticket`. Alcanzó eventos, payloads, dos entidades y el valor `COMPLAINT` del enum `ServiceOrigin` |
 | PascalCase → camelCase | Migrado, los 27 eventos. Si el Core matchea el tipo como string literal, `UrbanServiceScheduled` y `urbanServiceScheduled` son dos eventos distintos y ninguno llega |
 | `commercialFineIssued` → `commercialFineGenerated` | Adoptamos el nombre de M4 |
