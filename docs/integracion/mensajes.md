@@ -92,11 +92,17 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Además, en el contrato nuevo (el Acuerdo y los Sobres del 21/10) M6 publica 6 eventos; los dos que dejamos de emitir (`urbanServiceScheduled` y `treePruningScheduled`) no los consumía M2, así que no cambia nada de su lado.
 
+## Pendientes de enviar (21/10, rol `SERVICIO`)
+
+**→ M1 y M9** — qué `sub_type` lleva el token de `SERVICIO` ([#363](https://github.com/hllous/Backend-M6-DAPS2/issues/363)) — *pendiente de enviar*
+
+> Una consulta sobre el rol `SERVICIO`: en la guía v2.1 de M1 el claim `sub_type` solo toma `CIUDADANO` o `EMPLEADO`, y M1 nos dijo que `SERVICIO` lo tiene M9. Cuando un módulo llame a otro con ese rol, ¿qué `sub_type` lleva su token? Hoy M6 acepta solo `CIUDADANO` y `EMPLEADO`, y rechaza con 401 cualquier otro valor; además, un `CIUDADANO` recibe 403 en toda la API. Por ahora los eventos de M9 nos llegan por RabbitMQ y no necesitamos que nos llamen por HTTP con ese rol, así que no es urgente: solo queremos tenerlo claro antes de aceptarlo.
+
 ## Pendientes de enviar (21/10, M1 y M2)
 
 > Redactado el 21/10 para que el PO lo envíe. **Pendiente de enviar.** Al enviarlos, anotar la fecha acá y mover la respuesta a [`m1.md`](m1.md).
 
-**→ M1 (Ciudadanos)** — seguimiento a su guía v2.1 y a lo que aclaró el PO — *pendiente de enviar*
+**→ M1 (Ciudadanos)** — seguimiento a su guía v2.1 y a lo que aclaró el PO — *enviado el 21 oct 2026, sin respuesta todavía*
 
 > Gracias por la guía v2.1 y por las aclaraciones: con la lista de roles (`CIUDADANO`, `MESA_ENTRADAS`, `ADMINISTRATIVO`, `RESPONSABLE_AREA`, `AUDITOR`, `SERVICIO`), el `user_id` igual al `citizenId` y el contrato del token (HS256, clave compartida en base64, claims `iss`, `sub`, `rol`, `typ`, 15 minutos, sin `aud`) ya sabemos cómo validar. Nos quedan unos puntos:
 >
@@ -105,7 +111,7 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 > 3. **Sobre de eventos:** el del documento sigue siendo el viejo (`producer`, `subject`, `eventId` `M1-EVT-…`). Para publicar por el Core tienen que usar el sobre del Core, y el `correlationId` tiene que ser un UUID: un valor como `M6-REQ-000045` lo rechaza el Core y también nuestro buzón de entrada.
 > 4. **`auth: false`:** ¿qué significa en la respuesta del login? ¿Un login fallido responde 401 o 200 con `auth: false`?
 
-**→ M2 (Atención Ciudadana)** — ids numéricos en `updatedBy.id` — *pendiente de enviar*
+**→ M2 (Atención Ciudadana)** — ids numéricos en `updatedBy.id` — *enviado el 21 oct 2026, sin respuesta todavía*
 
 > M1 nos confirma que sus ids de usuario son numéricos: el `user_id` del login es el `citizenId`, y su base es numérica. Nos dice también que ustedes van a tener que adaptar `updatedBy.id`, que en la v1.78 exige un UUID. Mientras tanto mandamos `id: null` (salvo que el identificador ya sea un UUID). ¿Qué acepta M2 para identificar a quien actúa desde otro módulo: un número, un string o `null`?
 
