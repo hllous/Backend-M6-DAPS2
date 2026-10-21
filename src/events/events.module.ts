@@ -13,7 +13,7 @@ import { OutboxDispatcher } from './outbox/outbox-dispatcher.service';
 import { EventPublisher } from './publishers/event-publisher.port';
 import { RabbitMqEventPublisher } from './publishers/rabbitmq.publisher';
 import { LoggingEventPublisher } from './publishers/logging.publisher';
-import { brokerHost, RabbitMqConfig } from './rabbitmq';
+import { brokerHost, brokerUser, RabbitMqConfig } from './rabbitmq';
 
 /** La config del bus, o `undefined` si no hay `RABBITMQ_URL`. */
 function rabbitMq(config: ConfigService): RabbitMqConfig | undefined {
@@ -30,6 +30,16 @@ export function createEventPublisher(config: ConfigService): EventPublisher {
       'RABBITMQ_URL sin configurar: los eventos se encolan en el outbox y se registran en el log, no se publican a ningún bus',
     );
     return new LoggingEventPublisher();
+  }
+
+  // M9 va a verificar el usuario AMQP contra el sourceModule del sobre. No se
+  // frena el arranque: el nombre exacto del usuario es propuesta de M9.
+  const moduleId = config.get<string>('core.moduleId');
+  const user = brokerUser(rabbit.url);
+  if (typeof moduleId === 'string' && user && user !== moduleId) {
+    logger.warn(
+      `El usuario de RABBITMQ_URL (${user}) no coincide con CORE_MODULE_ID (${moduleId}): M9 va a rechazar lo que publiquemos si no son iguales`,
+    );
   }
 
   logger.log(`Publicación de eventos por RabbitMQ: ${brokerHost(rabbit.url)}`);

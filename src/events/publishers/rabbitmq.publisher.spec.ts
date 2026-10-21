@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { connect } from 'amqplib';
 import { RabbitMqEventPublisher } from './rabbitmq.publisher';
@@ -247,5 +248,23 @@ describe('createEventPublisher', () => {
     );
     expect(publisher).toBeInstanceOf(RabbitMqEventPublisher);
     expect(connect).not.toHaveBeenCalled();
+  });
+
+  it('avisa si el usuario de la URL no es el CORE_MODULE_ID, y no si coincide', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const conModulo = (user: string) =>
+      ({
+        get: jest.fn((k: string) =>
+          k === 'core.moduleId'
+            ? 'ambiente'
+            : { url: `amqp://${user}:p@broker:5672`, exchange: 'x' },
+        ),
+      }) as unknown as ConfigService;
+
+    createEventPublisher(conModulo('ambiente'));
+    expect(warn).not.toHaveBeenCalled();
+    createEventPublisher(conModulo('otro'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('(otro)'));
+    warn.mockRestore();
   });
 });
