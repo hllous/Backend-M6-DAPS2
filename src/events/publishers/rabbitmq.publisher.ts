@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ChannelModel, ConfirmChannel, Message, connect } from 'amqplib';
 import { EventPublisher } from './event-publisher.port';
 import { EventEnvelope } from '../envelope';
-import { brokerHost, CONNECT_TIMEOUT_MS, RabbitMqConfig } from '../rabbitmq';
+import { brokerHost, brokerUser, CONNECT_TIMEOUT_MS, RabbitMqConfig } from '../rabbitmq';
 
 /**
  * Adaptador RabbitMQ. El EventsModule lo instancia solo cuando hay
@@ -53,6 +53,7 @@ export class RabbitMqEventPublisher extends EventPublisher implements OnModuleDe
           messageId: envelope.eventId,
           type: envelope.eventType,
           appId: envelope.sourceModule,
+          userId: brokerUser(this.config.url),
           headers: {
             eventId: envelope.eventId,
             eventType: envelope.eventType,
@@ -121,7 +122,15 @@ export class RabbitMqEventPublisher extends EventPublisher implements OnModuleDe
 
         // Pasivo: el exchange es del Core. Si no existe, el broker cierra el
         // canal con 404 y la publicación vuelve como fallo al outbox.
-        await channel.checkExchange(this.config.exchange);
+        await channel.checkExchange(this.config.exchange).catch((error: Error) => {
+          // 404 es otro caso que basic.return: el Core nunca declaró la topología en este broker.
+          if (/404|NOT[-_ ]FOUND/i.test(error.message)) {
+            throw new Error(
+              `${this.config.exchange} no existe en el broker: ¿corrió el Core contra él? (${error.message})`,
+            );
+          }
+          throw error;
+        });
 
         this.logger.log(
           `Productor RabbitMQ conectado a ${brokerHost(this.config.url)}, exchange ${this.config.exchange}`,

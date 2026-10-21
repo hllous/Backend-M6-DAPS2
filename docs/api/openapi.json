@@ -5727,7 +5727,7 @@
       "get": {
         "operationId": "TreeInterventionsController_findAll",
         "summary": "Listar intervenciones sobre árboles",
-        "description": "Retorna un listado paginado de intervenciones. Se puede filtrar por tipo, estado y por árbol: con treeId vienen solo las intervenciones que incluyen ese árbol, para armar su ficha.",
+        "description": "Retorna un listado paginado de intervenciones. Se puede filtrar por tipo, estado, prioridad y por árbol: con treeId vienen solo las intervenciones que incluyen ese árbol, para armar su ficha.",
         "parameters": [
           {
             "name": "page",
@@ -5782,6 +5782,22 @@
                 "PENDING_AUTHORIZATION",
                 "AUTHORIZED",
                 "REJECTED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "priority",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por prioridad de la intervención (LOW, MEDIUM, HIGH, CRITICAL)",
+            "schema": {
+              "example": "HIGH",
+              "enum": [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL"
               ],
               "type": "string"
             }
@@ -8752,7 +8768,7 @@
       "post": {
         "operationId": "ServicesController_confirmReschedule",
         "summary": "Confirmar la nueva fecha",
-        "description": "RESCHEDULED → SCHEDULED con la fecha y la ventana horaria nuevas.",
+        "description": "RESCHEDULED → SCHEDULED con la fecha y la ventana horaria nuevas. Si el servicio nació de un reclamo (ticketId), le informa la nueva fecha y franja a M2 como texto para el vecino, salvo que el ticket no admita el aviso (pendiente de información o terminado).",
         "parameters": [
           {
             "name": "id",
@@ -9833,7 +9849,7 @@
       "get": {
         "operationId": "EnvironmentalReportsController_findAll",
         "summary": "Listar expedientes ambientales",
-        "description": "Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen, cuadrilla (crewId: expedientes con alguna inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base para que la página y meta.total sean consistentes) y búsqueda por dirección.",
+        "description": "Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen, cuadrilla (crewId: expedientes con alguna inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base para que la página y meta.total sean consistentes) y búsqueda por dirección. Rango de fechas from/to (YYYY-MM-DD, inclusivo, día argentino) sobre la fecha de última actualización; meta.total refleja el filtro.",
         "parameters": [
           {
             "name": "page",
@@ -9949,6 +9965,30 @@
             }
           },
           {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Actualizados desde este día, inclusive (YYYY-MM-DD, día argentino UTC-3). Filtra por la fecha de última actualización («Actualizado» de la cola)",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-09-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Actualizados hasta este día, inclusive: hasta las 23:59:59 ART (YYYY-MM-DD). No puede ser anterior a `from`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-09-30",
+              "type": "string"
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
@@ -9987,7 +10027,7 @@
             }
           },
           "400": {
-            "description": "Filtro inválido (por ejemplo, crewId que no es UUID)",
+            "description": "Filtro inválido (por ejemplo, crewId que no es UUID, fecha mal formada o from posterior a to)",
             "content": {
               "application/json": {
                 "schema": {
@@ -10374,6 +10414,105 @@
           },
           "409": {
             "description": "Transición inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "environmental-reports"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/environmental-reports/{id}/request-information": {
+      "post": {
+        "operationId": "EnvironmentalReportsController_requestInformation",
+        "summary": "Pedirle información al vecino",
+        "description": "Durante la revisión (UNDER_REVIEW, con reclamo de M2) le pide al vecino algo más, por ejemplo una foto. Hacia M2 sale como INFORMATION_REQUIRED y el ticket pasa a PENDING_INFORMATION. El expediente sigue en UNDER_REVIEW con la solicitud pendiente (informationRequestPending) hasta que M2 avisa la respuesta, que queda en citizenResponse. Solo puede haber una solicitud pendiente por reclamo.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del expediente",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestInformationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud registrada y enviada a M2",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentalReportResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mensaje vacío o demasiado largo, o requiredBy inválido o en el pasado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Expediente no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Expediente sin reclamo, fuera de UNDER_REVIEW, con una solicitud ya pendiente o con el ticket en un estado de M2 que no la admite",
             "content": {
               "application/json": {
                 "schema": {
@@ -11114,7 +11253,8 @@
                 "REQUESTED",
                 "APPROVED",
                 "REJECTED",
-                "ENDED"
+                "ENDED",
+                "EXPIRED"
               ],
               "type": "string"
             }
@@ -11468,7 +11608,7 @@
       "post": {
         "operationId": "StreetClosureRequestsController_end",
         "summary": "Registrar el fin del corte",
-        "description": "Pasa a ENDED y libera la dependencia. **Normalmente lo dispara streetClosureEnded** (Fase 6), que desde el 30/08 ya trae el closureRequestId para poder correlacionarlo.",
+        "description": "Pasa a ENDED y libera la dependencia. Se admite desde REQUESTED, APPROVED y EXPIRED (un corte vencido por el barrido igual puede terminar). **Normalmente lo dispara streetClosureEnded** (Fase 6), que desde el 30/08 ya trae el closureRequestId para poder correlacionarlo.",
         "parameters": [
           {
             "name": "id",
@@ -16743,6 +16883,29 @@
             "example": "El ruido es del local de planta baja, después de las 23 h.",
             "nullable": true
           },
+          "informationRequestPending": {
+            "type": "boolean",
+            "description": "Hay una solicitud de información al vecino sin responder (POST /environmental-reports/:id/request-information). Mientras sea true no se puede pedir otra. Se apaga cuando M2 avisa la respuesta.",
+            "example": false
+          },
+          "informationRequestedAt": {
+            "type": "string",
+            "description": "Cuándo se hizo la solicitud pendiente. Null si no hay ninguna.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "informationRequestMessage": {
+            "type": "string",
+            "description": "Lo que se le pidió al vecino (el mismo texto que ve en M2). Null si no hay solicitud pendiente.",
+            "example": "Necesitamos una foto más del frente del local, tomada de noche.",
+            "nullable": true
+          },
+          "informationRequestRequiredBy": {
+            "type": "string",
+            "description": "Fecha límite que se le dio al vecino. Null si no hay solicitud pendiente o no se fijó plazo.",
+            "format": "date-time",
+            "nullable": true
+          },
           "deadlineAt": {
             "type": "string",
             "description": "Fecha límite para que M4 resuelva el acta. Al vencer, el expediente cierra sin sanción: M4 no publica nada cuando decide que no corresponde castigo.",
@@ -16772,6 +16935,7 @@
           "reportType",
           "status",
           "escalated",
+          "informationRequestPending",
           "createdAt",
           "updatedAt"
         ]
@@ -16788,6 +16952,31 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "RequestInformationDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Lo que ve el vecino en M2 (va como messageForCitizen y como publicMessage). No incluir datos internos.",
+            "example": "Necesitamos una foto más del frente del local, tomada de noche.",
+            "maxLength": 500
+          },
+          "requiredBy": {
+            "type": "string",
+            "description": "Fecha límite para responder. YYYY-MM-DD (vence a las 23:59:59 de ese día argentino) o ISO 8601 completo con zona horaria. Tiene que ser futura.",
+            "example": "2026-11-03"
+          },
+          "internalNote": {
+            "type": "string",
+            "description": "Nota para el equipo (internalMessage hacia M2). El vecino no la ve.",
+            "example": "La foto anterior salió movida.",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "message"
         ]
       },
       "CreateRepairRequestDto": {
@@ -17124,12 +17313,13 @@
           },
           "status": {
             "type": "string",
-            "description": "Estado de la solicitud. Lo mueven las tres respuestas de M7.",
+            "description": "Estado de la solicitud. Lo mueven las tres respuestas de M7 y, para EXPIRED, el barrido que vence los cortes aprobados cuya ventana autorizada ya pasó (M7 no avisa).",
             "enum": [
               "REQUESTED",
               "APPROVED",
               "REJECTED",
-              "ENDED"
+              "ENDED",
+              "EXPIRED"
             ]
           },
           "closureId": {

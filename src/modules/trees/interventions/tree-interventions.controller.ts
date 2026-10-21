@@ -59,7 +59,7 @@ export class TreeInterventionsController {
   @ApiOperation({
     summary: 'Listar intervenciones sobre árboles',
     description:
-      'Retorna un listado paginado de intervenciones. Se puede filtrar por tipo, estado y por árbol: con treeId vienen solo las intervenciones que incluyen ese árbol, para armar su ficha.',
+      'Retorna un listado paginado de intervenciones. Se puede filtrar por tipo, estado, prioridad y por árbol: con treeId vienen solo las intervenciones que incluyen ese árbol, para armar su ficha.',
   })
   @ApiPaginatedResponse(TreeInterventionResponseDto, 'Listado paginado de intervenciones')
   @ApiResponse({

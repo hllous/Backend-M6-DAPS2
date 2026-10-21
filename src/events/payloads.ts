@@ -5,11 +5,8 @@ import {
   EnvironmentalInspection,
   EnvironmentalReport,
   RepairRequest,
-  Service,
-  ServiceType,
   StreetClosureRequest,
   Tree,
-  TreeIntervention,
   TreeSurvey,
   ViolationNotice,
 } from '@prisma/client';
@@ -21,16 +18,6 @@ import {
  * contra los `.schema.json` de docs/eventos/publicados/ en un test, que es la
  * única forma de saber que lo que emitimos es lo que documentamos.
  */
-
-/** `HH:mm` desde el DateTime que Prisma usa para las columnas @db.Time. */
-function hhmm(value: Date | null): string | undefined {
-  return value ? value.toISOString().slice(11, 16) : undefined;
-}
-
-/** `YYYY-MM-DD` desde una columna @db.Date. */
-function isoDate(value: Date): string {
-  return value.toISOString().slice(0, 10);
-}
 
 /**
  * La ubicación tal como la podemos armar hoy.
@@ -51,12 +38,6 @@ function location(source: {
   return loc;
 }
 
-function timeWindow(from: Date | null, to: Date | null): Record<string, string> | undefined {
-  const f = hhmm(from);
-  const t = hhmm(to);
-  return f && t ? { from: f, to: t } : undefined;
-}
-
 /**
  * Los adjuntos nuestros, en la forma que define el contrato para `evidence`.
  *
@@ -72,29 +53,6 @@ function evidence(attachments: Attachment[]): Record<string, unknown>[] {
 /** Saca las claves en undefined: los schemas usan `additionalProperties: false`. */
 function compact<T extends Record<string, unknown>>(obj: T): T {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
-}
-
-// ─── urbanServiceScheduled → M7 ───────────────────
-
-export function urbanServiceScheduled(
-  service: Service & { zones: { zoneId: string }[] },
-  serviceType: ServiceType,
-): Record<string, unknown> {
-  return compact({
-    serviceId: service.id,
-    serviceTypeCode: serviceType.code,
-    category: serviceType.category,
-    mode: service.mode,
-    zoneIds: service.zones.map((z) => z.zoneId),
-    routeId: service.routeId ?? undefined,
-    targetRef: service.targetId ?? undefined,
-    scheduledDate: isoDate(service.scheduledDate),
-    timeWindow: timeWindow(service.windowFrom, service.windowTo),
-    crewId: service.crewId ?? undefined,
-    vehicleId: service.vehicleId ?? undefined,
-    origin: service.origin,
-    ticketId: service.ticketId ?? undefined,
-  });
 }
 
 // ─── containerDamaged → M3 ────────────────────────
@@ -113,7 +71,7 @@ export function containerDamaged(container: Container, ticketId?: string): Recor
   });
 }
 
-// ─── treeRiskDetected → M3, M7 ────────────────────
+// ─── treeRiskDetected → M3 ────────────────────
 
 export function treeRiskDetected(tree: Tree, survey: TreeSurvey): Record<string, unknown> {
   return compact({
@@ -129,39 +87,6 @@ export function treeRiskDetected(tree: Tree, survey: TreeSurvey): Record<string,
     requiresStreetClosure: survey.requiresStreetClosure,
     requiresPublicWorks: survey.requiresPublicWorks,
     surveyedAt: survey.surveyedAt.toISOString(),
-  });
-}
-
-// ─── treePruningScheduled → M7 ────────────────────
-
-/**
- * Devuelve `null` si el servicio todavía no tiene cuadrilla o franja horaria.
- *
- * M7 declara los dos campos como requeridos y en nuestro modelo son opcionales
- * hasta que se asignan, así que el evento se difiere en vez de emitirse
- * incompleto. Es el desajuste que salió de su tabla del 02/09.
- */
-export function treePruningScheduled(
-  intervention: TreeIntervention & { trees: { treeId: string }[] },
-  service: Service & { zones: { zoneId: string }[] },
-  anyTree: Tree | null,
-): Record<string, unknown> | null {
-  const window = timeWindow(service.windowFrom, service.windowTo);
-  if (!service.crewId || !window) return null;
-
-  return compact({
-    interventionId: intervention.id,
-    serviceId: service.id,
-    interventionType: intervention.interventionType,
-    treeIds: intervention.trees.map((t) => t.treeId),
-    zoneId: service.zones[0]?.zoneId,
-    location: anyTree
-      ? location(anyTree)
-      : location({ address: intervention.address, lat: null, lng: null }),
-    scheduledDate: isoDate(service.scheduledDate),
-    timeWindow: window,
-    crewId: service.crewId,
-    requiresStreetClosure: intervention.requiresStreetClosure,
   });
 }
 
@@ -238,11 +163,10 @@ function seccion(s: ClosureStreet): string {
 /**
  * La solicitud de corte, en el esquema unificado con la de M3 (30/08).
  *
- * `sourceModule` va como `"M6"`, que es lo que dice la tabla de campos de M7.
- * Su mensaje del 02/09 se contradecía —la prosa hablaba de `requestingModule`
- * con valores "Obras"/"Ambiente"— y se resolvió a favor de la tabla. Sus tres
- * eventos de respuesta sí usan `requestingModule`; es probable que hayan
- * mezclado el campo de ida con el de vuelta. Ver bloqueantes.md.
+ * `sourceModule` va como `"M6"`, que es lo que dice la tabla de campos de M7
+ * y lo que M7 confirmó leer el 20/10. Sus respuestas devuelven `requestingModule`
+ * ("ambiente" para nosotros) dentro de `data`: son dos campos distintos, no se
+ * mezclaron. Ver bloqueantes.md.
  */
 export function streetClosureRequested(
   request: StreetClosureRequest & { streets: ClosureStreet[] },
@@ -277,12 +201,18 @@ export type TicketUpdateType =
 const ACTOR_SISTEMA = 'sistema';
 
 /**
- * Payload del contrato v1.75 de M2 (sin cambios desde la v1.6), adoptado tal cual.
+ * M2 v1.78 exige que `updatedBy.id` sea UUID o null. El `sub` del JWT provisorio
+ * puede ser un código o un entero, y ahí mandamos null (la persona sigue siendo
+ * EXTERNAL_USER). Laxo como el Core: 8-4-4-4-12 hex, sin mirar versión.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Payload del contrato v1.78 de M2 (desde la v1.6 solo cambió `updatedBy.id`), adoptado tal cual.
  *
- * La fecha y la franja agendadas **siguen sin viajar**: `progress` es un entero
- * de porcentaje y §8.2 sigue diciendo "details obligatorio: Ninguno" para
- * `STARTED` y `PROGRESS`. Es un bloqueante abierto con M2 desde la v1.5
- * (sigue igual en la v1.75; ver el conteo en docs/bloqueantes.md) — mientras tanto la información va como texto en `publicMessage`.
+ * La fecha y la franja agendadas viajan como **texto en `publicMessage`** (M2,
+ * 20/10; #303): `progress` es un entero de porcentaje y §8.2 dice "details
+ * obligatorio: Ninguno" para `STARTED` y `PROGRESS`, así que no hay otro lugar.
  */
 export function updateTicketStatus(params: {
   ticketId: string;
@@ -302,7 +232,10 @@ export function updateTicketStatus(params: {
     details: params.details,
     updatedBy: esAutomatico
       ? { type: 'SYSTEM' as const, id: null }
-      : { type: 'EXTERNAL_USER' as const, id: params.updatedById },
+      : {
+          type: 'EXTERNAL_USER' as const,
+          id: UUID.test(params.updatedById) ? params.updatedById : null,
+        },
     // Antes `statusChangedAt` en la v1.5. Renombrado en la v1.6 (§8.1).
     updateOccurredAt: new Date().toISOString(),
   });

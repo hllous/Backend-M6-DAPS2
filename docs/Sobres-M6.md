@@ -1,17 +1,17 @@
 # Ejemplos de sobres — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 21 de octubre de 2026**
 
 Anexo del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md). El Acuerdo dice **qué** campos tiene cada evento; este documento muestra **el mensaje completo**, tal como sale de M6 o tal como lo esperamos recibir, para que puedan copiarlo en sus pruebas.
 
 | Parte | Qué hay |
 |---|---|
 | **1** | El sobre del Core y las reglas que M6 aplica al enviar y al recibir |
-| **2** | Los 8 mensajes que **publicamos**, con un ejemplo completo cada uno |
+| **2** | Los 6 mensajes que **publicamos**, con un ejemplo completo cada uno |
 | **3** | Los mensajes que **recibimos** (M2, M3, M4, M7), con lo que leemos de cada uno |
 | **4** | Cómo respondemos a cada entrega y errores comunes |
 
-Todos los ejemplos son del 14 de octubre de 2026 y los identificadores son inventados. Los de la Parte 2 se validan contra los `.schema.json` de M6. Los de la Parte 3 son **lo que asumimos que mandan** (el de M2, según su contrato v1.75): el payload lo define cada módulo emisor, y si el suyo difiere, avísennos.
+Todos los ejemplos son del 14 de octubre de 2026 y los identificadores son inventados. Los de la Parte 2 se validan contra los `.schema.json` de M6. Los de la Parte 3 son **lo que asumimos que mandan** (el de M2, según su contrato v1.78): el payload lo define cada módulo emisor, y si el suyo difiere, avísennos.
 
 ---
 
@@ -22,7 +22,7 @@ Es el sobre que M9 fijó el 7/10/2026 para toda la cohorte. Reemplaza al de M2 (
 | Campo | Tipo | Obligatorio | Qué lleva |
 |---|---|---|---|
 | `eventId` | string (UUID) | ✅ | Identificador único del mensaje. **Es la clave de idempotencia**: el mismo `eventId` dos veces se procesa una sola |
-| `eventType` | string | ✅ | Nombre del evento en camelCase: `urbanServiceScheduled` |
+| `eventType` | string | ✅ | Nombre del evento en camelCase: `containerDamaged` |
 | `eventVersion` | string | ✅ al publicar | `"1.0"` |
 | `occurredAt` | string (ISO 8601) | ✅ | Cuándo ocurrió el hecho, **no** cuándo se publicó. Con offset; la `Z` cuenta. Se escribe con **doble r** |
 | `sourceModule` | string | ✅ | Módulo emisor. El nuestro es **`ambiente`** |
@@ -36,18 +36,18 @@ Es el sobre que M9 fijó el 7/10/2026 para toda la cohorte. Reemplaza al de M2 (
 - `eventId` es el id de la fila de nuestro outbox: un reenvío por un corte sale con el mismo `eventId`.
 - `correlationId` viaja siempre. Si el evento nace de una acción propia (una request HTTP, un barrido programado) abre un hilo nuevo; si nace del handler de un evento recibido, hereda el `correlationId` de ese.
 - `causationId` solo aparece cuando el evento nace dentro del handler de otro que recibimos, y es el `eventId` de ese. En los demás casos la clave no está (no mandamos `null`).
-- Solo propagamos UUID estrictos (versión 1-8, variante RFC). Si lo que llega no lo es, abrimos un hilo propio y el evento se procesa igual.
+- Solo propagamos lo que tiene la forma 8-4-4-4-12 en hex (lo que generamos sigue siendo v4). Si lo que llega no la tiene, abrimos un hilo propio y el evento se procesa igual.
 - `sourceModule` es `ambiente` en todos, también en `streetClosureRequested`, aunque su `data.sourceModule` valga `"M6"` (lo exige el schema acordado con M7).
 - `sourceModule` es el slug del módulo en el Core (M2 §5.1): `ciudadanos` (M1), `atencion-ciudadana` (M2), `obras` (M3), `habilitaciones` (M4), `rentas` (M5), `ambiente` (M6), `transito` (M7), `desarrollo-social` (M8) y `core` (M9). Dentro de `data` los módulos siguen siendo `M1`…`M9` (`responsibleAreaId`).
-- Se publica a `muni.inbox` con `persistent` y `mandatory`. La routing key es el `eventType`, pero con `fanout` no enruta nada.
+- Se publica a `muni.inbox` con `persistent`, `mandatory` y el `userId` del usuario AMQP (M9 lo va a verificar contra el `sourceModule`). La routing key es el `eventType`, pero con `fanout` no enruta nada.
 
 ## Reglas al **recibir** (somos tolerantes)
 
 - Leemos `eventId`, `eventType` y `data`; para la traza, también `correlationId` y `sourceModule`.
 - Aceptamos `eventVersion`, `occurredAt` y `causationId` (incluso `null`).
 - Mientras la cohorte migra, **seguimos aceptando el sobre viejo de M2**: `specVersion`, `producer` (string u objeto `{ moduleId, service }`) y `subject`. Se guardan o se ignoran, nunca se rechazan.
-- Si viene `correlationId` o `causationId`, tiene que tener forma de UUID (o `null` en `causationId`). Uno como `M6-REQ-000045` **rechaza el mensaje**.
-- El Core agrega `receivedAt` al registrar el evento (según la guía de M2 v1.75, §4; falta confirmarlo con el Core). **Por el bus lo toleramos**; por `POST /events/inbox` un campo extra del sobre da 400.
+- Si viene `correlationId` o `causationId`, tiene que tener la forma 8-4-4-4-12 en hex (o `null` en `causationId`), sin mirar versión ni variante: es lo mismo que valida el Core. Uno como `M6-REQ-000045` **rechaza el mensaje**. Los que heredamos para los eventos que publicamos solo necesitan esa forma.
+- El cuerpo que llega por la cola es el sobre, **sin campos nuevos** (M9, 20/10: lo desmiente la guía de M2, que decía que el Core agrega `receivedAt`). Lo del Core viaja en headers AMQP (`x-core-*`). El cuerpo se re-serializa: los `null` desaparecen y `occurredAt` se normaliza (`.5` pasa a `.500000`, mismo instante y offset), así que no se comparan fechas como texto. Un campo ausente lo tratamos igual que uno en `null`. Si llegara un campo extra, por el bus lo toleramos; por `POST /events/inbox` da 400.
 - Límites: `eventId` hasta 100 caracteres, `eventType` hasta 120, mensaje hasta 100 kB. `sourceModule` solo admite letras, números, guion y guion bajo (`atencion-ciudadana` es válido).
 - Un `occurredAt` presente tiene que ser ISO 8601 válido; si no, el mensaje se rechaza.
 
@@ -55,11 +55,13 @@ Es el sobre que M9 fijó el 7/10/2026 para toda la cohorte. Reemplaza al de M2 (
 
 # Parte 2 — Lo que publicamos
 
-Los ocho, uno por uno. `data` sigue el schema en `docs/eventos/publicados/`. Los campos de fecha (`...At`) son fecha y hora; `scheduledDate` es solo el día.
+Los seis, uno por uno. `data` sigue el schema JSON que les enviamos. Los campos de fecha (`...At`) son fecha y hora.
+
+`urbanServiceScheduled` y `treePruningScheduled` **ya no se publican** (21/10): M7 solo consume `streetClosureRequested`.
 
 ## 2.1 `updateTicketStatus` → M2
 
-Informamos el hecho, **M2 decide el estado**. Sin `status`, sin `sourceRef`, sin `publicId`. La correlación es solo por `ticketId`. Hay una variante por `updateType`; este es un cierre (`RESOLVED`):
+Informamos el hecho, **M2 decide el estado**. Sin `status`, sin `sourceRef`, sin `publicId`. La correlación es solo por `ticketId`. Hay una variante por `updateType`; este es el cierre de un servicio (`RESOLVED`), tal como lo arma M6:
 
 ```json
 {
@@ -72,23 +74,17 @@ Informamos el hecho, **M2 decide el estado**. Sin `status`, sin `sourceRef`, sin
   "data": {
     "ticketId": "0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a",
     "updateType": "RESOLVED",
-    "publicMessage": "Retiramos los residuos de la esquina. Gracias por avisarnos.",
+    "publicMessage": "El servicio se completó.",
     "details": {
       "resolution": { "type": "ACTION_COMPLETED" }
     },
-    "attachments": [
-      {
-        "fileName": "trabajo-terminado.jpg",
-        "contentType": "image/jpeg",
-        "url": "https://files.ejemplo.test/evidencia/trabajo-terminado.jpg",
-        "sizeBytes": 245123
-      }
-    ],
     "updatedBy": { "type": "SYSTEM", "id": null },
     "updateOccurredAt": "2026-10-14T15:20:00.000Z"
   }
 }
 ```
+
+Admitido por el contrato, **hoy no se manda**: el cierre puede llevar la foto del trabajo en `data.attachments`, por ejemplo `[{ "fileName": "trabajo-terminado.jpg", "contentType": "image/jpeg", "url": "https://files.ejemplo.test/evidencia/trabajo-terminado.jpg", "sizeBytes": 245123 }]`.
 
 Las otras variantes cambian `updateType` y `details`:
 
@@ -96,43 +92,52 @@ Las otras variantes cambian `updateType` y `details`:
 |---|---|---|
 | `STARTED` | no lleva | `publicMessage` opcional |
 | `PROGRESS` | no lleva | exige al menos uno de `progress`, `publicMessage`, `internalMessage` o `attachments` |
-| `INFORMATION_REQUIRED` | `{ "informationRequest": { "messageForCitizen": "...", "requiredBy": "2026-10-20T12:00:00.000Z" } }` | `requiredBy` opcional. **Diseñado, hoy no lo emitimos** |
-| `RETURNED` | `{ "returnInfo": { "reasonCode": "REQUEST_TYPE_MISMATCH" } }` | |
-| `REJECTED` | `{ "cancellation": { "reasonCode": "OUT_OF_SCOPE" } }` | |
+| `INFORMATION_REQUIRED` | `{ "informationRequest": { "messageForCitizen": "...", "requiredBy": "2026-11-04T02:59:59.000Z" } }` | `publicMessage` con el mismo texto que `messageForCitizen`; `requiredBy` e `internalMessage` opcionales; sin `progress` ni `attachments`. Lo emitimos cuando el operador lo pide: ver el ejemplo y las reglas más abajo |
+| `RETURNED` | `{ "returnInfo": { "reasonCode": "REQUEST_TYPE_MISMATCH" } }` | `internalMessage` con el motivo del operador, siempre (M2 exige `publicMessage` o `internalMessage`) |
+| `REJECTED` | `{ "cancellation": { "reasonCode": "DOES_NOT_APPLY" } }` (`OTHER` al cancelar un servicio) | `internalMessage` con el motivo del operador, siempre |
 
-`updatedBy` es `{ "type": "EXTERNAL_USER", "id": "<id>" }` cuando actúa una persona, y `{ "type": "SYSTEM", "id": null }` cuando es automático. Los adjuntos van en el formato de M2 (`fileName`, `contentType`, `url`, `sizeBytes?`), **sin** `attachmentId`.
-
-⚠️ **Pendiente con M2:** no hay campo para la fecha y franja agendadas de un servicio. Su paquete de schemas trae un ejemplo de `PROGRESS` con la programación como texto en `publicMessage` (`progress: 10`, sin `details`); falta que lo confirmen como la forma oficial. Hoy no las mandamos.
-
-## 2.2 `urbanServiceScheduled` → M7
+**`INFORMATION_REQUIRED`: así lo arma M6.** Lo manda el operador desde un expediente que nació de un reclamo, está en revisión y no tiene otra solicitud pendiente. `messageForCitizen` (obligatorio, hasta 500 caracteres) es el mismo texto que `publicMessage`; `requiredBy` es la fecha límite sugerida (opcional, futura; M2 fija la efectiva; si el operador manda solo una fecha vence a las 23:59:59 hora argentina de ese día); `internalMessage` es una nota interna opcional que el vecino no ve.
 
 ```json
 {
-  "eventId": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-  "eventType": "urbanServiceScheduled",
+  "eventId": "8d2e4f6a-1b3c-4d5e-9f7a-0b1c2d3e4f5a",
+  "eventType": "updateTicketStatus",
   "eventVersion": "1.0",
-  "occurredAt": "2026-10-14T13:05:10.000Z",
+  "occurredAt": "2026-10-21T14:10:00.000Z",
   "sourceModule": "ambiente",
-  "correlationId": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
+  "correlationId": "d4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f70",
   "data": {
-    "serviceId": "7e8f9a0b-1c2d-4e3f-a4b5-c6d7e8f9a0b1",
-    "serviceTypeCode": "WASTE_COLLECTION_RESIDENTIAL",
-    "category": "WASTE_COLLECTION",
-    "mode": "ROUTE",
-    "zoneIds": ["2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e"],
-    "routeId": "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f",
-    "scheduledDate": "2026-10-16",
-    "timeWindow": { "from": "06:00", "to": "10:00" },
-    "crewId": "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f80",
-    "vehicleId": "5e6f7a8b-9c0d-4e1f-a03b-4c5d6e7f8091",
-    "origin": "PLANNED"
+    "ticketId": "0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a",
+    "updateType": "INFORMATION_REQUIRED",
+    "publicMessage": "Necesitamos una foto más del frente del local, tomada de noche.",
+    "internalMessage": "La foto anterior salió movida.",
+    "details": {
+      "informationRequest": {
+        "messageForCitizen": "Necesitamos una foto más del frente del local, tomada de noche.",
+        "requiredBy": "2026-11-04T02:59:59.000Z"
+      }
+    },
+    "updatedBy": { "type": "EXTERNAL_USER", "id": "3b9f1c52-6a7e-4d08-9c41-5e2a8d7f0b13" },
+    "updateOccurredAt": "2026-10-21T14:10:00.000Z"
   }
 }
 ```
 
-`mode: "POINT"` lleva `targetRef` en vez de `routeId`; `origin: "TICKET"` lleva `ticketId`. `timeWindow`, `crewId` y `vehicleId` pueden faltar.
+Solo sale si M6 conoce o supone el ticket en `IN_PROGRESS` o `ROUTED`, o si todavía no tiene un estado conocido para él. Con el ticket en `PENDING_INFORMATION`, `IN_REVIEW` o un estado terminal no mandamos nada y el pedido del operador se rechaza. Esperamos de vuelta un `ticketUpdated / INFORMATION_PROVIDED` con la respuesta del vecino: la guardamos y damos la solicitud por cerrada (el que trae `details.informationResponse.purpose = "RECLASSIFICATION"` no cuenta como respuesta). Mientras hay una solicitud pendiente, M6 no devuelve, desestima ni cierra ese expediente. **Cómo termina el pedido.** Si el vecino responde, esperamos `INFORMATION_PROVIDED` con el `currentStatus` al que volvió el ticket. Si el pedido vence sin respuesta, M2 cancela el ticket (no vuelve al estado anterior) y esperamos un `ticketUpdated` `CANCELLED` con `reasonCode` `INFO_TIMEOUT`: cierra nuestra solicitud y desestima el expediente que estaba en revisión. Una cancelación administrativa también llega como `CANCELLED`. `requiredBy` es una fecha sugerida: M2 fija la efectiva. Mientras haya un pedido abierto no mandamos un segundo `INFORMATION_REQUIRED`. Además, la solicitud se da por cerrada con un `ticketUpdated` de cambio de estado (`STATUS_CHANGED`, `ROUTED`, `REOPENED`, `RESOLVED`, `CLOSED`, `CANCELLED` o `DUPLICATE_LINKED`) cuyo `currentStatus` sea uno de los nueve estados de M2 y no sea `PENDING_INFORMATION`; un evento viejo (atrasado respecto del último estado recibido) o un `currentStatus` fuera de esos nueve estados no la cierra, y una reclasificación (`RECLASSIFICATION`) nunca la cierra. `CANCELLED` la cierra aunque no traiga `currentStatus`.
 
-## 2.3 `containerDamaged` → M3
+`updatedBy` es `{ "type": "EXTERNAL_USER", "id": "3b9f1c52-6a7e-4d08-9c41-5e2a8d7f0b13" }` cuando actúa una persona, y `{ "type": "SYSTEM", "id": null }` cuando es automático. Desde la v1.78 de M2 el `id` es un UUID o `null` (no se admiten códigos ni enteros): mandamos el identificador del usuario autenticado solo si tiene forma de UUID; si no, `"id": null` con `"type": "EXTERNAL_USER"`. Los adjuntos van en el formato de M2 (`fileName`, `contentType`, `url`, `sizeBytes?`), **sin** `attachmentId`.
+
+✅ **Fecha y franja agendadas (M2, 20/10).** No hay campo estructurado: van como **texto en `publicMessage`**. **Ya las mandamos**, si el servicio nació de un reclamo: al agendar y al confirmar una reprogramación. El texto lleva solo fecha y franja, sin cuadrilla ni notas, y no lleva `progress` ni `details`:
+
+- Con franja completa: «Su servicio fue programado para el miércoles 21 de octubre de 2026, entre las 08:00 y las 12:30 hs.»
+- Sin franja (o con una sola punta): «Su servicio fue programado para el miércoles 21 de octubre de 2026.»
+- Al reprogramar dice «reprogramado» en vez de «programado»: «Su servicio fue reprogramado para el jueves 22 de octubre de 2026, entre las 08:00 y las 12:30 hs.»
+
+Qué `updateType` mandamos depende del estado del ticket que M6 deduce de lo que ya envió y de lo que M2 informa en `ticketUpdated`: `STARTED` si nunca lo vimos o está en `ROUTED` o `IN_REVIEW` (también al reprogramar, mientras siga en uno de esos estados); `PROGRESS` si está en `IN_PROGRESS`; con cualquier otro estado (`REGISTERED`, `DUPLICATE`, `PENDING_INFORMATION`, `RESOLVED`, `CLOSED`, `CANCELLED`) no mandamos nada.
+
+**Secuencia:** `STARTED` va siempre antes de `PROGRESS`; el primer `updateTicketStatus` de un ticket es `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`, o `INFORMATION_REQUIRED` si todavía no conocemos su estado. Si el ticket ya está `IN_PROGRESS` (por ejemplo porque agendar ya lo arrancó), el inicio del servicio y el inicio de la revisión de un expediente (denuncia ambiental) mandan `PROGRESS` en vez de repetir `STARTED`. Cuando M2 vuelve a derivarnos un reclamo que habíamos devuelto y reactivamos el expediente, mandamos `STARTED` (o `PROGRESS` si ya está `IN_PROGRESS`) con «Su denuncia ambiental está en análisis.». Una demora (`PROGRESS`) solo sale con el servicio en curso. Al emitirse un acta ambiental mandamos «Se constató una infracción y se emitió el acta correspondiente.» (nunca el contenido del acta): `PROGRESS` si el ticket está `IN_PROGRESS`, `STARTED` si está en `ROUTED`, `IN_REVIEW` o no conocemos su estado, y nada si está en `PENDING_INFORMATION` o en un estado terminal.
+
+## 2.2 `containerDamaged` → M3
 
 ```json
 {
@@ -157,7 +162,7 @@ Las otras variantes cambian `updateType` y `details`:
 
 Es un aviso: no esperamos respuesta. `damageType` viaja como texto (`STRUCTURAL`, `BURNT`, `LID_BROKEN`, `WHEELS_BROKEN`, `VANDALIZED`, `MISSING`). `ticketId` solo si lo reportó un vecino.
 
-## 2.4 `treeRiskDetected` → M3 y M7
+## 2.3 `treeRiskDetected` → M3
 
 Solo se publica con `riskLevel` `HIGH` o `CRITICAL`.
 
@@ -186,36 +191,9 @@ Solo se publica con `riskLevel` `HIGH` o `CRITICAL`.
 }
 ```
 
-`species` y `suggestedIntervention` son opcionales (sin intervención sugerida solo corresponde monitorear). Con `requiresStreetClosure: true`, M7 recibe después un `streetClosureRequested`.
+`species` y `suggestedIntervention` son opcionales (sin intervención sugerida solo corresponde monitorear). Con `requiresStreetClosure: true`, el corte se pide aparte con `streetClosureRequested`; M7 no recibe este evento.
 
-## 2.5 `treePruningScheduled` → M7
-
-Se publica recién cuando el servicio ya tiene cuadrilla y franja horaria.
-
-```json
-{
-  "eventId": "a1b2c3d4-0003-4d0e-9f2a-3b4c5d6e7f03",
-  "eventType": "treePruningScheduled",
-  "eventVersion": "1.0",
-  "occurredAt": "2026-10-14T14:00:00.000Z",
-  "sourceModule": "ambiente",
-  "correlationId": "f4a5b6c7-d8e9-4f0a-9b2c-3d4e5f607182",
-  "data": {
-    "interventionId": "0b1c2d3e-4f5a-4b6c-97d8-f9a0b1c2d3e4",
-    "serviceId": "7e8f9a0b-1c2d-4e3f-a4b5-c6d7e8f9a0b1",
-    "interventionType": "SAFETY_PRUNING",
-    "treeIds": ["9a0b1c2d-3e4f-4a5b-86c7-e8f9a0b1c2d3"],
-    "zoneId": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
-    "location": { "street": "Calle Mitre 845" },
-    "scheduledDate": "2026-10-20",
-    "timeWindow": { "from": "08:00", "to": "12:00" },
-    "crewId": "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f80",
-    "requiresStreetClosure": true
-  }
-}
-```
-
-## 2.6 `environmentalViolationDetected` → M4
+## 2.4 `environmentalViolationDetected` → M4
 
 Solo se publica si el acta tiene `establishmentId`.
 
@@ -253,7 +231,7 @@ Solo se publica si el acta tiene `establishmentId`.
 
 `suggestedAction` no es vinculante. `violationType` viaja como texto (`NOISE_LIMIT`, `ILLEGAL_DUMPING`, `UNTREATED_DISCHARGE`, `HAZARDOUS_WASTE`, `AIR_EMISSION`, `NO_WASTE_MANAGEMENT`, `INSPECTION_OBSTRUCTION`). `evidence[]` usa el formato de M6 (`url`, `mimeType`, `description?`), no el de M2. `violationId` es el que esperamos de vuelta como `sourceViolationId`.
 
-## 2.7 `infrastructureRepairRequested` → M3
+## 2.5 `infrastructureRepairRequested` → M3
 
 ```json
 {
@@ -277,7 +255,7 @@ Solo se publica si el acta tiene `establishmentId`.
 
 Abre una solicitud con seguimiento: M3 nos devuelve `requestId` como `sourceRequestId` en `workOrderScheduled` y `workOrderCompleted`. `damageType`: `BROKEN_PAVEMENT`, `BROKEN_SIDEWALK`, `BROKEN_STREETLIGHT`, `BLOCKED_DRAIN`, `DAMAGED_STRUCTURE`.
 
-## 2.8 `streetClosureRequested` → M7
+## 2.6 `streetClosureRequested` → M7
 
 ```json
 {
@@ -301,7 +279,7 @@ Abre una solicitud con seguimiento: M3 nos devuelve `requestId` como `sourceRequ
 }
 ```
 
-⚠️ **Dos `sourceModule` distintos y los dos son intencionales.** El del sobre es `ambiente` (el módulo ante el Core); el de `data` es `"M6"`, que es lo que dice la tabla de campos de M7. **M7: confirmen cuál leen.** Las respuestas nos tienen que devolver `closureRequestId`.
+⚠️ **Dos `sourceModule` distintos y los dos son intencionales.** El del sobre es `ambiente` (el módulo ante el Core); el de `data` es `"M6"`, que es lo que dice la tabla de campos de M7. M7 confirmó el 20/10 que lee el de `data`. `sourceRef` es el `serviceId` del servicio o el `interventionId` de la poda que origina el corte; es el único evento que les mandamos. Las respuestas nos tienen que devolver `closureRequestId`.
 
 ---
 
@@ -311,7 +289,7 @@ Estos son los eventos que M6 procesa. Los sobres de los ejemplos son los del Cor
 
 ## 3.1 `ticketUpdated` ← M2
 
-Es nuestro único disparador de entrada. Llega a todos los módulos: **filtramos por `responsibleAreaId`** y solo actuamos si vale `"M6"`. De los trece `updateType` actuamos sobre seis (`ROUTED`, `INFORMATION_PROVIDED`, `CANCELLED`, `REOPENED`, `PRIORITY_CHANGED`, `ESCALATION_CHANGED`); los otros siete se aceptan y no hacen nada.
+Es nuestro único disparador de entrada. Llega a todos los módulos: **filtramos por `responsibleAreaId`** y solo actuamos si vale `"M6"`. De los trece `updateType` actuamos sobre seis (`ROUTED`, `INFORMATION_PROVIDED`, `CANCELLED`, `REOPENED`, `PRIORITY_CHANGED`, `ESCALATION_CHANGED`); los otros siete se aceptan y no hacen nada sobre el expediente. De todos los de tickets nuestros (también de esos siete) guardamos el `currentStatus`, solo si es uno de los nueve estados de la §3 de M2, que influye en si al agendar un servicio mandamos `STARTED`, `PROGRESS` o nada.
 
 ```json
 {
@@ -321,7 +299,6 @@ Es nuestro único disparador de entrada. Llega a todos los módulos: **filtramos
   "occurredAt": "2026-10-13T18:42:10.000Z",
   "sourceModule": "atencion-ciudadana",
   "correlationId": "0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a",
-  "causationId": null,
   "data": {
     "ticketId": "0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a",
     "publicId": "TK-2026-004871",
@@ -335,6 +312,8 @@ Es nuestro único disparador de entrada. Llega a todos los módulos: **filtramos
     "details": {
       "routing": {
         "requestType": "Basura acumulada en la vía pública",
+        "category": "Higiene urbana",
+        "subcategory": "Residuos en la vía pública",
         "ticketType": "COMPLAINT",
         "summary": "Basura acumulada en la esquina",
         "description": "Hace tres días que no pasan a recoger los residuos de la esquina.",
@@ -350,7 +329,7 @@ Es nuestro único disparador de entrada. Llega a todos los módulos: **filtramos
 }
 ```
 
-El `sourceModule` de M2 es `atencion-ciudadana`; `responsibleAreaId` va con el código `M6`. Lo que **leemos**: `ticketId` y `updateType` (obligatorios: sin ellos el mensaje se rechaza), `responsibleAreaId`, `citizenId`, `isAnonymous` y, en `ROUTED`, `details.routing` (`requestType`, `summary`, `description`, `location`). Si `details.routing` no está, caemos al nivel raíz.
+El `sourceModule` de M2 es `atencion-ciudadana`; `responsibleAreaId` va con el código `M6`. Lo que **leemos**: `ticketId` y `updateType` (obligatorios: sin ellos el mensaje se rechaza), `responsibleAreaId`, `citizenId` (UUID, o `null` si `isAnonymous`), `isAnonymous` y, en `ROUTED`, `details.routing` (`requestType`, `summary`, `description`, `location`). `category`, `subcategory` y `reassignment` los aceptamos pero no los leemos. Leemos además `currentStatus` y lo guardamos solo si es uno de los nueve estados de la §3 de M2 (`REGISTERED`, `IN_REVIEW`, `ROUTED`, `IN_PROGRESS`, `PENDING_INFORMATION`, `DUPLICATE`, `RESOLVED`, `CLOSED`, `CANCELLED`); otro valor se ignora con un log. Ese estado condiciona si mandamos `STARTED`, `PROGRESS` o nada. Si `details.routing` no está, caemos al nivel raíz. El sobre de M2 omite `causationId` cuando no hay causa.
 
 Otros `updateType`, solo los campos que cambian:
 
@@ -358,10 +337,14 @@ Otros `updateType`, solo los campos que cambian:
 |---|---|
 | `PRIORITY_CHANGED` | `currentPriority` |
 | `ESCALATION_CHANGED` | `details.escalation.active` (boolean) |
-| `INFORMATION_PROVIDED` | `details.informationResponse.message` o `attachments[]` (al menos uno) |
-| `CANCELLED`, `REOPENED` | solo `ticketId` y `updateType` |
+| `INFORMATION_PROVIDED` | `details.informationResponse.message` o `attachments[]` (al menos uno). **Con `details.informationResponse.purpose = "RECLASSIFICATION"` se ignora**, aunque `responsibleAreaId` sea M6: es un trámite entre M2 y M1 |
+| `CANCELLED`, `REOPENED` | solo `ticketId` y `updateType`. Un `CANCELLED` sobre un ticket que habíamos devuelto cierra el expediente |
 
-**Orden:** no está garantizado. Los cambios de un mismo dato se ordenan por `occurredAt`, así que **es importante que sea el del hecho y no el de la publicación**. Un `occurredAt` más de 5 minutos en el futuro se ignora.
+**Orden:** no está garantizado. Los cambios de un mismo dato se ordenan por **`data.updatedAt`** (cuándo M2 persistió el cambio), no por el `occurredAt` del sobre, que puede ser posterior si la publicación se demoró; el `occurredAt` queda de respaldo. Un timestamp más de 5 minutos en el futuro se ignora. No se comparan timestamps de productores distintos.
+
+**`ROUTED` repetido.** Puede llegar más de una vez para el mismo `ticketId` (reclasificación tras un `RETURNED`). Con el mismo `eventId` es un reintento y se descarta; con otro `eventId` es una nueva derivación (`details.routing.reassignment = true`): si el expediente estaba devuelto (`FORWARDED`), lo reactivamos con el snapshot nuevo en lugar de abrir otro. Si `responsibleAreaId` pasó a otra área, ese `ROUTED` también nos llega (es un broadcast) y cerramos el expediente devuelto, usando solo `ticketId` y área.
+
+**Broadcast.** Los `ticketUpdated` de tickets que no son de M6 se ignoran y no se persiste su contenido de negocio.
 
 ## 3.2 `workOrderScheduled` ← M3
 
@@ -383,6 +366,17 @@ Otros `updateType`, solo los campos que cambian:
 ```
 
 Leemos `sourceRequestId` (obligatorio, UUID: el `requestId` de nuestro `infrastructureRepairRequested`) y `workOrderId`. Pasa la solicitud a en curso.
+
+🟡 **Propuesta de M3 (v0.6, 20/10), pendiente de validación:** que `workOrderId` sea el UUID técnico de la orden (ejemplo de M3: `1bb68ec6-56b2-43a8-956b-6949ac740b8a`) y que se agregue `workOrderNumber`, opcional, con la referencia humana (`"OT-2026-0098"`). **No está acordado.** Hoy aceptamos cualquier texto en `workOrderId` y no leemos `workOrderNumber`, así que los dos formatos pasan. Lo mismo vale para `workOrderCompleted`. El `data` de la propuesta (**propuesta, no acordado**):
+
+```json
+{
+  "sourceRequestId": "4f5a6b7c-8d9e-4f0a-9b1c-d3e4f5a6b7c8",
+  "workOrderId": "1bb68ec6-56b2-43a8-956b-6949ac740b8a",
+  "workOrderNumber": "OT-2026-0098",
+  "estimatedDuration": "PT4H"
+}
+```
 
 ## 3.3 `workOrderCompleted` ← M3
 
@@ -410,7 +404,7 @@ Leemos `sourceRequestId` (obligatorio, UUID: el `requestId` de nuestro `infrastr
 }
 ```
 
-Leemos `sourceRequestId` (obligatorio, UUID). `outcome` y `attachments[]` no se interpretan. Solo para `infrastructureRepairRequested`: M3 **no** debe emitirlo por `containerDamaged` ni `treeRiskDetected`.
+Leemos `sourceRequestId` (obligatorio, UUID). `outcome` y `attachments[]` no se interpretan. La propuesta de M3 de `workOrderId` UUID con `workOrderNumber` opcional (ver 3.2) también aplica acá y no está acordada. Solo para `infrastructureRepairRequested`: M3 **no** debe emitirlo por `containerDamaged` ni `treeRiskDetected`.
 
 ## 3.4 `commercialFineGenerated` ← M4
 
@@ -473,7 +467,7 @@ Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta)
   "data": {
     "streetClosureId": "CL-2026-0210",
     "closureRequestId": "5a6b7c8d-9e0f-4a1b-8c2d-e4f5a6b7c8d9",
-    "requestingModule": "Ambiente",
+    "requestingModule": "ambiente",
     "startDate": "2026-10-20T08:00:00.000Z",
     "endDate": "2026-10-20T12:00:00.000Z",
     "affectedStreet": ["Calle Mitre entre Av. Belgrano y Calle Sarmiento"],
@@ -483,7 +477,7 @@ Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta)
 }
 ```
 
-Leemos `closureRequestId` (obligatorio, UUID: el `closureRequestId` que mandamos) y `streetClosureId`. No leemos `requestingModule`. Habilita el trabajo que estaba bloqueado; si la ventana autorizada difiere de la pedida, reprogramamos dentro de ella.
+Leemos `closureRequestId` (obligatorio, UUID: el `closureRequestId` que mandamos), `streetClosureId`, `startDate` y `endDate`. No leemos `requestingModule`. Habilita el trabajo que estaba bloqueado; si la ventana autorizada difiere de la pedida, reprogramamos dentro de ella. Guardamos `startDate` y `endDate` como ventana autorizada: a partir de las 6 horas del `endDate`, si no llegó `streetClosureEnded`, damos el corte por vencido (estado `EXPIRED`) y, si el servicio seguía agendado, queda para reprogramar. Solo vence un corte que llegó en un `streetClosureApproved` con un `endDate` legible: sin `endDate`, nunca vence. Una intervención de arbolado asociada al corte no se toca, y un servicio ya iniciado o cerrado tampoco: solo uno todavía agendado pasa a reprogramar. No publicamos nada hacia M7 por esto.
 
 ## 3.7 `streetClosureRejected` ← M7
 
@@ -498,7 +492,7 @@ Leemos `closureRequestId` (obligatorio, UUID: el `closureRequestId` que mandamos
   "data": {
     "closureRequestId": "5a6b7c8d-9e0f-4a1b-8c2d-e4f5a6b7c8d9",
     "rejectionReason": "Obra vial en la misma calle esa semana",
-    "requestingModule": "Ambiente"
+    "requestingModule": "ambiente"
   }
 }
 ```
@@ -524,7 +518,7 @@ Leemos `closureRequestId` (obligatorio, UUID) y `rejectionReason` (se copia al s
 }
 ```
 
-Leemos `closureRequestId` (obligatorio, UUID). Sin él no podemos correlacionar y el mensaje se rechaza.
+Leemos `closureRequestId` (obligatorio, UUID). Sin él no podemos correlacionar y el mensaje se rechaza. Lo aceptamos también sobre un corte que ya habíamos dado por vencido.
 
 ## 3.9 Los que no procesamos
 
@@ -544,7 +538,7 @@ Cada entrega por `q.ambiente` se contesta así:
 | Resultado | Qué pasa | Qué hace el Core |
 |---|---|---|
 | Procesado, duplicado (mismo `eventId`) o ignorado (tipo sin handler) | `ack` | Nada más |
-| El handler falló, o el mensaje es inválido, o pesa más de 100 kB | `nack` **sin reencolar** | Reintenta (15 s → 1 m → 5 m → 15 m) y termina en la DLQ |
+| El handler falló, o el mensaje es inválido, o pesa más de 100 kB | `nack` **sin reencolar** | Reintenta con escalones de 5 s, 30 s, 2 min y 10 min según el intento (`maxAttempts=4`: el inicial más tres reintentos, cuatro intentos en total; es la cadena de la guía común del Core); al agotarlos queda una entrega fallida y una dead letter en el Core |
 
 - Reenviar el `eventId` de un evento **cuyo handler falló** vuelve a correr el handler. Uno ya procesado o en curso sale como duplicado.
 - Un mensaje inválido no se guarda: no ocupa el `eventId` y se puede reenviar corregido con el mismo.
@@ -557,11 +551,11 @@ Cada entrega por `q.ambiente` se contesta así:
 | `occuredAt` (una sola `r`) | El Core lo rechaza o el `occurredAt` queda ausente |
 | Un `eventId` repetido para eventos distintos | El segundo se descarta como duplicado |
 | `correlationId` o `causationId` que no tiene forma de UUID (por ejemplo `M6-REQ-000045`) | Rechazo del mensaje |
-| `correlationId` con forma de UUID pero sin versión o variante válida (por ejemplo todo ceros) | Lo aceptamos pero no lo propagamos: abrimos un hilo propio |
+| `correlationId` con forma 8-4-4-4-12 pero sin versión o variante válida (por ejemplo todo ceros) | Lo aceptamos y lo propagamos tal cual en lo que publicamos a partir de ese evento |
 | Mandar `specVersion`, `producer` o `subject` | El Core lo rechaza; nosotros lo toleramos al recibir |
 | Un id de correlación mal formado (`sourceRequestId`, `closureRequestId`, `sourceViolationId`) | Rechazo del mensaje |
 | Un id de correlación bien formado que no es nuestro | Se descarta con log, sin error |
 
 ---
 
-*Fuentes de este documento: los `.schema.json` de los ocho eventos de M6 y la decisión técnica ADR-007 (contrato de integración del Core, 7/10/2026). El estado de cada pedido abierto con cada módulo está en la Parte 3 del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md).*
+*Fuentes de este documento: los `.schema.json` de los seis eventos de M6 y el contrato del Core del 7/10/2026. El estado de cada pedido abierto con cada módulo está en la Parte 3 del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md).*

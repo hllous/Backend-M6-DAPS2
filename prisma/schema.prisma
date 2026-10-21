@@ -279,12 +279,19 @@ enum StreetClosureRequestStatus {
   APPROVED
   REJECTED
   ENDED
+  EXPIRED
 }
 
 enum OutboxEventStatus {
   PENDING
   SENT
   FAILED
+}
+
+// De dónde salió el estado guardado en TicketM2State.
+enum TicketStateSource {
+  DEDUCED // lo dedujimos de un updateTicketStatus que publicamos
+  RECEIVED // lo informó M2 en un ticketUpdated
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -710,6 +717,9 @@ model TreeIntervention {
   authorizedByUserId    String?                @map("authorized_by_user_id") // solo REMOVAL
   authorizedAt          DateTime?              @map("authorized_at") // solo REMOVAL
   justification         String?                @db.Text // solo REMOVAL
+  // Sin uso desde #345: treePruningScheduled dejó de emitirse (M7 solo consume
+  // streetClosureRequested). La columna queda sin migrar.
+  pruningScheduledAt    DateTime?              @map("pruning_scheduled_at")
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
 
@@ -754,41 +764,48 @@ model GreenSpace {
 // ════════════════════════════════════════════════════════════════
 
 model EnvironmentalReport {
-  id                  String                    @id @default(uuid()) @db.Uuid
-  reportType          EnvironmentalReportType   @map("report_type")
-  address             String?
+  id                           String                    @id @default(uuid()) @db.Uuid
+  reportType                   EnvironmentalReportType   @map("report_type")
+  address                      String?
   // Descripcion del hallazgo. Interna: puede traer datos personales, no va al
   // portal ciudadano ni a los eventos. Null en los que llegan de M2.
-  description         String?                   @db.Text
-  lat                 Decimal?                  @db.Decimal(10, 7)
-  lng                 Decimal?                  @db.Decimal(10, 7)
-  ticketId            String?                   @map("ticket_id") // EXT M2
+  description                  String?                   @db.Text
+  lat                          Decimal?                  @db.Decimal(10, 7)
+  lng                          Decimal?                  @db.Decimal(10, 7)
+  ticketId                     String?                   @map("ticket_id") // EXT M2
   // EXT M2, referencia humana (TK-2026-000123) desde la v1.70. No es credencial:
   // se muestra y se busca con auth, nunca reemplaza al ticketId.
-  publicId            String?                   @map("public_id")
-  reporterSnapshot    Json?                     @map("reporter_snapshot")
-  status              EnvironmentalReportStatus @default(RECEIVED)
-  priority            Severity?
+  publicId                     String?                   @map("public_id")
+  reporterSnapshot             Json?                     @map("reporter_snapshot")
+  status                       EnvironmentalReportStatus @default(RECEIVED)
+  priority                     Severity?
   // ticketUpdated/ESCALATION_CHANGED: se lo mostramos al supervisor.
-  escalated           Boolean                   @default(false)
+  escalated                    Boolean                   @default(false)
   // ticketUpdated/INFORMATION_PROVIDED: lo que el vecino respondio. El contrato
   // de M2 no usa ID de correlacion — hay como maximo una solicitud activa por
   // ticket, asi que la respuesta siempre corresponde a la nuestra.
-  citizenResponse     String?                   @map("citizen_response")
+  citizenResponse              String?                   @map("citizen_response")
+  // Solicitud de informacion pendiente (#169): M6 le pidio algo al vecino
+  // (updateTicketStatus/INFORMATION_REQUIRED) y todavia no contesto. Pendiente =
+  // informationRequestedAt no nulo; las tres se limpian juntas cuando llega el
+  // ticketUpdated/INFORMATION_PROVIDED. M2 admite una sola activa por ticket.
+  informationRequestedAt       DateTime?                 @map("information_requested_at")
+  informationRequestMessage    String?                   @map("information_request_message") @db.Text
+  informationRequestRequiredBy DateTime?                 @map("information_request_required_by")
   // El occurredAt (reloj de M2) del ultimo ticketUpdated aplicado a cada campo
   // que M2 pisa (#270): un reintento atrasado del Core no puede volver atras un
   // dato mas nuevo. Una marca por campo, no una sola: un PRIORITY_CHANGED nuevo
   // no tiene por que descartar un ESCALATION_CHANGED atrasado pero legitimo.
   // Null = sin marca, se aplica (filas viejas o sobre sin occurredAt).
-  priorityChangedAt   DateTime?                 @map("priority_changed_at")
-  escalationChangedAt DateTime?                 @map("escalation_changed_at")
-  citizenResponseAt   DateTime?                 @map("citizen_response_at")
+  priorityChangedAt            DateTime?                 @map("priority_changed_at")
+  escalationChangedAt          DateTime?                 @map("escalation_changed_at")
+  citizenResponseAt            DateTime?                 @map("citizen_response_at")
   // La comparten REOPENED y CANCELLED: un REOPENED atrasado no revive el
   // expediente de un reclamo que el vecino ya cancelo.
-  ticketStatusAt      DateTime?                 @map("ticket_status_at")
-  deadlineAt          DateTime?                 @map("deadline_at") // cierre por vencimiento
-  createdAt           DateTime                  @default(now()) @map("created_at")
-  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  ticketStatusAt               DateTime?                 @map("ticket_status_at")
+  deadlineAt                   DateTime?                 @map("deadline_at") // cierre por vencimiento
+  createdAt                    DateTime                  @default(now()) @map("created_at")
+  updatedAt                    DateTime                  @updatedAt @map("updated_at")
 
   inspections EnvironmentalInspection[]
 
@@ -896,17 +913,20 @@ model RepairRequest {
 }
 
 model StreetClosureRequest {
-  id          String                     @id @default(uuid()) @db.Uuid
-  reason      String
-  sourceType  String                     @map("source_type") // SERVICE | TREE_INTERVENTION
-  sourceId    String                     @map("source_id") @db.Uuid // polimórfico
-  closureType StreetClosureType?         @map("closure_type")
-  closureFrom DateTime?                  @map("closure_from")
-  closureTo   DateTime?                  @map("closure_to")
-  status      StreetClosureRequestStatus @default(REQUESTED)
-  closureId   String?                    @map("closure_id") // EXT M7
-  createdAt   DateTime                   @default(now()) @map("created_at")
-  updatedAt   DateTime                   @updatedAt @map("updated_at")
+  id           String                     @id @default(uuid()) @db.Uuid
+  reason       String
+  sourceType   String                     @map("source_type") // SERVICE | TREE_INTERVENTION
+  sourceId     String                     @map("source_id") @db.Uuid // polimórfico
+  closureType  StreetClosureType?         @map("closure_type")
+  closureFrom  DateTime?                  @map("closure_from")
+  closureTo    DateTime?                  @map("closure_to")
+  // Ventana que M7 autorizó (streetClosureApproved); prevalece sobre closureFrom/To.
+  approvedFrom DateTime?                  @map("approved_from")
+  approvedTo   DateTime?                  @map("approved_to")
+  status       StreetClosureRequestStatus @default(REQUESTED)
+  closureId    String?                    @map("closure_id") // EXT M7
+  createdAt    DateTime                   @default(now()) @map("created_at")
+  updatedAt    DateTime                   @updatedAt @map("updated_at")
 
   streets ClosureStreet[]
 
@@ -975,4 +995,22 @@ model InboxEvent {
 
   @@index([processedAt])
   @@map("inbox_event")
+}
+
+// Último estado conocido de un ticket nuestro en M2 (#303).
+//
+// M2 no avisa el IN_PROGRESS (no hay un ticketUpdated espejo): nuestro STARTED
+// es la única fuente, así que lo llevamos nosotros para elegir entre STARTED y
+// PROGRESS al informar la programación. `status` es un string porque los
+// valores son de M2, no un enum nuestro.
+model TicketM2State {
+  ticketId   String            @id @map("ticket_id") // EXT M2
+  status     String
+  source     TicketStateSource
+  // data.updatedAt del ticketUpdated: la marca de orden de los recibidos.
+  // Null en una deducción que nunca fue pisada por un recibido.
+  receivedAt DateTime?         @map("received_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+
+  @@map("ticket_m2_state")
 }

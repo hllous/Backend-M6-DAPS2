@@ -1,6 +1,6 @@
 # `updateTicketStatus` → M2
 
-El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — v1.75 (WIP), que reemplaza a la v1.74 WIP y no cambia este evento respecto de la v1.6; la v1.71, la v1.72 y la v1.74 nunca se cruzaron — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
+El canal del vecino, y el único evento que M2 consume de las áreas operativas. **El payload lo define M2 en su contrato — vigente v1.78 (WIP), recibida y cruzada el 20/10; respecto de la v1.77 solo cambia `updatedBy.id` (UUID o `null`, ver abajo) y, antes de eso, desde la v1.6 no cambió este evento; la v1.71, la v1.72 y la v1.74 nunca se cruzaron — y lo adoptamos tal cual**: no pedimos campos nuevos ni proponemos alternativas.
 
 Schema: [`updateTicketStatus.schema.json`](updateTicketStatus.schema.json).
 
@@ -10,7 +10,7 @@ Cuando cambia el estado de un [`Service`](../../entidades/service.md) o de una i
 
 > **La regla:** proyectamos si y solo si el `Service` o el [`EnvironmentalReport`](../../entidades/environmental-report.md) tiene `ticketId`. Sin esta regla, M2 recibe eventos de tickets que no existen.
 
-## Payload (v1.75, sin cambios desde la v1.6)
+## Payload (v1.78; solo `updatedBy.id` cambió desde la v1.6)
 
 ```
 ticketId, updateType,
@@ -26,7 +26,11 @@ attachments[]?, updatedBy, updateOccurredAt
 - `resolution.type` cambió `INFORMATION_PROVIDED` por **`INQUIRY_ANSWERED`** (§8.5).
 - El **sobre** ya no lleva `subject`: el sobre del Core no lo tiene, así que dejamos de mandar `tickets/{ticketId}` (§4 de M2) y la correlación con M2 va solo por `data.ticketId`. Ver [`envelope.ts`](../../../src/events/envelope.ts).
 
-Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED`/`PROGRESS` siguen sin estructura de `details`. El bloqueante de la fecha agendada sigue abierto — ver más abajo.
+🔴 **v1.78 (20/10): `updatedBy.id` es `UUID | null`.** La v1.77 admitía `string | integer | null` (el ejemplo era `"USR-M3-77"`); la v1.78 no admite códigos ni enteros. Para una acción en M2 es el `citizenId` del `ModuleUser`; para `EXTERNAL_USER` es el UUID de la persona en el módulo de origen; es `null` en `SYSTEM` o cuando no hay una persona concreta identificable. El paquete de M2 pasó a 68 casos inválidos (los dos nuevos: `actor.id` no UUID y numérico).
+
+**Resuelto en #314:** `updateTicketStatus()` de `src/events/payloads.ts` manda `{ type: 'EXTERNAL_USER', id: <sub del JWT> }` solo si el `sub` tiene forma de UUID (8-4-4-4-12 hex, laxo como el Core); si no (el JWT es provisorio, [ADR-002](../../decisiones/adr-002-auth-provisoria.md), y M1 documenta `user_id` como `bigint`), manda `id: null` con el mismo `type`. El [schema local](updateTicketStatus.schema.json) ya exige UUID o `null`, y un spec valida los payloads reales contra el paquete de M2 v1.78 cuando está presente.
+
+Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED`/`PROGRESS` siguen sin estructura de `details`. La fecha agendada ya no es un bloqueante: M2 confirmó el 20/10 que va como texto en `publicMessage` (ver más abajo).
 
 | Campo | Nota |
 |---|---|
@@ -37,7 +41,7 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 | `progress?` | `Int`, porcentaje estimado. **No sirve para la fecha/franja agendada** — ver bloqueante |
 | `details?` | Objeto cuya forma depende del `updateType` — ver la tabla de abajo |
 | `attachments[]?` | En el formato de M2: `{ fileName, contentType, url, sizeBytes? }`, no el nuestro. **Sin `attachmentId`** desde la v1.6 |
-| `updatedBy` | `{ type: EXTERNAL_USER, id }` para una persona; `{ type: SYSTEM, id: null }` si el hecho lo generó un proceso automático |
+| `updatedBy` | `{ type: EXTERNAL_USER, id }` para una persona (`id`: UUID o `null` desde la v1.78); `{ type: SYSTEM, id: null }` si el hecho lo generó un proceso automático |
 | `updateOccurredAt` | Cuándo ocurrió el hecho, no cuándo se publicó |
 
 **No lleva `status`.** Informamos el hecho y M2 decide la transición: nuestro modelo no vuelve a nombrar estados de M2 en ningún lado.
@@ -48,11 +52,37 @@ Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED
 
 `updateType` no usa nuestro enum `TicketStatusUpdate`, que [ADR-003](../../decisiones/adr-003-divergencias-enums.md) eliminó del catálogo: el vocabulario lo define M2 y lo adoptamos tal cual.
 
-### 🔴 Bloqueante: `progress` no sirve para la fecha agendada
+### ✅ La fecha agendada va como texto en `publicMessage` (M2, 20/10)
 
-**Sexta versión seguida sin una estructura propia.** *Novedad del 13/10:* el paquete de schemas de M2 trae `updateTicketStatus_PROGRESS_programacion.json`, un ejemplo de M3 que informa la programación como **texto en `publicMessage`** de un `PROGRESS` (`progress: 10`). Es la opción de texto de nuestro pedido; su schema fuerza `details: null` en `STARTED` y `PROGRESS`, así que `details.schedule` no va a llegar. Falta que M2 lo confirme, y que decidamos nosotros cuándo mandarlo: `PROGRESS` exige el ticket en `IN_PROGRESS` y hoy `urbanServiceScheduled` no emite nada hacia M2 (ver la tabla de abajo). El campo común `progress` es un `Int` 0..100 (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.75 mantiene "details obligatorio: Ninguno". Necesitamos saber cómo mandar la fecha/franja agendada del servicio: ¿va como texto en `publicMessage`, o van a definir una estructura tipo `details.schedule`? Ver [bloqueantes.md](../../bloqueantes.md#tablero).
+**Resuelto.** M2 confirmó que informar la fecha y la franja como **texto en `publicMessage`** es la forma vigente dentro de `eventVersion "1.0"`: el contrato no tiene campo estructurado y no lo va a tener salvo un cambio coordinado entre módulos. Reglas para mandarlo:
+
+- `PROGRESS` solo es válido con el ticket en `IN_PROGRESS`. En `ROUTED`, M2 hace `nack` y el Core reintenta hasta la DLQ.
+- `STARTED` significa para M2 que el área tomó la gestión del ticket, y **agendar el servicio cuenta**: el ticket pasa a `IN_PROGRESS` y el ciudadano lo ve.
+- Dos formas válidas: **(a)** `STARTED` con la programación en su propio `publicMessage`, o **(b)** `STARTED` al abrir el expediente y la programación como `PROGRESS`. Una reprogramación posterior es otro `PROGRESS`.
+- **El estado del ticket lo tenemos que llevar nosotros** (M2, 20/10): no hay un `ticketUpdated` que avise `IN_PROGRESS`, nuestro `STARTED` es la única fuente. Un `PROGRESS` fuera de estado no rompe nada grave (en `ROUTED` M2 lo trata como prematuro y lo reintenta; en los demás estados inválidos lo registra y lo confirma sin aplicar). Con el ticket en `PENDING_INFORMATION` M2 no acepta `PROGRESS` ni `REJECTED`.
+
+**Implementado en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303), forma (a):**
+
+- **Qué se manda.** Solo si el servicio tiene `ticketId`. El texto es es-AR y lleva solo fecha y franja: «Su servicio fue programado para el miércoles 21 de octubre de 2026, entre las 08:00 y las 12:30 hs.» (en una reprogramación, «reprogramado»). Sin franja, o con una sola punta, va solo la fecha. Nunca la cuadrilla ni las notas, y sin `progress` ni `details`.
+- **Cuándo.** Al agendar (`POST /services`) y al confirmar una reprogramación (`confirm-reschedule`). `reschedule` sin fecha nueva no publica nada.
+- **Qué `updateType`**, según el estado que conocemos del ticket: `IN_PROGRESS` → `PROGRESS`; `ROUTED`, `IN_REVIEW` o desconocido → `STARTED`; `PENDING_INFORMATION`, terminal (`RESOLVED`, `CLOSED`, `CANCELLED`) o cualquier otro valor → no se publica (queda un log).
+- **Cómo llevamos el estado.** Tabla `ticket_m2_state` (`ticketId`, `status`, `source`, `receivedAt`, `updatedAt`). Se **deduce** al encolar cualquier `updateTicketStatus` (`STARTED` → `IN_PROGRESS`, `INFORMATION_REQUIRED` → `PENDING_INFORMATION`, `RETURNED` → `IN_REVIEW`, `RESOLVED` → `RESOLVED`, `REJECTED` → `CANCELLED`; `PROGRESS` no cambia), en la misma transacción, en un único punto (`OutboxService`). Y se **corrige** con el `currentStatus` de todo `ticketUpdated` de un ticket nuestro, ordenado por `data.updatedAt`: uno recibido manda sobre una deducción, pero uno más viejo que el último recibido no lo pisa. De un ticket ajeno no se guarda nada.
+- **Qué es «estado desconocido».** Solo `null`/`undefined`: un ticket que nunca vimos ni deducimos. Se trata como `ROUTED` (manda `STARTED`). Un `currentStatus` fuera de la lista cerrada de §3 (`REGISTERED`, `IN_REVIEW`, `ROUTED`, `IN_PROGRESS`, `PENDING_INFORMATION`, `DUPLICATE`, `RESOLVED`, `CLOSED`, `CANCELLED`) **no se persiste** (queda un warn saneado), así que no aparece como estado y no puede callar el aviso. El `ticketId` se persiste con un tope de 64 caracteres.
+- **No repetir `STARTED`.** `start()` del servicio y `startReview` del expediente mandan `PROGRESS` (mismo mensaje) si el ticket ya está `IN_PROGRESS`, porque agendar ya lo arrancó.
+
+*Histórico, antes de la respuesta:* `progress` no sirve para la fecha agendada.
+
+**Sexta versión seguida sin una estructura propia.** *Novedad del 13/10:* el paquete de schemas de M2 trae `updateTicketStatus_PROGRESS_programacion.json`, un ejemplo de M3 que informa la programación como **texto en `publicMessage`** de un `PROGRESS` (`progress: 10`). Es la opción de texto de nuestro pedido; su schema fuerza `details: null` en `STARTED` y `PROGRESS`, así que `details.schedule` no va a llegar. *(M2 lo confirmó el 20/10 y está implementado en #303, ver arriba.)* El campo común `progress` es un `Int` 0..100 (porcentaje estimado), no una fecha, y sigue sin haber estructura de `details` para `STARTED`/`PROGRESS` — §8.2 de la v1.75 mantiene "details obligatorio: Ninguno". *(Histórico: la pregunta de entonces —texto en `publicMessage` o una estructura tipo `details.schedule`— quedó resuelta el 20/10: texto en `publicMessage`, sin `details`.)*
 
 ⚠️ **Validación nueva en `PROGRESS`.** La v1.6 (§8.2) exige que aporte al menos uno de `progress`, `publicMessage`, `internalMessage` o `attachments`. Un `PROGRESS` vacío ahora es inválido: afectaría sobre todo al fan-out de `zoneNotServiced` si se implementa (hoy no lo está, ver más abajo).
+
+### Riesgos aceptados del estado del ticket (#303)
+
+1. **Tickets que ya estaban `IN_PROGRESS` antes del deploy no tienen fila**: el primer aviso manda `STARTED` (duplicado) y M2 lo registra y lo confirma sin aplicar, sin daño. No hay backfill.
+2. **Con el ticket en `PENDING_INFORMATION` o en un estado terminal la programación no se avisa**: queda un warn y no hay reintento.
+3. **Un `ticketUpdated` recibido tarde, con un `currentStatus` anterior, puede pisar una deducción posterior** (T1.5 > T1), con efecto leve. Mejora futura: compararlo con el `updatedAt` de la deducción, pero hay desfase de relojes entre M2 y M6.
+4. **La tabla `ticket_m2_state` no tiene purga**: crece un registro por ticket.
+5. **La deducción corre dentro de la transacción de `OutboxService.enqueue`**: si el upsert falla se pierde también el cambio de dominio. Aceptado.
 
 ### `STARTED` antes de `RESOLVED` dejó de ser necesario
 
@@ -66,10 +96,10 @@ Revisadas contra los lugares donde se arma el evento (`ticketEvents` en `Environ
 
 | Regla de M2 | Cómo la cumplimos |
 |---|---|
-| `PROGRESS` solo con el ticket `IN_PROGRESS`; si no, M2 lo `nack`ea (queda reintentando hasta la DLQ). **Informar `STARTED` antes** | La demora solo se proyecta con el servicio `IN_PROGRESS` (#146); el aviso por acta sale después del `STARTED` de `startReview` |
+| `PROGRESS` solo con el ticket `IN_PROGRESS`; si no, M2 lo `nack`ea (queda reintentando hasta la DLQ). **Informar `STARTED` antes** | La demora solo se proyecta con el servicio `IN_PROGRESS` (#146); el aviso por acta lee el estado del ticket: `PROGRESS` si está `IN_PROGRESS`, `STARTED` si está `ROUTED`, `IN_REVIEW` o es desconocido, y no sale con `PENDING_INFORMATION` o terminal (#325). **Riesgo aceptado, sin backfill de `ticket_m2_state`:** un expediente `UNDER_REVIEW` anterior al deploy de #303 que ya mandó `STARTED` tiene estado desconocido y su acta sale como `STARTED`; según M2 (`integracion/m2.md`) un `STARTED` con el ticket ya `IN_PROGRESS` se registra y se confirma sin aplicar (el `nack` es solo de `PROGRESS` en `ROUTED`). Pendiente que M2 lo confirme |
 | `RESOLVED` exige `details.resolution.type` y `publicMessage` | Siempre `ACTION_COMPLETED` y un `publicMessage` fijo |
 | `RETURNED` y `REJECTED` exigen `publicMessage` o `internalMessage` | Mandamos `internalMessage` (el motivo del operador, que no se le muestra al vecino) |
-| `INFORMATION_REQUIRED` exige `informationRequest.messageForCitizen` | No lo emitimos todavía (ver abajo) |
+| `INFORMATION_REQUIRED` exige `informationRequest.messageForCitizen` | Siempre lo mandamos, igual a `publicMessage` (`POST /environmental-reports/:id/request-information`, #169) |
 | Un `updateTicketStatus` solo lo acepta M2 si el `sourceModule` del sobre, traducido a `Mx`, es el `responsibleAreaId` del ticket | Nuestro `sourceModule` es `ambiente`, que M2 traduce a `M6` (§5.1) |
 | Reenviar el mismo hecho reusa el `eventId` | El `eventId` es el id de la fila del outbox |
 
@@ -81,20 +111,21 @@ Revisadas contra los lugares donde se arma el evento (`ticketEvents` en `Environ
 
 ## De qué hecho interno sale cada `updateType`
 
-Esta es la tabla con la que se implementa. **La columna izquierda son hechos internos de nuestro modelo, no eventos publicados**: salvo `urbanServiceScheduled`, ninguno sale al bus (ver [descartados.md](descartados.md)). Cuando ocurre el hecho, publicamos el `updateTicketStatus` que le corresponde.
+Esta es la tabla con la que se implementa. **La columna izquierda son hechos internos de nuestro modelo, no eventos publicados**: ninguno sale al bus, ni siquiera `urbanServiceScheduled`, que dejamos de emitir el 21/10 (ver [descartados.md](descartados.md)). Cuando ocurre el hecho, publicamos el `updateTicketStatus` que le corresponde.
 
 | Hecho nuestro | `updateType` | Qué mandamos |
 |---|---|---|
-| `urbanServiceScheduled` | *(ninguno)* | **No se emite hoy.** Agendar un servicio solo dispara `urbanServiceScheduled` hacia M7; la fecha/franja agendada no tiene campo definido en el contrato de M2 — ver el bloqueante arriba |
-| `urbanServiceStarted` | `STARTED` | vacío |
-| `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage`. **Solo con el servicio `IN_PROGRESS`**: antes de arrancar el ticket sigue `ROUTED` y §8.2 rechaza `PROGRESS`, así que un aviso de demora antes de arrancar (`delayType: START`) queda registrado pero no se proyecta (#146) |
+| Se agenda un servicio (antes `urbanServiceScheduled`) | `STARTED` (primera vez) o `PROGRESS` (reprogramación) | **Implementado en [#303](https://github.com/hllous/Backend-M6-DAPS2/issues/303).** Fecha y franja como texto en `publicMessage`, sin `details`. Sale al agendar y en `confirm-reschedule`. `STARTED` o `PROGRESS` según el estado del ticket; si no corresponde, no sale |
+| Se reactiva un expediente `FORWARDED` por un `ROUTED` repetido ([#309](https://github.com/hllous/Backend-M6-DAPS2/issues/309)) | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «Su denuncia ambiental está en análisis.». Lo publica el consumer de `ticketUpdated`, con `causationId` = `eventId` del `ROUTED` y `updatedBy` `SYSTEM`; un reproceso no lo duplica |
+| `urbanServiceStarted` | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage` fijo |
+| `urbanServiceDelayed` | `PROGRESS` | motivo en `publicMessage` o `internalMessage`. **Solo con el servicio `IN_PROGRESS` y el ticket sin estado conocido o `IN_PROGRESS`** (#325): antes de arrancar el ticket sigue `ROUTED` y §8.2 rechaza `PROGRESS`, así que un aviso de demora antes de arrancar (`delayType: START`) queda registrado pero no se proyecta (#146) |
 | `urbanServiceCompleted` | `RESOLVED` | `details.resolution.type` + `publicMessage`. **`attachments[]` no se manda**: el payload no lleva evidencia hoy, pendiente de decidir qué adjuntos ve el vecino — ver [bloqueantes.md](../../bloqueantes.md) |
 | `environmentalInspectionScheduled` | `STARTED` | vacío |
 | `environmentalInspectionCompleted`, sin irregularidad | `RESOLVED` | `details.resolution.type` + `publicMessage`: "no se encontraron irregularidades" |
-| `environmentalInspectionCompleted`, con acta | `PROGRESS` | El caso sigue en M4. **Nunca el contenido del acta** |
+| Emisión del acta (`violation-notice`) | `PROGRESS` si el ticket está `IN_PROGRESS`; `STARTED` si está `ROUTED`, `IN_REVIEW` o es desconocido (constatar cuenta como tomar la gestión); nada con `PENDING_INFORMATION` o terminal ([#325](https://github.com/hllous/Backend-M6-DAPS2/issues/325)) | Mismo `publicMessage` en ambos: «Se constató una infracción y se emitió el acta correspondiente.». El caso sigue en M4. **Nunca el contenido del acta** |
 | Se desestima el reporte | `REJECTED` | `details.cancellation.reasonCode` + `publicMessage`/`internalMessage` |
 | El reclamo no es de nuestra área | `RETURNED` | `details.returnInfo.reasonCode` + `publicMessage`/`internalMessage`. Vuelve a M2 para que lo re-derive, en vez de cancelárselo al vecino |
-| El inspector necesita un dato del vecino | `INFORMATION_REQUIRED` | **Diseñado, sin implementar.** No hay call site que lo dispare hoy: `details.informationRequest.messageForCitizen` (+ `requiredBy` opcional) es el payload previsto, no uno que salga |
+| El inspector necesita un dato del vecino | `INFORMATION_REQUIRED` | **Emitido** (#169, decisión del PO del 20/10): `POST /environmental-reports/:id/request-information` con el expediente en `UNDER_REVIEW`. `details.informationRequest.messageForCitizen` (+ `requiredBy` opcional, ISO con hora) y el mismo texto en `publicMessage`; la nota interna opcional va como `internalMessage`. Regla: solo con `ticketId`, **una sola solicitud pendiente por ticket** y con el ticket conocido en `IN_PROGRESS`, `ROUTED` o nunca visto; en `PENDING_INFORMATION` o terminal → 409 sin publicar |
 
 🔴 **Pendiente conocido: el cierre por sanción de M4 no emite `RESOLVED`.** Cuando `closureUpdate` o `commercialFineGenerated` cierran el expediente (ver [`closureUpdate`](../consumidos/closureUpdate.md)), el consumidor pasa el `EnvironmentalReport` a `SANCTIONED` y después a `CLOSED` sin publicar nada hacia M2: el vecino no se entera de ese cierre por acá.
 
@@ -107,7 +138,7 @@ Los otros dos hechos no tienen traducción directa:
 
 `INFORMATION_REQUIRED` se correlaciona sin ID: desde la v1.5 no hay `informationRequestId`, sino una invariante de "como máximo una `InformationRequest` activa por ticket a la vez", así que la respuesta del vecino siempre corresponde a la nuestra. Llega como [`ticketUpdated / INFORMATION_PROVIDED`](../consumidos/ticketUpdated.md).
 
-**§9 de la v1.75: un Ticket tiene como máximo UNA solicitud de información activa.** Un segundo `INFORMATION_REQUIRED` mientras hay una pendiente **no abre una interacción paralela**: M2 lo rechaza o registra conflicto. El flujo: publicamos `INFORMATION_REQUIRED`; M2 pasa el ticket a `PENDING_INFORMATION` y pausa el SLA; el vecino responde; M2 restaura el estado anterior y publica `ticketUpdated / INFORMATION_PROVIDED`. En el ejemplo de la v1.75 el sobre lleva `sourceModule: "ambiente"`, igual que el nuestro, y `updatedBy: { type: "EXTERNAL_USER", id: "USR-M6-77" }`. **Hoy no emitimos `INFORMATION_REQUIRED`** (no hay call site; la propuesta abierta es el issue #169), así que el riesgo de mandar un segundo pedido con uno activo no existe todavía, pero hay que resolverlo al implementarlo.
+**§9 de la v1.75: un Ticket tiene como máximo UNA solicitud de información activa.** Un segundo `INFORMATION_REQUIRED` mientras hay una pendiente **no abre una interacción paralela**: M2 lo rechaza o registra conflicto. El flujo: publicamos `INFORMATION_REQUIRED`; M2 pasa el ticket a `PENDING_INFORMATION` y pausa el SLA; el vecino responde; M2 vuelve el ticket al estado previo (`ROUTED` o `IN_PROGRESS`) y publica `ticketUpdated / INFORMATION_PROVIDED`; si el pedido vence, M2 cancela el ticket. En el ejemplo de la v1.75 el sobre lleva `sourceModule: "ambiente"`, igual que el nuestro, y `updatedBy: { type: "EXTERNAL_USER", id: "USR-M6-77" }`. **Emitimos `INFORMATION_REQUIRED` desde el #169** y el segundo pedido con uno activo no sale: el expediente guarda la solicitud pendiente (`informationRequestedAt`, `informationRequestMessage`, `informationRequestRequiredBy`), se marca con un `updateMany` condicionado a que no haya otra en la misma transacción que el outbox (dos pedidos simultáneos: uno solo gana, el otro es 409), y el estado deducido del ticket (`PENDING_INFORMATION`) también lo frena. `internalMessage` solo viaja si la nota tiene algún carácter no blanco (M2 rechaza `""`). **Ciclo de la solicitud.** Se abre con `request-information`. Se cierra (las tres columnas en `null`) por: (a) `ticketUpdated / INFORMATION_PROVIDED` (que además guarda `citizenResponse`); (b) un `ticketUpdated` de un ticket nuestro cuyo `updateType` **implica un cambio de estado** (`STATUS_CHANGED`, `ROUTED`, `REOPENED`, `RESOLVED`, `CLOSED`, `CANCELLED`, `DUPLICATE_LINKED`) y cuyo `currentStatus` sea uno de los 9 estados de M2 distinto de `PENDING_INFORMATION`. Quedan **fuera** `PRIORITY_CHANGED`, `ESCALATION_CHANGED`, `CONTENT_UPDATED` y `PROGRESS` (traen `currentStatus` pero no lo cambian: uno atrasado puede llevar un estado viejo mientras M2 ya está en `PENDING_INFORMATION` y cerraría la solicitud por error), `INFORMATION_REQUIRED` (es `PENDING_INFORMATION`) e `INFORMATION_PROVIDED` (se cierra en su propio update, junto con la respuesta); siempre que no sea más viejo que el último estado recibido (`ticket_m2_state.receivedAt`, por `data.updatedAt`) ni que la última respuesta del vecino (`citizen_response_at`); los de `purpose=RECLASSIFICATION` no cuentan; (c) el expediente sale de `UNDER_REVIEW` por `transition()` (derivar, desestimar, cerrar) o por un `CANCELLED` de M2 (`UNDER_REVIEW → DISMISSED`, que limpia la solicitud aunque el evento no traiga `currentStatus`). Mientras está pendiente, `forward`, `dismiss` y `close` responden **409** («hay una solicitud de información al vecino pendiente: esperar la respuesta o su vencimiento»), porque M2 solo acepta `RETURNED`/`RESOLVED`/`REJECTED` desde `ROUTED` o `IN_PROGRESS` y el estado deducido divergiría. **Confirmado por M2 (21/10, #349):** al vencer la solicitud M2 cancela el ticket (`ticketUpdated` `CANCELLED`, `reasonCode` `INFO_TIMEOUT`; no vuelve al estado anterior) y ese `CANCELLED` cierra la solicitud y desestima el expediente; una cancelación administrativa llega también como `CANCELLED`. `requiredBy` es una fecha sugerida, M2 fija la efectiva. **Límites conocidos:** el estado del ticket (`leerEstado`) se lee fuera de la transacción, la misma carrera aceptada de #303 (el guard atómico es el `updateMany` del expediente); y `applyTransition` (hoy sin llamadores fuera del service) no limpia la solicitud: el que la use para salir de `UNDER_REVIEW` tiene que limpiarla. **Límite conocido (decisión de diseño):** si M2 no responde ni vence la solicitud y no hay `requiredBy`, el operador no puede devolver, desestimar ni cerrar el expediente: el 409 depende de un evento externo, y si ese evento se pierde o va a la DLQ el expediente queda trabado. Salida futura propuesta, **sin implementar**: `POST /environmental-reports/:id/request-information/cancel`, que apague la solicitud a mano (y avise a M2 si su contrato lo permite).
 
 ## Un hecho, dos eventos, un solo efecto
 

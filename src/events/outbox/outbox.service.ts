@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { AggregateTypeName, EventTypeName } from '../event-types';
+import { AggregateTypeName, EventType, EventTypeName } from '../event-types';
+import { TicketUpdateType } from '../payloads';
+import { registrarDeducido } from '../ticket-state';
 import { currentTrace, EventTrace } from '../event-context';
 
 /** Lo que el dominio encola. El sobre lo arma el dispatcher al publicar. */
@@ -39,6 +41,7 @@ export class OutboxService {
    * @param tx cliente de la transacción en curso — `this.prisma.$transaction(async (tx) => ...)`
    */
   async enqueue(tx: Prisma.TransactionClient, entry: OutboxEntry): Promise<void> {
+    await this.registrarEstadoDelTicket(tx, entry);
     await tx.outboxEvent.create({ data: this.fila(entry, currentTrace()) });
   }
 
@@ -46,10 +49,30 @@ export class OutboxService {
   async enqueueMany(tx: Prisma.TransactionClient, entries: OutboxEntry[]): Promise<void> {
     if (entries.length === 0) return;
 
+    for (const entry of entries) await this.registrarEstadoDelTicket(tx, entry);
+
     // Una sola traza para todo el lote: es un mismo cambio de dominio, así que
     // también comparten hilo en un barrido, donde no hay contexto.
     const trace = currentTrace();
     await tx.outboxEvent.createMany({ data: entries.map((entry) => this.fila(entry, trace)) });
+  }
+
+  /**
+   * Un `updateTicketStatus` cambia el ticket en M2, y ese estado solo lo
+   * conocemos nosotros (#303). Se anota acá, en el único punto por el que pasan
+   * todos los emisores y dentro de la misma transacción: sin esto habría que
+   * acordarse de hacerlo en cada call site.
+   */
+  private async registrarEstadoDelTicket(
+    tx: Prisma.TransactionClient,
+    entry: OutboxEntry,
+  ): Promise<void> {
+    if (entry.eventType !== EventType.UPDATE_TICKET_STATUS) return;
+    const { ticketId, updateType } = entry.payload as {
+      ticketId: string;
+      updateType: TicketUpdateType;
+    };
+    await registrarDeducido(tx, ticketId, updateType);
   }
 
   private fila(entry: OutboxEntry, trace: EventTrace): Prisma.OutboxEventCreateManyInput {

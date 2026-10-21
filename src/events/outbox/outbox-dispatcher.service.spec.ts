@@ -19,7 +19,7 @@ describe('OutboxDispatcher', () => {
 
   const row = (over: Record<string, unknown> = {}) => ({
     id: ROW_ID,
-    eventType: 'urbanServiceScheduled',
+    eventType: 'updateTicketStatus',
     aggregateType: 'SERVICE',
     aggregateId: SUBJECT,
     payload: { serviceId: SUBJECT },
@@ -56,7 +56,7 @@ describe('OutboxDispatcher', () => {
 
     expect(publicado()).toEqual({
       eventId: ROW_ID,
-      eventType: 'urbanServiceScheduled',
+      eventType: 'updateTicketStatus',
       eventVersion: '1.0',
       occurredAt: '2026-09-02T10:00:00.000Z',
       sourceModule: 'ambiente',

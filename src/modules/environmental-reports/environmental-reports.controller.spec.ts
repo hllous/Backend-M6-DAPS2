@@ -6,6 +6,7 @@ import {
   CreateEnvironmentalReportDto,
   QueryEnvironmentalReportsDto,
   ReportStatusChangeDto,
+  RequestInformationDto,
 } from './dto';
 
 const ID = '11111111-1111-1111-1111-111111111111';
@@ -24,6 +25,7 @@ describe('EnvironmentalReportsController', () => {
       forward: jest.fn().mockResolvedValue(RESULT),
       dismiss: jest.fn().mockResolvedValue(RESULT),
       close: jest.fn().mockResolvedValue(RESULT),
+      requestInformation: jest.fn().mockResolvedValue(RESULT),
     } as unknown as jest.Mocked<EnvironmentalReportsService>;
     controller = new EnvironmentalReportsController(service);
   });
@@ -90,5 +92,48 @@ describe('EnvironmentalReportsController', () => {
   it('close delega id y userId', async () => {
     await controller.close(ID, 'user-1');
     expect(service.close).toHaveBeenCalledWith(ID, 'user-1');
+  });
+
+  it('requestInformation delega el id, el dto y el actor', async () => {
+    const dto = { message: 'Una foto más' } as RequestInformationDto;
+    await expect(controller.requestInformation(ID, dto, 'user-1')).resolves.toBe(RESULT);
+    expect(service.requestInformation).toHaveBeenCalledWith(ID, dto, 'user-1');
+  });
+
+  describe('RequestInformationDto', () => {
+    const errores = (body: object) =>
+      validate(plainToInstance(RequestInformationDto, body), {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      });
+
+    it.each([
+      [{ message: 'Una foto más' }],
+      [{ message: '  Una foto más  ', requiredBy: '2999-01-10', internalNote: 'nota' }],
+      [{ message: 'x', requiredBy: '2999-01-10T12:00:00-03:00' }],
+      [{ message: 'x', requiredBy: '2999-01-10T15:00:00Z' }],
+      [{ message: 'x'.repeat(500) }],
+    ])('acepta %j', async (body) => {
+      expect(await errores(body)).toEqual([]);
+    });
+
+    it.each([
+      [{}],
+      [{ message: '' }],
+      [{ message: '    ' }],
+      [{ message: 'x'.repeat(501) }],
+      [{ message: 'x', internalNote: 'x'.repeat(501) }],
+      [{ message: 'x', requiredBy: 'mañana' }],
+      [{ message: 'x', requiredBy: '2999-02-30' }],
+      [{ message: 'x', requiredBy: '2999-01-10T12:00:00' }],
+      [{ message: 'x', requiredBy: '29990110' }],
+      [{ message: 'x', otro: 1 }],
+    ])('rechaza %j', async (body) => {
+      expect((await errores(body)).length).toBeGreaterThan(0);
+    });
+
+    it('recorta el mensaje', () => {
+      expect(plainToInstance(RequestInformationDto, { message: '  hola ' }).message).toBe('hola');
+    });
   });
 });

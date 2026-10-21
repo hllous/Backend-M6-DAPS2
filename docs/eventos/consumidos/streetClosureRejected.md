@@ -14,14 +14,14 @@ Cancelarlo en vez de reprogramarlo (un servicio que sin el corte ya no tiene sen
 
 ```
 streetClosureRejected
-  closureRequestId, rejectionReason, requestingModule (Obras|Ambiente)
+  closureRequestId, rejectionReason, requestingModule ("ambiente" para nosotros)
 ```
 
 | Campo | Nota |
 |---|---|
 | ✅ `closureRequestId` | El `requestId` que mandamos. **No se llama `sourceRequestId`** como habíamos pedido, pero es el mismo dato — sin él no sabemos qué servicio reprogramar |
 | `rejectionReason` | Decide si tiene sentido volver a pedirlo con otra ventana |
-| ✅ `requestingModule` | Nosotros somos `"Ambiente"` |
+| ✅ `requestingModule` | Para nosotros viaja `"ambiente"`, en minúscula (M7, 20/10). El código no lo lee |
 
 ## Notas
 

@@ -9,7 +9,7 @@ export interface EventEnvelope<T = unknown> {
   /** Identificador único de este mensaje. Es el id de la fila del outbox, lo que hace la publicación idempotente del lado del consumidor. */
   eventId: string;
 
-  /** Nombre del evento en camelCase, ej. `urbanServiceScheduled`. */
+  /** Nombre del evento en camelCase, ej. `updateTicketStatus`. */
   eventType: string;
 
   /** Versión del contrato del evento (M9). `"1.0"` mientras ningún payload cambie de forma. */

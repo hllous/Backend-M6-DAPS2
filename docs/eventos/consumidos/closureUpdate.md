@@ -48,4 +48,4 @@ Es menos preciso que un evento —una desestimación y una demora de M4 se ven i
 
 🟡 **¿`actId` es lo mismo que `externalRef`?** Si es el mismo número con otro nombre, conviene decírselo para no duplicar el campo.
 
-Ver el resto de M4 en [bloqueantes.md](../../bloqueantes.md#m4--habilitaciones--con-dos-preguntas-abiertas).
+Ver el resto de M4 en [bloqueantes.md](../../integracion/m4.md#m4--habilitaciones--con-dos-preguntas-abiertas).

@@ -42,9 +42,9 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 | `RepairDamageType` | `BROKEN_PAVEMENT`, `BROKEN_SIDEWALK`, `BROKEN_STREETLIGHT`, `BLOCKED_DRAIN`, `DAMAGED_STRUCTURE` |
 | `RepairRequestStatus` | `REQUESTED`, `IN_PROGRESS`, `CLOSED` |
 | `StreetClosureType` | `TOTAL`, `PARTIAL` |
-| `StreetClosureRequestStatus` | `REQUESTED`, `APPROVED`, `REJECTED`, `ENDED` |
+| `StreetClosureRequestStatus` | `REQUESTED`, `APPROVED`, `REJECTED`, `ENDED`, `EXPIRED` |
 
-Son 33 enums de dominio (`prisma/schema.prisma` tiene 34: falta `OutboxEventStatus`, de infraestructura: `PENDING`, `SENT`, `FAILED`). `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
+Son 33 enums de dominio (`prisma/schema.prisma` tiene 35: faltan `OutboxEventStatus` —`PENDING`, `SENT`, `FAILED`— y `TicketStateSource` —`DEDUCED`, `RECEIVED`, de dónde salió el estado del ticket en M2 (#303)—, ambos de infraestructura). `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
 
 ## Divergencias con el acuerdo publicado — resueltas
 
@@ -55,9 +55,9 @@ Son 33 enums de dominio (`prisma/schema.prisma` tiene 34: falta `OutboxEventStat
 | # | Enum | Qué queda | Qué decía el acuerdo | A quién hay que avisarle |
 |---|---|---|---|---|
 | 1 | `TicketStatusUpdate` | **Se elimina del catálogo.** El vocabulario es de M2 | `updateType`: `STARTED`, `PROGRESS`, `INFORMATION_REQUIRED`, `RETURNED`, `RESOLVED`, `REJECTED` | Nadie: adoptamos el suyo tal cual |
-| 2 | `ServiceOrigin` | `PLANNED`, `TICKET`, `WEATHER_ALERT`, `INSPECTION`, `MANUAL` | `SCHEDULED`, `TICKET`, `INSPECTION`, `INTERNAL` | **M7**, en [`urbanServiceScheduled`](eventos/publicados/urbanServiceScheduled.md) |
-| 3 | `TreeHealthStatus` | `HEALTHY`, `WEAKENED`, `DISEASED`, `DEAD` | `HEALTHY`, `DECLINING`, `DEAD` | **M3 y M7**, en [`treeRiskDetected`](eventos/publicados/treeRiskDetected.md) |
-| 4 | `TreeInterventionType` | `FORMATION_PRUNING`, `SAFETY_PRUNING`, `REMOVAL`, `PLANTING`, `TREATMENT` | `PRUNING`, `FELLING`, `PLANTING`, `TREATMENT` | **M7**, en [`treePruningScheduled`](eventos/publicados/treePruningScheduled.md) y `treeRiskDetected` |
+| 2 | `ServiceOrigin` | `PLANNED`, `TICKET`, `WEATHER_ALERT`, `INSPECTION`, `MANUAL` | `SCHEDULED`, `TICKET`, `INSPECTION`, `INTERNAL` | Nadie desde el 21/10: solo viajaba en `urbanServiceScheduled`, que dejamos de emitir ([descartados](eventos/publicados/descartados.md)) |
+| 3 | `TreeHealthStatus` | `HEALTHY`, `WEAKENED`, `DISEASED`, `DEAD` | `HEALTHY`, `DECLINING`, `DEAD` | **M3**, en [`treeRiskDetected`](eventos/publicados/treeRiskDetected.md) |
+| 4 | `TreeInterventionType` | `FORMATION_PRUNING`, `SAFETY_PRUNING`, `REMOVAL`, `PLANTING`, `TREATMENT` | `PRUNING`, `FELLING`, `PLANTING`, `TREATMENT` | **M3**, en [`treeRiskDetected`](eventos/publicados/treeRiskDetected.md) (`suggestedIntervention`). Antes también M7, en `treePruningScheduled`, que dejamos de emitir el 21/10 |
 | 5 | `SuggestedAction` | `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE` | `WARNING`, `FINE`, `CLOSURE` | **M4**, en [`environmentalViolationDetected`](eventos/publicados/environmentalViolationDetected.md). Es el caso más expuesto: M4 actúa sobre el valor, aunque el campo es no vinculante |
 | 6 | `RiskLevel` | `NONE`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` | `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` | Nadie: el evento solo se publica con `HIGH` o `CRITICAL`, `NONE` nunca sale del módulo |
 

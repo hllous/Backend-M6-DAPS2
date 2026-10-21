@@ -326,7 +326,8 @@ describe('Flujo del expediente ambiental (e2e)', () => {
       expect(codigos.filter((c) => c === 201)).toHaveLength(1);
       expect(codigos.filter((c) => c === 409)).toHaveLength(11);
       expect(await prisma.service.count()).toBe(servicios0 + 1);
-      expect(await eventos()).toBe(eventos0 + 1);
+      // Ya no se emite urbanServiceScheduled al programar (#345).
+      expect(await eventos()).toBe(eventos0);
       const ganador = res.find((r) => r.status === 201)!;
       const inspeccion = await prisma.environmentalInspection.findUniqueOrThrow({ where: { id } });
       expect(inspeccion.serviceId).toBe(ganador.body.id);

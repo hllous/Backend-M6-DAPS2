@@ -8,7 +8,7 @@ El árbol y su historial de relevamientos están en [inventario-urbano.md](inven
 
 | Entidad | Campos principales |
 |---|---|
-| `TreeIntervention` | `interventionType`, `treeIds[]`, `location`, `requiresStreetClosure`, `status`, `priority`, `serviceId`, y en las extracciones `authorizedByUserId`, `authorizedAt`, `justification` |
+| `TreeIntervention` | `interventionType`, `treeIds[]`, `location`, `requiresStreetClosure`, `status`, `priority`, `serviceId`, `pruningScheduledAt` (columna que quedó de la marca de emisión de `treePruningScheduled`; ya no se usa para emitir) y, en las extracciones, `authorizedByUserId`, `authorizedAt`, `justification` |
 
 Enums: `interventionType` es `TreeInterventionType`, `status` es `TreeInterventionStatus` — ver [enumeraciones.md](../enumeraciones.md). La [divergencia 4](../enumeraciones.md#divergencias-con-el-acuerdo-publicado--resueltas) sobre `interventionType` quedó resuelta a favor del catálogo ([ADR-003](../decisiones/adr-003-divergencias-enums.md)).
 
@@ -31,5 +31,5 @@ Los campos de auditoría de autorización (`authorizedByUserId`, `authorizedAt`)
 
 ## Qué publica
 
-- Al programarse la poda: [`treePruningScheduled`](../eventos/publicados/treePruningScheduled.md) → M7.
+- Al programarse la poda no sale nada hacia M7: `treePruningScheduled` se dejó de emitir el 21/10 ([descartados](../eventos/publicados/descartados.md)).
 - Si `requiresStreetClosure = true`, el corte no sale solo: se pide aparte con `POST /street-closure-requests` (`sourceType = TREE_INTERVENTION`), que exige la intervención en `AUTHORIZED` y publica [`streetClosureRequested`](../eventos/publicados/streetClosureRequested.md) → M7 con `sourceRef` apuntando a esta intervención.

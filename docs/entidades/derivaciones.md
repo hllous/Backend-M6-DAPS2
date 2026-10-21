@@ -23,7 +23,7 @@ Un daño de infraestructura que detectamos pero que no nos corresponde arreglar:
 | Llega [`workOrderScheduled`](../eventos/consumidos/workOrderScheduled.md) | Pasa a en curso |
 | Llega [`workOrderCompleted`](../eventos/consumidos/workOrderCompleted.md) | Se cierra |
 
-Las dos respuestas dependen de que M3 devuelva nuestro `requestId` como `sourceRequestId`; el `sourceRequestId` es obligatorio (uuid) y confirmado. Que M3 dispare `workOrderScheduled` al abrir o al agendar no nos cambia nada (cerrado el 5 oct 2026, ver [bloqueantes.md](../bloqueantes.md#m3--obras-públicas)). La solicitud se cierra con `workOrderCompleted`; no esperamos `workOrderValidated`.
+Las dos respuestas dependen de que M3 devuelva nuestro `requestId` como `sourceRequestId`; el `sourceRequestId` es obligatorio (uuid) y confirmado. Que M3 dispare `workOrderScheduled` al abrir o al agendar no nos cambia nada (cerrado el 5 oct 2026, ver [bloqueantes.md](../integracion/m3.md#m3--obras-públicas)). La solicitud se cierra con `workOrderCompleted`; no esperamos `workOrderValidated`.
 
 Un [`Container`](container.md) con `requiresPublicWorks = true` también le llega a M3, pero por otra vía: el evento `containerDamaged`, no una `RepairRequest`.
 
@@ -34,11 +34,11 @@ El corte de calle que necesita un servicio o una poda. `sourceRef` apunta al [`S
 | Momento | Qué pasa |
 |---|---|
 | Se crea | Publicamos [`streetClosureRequested`](../eventos/publicados/streetClosureRequested.md), con `sourceModule = M6` |
-| Llega [`streetClosureApproved`](../eventos/consumidos/streetClosureApproved.md) | Se habilita la ejecución del servicio bloqueado |
+| Llega [`streetClosureApproved`](../eventos/consumidos/streetClosureApproved.md) | Se habilita la ejecución del servicio bloqueado y se guarda la ventana autorizada (`approvedFrom`, `approvedTo`) |
 | Llega [`streetClosureRejected`](../eventos/consumidos/streetClosureRejected.md) | Se reprograma o se cancela el servicio dependiente |
 | Llega [`streetClosureEnded`](../eventos/consumidos/streetClosureEnded.md) | Se libera la dependencia |
 
-Las tres respuestas traen `closureRequestId` y `requestingModule` (nombres de M7, no los que pedimos, pero el mismo dato) — confirmado desde el 25/08, y desde el 30/08 también en `streetClosureEnded`, que antes era la excepción.
+Las tres respuestas traen `closureRequestId` y `requestingModule` (nombres de M7, no los que pedimos, pero el mismo dato) — confirmado desde el 25/08, y desde el 30/08 también en `streetClosureEnded`, que antes era la excepción. Para nosotros `requestingModule` viaja como `"ambiente"` (M7, 20/10).
 
 ## Transiciones válidas
 
@@ -50,10 +50,13 @@ Toda transición pasa por una tabla (`outbound-requests.transitions.ts`). Los en
 | `RepairRequest` | `IN_PROGRESS` | `CLOSED` |
 | `RepairRequest` | `CLOSED` | terminal |
 | `StreetClosureRequest` | `REQUESTED` | `APPROVED`, `REJECTED`, `ENDED` |
-| `StreetClosureRequest` | `APPROVED` | `ENDED` |
+| `StreetClosureRequest` | `APPROVED` | `ENDED`, `EXPIRED` |
+| `StreetClosureRequest` | `EXPIRED` | `ENDED` |
 | `StreetClosureRequest` | `REJECTED`, `ENDED` | terminales |
 
 Dos saltos son válidos a propósito, porque el Core no garantiza el orden de llegada entre los eventos de M3 y M7, y un reintento vuelve después de lo publicado más tarde:
 
 - **`REQUESTED → CLOSED`**: `workOrderCompleted` puede llegar sin que hayamos visto `workOrderScheduled`, y M3 lo dispara al abrir o al agendar, según le convenga.
+- **`APPROVED → EXPIRED`** (#321): M7 no publica nada cuando un corte aprobado expira sin activarse, así que lo vence el `StreetClosureExpirySweeper` cuando pasan `approvedTo` + 6 horas de gracia (sin `approvedTo` no se vence). En la misma transacción, un servicio `SCHEDULED` pasa a `RESCHEDULED` («venció la ventana autorizada del corte»); uno iniciado o cerrado y la `TreeIntervention` no se tocan. No se publica nada hacia M7.
+- **`EXPIRED → ENDED`**: un `streetClosureEnded` que llega después de vencido se acepta.
 - **`REQUESTED → ENDED`**: `streetClosureEnded` puede adelantarse a `streetClosureApproved`. Como la tabla es una sola, el endpoint manual `POST /street-closure-requests/:id/end` también lo admite desde `REQUESTED`.
