@@ -38,6 +38,15 @@ Cuando un caso de uso necesite datos de identidad de M1, dependerá de un puerto
 
 - El token de servicio del Core/M9, si se usa para comunicación máquina-a-máquina, se trata como una credencial distinta del JWT de usuario.
 
+## Nota de corrección — 2026-10-21
+
+M1 entregó el contrato real del JWT ([#353](https://github.com/hllous/Backend-M6-DAPS2/issues/353); detalle en [`../integracion/m1.md`](../integracion/m1.md#acordado-el-2110)). La decisión no cambia (M1 emite, M6 valida); cambia lo que dábamos por provisorio:
+
+- **HS256 con secreto compartido en base64** (`APP_JWT_SECRET` de M1, mínimo 256 bits), no JWKS ni clave pública. El valor se pide a M1 por privado. «Sin firma, claves ni emisor» deja de ser un bloqueo salvo por el secreto.
+- **Claims:** `iss` = `modulo1-ciudadanos` (verificar), `sub` (id numérico), `sub_type`, `rol` (un solo string, no `roles[]`), `typ` = `access` (rechazar si no), `iat`, `exp`. TTL de 15 min y sin `aud`.
+- **Rol único y sin área:** el rol de M1 no alcanza para autorizar en M6; sigue el modelo híbrido (adaptador + tabla local de asignaciones, #161).
+- **Qué cambia en el código:** `src/auth/jwt.strategy.ts` hoy asume `sub` + `roles[]` y un secreto de texto plano. Hay que decodificar el secreto de base64, verificar `iss` y `typ`, y leer `rol`. Todavía no se hizo.
+
 ## Referencias
 
 - [`../bloqueantes.md`](../bloqueantes.md)

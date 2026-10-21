@@ -92,6 +92,21 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Además, en el contrato nuevo (el Acuerdo y los Sobres del 21/10) M6 publica 6 eventos; los dos que dejamos de emitir (`urbanServiceScheduled` y `treePruningScheduled`) no los consumía M2, así que no cambia nada de su lado.
 
+## Pendientes de enviar (21/10, M1)
+
+> Redactado el 21/10 para que el PO lo envíe. **Pendiente de enviar.** Al enviarlo, anotar la fecha acá y mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — seguimiento a su guía v2.1 y a lo que aclaró el PO — *pendiente de enviar*
+
+> Gracias por la guía v2.1 y por las aclaraciones: con eso ya sabemos cómo validar el token (HS256, clave compartida en base64, claims `iss`, `sub`, `rol`, `typ`, 15 minutos, sin `aud`). Nos quedan unos puntos para cerrar:
+>
+> 1. **Secreto:** el valor de `APP_JWT_SECRET` no está en el documento. ¿Nos lo pasan por privado? Y confirmen que es base64 (sus ejemplos lo decodifican así) y que cada módulo lo carga como variable de entorno.
+> 2. **Roles:** ¿cuál es la lista completa y vigente? En sus ejemplos aparece `CIUDADANO` donde antes figuraba `PERSONA`: ¿lo reemplaza? ¿Siguen `MESA_ENTRADAS`, `RESPONSABLE_AREA` y `AUDITOR`?
+> 3. **Refresh y logout:** el PO nos dijo que ya no están, pero el PDF todavía documenta `POST /auth/refresh` y el logout. ¿Cuál vale? A nosotros no nos cambia (no aceptamos refresh), pero queremos que el contrato quede claro.
+> 4. **Sobre de eventos:** el del documento sigue siendo el viejo (`producer`, `subject`, `eventId` `M1-EVT-…`). Para publicar por el Core tienen que usar el sobre del Core, y el `correlationId` tiene que ser un UUID: un valor como `M6-REQ-000045` lo rechaza el Core y también nuestro buzón de entrada.
+> 5. **Ids:** los ids de usuario son numéricos, pero M2 exige un UUID en `updatedBy.id`. ¿Qué van a hacer? Mientras tanto nosotros mandamos ese campo vacío. Además, ¿el `user_id` del login es el mismo número que el `citizenId`?
+> 6. **`auth: false`:** ¿qué significa en la respuesta del login?
+
 ## Pendientes de enviar (20/10)
 
 
