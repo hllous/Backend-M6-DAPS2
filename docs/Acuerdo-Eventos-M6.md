@@ -388,7 +388,7 @@ estimatedDuration: PT4H
 
 **Aviso de renombre:** `closureOrdered` y `closureLifted` se fusionaron en `closureUpdate` con `status: ORDERED | LIFTED`.
 
-⚠️ **`commercialFineGenerated` sigue rotulado solo hacia Rentas.** Confirmen que también nos lo rutean a nosotros — sigue sin confirmar.
+✅ **`commercialFineGenerated` también nos llega.** M4 confirmó el 21 de octubre que lo recibimos además de Rentas cuando la multa nace de una infracción ambiental, y `closureUpdate` cuando corresponda; estamos suscriptos a ambos en el Core.
 
 **Decisión que les avisamos: no les pedimos un evento de desestimación.** El caso "M4 decide que no corresponde castigo" no dispara ningún evento, ni siquiera `closureUpdate / LIFTED`. Lo resolvemos de nuestro lado cerrando el expediente por vencimiento de un plazo configurable. Una dependencia menos.
 
@@ -457,7 +457,7 @@ M9 respondió el 20/10 que `notificationSent` **no existe en su catálogo**: nin
 | # | Qué pasa | Con quién |
 |---|---|---|
 | 1 | **M2 publicó su contrato (ahora v1.78, WIP) y ningún otro módulo está escrito contra él.** M4, M5 y M8 siguen publicando `ticketInProgress`, `ticketUpdate`, `ticketCompleted` y `ticketRejected`, que M2 no consume: lo suyo va por `updateTicketStatus` con `updateType`. Y los seis eventos de ciclo de vida que M1, M3, M5, M7 y M8 esperan son hoy variantes de `ticketUpdated`, no eventos. **Los cinco tienen que releer el contrato**. El documento de M1 del 13/10 ya no lista esos eventos, pero sus ejemplos de `updateTicketStatus` de M2 (`COMPLETED`, `UPDATED`, `ADDITIONAL_INFO_REQUIRED`, `statusChangedAt`, `AREA_USER`) son del contrato viejo | M1, M3, M4, M5, M8 |
-| 2 | **`commercialFineGenerated` figura rotulado solo hacia Rentas**, pero nosotros lo necesitamos para cerrar el expediente | M4 |
+| 2 | ✅ **`commercialFineGenerated`:** M4 confirmó el 21/10 que también nos lo rutean (y `closureUpdate` cuando corresponda); estamos suscriptos a ambos | M4 |
 | 3 | **M4 declara consumir `updateTicketStatus`.** Es el canal de entrada de M2 desde las áreas operativas: ningún otro módulo tendría que escucharlo | M4 |
 | 4 | ~~**`workOrderScheduled` reemplazó a `workOrderCreated`**~~ ✅ Cerrado el 5 oct 2026: se dispare al abrir o al agendar, no nos cambia nada | M3 |
 | 5 | ✅ **Cerrado el 7 oct 2026: el sobre vigente es el del Core.** M2 había definido `specVersion`, `eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `subject` y `data`; M9 publicó el suyo (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `sourceModule`, `correlationId?`, `causationId?`, `data`) para toda la cohorte y el de M2 queda reemplazado, también para M2 | M9, toda la cohorte |
