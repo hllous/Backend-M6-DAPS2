@@ -23,7 +23,7 @@ import { UploadEvidenceDto, EvidenceResponseDto, QueryEvidenceDto } from './dto'
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { MAX_EVIDENCE_SIZE_BYTES } from './evidence-mime';
 import { ErrorResponseDto } from '../../common/dto';
-import { CurrentUser, Roles } from '../../common/decorators';
+import { ApiNotAssigned, CurrentUser, Roles } from '../../common/decorators';
 import { M6Role } from '@prisma/client';
 import { ROLES_CAMPO } from '../../auth/role-groups';
 
@@ -34,6 +34,9 @@ export class AttachmentsController {
   constructor(private readonly attachmentsService: AttachmentsService) {}
 
   @Post()
+  @ApiNotAssigned(
+    'la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION)',
+  )
   @Roles(...ROLES_CAMPO)
   // Sin límite, multer bufferea en memoria lo que venga antes de que el
   // service pueda rechazarlo por tamaño.
@@ -95,8 +98,9 @@ export class AttachmentsController {
     @UploadedFile() file: Express.Multer.File,
     @Headers('Idempotency-Key') idempotencyKey: string,
     @CurrentUser('roles') roles: M6Role[],
+    @CurrentUser('userId') userId: string,
   ): Promise<EvidenceResponseDto> {
-    return this.attachmentsService.upload(dto, file, idempotencyKey, roles);
+    return this.attachmentsService.upload(dto, file, idempotencyKey, roles, userId);
   }
 
   @Get()

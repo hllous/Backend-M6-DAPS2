@@ -4,7 +4,7 @@ import { CrewType, Shift } from '@prisma/client';
 class CrewMemberResponseDto {
   @ApiProperty({
     description: 'ID del usuario miembro (usuario interno de M6)',
-    example: 'usr-00010',
+    example: '10',
   })
   userId: string;
 }
@@ -39,7 +39,7 @@ export class CrewResponseDto {
 
   @ApiPropertyOptional({
     description: 'ID del usuario líder',
-    example: 'usr-00001',
+    example: '1',
     type: String,
     nullable: true,
   })

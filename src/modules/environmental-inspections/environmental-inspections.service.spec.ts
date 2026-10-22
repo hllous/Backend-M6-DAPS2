@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   EnvironmentalReportStatus as S,
   InspectionNextStep,
@@ -298,11 +303,51 @@ describe('EnvironmentalInspectionsService', () => {
 
   describe('cierre de la inspección', () => {
     beforeEach(() => {
-      prisma.environmentalInspection.findUnique.mockResolvedValue(inspection({ outcome: null }));
+      prisma.environmentalInspection.findUnique.mockResolvedValue(
+        inspection({ outcome: null, inspectorId: 'user-7' }),
+      );
       prisma.environmentalReport.findUnique.mockResolvedValue(
         report({ status: S.INSPECTION_SCHEDULED }),
       );
       prisma.environmentalInspection.update.mockResolvedValue(inspection());
+    });
+
+    // #365: el asignado, o cualquiera si no hay asignado; otro inspector no.
+    describe('pertenencia (#365)', () => {
+      const dto = {
+        inspectedAt: '2026-09-10T11:30:00.000Z',
+        outcome: InspectionOutcome.NO_VIOLATION,
+      } as CompleteInspectionDto;
+
+      it('otro inspector que el asignado recibe 403 NOT_ASSIGNED y no escribe', async () => {
+        const error = await service.complete(INSPECTION_ID, dto, 'user-8').catch((e) => e);
+
+        expect(error).toBeInstanceOf(ForbiddenException);
+        expect(error.getResponse()).toMatchObject({ code: 'NOT_ASSIGNED' });
+        expect(JSON.stringify(error.getResponse())).not.toContain('user-7');
+        expect(prisma.environmentalInspection.update).not.toHaveBeenCalled();
+      });
+
+      it('sin inspector asignado la cierra cualquiera y queda el del token', async () => {
+        prisma.environmentalInspection.findUnique.mockResolvedValue(
+          inspection({ outcome: null, inspectorId: null }),
+        );
+
+        await service.complete(INSPECTION_ID, dto, 'user-8');
+
+        const [[args]] = prisma.environmentalInspection.update.mock.calls;
+        expect(args.data.completedByUserId).toBe('user-8');
+      });
+
+      it('el 403 va antes que el 409 de ya cerrada: un ajeno no ve el estado', async () => {
+        prisma.environmentalInspection.findUnique.mockResolvedValue(
+          inspection({ inspectorId: 'user-7' }),
+        );
+
+        await expect(service.complete(INSPECTION_ID, dto, 'user-8')).rejects.toBeInstanceOf(
+          ForbiddenException,
+        );
+      });
     });
 
     it('completedByUserId sale del token y no pisa el inspector asignado', async () => {
@@ -398,7 +443,9 @@ describe('EnvironmentalInspectionsService', () => {
     });
 
     it('una inspeccion ya cerrada no se vuelve a cerrar', async () => {
-      prisma.environmentalInspection.findUnique.mockResolvedValue(inspection());
+      prisma.environmentalInspection.findUnique.mockResolvedValue(
+        inspection({ inspectorId: 'user-7' }),
+      );
 
       await expect(
         service.complete(

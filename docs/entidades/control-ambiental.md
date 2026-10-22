@@ -16,6 +16,8 @@ La inspección se **ejecuta como un [`Service`](service.md)**: `serviceId` dice 
 
 Al cerrarla, el inspector puede dejar su `conclusion` y, si hubo infracción, `violationType`, `severity` y `suggestedAction`. Son orientativos: el acta los vuelve a pedir y es la que vale ante M4.
 
+**Quién la completa (#365).** Con `inspectorId` asignado, solo ese inspector puede cerrarla o adjuntarle evidencia (`403 NOT_ASSIGNED` para otro, antes de revelar si ya estaba cerrada); sin inspector asignado, cualquier `M6_CAMPO_INSPECTOR`. Oficina no tiene la restricción. La evidencia de la cuadrilla (`SERVICE`, `ZONE_RESULT`) sigue la misma regla que el servicio: ver [service.md](service.md).
+
 `checklist[]`, `findings`, `conclusion`, `inspectorId` y `completedByUserId` son internos: **nunca salen hacia M2**. Lo que el vecino ve es la proyección pública, sin identidad del inspector ni contenido del acta.
 
 ## `ViolationNotice` — el acta

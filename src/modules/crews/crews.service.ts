@@ -9,6 +9,7 @@ import {
   AddCrewMembersDto,
 } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
+import { normalizeM1UserId } from '../../common/decorators';
 
 @Injectable()
 export class CrewsService {
@@ -25,7 +26,7 @@ export class CrewsService {
         name: dto.name,
         crewType: dto.crewType,
         defaultShift: dto.defaultShift,
-        leaderUserId: dto.leaderUserId ?? null,
+        leaderUserId: dto.leaderUserId ? normalizeM1UserId(dto.leaderUserId) : null,
         organizationId: dto.organizationId ?? null,
         active: dto.active ?? true,
       },
@@ -99,7 +100,9 @@ export class CrewsService {
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.defaultShift !== undefined && { defaultShift: dto.defaultShift }),
-        ...(dto.leaderUserId !== undefined && { leaderUserId: dto.leaderUserId }),
+        ...(dto.leaderUserId !== undefined && {
+          leaderUserId: dto.leaderUserId ? normalizeM1UserId(dto.leaderUserId) : null,
+        }),
         ...(dto.organizationId !== undefined && { organizationId: dto.organizationId }),
         ...(dto.active !== undefined && { active: dto.active }),
       },
@@ -130,15 +133,16 @@ export class CrewsService {
   async addMembers(crewId: string, dto: AddCrewMembersDto): Promise<CrewResponseDto> {
     await this.ensureExists(crewId);
 
+    const userIds = dto.userIds.map(normalizeM1UserId);
     await this.prisma.crewMember.createMany({
-      data: dto.userIds.map((userId) => ({
+      data: userIds.map((userId) => ({
         crewId,
         userId,
       })),
       skipDuplicates: true,
     });
 
-    this.logger.log(`Miembros agregados a cuadrilla ${crewId}: ${dto.userIds.join(', ')}`);
+    this.logger.log(`Miembros agregados a cuadrilla ${crewId}: ${userIds.join(', ')}`);
     return this.findOne(crewId);
   }
 

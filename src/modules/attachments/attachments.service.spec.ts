@@ -9,6 +9,7 @@ import { AttachmentsService } from './attachments.service';
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { EvidenceStorage } from './storage/evidence-storage.interface';
 
+const USER_ID = '4242';
 const CONTAINER_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const ATTACHMENT_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const CAMPO = [M6Role.M6_CAMPO_CUADRILLA, M6Role.M6_CAMPO_INSPECTOR];
@@ -59,6 +60,7 @@ describe('AttachmentsService', () => {
               jpegFile(),
               IDEMPOTENCY_KEY,
               [rol],
+              USER_ID,
             )
             .catch((e) => e);
           expect(error).toBeInstanceOf(ForbiddenException);
@@ -75,6 +77,7 @@ describe('AttachmentsService', () => {
             jpegFile(),
             IDEMPOTENCY_KEY,
             [ok],
+            USER_ID,
           )
           .catch((e) => e);
         expect(res).not.toBeInstanceOf(ForbiddenException);
@@ -88,6 +91,7 @@ describe('AttachmentsService', () => {
           jpegFile(),
           IDEMPOTENCY_KEY,
           [],
+          USER_ID,
         ),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
@@ -100,9 +104,10 @@ describe('AttachmentsService', () => {
   beforeEach(() => {
     prisma = {
       container: { count: jest.fn().mockResolvedValue(1) },
-      service: { count: jest.fn().mockResolvedValue(0) },
-      zoneResult: { count: jest.fn().mockResolvedValue(0) },
-      environmentalInspection: { count: jest.fn().mockResolvedValue(0) },
+      service: { findUnique: jest.fn().mockResolvedValue(null) },
+      zoneResult: { findUnique: jest.fn().mockResolvedValue(null) },
+      environmentalInspection: { findUnique: jest.fn().mockResolvedValue(null) },
+      crew: { count: jest.fn().mockResolvedValue(0) },
       attachment: {
         findUnique: jest.fn().mockResolvedValue(null),
         findUniqueOrThrow: jest.fn(),
@@ -130,6 +135,7 @@ describe('AttachmentsService', () => {
         jpegFile(),
         IDEMPOTENCY_KEY,
         CAMPO,
+        USER_ID,
       );
 
       expect(prisma.container.count).toHaveBeenCalledWith({ where: { id: CONTAINER_ID } });
@@ -172,6 +178,7 @@ describe('AttachmentsService', () => {
         jpegFile(),
         IDEMPOTENCY_KEY,
         CAMPO,
+        USER_ID,
       );
 
       expect(prisma.attachment.findUnique).toHaveBeenCalledWith({
@@ -197,6 +204,7 @@ describe('AttachmentsService', () => {
           jpegFile(),
           IDEMPOTENCY_KEY,
           CAMPO,
+          USER_ID,
         ),
       ).rejects.toThrow(NotFoundException);
       expect(storage.upload).not.toHaveBeenCalled();
@@ -209,6 +217,7 @@ describe('AttachmentsService', () => {
           undefined as unknown as Express.Multer.File,
           IDEMPOTENCY_KEY,
           CAMPO,
+          USER_ID,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -220,6 +229,7 @@ describe('AttachmentsService', () => {
           jpegFile(),
           '',
           CAMPO,
+          USER_ID,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -231,6 +241,7 @@ describe('AttachmentsService', () => {
           jpegFile({ mimetype: 'application/zip' }),
           IDEMPOTENCY_KEY,
           CAMPO,
+          USER_ID,
         ),
       ).rejects.toThrow(BadRequestException);
       expect(storage.upload).not.toHaveBeenCalled();
@@ -250,6 +261,7 @@ describe('AttachmentsService', () => {
           jpegFile({ buffer: exe, size: exe.length }),
           IDEMPOTENCY_KEY,
           CAMPO,
+          USER_ID,
         ),
       ).rejects.toThrow(BadRequestException);
       expect(storage.upload).not.toHaveBeenCalled();
@@ -264,6 +276,7 @@ describe('AttachmentsService', () => {
           jpegFile({ buffer: png, size: png.length }),
           IDEMPOTENCY_KEY,
           CAMPO,
+          USER_ID,
         ),
       ).rejects.toThrow(/image\/png/);
     });
@@ -275,6 +288,7 @@ describe('AttachmentsService', () => {
         jpegFile(),
         IDEMPOTENCY_KEY,
         CAMPO,
+        USER_ID,
       );
 
       const [[args]] = storage.upload.mock.calls;
@@ -288,6 +302,7 @@ describe('AttachmentsService', () => {
         jpegFile({ size: 999_999 }),
         IDEMPOTENCY_KEY,
         CAMPO,
+        USER_ID,
       );
 
       const [[args]] = prisma.attachment.create.mock.calls;
@@ -304,6 +319,7 @@ describe('AttachmentsService', () => {
         jpegFile(),
         IDEMPOTENCY_KEY,
         CAMPO,
+        USER_ID,
       );
 
       const [[args]] = prisma.attachment.create.mock.calls;
@@ -316,6 +332,7 @@ describe('AttachmentsService', () => {
         jpegFile(),
         IDEMPOTENCY_KEY,
         CAMPO,
+        USER_ID,
       );
 
       const [[args]] = storage.upload.mock.calls;
@@ -329,6 +346,7 @@ describe('AttachmentsService', () => {
         jpegFile({ originalname: '../../../etc/passwd' }),
         IDEMPOTENCY_KEY,
         CAMPO,
+        USER_ID,
       );
 
       const [[args]] = prisma.attachment.create.mock.calls;
@@ -348,6 +366,7 @@ describe('AttachmentsService', () => {
           jpegFile(),
           IDEMPOTENCY_KEY,
           CAMPO,
+          USER_ID,
         ),
       ).rejects.toThrow('la base se cayo');
 
@@ -375,6 +394,7 @@ describe('AttachmentsService', () => {
         jpegFile(),
         IDEMPOTENCY_KEY,
         CAMPO,
+        USER_ID,
       );
 
       expect(result.filename).toBe('ganador.jpg');
@@ -388,6 +408,7 @@ describe('AttachmentsService', () => {
           jpegFile({ size: 999_999_999 }),
           IDEMPOTENCY_KEY,
           CAMPO,
+          USER_ID,
         ),
       ).rejects.toThrow(BadRequestException);
       expect(storage.upload).not.toHaveBeenCalled();
@@ -401,15 +422,15 @@ describe('AttachmentsService', () => {
       });
 
       it('el camino válido responde 503 y no persiste nada (la Idempotency-Key queda libre)', async () => {
-        await expect(service.upload(owner, jpegFile(), IDEMPOTENCY_KEY, CAMPO)).rejects.toThrow(
-          ServiceUnavailableException,
-        );
+        await expect(
+          service.upload(owner, jpegFile(), IDEMPOTENCY_KEY, CAMPO, USER_ID),
+        ).rejects.toThrow(ServiceUnavailableException);
         expect(prisma.attachment.create).not.toHaveBeenCalled();
       });
 
       it('las validaciones previas siguen dando 400/404 y no llegan al storage', async () => {
         await expect(
-          service.upload(owner, jpegFile({ size: 999_999_999 }), IDEMPOTENCY_KEY, CAMPO),
+          service.upload(owner, jpegFile({ size: 999_999_999 }), IDEMPOTENCY_KEY, CAMPO, USER_ID),
         ).rejects.toThrow(BadRequestException);
         await expect(
           service.upload(
@@ -417,17 +438,81 @@ describe('AttachmentsService', () => {
             jpegFile({ mimetype: 'text/plain', buffer: Buffer.from('hola') }),
             IDEMPOTENCY_KEY,
             CAMPO,
+            USER_ID,
           ),
         ).rejects.toThrow(BadRequestException);
-        await expect(service.upload(owner, jpegFile(), '', CAMPO)).rejects.toThrow(
+        await expect(service.upload(owner, jpegFile(), '', CAMPO, USER_ID)).rejects.toThrow(
           BadRequestException,
         );
         prisma.container.count.mockResolvedValue(0);
-        await expect(service.upload(owner, jpegFile(), IDEMPOTENCY_KEY, CAMPO)).rejects.toThrow(
-          NotFoundException,
-        );
+        await expect(
+          service.upload(owner, jpegFile(), IDEMPOTENCY_KEY, CAMPO, USER_ID),
+        ).rejects.toThrow(NotFoundException);
         expect(storage.upload).not.toHaveBeenCalled();
       });
+    });
+  });
+
+  // #365: la evidencia de un servicio es de su cuadrilla; la de una inspección, del asignado.
+  describe('pertenencia (#365)', () => {
+    const SERVICE_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+    const subir = (ownerType: AttachmentOwnerType, ownerId: string) =>
+      service.upload({ ownerType, ownerId }, jpegFile(), IDEMPOTENCY_KEY, CAMPO, USER_ID);
+
+    it.each([AttachmentOwnerType.SERVICE, AttachmentOwnerType.ZONE_RESULT])(
+      '%s de una cuadrilla ajena (o sin cuadrilla): 403 NOT_ASSIGNED y no sube nada',
+      async (tipo) => {
+        prisma.service.findUnique.mockResolvedValue({ crewId: 'crew-1' });
+        prisma.zoneResult.findUnique.mockResolvedValue({ service: { crewId: null } });
+
+        const error = await subir(tipo, SERVICE_ID).catch((e) => e);
+
+        expect(error).toBeInstanceOf(ForbiddenException);
+        expect(error.getResponse()).toMatchObject({ code: 'NOT_ASSIGNED' });
+        expect(storage.upload).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      [AttachmentOwnerType.SERVICE, 'service'],
+      [AttachmentOwnerType.ZONE_RESULT, 'zoneResult'],
+    ])('%s de la propia cuadrilla se sube', async (tipo, modelo) => {
+      prisma[modelo].findUnique.mockResolvedValue({
+        crewId: 'crew-1',
+        service: { crewId: 'crew-1' },
+      });
+      prisma.crew.count.mockResolvedValue(1);
+
+      await expect(subir(tipo, SERVICE_ID)).resolves.toBeDefined();
+      expect(prisma.crew.count).toHaveBeenCalledWith({
+        where: {
+          id: 'crew-1',
+          OR: [{ leaderUserId: USER_ID }, { members: { some: { userId: USER_ID } } }],
+        },
+      });
+    });
+
+    it('INSPECTION asignada a otro: 403; a mí o sin asignar: se sube', async () => {
+      prisma.environmentalInspection.findUnique.mockResolvedValue({ inspectorId: '7' });
+      await expect(subir(AttachmentOwnerType.INSPECTION, SERVICE_ID)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+
+      for (const inspectorId of [USER_ID, null]) {
+        prisma.environmentalInspection.findUnique.mockResolvedValue({ inspectorId });
+        await expect(subir(AttachmentOwnerType.INSPECTION, SERVICE_ID)).resolves.toBeDefined();
+      }
+    });
+
+    it('el dueño inexistente sigue siendo 404 (no 403)', async () => {
+      await expect(subir(AttachmentOwnerType.SERVICE, SERVICE_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('CONTAINER no depende de la cuadrilla', async () => {
+      await expect(subir(AttachmentOwnerType.CONTAINER, CONTAINER_ID)).resolves.toBeDefined();
+      expect(prisma.crew.count).not.toHaveBeenCalled();
     });
   });
 

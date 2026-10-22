@@ -8208,7 +8208,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/json": {
                 "schema": {
@@ -8332,7 +8332,7 @@
       "post": {
         "operationId": "ServicesController_start",
         "summary": "Iniciar la ejecución",
-        "description": "SCHEDULED → IN_PROGRESS. Requiere cuadrilla asignada, y vehículo si el tipo de servicio lo exige.",
+        "description": "SCHEDULED → IN_PROGRESS. Solo la cuadrilla del servicio (integrante o líder); un servicio sin cuadrilla da 403 NOT_ASSIGNED. Exige vehículo si el tipo de servicio lo pide.",
         "parameters": [
           {
             "name": "id",
@@ -8367,7 +8367,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/json": {
                 "schema": {
@@ -8387,7 +8387,7 @@
             }
           },
           "409": {
-            "description": "Transición inválida, o falta la cuadrilla o el vehículo obligatorio",
+            "description": "Transición inválida, o falta el vehículo obligatorio",
             "content": {
               "application/json": {
                 "schema": {
@@ -8476,7 +8476,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/json": {
                 "schema": {
@@ -8565,7 +8565,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/json": {
                 "schema": {
@@ -8674,7 +8674,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9110,7 +9110,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9289,7 +9289,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9661,7 +9661,7 @@
       "post": {
         "operationId": "EnvironmentalInspectionsController_complete",
         "summary": "Cerrar la inspección con su resultado",
-        "description": "Lleva el expediente a INSPECTED y de ahí, en la misma operación, a NO_VIOLATION o VIOLATION_FOUND según el outcome. Un INCONCLUSIVE lo deja en INSPECTED, a la espera de otra inspección. El checklist y los hallazgos son internos.",
+        "description": "Si la inspección tiene inspector asignado, solo él puede cerrarla (403 NOT_ASSIGNED para otro inspector); sin asignado, cualquier inspector, y queda registrado el del token como `completedByUserId`. Lleva el expediente a INSPECTED y de ahí, en la misma operación, a NO_VIOLATION o VIOLATION_FOUND según el outcome. Un INCONCLUSIVE lo deja en INSPECTED, a la espera de otra inspección. El checklist y los hallazgos son internos.",
         "parameters": [
           {
             "name": "id",
@@ -9716,7 +9716,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_INSPECTOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es el inspector asignado (no se revela de quién es)",
             "content": {
               "application/json": {
                 "schema": {
@@ -12306,7 +12306,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA, M6_CAMPO_INSPECTOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION) (no se revela de quién es)",
             "content": {
               "application/json": {
                 "schema": {
@@ -13357,7 +13357,7 @@
           "code": {
             "type": "string",
             "example": "ROLE_REQUIRED",
-            "description": "Código estable, solo en algunos errores (403 por falta de rol de M6)"
+            "description": "Código estable, solo en algunos errores: ROLE_REQUIRED (403 por falta de rol de M6) o NOT_ASSIGNED (403 por pertenencia: el recurso no es de su cuadrilla ni se le asignó)"
           },
           "timestamp": {
             "type": "string",
@@ -14399,8 +14399,8 @@
           "leaderUserId": {
             "type": "string",
             "maxLength": 100,
-            "description": "ID del usuario líder de la cuadrilla (usuario interno de M6)",
-            "example": "usr-00001"
+            "description": "Id de M1 (numérico, solo dígitos) del líder de la cuadrilla. El líder puede ejecutar los servicios de la cuadrilla",
+            "example": "1"
           },
           "organizationId": {
             "type": "string",
@@ -14427,7 +14427,7 @@
           "userId": {
             "type": "string",
             "description": "ID del usuario miembro (usuario interno de M6)",
-            "example": "usr-00010"
+            "example": "10"
           }
         },
         "required": [
@@ -14471,7 +14471,7 @@
           "leaderUserId": {
             "type": "string",
             "description": "ID del usuario líder",
-            "example": "usr-00001",
+            "example": "1",
             "nullable": true
           },
           "organizationId": {
@@ -14537,8 +14537,8 @@
           "leaderUserId": {
             "type": "string",
             "maxLength": 100,
-            "description": "ID del usuario líder de la cuadrilla",
-            "example": "usr-00002"
+            "description": "Id de M1 (numérico, solo dígitos) del líder de la cuadrilla",
+            "example": "2"
           },
           "organizationId": {
             "type": "string",
@@ -14558,11 +14558,11 @@
         "properties": {
           "userIds": {
             "type": "array",
-            "description": "IDs de usuarios a agregar como miembros de la cuadrilla (usuarios internos de M6)",
+            "description": "Ids de M1 (numéricos, solo dígitos) de los usuarios a agregar como integrantes de la cuadrilla. Es lo que habilita a cada uno a ejecutar los servicios de la cuadrilla",
             "example": [
-              "usr-00010",
-              "usr-00011",
-              "usr-00012"
+              "10",
+              "11",
+              "12"
             ],
             "items": {
               "type": "string",

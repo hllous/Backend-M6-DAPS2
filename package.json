@@ -23,6 +23,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "core:register": "ts-node -P tsconfig.json scripts/core-register.ts",
+    "crews:migrate-user-ids": "ts-node -P tsconfig.json scripts/migrate-crew-user-ids.ts",
     "openapi:generate": "ts-node -P tsconfig.json scripts/generate-openapi.ts",
     "docs:check": "node scripts/check-docs-integracion.mjs",
     "docs:roles": "ts-node -P tsconfig.json scripts/generate-roles-table.ts",
@@ -92,12 +93,14 @@
       "ts"
     ],
     "rootDir": "src",
+    "roots": ["<rootDir>", "<rootDir>/../scripts"],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s",
+      "../scripts/migrate-crew-user-ids.ts",
       "!**/*.module.ts",
       "!**/dto/**",
       "!**/index.ts",

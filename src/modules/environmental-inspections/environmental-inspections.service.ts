@@ -14,6 +14,8 @@ import {
   ServiceMode,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { notAssignedException } from '../../common/decorators';
+import { isInspectionAssignee } from '../../common/ownership';
 import { AttachmentOwnerType } from '../attachments/attachment-owner-type';
 import { OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
@@ -108,6 +110,13 @@ export class EnvironmentalInspectionsService {
       );
     }
     const inspection = await this.getInspection(id);
+    // Pertenencia (#365): antes de revelar si ya está cerrada.
+    if (!isInspectionAssignee(inspection.inspectorId, userId)) {
+      this.logger.warn(
+        `Denegado NOT_ASSIGNED: usuario ${paraLog(userId)} sobre la inspección ${id}`,
+      );
+      throw notAssignedException();
+    }
     if (inspection.outcome) {
       throw new ConflictException(
         `La inspección '${id}' ya fue cerrada con resultado ${inspection.outcome}`,
