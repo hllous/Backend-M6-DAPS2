@@ -43,17 +43,15 @@ export interface MigrationResult {
 
 type MemberAction = 'update' | 'merge';
 
-interface MemberChange {
+/** Un cambio de id dentro de una cuadrilla. */
+interface IdChange {
   crewId: string;
   from: string;
   to: string;
-  action: MemberAction;
 }
 
-interface LeaderChange {
-  crewId: string;
-  from: string;
-  to: string;
+interface MemberChange extends IdChange {
+  action: MemberAction;
 }
 
 /** Valida y normaliza el mapeo: las claves son libres, los destinos tienen que ser ids de M1. */
@@ -93,31 +91,31 @@ export async function migrateCrewUserIds(
   });
 
   const memberChanges: MemberChange[] = [];
-  const leaderChanges: LeaderChange[] = [];
+  const leaderChanges: IdChange[] = [];
   const unmapped: UnmappedRow[] = [];
 
   // Ids que ya ocupa cada cuadrilla y no se mueven: contra ellos chocaría la PK.
-  const ocupados = new Map<string, Set<string>>();
-  const pendientes: { crewId: string; from: string; to: string }[] = [];
+  const occupied = new Map<string, Set<string>>();
+  const pending: IdChange[] = [];
   for (const m of members) {
     const to = resolve(m.userId, mapping);
     if (to === null) {
       unmapped.push({ table: 'crew_member', crewId: m.crewId, userId: m.userId });
     } else if (to === m.userId) {
-      const set = ocupados.get(m.crewId) ?? new Set<string>();
+      const set = occupied.get(m.crewId) ?? new Set<string>();
       set.add(m.userId);
-      ocupados.set(m.crewId, set);
+      occupied.set(m.crewId, set);
     } else {
-      pendientes.push({ crewId: m.crewId, from: m.userId, to });
+      pending.push({ crewId: m.crewId, from: m.userId, to });
     }
   }
   // Los sin mapeo también ocupan su lugar (no se mueven), pero su id no es numérico:
   // no pueden chocar con un destino, así que no hace falta registrarlos.
-  for (const p of pendientes) {
-    const set = ocupados.get(p.crewId) ?? new Set<string>();
+  for (const p of pending) {
+    const set = occupied.get(p.crewId) ?? new Set<string>();
     memberChanges.push({ ...p, action: set.has(p.to) ? 'merge' : 'update' });
     set.add(p.to);
-    ocupados.set(p.crewId, set);
+    occupied.set(p.crewId, set);
   }
 
   for (const c of leaders) {
@@ -130,11 +128,11 @@ export async function migrateCrewUserIds(
   const changes = memberChanges.length + leaderChanges.length;
   log(dryRun ? '== SIMULACRO (no se escribe nada) ==' : '== MIGRACIÓN ==');
   for (const c of memberChanges) {
-    const nota =
+    const note =
       c.action === 'merge'
         ? ' (el destino ya es integrante: se fusiona y se borra la fila vieja)'
         : '';
-    log(`crew_member   crew ${c.crewId}: ${c.from} -> ${c.to}${nota}`);
+    log(`crew_member   crew ${c.crewId}: ${c.from} -> ${c.to}${note}`);
   }
   for (const c of leaderChanges) {
     log(`crew.leader   crew ${c.crewId}: ${c.from} -> ${c.to}`);
@@ -191,8 +189,8 @@ async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
   const mapping = parseMapping(readFileSync(mapPath, 'utf8'));
 
-  const destino = new URL(process.env.DATABASE_URL);
-  console.log(`Base: ${destino.hostname}:${destino.port || '5432'}${destino.pathname}`);
+  const target = new URL(process.env.DATABASE_URL);
+  console.log(`Base: ${target.hostname}:${target.port || '5432'}${target.pathname}`);
 
   const prisma = new PrismaClient();
   try {
