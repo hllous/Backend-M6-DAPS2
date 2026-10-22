@@ -60,8 +60,9 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
 
   async sync(): Promise<RegistroResultado> {
     const maxAttempts = this.config.get<number>('core.subscriptionMaxAttempts', 4);
-    const subs = await this.listar('/api/v1/subscriptions');
-    const pubs = await this.listar('/api/v1/publications');
+    const modulo = this.config.get<string>('core.moduleId', 'ambiente');
+    const subs = await this.listar('/api/v1/subscriptions', modulo);
+    const pubs = await this.listar('/api/v1/publications', modulo);
 
     const deseadasSubs: string[] = Object.values(ConsumedEvent).filter(
       (e) => !SIN_PUBLICADOR.includes(e),
@@ -110,8 +111,16 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
     }
   }
 
-  /** Los `eventType` ya registrados. Acepta un array o `{ data | items: [...] }`. */
-  private async listar(path: string): Promise<Set<string>> {
+  /**
+   * Los `eventType` ya registrados **a nombre de M6 y activos**. Acepta un array
+   * (la forma real del Core) o `{ data | items: [...] }`.
+   *
+   * `GET /publications` devuelve las de TODOS los módulos (M9, 22/10): una
+   * entrada de otro módulo no cuenta como nuestra, o M6 creería tener declarado
+   * un tipo que otro declaró y nunca se registraría. Una entrada `active: false`
+   * cuenta como faltante: el POST repetido la reactiva.
+   */
+  private async listar(path: string, modulo: string): Promise<Set<string>> {
     const res = await this.core.request(path);
     if (!res.ok) {
       await res.body?.cancel().catch(() => undefined);
@@ -134,6 +143,11 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
     return new Set(
       lista
         .slice(0, MAX_ENTRADAS)
+        .filter((x) => {
+          const e = x as { moduleName?: unknown; active?: unknown } | null;
+          if (typeof e?.moduleName === 'string' && e.moduleName !== modulo) return false;
+          return e?.active !== false;
+        })
         .map((x) => (x as { eventType?: unknown } | null)?.eventType)
         .filter((e): e is string => typeof e === 'string' && EVENT_TYPE.test(e)),
     );
