@@ -30,7 +30,7 @@ Los nueve que se cayeron del contrato están en [descartados.md](descartados.md)
 
 **Si la publicación falla, la fila no se pierde ni se reintenta para siempre.** `outbox_event.attempts` cuenta los intentos y `last_error` guarda por qué falló el último; a los cinco intentos la fila pasa a `FAILED` y deja de barrerse, para que un broker caído no genere una cola infinita de reintentos. Del lado entrante, `inbox_event.error` deja el rastro: un handler que falla deja la fila **sin** `processed_at` y con el error. El reintento lo hace el Core, que reentrega con su backoff (escalones de 5 s, 30 s, 2 min y 10 min según el intento, ver [m9.md](../../integracion/m9.md)) hasta la DLQ, y reenviar el mismo `eventId` vuelve a correr el handler; ver [consumidos](../consumidos/README.md#qué-se-consume-hoy).
 
-⚠️ **`location.neighborhoodId` viaja ausente** en `containerDamaged` y `treeRiskDetected`: sale del catálogo de barrios de M9, que sigue sin exponerse. Era un campo requerido de `_shared.location` y pasó a opcional hasta que exista. Hay que avisarle a M3.
+⚠️ **`location.neighborhoodId` viaja ausente** en `containerDamaged` y `treeRiskDetected`: es el `id` UUID del catálogo de barrios de M9, que M9 ya expone por REST (22/10, datos ficticios hasta que cargue los de CABA) pero M6 todavía no consume ([#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)). Era un campo requerido de `_shared.location` y pasó a opcional hasta la adopción. Hay que avisarle a M3.
 
 ## Los schemas
 
