@@ -132,7 +132,7 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 > Seguimos esperando el JWT. Para integrar necesitamos: dónde viaja (header), `alg`, claves o JWKS, claims, `iss`/`aud`, TTL, y si `RESPONSABLE_AREA` lleva un área asociada. Además, M2 v1.78 exige que `updatedBy.id` sea **UUID**, y su login devuelve `user_id` como `bigint`: ¿qué identificador viaja en el token? Hoy mandamos el `sub` si tiene forma de UUID y `null` si no. Por último, su documento sigue con el sobre viejo (`producer`, `subject`, `eventId` tipo `M1-EVT-…`): hay que pasar al sobre del Core, que además exige `correlationId` en forma UUID.
 
-**→ M4 (Habilitaciones)**
+**→ M4 (Habilitaciones)** — *respondido el 21/10 (ver `m4.md`)*
 
 > Cuatro confirmaciones sobre su contrato de octubre: (1) en `environmentalViolationDetected` mandamos `suggestedAction` con cuatro valores: `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE`. Su documento lista tres; ¿toleran `FORMAL_NOTICE`? El campo no es vinculante. (2) ¿`commercialFineGenerated` también nos lo rutean a nosotros, o solo `closureUpdate`? (3) ¿`actId` y `externalRef` son el mismo dato? (4) ¿Dejaron de publicar `ticketInProgress`? Aclaración: `sourceViolationId` reproduce exactamente el `violationId` UUID que les mandamos.
 
