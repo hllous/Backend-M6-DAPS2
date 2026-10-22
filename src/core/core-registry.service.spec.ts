@@ -179,6 +179,60 @@ describe('CoreRegistryService', () => {
     expect(sobrantes).not.toContain('suscripción tipo250');
   });
 
+  describe('simulacro (--dry-run)', () => {
+    const estado = {
+      subs: ['ticketUpdated', 'commercialFineIssued'],
+      pubs: ['containerDamaged', 'zoneNotServiced', 'closureOrdered'],
+      rawSubs: [{ eventType: 'workOrderScheduled', moduleName: 'ambiente', active: false }],
+      rawPubs: [
+        { eventType: 'treeRiskDetected', moduleName: 'ambiente', active: false },
+        { eventType: 'updateTicketStatus', moduleName: 'obras', active: true },
+      ],
+    };
+
+    it('no hace ningún POST y el plan coincide con lo que haría el modo real', async () => {
+      const sim = coreSimulado(estado);
+      const plan = await servicio(sim.core).simular();
+
+      expect(sim.request).toHaveBeenCalledTimes(2);
+      const metodos = sim.request.mock.calls.map(([, i]) => (i as RequestInit | undefined)?.method);
+      expect(metodos.every((m) => m === undefined || m === 'GET')).toBe(true);
+      expect(sim.posts).toHaveLength(0);
+
+      const real = coreSimulado(estado);
+      const res = await servicio(real.core).sync();
+      expect(plan.suscripcionesCreadas).toEqual(res.suscripcionesCreadas);
+      expect(plan.publicacionesCreadas).toEqual(res.publicacionesCreadas);
+      expect(plan.sobrantes).toEqual(res.sobrantes);
+      expect(real.posts).toHaveLength(
+        plan.suscripcionesCreadas.length + plan.publicacionesCreadas.length,
+      );
+    });
+
+    it('distingue ya activas, inactivas (reactivables) y sobrantes', async () => {
+      const plan = await servicio(coreSimulado(estado).core).simular();
+
+      expect(plan.suscripcionesYaActivas).toEqual(['ticketUpdated']);
+      expect(plan.publicacionesYaActivas).toEqual(['containerDamaged']);
+      expect(plan.suscripcionesInactivas).toEqual(['workOrderScheduled']);
+      expect(plan.suscripcionesCreadas).toContain('workOrderScheduled');
+      expect(plan.publicacionesInactivas).toEqual(['treeRiskDetected']);
+      expect(plan.publicacionesCreadas).toContain('treeRiskDetected');
+      expect(plan.publicacionesCreadas).toContain('updateTicketStatus');
+      expect([...plan.sobrantes].sort()).toEqual([
+        'publicación closureOrdered',
+        'publicación zoneNotServiced',
+        'suscripción commercialFineIssued',
+      ]);
+    });
+
+    it('si el Core no responde, falla (el script sale con código distinto de 0)', async () => {
+      const sim = coreSimulado({}, () => true);
+      await expect(servicio(sim.core).simular()).rejects.toThrow(/HTTP 503/);
+      expect(sim.posts).toHaveLength(0);
+    });
+  });
+
   describe('al arrancar', () => {
     it('sin CORE_API_URL no hace nada', () => {
       const request = jest.fn();

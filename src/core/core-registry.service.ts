@@ -25,6 +25,19 @@ export interface RegistroResultado {
   sobrantes: string[];
 }
 
+/** Lo que `sync()` haría, sin hacerlo. Las «Inactivas» también figuran en las «Creadas»: el POST las reactiva. */
+export interface PlanRegistro extends RegistroResultado {
+  suscripcionesYaActivas: string[];
+  publicacionesYaActivas: string[];
+  suscripcionesInactivas: string[];
+  publicacionesInactivas: string[];
+}
+
+interface Listado {
+  activos: Set<string>;
+  inactivos: Set<string>;
+}
+
 /**
  * Registra en el catálogo del Core lo que M6 consume y publica. Las listas
  * salen de `ConsumedEvent` y `EventType`: agregar un evento lo registra solo.
@@ -58,7 +71,36 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
     clearTimeout(this.timer);
   }
 
+  /** Registro real: consulta, crea lo que falta y loguea. */
   async sync(): Promise<RegistroResultado> {
+    const { maxAttempts, plan } = await this.planificar();
+    const { suscripcionesCreadas, publicacionesCreadas, sobrantes } = plan;
+    for (const eventType of suscripcionesCreadas) {
+      await this.crear('/api/v1/subscriptions', { eventType, maxAttempts });
+    }
+    for (const eventType of publicacionesCreadas) {
+      await this.crear('/api/v1/publications', { eventType });
+    }
+    if (sobrantes.length) {
+      this.logger.warn(
+        `Registrado en el Core y ya no declarado por M6 (no se borra, retirarlo con DELETE): ${sobrantes.join(', ')}`,
+      );
+    }
+    this.logger.log(
+      `Registro en el Core: ${suscripcionesCreadas.length} suscripciones y ${publicacionesCreadas.length} publicaciones nuevas`,
+    );
+    return { suscripcionesCreadas, publicacionesCreadas, sobrantes };
+  }
+
+  /**
+   * Simulacro: el mismo plan que `sync()` ejecutaría, solo con GET. Desde acá no
+   * hay camino a `crear()`; el spec lo verifica contra el Core simulado.
+   */
+  async simular(): Promise<PlanRegistro> {
+    return (await this.planificar()).plan;
+  }
+
+  private async planificar(): Promise<{ maxAttempts: number; plan: PlanRegistro }> {
     const maxAttempts = this.config.get<number>('core.subscriptionMaxAttempts', 4);
     const modulo = this.config.get<string>('core.moduleId', 'ambiente');
     const subs = await this.listar('/api/v1/subscriptions', modulo);
@@ -69,28 +111,26 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
     );
     const deseadasPubs: string[] = Object.values(EventType);
 
-    const suscripcionesCreadas = deseadasSubs.filter((e) => !subs.has(e));
-    const publicacionesCreadas = deseadasPubs.filter((e) => !pubs.has(e));
-    for (const eventType of suscripcionesCreadas) {
-      await this.crear('/api/v1/subscriptions', { eventType, maxAttempts });
-    }
-    for (const eventType of publicacionesCreadas) {
-      await this.crear('/api/v1/publications', { eventType });
-    }
-
     const sobrantes = [
-      ...[...subs].filter((e) => !deseadasSubs.includes(e)).map((e) => `suscripción ${e}`),
-      ...[...pubs].filter((e) => !deseadasPubs.includes(e)).map((e) => `publicación ${e}`),
+      ...[...subs.activos].filter((e) => !deseadasSubs.includes(e)).map((e) => `suscripción ${e}`),
+      ...[...pubs.activos].filter((e) => !deseadasPubs.includes(e)).map((e) => `publicación ${e}`),
     ];
-    if (sobrantes.length) {
-      this.logger.warn(
-        `Registrado en el Core y ya no declarado por M6 (no se borra, retirarlo con DELETE): ${sobrantes.join(', ')}`,
-      );
-    }
-    this.logger.log(
-      `Registro en el Core: ${suscripcionesCreadas.length} suscripciones y ${publicacionesCreadas.length} publicaciones nuevas`,
-    );
-    return { suscripcionesCreadas, publicacionesCreadas, sobrantes };
+    return {
+      maxAttempts,
+      plan: {
+        suscripcionesCreadas: deseadasSubs.filter((e) => !subs.activos.has(e)),
+        publicacionesCreadas: deseadasPubs.filter((e) => !pubs.activos.has(e)),
+        suscripcionesYaActivas: deseadasSubs.filter((e) => subs.activos.has(e)),
+        publicacionesYaActivas: deseadasPubs.filter((e) => pubs.activos.has(e)),
+        suscripcionesInactivas: deseadasSubs.filter(
+          (e) => subs.inactivos.has(e) && !subs.activos.has(e),
+        ),
+        publicacionesInactivas: deseadasPubs.filter(
+          (e) => pubs.inactivos.has(e) && !pubs.activos.has(e),
+        ),
+        sobrantes,
+      },
+    };
   }
 
   private async syncConReintentos(intento: number): Promise<void> {
@@ -120,7 +160,7 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
    * un tipo que otro declaró y nunca se registraría. Una entrada `active: false`
    * cuenta como faltante: el POST repetido la reactiva.
    */
-  private async listar(path: string, modulo: string): Promise<Set<string>> {
+  private async listar(path: string, modulo: string): Promise<Listado> {
     const res = await this.core.request(path);
     if (!res.ok) {
       await res.body?.cancel().catch(() => undefined);
@@ -140,17 +180,14 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
     }
     // Única fuente no confiable que llega a los logs (los sobrantes): solo
     // pasan nombres con forma de evento y se corta la lista.
-    return new Set(
-      lista
-        .slice(0, MAX_ENTRADAS)
-        .filter((x) => {
-          const e = x as { moduleName?: unknown; active?: unknown } | null;
-          if (typeof e?.moduleName === 'string' && e.moduleName !== modulo) return false;
-          return e?.active !== false;
-        })
-        .map((x) => (x as { eventType?: unknown } | null)?.eventType)
-        .filter((e): e is string => typeof e === 'string' && EVENT_TYPE.test(e)),
-    );
+    const out: Listado = { activos: new Set(), inactivos: new Set() };
+    for (const x of lista.slice(0, MAX_ENTRADAS)) {
+      const e = x as { eventType?: unknown; moduleName?: unknown; active?: unknown } | null;
+      if (typeof e?.moduleName === 'string' && e.moduleName !== modulo) continue;
+      if (typeof e?.eventType !== 'string' || !EVENT_TYPE.test(e.eventType)) continue;
+      (e.active === false ? out.inactivos : out.activos).add(e.eventType);
+    }
+    return out;
   }
 
   private async crear(path: string, body: Record<string, unknown>): Promise<void> {
