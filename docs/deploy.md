@@ -15,7 +15,7 @@
 
 El frontend publica su URL en el repo [`hllous/Frontend-M6-DAPS2`](https://github.com/hllous/Frontend-M6-DAPS2) (campo "website"). `https://m6-ambiente-frontend.vercel.app` también respondía el 04/10, pero la vigente es la de arriba.
 
-El deploy está **enlazado a la rama `develop`** de cada repo: al pushear código a `develop` se actualiza automáticamente — el backend vía GitHub Actions + Deploy Hook de Render, el frontend vía auto-deploy nativo de Vercel (~2-5 min).
+El deploy está **enlazado a la rama `main`** de cada repo (cambio del 22/10; antes era `develop`): lo que se mergea a `develop` **no** se despliega hasta el release `develop` → `test` → `main`. Al pushear a `main` se actualiza automáticamente — el backend vía GitHub Actions + Deploy Hook de Render, el frontend vía auto-deploy nativo de Vercel (~2-5 min).
 
 ---
 
@@ -54,7 +54,7 @@ curl https://frontend-m6-daps2-grupo4-modulo6.vercel.app/api/health
 **Backend (Render)** — lo dispara GitHub Actions:
 
 ```
-git push origin develop
+git push origin main   (el release develop → test → main)
     ↓
 GitHub Actions corre build + test (CI)
     ↓  si ambos pasan
@@ -65,17 +65,17 @@ Render buildea Docker y deploya
 Backend actualizado en ~3-5 min
 ```
 
-**Frontend (Vercel)** — deploy nativo:
+**Frontend (Vercel)** — deploy nativo (rama de producción `main`; verificar en el panel de Vercel):
 
 ```
-git push origin develop
+git push origin main
     ↓
 Vercel detecta cambios en Frontend-M6-DAPS2 → buildea Next.js → deploya
     ↓
 Frontend actualizado en ~2-5 min
 ```
 
-No hay que hacer nada manual en el día a día.
+No hay que hacer nada manual: el deploy sale con el release a `main`. Un push a `develop` corre el CI pero no despliega.
 
 > **Nota**: el job `deploy` de GitHub Actions depende de `build`+`test`: si el CI falla, **no** se deploya. La config es el secret `RENDER_DEPLOY_HOOK_URL` (Deploy Hook del servicio en Render) + **Auto-Deploy apagado** en Render (para evitar dobles deploys).
 
