@@ -171,7 +171,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 
 | Lugar | Variable | Qué va | Por qué | A quién pedirlo | Cuándo | Secreto |
 |---|---|---|---|---|---|---|
-| Vercel | `M6_DEV_JWT` | Se genera con `node scripts/generate-demo-jwt.mjs <JWT_SECRET de Render>` | Token de demo del BFF. **Dura 15 minutos** y tiene que ser de un empleado | Lo genera DevOps con el secreto de Render | Después de cargar el `JWT_SECRET` | Sí |
+| Vercel | `M6_DEV_JWT` | Se genera con `node scripts/generate-demo-jwt.mjs <JWT_SECRET de Render> RESPONSABLE_AREA <user_id del admin inicial>` (el mismo id de `M6_BOOTSTRAP_ADMIN_USER_IDS`) | Token de demo del BFF. **Dura 15 minutos** y tiene que ser de un empleado | Lo genera DevOps con el secreto de Render | Después de cargar el `JWT_SECRET` | Sí |
 | Vercel | `M6_SESSION_SECRET` | Valor aleatorio propio | Sella la cookie de sesión del BFF | Lo genera DevOps | Si no existe | Sí |
 | Vercel | `M6_AUTH_MODE`, `M6_BACKEND_ORIGIN` | `backend-development` y `https://m6-backend-m64k.onrender.com` | Modo demo contra el backend real | – | Solo verificar | No |
 
