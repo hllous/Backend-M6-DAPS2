@@ -538,7 +538,7 @@ Cada entrega por `q.ambiente` se contesta así:
 | Resultado | Qué pasa | Qué hace el Core |
 |---|---|---|
 | Procesado, duplicado (mismo `eventId`) o ignorado (tipo sin handler) | `ack` | Nada más |
-| El handler falló, o el mensaje es inválido, o pesa más de 100 kB | `nack` **sin reencolar** | Reintenta con escalones de 5 s, 30 s, 2 min y 10 min según el intento (`maxAttempts=4`: el inicial más tres reintentos, cuatro intentos en total; es la cadena de la guía común del Core); al agotarlos queda una entrega fallida y una dead letter en el Core |
+| El handler falló, o el mensaje es inválido, o pesa más de 100 kB | `nack` **sin reencolar** | Reintenta con `maxAttempts=4`: un intento inicial y tres reintentos, con esperas de 5 s, 30 s y 2 min (155 s nominales); el escalón de 10 min no se usa; al agotarlos queda una entrega fallida y una dead letter en el Core |
 
 - Reenviar el `eventId` de un evento **cuyo handler falló** vuelve a correr el handler. Uno ya procesado o en curso sale como duplicado.
 - Un mensaje inválido no se guarda: no ocupa el `eventId` y se puede reenviar corregido con el mismo.

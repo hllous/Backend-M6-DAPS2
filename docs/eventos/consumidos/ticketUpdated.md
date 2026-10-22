@@ -34,7 +34,7 @@ De todo `ticketUpdated` de un ticket **nuestro** (`responsibleAreaId = M6`), sea
 
 **Desde el 20/10 (M2) se ordena por `data.updatedAt`**, cuándo M2 persistió el cambio, y no por el `occurredAt` del sobre, que es cuándo se publicó y puede ser posterior si la publicación se demoró o se reintentó. El `occurredAt` queda de respaldo si `updatedAt` falta, es ilegible o está más de 5 minutos en el futuro. Los timestamps sirven para descartar un evento viejo que llega tarde, no para decidir el estado del ticket (eso lo define `currentStatus` de M2). No se comparan con timestamps de otro productor (por ejemplo, el `updateOccurredAt` de M3). Donde más abajo dice «`occurredAt`» en este apartado, leer «el timestamp de orden».
 
-El Core reintenta un handler fallido con su backoff (escalones de 5 s, 30 s, 2 min y 10 min según el intento, ver [m9.md](../../integracion/m9.md)) hasta la DLQ y M9 no garantiza el orden, así que un evento viejo puede aplicarse **después** de uno más nuevo del mismo ticket. Los `updateType` que pisan un dato lo comparan con el `occurredAt` del último aplicado **a ese dato**, guardado en el expediente:
+El Core reintenta un handler fallido con su backoff (hasta tres reintentos con esperas de 5 s, 30 s y 2 min, ver [m9.md](../../integracion/m9.md)) hasta la DLQ y M9 no garantiza el orden, así que un evento viejo puede aplicarse **después** de uno más nuevo del mismo ticket. Los `updateType` que pisan un dato lo comparan con el `occurredAt` del último aplicado **a ese dato**, guardado en el expediente:
 
 | `updateType` | Marca en `environmental_report` |
 |---|---|
