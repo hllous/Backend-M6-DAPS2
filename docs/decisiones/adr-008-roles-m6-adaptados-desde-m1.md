@@ -66,7 +66,7 @@ M6 no tiene un directorio de M1: no sabe qué rol tiene un `userId` hasta que es
 
 ### Neutras
 
-- La pertenencia (Campo solo sobre lo suyo) es una fase aparte (#365).
+- La pertenencia (Campo solo sobre lo suyo) es una fase aparte (#365); ver la nota del 22/10/2026 al final.
 - `userId` es siempre texto: los ids de M1 son numéricos pero un `bigint` pierde precisión en JSON.
 
 ## Nota 21/10/2026: corte de seguridad (PR 2 de #161)
@@ -87,3 +87,9 @@ Hecho: `RolesGuard` pasó a ser el segundo `APP_GUARD`, después de `JwtAuthGuar
 - Issue #161 y sus comentarios del 21/10 (decisiones del PO)
 - [`integracion/m1.md`](../integracion/m1.md): contrato del JWT y lista de roles de M1
 - [ADR-004](adr-004-jwt-m1-y-puerto-identidad.md), [ADR-005](adr-005-alineacion-frontend-sesion-y-seguridad.md)
+
+## Nota 22/10/2026: pertenencia de Campo (#365, #394)
+
+Hecho: el rol de Campo ya no alcanza para ejecutar. Una comprobación simple en la capa de service (`src/common/ownership.ts`, sin ABAC): el usuario del token tiene que ser **líder o integrante** de la cuadrilla del servicio (sin cuadrilla, nadie pertenece) para iniciar, suspender, reanudar y completar, y para cargar resultados por zona, registros de recolección y avisos de demora; una inspección asignada solo la completa su inspector (sin asignar, cualquiera); la evidencia aplica la misma regla según el tipo de objeto. Lo ajeno responde `403` con `code: NOT_ASSIGNED`. Oficina no tiene restricciones. El chequeo va antes que la máquina de estados: un servicio sin cuadrilla da 403, no 409. No se filtran los listados.
+
+Consecuencia operativa: los ids de integrantes y líder son los `user_id` numéricos de M1 (el `sub` del token). Las cuadrillas sembradas con ids `usr-…` nunca van a coincidir, así que **el despliegue queda bloqueado hasta migrarlas** con `npm run crews:migrate-user-ids` (mapeo explícito que entrega M1, ver `docs/deploy.md`).

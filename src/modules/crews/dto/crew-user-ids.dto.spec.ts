@@ -33,4 +33,15 @@ describe('ids de usuario de cuadrillas', () => {
       [],
     );
   });
+
+  it('el tope es de 19 dígitos: 19 pasan y 20 se rechazan', async () => {
+    const ok = await validate(
+      plainToInstance(CreateCrewDto, { ...base, leaderUserId: '9'.repeat(19) }),
+    );
+    const mal = await validate(
+      plainToInstance(CreateCrewDto, { ...base, leaderUserId: '9'.repeat(20) }),
+    );
+    expect(ok).toEqual([]);
+    expect(mal.map((e) => e.property)).toContain('leaderUserId');
+  });
 });
