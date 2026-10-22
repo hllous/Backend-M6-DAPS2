@@ -131,8 +131,29 @@ describe('Ciclo de vida de un servicio urbano (e2e)', () => {
   });
 
   it('rechaza con 409 una transición que la tabla no admite', async () => {
+    // Servicio aparte con cuadrilla (el usuario del token es integrante): la pertenencia
+    // se chequea antes que la máquina de estados (#365), así que sin cuadrilla daría 403.
+    const zona = await crearZona(api);
+    const ruta = await crearRuta(api, [zona.id]);
+    const tipo = await crearTipoServicio(api, { mode: 'ROUTE' });
+    const programado = await api
+      .post('/services', {
+        serviceTypeId: tipo.id,
+        routeId: ruta.id,
+        scheduledDate: hoy(),
+        origin: 'TICKET',
+        ticketId: 'TCK-E2E-0002',
+      })
+      .expect(201);
+    const cuadrilla = await crearCuadrilla(api);
+    await api
+      .post(`/services/${programado.body.id}/assign-crew`, { crewId: cuadrilla.id })
+      .expect(200);
+
     // SCHEDULED no admite SUSPENDED: hay que iniciar primero.
-    const res = await api.post(`/services/${serviceId}/suspend`, { reason: 'Prueba e2e' });
+    const res = await api.post(`/services/${programado.body.id}/suspend`, {
+      reason: 'Prueba e2e',
+    });
     expect(res.status).toBe(409);
     expect(res.body.message).toContain('SCHEDULED');
   });
