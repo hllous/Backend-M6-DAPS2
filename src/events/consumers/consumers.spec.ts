@@ -468,6 +468,14 @@ describe('consumidores de eventos', () => {
       expect(estados).toEqual([S.SANCTIONED, S.CLOSED]);
     });
 
+    it('actId no se usa como externalRef: son datos distintos (M4, 21/10)', async () => {
+      await h('commercialFineGenerated')({ sourceViolationId: ID, actId: 'ACT-INTERNO-7' });
+
+      expect(prisma.sanctionOutcome.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ externalRef: null }),
+      });
+    });
+
     it('closureUpdate ORDERED registra la clausura', async () => {
       await h('closureUpdate')({ sourceViolationId: ID, status: 'ORDERED' });
 
