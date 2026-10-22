@@ -15,7 +15,7 @@
 
 El frontend publica su URL en el repo [`hllous/Frontend-M6-DAPS2`](https://github.com/hllous/Frontend-M6-DAPS2) (campo "website"). `https://m6-ambiente-frontend.vercel.app` también respondía el 04/10, pero la vigente es la de arriba.
 
-El deploy está **enlazado a la rama `main`** de cada repo (cambio del 22/10; antes era `develop`): lo que se mergea a `develop` **no** se despliega hasta el release `develop` → `test` → `main`. Al pushear a `main` se actualiza automáticamente — el backend vía GitHub Actions + Deploy Hook de Render, el frontend vía auto-deploy nativo de Vercel (~2-5 min).
+El deploy está **enlazado a la rama `main`** de cada repo: el frontend (Vercel) siempre estuvo en `main` y el backend (Render) pasó de `develop` a `main` el 22/10. Lo que se mergea a `develop` **no** se despliega hasta el release `develop` → `test` → `main`. Al pushear a `main` se actualiza automáticamente — el backend vía GitHub Actions + Deploy Hook de Render, el frontend vía auto-deploy nativo de Vercel (~2-5 min).
 
 ---
 
@@ -65,7 +65,7 @@ Render buildea Docker y deploya
 Backend actualizado en ~3-5 min
 ```
 
-**Frontend (Vercel)** — deploy nativo (rama de producción `main`; verificar en el panel de Vercel):
+**Frontend (Vercel)** — deploy nativo (rama de producción `main`):
 
 ```
 git push origin main
