@@ -246,7 +246,14 @@ export async function crearTipoServicio(
   return res.body;
 }
 
-export async function crearCuadrilla(api: Api): Promise<{ id: string }> {
+/**
+ * Una cuadrilla con sus integrantes. Sin argumentos, el actor `cuadrilla` es
+ * integrante: Campo solo opera los servicios de su cuadrilla (#365).
+ */
+export async function crearCuadrilla(
+  api: Api,
+  integrantes: string[] = [ACTORES.cuadrilla.userId],
+): Promise<{ id: string }> {
   const res = await api
     .post('/crews', {
       name: `Cuadrilla ${unique('CR')}`,
@@ -254,6 +261,9 @@ export async function crearCuadrilla(api: Api): Promise<{ id: string }> {
       defaultShift: 'MORNING',
     })
     .expect(201);
+  if (integrantes.length > 0) {
+    await api.post(`/crews/${res.body.id}/members`, { userIds: integrantes }).expect(201);
+  }
   return res.body;
 }
 

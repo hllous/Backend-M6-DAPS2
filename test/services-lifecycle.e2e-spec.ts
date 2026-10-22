@@ -138,7 +138,9 @@ describe('Ciclo de vida de un servicio urbano (e2e)', () => {
   });
 
   it('no deja iniciar sin cuadrilla y sí después de asignarla', async () => {
-    await api.post(`/services/${serviceId}/start`).expect(409);
+    // Sin cuadrilla nadie es "de su cuadrilla": 403 antes que cualquier regla de estado (#365).
+    const sinCuadrilla = await api.post(`/services/${serviceId}/start`).expect(403);
+    expect(sinCuadrilla.body.code).toBe('NOT_ASSIGNED');
 
     const cuadrilla = await crearCuadrilla(api);
     const asignado = await api

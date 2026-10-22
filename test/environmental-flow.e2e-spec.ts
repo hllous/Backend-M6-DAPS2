@@ -11,6 +11,7 @@ import {
   hoy,
   truncateAll,
   seedActores,
+  tokenFor,
 } from './helpers';
 
 /**
@@ -68,7 +69,7 @@ describe('Flujo del expediente ambiental (e2e)', () => {
   });
 
   it('programa la inspección y deja el expediente en INSPECTION_SCHEDULED', async () => {
-    // Oficina asigna a un inspector (9007) que no es el que después cierra (9005).
+    // Oficina asigna al inspector 9007; es él quien cierra (la pertenencia, #365, lo exige).
     await grantRoles(prisma, '9007', [M6Role.M6_CAMPO_INSPECTOR]);
     const res = await api
       .post(`/environmental-reports/${reportId}/inspections`, { inspectorId: '9007' })
@@ -123,7 +124,7 @@ describe('Flujo del expediente ambiental (e2e)', () => {
       severity: 'HIGH',
       suggestedAction: 'FINE',
     };
-    const res = await api
+    const res = await new Api(app, tokenFor('ADMINISTRATIVO', '9007'))
       .post(`/environmental-inspections/${inspectionId}/complete`, {
         inspectedAt: new Date().toISOString(),
         outcome: 'VIOLATION_FOUND',
@@ -138,12 +139,12 @@ describe('Flujo del expediente ambiental (e2e)', () => {
 
     expect(res.body.outcome).toBe('VIOLATION_FOUND');
     expect(res.body).toMatchObject(cierre);
-    // Cerró el inspector del token (9005); el asignado (9007) no se pisa.
-    expect(res.body).toMatchObject({ completedByUserId: '9005', inspectorId: '9007' });
+    // completedByUserId sale del token, no del body; el asignado no se pisa.
+    expect(res.body).toMatchObject({ completedByUserId: '9007', inspectorId: '9007' });
     const guardada = await prisma.environmentalInspection.findUniqueOrThrow({
       where: { id: inspectionId },
     });
-    expect(guardada).toMatchObject({ completedByUserId: '9005', inspectorId: '9007' });
+    expect(guardada).toMatchObject({ completedByUserId: '9007', inspectorId: '9007' });
 
     const detalle = await api.get(`/environmental-inspections/${inspectionId}`).expect(200);
     expect(detalle.body).toMatchObject(cierre);

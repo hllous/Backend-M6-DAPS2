@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { M6Role, Prisma } from '@prisma/client';
-import { roleRequiredException } from '../../common/decorators';
+import { notAssignedException, roleRequiredException } from '../../common/decorators';
+import { belongsToCrew, isInspectionAssignee } from '../../common/ownership';
+import { paraLog } from '../../events/log-safe';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { EvidenceResponseDto, QueryEvidenceDto, UploadEvidenceDto } from './dto';
@@ -13,7 +15,7 @@ import { EVIDENCE_STORAGE, EvidenceStorage } from './storage/evidence-storage.in
  * Quién puede subir evidencia de cada tipo de recurso. Lo de la inspección es del
  * inspector; lo del servicio, la zona y el contenedor es de la cuadrilla. Un
  * M6_ADMIN no tiene Campo (ADR-005), así que no sube evidencia.
- * La pertenencia (solo sobre lo suyo) es #365.
+ * La pertenencia (solo sobre lo suyo) va aparte: `assertOwnerAccess`.
  */
 const UPLOAD_ROLES: Record<AttachmentOwnerType, readonly M6Role[]> = {
   [AttachmentOwnerType.INSPECTION]: [M6Role.M6_CAMPO_INSPECTOR],
@@ -36,6 +38,7 @@ export class AttachmentsService {
     file: Express.Multer.File,
     idempotencyKey: string,
     roles: readonly M6Role[],
+    userId: string,
   ): Promise<EvidenceResponseDto> {
     // Primero el rol: un 403 no debe depender de qué tan bien armado venga el resto.
     if (!UPLOAD_ROLES[dto.ownerType].some((r) => roles.includes(r))) {
@@ -71,7 +74,7 @@ export class AttachmentsService {
       );
     }
 
-    await this.assertOwnerExists(dto.ownerType, dto.ownerId);
+    await this.assertOwnerAccess(dto.ownerType, dto.ownerId, userId);
 
     const uniqueKey = {
       ownerType_ownerId_idempotencyKey: {
@@ -141,23 +144,57 @@ export class AttachmentsService {
     return attachments.map((a) => this.toResponseDto(a));
   }
 
-  private async assertOwnerExists(ownerType: AttachmentOwnerType, ownerId: string): Promise<void> {
-    const exists = await this.ownerExists(ownerType, ownerId);
-    if (!exists) {
-      throw new NotFoundException(`${ownerType} con id '${ownerId}' no encontrado`);
-    }
-  }
-
-  private async ownerExists(ownerType: AttachmentOwnerType, ownerId: string): Promise<boolean> {
+  /**
+   * 404 si el dueño no existe; después, la pertenencia (#365): SERVICE y
+   * ZONE_RESULT, solo la cuadrilla del servicio; INSPECTION, el inspector
+   * asignado (o cualquiera si no hay); CONTAINER no tiene dueño de Campo.
+   */
+  private async assertOwnerAccess(
+    ownerType: AttachmentOwnerType,
+    ownerId: string,
+    userId: string,
+  ): Promise<void> {
+    let permitido: boolean | undefined; // undefined = el dueño no existe
     switch (ownerType) {
       case AttachmentOwnerType.CONTAINER:
-        return (await this.prisma.container.count({ where: { id: ownerId } })) > 0;
-      case AttachmentOwnerType.SERVICE:
-        return (await this.prisma.service.count({ where: { id: ownerId } })) > 0;
-      case AttachmentOwnerType.ZONE_RESULT:
-        return (await this.prisma.zoneResult.count({ where: { id: ownerId } })) > 0;
-      case AttachmentOwnerType.INSPECTION:
-        return (await this.prisma.environmentalInspection.count({ where: { id: ownerId } })) > 0;
+        permitido =
+          (await this.prisma.container.count({ where: { id: ownerId } })) > 0 ? true : undefined;
+        break;
+      case AttachmentOwnerType.SERVICE: {
+        const service = await this.prisma.service.findUnique({
+          where: { id: ownerId },
+          select: { crewId: true },
+        });
+        permitido = service ? await belongsToCrew(this.prisma, service.crewId, userId) : undefined;
+        break;
+      }
+      case AttachmentOwnerType.ZONE_RESULT: {
+        const result = await this.prisma.zoneResult.findUnique({
+          where: { id: ownerId },
+          select: { service: { select: { crewId: true } } },
+        });
+        permitido = result
+          ? await belongsToCrew(this.prisma, result.service.crewId, userId)
+          : undefined;
+        break;
+      }
+      case AttachmentOwnerType.INSPECTION: {
+        const inspection = await this.prisma.environmentalInspection.findUnique({
+          where: { id: ownerId },
+          select: { inspectorId: true },
+        });
+        permitido = inspection ? isInspectionAssignee(inspection.inspectorId, userId) : undefined;
+        break;
+      }
+    }
+    if (permitido === undefined) {
+      throw new NotFoundException(`${ownerType} con id '${ownerId}' no encontrado`);
+    }
+    if (!permitido) {
+      this.logger.warn(
+        `Denegado NOT_ASSIGNED: usuario ${paraLog(userId)} sobre ${ownerType}/${paraLog(ownerId)}`,
+      );
+      throw notAssignedException();
     }
   }
 

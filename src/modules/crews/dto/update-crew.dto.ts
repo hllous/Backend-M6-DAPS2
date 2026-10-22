@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsEnum, MaxLength, IsNotEmpty } from 'class-validator';
-import { ToBoolean, Trim, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
+import { IsM1UserId, ToBoolean, Trim, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
 import { Shift } from '@prisma/client';
 
 export class UpdateCrewDto {
@@ -27,12 +27,13 @@ export class UpdateCrewDto {
 
   @ApiPropertyOptional({
     maxLength: MAX_EXTERNAL_ID_LENGTH,
-    description: 'ID del usuario líder de la cuadrilla',
-    example: 'usr-00002',
+    description: 'Id de M1 (numérico, solo dígitos) del líder de la cuadrilla',
+    example: '2',
   })
   @IsOptional()
   @IsString()
   @MaxLength(MAX_EXTERNAL_ID_LENGTH)
+  @IsM1UserId()
   leaderUserId?: string;
 
   @ApiPropertyOptional({

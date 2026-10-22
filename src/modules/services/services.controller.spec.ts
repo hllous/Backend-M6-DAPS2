@@ -23,6 +23,7 @@ describe('ServicesController', () => {
   let controller: ServicesController;
 
   const RESULT = { id: 'svc-1' };
+  const USER_ID = '4242';
   const ID = '11111111-1111-1111-1111-111111111111';
 
   beforeEach(() => {
@@ -131,13 +132,17 @@ describe('ServicesController', () => {
   });
 
   it('suspend delega id y motivo y nota del dto', async () => {
-    await controller.suspend(ID, { reason: 'lluvia', note: 'detalle' } as SuspendServiceDto);
-    expect(service.suspend).toHaveBeenCalledWith(ID, 'lluvia', 'detalle');
+    await controller.suspend(
+      ID,
+      { reason: 'lluvia', note: 'detalle' } as SuspendServiceDto,
+      USER_ID,
+    );
+    expect(service.suspend).toHaveBeenCalledWith(ID, USER_ID, 'lluvia', 'detalle');
   });
 
   it('resume delega el id', async () => {
-    await controller.resume(ID);
-    expect(service.resume).toHaveBeenCalledWith(ID);
+    await controller.resume(ID, USER_ID);
+    expect(service.resume).toHaveBeenCalledWith(ID, USER_ID);
   });
 
   it('complete delega id, dto y userId', async () => {
@@ -164,8 +169,8 @@ describe('ServicesController', () => {
 
   it('addZoneResult delega id y dto', async () => {
     const dto = {} as CreateZoneResultDto;
-    await controller.addZoneResult(ID, dto);
-    expect(service.addZoneResult).toHaveBeenCalledWith(ID, dto);
+    await controller.addZoneResult(ID, dto, USER_ID);
+    expect(service.addZoneResult).toHaveBeenCalledWith(ID, dto, USER_ID);
   });
 
   it('findZoneResults delega el id', async () => {
@@ -175,8 +180,8 @@ describe('ServicesController', () => {
 
   it('addCollectionRecord delega id y dto', async () => {
     const dto = {} as CreateCollectionRecordDto;
-    await controller.addCollectionRecord(ID, dto);
-    expect(service.addCollectionRecord).toHaveBeenCalledWith(ID, dto);
+    await controller.addCollectionRecord(ID, dto, USER_ID);
+    expect(service.addCollectionRecord).toHaveBeenCalledWith(ID, dto, USER_ID);
   });
 
   it('findCollectionRecords delega el id', async () => {

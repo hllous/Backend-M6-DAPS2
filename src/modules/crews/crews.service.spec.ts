@@ -13,7 +13,7 @@ describe('CrewsService', () => {
     name: 'Cuadrilla Centro 1',
     crewType: 'MUNICIPAL',
     defaultShift: 'MORNING',
-    leaderUserId: 'u-1',
+    leaderUserId: '1',
     organizationId: null,
     active: true,
     createdAt: new Date('2026-08-01T10:00:00.000Z'),
@@ -49,6 +49,17 @@ describe('CrewsService', () => {
       });
     });
 
+    it('el líder se guarda como id de M1 normalizado (#365)', async () => {
+      await service.create({
+        name: 'C1',
+        crewType: 'MUNICIPAL',
+        defaultShift: 'MORNING',
+        leaderUserId: '0042',
+      } as any);
+
+      expect(prisma.crew.create.mock.calls[0][0].data.leaderUserId).toBe('42');
+    });
+
     /** Una cuadrilla de cooperativa se identifica por su organización. */
     it('guarda la organización cuando la cuadrilla es de cooperativa', async () => {
       await service.create({
@@ -79,6 +90,12 @@ describe('CrewsService', () => {
       expect(prisma.crew.update.mock.calls[0][0].data).toEqual({ leaderUserId: null });
     });
 
+    it('cambiar el líder también normaliza el id', async () => {
+      await service.update(ID, { leaderUserId: '007' } as any);
+
+      expect(prisma.crew.update.mock.calls[0][0].data).toEqual({ leaderUserId: '7' });
+    });
+
     it('una cuadrilla inexistente da 404', async () => {
       prisma.crew.findUnique.mockResolvedValue(null);
 
@@ -100,12 +117,12 @@ describe('CrewsService', () => {
 
   describe('miembros', () => {
     it('los duplicados se ignoran en silencio', async () => {
-      await service.addMembers(ID, { userIds: ['u-1', 'u-2'] } as any);
+      await service.addMembers(ID, { userIds: ['001', '2'] } as any);
 
       expect(prisma.crewMember.createMany).toHaveBeenCalledWith({
         data: [
-          { crewId: ID, userId: 'u-1' },
-          { crewId: ID, userId: 'u-2' },
+          { crewId: ID, userId: '1' },
+          { crewId: ID, userId: '2' },
         ],
         skipDuplicates: true,
       });
@@ -113,18 +130,18 @@ describe('CrewsService', () => {
 
     it('devuelve la cuadrilla con sus miembros', async () => {
       prisma.crew.findUnique.mockResolvedValue(
-        cuadrilla({ members: [{ userId: 'u-1' }, { userId: 'u-2' }] }),
+        cuadrilla({ members: [{ userId: '1' }, { userId: '2' }] }),
       );
 
-      const dto = await service.addMembers(ID, { userIds: ['u-2'] } as any);
+      const dto = await service.addMembers(ID, { userIds: ['2'] } as any);
 
-      expect(dto.members).toEqual([{ userId: 'u-1' }, { userId: 'u-2' }]);
+      expect(dto.members).toEqual([{ userId: '1' }, { userId: '2' }]);
     });
 
     it('sumar miembros a una cuadrilla inexistente da 404 sin escribir', async () => {
       prisma.crew.findUnique.mockResolvedValue(null);
 
-      await expect(service.addMembers(ID, { userIds: ['u-1'] } as any)).rejects.toBeInstanceOf(
+      await expect(service.addMembers(ID, { userIds: ['1'] } as any)).rejects.toBeInstanceOf(
         NotFoundException,
       );
       expect(prisma.crewMember.createMany).not.toHaveBeenCalled();
@@ -133,11 +150,11 @@ describe('CrewsService', () => {
     it('quitar a alguien que no es miembro da 404', async () => {
       prisma.crewMember.deleteMany.mockResolvedValue({ count: 0 });
 
-      await expect(service.removeMember(ID, 'u-9')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.removeMember(ID, '9')).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('quitar a un miembro no devuelve nada', async () => {
-      await expect(service.removeMember(ID, 'u-1')).resolves.toBeUndefined();
+      await expect(service.removeMember(ID, '1')).resolves.toBeUndefined();
     });
   });
 
@@ -162,9 +179,9 @@ describe('CrewsService', () => {
       const lista = await service.findAll({ page: 1, pageSize: 20 } as any);
       expect(lista.data[0].members).toBeUndefined();
 
-      prisma.crew.findUnique.mockResolvedValue(cuadrilla({ members: [{ userId: 'u-1' }] }));
+      prisma.crew.findUnique.mockResolvedValue(cuadrilla({ members: [{ userId: '1' }] }));
       const detalle = await service.findOne(ID);
-      expect(detalle.members).toEqual([{ userId: 'u-1' }]);
+      expect(detalle.members).toEqual([{ userId: '1' }]);
     });
 
     it('findOne da 404 si no está', async () => {

@@ -52,6 +52,8 @@ import {
   CollectionRecordResponseDto,
 } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
+import { notAssignedException } from '../../common/decorators';
+import { belongsToCrew } from '../../common/ownership';
 
 /**
  * Transiciones válidas. Derivado del diagrama de docs/entidades/service.md,
@@ -531,14 +533,9 @@ export class ServicesService {
    * No se puede iniciar sin cuadrilla, ni sin vehículo si el tipo de servicio
    * lo exige: es el caso que el propio estándar Swagger usa como ejemplo de 409.
    */
-  async start(id: string, actorId = 'sistema'): Promise<ServiceResponseDto> {
-    const current = await this.getService(id);
-
-    if (!current.crewId) {
-      throw new ConflictException(
-        'No se puede iniciar un servicio sin cuadrilla asignada. Usar POST /services/:id/assign-crew',
-      );
-    }
+  async start(id: string, actorId: string): Promise<ServiceResponseDto> {
+    // Un servicio sin cuadrilla también cae acá (403): nadie es "de su cuadrilla".
+    const current = await this.assertCrewMember(await this.getService(id), actorId);
 
     const serviceType = await this.prisma.serviceType.findUnique({
       where: { id: current.serviceTypeId },
@@ -566,8 +563,13 @@ export class ServicesService {
   }
 
   /** IN_PROGRESS → SUSPENDED */
-  async suspend(id: string, reason: string, note?: string): Promise<ServiceResponseDto> {
-    const current = await this.getService(id);
+  async suspend(
+    id: string,
+    userId: string,
+    reason: string,
+    note?: string,
+  ): Promise<ServiceResponseDto> {
+    const current = await this.assertCrewMember(await this.getService(id), userId);
     return this.transition(current, ServiceStatus.SUSPENDED, {
       statusReason: reason,
       statusNote: note?.trim() || null,
@@ -575,8 +577,8 @@ export class ServicesService {
   }
 
   /** SUSPENDED → IN_PROGRESS */
-  async resume(id: string): Promise<ServiceResponseDto> {
-    const current = await this.getService(id);
+  async resume(id: string, userId: string): Promise<ServiceResponseDto> {
+    const current = await this.assertCrewMember(await this.getService(id), userId);
     // IN_PROGRESS también se alcanza desde SCHEDULED, pero eso es `start` (que
     // exige cuadrilla y vehículo): `resume` solo retoma lo que se suspendió.
     if (current.status !== ServiceStatus.SUSPENDED) {
@@ -599,10 +601,10 @@ export class ServicesService {
    */
   async complete(
     id: string,
-    dto: CompleteServiceDto = {},
-    actorId = 'sistema',
+    dto: CompleteServiceDto,
+    actorId: string,
   ): Promise<ServiceResponseDto> {
-    const current = await this.getService(id);
+    const current = await this.assertCrewMember(await this.getService(id), actorId);
 
     const reported = new Set(current.zoneResults.map((r) => r.zoneId));
     const missing = current.zones.filter((z) => !reported.has(z.zoneId));
@@ -837,9 +839,9 @@ export class ServicesService {
   async addDelayNotice(
     serviceId: string,
     dto: CreateDelayNoticeDto,
-    actorId?: string,
+    actorId: string,
   ): Promise<DelayNoticeResponseDto> {
-    const service = await this.getService(serviceId);
+    const service = await this.assertCrewMember(await this.getService(serviceId), actorId);
 
     if (!ADMITEN_DEMORA.includes(service.status)) {
       throw new ConflictException(
@@ -884,7 +886,7 @@ export class ServicesService {
     }
     const eventos =
       service.status === ServiceStatus.IN_PROGRESS && ticketAdmiteProgress
-        ? this.ticketEvents(service, actorId ?? 'sistema', {
+        ? this.ticketEvents(service, actorId, {
             updateType: 'PROGRESS',
             publicMessage: 'El servicio se esta demorando. Estamos trabajando para normalizarlo.',
             internalMessage: dto.reason,
@@ -900,7 +902,7 @@ export class ServicesService {
           reason: dto.reason,
           newEstimatedEnd: dto.newEstimatedEnd ? new Date(dto.newEstimatedEnd) : null,
           serviceStatus: service.status,
-          reportedBy: actorId ?? null,
+          reportedBy: actorId,
           detectedAt,
         },
       });
@@ -937,8 +939,12 @@ export class ServicesService {
 
   // ─── Resultado por zona ───────────────────────────
 
-  async addZoneResult(serviceId: string, dto: CreateZoneResultDto): Promise<ZoneResultResponseDto> {
-    const current = await this.getService(serviceId);
+  async addZoneResult(
+    serviceId: string,
+    dto: CreateZoneResultDto,
+    userId: string,
+  ): Promise<ZoneResultResponseDto> {
+    const current = await this.assertCrewMember(await this.getService(serviceId), userId);
 
     if (current.status !== ServiceStatus.IN_PROGRESS) {
       throw new ConflictException(
@@ -988,8 +994,9 @@ export class ServicesService {
   async addCollectionRecord(
     serviceId: string,
     dto: CreateCollectionRecordDto,
+    userId: string,
   ): Promise<CollectionRecordResponseDto> {
-    const current = await this.getService(serviceId);
+    const current = await this.assertCrewMember(await this.getService(serviceId), userId);
 
     const closed: ServiceStatus[] = [
       ServiceStatus.IN_PROGRESS,
@@ -1303,6 +1310,26 @@ export class ServicesService {
         `Un servicio en '${service.status}' ya no se puede editar. Estados editables: [${EDITABLE_STATUSES.join(', ')}]`,
       );
     }
+  }
+
+  /**
+   * Pertenencia (#365): quien ejecuta tiene que ser integrante o líder de la
+   * cuadrilla del servicio. Va después del 404 y antes de cualquier regla de
+   * estado, así un ajeno no aprende en qué estado está el servicio. Devuelve el
+   * mismo servicio para encadenarlo.
+   */
+  private async assertCrewMember<T extends { id: string; crewId: string | null }>(
+    service: T,
+    userId: string,
+  ): Promise<T> {
+    const pertenece = await belongsToCrew(this.prisma, service.crewId, userId);
+    if (!pertenece) {
+      this.logger.warn(
+        `Denegado NOT_ASSIGNED: usuario ${paraLog(userId)} sobre el servicio ${service.id}`,
+      );
+      throw notAssignedException();
+    }
+    return service;
   }
 
   private async getService(id: string): Promise<ServiceWithRelations> {
