@@ -20,11 +20,23 @@ interface CoreSimulado {
 
 /** Un Core simulado con estado: lo que se hace POST aparece en el siguiente GET. */
 function coreSimulado(
-  inicial: { subs?: string[]; pubs?: string[] } = {},
+  inicial: {
+    subs?: string[];
+    pubs?: string[];
+    /** Entradas tal cual las devuelve el Core (con `moduleName`, `active`...). */
+    rawSubs?: Record<string, unknown>[];
+    rawPubs?: Record<string, unknown>[];
+  } = {},
   falla?: (path: string, method: string) => boolean,
 ): CoreSimulado {
-  const subs = (inicial.subs ?? []).map((eventType) => ({ eventType, maxAttempts: 4 }));
-  const pubs = (inicial.pubs ?? []).map((eventType) => ({ eventType }));
+  const subs: Record<string, unknown>[] = [
+    ...(inicial.subs ?? []).map((eventType) => ({ eventType, maxAttempts: 4 })),
+    ...(inicial.rawSubs ?? []),
+  ];
+  const pubs: Record<string, unknown>[] = [
+    ...(inicial.pubs ?? []).map((eventType) => ({ eventType })),
+    ...(inicial.rawPubs ?? []),
+  ];
   const posts: CoreSimulado['posts'] = [];
   const request = jest.fn((path: string, init: RequestInit = {}) => {
     const method = init.method ?? 'GET';
@@ -61,6 +73,44 @@ describe('CoreRegistryService', () => {
     const subs = posts.filter((p) => p.path === '/api/v1/subscriptions');
     expect(subs.every((p) => p.body.maxAttempts === 4)).toBe(true);
     expect(posts.map((p) => p.body.eventType)).not.toContain('weatherAlertIssued');
+  });
+
+  it('una publicación de OTRO módulo no cuenta como declarada por M6', async () => {
+    const { core, posts } = coreSimulado({
+      rawPubs: [
+        { eventType: 'updateTicketStatus', moduleName: 'obras', active: true },
+        { eventType: 'containerDamaged', moduleName: 'ambiente', active: true },
+      ],
+    });
+    const res = await servicio(core).sync();
+
+    expect(res.publicacionesCreadas).toContain('updateTicketStatus');
+    expect(res.publicacionesCreadas).not.toContain('containerDamaged');
+    expect(
+      posts.filter((p) => p.path.endsWith('publications')).map((p) => p.body.eventType),
+    ).toContain('updateTicketStatus');
+  });
+
+  it('lo registrado a nombre de M6 pero inactivo cuenta como faltante: el POST lo reactiva', async () => {
+    const { core } = coreSimulado({
+      rawSubs: [
+        { eventType: 'ticketUpdated', moduleName: 'ambiente', active: false, maxAttempts: 4 },
+      ],
+      rawPubs: [{ eventType: 'containerDamaged', moduleName: 'ambiente', active: false }],
+    });
+    const res = await servicio(core).sync();
+
+    expect(res.suscripcionesCreadas).toContain('ticketUpdated');
+    expect(res.publicacionesCreadas).toContain('containerDamaged');
+  });
+
+  it('una entrada de otro módulo no se loguea como sobrante de M6', async () => {
+    const { core } = coreSimulado({
+      rawPubs: [{ eventType: 'ticketCreated', moduleName: 'atencion-ciudadana', active: true }],
+    });
+    const res = await servicio(core).sync();
+
+    expect(res.sobrantes.join(' ')).not.toContain('ticketCreated');
   });
 
   it('maxAttempts es configurable', async () => {
