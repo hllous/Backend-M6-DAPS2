@@ -31,7 +31,7 @@ evidence[], suggestedAction
 
 Enums: `severity` es `Severity`, `violationType` es `ViolationType`, `suggestedAction` es `SuggestedAction` — ver [enumeraciones.md](../../enumeraciones.md).
 
-✅ **`suggestedAction` conserva `FORMAL_NOTICE`**, que el acuerdo publicado no incluía ([ADR-003](../../decisiones/adr-003-divergencias-enums.md), divergencia 5). Es el caso más expuesto de los cinco, porque M4 actúa sobre el valor: **pendiente de confirmarles** que toleran un cuarto valor en un campo que por diseño no es vinculante.
+✅ **`suggestedAction` conserva `FORMAL_NOTICE`**, que el acuerdo publicado no incluía ([ADR-003](../../decisiones/adr-003-divergencias-enums.md), divergencia 5). Es el caso más expuesto de los cinco, porque M4 actúa sobre el valor: **M4 confirmó el 21/10** que lo agrega a su enum.
 
 ## Qué le pedimos al consumidor
 

@@ -427,7 +427,7 @@ Leemos `sourceRequestId` (obligatorio, UUID). `outcome` y `attachments[]` no se 
 }
 ```
 
-Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta). Registra la resolución y cierra el expediente como `SANCTIONED`. ⚠️ Falta que M4 confirme que nos rutean este evento, y si `actId` y `externalRef` son el mismo dato.
+Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta). Registra la resolución y cierra el expediente como `SANCTIONED`. M4 confirmó el 21 de octubre que nos rutean este evento (además de Rentas, cuando la multa nace de una infracción ambiental) y que `actId` —el identificador interno del acta de M4 que fundamenta la sanción— y `externalRef` —la referencia administrativa visible de la multa— son datos distintos; de la multa guardamos `externalRef`.
 
 ## 3.5 `closureUpdate` ← M4
 

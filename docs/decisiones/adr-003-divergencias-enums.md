@@ -83,3 +83,7 @@ Detalle por divergencia:
 - [`bloqueantes.md`](../bloqueantes.md) — fila "Interno" del tablero, abierta desde el 18/08
 - Schemas afectados: `urbanServiceScheduled` (hoy en [descartados](../eventos/publicados/descartados.md)), [`treeRiskDetected`](../eventos/publicados/treeRiskDetected.schema.json), [`environmentalViolationDetected`](../eventos/publicados/environmentalViolationDetected.schema.json)
 - [ADR-001](adr-001-stack-tecnologico.md) — Prisma como ORM, que es lo que hace que el catálogo esté materializado en la base
+
+## Nota de corrección — 2026-10-21
+
+Divergencia 5 (`SuggestedAction`): M4 respondió que agrega `FORMAL_NOTICE` a su enum ([#372](https://github.com/hllous/Backend-M6-DAPS2/issues/372); [`m4.md`](../integracion/m4.md#acordado-el-2110)). El riesgo señalado en «Negativas» queda resuelto: M4 reconoce los cuatro valores. La decisión no cambia.
