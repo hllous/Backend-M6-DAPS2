@@ -1,6 +1,6 @@
 # Ejemplos de sobres — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 21 de octubre de 2026**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión 2.1 · 22 de octubre de 2026**
 
 Anexo del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md). El Acuerdo dice **qué** campos tiene cada evento; este documento muestra **el mensaje completo**, tal como sale de M6 o tal como lo esperamos recibir, para que puedan copiarlo en sus pruebas.
 

@@ -1,6 +1,6 @@
 # Acuerdo de Eventos — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 21 de octubre de 2026**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión 2.1 · 22 de octubre de 2026**
 
 Este documento sirve para cerrar el contrato de eventos antes de empezar a programar. Tiene tres partes y les pedimos tres cosas distintas:
 
@@ -498,3 +498,16 @@ Un huérfano es un evento que alguien espera y nadie publica. Esta lista se achi
 ## 3.3 Un riesgo en el bloque común
 
 ✅ **Resuelto el 20/10.** Habíamos advertido que `eventProcessingFailed` podía generar una tormenta de eventos técnicos. M9 confirmó que `eventProcessingFailed` y `eventRejected` son del propio Core, que nunca circuló ninguno y que los da de baja del catálogo: la DLQ (`GET /api/v1/dlq`), su auditoría (`/dlq/{id}/audit`) y el estado de cada evento (`/events/{eventId}`) ya cubren ese papel. M6 no los publica ni los consume; si alguien los tenía declarados, que los saque.
+
+
+---
+
+## Historial de versiones
+
+El número de versión es del **documento** (no confundir con la `eventVersion` de los mensajes ni con las versiones del contrato de M2, como la v1.78). El Acuerdo y los Sobres comparten número porque viajan juntos. **Mayor** cuando cambia el contrato y los demás módulos tienen que hacer algo; **menor** para aclaraciones o confirmaciones. La numeración se puso el 22 de octubre de 2026: las ediciones anteriores se numeraron después, a partir del historial.
+
+| Versión | Fecha | Qué cambió |
+|---|---|---|
+| **2.1** | 22 de octubre de 2026 | Confirmaciones de M2 (el pedido de información que vence cancela el ticket; `STARTED` solo desde `ROUTED`), de M4 (nos rutean `commercialFineGenerated`; `actId` y `externalRef` son distintos) y de M9 (el catálogo de barrios es del Core y ya está publicado). Sin cambios de contrato |
+| **2.0** | 21 de octubre de 2026 | Publicamos **seis** eventos: `urbanServiceScheduled` y `treePruningScheduled` dejan de emitirse (M7 solo consume `streetClosureRequested`). Emitimos `INFORMATION_REQUIRED`. Baja de los eventos técnicos. Cadena de reintentos de la guía común del Core |
+| **1.0** | 13 de octubre de 2026 | Primera edición con el sobre del Core y el anexo de Sobres (M2 v1.75) |
