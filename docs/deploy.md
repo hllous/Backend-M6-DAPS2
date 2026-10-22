@@ -118,7 +118,7 @@ No hay que hacer nada manual en el día a día.
 > - **A mano:** `npm run core:register` (lee `.env`; imprime lo creado y lo sobrante).
 > - **`maxAttempts` solo rige al crear:** cambiar `CORE_SUBSCRIPTION_MAX_ATTEMPTS` después no actualiza las suscripciones ya registradas.
 > - **Varias réplicas:** cada una sincroniza al arrancar y pueden pisarse; conviene `CORE_REGISTER_ON_BOOT=false` y correr `npm run core:register` como paso del deploy.
-> - **Suposiciones a confirmar con M9:** la forma del `GET` (array, o `{data}`/`{items}` con `eventType`), si pagina (con `meta.total` mayor a lo recibido el servicio no crea nada y falla) y si devuelve solo lo del módulo del token.
+> - **Formato de los `GET` (confirmado por M9 el 22/10):** array JSON sin paginar. `/subscriptions` trae las suscripciones del módulo; `/publications` trae las de **todos** los módulos, así que se filtra por `moduleName` y `active`. Ya corregido en el código ([#381](https://github.com/hllous/Backend-M6-DAPS2/issues/381)).
 > - **Desactivar:** `CORE_REGISTER_ON_BOOT=false` apaga solo el registro; sin `CORE_API_URL` no se le pide nada al Core.
 
 > **Core de M9 (ambiente real, guía común del 20/10).** El Core está desplegado en AWS: ambiente **único y compartido**, sin testing separado (un evento de prueba puede llegar a otros módulos; coordinar antes de publicar, ver [m9.md](integracion/m9.md#guía-común-de-integración-del-core-2010)). Valores **no secretos** a cargar en el panel de Render cuando M9 entregue la ficha:
