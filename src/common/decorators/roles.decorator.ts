@@ -36,9 +36,9 @@ export const notAssignedException = () =>
  * Swagger guarda una respuesta por status y gana el último decorador aplicado
  * (el de más arriba), así que este pisa al de @Roles con un texto que cubre los dos códigos.
  */
-export const ApiNotAssigned = (quien: string) =>
+export const ApiNotAssigned = (who: string) =>
   ApiForbiddenResponse({
-    description: `403 con code ${ROLE_REQUIRED_CODE} si falta el rol de Campo, o con code ${NOT_ASSIGNED_CODE} si el usuario no es ${quien} (no se revela de quién es)`,
+    description: `403 con code ${ROLE_REQUIRED_CODE} si falta el rol de Campo, o con code ${NOT_ASSIGNED_CODE} si el usuario no es ${who} (no se revela de quién es)`,
     type: ErrorResponseDto,
   });
 

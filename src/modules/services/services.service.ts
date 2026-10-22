@@ -1322,8 +1322,8 @@ export class ServicesService {
     service: T,
     userId: string,
   ): Promise<T> {
-    const pertenece = await belongsToCrew(this.prisma, service.crewId, userId);
-    if (!pertenece) {
+    const belongs = await belongsToCrew(this.prisma, service.crewId, userId);
+    if (!belongs) {
       this.logger.warn(
         `Denegado NOT_ASSIGNED: usuario ${paraLog(userId)} sobre el servicio ${service.id}`,
       );

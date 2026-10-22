@@ -154,10 +154,10 @@ export class AttachmentsService {
     ownerId: string,
     userId: string,
   ): Promise<void> {
-    let permitido: boolean | undefined; // undefined = el dueño no existe
+    let allowed: boolean | undefined; // undefined = el dueño no existe
     switch (ownerType) {
       case AttachmentOwnerType.CONTAINER:
-        permitido =
+        allowed =
           (await this.prisma.container.count({ where: { id: ownerId } })) > 0 ? true : undefined;
         break;
       case AttachmentOwnerType.SERVICE: {
@@ -165,7 +165,7 @@ export class AttachmentsService {
           where: { id: ownerId },
           select: { crewId: true },
         });
-        permitido = service ? await belongsToCrew(this.prisma, service.crewId, userId) : undefined;
+        allowed = service ? await belongsToCrew(this.prisma, service.crewId, userId) : undefined;
         break;
       }
       case AttachmentOwnerType.ZONE_RESULT: {
@@ -173,7 +173,7 @@ export class AttachmentsService {
           where: { id: ownerId },
           select: { service: { select: { crewId: true } } },
         });
-        permitido = result
+        allowed = result
           ? await belongsToCrew(this.prisma, result.service.crewId, userId)
           : undefined;
         break;
@@ -183,14 +183,14 @@ export class AttachmentsService {
           where: { id: ownerId },
           select: { inspectorId: true },
         });
-        permitido = inspection ? isInspectionAssignee(inspection.inspectorId, userId) : undefined;
+        allowed = inspection ? isInspectionAssignee(inspection.inspectorId, userId) : undefined;
         break;
       }
     }
-    if (permitido === undefined) {
+    if (allowed === undefined) {
       throw new NotFoundException(`${ownerType} con id '${ownerId}' no encontrado`);
     }
-    if (!permitido) {
+    if (!allowed) {
       this.logger.warn(
         `Denegado NOT_ASSIGNED: usuario ${paraLog(userId)} sobre ${ownerType}/${paraLog(ownerId)}`,
       );

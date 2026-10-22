@@ -9,7 +9,7 @@ Dos suites separadas, con propósitos distintos:
 | **Unitaria** | `npm test` / `npm run test:cov` | Reglas de negocio de cada service, con Prisma mockeado. Es la que mide el 85% del DoD | No usa |
 | **End to end** | `npm run test:e2e` | La app completa —auth, `ValidationPipe`, cabeceras de seguridad, máquinas de estado, outbox e inbox— contra Postgres | Sí, y **la trunca** |
 
-Los unitarios viven al lado del código (`src/**/*.spec.ts`); los e2e, en `test/*.e2e-spec.ts`.
+Los unitarios viven al lado del código (`src/**/*.spec.ts`; también `scripts/migrate-crew-user-ids.spec.ts`, vía `roots` de jest); los e2e, en `test/*.e2e-spec.ts`.
 
 ## Correr los e2e en local
 
@@ -49,7 +49,7 @@ npm run test:e2e -- services-lifecycle
 | `global-setup.ts` | Aplica `prisma migrate deploy` con la URL ya validada |
 | `helpers.ts` | Levanta la app con `configureApp()` —la misma configuración que `main.ts`—, firma tokens, trunca la base y arma los datos mínimos de cada caso |
 | `services-lifecycle.e2e-spec.ts` | Programar → asignar cuadrilla → iniciar → resultado por zona → cerrar, con el 409 de transición inválida y las filas del outbox. También el 401 sin token, el 400 del `ValidationPipe` ante una propiedad no declarada, `X-Content-Type-Options: nosniff` y la ausencia de `X-Powered-By` |
-| `crew-ownership.e2e-spec.ts` | Pertenencia de Campo (#365): matriz propio / ajeno / sin cuadrilla (o sin inspector) por cada acción de Campo —servicio, resultados, recolección, demoras, inspección y evidencia—, con `403 NOT_ASSIGNED` y Oficina con acceso total |
+| `crew-ownership.e2e-spec.ts` | Pertenencia de Campo (#365): matriz propio / ajeno / sin cuadrilla (o sin inspector) por cada acción de Campo —servicio, resultados, recolección, demoras, inspección y evidencia—, con `403 NOT_ASSIGNED` y Oficina con acceso total. La evidencia corre con un storage en memoria (`EVIDENCE_STORAGE` pisado vía `createTestApp(customize)`), así que la subida del dueño es un 201 exacto |
 | `crew-user-id-migration.e2e-spec.ts` | `npm run crews:migrate-user-ids` (#394): simulacro de solo lectura, mapeo aplicado con normalización, choque de PK por fusión, filas sin mapeo que no se borran e idempotencia |
 | `inbox.e2e-spec.ts` | Idempotencia por `eventId` (el duplicado no reprograma un servicio creado después del primer envío), el sobre del Core (con `causationId` nulo) y el de M2 con `producer` objeto, el reintento de un handler fallido (vuelve a correr y queda procesado; otro `eventType` sale `duplicate`), el 400 que no deja fila y el evento sin handler. Trazabilidad (#267): lo que publica un handler hereda el `correlationId` del consumido y lleva su `eventId` como `causationId` (el contexto de `ingest()` pisa al del request), el inbox guarda `correlationId` y `sourceModule`, y lo que publica un endpoint abre un hilo sin causa |
 | `environmental-flow.e2e-spec.ts` | Expediente → inspección → acta, con la derivación a M4 en el outbox (el acta hacia M4 y el `updateTicketStatus` hacia M2 comparten `correlationId`: un hilo por request, #267), y la vuelta de M4 por el inbox (`commercialFineGenerated` cierra el expediente; sin `sourceViolationId` válido da 400 y no deja fila). No prueba rollback |

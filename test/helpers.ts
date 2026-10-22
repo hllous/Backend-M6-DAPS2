@@ -9,7 +9,7 @@
  */
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { M6Role, OutboxEventStatus } from '@prisma/client';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
@@ -66,11 +66,15 @@ const outboxDispatcherStub: Pick<OutboxDispatcher, 'dispatchPending' | 'dispatch
 };
 
 /** La app completa, con la misma configuración que `main.ts`. Cerrarla con `app.close()`. */
-export async function createTestApp(): Promise<NestExpressApplication> {
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(OutboxDispatcher)
-    .useValue(outboxDispatcherStub)
-    .compile();
+export async function createTestApp(
+  /** Para pisar providers puntuales (p. ej. el storage de evidencia) sin tocar el resto. */
+  customize: (builder: TestingModuleBuilder) => TestingModuleBuilder = (b) => b,
+): Promise<NestExpressApplication> {
+  const moduleRef = await customize(
+    Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(OutboxDispatcher)
+      .useValue(outboxDispatcherStub),
+  ).compile();
 
   const app = configureApp(moduleRef.createNestApplication<NestExpressApplication>());
   await app.init();

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { M6Role } from '@prisma/client';
 import * as request from 'supertest';
+import { EVIDENCE_STORAGE } from '../src/modules/attachments/storage/evidence-storage.interface';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
   Api,
@@ -38,6 +39,7 @@ describe('Pertenencia de Campo (e2e)', () => {
   let cuadrillaB: string;
   let zoneId: string;
   let serviceTypeId: string;
+  let disposalSiteId: string;
 
   const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xda, 0x00, 0x08, 1, 2, 3, 4, 5, 6, 0xff, 0xd9]);
 
@@ -70,7 +72,13 @@ describe('Pertenencia de Campo (e2e)', () => {
   };
 
   beforeAll(async () => {
-    app = await createTestApp();
+    // Storage en memoria: así una subida del dueño es un 201 exacto, sin bucket real.
+    app = await createTestApp((b) =>
+      b.overrideProvider(EVIDENCE_STORAGE).useValue({
+        upload: async ({ key }: { key: string }) => ({ url: `https://storage.test/${key}` }),
+        remove: async () => undefined,
+      }),
+    );
     prisma = app.get(PrismaService);
     await truncateAll(prisma);
     await seedActores(prisma);
@@ -81,6 +89,11 @@ describe('Pertenencia de Campo (e2e)', () => {
     oficina = Api.porRol(app);
     zoneId = (await crearZona(oficina)).id;
     serviceTypeId = (await crearTipoServicio(oficina, { mode: 'POINT' })).id;
+    disposalSiteId = (
+      await prisma.disposalSite.create({
+        data: { code: 'SITIO-OWN', name: 'Sitio e2e', siteType: 'LANDFILL' },
+      })
+    ).id;
     cuadrillaA = (await crearCuadrilla(oficina, [INTEGRANTE_A])).id;
     cuadrillaB = (await crearCuadrilla(oficina, [INTEGRANTE_B])).id;
     await oficina.patch(`/crews/${cuadrillaA}`, { leaderUserId: LIDER_A }).expect(200);
@@ -141,11 +154,63 @@ describe('Pertenencia de Campo (e2e)', () => {
       expect(await prisma.zoneResult.count({ where: { serviceId: id } })).toBe(0);
     });
 
-    it('un servicio sin cuadrilla da 403 a todo Campo', async () => {
+    it('un servicio sin cuadrilla da 403 a todo Campo, en cada acción', async () => {
       const id = await servicioDe(null);
 
-      prohibido(await campo(INTEGRANTE_A).post(`/services/${id}/start`));
-      prohibido(await campo(LIDER_A).post(`/services/${id}/start`));
+      for (const quien of [INTEGRANTE_A, LIDER_A]) {
+        const c = campo(quien);
+        prohibido(await c.post(`/services/${id}/start`));
+        prohibido(await c.post(`/services/${id}/suspend`, { reason: 'x' }));
+        prohibido(await c.post(`/services/${id}/resume`));
+        prohibido(await c.post(`/services/${id}/complete`));
+        prohibido(await c.post(`/services/${id}/zone-results`, { zoneId, status: 'SERVICED' }));
+        prohibido(
+          await c.post(`/services/${id}/collection-records`, {
+            wasteType: 'HOUSEHOLD',
+            disposalSiteId,
+            weightKg: 100,
+          }),
+        );
+        prohibido(
+          await c.post(`/services/${id}/delay-notices`, {
+            delayType: 'START',
+            delayMinutes: 30,
+            reason: 'Camión averiado',
+          }),
+        );
+      }
+    });
+
+    it('registrar residuos: el integrante y el líder de la cuadrilla pasan', async () => {
+      const id = await servicioDe(cuadrillaA);
+
+      for (const quien of [INTEGRANTE_A, LIDER_A]) {
+        const res = await campo(quien)
+          .post(`/services/${id}/collection-records`, {
+            wasteType: 'HOUSEHOLD',
+            disposalSiteId,
+            weightKg: 100,
+          })
+          .expect(201);
+        expect(res.body).toMatchObject({ disposalSiteId, wasteType: 'HOUSEHOLD' });
+      }
+      expect(await prisma.collectionRecord.count({ where: { serviceId: id } })).toBe(2);
+    });
+
+    it('avisar demora: el integrante y el líder de la cuadrilla pasan', async () => {
+      const id = await servicioDe(cuadrillaA);
+
+      for (const quien of [INTEGRANTE_A, LIDER_A]) {
+        const res = await campo(quien)
+          .post(`/services/${id}/delay-notices`, {
+            delayType: 'DURATION',
+            delayMinutes: 30,
+            reason: 'Camión averiado',
+          })
+          .expect(201);
+        expect(res.body).toMatchObject({ serviceId: id, delayType: 'DURATION' });
+      }
+      expect(await prisma.serviceDelayNotice.count({ where: { serviceId: id } })).toBe(2);
     });
 
     it('un servicio inexistente sigue siendo 404 (no se confunde con 403)', async () => {
@@ -226,13 +291,19 @@ describe('Pertenencia de Campo (e2e)', () => {
         .field('ownerId', ownerId)
         .attach('file', JPEG, { filename: 'foto.jpg', contentType: 'image/jpeg' });
 
-    it('SERVICE: el ajeno recibe 403 NOT_ASSIGNED; el de la cuadrilla pasa el control de pertenencia', async () => {
+    it('SERVICE: el ajeno recibe 403 NOT_ASSIGNED; el integrante y el líder suben (201)', async () => {
       const id = await servicioDe(cuadrillaA);
 
       prohibido(await subir(INTEGRANTE_B, 'SERVICE', id));
-      // En el e2e no hay bucket (503) o sube (201): lo que importa es que no es 403.
-      expect((await subir(INTEGRANTE_A, 'SERVICE', id)).status).not.toBe(403);
-      expect((await subir(LIDER_A, 'SERVICE', id)).status).not.toBe(403);
+      expect((await subir(INTEGRANTE_A, 'SERVICE', id)).status).toBe(201);
+      expect((await subir(LIDER_A, 'SERVICE', id)).status).toBe(201);
+    });
+
+    it('SERVICE sin cuadrilla: 403 NOT_ASSIGNED para todo Campo', async () => {
+      const id = await servicioDe(null);
+
+      prohibido(await subir(INTEGRANTE_A, 'SERVICE', id));
+      prohibido(await subir(LIDER_A, 'SERVICE', id));
     });
 
     it('ZONE_RESULT: sigue a la cuadrilla del servicio dueño', async () => {
@@ -242,7 +313,7 @@ describe('Pertenencia de Campo (e2e)', () => {
         .expect(201);
 
       prohibido(await subir(INTEGRANTE_B, 'ZONE_RESULT', zr.body.id));
-      expect((await subir(INTEGRANTE_A, 'ZONE_RESULT', zr.body.id)).status).not.toBe(403);
+      expect((await subir(INTEGRANTE_A, 'ZONE_RESULT', zr.body.id)).status).toBe(201);
     });
 
     it('INSPECTION: el asignado o cualquiera si no hay; otro inspector, 403', async () => {
@@ -255,7 +326,7 @@ describe('Pertenencia de Campo (e2e)', () => {
       ).body.id;
 
       prohibido(await subir('9005', 'INSPECTION', asignada));
-      expect((await subir('9007', 'INSPECTION', asignada)).status).not.toBe(403);
+      expect((await subir('9007', 'INSPECTION', asignada)).status).toBe(201);
 
       const exp2 = await oficina
         .post('/environmental-reports', { reportType: 'NOISE' })
@@ -264,7 +335,7 @@ describe('Pertenencia de Campo (e2e)', () => {
       const libre = (
         await oficina.post(`/environmental-reports/${exp2.body.id}/inspections`, {}).expect(201)
       ).body.id;
-      expect((await subir('9005', 'INSPECTION', libre)).status).not.toBe(403);
+      expect((await subir('9005', 'INSPECTION', libre)).status).toBe(201);
     });
 
     it('un dueño inexistente es 404, no 403', async () => {
