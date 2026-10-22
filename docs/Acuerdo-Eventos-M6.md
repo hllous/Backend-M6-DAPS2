@@ -55,11 +55,11 @@ Nuestros:     serviceId, inspectionId, reportId, violationId, requestId,
               interventionId, containerId, treeId, zoneId, crewId, vehicleId
 De M2:        ticketId
 De M4:        establishmentId
-A confirmar:  neighborhoodId (catálogo de barrios sin publicar)
+A confirmar:  neighborhoodId (catálogo de barrios de M9 ya publicado; falta que cargue los barrios reales y que M6 lo adopte)
 De M1:        citizenId, organizationId
 ```
 
-`neighborhoodId` es **opcional** y hoy viaja ausente: sale del catálogo de barrios, que todavía no se publicó. Hay una discrepancia abierta sobre quién lo publica: M9 dice que no es del Core y el enunciado del TPO (§9) se lo asigna.
+`neighborhoodId` es **opcional** y hoy viaja ausente: es el `id` (UUID) del catálogo de barrios de M9 (`GET /api/v1/catalogos/barrios`), que M9 ya expone con datos de arranque ficticios. M6 lo va a adoptar cuando M9 cargue los barrios reales. El Core reconoció el 22 de octubre que el catálogo es suyo.
 
 Los campos que terminan en `At` son **fecha y hora**. El formato es el del sobre del Core: `occurredAt` en ISO 8601 con offset (ver Sobres, Parte 1).
 
@@ -446,7 +446,7 @@ streetClosureEnded
 
 M9 respondió el 20/10 que `notificationSent` **no existe en su catálogo**: ningún módulo lo declara ni lo escucha. El enunciado del TPO (§9 y §6) pone las notificaciones en el Core y lista `NotificacionEnviada` entre los eventos que consumimos, así que **no lo sacamos todavía**: pedimos que lo publiquen o que se retire de todos los módulos.
 
-**Lo que les pedimos por REST:** catálogo de barrios con `neighborhoodId` estable, y validación del JWT. M9 dice que el catálogo de barrios no es del Core y supone que es de Ciudadanos; el TPO (§9) se lo asigna al Core. Está abierto.
+**Lo que consultamos por REST:** el catálogo de barrios (`GET /api/v1/catalogos/barrios`; M9 reconoció el 22 de octubre que es suyo, con datos ficticios hasta que carguen los barrios reales). Está en adopción.
 
 ---
 

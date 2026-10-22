@@ -6,6 +6,7 @@
 
 | Qué | Cómo quedó |
 |---|---|
+| **M9: de quién es el catálogo de barrios y de las zonas** ([#300](https://github.com/hllous/Backend-M6-DAPS2/issues/300), [#377](https://github.com/hllous/Backend-M6-DAPS2/issues/377)) | Resuelto el 22/10: M9 reconoció que barrios, zonas administrativas y catálogos globales son del Core (TPO §9 y §10) y los expone por REST (`/api/v1/catalogos/...`, ver [`m9.md`](m9.md#catálogos-globales-del-core-2010)). Las 5 zonas del Core son administrativas; la zona operativa sigue siendo de M6. Queda abierto en el tablero que carguen los barrios reales y que M6 lo adopte (#376) |
 | **M4: `FORMAL_NOTICE` en `suggestedAction`** | Confirmado el 21/10: M4 lo agrega a su enum. Los cuatro valores (`WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE`) quedan firmes ([ADR-003](../decisiones/adr-003-divergencias-enums.md), divergencia 5) |
 | **M4: ruteo de `commercialFineGenerated`** | Confirmado el 21/10: lo reciben además de Rentas cuando la multa nace de una infracción ambiental, y también `closureUpdate` cuando corresponda. Hay que estar suscripto a ambos en el Core; el registro de #266 ya los incluye entre las 8 suscripciones |
 | **M4: `actId` frente a `externalRef`** | Son distintos (21/10): `actId` es el identificador interno del acta de M4 que fundamenta la sanción; `externalRef`, la referencia administrativa visible de la resolución, disposición o multa. Hoy persistimos solo `externalRef`; el respaldo `externalRef ?? actId` del consumidor queda para el implementador |

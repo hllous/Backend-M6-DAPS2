@@ -22,7 +22,7 @@ detectedAt, ticketId?
 |---|---|
 | `requiresPublicWorks` | Booleano. **En `true` el arreglo le corresponde a M3**: es la señal que hace accionable el evento |
 | `damageType` | Sale de nuestro catálogo y **viaja como texto**: M3 no tiene por qué validar contra un enum nuestro |
-| `location` | Con `neighborhoodId` del catálogo de M9 |
+| `location` | Con `neighborhoodId` (`id` UUID del catálogo de M9); hoy viaja ausente hasta que adoptemos el catálogo ([#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)) |
 | `ticketId?` | Solo si el daño lo reportó un vecino |
 
 Enums: `severity` es `Severity`, `damageType` es `DamageType` — ver [enumeraciones.md](../../enumeraciones.md).
