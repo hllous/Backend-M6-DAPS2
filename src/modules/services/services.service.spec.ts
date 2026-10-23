@@ -1153,7 +1153,7 @@ describe('ServicesService', () => {
       expect(prisma.ticketM2State.findUnique).not.toHaveBeenCalled();
     });
 
-    it.each(['ROUTED', 'IN_REVIEW', null])(
+    it.each(['ROUTED', null])(
       'agendar con el ticket en %s manda STARTED con la programación',
       async (estado) => {
         conTicketEn(estado);
@@ -1179,7 +1179,7 @@ describe('ServicesService', () => {
       expect(hacia()).toEqual([expect.objectContaining({ updateType: 'PROGRESS' })]);
     });
 
-    it.each(['PENDING_INFORMATION', 'RESOLVED', 'CLOSED', 'CANCELLED', 'DUPLICATE'])(
+    it.each(['IN_REVIEW', 'PENDING_INFORMATION', 'RESOLVED', 'CLOSED', 'CANCELLED', 'DUPLICATE'])(
       'agendar con el ticket en %s no publica (M2 lo rechazaría)',
       async (estado) => {
         conTicketEn(estado);
@@ -1322,7 +1322,7 @@ describe('ServicesService', () => {
         ]);
       });
 
-      it.each(['ROUTED', 'IN_REVIEW', null])('con el ticket en %s sigue en STARTED', async (e) => {
+      it.each(['ROUTED', null])('con el ticket en %s manda STARTED', async (e) => {
         prisma.service.findUnique.mockResolvedValue(iniciable());
         conTicketEn(e);
 
@@ -1330,6 +1330,20 @@ describe('ServicesService', () => {
 
         expect(hacia()).toEqual([expect.objectContaining({ updateType: 'STARTED' })]);
       });
+
+      // M2 solo acepta STARTED desde ROUTED (#396): el servicio arranca igual, sin aviso.
+      it.each(['IN_REVIEW', 'PENDING_INFORMATION', 'RESOLVED', 'CANCELLED'])(
+        'con el ticket en %s inicia el servicio y no publica',
+        async (e) => {
+          prisma.service.findUnique.mockResolvedValue(iniciable());
+          conTicketEn(e);
+
+          await service.start(SERVICE_ID, USER_ID);
+
+          expect(prisma.service.update).toHaveBeenCalled();
+          expect(hacia()).toEqual([]);
+        },
+      );
     });
   });
 

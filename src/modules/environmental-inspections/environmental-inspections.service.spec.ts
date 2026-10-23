@@ -273,7 +273,7 @@ describe('EnvironmentalInspectionsService', () => {
         });
       });
 
-      it.each(['ROUTED', 'IN_REVIEW', null])(
+      it.each(['ROUTED', null])(
         'con el ticket en %s informa STARTED con el mismo mensaje',
         async (estado) => {
           await emitir(estado);
@@ -285,7 +285,7 @@ describe('EnvironmentalInspectionsService', () => {
         },
       );
 
-      it.each(['PENDING_INFORMATION', 'RESOLVED', 'CLOSED', 'CANCELLED', 'DUPLICATE'])(
+      it.each(['IN_REVIEW', 'PENDING_INFORMATION', 'RESOLVED', 'CLOSED', 'CANCELLED', 'DUPLICATE'])(
         'con el ticket en %s no publica nada a M2',
         async (estado) => {
           await emitir(estado);

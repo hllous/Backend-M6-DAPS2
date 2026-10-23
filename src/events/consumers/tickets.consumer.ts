@@ -373,19 +373,23 @@ export class TicketsConsumer implements OnModuleInit {
         });
         if (count && existente.ticketId) {
           // Si por algún motivo el ticket ya está IN_PROGRESS, repetir STARTED no
-          // es válido para M2: va como PROGRESS.
+          // es válido para M2: va como PROGRESS. Desde un estado que no admite
+          // STARTED (#396) el expediente se reactiva igual, sin aviso.
           const estado = await leerEstado(tx, existente.ticketId);
-          await this.outbox.enqueue(tx, {
-            eventType: EventType.UPDATE_TICKET_STATUS,
-            aggregateType: AggregateType.ENVIRONMENTAL_REPORT,
-            aggregateId: existente.id,
-            payload: payloads.updateTicketStatus({
-              ticketId: existente.ticketId,
-              updateType: startUpdate(estado),
-              updatedById: 'sistema',
-              publicMessage: 'Su denuncia ambiental está en análisis.',
-            }),
-          });
+          const updateType = startUpdate(estado);
+          if (updateType) {
+            await this.outbox.enqueue(tx, {
+              eventType: EventType.UPDATE_TICKET_STATUS,
+              aggregateType: AggregateType.ENVIRONMENTAL_REPORT,
+              aggregateId: existente.id,
+              payload: payloads.updateTicketStatus({
+                ticketId: existente.ticketId,
+                updateType,
+                updatedById: 'sistema',
+                publicMessage: 'Su denuncia ambiental está en análisis.',
+              }),
+            });
+          }
         }
         return count;
       });

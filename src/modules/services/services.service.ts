@@ -548,17 +548,21 @@ export class ServicesService {
     }
 
     // Si agendar ya arrancó el ticket (#303), repetir STARTED no es válido para
-    // M2: el mismo aviso viaja como PROGRESS.
+    // M2: el mismo aviso viaja como PROGRESS. Desde un estado que no admite
+    // STARTED (#396) el servicio arranca igual, sin aviso.
     const estadoTicket = current.ticketId ? await leerEstado(this.prisma, current.ticketId) : null;
+    const updateType = startUpdate(estadoTicket);
 
     return this.transition(
       current,
       ServiceStatus.IN_PROGRESS,
       {},
-      this.ticketEvents(current, actorId, {
-        updateType: startUpdate(estadoTicket),
-        publicMessage: 'La cuadrilla comenzó a atender su reclamo.',
-      }),
+      updateType
+        ? this.ticketEvents(current, actorId, {
+            updateType,
+            publicMessage: 'La cuadrilla comenzó a atender su reclamo.',
+          })
+        : [],
     );
   }
 

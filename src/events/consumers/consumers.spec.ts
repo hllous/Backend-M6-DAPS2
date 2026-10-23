@@ -836,6 +836,19 @@ describe('consumidores de eventos', () => {
           });
         });
 
+        // M2 solo acepta STARTED desde ROUTED (#396): el expediente se reactiva igual, sin aviso.
+        it.each(['IN_REVIEW', 'PENDING_INFORMATION', 'CLOSED'])(
+          'con el ticket en %s reactiva el expediente y no publica',
+          async (estado) => {
+            prisma.ticketM2State.findUnique.mockResolvedValue({ status: estado });
+
+            await h({ ...rerouted, currentStatus: undefined });
+
+            expect(prisma.environmentalReport.updateMany).toHaveBeenCalled();
+            expect(outbox.enqueue).not.toHaveBeenCalled();
+          },
+        );
+
         it('con el ROUTED recibido (currentStatus) manda STARTED', async () => {
           prisma.ticketM2State.findUnique.mockResolvedValue({ status: 'ROUTED' });
 
