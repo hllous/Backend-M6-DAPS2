@@ -1,6 +1,6 @@
 # Acuerdo de Eventos — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión 2.1 · 22 de octubre de 2026**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión 2.2 · 23 de octubre de 2026**
 
 Este documento sirve para cerrar el contrato de eventos antes de empezar a programar. Tiene tres partes y les pedimos tres cosas distintas:
 
@@ -508,6 +508,7 @@ El número de versión es del **documento** (no confundir con la `eventVersion` 
 
 | Versión | Fecha | Qué cambió |
 |---|---|---|
+| **2.2** | 23 de octubre de 2026 | Ajustes pedidos por M2 al revisar la v2.1: `STARTED` sale solo con el ticket en `ROUTED` o sin estado conocido (con `IN_REVIEW` no mandamos nada, igual que con `PENDING_INFORMATION`); los ejemplos de M4 usan UUID en `establishmentId` y `actId`, que tratamos como string opaco; se corrigió la fila de `INFORMATION_REQUIRED` y se sacó lo de que M9 verifica el `userId` AMQP. Sin cambios de payload |
 | **2.1** | 22 de octubre de 2026 | Confirmaciones de M2 (el pedido de información que vence cancela el ticket; `STARTED` solo desde `ROUTED`), de M4 (nos rutean `commercialFineGenerated`; `actId` y `externalRef` son distintos) y de M9 (el catálogo de barrios es del Core y ya está publicado). Sin cambios de contrato |
 | **2.0** | 21 de octubre de 2026 | Publicamos **seis** eventos: `urbanServiceScheduled` y `treePruningScheduled` dejan de emitirse (M7 solo consume `streetClosureRequested`). Emitimos `INFORMATION_REQUIRED`. Baja de los eventos técnicos. Cadena de reintentos de la guía común del Core |
 | **1.0** | 13 de octubre de 2026 | Primera edición con el sobre del Core y el anexo de Sobres (M2 v1.75) |
