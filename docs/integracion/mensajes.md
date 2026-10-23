@@ -76,7 +76,7 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 > Redactados el 21/10 y enviados ese mismo día por el PO (#345, #347). Cuando respondan, mover la respuesta a la ficha (`m2.md`, `m7.md`, `m9.md`).
 
-**→ M7 (Tránsito)** — respuesta a sus dos mensajes del 20/10 — *enviado el 21 oct 2026, sin respuesta todavía*
+**→ M7 (Tránsito)** — respuesta a sus dos mensajes del 20/10 — *enviado el 21 oct 2026; respondido el 23/10 (UUID o `null`, ver [historial](historial.md))*
 
 > Gracias por las respuestas, nos ordenan mucho. Sí, estamos de acuerdo: a partir de ahora **dejamos de emitir `urbanServiceScheduled` y `treePruningScheduled`**, y `treeRiskDetected` va solo a M3. Lo único que les mandamos es `streetClosureRequested`. Cuando un servicio o una poda necesita cortar la calle, la solicitud la pedimos siempre con ese evento, con `sourceRef` apuntando al servicio o a la poda que origina el corte. No cambia nada de su lado ni del payload que ya tienen.
 >

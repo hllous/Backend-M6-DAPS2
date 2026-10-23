@@ -190,8 +190,8 @@ export class IssueViolationNoticeDto {
 
   @ApiPropertyOptional({
     description:
-      'Establecimiento habilitado de M4. **Sin esto el acta no se deriva** y el expediente cierra de nuestro lado: es lo único sobre lo que M4 puede actuar.',
-    example: 'EST-004512',
+      'Establecimiento habilitado de M4 (UUID; M6 lo trata como string opaco). **Sin esto el acta no se deriva** y el expediente cierra de nuestro lado: es lo único sobre lo que M4 puede actuar.',
+    example: '7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47',
     maxLength: 64,
   })
   @IsOptional()

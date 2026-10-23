@@ -39,7 +39,7 @@ Es el sobre que M9 fijó el 7/10/2026 para toda la cohorte. Reemplaza al de M2 (
 - Solo propagamos lo que tiene la forma 8-4-4-4-12 en hex (lo que generamos sigue siendo v4). Si lo que llega no la tiene, abrimos un hilo propio y el evento se procesa igual.
 - `sourceModule` es `ambiente` en todos, también en `streetClosureRequested`, aunque su `data.sourceModule` valga `"M6"` (lo exige el schema acordado con M7).
 - `sourceModule` es el slug del módulo en el Core (M2 §5.1): `ciudadanos` (M1), `atencion-ciudadana` (M2), `obras` (M3), `habilitaciones` (M4), `rentas` (M5), `ambiente` (M6), `transito` (M7), `desarrollo-social` (M8) y `core` (M9). Dentro de `data` los módulos siguen siendo `M1`…`M9` (`responsibleAreaId`).
-- Se publica a `muni.inbox` con `persistent`, `mandatory` y el `userId` del usuario AMQP (M9 lo va a verificar contra el `sourceModule`). La routing key es el `eventType`, pero con `fanout` no enruta nada.
+- Se publica a `muni.inbox` con `persistent`, `mandatory` y el `userId` del usuario AMQP. La routing key es el `eventType`, pero con `fanout` no enruta nada.
 
 ## Reglas al **recibir** (somos tolerantes)
 
@@ -215,7 +215,7 @@ Solo se publica si el acta tiene `establishmentId`.
     "violationType": "ILLEGAL_DUMPING",
     "severity": "HIGH",
     "location": { "street": "Av. San Martín 3300" },
-    "establishmentId": "EST-004512",
+    "establishmentId": "7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47",
     "priorNoticeCount": 1,
     "evidence": [
       {
@@ -418,8 +418,8 @@ Leemos `sourceRequestId` (obligatorio, UUID). `outcome` y `attachments[]` no se 
   "correlationId": "e9f0a1b2-c3d4-4e5f-8a7b-8293a4b5c6d7",
   "data": {
     "sourceViolationId": "1c2d3e4f-5a6b-4c7d-88e9-a0b1c2d3e4f5",
-    "actId": "ACT-2026-1187",
-    "establishmentId": "EST-004512",
+    "actId": "c4a8e1f2-6b3d-4a95-8e17-9d02f5b6a3c8",
+    "establishmentId": "7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47",
     "decision": "FINE",
     "decidedAt": "2026-10-22T12:55:00.000Z",
     "externalRef": "MULTA-2026-0310"
@@ -427,7 +427,7 @@ Leemos `sourceRequestId` (obligatorio, UUID). `outcome` y `attachments[]` no se 
 }
 ```
 
-Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta). Registra la resolución y cierra el expediente como `SANCTIONED`. M4 confirmó el 21 de octubre que nos rutean este evento (además de Rentas, cuando la multa nace de una infracción ambiental) y que `actId` —el identificador interno del acta de M4 que fundamenta la sanción— y `externalRef` —la referencia administrativa visible de la multa— son datos distintos; de la multa guardamos `externalRef`.
+Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta). Registra la resolución y cierra el expediente como `SANCTIONED`. M4 confirmó el 21 de octubre que nos rutean este evento (además de Rentas, cuando la multa nace de una infracción ambiental) y que `actId` —el identificador interno del acta de M4 que fundamenta la sanción— y `externalRef` —la referencia administrativa visible de la multa— son datos distintos; de la multa guardamos `externalRef`. `actId` y `establishmentId` son UUID de M4 y los tratamos como string opaco: no validamos ningún formato ni patrón (`EST-` y `ACT-` son solo referencias humanas de M4).
 
 ## 3.5 `closureUpdate` ← M4
 
@@ -442,8 +442,8 @@ Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta)
   "data": {
     "status": "ORDERED",
     "sourceViolationId": "1c2d3e4f-5a6b-4c7d-88e9-a0b1c2d3e4f5",
-    "actId": "ACT-2026-1188",
-    "establishmentId": "EST-004512",
+    "actId": "d5b9f203-7c4e-4ba6-9f28-ae13a6c7b4d9",
+    "establishmentId": "7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47",
     "decision": "CLOSURE",
     "decidedAt": "2026-10-22T13:05:00.000Z",
     "externalRef": "CLAUSURA-2026-0072"
@@ -451,7 +451,7 @@ Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta)
 }
 ```
 
-`status` es `ORDERED` o `LIFTED` (obligatorio). Con `ORDERED` registramos la clausura como resolución y cerramos; con `LIFTED`, registramos el levantamiento y cerramos. Leemos además `sourceViolationId` (obligatorio, UUID).
+`status` es `ORDERED` o `LIFTED` (obligatorio). Con `ORDERED` registramos la clausura como resolución y cerramos; con `LIFTED`, registramos el levantamiento y cerramos. Leemos además `sourceViolationId` (obligatorio, UUID). `actId` y `establishmentId` son UUID de M4, tratados como string opaco.
 
 ## 3.6 `streetClosureApproved` ← M7
 

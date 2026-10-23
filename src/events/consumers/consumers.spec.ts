@@ -469,7 +469,10 @@ describe('consumidores de eventos', () => {
     });
 
     it('actId no se usa como externalRef: son datos distintos (M4, 21/10)', async () => {
-      await h('commercialFineGenerated')({ sourceViolationId: ID, actId: 'ACT-INTERNO-7' });
+      await h('commercialFineGenerated')({
+        sourceViolationId: ID,
+        actId: 'c4a8e1f2-6b3d-4a95-8e17-9d02f5b6a3c8',
+      });
 
       expect(prisma.sanctionOutcome.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ externalRef: null }),
