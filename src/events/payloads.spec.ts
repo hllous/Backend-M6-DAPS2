@@ -232,7 +232,7 @@ describe('payloads de los eventos publicados', () => {
       noticeNumber: 'ACTA-2026-000012',
       inspectionId: ID(2),
       issuedAt: new Date('2026-09-10T12:00:00.000Z'),
-      establishmentId: 'EST-004512',
+      establishmentId: '7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47',
       violationType: 'UNTREATED_DISCHARGE',
       severity: 'HIGH',
       suggestedAction: 'FINE',

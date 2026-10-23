@@ -21,7 +21,7 @@ import { CompleteInspectionDto, CreateInspectionDto } from './dto';
 describe('EnvironmentalInspectionsService', () => {
   const INSPECTION_ID = '11111111-1111-1111-1111-111111111111';
   const REPORT_ID = '22222222-2222-2222-2222-222222222222';
-  const ESTABLISHMENT = 'EST-004512';
+  const ESTABLISHMENT = '7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47';
 
   let prisma: any;
   let outbox: any;

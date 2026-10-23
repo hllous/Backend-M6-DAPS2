@@ -171,7 +171,7 @@ describe('Flujo del expediente ambiental (e2e)', () => {
         violationType: 'UNTREATED_DISCHARGE',
         severity: 'HIGH',
         suggestedAction: 'FINE',
-        establishmentId: 'EST-E2E-01',
+        establishmentId: '7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47',
       })
       .expect(201);
 
@@ -189,7 +189,7 @@ describe('Flujo del expediente ambiental (e2e)', () => {
     expect(encolados).toHaveLength(1);
     expect(encolados[0].status).toBe(OutboxEventStatus.PENDING);
     expect((encolados[0].payload as { establishmentId: string }).establishmentId).toBe(
-      'EST-E2E-01',
+      '7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47',
     );
 
     // Un solo hilo para la acción (#267): el acta hacia M4 y la novedad hacia M2
