@@ -102,6 +102,19 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 > Redactado el 21/10 para que el PO lo envíe. **Pendiente de enviar.** Al enviarlos, anotar la fecha acá y mover la respuesta a [`m1.md`](m1.md).
 
+**→ M1 (Ciudadanos)** — usuario empleado y admin de roles — *enviado el 26 oct 2026, sin respuesta todavía* (respondían: «¿Para qué necesitan un usuario admin? Hoy el endpoint de login solo sirve para autenticar ciudadanos, no empleados. Es más, el id es distinto»)
+
+> Necesitamos un admin porque M6 autoriza por rol y, sin al menos un usuario con rol, toda nuestra API responde 403. Les pedimos:
+>
+> 1. Un usuario **empleado** con rol `RESPONSABLE_AREA` (o cómo lo registramos) y su `user_id` numérico, para cargarlo como administrador inicial de roles de M6.
+>
+> Y nos ayudaría que nos aclaren:
+>
+> 2. ¿El login sirve o no para empleados? Su v2.1 dice que `POST /auth/usuario/login` entrega token para `CIUDADANO` y `EMPLEADO`.
+> 3. ¿Qué quiere decir «el id es distinto»? Su doc dice que el `sub` del token es el `user_id` (bigint) del login. Si no coinciden, se nos rompe la pertenencia de Campo.
+> 4. ¿`POST /auth/refresh` y el logout siguen existiendo?
+> 5. ¿Qué significa `auth: false` en el login? ¿Un login fallido responde 401 o 200?
+
 **→ M1 (Ciudadanos)** — seguimiento a su guía v2.1 y a lo que aclaró el PO — *enviado el 21 oct 2026, sin respuesta todavía*
 
 > Gracias por la guía v2.1 y por las aclaraciones: con la lista de roles (`CIUDADANO`, `MESA_ENTRADAS`, `ADMINISTRATIVO`, `RESPONSABLE_AREA`, `AUDITOR`, `SERVICIO`), el `user_id` igual al `citizenId` y el contrato del token (HS256, clave compartida en base64, claims `iss`, `sub`, `rol`, `typ`, 15 minutos, sin `aud`) ya sabemos cómo validar. Nos quedan unos puntos:
