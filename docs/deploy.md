@@ -159,7 +159,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 | Lugar | Variable | Qué va | Por qué | A quién pedirlo | Cuándo | Secreto |
 |---|---|---|---|---|---|---|
 | Render | `JWT_SECRET` | Base64 de 32 bytes o más. Provisorio: `openssl rand -base64 32` | La validación del token de M1 cambió (#354). Con el valor viejo en texto plano **el servicio no arranca** | Al PO de M6: M1 manda el definitivo por el grupo de POs | **Antes del deploy** | Sí |
-| Render | `M6_BOOTSTRAP_ADMIN_USER_IDS` | `user_id` de M1 del primer admin (varios, separados por coma) | Sin él nadie puede asignar roles (#161) | Al PO de M6: el `user_id` del login de M1 de un empleado con rol `RESPONSABLE_AREA` | Con el deploy de la base de roles | No |
+| Render | `M6_BOOTSTRAP_ADMIN_USER_IDS` | `user_id` de M1 del primer admin (varios, separados por coma) | Sin él nadie puede asignar roles (#161) | M1 entregó el `user_id` 1 (26/10); confirmarlo con el `sub` del token de esa cuenta (`RESPONSABLE_AREA`) | Con el deploy de la base de roles | No |
 | Render | `RABBITMQ_URL` | `amqps://module_ambiente:<clave>@core-uade-2026.duckdns.org:5671/core` (clave percent-encoded si lleva `/ ? # @ : %`) | Conecta con el bus del Core. Sin ella la app arranca, pero no publica ni consume | Al PO de M6: ficha privada de M9, usuario `module_ambiente` | Cuando llegue la ficha | **Sí** |
 | Render | `CORE_API_URL` | `https://core-uade-2026.duckdns.org` | API REST del Core (token de módulo y registro de suscripciones) | No hace falta pedirla: es un dato conocido | Con la ficha | No |
 | Render | `CORE_MODULE_SECRET` | El secret de máquina de M9 | Pide el token de módulo al Core; obligatoria si hay `CORE_API_URL` | Al PO de M6: ficha privada de M9 | Cuando llegue la ficha | **Sí** |
