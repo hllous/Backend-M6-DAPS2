@@ -28,7 +28,7 @@ import {
   ViolationNoticeResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { CurrentUser, Roles } from '../../common/decorators';
+import { ApiNotAssigned, CurrentUser, Roles } from '../../common/decorators';
 import { ROLES_ACTA_LECTURA, ROLES_AMBIENTAL, ROLES_INSPECTOR } from '../../auth/role-groups';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
@@ -110,12 +110,13 @@ export class EnvironmentalInspectionsController {
   }
 
   @Post('environmental-inspections/:id/complete')
+  @ApiNotAssigned('el inspector asignado')
   @Roles(...ROLES_INSPECTOR)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cerrar la inspección con su resultado',
     description:
-      'Lleva el expediente a INSPECTED y de ahí, en la misma operación, a NO_VIOLATION o VIOLATION_FOUND según el outcome. Un INCONCLUSIVE lo deja en INSPECTED, a la espera de otra inspección. El checklist y los hallazgos son internos.',
+      'Si la inspección tiene inspector asignado, solo él puede cerrarla (403 NOT_ASSIGNED para otro inspector); sin asignado, cualquier inspector, y queda registrado el del token como `completedByUserId`. Lleva el expediente a INSPECTED y de ahí, en la misma operación, a NO_VIOLATION o VIOLATION_FOUND según el outcome. Un INCONCLUSIVE lo deja en INSPECTED, a la espera de otra inspección. El checklist y los hallazgos son internos.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la inspección', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Inspección cerrada', type: InspectionResponseDto })

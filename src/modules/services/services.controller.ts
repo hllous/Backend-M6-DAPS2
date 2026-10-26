@@ -32,7 +32,7 @@ import {
   ZoneResultResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import { ApiNotAssigned, ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
@@ -222,6 +222,7 @@ export class ServicesController {
   // ─── Aviso de demora ──────────────────────────────
 
   @Post(':id/delay-notices')
+  @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @ApiOperation({
     summary: 'Avisar que el servicio se demora',
@@ -250,7 +251,7 @@ export class ServicesController {
   async addDelayNotice(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateDelayNoticeDto,
-    @CurrentUser('userId') userId?: string,
+    @CurrentUser('userId') userId: string,
   ): Promise<DelayNoticeResponseDto> {
     return this.servicesService.addDelayNotice(id, dto, userId);
   }
@@ -280,12 +281,13 @@ export class ServicesController {
   // ─── Ejecución ────────────────────────────────────
 
   @Post(':id/start')
+  @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Iniciar la ejecución',
     description:
-      'SCHEDULED → IN_PROGRESS. Requiere cuadrilla asignada, y vehículo si el tipo de servicio lo exige.',
+      'SCHEDULED → IN_PROGRESS. Solo la cuadrilla del servicio (integrante o líder); un servicio sin cuadrilla da 403 NOT_ASSIGNED. Exige vehículo si el tipo de servicio lo pide.',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Servicio iniciado', type: ServiceResponseDto })
@@ -293,7 +295,7 @@ export class ServicesController {
   @ApiResponse(NOT_FOUND)
   @ApiResponse({
     status: 409,
-    description: 'Transición inválida, o falta la cuadrilla o el vehículo obligatorio',
+    description: 'Transición inválida, o falta el vehículo obligatorio',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
@@ -305,6 +307,7 @@ export class ServicesController {
   }
 
   @Post(':id/suspend')
+  @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -322,11 +325,13 @@ export class ServicesController {
   async suspend(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SuspendServiceDto,
+    @CurrentUser('userId') userId: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.suspend(id, dto.reason, dto.note);
+    return this.servicesService.suspend(id, userId, dto.reason, dto.note);
   }
 
   @Post(':id/resume')
+  @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -340,11 +345,15 @@ export class ServicesController {
   @ApiResponse(NOT_FOUND)
   @ApiResponse({ status: 409, description: 'Transición inválida', type: ErrorResponseDto })
   @ApiResponse(SERVER)
-  async resume(@Param('id', ParseUUIDPipe) id: string): Promise<ServiceResponseDto> {
-    return this.servicesService.resume(id);
+  async resume(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('userId') userId: string,
+  ): Promise<ServiceResponseDto> {
+    return this.servicesService.resume(id, userId);
   }
 
   @Post(':id/complete')
+  @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -459,6 +468,7 @@ export class ServicesController {
   // ─── Resultado por zona ───────────────────────────
 
   @Post(':id/zone-results')
+  @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @ApiOperation({
     summary: 'Informar el resultado de una zona',
@@ -483,8 +493,9 @@ export class ServicesController {
   async addZoneResult(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateZoneResultDto,
+    @CurrentUser('userId') userId: string,
   ): Promise<ZoneResultResponseDto> {
-    return this.servicesService.addZoneResult(id, dto);
+    return this.servicesService.addZoneResult(id, dto, userId);
   }
 
   @Get(':id/zone-results')
@@ -508,6 +519,7 @@ export class ServicesController {
   // ─── Registro de recolección ──────────────────────
 
   @Post(':id/collection-records')
+  @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @ApiOperation({
     summary: 'Registrar residuos recolectados',
@@ -541,8 +553,9 @@ export class ServicesController {
   async addCollectionRecord(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateCollectionRecordDto,
+    @CurrentUser('userId') userId: string,
   ): Promise<CollectionRecordResponseDto> {
-    return this.servicesService.addCollectionRecord(id, dto);
+    return this.servicesService.addCollectionRecord(id, dto, userId);
   }
 
   @Get(':id/collection-records')

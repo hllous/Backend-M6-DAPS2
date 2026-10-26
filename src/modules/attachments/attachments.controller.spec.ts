@@ -18,11 +18,11 @@ describe('AttachmentsController', () => {
     controller = new AttachmentsController(service);
   });
 
-  it('upload delega dto, archivo, la Idempotency-Key y los roles del token', async () => {
+  it('upload delega dto, archivo, la Idempotency-Key y los roles y el userId del token', async () => {
     const dto = { ownerType: 'CONTAINER', ownerId: 'c1' } as UploadEvidenceDto;
     const file = { originalname: 'foto.jpg' } as Express.Multer.File;
-    await expect(controller.upload(dto, file, 'idem-1', ROLES)).resolves.toBe(RESULT);
-    expect(service.upload).toHaveBeenCalledWith(dto, file, 'idem-1', ROLES);
+    await expect(controller.upload(dto, file, 'idem-1', ROLES, '4242')).resolves.toBe(RESULT);
+    expect(service.upload).toHaveBeenCalledWith(dto, file, 'idem-1', ROLES, '4242');
   });
 
   it('findByOwner delega la query', async () => {

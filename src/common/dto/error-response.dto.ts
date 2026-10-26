@@ -16,7 +16,8 @@ export class ErrorResponseDto {
 
   @ApiPropertyOptional({
     example: 'ROLE_REQUIRED',
-    description: 'Código estable, solo en algunos errores (403 por falta de rol de M6)',
+    description:
+      'Código estable, solo en algunos errores: ROLE_REQUIRED (403 por falta de rol de M6) o NOT_ASSIGNED (403 por pertenencia: el recurso no es de su cuadrilla ni se le asignó)',
   })
   code?: string;
 

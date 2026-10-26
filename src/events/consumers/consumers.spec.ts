@@ -469,7 +469,10 @@ describe('consumidores de eventos', () => {
     });
 
     it('actId no se usa como externalRef: son datos distintos (M4, 21/10)', async () => {
-      await h('commercialFineGenerated')({ sourceViolationId: ID, actId: 'ACT-INTERNO-7' });
+      await h('commercialFineGenerated')({
+        sourceViolationId: ID,
+        actId: 'c4a8e1f2-6b3d-4a95-8e17-9d02f5b6a3c8',
+      });
 
       expect(prisma.sanctionOutcome.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ externalRef: null }),
@@ -832,6 +835,19 @@ describe('consumidores de eventos', () => {
             publicMessage: 'Su denuncia ambiental está en análisis.',
           });
         });
+
+        // M2 solo acepta STARTED desde ROUTED (#396): el expediente se reactiva igual, sin aviso.
+        it.each(['IN_REVIEW', 'PENDING_INFORMATION', 'CLOSED'])(
+          'con el ticket en %s reactiva el expediente y no publica',
+          async (estado) => {
+            prisma.ticketM2State.findUnique.mockResolvedValue({ status: estado });
+
+            await h({ ...rerouted, currentStatus: undefined });
+
+            expect(prisma.environmentalReport.updateMany).toHaveBeenCalled();
+            expect(outbox.enqueue).not.toHaveBeenCalled();
+          },
+        );
 
         it('con el ROUTED recibido (currentStatus) manda STARTED', async () => {
           prisma.ticketM2State.findUnique.mockResolvedValue({ status: 'ROUTED' });

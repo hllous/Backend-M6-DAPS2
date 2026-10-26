@@ -483,13 +483,28 @@ describe('EnvironmentalReportsService', () => {
       });
     });
 
-    it.each(['ROUTED', 'IN_REVIEW'])('startReview con el ticket en %s manda STARTED', async (e) => {
-      prisma.ticketM2State.findUnique.mockResolvedValue({ status: e });
+    it.each(['ROUTED', null])('startReview con el ticket en %s manda STARTED', async (e) => {
+      prisma.ticketM2State.findUnique.mockResolvedValue(e && { status: e });
 
       const { encolado } = await transicionar(S.RECEIVED, (s) => s.startReview(ID, ACTOR));
 
       expect(encolado[0].payload).toMatchObject({ updateType: 'STARTED' });
     });
+
+    // M2 solo acepta STARTED desde ROUTED (#396): la revisión arranca igual, sin aviso.
+    it.each(['IN_REVIEW', 'PENDING_INFORMATION', 'CLOSED'])(
+      'startReview con el ticket en %s transiciona y no publica',
+      async (e) => {
+        prisma.ticketM2State.findUnique.mockResolvedValue({ status: e });
+
+        const { escrito, encolado } = await transicionar(S.RECEIVED, (s) =>
+          s.startReview(ID, ACTOR),
+        );
+
+        expect(escrito.data.status).toBe(S.UNDER_REVIEW);
+        expect(encolado).toEqual([]);
+      },
+    );
 
     it('startReview de un expediente sin ticketId no consulta el estado ni publica', async () => {
       const { encolado } = await transicionar(S.RECEIVED, async (s) => {

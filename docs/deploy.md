@@ -186,6 +186,16 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 4. Regenerar `M6_DEV_JWT` en Vercel.
 5. Cuando llegue la ficha de M9: cargar `RABBITMQ_URL`, `CORE_API_URL` y `CORE_MODULE_SECRET` y reiniciar. Verificar el registro con `GET /api/v1/event-types/map`.
 
+### Migrar las cuadrillas de usr-… a ids de M1 (#365)
+
+**Bloquea el despliegue de la pertenencia de Campo (#365/#394).** La regla compara el `sub` numérico del token de M1 con el líder y los integrantes de la cuadrilla; las filas sembradas con ids `usr-…` nunca coinciden, así que activar la regla sin migrar deja a esas cuadrillas sin poder ejecutar servicios. Correr el script **antes** de promover (el código nuevo y la migración no se pisan: el código viejo no mira estos ids).
+
+1. Pedir a M1 el mapeo `usr-… → user_id` y guardarlo como JSON fuera del repo: `{ "usr-00010": "10", "usr-00011": "11" }` (los destinos tienen que ser numéricos).
+2. Simulacro (solo lee la base): `DATABASE_URL=<base desplegada> npm run crews:migrate-user-ids -- --map mapeo.json --dry-run`. Imprime cada cambio de `crew_member.user_id` y de `crew.leader_user_id`, los choques de PK que se resuelven fusionando (el destino ya era integrante: se borra la fila vieja) y las filas **SIN MAPEO**.
+3. Si quedan filas sin mapeo, pedirle el dato a M1 y repetir. No se borran ni se tocan; el script sale con código 2 mientras quede alguna.
+4. Aplicar: el mismo comando sin `--dry-run` (una sola transacción). Es idempotente: una segunda corrida no cambia nada. Los ids numéricos con ceros a la izquierda se normalizan (`007` → `7`).
+5. Recién entonces activar el deploy de #365. Quitar un integrante `usr-…` que sobre sigue siendo posible con `DELETE /crews/:id/members/:userId` (ese endpoint no valida el formato).
+
 ---
 
 ## 5. Gotchas conocidos

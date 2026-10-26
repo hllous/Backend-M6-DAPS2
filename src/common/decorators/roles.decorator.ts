@@ -17,6 +17,31 @@ export const roleRequiredException = () =>
     code: ROLE_REQUIRED_CODE,
   });
 
+/** Código del 403 por pertenencia: tiene el rol pero el objeto no es de su cuadrilla / no se le asignó. */
+export const NOT_ASSIGNED_CODE = 'NOT_ASSIGNED';
+
+/**
+ * El 403 por pertenencia (#365). El mensaje no dice de quién es el objeto: el
+ * 404 previo ya es lo único que se revela de su existencia.
+ */
+export const notAssignedException = () =>
+  new ForbiddenException({
+    statusCode: 403,
+    message: 'El recurso no está asignado a su cuadrilla o a usted',
+    code: NOT_ASSIGNED_CODE,
+  });
+
+/**
+ * Documenta el 403 NOT_ASSIGNED de un endpoint de Campo. Va ARRIBA de @Roles:
+ * Swagger guarda una respuesta por status y gana el último decorador aplicado
+ * (el de más arriba), así que este pisa al de @Roles con un texto que cubre los dos códigos.
+ */
+export const ApiNotAssigned = (who: string) =>
+  ApiForbiddenResponse({
+    description: `403 con code ${ROLE_REQUIRED_CODE} si falta el rol de Campo, o con code ${NOT_ASSIGNED_CODE} si el usuario no es ${who} (no se revela de quién es)`,
+    type: ErrorResponseDto,
+  });
+
 /**
  * Roles de M6 que pueden invocar el endpoint (basta uno). Lo hace cumplir el
  * RolesGuard global y, de paso, documenta el 403 en Swagger: así no se escribe

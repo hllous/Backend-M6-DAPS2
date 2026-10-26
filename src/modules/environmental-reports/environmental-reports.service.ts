@@ -210,14 +210,21 @@ export class EnvironmentalReportsService {
   async startReview(id: string, actorId: string): Promise<EnvironmentalReportResponseDto> {
     const report = await this.getReport(id);
     // Si agendar un servicio ya arrancó el ticket, repetir STARTED no es válido
-    // para M2: el mismo aviso viaja como PROGRESS (#303).
+    // para M2: el mismo aviso viaja como PROGRESS (#303). Desde un estado que no
+    // admite STARTED (#396) la revisión arranca igual, sin aviso.
     const estadoTicket = report.ticketId ? await leerEstado(this.prisma, report.ticketId) : null;
-    return this.transition(report, S.UNDER_REVIEW, {}, [
-      ...this.ticketEvents(report, actorId, {
-        updateType: startUpdate(estadoTicket),
-        publicMessage: 'Su denuncia ambiental está en análisis.',
-      }),
-    ]);
+    const updateType = startUpdate(estadoTicket);
+    return this.transition(
+      report,
+      S.UNDER_REVIEW,
+      {},
+      updateType
+        ? this.ticketEvents(report, actorId, {
+            updateType,
+            publicMessage: 'Su denuncia ambiental está en análisis.',
+          })
+        : [],
+    );
   }
 
   /**

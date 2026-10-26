@@ -5,7 +5,11 @@ export {
   ANY_EMPLOYEE_KEY,
   ROLE_REQUIRED_CODE,
   roleRequiredException,
+  NOT_ASSIGNED_CODE,
+  notAssignedException,
+  ApiNotAssigned,
 } from './roles.decorator';
+export { IsM1UserId, M1_USER_ID_REGEX, normalizeM1UserId } from './m1-user-id.decorator';
 export { Public, IS_PUBLIC_KEY } from './public.decorator';
 export { CurrentUser } from './current-user.decorator';
 export { ToBoolean } from './to-boolean.decorator';

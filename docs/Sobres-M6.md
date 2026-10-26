@@ -1,6 +1,6 @@
 # Ejemplos de sobres — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión 2.1 · 22 de octubre de 2026**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión 2.2 · 23 de octubre de 2026**
 
 Anexo del [Acuerdo de Eventos](Acuerdo-Eventos-M6.md). El Acuerdo dice **qué** campos tiene cada evento; este documento muestra **el mensaje completo**, tal como sale de M6 o tal como lo esperamos recibir, para que puedan copiarlo en sus pruebas.
 
@@ -39,7 +39,7 @@ Es el sobre que M9 fijó el 7/10/2026 para toda la cohorte. Reemplaza al de M2 (
 - Solo propagamos lo que tiene la forma 8-4-4-4-12 en hex (lo que generamos sigue siendo v4). Si lo que llega no la tiene, abrimos un hilo propio y el evento se procesa igual.
 - `sourceModule` es `ambiente` en todos, también en `streetClosureRequested`, aunque su `data.sourceModule` valga `"M6"` (lo exige el schema acordado con M7).
 - `sourceModule` es el slug del módulo en el Core (M2 §5.1): `ciudadanos` (M1), `atencion-ciudadana` (M2), `obras` (M3), `habilitaciones` (M4), `rentas` (M5), `ambiente` (M6), `transito` (M7), `desarrollo-social` (M8) y `core` (M9). Dentro de `data` los módulos siguen siendo `M1`…`M9` (`responsibleAreaId`).
-- Se publica a `muni.inbox` con `persistent`, `mandatory` y el `userId` del usuario AMQP (M9 lo va a verificar contra el `sourceModule`). La routing key es el `eventType`, pero con `fanout` no enruta nada.
+- Se publica a `muni.inbox` con `persistent`, `mandatory` y el `userId` del usuario AMQP. La routing key es el `eventType`, pero con `fanout` no enruta nada.
 
 ## Reglas al **recibir** (somos tolerantes)
 
@@ -133,9 +133,9 @@ Solo sale si M6 conoce o supone el ticket en `IN_PROGRESS` o `ROUTED`, o si toda
 - Sin franja (o con una sola punta): «Su servicio fue programado para el miércoles 21 de octubre de 2026.»
 - Al reprogramar dice «reprogramado» en vez de «programado»: «Su servicio fue reprogramado para el jueves 22 de octubre de 2026, entre las 08:00 y las 12:30 hs.»
 
-Qué `updateType` mandamos depende del estado del ticket que M6 deduce de lo que ya envió y de lo que M2 informa en `ticketUpdated`: `STARTED` si nunca lo vimos o está en `ROUTED` o `IN_REVIEW` (también al reprogramar, mientras siga en uno de esos estados); `PROGRESS` si está en `IN_PROGRESS`; con cualquier otro estado (`REGISTERED`, `DUPLICATE`, `PENDING_INFORMATION`, `RESOLVED`, `CLOSED`, `CANCELLED`) no mandamos nada.
+Qué `updateType` mandamos depende del estado del ticket que M6 deduce de lo que ya envió y de lo que M2 informa en `ticketUpdated`: `STARTED` si nunca lo vimos o está en `ROUTED` (M2 acepta `STARTED` solo desde `ROUTED`; también al reprogramar, mientras siga ahí); `PROGRESS` si está en `IN_PROGRESS`; con cualquier otro estado (`REGISTERED`, `IN_REVIEW`, `DUPLICATE`, `PENDING_INFORMATION`, `RESOLVED`, `CLOSED`, `CANCELLED`) no mandamos nada.
 
-**Secuencia:** `STARTED` va siempre antes de `PROGRESS`; el primer `updateTicketStatus` de un ticket es `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`, o `INFORMATION_REQUIRED` si todavía no conocemos su estado. Si el ticket ya está `IN_PROGRESS` (por ejemplo porque agendar ya lo arrancó), el inicio del servicio y el inicio de la revisión de un expediente (denuncia ambiental) mandan `PROGRESS` en vez de repetir `STARTED`. Cuando M2 vuelve a derivarnos un reclamo que habíamos devuelto y reactivamos el expediente, mandamos `STARTED` (o `PROGRESS` si ya está `IN_PROGRESS`) con «Su denuncia ambiental está en análisis.». Una demora (`PROGRESS`) solo sale con el servicio en curso. Al emitirse un acta ambiental mandamos «Se constató una infracción y se emitió el acta correspondiente.» (nunca el contenido del acta): `PROGRESS` si el ticket está `IN_PROGRESS`, `STARTED` si está en `ROUTED`, `IN_REVIEW` o no conocemos su estado, y nada si está en `PENDING_INFORMATION` o en un estado terminal.
+**Secuencia:** `STARTED` va siempre antes de `PROGRESS`; el primer `updateTicketStatus` de un ticket es `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`, o `INFORMATION_REQUIRED` si todavía no conocemos su estado. Si el ticket ya está `IN_PROGRESS` (por ejemplo porque agendar ya lo arrancó), el inicio del servicio y el inicio de la revisión de un expediente (denuncia ambiental) mandan `PROGRESS` en vez de repetir `STARTED`. Solo mandamos `STARTED` con el ticket en `ROUTED` o sin estado conocido; con cualquier otro estado la acción de M6 se hace igual y no mandamos nada. Cuando M2 vuelve a derivarnos un reclamo que habíamos devuelto y reactivamos el expediente, mandamos `STARTED` (o `PROGRESS` si ya está `IN_PROGRESS`; nada con otro estado) con «Su denuncia ambiental está en análisis.». Una demora (`PROGRESS`) solo sale con el servicio en curso. Al emitirse un acta ambiental mandamos «Se constató una infracción y se emitió el acta correspondiente.» (nunca el contenido del acta): `PROGRESS` si el ticket está `IN_PROGRESS`, `STARTED` si está en `ROUTED` o no conocemos su estado, y nada si está en `IN_REVIEW`, `PENDING_INFORMATION` o en un estado terminal.
 
 ## 2.2 `containerDamaged` → M3
 
@@ -215,7 +215,7 @@ Solo se publica si el acta tiene `establishmentId`.
     "violationType": "ILLEGAL_DUMPING",
     "severity": "HIGH",
     "location": { "street": "Av. San Martín 3300" },
-    "establishmentId": "EST-004512",
+    "establishmentId": "7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47",
     "priorNoticeCount": 1,
     "evidence": [
       {
@@ -418,8 +418,8 @@ Leemos `sourceRequestId` (obligatorio, UUID). `outcome` y `attachments[]` no se 
   "correlationId": "e9f0a1b2-c3d4-4e5f-8a7b-8293a4b5c6d7",
   "data": {
     "sourceViolationId": "1c2d3e4f-5a6b-4c7d-88e9-a0b1c2d3e4f5",
-    "actId": "ACT-2026-1187",
-    "establishmentId": "EST-004512",
+    "actId": "c4a8e1f2-6b3d-4a95-8e17-9d02f5b6a3c8",
+    "establishmentId": "7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47",
     "decision": "FINE",
     "decidedAt": "2026-10-22T12:55:00.000Z",
     "externalRef": "MULTA-2026-0310"
@@ -427,7 +427,7 @@ Leemos `sourceRequestId` (obligatorio, UUID). `outcome` y `attachments[]` no se 
 }
 ```
 
-Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta). Registra la resolución y cierra el expediente como `SANCTIONED`. M4 confirmó el 21 de octubre que nos rutean este evento (además de Rentas, cuando la multa nace de una infracción ambiental) y que `actId` —el identificador interno del acta de M4 que fundamenta la sanción— y `externalRef` —la referencia administrativa visible de la multa— son datos distintos; de la multa guardamos `externalRef`.
+Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta). Registra la resolución y cierra el expediente como `SANCTIONED`. M4 confirmó el 21 de octubre que nos rutean este evento (además de Rentas, cuando la multa nace de una infracción ambiental) y que `actId` —el identificador interno del acta de M4 que fundamenta la sanción— y `externalRef` —la referencia administrativa visible de la multa— son datos distintos; de la multa guardamos `externalRef`. `actId` y `establishmentId` son UUID de M4 y los tratamos como string opaco: no validamos ningún formato ni patrón (`EST-` y `ACT-` son solo referencias humanas de M4).
 
 ## 3.5 `closureUpdate` ← M4
 
@@ -442,8 +442,8 @@ Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta)
   "data": {
     "status": "ORDERED",
     "sourceViolationId": "1c2d3e4f-5a6b-4c7d-88e9-a0b1c2d3e4f5",
-    "actId": "ACT-2026-1188",
-    "establishmentId": "EST-004512",
+    "actId": "d5b9f203-7c4e-4ba6-9f28-ae13a6c7b4d9",
+    "establishmentId": "7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47",
     "decision": "CLOSURE",
     "decidedAt": "2026-10-22T13:05:00.000Z",
     "externalRef": "CLAUSURA-2026-0072"
@@ -451,7 +451,7 @@ Leemos `sourceViolationId` (obligatorio, UUID: el `violationId` de nuestra acta)
 }
 ```
 
-`status` es `ORDERED` o `LIFTED` (obligatorio). Con `ORDERED` registramos la clausura como resolución y cerramos; con `LIFTED`, registramos el levantamiento y cerramos. Leemos además `sourceViolationId` (obligatorio, UUID).
+`status` es `ORDERED` o `LIFTED` (obligatorio). Con `ORDERED` registramos la clausura como resolución y cerramos; con `LIFTED`, registramos el levantamiento y cerramos. Leemos además `sourceViolationId` (obligatorio, UUID). `actId` y `establishmentId` son UUID de M4, tratados como string opaco.
 
 ## 3.6 `streetClosureApproved` ← M7
 
