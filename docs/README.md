@@ -27,7 +27,7 @@ Detalle funcional de cada área (qué se puede hacer, no solo el título): ver `
 
 | Término | Qué es en M6 |
 |---|---|
-| **Zona operativa** (`Zone`) | Agrupación propia que junta uno o más barrios para armar recorridos y asignar cuadrillas. No confundir con las zonas de M9, que son administrativas y solo agrupan barrios — ver [m9.md](integracion/m9.md#catálogos-globales-del-core-2010) |
+| **Zona operativa** (`Zone`) | Agrupación propia que junta uno o más barrios para armar recorridos y asignar cuadrillas. Hoy se define una por barrio (decisión del 27/10, #376). No confundir con las zonas de M9, que son administrativas (las 15 comunas) y solo agrupan barrios — ver [m9.md](integracion/m9.md#catálogos-globales-del-core-2010) |
 | **Servicio** (`Service`) | Unidad de trabajo programable: tipo, fecha, cuadrilla y estado. Puede ser `ROUTE` o `POINT`. Ver [entidades/service.md](entidades/service.md) |
 | **Ticket** | El reclamo que el vecino presenta en M2, dueño del registro. Se llamaba `complaint` en los documentos viejos de este módulo — **migrado a `ticket`**, que es el nombre que usa toda la cohorte, antes de la primera entrega para no arrastrar un rename de esquema después |
 | **Acta** (`ViolationNotice`) | Lo que emitimos al constatar una violación. Inmutable una vez emitida. Ver [entidades/control-ambiental.md](entidades/control-ambiental.md) |
@@ -49,7 +49,7 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 
 ## Mapa de esta carpeta
 
-- [api/](api/) — estándar Swagger y 140 endpoints REST del backend
+- [api/](api/) — estándar Swagger y 142 endpoints REST del backend
 - [entidades/](entidades/) — modelo conceptual de datos y máquinas de estados
 - [DER.md](DER.md) — modelo relacional entidad-relación (diagrama Mermaid y reglas de esquema)
 - [eventos/publicados/](eventos/publicados/) — los 6 eventos que este módulo emite (con sus `.schema.json`)

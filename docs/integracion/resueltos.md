@@ -6,6 +6,9 @@
 
 | Qué | Cómo quedó |
 |---|---|
+| **M1: contradicción `refresh`/logout con su PO y códigos del login** ([#413](https://github.com/hllous/Backend-M6-DAPS2/issues/413)) | Decisión del 27/10: vale lo que dice su documento en la última versión (Catálogo v3.0), no lo que dijo su PO. `POST /auth/refresh` y el logout se dan por existentes; el login responde 401 (clave errónea) y 403 (inactivo/bloqueado). A M6 no le afecta (nunca aceptamos un refresh). Lo que el documento no define sigue en el tablero |
+| **M4: `decidedAt` y `externalRef`** | Confirmado por M4 el 27/10: están contemplados en `closureUpdate` y `commercialFineGenerated` y se envían cuando se formaliza la multa o la decisión de clausura/levantamiento. Nuestro consumidor guarda `externalRef` o `null`; verificar con un evento real en la prueba contra el Core |
+| **M9: barrios reales de CABA cargados** | 27/10: 48 barrios en 15 comunas, ficticios dados de baja. Queda abierta la adopción (#376) en el tablero |
 | **M2: contrato cerrado (Acuerdo y Sobres v2.2)** ([#396](https://github.com/hllous/Backend-M6-DAPS2/issues/396), [#397](https://github.com/hllous/Backend-M6-DAPS2/issues/397)) | Cerrado con M2 el 26/10 (por el chat de los grupos): el Acuerdo y los Sobres v2.2 quedan como contrato vigente. Sale la fila «falta avisar a M2» del tablero |
 | **Interno: PDF del Acuerdo y de los Sobres v2.2** ([#396](https://github.com/hllous/Backend-M6-DAPS2/issues/396), [#397](https://github.com/hllous/Backend-M6-DAPS2/issues/397)) | Regenerados el 23/10 con los ajustes de M2 y recirculados a la cohorte (confirmado el 26/10). Primera prueba contra el Core: martes 27/10. El aviso aparte a M2 sigue en el tablero |
 | **Interno: secreto JWT de M1 en Render** | Cargado como `JWT_SECRET` (26/10). M1 entregó el `user_id` 1 para `M6_BOOTSTRAP_ADMIN_USER_IDS` (26/10); M1 no está hosteado, así que no se confirma con un token de M1: el token de demo se firma con el script (fila del despliegue y fila de M1) |

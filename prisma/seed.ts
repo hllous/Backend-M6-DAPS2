@@ -11,6 +11,7 @@ import {
   GreenSpaceType,
   InspectionNextStep,
   InspectionOutcome,
+  M6Role,
   NotServicedReason,
   OutboxEventStatus,
   Prisma,
@@ -39,16 +40,30 @@ import {
   ZoneResultStatus,
 } from '@prisma/client';
 import { todayArgentina } from '../src/common/utils/date-only';
+import { cargarSnapshot, syncZones } from '../src/core/zones-sync';
 import { AggregateType, EventType } from '../src/events/event-types';
 import * as payloads from '../src/events/payloads';
+import { puntoEnGeometria, semillaDe } from '../src/common/utils/geo';
+import {
+  ArbolSeed,
+  BARRIOS,
+  Barrio,
+  ContenedorSeed,
+  ESPACIOS,
+  PuntoVerdeSeed,
+  cargarPoligonos,
+  MIN_ARBOLES,
+  MIN_CONTENEDORES,
+  generarInventario,
+} from './seed-lugares';
 
 const prisma = new PrismaClient();
 
 /**
- * Seed de demostración: Servicios Urbanos de ocho barrios de la Ciudad.
+ * Seed de demostración: Servicios Urbanos de los 48 barrios y las 15 comunas de la Ciudad.
  *
- * Belgrano, Palermo, Colegiales, Recoleta, San Nicolás, Puerto Madero,
- * Montserrat y Retiro, con calles, plazas y avenidas reales. Las coordenadas salen del
+ * Ocho barrios (Belgrano, Palermo, Colegiales, Recoleta, San Nicolás, Puerto Madero,
+ * Montserrat y Retiro) conservan calles, plazas y avenidas reales escritas a mano. Las coordenadas salen del
  * normalizador de direcciones de la Ciudad (USIG) y se verificaron contra los
  * polígonos oficiales de barrios: un contenedor que cae en el barrio de al lado
  * no se dibuja en el mapa de su zona.
@@ -68,9 +83,11 @@ const prisma = new PrismaClient();
  * transacción y solo si no hay servicios cargados: si algo falla a mitad de
  * camino no queda una base a medias, y una segunda corrida no duplica nada.
  *
- * **Los `neighborhoodId` son placeholders.** El catálogo de barrios es de M9 y
- * sigue sin publicarse (docs/bloqueantes.md): se usan slugs `caba-…` fáciles de
- * reemplazar cuando M9 publique sus IDs.
+ * **Zonas, comunas y lugares.** Las 48 zonas (una por barrio) y las 15 comunas salen del
+ * snapshot del catálogo de M9 con `syncZones`, con los UUID reales. Los espacios verdes son
+ * del dataset abierto de BA Data (`prisma/data/espacios-verdes.json`). Contenedores,
+ * puntos verdes y arbolado se generan dentro del polígono de cada barrio (ver
+ * `seed-lugares.ts`). Detalle y límites de lo auténtico en docs/seed.md.
  */
 
 // ════════════════════════════════════════════════════════════
@@ -234,146 +251,129 @@ const SERVICE_TYPES = [
   },
 ];
 
-/**
- * Zonas operativas: **una por barrio oficial**, porque es lo único que tiene
- * polígono publicado. Partir Palermo en Soho y Hollywood sería dibujar como
- * dato una opinión sobre dónde terminan.
- *
- * Los códigos siguen el patrón de las cuatro originales (Z + tres letras del
- * barrio): el mapa del frontend las matchea por `zoneCode`.
- */
-const ZONES = [
-  { code: 'Z-BEL', name: 'Belgrano', neighborhoods: ['caba-belgrano'] },
-  { code: 'Z-PAL', name: 'Palermo', neighborhoods: ['caba-palermo'] },
-  { code: 'Z-COL', name: 'Colegiales', neighborhoods: ['caba-colegiales'] },
-  { code: 'Z-REC', name: 'Recoleta', neighborhoods: ['caba-recoleta'] },
-  { code: 'Z-SNI', name: 'San Nicolás', neighborhoods: ['caba-san-nicolas'] },
-  { code: 'Z-PMA', name: 'Puerto Madero', neighborhoods: ['caba-puerto-madero'] },
-  { code: 'Z-MON', name: 'Montserrat', neighborhoods: ['caba-montserrat'] },
-  { code: 'Z-RET', name: 'Retiro', neighborhoods: ['caba-retiro'] },
-];
+/** Los códigos de zona son los `codigo` de barrio de M9 (`belgrano`, `san-nicolas`…). */
+const TODAS_LAS_ZONAS = BARRIOS.map((b) => b.codigo);
 
-const CENTRO = ['Z-SNI', 'Z-MON', 'Z-PMA', 'Z-RET'];
-const TODAS_LAS_ZONAS = ZONES.map((z) => z.code);
+const CENTRO = ['san-nicolas', 'montserrat', 'puerto-madero', 'retiro'];
 
 /**
  * Recorridos sobre corredores reales, con las zonas en el orden en que las
  * hace el camión y la duración estimada de cada tramo.
  */
-const ROUTES = [
+export const ROUTES = [
   {
     code: 'R-REC-C13',
     name: 'Recolección domiciliaria Comuna 13 — Belgrano y Colegiales (Av. Cabildo, Av. Juramento y Av. Federico Lacroze)',
     stops: [
-      { zone: 'Z-BEL', min: 175 },
-      { zone: 'Z-COL', min: 95 },
+      { zone: 'belgrano', min: 175 },
+      { zone: 'colegiales', min: 95 },
     ],
   },
   {
     code: 'R-REC-PAL',
     name: 'Recolección domiciliaria Palermo — Av. Santa Fe, Av. Scalabrini Ortiz y Av. Córdoba',
-    stops: [{ zone: 'Z-PAL', min: 210 }],
+    stops: [{ zone: 'palermo', min: 210 }],
   },
   {
     code: 'R-REC-RECO',
     name: 'Recolección domiciliaria Recoleta — Av. Santa Fe, Av. Las Heras y Av. Pueyrredón',
-    stops: [{ zone: 'Z-REC', min: 190 }],
+    stops: [{ zone: 'recoleta', min: 190 }],
   },
   {
     code: 'R-REC-SNI',
     name: 'Recolección nocturna San Nicolás y Retiro — Microcentro, Tribunales, Florida norte y terminales',
     stops: [
-      { zone: 'Z-SNI', min: 125 },
-      { zone: 'Z-RET', min: 50 },
+      { zone: 'san-nicolas', min: 125 },
+      { zone: 'retiro', min: 50 },
     ],
   },
   {
     code: 'R-REC-MON',
     name: 'Recolección nocturna Montserrat — Av. de Mayo, Av. Belgrano y Av. Independencia',
-    stops: [{ zone: 'Z-MON', min: 150 }],
+    stops: [{ zone: 'montserrat', min: 150 }],
   },
   {
     code: 'R-REC-PMA',
     name: 'Recolección nocturna Puerto Madero — Diques 1 a 4',
-    stops: [{ zone: 'Z-PMA', min: 75 }],
+    stops: [{ zone: 'puerto-madero', min: 75 }],
   },
   {
     code: 'R-RECI-PR',
     name: 'Recolección de reciclables Palermo–Recoleta',
     stops: [
-      { zone: 'Z-PAL', min: 150 },
-      { zone: 'Z-REC', min: 90 },
+      { zone: 'palermo', min: 150 },
+      { zone: 'recoleta', min: 90 },
     ],
   },
   {
     code: 'R-RECI-BC',
     name: 'Recolección de reciclables Belgrano–Colegiales',
     stops: [
-      { zone: 'Z-BEL', min: 120 },
-      { zone: 'Z-COL', min: 70 },
+      { zone: 'belgrano', min: 120 },
+      { zone: 'colegiales', min: 70 },
     ],
   },
   {
     code: 'R-RECI-CEN',
     name: 'Recolección de reciclables Microcentro — grandes generadores de San Nicolás, Montserrat y Retiro',
     stops: [
-      { zone: 'Z-SNI', min: 80 },
-      { zone: 'Z-MON', min: 55 },
-      { zone: 'Z-RET', min: 40 },
+      { zone: 'san-nicolas', min: 80 },
+      { zone: 'montserrat', min: 55 },
+      { zone: 'retiro', min: 40 },
     ],
   },
   {
     code: 'R-BAR-CEN',
     name: 'Barrido mecánico Microcentro — Av. Corrientes, Av. de Mayo y Diagonal Norte',
     stops: [
-      { zone: 'Z-SNI', min: 130 },
-      { zone: 'Z-MON', min: 100 },
+      { zone: 'san-nicolas', min: 130 },
+      { zone: 'montserrat', min: 100 },
     ],
   },
   {
     code: 'R-BAR-SF',
     name: 'Barrido mecánico Av. Santa Fe y Av. del Libertador — Palermo, Recoleta y Retiro',
     stops: [
-      { zone: 'Z-PAL', min: 70 },
-      { zone: 'Z-REC', min: 65 },
-      { zone: 'Z-RET', min: 40 },
+      { zone: 'palermo', min: 70 },
+      { zone: 'recoleta', min: 65 },
+      { zone: 'retiro', min: 40 },
     ],
   },
   {
     code: 'R-BAR-CAB',
     name: 'Barrido mecánico Av. Cabildo — Colegiales y Belgrano',
     stops: [
-      { zone: 'Z-COL', min: 35 },
-      { zone: 'Z-BEL', min: 95 },
+      { zone: 'colegiales', min: 35 },
+      { zone: 'belgrano', min: 95 },
     ],
   },
   {
     code: 'R-BAR-MAN-PAL',
     name: 'Barrido manual ejes comerciales de Palermo — Plaza Serrano, Honduras y Thames',
-    stops: [{ zone: 'Z-PAL', min: 120 }],
+    stops: [{ zone: 'palermo', min: 120 }],
   },
   {
     code: 'R-BAR-MAN-SNI',
     name: 'Barrido manual peatonales Florida (hasta Plaza San Martín) y Lavalle',
     stops: [
-      { zone: 'Z-SNI', min: 135 },
-      { zone: 'Z-RET', min: 40 },
+      { zone: 'san-nicolas', min: 135 },
+      { zone: 'retiro', min: 40 },
     ],
   },
   {
     code: 'R-LAV-CEN',
     name: 'Hidrolavado Plaza de Mayo, Av. de Mayo y paseos de Puerto Madero',
     stops: [
-      { zone: 'Z-MON', min: 110 },
-      { zone: 'Z-PMA', min: 80 },
+      { zone: 'montserrat', min: 110 },
+      { zone: 'puerto-madero', min: 80 },
     ],
   },
   {
     code: 'R-ARB-CENSO',
     name: 'Relevamiento de arbolado — Belgrano y Palermo',
     stops: [
-      { zone: 'Z-BEL', min: 75 },
-      { zone: 'Z-PAL', min: 105 },
+      { zone: 'belgrano', min: 75 },
+      { zone: 'palermo', min: 105 },
     ],
   },
 ];
@@ -428,7 +428,7 @@ interface VehiculoSeed {
   active?: boolean;
 }
 
-const VEHICLES: VehiculoSeed[] = [
+export const VEHICLES: VehiculoSeed[] = [
   // Compactadores: el grueso de la flota.
   { plate: 'AB123CD', vehicleType: VehicleType.COMPACTOR_TRUCK, capacity: 19 },
   { plate: 'AB456CE', vehicleType: VehicleType.COMPACTOR_TRUCK, capacity: 15 },
@@ -515,7 +515,7 @@ interface CuadrillaSeed {
   bajaDesde?: number;
 }
 
-const CREWS: CuadrillaSeed[] = [
+export const CREWS: CuadrillaSeed[] = [
   // ── Mañana: recolección, barrido, poda, mantenimiento y riego ──
   {
     clave: 'BEL-REC',
@@ -527,7 +527,7 @@ const CREWS: CuadrillaSeed[] = [
     members: ['101', '102', '103', '104'],
     active: true,
     tipos: ['REC-DOM', 'CONT-VAC', 'REC-VOL'],
-    zonas: ['Z-BEL', 'Z-COL'],
+    zonas: ['belgrano', 'colegiales'],
   },
   {
     clave: 'PAL-REC',
@@ -539,11 +539,11 @@ const CREWS: CuadrillaSeed[] = [
     members: ['111', '112', '113', '114', '115'],
     active: true,
     tipos: ['REC-DOM', 'BAR-MAN', 'CONT-VAC', 'REC-VOL'],
-    zonas: ['Z-PAL'],
+    zonas: ['palermo'],
   },
   {
     clave: 'ARBOLADO',
-    name: 'Cuadrilla Municipal Comunas 2, 13 y 14 — Poda y Arbolado',
+    name: 'Cuadrilla Municipal Arbolado — Poda y Relevamiento de toda la Ciudad',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
     leaderUserId: '401',
@@ -551,7 +551,7 @@ const CREWS: CuadrillaSeed[] = [
     members: ['401', '402', '403'],
     active: true,
     tipos: ['ARB-POD', 'ARB-CENSO'],
-    zonas: ['Z-BEL', 'Z-COL', 'Z-PAL', 'Z-REC'],
+    zonas: TODAS_LAS_ZONAS,
   },
   {
     clave: 'EV',
@@ -572,11 +572,11 @@ const CREWS: CuadrillaSeed[] = [
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.AFTERNOON,
     leaderUserId: '201',
-    organizationId: 'org-m1-coop-recuperadores-palermo',
+    organizationId: '3301',
     members: ['201', '202', '203', '204'],
     active: true,
     tipos: ['REC-REC', 'CONT-VAC'],
-    zonas: ['Z-PAL', 'Z-REC', 'Z-BEL', 'Z-COL'],
+    zonas: ['palermo', 'recoleta', 'belgrano', 'colegiales'],
   },
   {
     // Convenio en renovación: sin cobertura hasta que se firme. Sus recorridos
@@ -586,11 +586,11 @@ const CREWS: CuadrillaSeed[] = [
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.AFTERNOON,
     leaderUserId: '211',
-    organizationId: 'org-m1-coop-recuperadores-comuna-13',
+    organizationId: '3302',
     members: ['211', '212', '213'],
     active: false,
     tipos: ['REC-REC'],
-    zonas: ['Z-BEL', 'Z-COL'],
+    zonas: ['belgrano', 'colegiales'],
     bajaDesde: -6,
   },
   {
@@ -603,7 +603,7 @@ const CREWS: CuadrillaSeed[] = [
     members: ['121', '122', '123', '124'],
     active: true,
     tipos: ['REC-DOM', 'REC-VOL', 'CONT-VAC', 'CONT-LAV'],
-    zonas: ['Z-REC'],
+    zonas: ['recoleta'],
   },
   {
     // Sin vehículo propio: los inspectores se mueven a pie o en transporte público.
@@ -653,7 +653,7 @@ const CREWS: CuadrillaSeed[] = [
     members: ['301', '302', '303'],
     active: true,
     tipos: ['BAR-MEC'],
-    zonas: ['Z-SNI', 'Z-MON', 'Z-RET', 'Z-PAL', 'Z-REC', 'Z-BEL', 'Z-COL'],
+    zonas: ['san-nicolas', 'montserrat', 'retiro', 'palermo', 'recoleta', 'belgrano', 'colegiales'],
   },
   {
     clave: 'COOP-CEN',
@@ -661,13 +661,45 @@ const CREWS: CuadrillaSeed[] = [
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.NIGHT,
     leaderUserId: '221',
-    organizationId: 'org-m1-coop-recuperadores-microcentro',
+    organizationId: '3303',
     members: ['221', '222', '223', '224'],
     active: true,
     tipos: ['REC-REC', 'CONT-VAC'],
     zonas: CENTRO,
   },
 ];
+
+/**
+ * Personal de Oficina y auditoría de la demo. Los ids son los `sub` numéricos del
+ * token de M1 (no hay usuarios reales: M1 no está hosteado y los tokens de demo los
+ * firma scripts/generate-demo-jwt.mjs). El id 1 es el admin inicial y NO lleva fila:
+ * es M6_ADMIN por M6_BOOTSTRAP_ADMIN_USER_IDS. Campo sale de las cuadrillas (CREWS).
+ */
+const PERSONAL_DE_OFICINA: { userId: string; roles: M6Role[] }[] = [
+  { userId: '2', roles: [M6Role.M6_ADMIN] },
+  { userId: '3', roles: [M6Role.M6_OFICINA_OPERACIONES] },
+  { userId: '4', roles: [M6Role.M6_OFICINA_OPERACIONES] },
+  { userId: '5', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '6', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '7', roles: [M6Role.M6_OFICINA_OPERACIONES, M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '8', roles: [M6Role.M6_AUDITOR] },
+  { userId: '9', roles: [M6Role.M6_AUDITOR] },
+];
+
+/** Los roles de M6 de cada usuario de la demo: Oficina fija y Campo según su cuadrilla. */
+function rolesDeLaDemo(): { userId: string; role: M6Role }[] {
+  const filas = PERSONAL_DE_OFICINA.flatMap((p) =>
+    p.roles.map((role) => ({ userId: p.userId, role })),
+  );
+  for (const c of CREWS) {
+    for (const userId of new Set([c.leaderUserId, ...c.members])) {
+      filas.push({ userId, role: M6Role.M6_CAMPO_CUADRILLA });
+      // La cuadrilla de inspección también cierra las inspecciones ambientales.
+      if (c.clave === 'INSP') filas.push({ userId, role: M6Role.M6_CAMPO_INSPECTOR });
+    }
+  }
+  return filas;
+}
 
 /**
  * Franjas en las que trabaja cada turno, en minutos del día. La noche va en
@@ -687,20 +719,6 @@ const FRANJAS_TURNO: Record<Shift, [number, number][]> = {
 // ════════════════════════════════════════════════════════════
 // INVENTARIO URBANO
 // ════════════════════════════════════════════════════════════
-
-interface ContenedorSeed {
-  code: string;
-  zone: string;
-  containerType: ContainerType;
-  address: string;
-  lat: number;
-  lng: number;
-  capacityLiters: number;
-  status?: ContainerStatus;
-  damageType?: DamageType;
-  severity?: Severity;
-  requiresPublicWorks?: boolean;
-}
 
 function ct(
   code: string,
@@ -723,50 +741,59 @@ const R = ContainerType.RECYCLABLE;
  * hay gastronomía o salida de teatros, daños donde hay vandalismo, uno en el
  * taller, uno en reubicación y uno retirado por una peatonalización.
  */
-const CONTAINERS: ContenedorSeed[] = [
-  ct('CT-BEL-0001', 'Z-BEL', H, 'Av. Cabildo 2200', -34.5613, -58.4575, 3200),
-  ct('CT-BEL-0002', 'Z-BEL', R, 'Av. Juramento 2400', -34.5621, -58.4565, 3200),
+const CONTAINERS_BASE: ContenedorSeed[] = [
+  ct('CT-BEL-0001', 'belgrano', H, 'Av. Cabildo 2200', -34.5613, -58.4575, 3200),
+  ct('CT-BEL-0002', 'belgrano', R, 'Av. Juramento 2400', -34.5621, -58.4565, 3200),
   // Barrio Chino: mucha gastronomía, mucho volumen los fines de semana.
-  ct('CT-BEL-0003', 'Z-BEL', H, 'Arribeños 2200', -34.5572, -58.4508, 2400, {
+  ct('CT-BEL-0003', 'belgrano', H, 'Arribeños 2200', -34.5572, -58.4508, 2400, {
     status: ContainerStatus.OVERFLOWED,
   }),
   ct(
     'CT-BEL-0004',
-    'Z-BEL',
+    'belgrano',
     ContainerType.GREEN,
     'Av. Virrey Vértiz 1900',
     -34.5599,
     -58.4482,
     1100,
   ),
-  ct('CT-BEL-0005', 'Z-BEL', H, 'Echeverría 2800', -34.5651, -58.4594, 2400),
-  ct('CT-BEL-0006', 'Z-BEL', R, 'Monroe 2600', -34.5594, -58.4616, 2400),
-  ct('CT-BEL-0007', 'Z-BEL', H, 'Mendoza 2500', -34.5616, -58.4584, 3200),
-  ct('CT-BEL-0008', 'Z-BEL', ContainerType.BULKY, 'Av. Congreso 2300', -34.5549, -58.4612, 5000, {
-    status: ContainerStatus.DAMAGED,
-    damageType: DamageType.BURNT,
-    severity: Severity.HIGH,
-    requiresPublicWorks: true,
-  }),
+  ct('CT-BEL-0005', 'belgrano', H, 'Echeverría 2800', -34.5651, -58.4594, 2400),
+  ct('CT-BEL-0006', 'belgrano', R, 'Monroe 2600', -34.5594, -58.4616, 2400),
+  ct('CT-BEL-0007', 'belgrano', H, 'Mendoza 2500', -34.5616, -58.4584, 3200),
+  ct(
+    'CT-BEL-0008',
+    'belgrano',
+    ContainerType.BULKY,
+    'Av. Congreso 2300',
+    -34.5549,
+    -58.4612,
+    5000,
+    {
+      status: ContainerStatus.DAMAGED,
+      damageType: DamageType.BURNT,
+      severity: Severity.HIGH,
+      requiresPublicWorks: true,
+    },
+  ),
   // Retirado: la cuadra se peatonalizó. La fila queda porque los servicios
   // históricos la referencian.
-  ct('CT-BEL-0009', 'Z-BEL', R, 'Mendoza 1700', -34.5571, -58.4507, 1100, {
+  ct('CT-BEL-0009', 'belgrano', R, 'Mendoza 1700', -34.5571, -58.4507, 1100, {
     status: ContainerStatus.REMOVED,
   }),
-  ct('CT-PAL-0001', 'Z-PAL', H, 'Honduras 5800', -34.5826, -58.4383, 3200),
-  ct('CT-PAL-0002', 'Z-PAL', R, 'Fitz Roy 1700', -34.5842, -58.4364, 3200),
+  ct('CT-PAL-0001', 'palermo', H, 'Honduras 5800', -34.5826, -58.4383, 3200),
+  ct('CT-PAL-0002', 'palermo', R, 'Fitz Roy 1700', -34.5842, -58.4364, 3200),
   // Las Cañitas: la vereda gastronómica castiga los contenedores.
-  ct('CT-PAL-0003', 'Z-PAL', H, 'Báez 400', -34.5715, -58.4321, 2400, {
+  ct('CT-PAL-0003', 'palermo', H, 'Báez 400', -34.5715, -58.4321, 2400, {
     status: ContainerStatus.DAMAGED,
     damageType: DamageType.LID_BROKEN,
     severity: Severity.MEDIUM,
     requiresPublicWorks: false,
   }),
-  ct('CT-PAL-0004', 'Z-PAL', H, 'Gurruchaga 1800', -34.5881, -58.4273, 3200),
-  ct('CT-PAL-0005', 'Z-PAL', R, 'Jorge Luis Borges 1900', -34.5867, -58.4272, 3200),
+  ct('CT-PAL-0004', 'palermo', H, 'Gurruchaga 1800', -34.5881, -58.4273, 3200),
+  ct('CT-PAL-0005', 'palermo', R, 'Jorge Luis Borges 1900', -34.5867, -58.4272, 3200),
   ct(
     'CT-PAL-0006',
-    'Z-PAL',
+    'palermo',
     ContainerType.BULKY,
     'Av. Juan B. Justo 1900',
     -34.5888,
@@ -775,78 +802,86 @@ const CONTAINERS: ContenedorSeed[] = [
   ),
   ct(
     'CT-PAL-0007',
-    'Z-PAL',
+    'palermo',
     ContainerType.GREEN,
     'Scalabrini Ortiz 2400',
     -34.5861,
     -58.4176,
     1100,
   ),
-  ct('CT-PAL-0008', 'Z-PAL', H, 'Av. Las Heras 3900', -34.5819, -58.4141, 2400, {
+  ct('CT-PAL-0008', 'palermo', H, 'Av. Las Heras 3900', -34.5819, -58.4141, 2400, {
     status: ContainerStatus.RELOCATING,
   }),
-  ct('CT-PAL-0009', 'Z-PAL', H, 'Godoy Cruz 1800', -34.5869, -58.433, 2400, {
+  ct('CT-PAL-0009', 'palermo', H, 'Godoy Cruz 1800', -34.5869, -58.433, 2400, {
     status: ContainerStatus.UNDER_REPAIR,
   }),
-  ct('CT-PAL-0010', 'Z-PAL', R, 'Av. Santa Fe 4200', -34.5813, -58.4217, 3200, {
+  ct('CT-PAL-0010', 'palermo', R, 'Av. Santa Fe 4200', -34.5813, -58.4217, 3200, {
     status: ContainerStatus.OVERFLOWED,
   }),
-  ct('CT-PAL-0011', 'Z-PAL', H, 'Serrano 1500', -34.5894, -58.4313, 3200),
-  ct('CT-COL-0001', 'Z-COL', H, 'Av. Federico Lacroze y Zapiola', -34.576, -58.4484, 3200),
-  ct('CT-COL-0002', 'Z-COL', R, 'Conde y Concepción Arenal', -34.5809, -58.4446, 2400),
-  ct('CT-COL-0003', 'Z-COL', H, 'Virrey Avilés y Ramón Freire', -34.5725, -58.4579, 2400, {
+  ct('CT-PAL-0011', 'palermo', H, 'Serrano 1500', -34.5894, -58.4313, 3200),
+  ct('CT-COL-0001', 'colegiales', H, 'Av. Federico Lacroze y Zapiola', -34.576, -58.4484, 3200),
+  ct('CT-COL-0002', 'colegiales', R, 'Conde y Concepción Arenal', -34.5809, -58.4446, 2400),
+  ct('CT-COL-0003', 'colegiales', H, 'Virrey Avilés y Ramón Freire', -34.5725, -58.4579, 2400, {
     status: ContainerStatus.OVERFLOWED,
   }),
-  ct('CT-COL-0004', 'Z-COL', ContainerType.GREEN, 'Av. Elcano 3100', -34.572, -58.4587, 1100),
-  ct('CT-COL-0005', 'Z-COL', H, 'Virrey Loreto 3400', -34.5759, -58.4566, 2400),
-  ct('CT-REC-0001', 'Z-REC', H, 'Av. Pueyrredón 1700', -34.5916, -58.4012, 3200),
-  ct('CT-REC-0002', 'Z-REC', R, 'Junín 1800', -34.5881, -58.3924, 3200),
-  ct('CT-REC-0003', 'Z-REC', H, 'Av. Callao 1200', -34.595, -58.3933, 2400),
-  ct('CT-REC-0004', 'Z-REC', H, 'Av. Santa Fe y Anchorena', -34.5933, -58.4051, 3200),
-  ct('CT-REC-0005', 'Z-REC', R, 'Av. Las Heras y Av. Pueyrredón', -34.5875, -58.3972, 3200),
-  ct('CT-REC-0006', 'Z-REC', H, 'French y Billinghurst', -34.5863, -58.4066, 2400, {
+  ct('CT-COL-0004', 'colegiales', ContainerType.GREEN, 'Av. Elcano 3100', -34.572, -58.4587, 1100),
+  ct('CT-COL-0005', 'colegiales', H, 'Virrey Loreto 3400', -34.5759, -58.4566, 2400),
+  ct('CT-REC-0001', 'recoleta', H, 'Av. Pueyrredón 1700', -34.5916, -58.4012, 3200),
+  ct('CT-REC-0002', 'recoleta', R, 'Junín 1800', -34.5881, -58.3924, 3200),
+  ct('CT-REC-0003', 'recoleta', H, 'Av. Callao 1200', -34.595, -58.3933, 2400),
+  ct('CT-REC-0004', 'recoleta', H, 'Av. Santa Fe y Anchorena', -34.5933, -58.4051, 3200),
+  ct('CT-REC-0005', 'recoleta', R, 'Av. Las Heras y Av. Pueyrredón', -34.5875, -58.3972, 3200),
+  ct('CT-REC-0006', 'recoleta', H, 'French y Billinghurst', -34.5863, -58.4066, 2400, {
     status: ContainerStatus.UNDER_REPAIR,
   }),
-  ct('CT-REC-0007', 'Z-REC', H, 'Ayacucho 1500', -34.5918, -58.394, 2400),
-  ct('CT-SNI-0001', 'Z-SNI', H, 'Tucumán y Reconquista', -34.6009, -58.3726, 3200),
-  ct('CT-SNI-0002', 'Z-SNI', R, 'Sarmiento y San Martín', -34.6045, -58.3738, 3200),
+  ct('CT-REC-0007', 'recoleta', H, 'Ayacucho 1500', -34.5918, -58.394, 2400),
+  ct('CT-SNI-0001', 'san-nicolas', H, 'Tucumán y Reconquista', -34.6009, -58.3726, 3200),
+  ct('CT-SNI-0002', 'san-nicolas', R, 'Sarmiento y San Martín', -34.6045, -58.3738, 3200),
   // La salida de los teatros de Corrientes lo desborda casi todas las noches.
-  ct('CT-SNI-0003', 'Z-SNI', H, 'Av. Corrientes y Paraná', -34.6041, -58.3879, 3200, {
+  ct('CT-SNI-0003', 'san-nicolas', H, 'Av. Corrientes y Paraná', -34.6041, -58.3879, 3200, {
     status: ContainerStatus.OVERFLOWED,
   }),
-  ct('CT-SNI-0004', 'Z-SNI', H, 'Viamonte y Uruguay', -34.6006, -58.3867, 2400),
-  ct('CT-SNI-0005', 'Z-SNI', R, 'Libertad y Tucumán', -34.6015, -58.3839, 2400),
-  ct('CT-SNI-0006', 'Z-SNI', H, 'Diagonal Norte y Esmeralda', -34.6057, -58.378, 3200, {
+  ct('CT-SNI-0004', 'san-nicolas', H, 'Viamonte y Uruguay', -34.6006, -58.3867, 2400),
+  ct('CT-SNI-0005', 'san-nicolas', R, 'Libertad y Tucumán', -34.6015, -58.3839, 2400),
+  ct('CT-SNI-0006', 'san-nicolas', H, 'Diagonal Norte y Esmeralda', -34.6057, -58.378, 3200, {
     status: ContainerStatus.DAMAGED,
     damageType: DamageType.VANDALIZED,
     severity: Severity.MEDIUM,
     requiresPublicWorks: false,
   }),
-  ct('CT-MON-0001', 'Z-MON', H, 'Av. de Mayo y Salta', -34.6092, -58.3834, 3200),
-  ct('CT-MON-0002', 'Z-MON', R, 'Chacabuco y Alsina', -34.6105, -58.3763, 2400),
-  ct('CT-MON-0003', 'Z-MON', H, 'Perú y Av. Belgrano', -34.6126, -58.3747, 3200),
-  ct('CT-MON-0004', 'Z-MON', H, 'Moreno y Piedras', -34.6117, -58.3777, 2400),
-  ct('CT-MON-0005', 'Z-MON', R, 'Hipólito Yrigoyen y Lima', -34.6097, -58.3819, 2400),
-  ct('CT-RET-0001', 'Z-RET', H, 'Florida 900', -34.5976, -58.3755, 3200),
-  ct('CT-RET-0002', 'Z-RET', R, 'Reconquista 1000', -34.5963, -58.3732, 3200),
+  ct('CT-MON-0001', 'montserrat', H, 'Av. de Mayo y Salta', -34.6092, -58.3834, 3200),
+  ct('CT-MON-0002', 'montserrat', R, 'Chacabuco y Alsina', -34.6105, -58.3763, 2400),
+  ct('CT-MON-0003', 'montserrat', H, 'Perú y Av. Belgrano', -34.6126, -58.3747, 3200),
+  ct('CT-MON-0004', 'montserrat', H, 'Moreno y Piedras', -34.6117, -58.3777, 2400),
+  ct('CT-MON-0005', 'montserrat', R, 'Hipólito Yrigoyen y Lima', -34.6097, -58.3819, 2400),
+  ct('CT-RET-0001', 'retiro', H, 'Florida 900', -34.5976, -58.3755, 3200),
+  ct('CT-RET-0002', 'retiro', R, 'Reconquista 1000', -34.5963, -58.3732, 3200),
   // La salida de las terminales de Retiro lo llena antes que la rotación.
-  ct('CT-RET-0003', 'Z-RET', H, 'Av. Santa Fe 900', -34.5953, -58.3798, 3200, {
+  ct('CT-RET-0003', 'retiro', H, 'Av. Santa Fe 900', -34.5953, -58.3798, 3200, {
     status: ContainerStatus.OVERFLOWED,
   }),
-  ct('CT-RET-0004', 'Z-RET', H, 'Esmeralda 1100', -34.5952, -58.3786, 2400),
-  ct('CT-RET-0005', 'Z-RET', R, 'Juncal 1000', -34.5929, -58.3815, 2400),
-  ct('CT-RET-0006', 'Z-RET', H, 'Av. Antártida Argentina 1100', -34.5904, -58.371, 3200),
-  ct('CT-PMA-0001', 'Z-PMA', H, 'Av. Alicia Moreau de Justo 1000', -34.6096, -58.3664, 2400),
-  ct('CT-PMA-0002', 'Z-PMA', R, 'Juana Manso 1000', -34.6093, -58.3629, 2400),
-  ct('CT-PMA-0003', 'Z-PMA', H, 'Av. Alicia Moreau de Justo 400', -34.6024, -58.3674, 2400),
+  ct('CT-RET-0004', 'retiro', H, 'Esmeralda 1100', -34.5952, -58.3786, 2400),
+  ct('CT-RET-0005', 'retiro', R, 'Juncal 1000', -34.5929, -58.3815, 2400),
+  ct('CT-RET-0006', 'retiro', H, 'Av. Antártida Argentina 1100', -34.5904, -58.371, 3200),
+  ct(
+    'CT-PMA-0001',
+    'puerto-madero',
+    H,
+    'Av. Alicia Moreau de Justo 1000',
+    -34.6096,
+    -58.3664,
+    2400,
+  ),
+  ct('CT-PMA-0002', 'puerto-madero', R, 'Juana Manso 1000', -34.6093, -58.3629, 2400),
+  ct('CT-PMA-0003', 'puerto-madero', H, 'Av. Alicia Moreau de Justo 400', -34.6024, -58.3674, 2400),
 ];
 
 /** Puntos verdes de entrega voluntaria, en plazas. */
-const GREEN_POINTS = [
+const GREEN_POINTS_BASE: PuntoVerdeSeed[] = [
   {
     code: 'GP-BEL-01',
     name: 'Punto Verde Barrancas de Belgrano',
-    zone: 'Z-BEL',
+    zone: 'belgrano',
     address: 'Av. Juramento y 11 de Septiembre de 1888',
     lat: -34.5588,
     lng: -58.4512,
@@ -855,7 +890,7 @@ const GREEN_POINTS = [
   {
     code: 'GP-PAL-01',
     name: 'Punto Verde Plaza Güemes',
-    zone: 'Z-PAL',
+    zone: 'palermo',
     address: 'Charcas y Jerónimo Salguero',
     lat: -34.5892,
     lng: -58.4158,
@@ -864,7 +899,7 @@ const GREEN_POINTS = [
   {
     code: 'GP-PAL-02',
     name: 'Punto Verde Parque Tres de Febrero',
-    zone: 'Z-PAL',
+    zone: 'palermo',
     address: 'Av. Infanta Isabel y Av. Iraola',
     lat: -34.5721,
     lng: -58.4137,
@@ -873,7 +908,7 @@ const GREEN_POINTS = [
   {
     code: 'GP-COL-01',
     name: 'Punto Verde Plaza Mafalda',
-    zone: 'Z-COL',
+    zone: 'colegiales',
     address: 'Conde y Concepción Arenal',
     lat: -34.5812,
     lng: -58.4441,
@@ -882,7 +917,7 @@ const GREEN_POINTS = [
   {
     code: 'GP-REC-01',
     name: 'Punto Verde Parque Las Heras',
-    zone: 'Z-REC',
+    zone: 'recoleta',
     address: 'Av. Las Heras y Av. Coronel Díaz',
     lat: -34.5852,
     lng: -58.4059,
@@ -891,7 +926,7 @@ const GREEN_POINTS = [
   {
     code: 'GP-SNI-01',
     name: 'Punto Verde Plaza Lavalle',
-    zone: 'Z-SNI',
+    zone: 'san-nicolas',
     address: 'Tucumán y Talcahuano',
     lat: -34.6015,
     lng: -58.3848,
@@ -900,7 +935,7 @@ const GREEN_POINTS = [
   {
     code: 'GP-MON-01',
     name: 'Punto Verde Plaza Montserrat',
-    zone: 'Z-MON',
+    zone: 'montserrat',
     address: 'Av. Belgrano y Lima',
     lat: -34.6128,
     lng: -58.3812,
@@ -909,7 +944,7 @@ const GREEN_POINTS = [
   {
     code: 'GP-RET-01',
     name: 'Punto Verde Plaza San Martín',
-    zone: 'Z-RET',
+    zone: 'retiro',
     address: 'Av. Santa Fe y Maipú',
     lat: -34.595,
     lng: -58.3777,
@@ -918,24 +953,13 @@ const GREEN_POINTS = [
   {
     code: 'GP-PMA-01',
     name: 'Punto Verde Puerto Madero — Dique 3',
-    zone: 'Z-PMA',
+    zone: 'puerto-madero',
     address: 'Av. Alicia Moreau de Justo y Macacha Güemes',
     lat: -34.6052,
     lng: -58.367,
     wasteTypes: [WasteType.RECYCLABLE, WasteType.MIXED],
   },
 ];
-
-interface ArbolSeed {
-  surveyCode: string;
-  zone: string;
-  species: string;
-  address: string;
-  lat: number;
-  lng: number;
-  heightM: number;
-  diameterCm: number;
-}
 
 function arbol(
   surveyCode: string,
@@ -961,12 +985,21 @@ const PLATANO = 'Platanus x acerifolia';
 const FRESNO = 'Fraxinus pennsylvanica';
 const JACARANDA = 'Jacaranda mimosifolia';
 
-const TREES: ArbolSeed[] = [
-  arbol('ARB-13-00101', 'Z-BEL', TIPA, 'Av. Juramento 2200', -34.5609, -58.4546, 16, 78),
-  arbol('ARB-13-00102', 'Z-BEL', JACARANDA, 'Vuelta de Obligado 2300', -34.5597, -58.4573, 9, 41.5),
+const TREES_BASE: ArbolSeed[] = [
+  arbol('ARB-13-00101', 'belgrano', TIPA, 'Av. Juramento 2200', -34.5609, -58.4546, 16, 78),
+  arbol(
+    'ARB-13-00102',
+    'belgrano',
+    JACARANDA,
+    'Vuelta de Obligado 2300',
+    -34.5597,
+    -58.4573,
+    9,
+    41.5,
+  ),
   arbol(
     'ARB-13-00103',
-    'Z-BEL',
+    'belgrano',
     PLATANO,
     '11 de Septiembre de 1888 1700',
     -34.5627,
@@ -974,11 +1007,11 @@ const TREES: ArbolSeed[] = [
     18,
     92,
   ),
-  arbol('ARB-13-00104', 'Z-BEL', FRESNO, 'Echeverría 2600', -34.5641, -58.4576, 11.5, 52),
-  arbol('ARB-13-00105', 'Z-BEL', 'Ceiba speciosa', 'Superí 1800', -34.5707, -58.4641, 12, 74),
+  arbol('ARB-13-00104', 'belgrano', FRESNO, 'Echeverría 2600', -34.5641, -58.4576, 11.5, 52),
+  arbol('ARB-13-00105', 'belgrano', 'Ceiba speciosa', 'Superí 1800', -34.5707, -58.4641, 12, 74),
   arbol(
     'ARB-13-00106',
-    'Z-BEL',
+    'belgrano',
     TIPA,
     'Mcal. Antonio José de Sucre 2400',
     -34.5639,
@@ -986,18 +1019,27 @@ const TREES: ArbolSeed[] = [
     15,
     70,
   ),
-  arbol('ARB-13-00107', 'Z-BEL', 'Melia azedarach', 'La Pampa 2100', -34.5632, -58.4513, 8, 36),
-  arbol('ARB-13-00201', 'Z-COL', FRESNO, 'Zapiola 800', -34.5756, -58.4494, 10, 44),
-  arbol('ARB-13-00202', 'Z-COL', TIPA, 'Conesa 900', -34.5739, -58.4497, 14, 66),
-  arbol('ARB-13-00203', 'Z-COL', FRESNO, 'Virrey Avilés 3200', -34.5735, -58.4587, 12, 58),
-  arbol('ARB-13-00204', 'Z-COL', JACARANDA, 'Teodoro García 2900', -34.5742, -58.4488, 8.5, 37),
-  arbol('ARB-14-00301', 'Z-PAL', TIPA, 'Gorriti 5600', -34.5851, -58.4371, 16, 81),
-  arbol('ARB-14-00302', 'Z-PAL', FRESNO, 'Arévalo 1500', -34.5827, -58.4425, 10.5, 45),
-  arbol('ARB-14-00303', 'Z-PAL', JACARANDA, 'Armenia 1700', -34.5894, -58.4273, 8.5, 38),
-  arbol('ARB-14-00304', 'Z-PAL', TIPA, 'Thames 1800', -34.5868, -58.4293, 17.5, 88),
+  arbol('ARB-13-00107', 'belgrano', 'Melia azedarach', 'La Pampa 2100', -34.5632, -58.4513, 8, 36),
+  arbol('ARB-13-00201', 'colegiales', FRESNO, 'Zapiola 800', -34.5756, -58.4494, 10, 44),
+  arbol('ARB-13-00202', 'colegiales', TIPA, 'Conesa 900', -34.5739, -58.4497, 14, 66),
+  arbol('ARB-13-00203', 'colegiales', FRESNO, 'Virrey Avilés 3200', -34.5735, -58.4587, 12, 58),
+  arbol(
+    'ARB-13-00204',
+    'colegiales',
+    JACARANDA,
+    'Teodoro García 2900',
+    -34.5742,
+    -58.4488,
+    8.5,
+    37,
+  ),
+  arbol('ARB-14-00301', 'palermo', TIPA, 'Gorriti 5600', -34.5851, -58.4371, 16, 81),
+  arbol('ARB-14-00302', 'palermo', FRESNO, 'Arévalo 1500', -34.5827, -58.4425, 10.5, 45),
+  arbol('ARB-14-00303', 'palermo', JACARANDA, 'Armenia 1700', -34.5894, -58.4273, 8.5, 38),
+  arbol('ARB-14-00304', 'palermo', TIPA, 'Thames 1800', -34.5868, -58.4293, 17.5, 88),
   arbol(
     'ARB-14-00305',
-    'Z-PAL',
+    'palermo',
     PLATANO,
     'Av. Pres. Figueroa Alcorta y Jerónimo Salguero',
     -34.5765,
@@ -1007,7 +1049,7 @@ const TREES: ArbolSeed[] = [
   ),
   arbol(
     'ARB-14-00306',
-    'Z-PAL',
+    'palermo',
     'Erythrina crista-galli',
     'Av. Infanta Isabel 500',
     -34.5708,
@@ -1015,10 +1057,10 @@ const TREES: ArbolSeed[] = [
     7,
     33,
   ),
-  arbol('ARB-14-00307', 'Z-PAL', JACARANDA, 'Malabia 2300', -34.5861, -58.42, 9.5, 43),
+  arbol('ARB-14-00307', 'palermo', JACARANDA, 'Malabia 2300', -34.5861, -58.42, 9.5, 43),
   arbol(
     'ARB-14-00308',
-    'Z-PAL',
+    'palermo',
     'Ceiba speciosa',
     'República de la India 2900',
     -34.5792,
@@ -1028,7 +1070,7 @@ const TREES: ArbolSeed[] = [
   ),
   arbol(
     'ARB-02-00401',
-    'Z-REC',
+    'recoleta',
     'Ficus benjamina',
     'Av. Pres. Manuel Quintana 400',
     -34.5893,
@@ -1036,13 +1078,13 @@ const TREES: ArbolSeed[] = [
     13,
     79,
   ),
-  arbol('ARB-02-00402', 'Z-REC', PLATANO, 'Av. Alvear 1800', -34.5885, -58.388, 20, 112),
-  arbol('ARB-02-00403', 'Z-REC', TIPA, 'Ayacucho 1200', -34.5947, -58.396, 15, 70),
-  arbol('ARB-02-00404', 'Z-REC', FRESNO, 'Peña 2200', -34.5913, -58.3966, 11, 49),
-  arbol('ARB-02-00405', 'Z-REC', TIPA, 'Agüero 1900', -34.5896, -58.4044, 16.5, 84),
+  arbol('ARB-02-00402', 'recoleta', PLATANO, 'Av. Alvear 1800', -34.5885, -58.388, 20, 112),
+  arbol('ARB-02-00403', 'recoleta', TIPA, 'Ayacucho 1200', -34.5947, -58.396, 15, 70),
+  arbol('ARB-02-00404', 'recoleta', FRESNO, 'Peña 2200', -34.5913, -58.3966, 11, 49),
+  arbol('ARB-02-00405', 'recoleta', TIPA, 'Agüero 1900', -34.5896, -58.4044, 16.5, 84),
   arbol(
     'ARB-01-00501',
-    'Z-PMA',
+    'puerto-madero',
     'Handroanthus impetiginosus',
     'Av. Alicia Moreau de Justo 1500',
     -34.6157,
@@ -1052,7 +1094,7 @@ const TREES: ArbolSeed[] = [
   ),
   arbol(
     'ARB-01-00502',
-    'Z-PMA',
+    'puerto-madero',
     'Erythrina crista-galli',
     'Juana Manso 1300',
     -34.6128,
@@ -1060,12 +1102,12 @@ const TREES: ArbolSeed[] = [
     6.5,
     30,
   ),
-  arbol('ARB-01-00503', 'Z-PMA', TIPA, 'Macacha Güemes 500', -34.6047, -58.3624, 11, 46),
-  arbol('ARB-01-00601', 'Z-SNI', PLATANO, 'Talcahuano 500', -34.6027, -58.3852, 17, 90),
-  arbol('ARB-01-00602', 'Z-SNI', FRESNO, 'Suipacha 600', -34.6014, -58.3796, 10, 42),
+  arbol('ARB-01-00503', 'puerto-madero', TIPA, 'Macacha Güemes 500', -34.6047, -58.3624, 11, 46),
+  arbol('ARB-01-00601', 'san-nicolas', PLATANO, 'Talcahuano 500', -34.6027, -58.3852, 17, 90),
+  arbol('ARB-01-00602', 'san-nicolas', FRESNO, 'Suipacha 600', -34.6014, -58.3796, 10, 42),
   arbol(
     'ARB-01-00801',
-    'Z-RET',
+    'retiro',
     'Ficus macrophylla',
     'Plaza San Martín — Maipú y Florida',
     -34.5953,
@@ -1075,7 +1117,7 @@ const TREES: ArbolSeed[] = [
   ),
   arbol(
     'ARB-01-00802',
-    'Z-RET',
+    'retiro',
     'Phytolacca dioica',
     'Plaza San Martín — Av. del Libertador',
     -34.5945,
@@ -1083,67 +1125,82 @@ const TREES: ArbolSeed[] = [
     12,
     150,
   ),
-  arbol('ARB-01-00803', 'Z-RET', FRESNO, 'Arroyo 900', -34.5915, -58.38, 11, 47),
-  arbol('ARB-01-00701', 'Z-MON', PLATANO, 'Bernardo de Irigoyen 600', -34.6151, -58.3803, 18, 95),
-  arbol('ARB-01-00702', 'Z-MON', FRESNO, 'Chacabuco 300', -34.6115, -58.3762, 9.5, 40),
+  arbol('ARB-01-00803', 'retiro', FRESNO, 'Arroyo 900', -34.5915, -58.38, 11, 47),
+  arbol(
+    'ARB-01-00701',
+    'montserrat',
+    PLATANO,
+    'Bernardo de Irigoyen 600',
+    -34.6151,
+    -58.3803,
+    18,
+    95,
+  ),
+  arbol('ARB-01-00702', 'montserrat', FRESNO, 'Chacabuco 300', -34.6115, -58.3762, 9.5, 40),
 ];
 
-/** Espacios verdes reales. El punto es un marcador dentro del espacio, no su contorno. */
-interface EspacioSeed {
-  name: string;
-  spaceType: GreenSpaceType;
-  zone: string;
-  lat: number;
-  lng: number;
-  areaM2: number;
+/**
+ * Inventario completo: lo escrito a mano para los ocho barrios originales y, en todos los
+ * barrios, lo que falta hasta el mínimo, generado dentro del polígono oficial del barrio.
+ */
+const POLIGONOS = cargarPoligonos();
+
+function contarPorZona(items: { zone: string }[]): Map<string, number> {
+  const n = new Map<string, number>();
+  for (const i of items) n.set(i.zone, (n.get(i.zone) ?? 0) + 1);
+  return n;
 }
 
-function ev(
-  name: string,
-  spaceType: GreenSpaceType,
-  zone: string,
-  lat: number,
-  lng: number,
-  areaM2: number,
-): EspacioSeed {
-  return { name, spaceType, zone, lat, lng, areaM2 };
-}
+const INVENTARIO = generarInventario(POLIGONOS, {
+  contenedores: contarPorZona(CONTAINERS_BASE),
+  puntosVerdes: contarPorZona(GREEN_POINTS_BASE),
+  arboles: contarPorZona(TREES_BASE),
+});
 
-const { PARK, SQUARE, MEDIAN, PLANTER, PROMENADE } = GreenSpaceType;
+export const CONTAINERS: ContenedorSeed[] = [...CONTAINERS_BASE, ...INVENTARIO.contenedores];
+export const GREEN_POINTS: PuntoVerdeSeed[] = [...GREEN_POINTS_BASE, ...INVENTARIO.puntosVerdes];
+export const TREES: ArbolSeed[] = [...TREES_BASE, ...INVENTARIO.arboles];
 
-const GREEN_SPACES: EspacioSeed[] = [
-  ev('Barrancas de Belgrano', PARK, 'Z-BEL', -34.5583, -58.4506, 54000),
-  ev('Plaza Manuel Belgrano', SQUARE, 'Z-BEL', -34.5617, -58.457, 9800),
-  ev('Plaza Noruega', SQUARE, 'Z-BEL', -34.5726, -58.461, 4200),
-  ev('Plaza Castelli', SQUARE, 'Z-BEL', -34.5697, -58.4676, 3100),
-  ev('Parque Tres de Febrero (Bosques de Palermo)', PARK, 'Z-PAL', -34.572, -58.416, 3900000),
-  ev('Jardín Botánico Carlos Thays', PARK, 'Z-PAL', -34.5822, -58.4172, 69800),
-  ev('Plaza Italia', SQUARE, 'Z-PAL', -34.5806, -58.4206, 7600),
-  ev('El Rosedal de Palermo', PARK, 'Z-PAL', -34.5715, -58.4185, 34000),
-  ev('Plazoleta Julio Cortázar (Plaza Serrano)', SQUARE, 'Z-PAL', -34.5885, -58.43, 2400),
-  ev('Plaza Güemes', SQUARE, 'Z-PAL', -34.5895, -58.4116, 12500),
-  ev('Cantero central Av. Dorrego', MEDIAN, 'Z-PAL', -34.58, -58.431, 3400),
-  ev('Plaza Mafalda', SQUARE, 'Z-COL', -34.5812, -58.4441, 8200),
-  ev('Canteros de Av. Federico Lacroze', PLANTER, 'Z-COL', -34.576, -58.4484, 900),
-  ev('Parque Las Heras', PARK, 'Z-REC', -34.5852, -58.4059, 124000),
-  ev('Plaza Francia', SQUARE, 'Z-REC', -34.586, -58.3925, 18000),
-  ev('Plaza Vicente López', SQUARE, 'Z-REC', -34.5931, -58.3893, 21000),
-  ev('Plaza Intendente Alvear', SQUARE, 'Z-REC', -34.587, -58.3915, 26000),
-  ev('Plaza Rodríguez Peña', SQUARE, 'Z-REC', -34.5975, -58.3925, 13500),
-  ev('Plaza Lavalle', SQUARE, 'Z-SNI', -34.6015, -58.3848, 28000),
-  ev('Plaza de la República', SQUARE, 'Z-SNI', -34.6037, -58.3816, 5200),
-  ev('Canteros centrales Av. 9 de Julio', MEDIAN, 'Z-SNI', -34.606, -58.381, 16000),
-  ev('Plaza de Mayo', SQUARE, 'Z-MON', -34.6083, -58.3722, 19000),
-  ev('Plaza del Congreso', SQUARE, 'Z-MON', -34.6096, -58.39, 23000),
-  ev('Plaza Montserrat', SQUARE, 'Z-MON', -34.6128, -58.3812, 6500),
-  ev('Plaza San Martín', PARK, 'Z-RET', -34.595, -58.3745, 62000),
-  ev('Plaza Fuerza Aérea Argentina', SQUARE, 'Z-RET', -34.5919, -58.3739, 15000),
-  ev('Canteros de Av. del Libertador (Retiro)', MEDIAN, 'Z-RET', -34.5913, -58.3779, 4800),
-  ev('Parque Mujeres Argentinas', PARK, 'Z-PMA', -34.6062, -58.3645, 37000),
-  ev('Parque Micaela Bastidas', PARK, 'Z-PMA', -34.6147, -58.362, 64000),
-  ev('Paseo de la Costanera Sur', PROMENADE, 'Z-PMA', -34.612, -58.3575, 41000),
-  ev('Reserva Ecológica Costanera Sur', PARK, 'Z-PMA', -34.6134, -58.3553, 3500000),
-];
+/**
+ * Espacios verdes: todos los del dataset de BA Data (plazas, parques, plazoletas, paseos).
+ * Cada uno se identifica por `ev-<id del dataset>`; el nombre no sirve de clave porque se
+ * repite entre barrios.
+ */
+const claveEspacio = (id: number): string => `ev-${id}`;
+
+export const TIPO_ESPACIO: Record<string, GreenSpaceType> = {
+  PLAZA: GreenSpaceType.SQUARE,
+  PLAZOLETA: GreenSpaceType.SQUARE,
+  PARQUE: GreenSpaceType.PARK,
+  'PARQUE SEMIPÚBLICO': GreenSpaceType.PARK,
+  'JARDÍN BOTÁNICO': GreenSpaceType.PARK,
+  PASEO: GreenSpaceType.PROMENADE,
+};
+
+/** Los espacios que nombran los servicios escritos a mano, y su id en el dataset. */
+const ESPACIO_POR_NOMBRE: Record<string, number> = {
+  'Barrancas de Belgrano': 610,
+  'Plaza Manuel Belgrano': 1154,
+  'Plaza Noruega': 911,
+  'Plaza Castelli': 899,
+  'Parque Tres de Febrero (Bosques de Palermo)': 1537,
+  'Jardín Botánico Carlos Thays': 1330,
+  'Plaza Italia': 885,
+  'El Rosedal de Palermo': 1490,
+  'Plaza Güemes': 630,
+  'Plaza Mafalda': 1160,
+  'Plaza Francia': 887,
+  'Plaza Vicente López': 481,
+  'Plaza Intendente Alvear': 482,
+  'Plaza Lavalle': 881,
+  'Plaza de la República': 647,
+  'Plaza de Mayo': 883,
+  'Plaza San Martín': 882,
+  'Plaza Fuerza Aérea Argentina': 511,
+  'Parque Mujeres Argentinas': 1284,
+  'Parque Micaela Bastidas': 1161,
+  'Paseo de la Costanera Sur': 1274,
+};
 
 // ════════════════════════════════════════════════════════════
 // PLAN DE OPERACIÓN
@@ -1211,9 +1268,12 @@ const FRANJA = {
   mananaTemprano: fr('06:00', '11:00'),
 };
 
-/** Días que genera la planificación semanal: dos semanas de historia y tres días de agenda. */
+/** Fin de la cursada: la agenda llega hasta acá (al menos tres días, si se siembra después). */
+const FIN_DE_CURSADA = Date.UTC(2026, 11, 16);
+
+/** Días que genera la planificación semanal: dos semanas de historia y la agenda hasta el fin de la cursada. */
 const DESDE = -14;
-const HASTA = 3;
+const HASTA = Math.max(3, Math.round((FIN_DE_CURSADA - HOY.getTime()) / 86_400_000));
 
 const TODOS = [1, 2, 3, 4, 5, 6, 7];
 const LMV = [1, 3, 5];
@@ -1245,7 +1305,7 @@ const BAJA_VEHICULO: Record<string, number> = {
   AJ678KU: DESDE - 30,
 };
 
-const FREQUENCIES: FrecuenciaSeed[] = [
+export const FREQUENCIES: FrecuenciaSeed[] = [
   {
     serviceType: 'REC-DOM',
     route: 'R-REC-C13',
@@ -1333,7 +1393,7 @@ const FREQUENCIES: FrecuenciaSeed[] = [
     serviceType: 'BAR-MEC',
     route: 'R-BAR-CEN',
     shift: Shift.NIGHT,
-    weekdays: [1, 2, 3, 4, 5],
+    weekdays: LMV,
     franja: FRANJA.madrugada,
     cuadrilla: () => 'BAR-MEC',
     vehiculo: () => 'AE234FL',
@@ -1352,7 +1412,7 @@ const FREQUENCIES: FrecuenciaSeed[] = [
     route: 'R-BAR-CAB',
     shift: Shift.NIGHT,
     // El sábado también: Cabildo es la avenida comercial con más tránsito peatonal del norte.
-    weekdays: [1, 3, 5, 6],
+    weekdays: [1, 6],
     franja: fr('21:00', '23:59'),
     cuadrilla: () => 'BAR-MEC',
     vehiculo: (d) => (d <= ROTURA_BARREDORA ? 'AF890GN' : 'AF567GM'),
@@ -1361,7 +1421,7 @@ const FREQUENCIES: FrecuenciaSeed[] = [
     serviceType: 'BAR-MAN',
     route: 'R-BAR-MAN-PAL',
     shift: Shift.MORNING,
-    weekdays: LMV,
+    weekdays: MJ,
     franja: fr('09:45', '11:45'),
     cuadrilla: () => 'PAL-REC',
   },
@@ -1369,7 +1429,7 @@ const FREQUENCIES: FrecuenciaSeed[] = [
     serviceType: 'BAR-MAN',
     route: 'R-BAR-MAN-SNI',
     shift: Shift.NIGHT,
-    weekdays: MJ,
+    weekdays: [4],
     franja: fr('21:00', '23:59'),
     cuadrilla: () => 'CEN-LIM',
   },
@@ -1377,7 +1437,7 @@ const FREQUENCIES: FrecuenciaSeed[] = [
     serviceType: 'HIG-LAV',
     route: 'R-LAV-CEN',
     shift: Shift.NIGHT,
-    weekdays: [2, 5],
+    weekdays: [5],
     franja: fr('00:30', '04:00'),
     cuadrilla: () => 'CEN-LIM',
     vehiculo: () => 'AG123HP',
@@ -1392,6 +1452,108 @@ const FREQUENCIES: FrecuenciaSeed[] = [
     vehiculo: () => 'AL997MJ',
   },
 ];
+
+// ════════════════════════════════════════════════════════════
+// COBERTURA REGIONAL
+// ════════════════════════════════════════════════════════════
+
+const deComuna = (n: number): string[] =>
+  BARRIOS.filter((b) => b.comuna === n).map((b) => b.codigo);
+
+/**
+ * Las comunas que los recorridos escritos a mano no tocan. Cada región tiene su cuadrilla
+ * de recolección y su compactador, y un recorrido semanal por comuna: así toda comuna tiene
+ * recorridos y servicios sin multiplicar el volumen de la agenda.
+ */
+const REGIONES = [
+  {
+    clave: 'SUR-REC',
+    name: 'Cuadrilla Municipal Sur — Recolección Comunas 1 (sur), 4 y 8',
+    lider: '151',
+    patente: 'AN123PQ',
+    rutas: [
+      { code: 'R-REC-C01S', zonas: ['san-telmo', 'constitucion'], dia: 6 },
+      { code: 'R-REC-C04', zonas: deComuna(4), dia: 2 },
+      { code: 'R-REC-C08', zonas: deComuna(8), dia: 4 },
+    ],
+  },
+  {
+    clave: 'OESTE-REC',
+    name: 'Cuadrilla Municipal Oeste — Recolección Comunas 9, 10 y 11',
+    lider: '161',
+    patente: 'AN246PR',
+    rutas: [
+      { code: 'R-REC-C09', zonas: deComuna(9), dia: 1 },
+      { code: 'R-REC-C10', zonas: deComuna(10), dia: 3 },
+      { code: 'R-REC-C11', zonas: deComuna(11), dia: 5 },
+    ],
+  },
+  {
+    clave: 'CENTRO-REC',
+    name: 'Cuadrilla Municipal Centro-Oeste — Recolección Comunas 3, 5, 6 y 7',
+    lider: '171',
+    patente: 'AN369PS',
+    rutas: [
+      { code: 'R-REC-C03', zonas: deComuna(3), dia: 2 },
+      { code: 'R-REC-C05', zonas: deComuna(5), dia: 4 },
+      { code: 'R-REC-C06', zonas: deComuna(6), dia: 1 },
+      { code: 'R-REC-C07', zonas: deComuna(7), dia: 3 },
+    ],
+  },
+  {
+    clave: 'NORTE-REC',
+    name: 'Cuadrilla Municipal Noroeste — Recolección Comunas 12, 13 (Núñez) y 15',
+    lider: '181',
+    patente: 'AN482PT',
+    rutas: [
+      { code: 'R-REC-C12', zonas: [...deComuna(12), 'nunez'], dia: 1 },
+      { code: 'R-REC-C15', zonas: deComuna(15), dia: 3 },
+    ],
+  },
+];
+
+const FRANJA_REGIONAL = fr('06:00', '11:00');
+
+for (const r of REGIONES) {
+  VEHICLES.push({ plate: r.patente, vehicleType: VehicleType.COMPACTOR_TRUCK, capacity: 19 });
+  CREWS.push({
+    clave: r.clave,
+    name: r.name,
+    crewType: CrewType.MUNICIPAL,
+    defaultShift: Shift.MORNING,
+    leaderUserId: r.lider,
+    organizationId: null,
+    members: [0, 1, 2, 3].map((i) => String(Number(r.lider) + i)),
+    active: true,
+    tipos: ['REC-DOM', 'CONT-VAC'],
+    zonas: r.rutas.flatMap((x) => x.zonas),
+  });
+  for (const ruta of r.rutas) {
+    const barrios = ruta.zonas.map((z) => BARRIOS.find((b) => b.codigo === z) as Barrio);
+    const comunas = [...new Set(barrios.map((b) => b.comuna))].join(', ');
+    ROUTES.push({
+      code: ruta.code,
+      name: `Recolección domiciliaria Comuna ${comunas} — ${barrios.map((b) => b.nombre).join(', ')}`,
+      stops: barrios.map((b) => ({
+        zone: b.codigo,
+        min: Math.min(90, Math.floor(280 / barrios.length)),
+      })),
+    });
+    FREQUENCIES.push({
+      serviceType: 'REC-DOM',
+      route: ruta.code,
+      shift: Shift.MORNING,
+      weekdays: [ruta.dia],
+      franja: FRANJA_REGIONAL,
+      cuadrilla: () => r.clave,
+      vehiculo: () => r.patente,
+    });
+  }
+}
+
+/** La región que atiende una zona, si la atiende alguna. */
+const regionDe = (zona: string) =>
+  REGIONES.find((r) => r.rutas.some((x) => x.zonas.includes(zona)));
 
 function diasDe(weekdays: number[]): number[] {
   const dias: number[] = [];
@@ -1432,14 +1594,14 @@ const INCIDENCIAS: {
       estado: ServiceStatus.PARTIALLY_COMPLETED,
       resultados: [
         {
-          zona: 'Z-BEL',
+          zona: 'belgrano',
           estado: ZoneResultStatus.NOT_SERVICED,
           motivo: NotServicedReason.WEATHER,
           notas: 'Granizo. Se suspendió la salida por seguridad del personal.',
           propuesta: -10,
         },
         {
-          zona: 'Z-COL',
+          zona: 'colegiales',
           estado: ZoneResultStatus.NOT_SERVICED,
           motivo: NotServicedReason.WEATHER,
           notas: 'Granizo. Se suspendió la salida por seguridad del personal.',
@@ -1456,7 +1618,7 @@ const INCIDENCIAS: {
       clave: 'rotura-compactador',
       resultados: [
         {
-          zona: 'Z-BEL',
+          zona: 'belgrano',
           estado: ZoneResultStatus.PARTIAL,
           motivo: NotServicedReason.VEHICLE_BREAKDOWN,
           notas:
@@ -1464,7 +1626,7 @@ const INCIDENCIAS: {
           propuesta: -8,
         },
         {
-          zona: 'Z-COL',
+          zona: 'colegiales',
           estado: ZoneResultStatus.NOT_SERVICED,
           motivo: NotServicedReason.VEHICLE_BREAKDOWN,
           notas: 'El camión quedó fuera de servicio antes de llegar a Colegiales.',
@@ -1507,7 +1669,7 @@ const INCIDENCIAS: {
       estado: ServiceStatus.PARTIALLY_COMPLETED,
       resultados: [
         {
-          zona: 'Z-PAL',
+          zona: 'palermo',
           estado: ZoneResultStatus.PARTIAL,
           motivo: NotServicedReason.EXCESS_VOLUME,
           notas:
@@ -1524,7 +1686,7 @@ const INCIDENCIAS: {
       estado: ServiceStatus.PARTIALLY_COMPLETED,
       resultados: [
         {
-          zona: 'Z-REC',
+          zona: 'recoleta',
           estado: ZoneResultStatus.PARTIAL,
           motivo: NotServicedReason.OTHER,
           notas: 'Acto en Plaza Francia con vallado municipal, sin aviso previo.',
@@ -1557,14 +1719,14 @@ const INCIDENCIAS: {
       estado: ServiceStatus.PARTIALLY_COMPLETED,
       resultados: [
         {
-          zona: 'Z-SNI',
+          zona: 'san-nicolas',
           estado: ZoneResultStatus.PARTIAL,
           motivo: NotServicedReason.BLOCKED_ACCESS,
           notas:
             'Vallado por una marcha sobre Diagonal Norte. No se pudo ingresar entre Florida y Av. de Mayo.',
           propuesta: -5,
         },
-        { zona: 'Z-RET', estado: ZoneResultStatus.SERVICED },
+        { zona: 'retiro', estado: ZoneResultStatus.SERVICED },
       ],
       demoras: [
         {
@@ -1589,7 +1751,7 @@ const INCIDENCIAS: {
       clave: 'recoleccion-mon-incidente',
       resultados: [
         {
-          zona: 'Z-MON',
+          zona: 'montserrat',
           estado: ZoneResultStatus.NOT_SERVICED,
           motivo: NotServicedReason.SECURITY_INCIDENT,
           notas:
@@ -1605,9 +1767,9 @@ const INCIDENCIAS: {
     cambios: {
       estado: ServiceStatus.PARTIALLY_COMPLETED,
       resultados: [
-        { zona: 'Z-PAL', estado: ZoneResultStatus.SERVICED },
+        { zona: 'palermo', estado: ZoneResultStatus.SERVICED },
         {
-          zona: 'Z-REC',
+          zona: 'recoleta',
           estado: ZoneResultStatus.NOT_SERVICED,
           motivo: NotServicedReason.CREW_UNAVAILABLE,
           notas: 'Dos recuperadores con licencia médica y sin reemplazo en el turno.',
@@ -1621,14 +1783,14 @@ const INCIDENCIAS: {
     cambios: {
       estado: ServiceStatus.PARTIALLY_COMPLETED,
       resultados: [
-        { zona: 'Z-SNI', estado: ZoneResultStatus.SERVICED },
+        { zona: 'san-nicolas', estado: ZoneResultStatus.SERVICED },
         {
-          zona: 'Z-MON',
+          zona: 'montserrat',
           estado: ZoneResultStatus.PARTIAL,
           motivo: NotServicedReason.EXCESS_VOLUME,
           notas: 'El cartón de los grandes generadores superó la capacidad del camión.',
         },
-        { zona: 'Z-RET', estado: ZoneResultStatus.SERVICED },
+        { zona: 'retiro', estado: ZoneResultStatus.SERVICED },
       ],
     },
   },
@@ -1649,7 +1811,7 @@ const INCIDENCIAS: {
       estado: ServiceStatus.SUSPENDED,
       clave: 'barrido-sf-suspendido',
       motivo: 'Rotura del cepillo lateral de la barredora AF890GN a mitad del recorrido.',
-      resultados: [{ zona: 'Z-PAL', estado: ZoneResultStatus.SERVICED }],
+      resultados: [{ zona: 'palermo', estado: ZoneResultStatus.SERVICED }],
     },
   },
   {
@@ -1734,7 +1896,11 @@ function punto(
 
 const cont = (codigo: string) => ({ tipo: 'CONTAINER' as const, codigo });
 const tree = (codigo: string) => ({ tipo: 'TREE' as const, codigo });
-const verde = (codigo: string) => ({ tipo: 'GREEN_SPACE' as const, codigo });
+const verde = (nombre: string) => {
+  const id = ESPACIO_POR_NOMBRE[nombre];
+  if (id === undefined) throw new Error(`seed: espacio verde sin id del dataset: '${nombre}'`);
+  return { tipo: 'GREEN_SPACE' as const, codigo: claveEspacio(id) };
+};
 const pv = (codigo: string) => ({ tipo: 'GREEN_POINT' as const, codigo });
 
 /** La alerta de tormentas que dejó marcados para reprogramar los trabajos de Puerto Madero. */
@@ -1742,7 +1908,7 @@ const ALERTA_TORMENTA = {
   tipo: 'tormentas fuertes',
   severidad: Severity.HIGH,
   dia: 2,
-  zonas: ['Z-PMA'],
+  zonas: ['puerto-madero'],
 };
 
 /**
@@ -1768,7 +1934,7 @@ const PUNTOS: Plan[] = [
   punto('CONT-VAC', -1, 'CEN-LIM', 'AF556GC', PARTIALLY_COMPLETED, cont('CT-MON-0003'), PLANNED, {
     resultados: [
       {
-        zona: 'Z-MON',
+        zona: 'montserrat',
         estado: ZoneResultStatus.NOT_SERVICED,
         motivo: NotServicedReason.BLOCKED_ACCESS,
         notas: 'Auto estacionado delante del contenedor sobre Perú. No se pudo levantar.',
@@ -1829,32 +1995,32 @@ const PUNTOS: Plan[] = [
   punto('CONT-LAV', 2, 'RECO', 'AK553LG', SCHEDULED, cont('CT-REC-0005'), PLANNED),
   punto('CONT-LAV', 2, 'CEN-LIM', 'AK553LG', SCHEDULED, cont('CT-MON-0002'), PLANNED),
   // ── Voluminosos ──
-  punto('REC-VOL', -11, 'RECO', 'AD678EJ', COMPLETED, 'Z-REC', TICKET, {
+  punto('REC-VOL', -11, 'RECO', 'AD678EJ', COMPLETED, 'recoleta', TICKET, {
     notas: 'Colchones y muebles en desuso frente a Ayacucho 1500.',
   }),
   punto('REC-VOL', -7, 'PAL-REC', 'AH221JA', COMPLETED, cont('CT-PAL-0006'), PLANNED),
-  punto('REC-VOL', -4, 'PAL-REC', 'AH221JA', COMPLETED, 'Z-PAL', TICKET, {
+  punto('REC-VOL', -4, 'PAL-REC', 'AH221JA', COMPLETED, 'palermo', TICKET, {
     notas: 'Restos de mudanza en la vereda de Honduras al 5800.',
   }),
-  punto('REC-VOL', -2, 'RECO', 'AD678EJ', CANCELLED, 'Z-REC', TICKET, {
+  punto('REC-VOL', -2, 'RECO', 'AD678EJ', CANCELLED, 'recoleta', TICKET, {
     motivo: 'El vecino retiró los restos por su cuenta antes de la visita.',
   }),
-  punto('REC-VOL', -1, 'BEL-REC', 'AH443JB', COMPLETED, 'Z-COL', TICKET, {
+  punto('REC-VOL', -1, 'BEL-REC', 'AH443JB', COMPLETED, 'colegiales', TICKET, {
     notas: 'Restos de obra embolsados en Virrey Loreto al 3400.',
   }),
   // A propósito se pisa con el vaciado del Barrio Chino, misma cuadrilla: la
   // base arranca con un solapamiento real y su nota (Issue #123).
-  punto('REC-VOL', 0, 'BEL-REC', 'AH443JB', SCHEDULED, 'Z-BEL', TICKET, {
+  punto('REC-VOL', 0, 'BEL-REC', 'AH443JB', SCHEDULED, 'belgrano', TICKET, {
     franja: fr('11:30', '12:30'),
     notas: 'Heladera abandonada sobre la vereda de Mendoza al 2500.',
     override:
       'Se asigna igual: el vaciado del Barrio Chino termina antes y la heladera está obstruyendo la rampa de la esquina.',
   }),
-  punto('REC-VOL', 0, 'RECO', 'AD678EJ', SCHEDULED, 'Z-REC', TICKET, {
+  punto('REC-VOL', 0, 'RECO', 'AD678EJ', SCHEDULED, 'recoleta', TICKET, {
     notas: 'Restos de poda particular embolsados en Av. Las Heras y Av. Pueyrredón.',
   }),
-  punto('REC-VOL', 1, 'RECO', 'AD678EJ', SCHEDULED, 'Z-REC', TICKET),
-  punto('REC-VOL', 2, '-PAL-REC', undefined, SCHEDULED, 'Z-PAL', TICKET),
+  punto('REC-VOL', 1, 'RECO', 'AD678EJ', SCHEDULED, 'recoleta', TICKET),
+  punto('REC-VOL', 2, '-PAL-REC', undefined, SCHEDULED, 'palermo', TICKET),
   // ── Poda ──
   punto('ARB-POD', -13, 'ARBOLADO', 'AH789JR', COMPLETED, tree('ARB-13-00103'), INSPECTION, {
     clave: 'poda-barrancas',
@@ -1966,30 +2132,136 @@ const PUNTOS: Plan[] = [
   ),
   punto('EV-RIEGO', -4, 'EV-a', 'AG456HQ', COMPLETED, verde('Plaza San Martín'), PLANNED),
   // ── Inspecciones ambientales ──
-  punto('AMB-INSP', -14, 'INSP-a', undefined, COMPLETED, 'Z-PAL', TICKET, {
+  punto('AMB-INSP', -14, 'INSP-a', undefined, COMPLETED, 'barracas', TICKET, {
     clave: 'insp-vuelco',
   }),
-  punto('AMB-INSP', -4, 'INSP-c', undefined, COMPLETED, 'Z-COL', INSPECTION, {
+  punto('AMB-INSP', -4, 'INSP-c', undefined, COMPLETED, 'colegiales', INSPECTION, {
     clave: 'insp-olor-colegiales',
   }),
-  punto('AMB-INSP', -3, 'INSP-b', undefined, COMPLETED, 'Z-SNI', INSPECTION, {
+  punto('AMB-INSP', -3, 'INSP-b', undefined, COMPLETED, 'san-nicolas', INSPECTION, {
     clave: 'insp-lavalle',
   }),
-  punto('AMB-INSP', -1, 'INSP-a', undefined, COMPLETED, 'Z-REC', TICKET, {
+  punto('AMB-INSP', -1, 'INSP-a', undefined, COMPLETED, 'villa-lugano', TICKET, {
     clave: 'insp-recoleta',
   }),
-  punto('AMB-INSP', 0, 'INSP-b', undefined, SCHEDULED, 'Z-MON', INSPECTION, {
+  punto('AMB-INSP', 0, 'INSP-b', undefined, SCHEDULED, 'montserrat', INSPECTION, {
     clave: 'insp-chile',
     notas: 'Constatar acopio de residuos en la vereda de Chile al 900.',
   }),
-  punto('AMB-INSP', 2, 'INSP-c', undefined, SCHEDULED, 'Z-PAL', TICKET, {
+  punto('AMB-INSP', 2, 'INSP-c', undefined, SCHEDULED, 'caballito', TICKET, {
     clave: 'insp-ruido',
     notas: 'Medición de nivel sonoro en horario nocturno.',
   }),
 ];
 
+/** ¿Tienen la cuadrilla y el vehículo libre esa franja ese día? Igual criterio que `verificar`. */
+function libre(
+  planes: Plan[],
+  q: Pick<Plan, 'cuadrilla' | 'vehiculo' | 'dia' | 'franja'>,
+): boolean {
+  return !planes.some(
+    (o) =>
+      o.estado !== CANCELLED &&
+      !o.override &&
+      o.dia === q.dia &&
+      ((q.cuadrilla && o.cuadrilla === q.cuadrilla) || (q.vehiculo && o.vehiculo === q.vehiculo)) &&
+      minutos(o.franja[0]) < minutos(q.franja[1]) &&
+      minutos(q.franja[0]) < minutos(o.franja[1]),
+  );
+}
+
+/**
+ * Un servicio puntual en cada comuna que los recorridos escritos a mano no cubren: vaciado de
+ * un contenedor, mantenimiento o riego de una plaza real, inspección y poda. Cada uno cae en
+ * el primer día libre a partir del preferido, así no pisa a nadie; los días preferidos se
+ * reparten entre el pasado reciente y las próximas semanas.
+ */
+function puntualesRegionales(previos: Plan[]): Plan[] {
+  const salida: Plan[] = [];
+  const todos = () => [...previos, ...salida];
+  const agregar = (
+    base: Omit<Plan, 'dia' | 'estado' | 'origen'>,
+    preferido: number,
+    vehiculos: (string | undefined)[],
+  ): void => {
+    for (let d = preferido; d <= Math.min(preferido + 25, HASTA); d++) {
+      for (const vehiculo of vehiculos) {
+        const q = { ...base, vehiculo, dia: d };
+        if (!libre(todos(), q)) continue;
+        salida.push({ ...q, estado: d < 0 ? COMPLETED : SCHEDULED, origen: PLANNED });
+        return;
+      }
+    }
+    throw new Error(`seed: no hay un día libre para ${base.tipo} en ${zonasDe(base as Plan)}`);
+  };
+
+  const NUEVAS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15];
+  NUEVAS.forEach((c, j) => {
+    const zonas = deComuna(c);
+    const zona = zonas[j % zonas.length];
+    const region = regionDe(zona);
+    if (!region) throw new Error(`seed: ninguna región atiende ${zona}`);
+
+    const cont = CONTAINERS.find(
+      (x) => x.zone === zona && (x.status ?? ContainerStatus.ACTIVE) === ContainerStatus.ACTIVE,
+    );
+    if (cont) {
+      agregar(
+        {
+          tipo: 'CONT-VAC',
+          franja: fr('11:15', '12:45'),
+          cuadrilla: region.clave,
+          objetivo: { tipo: 'CONTAINER', codigo: cont.code },
+        },
+        [-9, -6, -3, -1, 1, 2, 3, 4, 6, 8, 10][j],
+        [region.patente],
+      );
+    }
+
+    const plaza = ESPACIOS.filter(
+      (e) => e.barrio === zonas[(j + 1) % zonas.length] && !e.nombreDerivado,
+    ).sort((a, b) => b.areaM2 - a.areaM2)[0];
+    if (plaza) {
+      const riego = j % 2 === 0;
+      agregar(
+        {
+          tipo: riego ? 'EV-RIEGO' : 'EV-MANT',
+          franja: riego ? fr('07:00', '09:30') : fr('10:00', '12:30'),
+          cuadrilla: 'EV',
+          objetivo: { tipo: 'GREEN_SPACE', codigo: claveEspacio(plaza.id) },
+        },
+        [-11, -8, -5, -2, 0, 1, 2, 3, 5, 7, 9][j],
+        riego ? ['AK331LF', 'AG456HQ'] : ['AJ345KT', 'AE901FK'],
+      );
+    }
+
+    if (j % 2 === 0) {
+      agregar(
+        { tipo: 'AMB-INSP', franja: fr('14:00', '16:00'), cuadrilla: 'INSP', zona },
+        [-10, -7, -4, -1, 2, 4][j / 2],
+        [undefined],
+      );
+    }
+
+    const arbol = TREES.find((t) => zonas.includes(t.zone) && t.surveyCode.includes('-9'));
+    if (arbol && [4, 8, 10, 15].includes(c)) {
+      agregar(
+        {
+          tipo: 'ARB-POD',
+          franja: fr('10:30', '13:00'),
+          cuadrilla: 'ARBOLADO',
+          objetivo: { tipo: 'TREE', codigo: arbol.surveyCode },
+        },
+        { 4: -7, 8: -4, 10: 2, 15: 5 }[c] as number,
+        ['AH789JR', 'AL775MH'],
+      );
+    }
+  });
+  return salida;
+}
+
 /** Las zonas de un plan: las paradas del recorrido o la zona del objetivo. */
-function zonasDe(p: Plan): string[] {
+export function zonasDe(p: Plan): string[] {
   if (p.recorrido) {
     const r = ROUTES.find((x) => x.code === p.recorrido);
     if (!r) throw new Error(`seed: no existe el recorrido '${p.recorrido}'`);
@@ -2001,6 +2273,11 @@ function zonasDe(p: Plan): string[] {
 }
 
 function zonaDelObjetivo(o: { tipo: Objetivo; codigo: string }): string {
+  if (o.tipo === 'GREEN_SPACE') {
+    const e = ESPACIOS.find((x) => claveEspacio(x.id) === o.codigo);
+    if (!e) throw new Error(`seed: no existe el espacio verde '${o.codigo}'`);
+    return e.barrio;
+  }
   const item =
     o.tipo === 'CONTAINER'
       ? CONTAINERS.find((c) => c.code === o.codigo)
@@ -2008,13 +2285,13 @@ function zonaDelObjetivo(o: { tipo: Objetivo; codigo: string }): string {
         ? TREES.find((t) => t.surveyCode === o.codigo)
         : o.tipo === 'GREEN_POINT'
           ? GREEN_POINTS.find((g) => g.code === o.codigo)
-          : GREEN_SPACES.find((g) => g.name === o.codigo);
+          : undefined;
   if (!item) throw new Error(`seed: no existe el objetivo ${o.tipo} '${o.codigo}'`);
   return item.zone;
 }
 
 /** La planificación completa: frecuencias, incidencias y servicios puntuales. */
-function planificar(): Plan[] {
+export function planificar(): Plan[] {
   const planes: Plan[] = [];
 
   for (const f of FREQUENCIES) {
@@ -2043,6 +2320,7 @@ function planificar(): Plan[] {
   }
 
   planes.push(...PUNTOS);
+  planes.push(...puntualesRegionales(planes));
 
   // La alerta pasa por el mismo filtro que el consumidor: lo agendado ese día
   // en las zonas afectadas queda para reprogramar.
@@ -2075,7 +2353,7 @@ function minutos(hm: Hm): number {
 }
 
 /** Resultados por zona de un plan: los explícitos o, si cerró, todas atendidas. */
-function resultadosDe(p: Plan): ResultadoZona[] {
+export function resultadosDe(p: Plan): ResultadoZona[] {
   if (p.resultados) return p.resultados;
   if (p.estado !== COMPLETED) return [];
   return zonasDe(p).map((zona) => ({ zona, estado: ZoneResultStatus.SERVICED }));
@@ -2086,7 +2364,7 @@ function resultadosDe(p: Plan): ResultadoZona[] {
  * no escribe nada: es mejor que falle acá que una demo con una cuadrilla
  * nocturna barriendo a las tres de la tarde.
  */
-function verificar(planes: Plan[]): void {
+export function verificar(planes: Plan[]): void {
   const errores: string[] = [];
   const crews = new Map(CREWS.map((c) => [c.clave, c]));
   const flota = new Map(VEHICLES.map((v) => [v.plate, v]));
@@ -2208,9 +2486,62 @@ function verificar(planes: Plan[]): void {
       errores.push(`${f.route}: las paradas suman ${duracion} min y la franja tiene ${franja}`);
   }
 
+  errores.push(...verificarCobertura(planes));
+
   if (errores.length > 0) {
     throw new Error(`seed: la planificación no es coherente:\n  - ${errores.join('\n  - ')}`);
   }
+}
+
+/**
+ * Tope de servicios del seed. Contra Supabase la transacción tarda unos 1,5 s por servicio
+ * (710 tardaron ~17 min) y la transacción vence a la hora: no crecer sin medir de nuevo.
+ */
+export const TOPE_SERVICIOS = 800;
+
+/** Reparto por comuna y por barrio: nada de la Ciudad queda sin recorridos, servicios ni inventario. */
+export function verificarCobertura(planes: Plan[]): string[] {
+  const errores: string[] = [];
+  const comunaDe = new Map(BARRIOS.map((b) => [b.codigo, b.comuna]));
+  const comunas = [...new Set(BARRIOS.map((b) => b.comuna))];
+
+  if (planes.length > TOPE_SERVICIOS)
+    errores.push(`${planes.length} servicios: supera el tope de ${TOPE_SERVICIOS}`);
+
+  const conServicio = new Set(planes.flatMap(zonasDe).map((z) => comunaDe.get(z)));
+  const conRecorrido = new Set(ROUTES.flatMap((r) => r.stops).map((s) => comunaDe.get(s.zone)));
+  for (const c of comunas) {
+    if (!conServicio.has(c)) errores.push(`comuna ${c}: sin servicios`);
+    if (!conRecorrido.has(c)) errores.push(`comuna ${c}: sin recorridos`);
+  }
+
+  const cuenta = (items: { zone: string }[], barrio: string) =>
+    items.filter((i) => i.zone === barrio).length;
+  const espacios = new Set(ESPACIOS.map((e) => e.barrio));
+  for (const b of BARRIOS) {
+    if (cuenta(CONTAINERS, b.codigo) < MIN_CONTENEDORES)
+      errores.push(`${b.codigo}: pocos contenedores`);
+    if (cuenta(TREES, b.codigo) < MIN_ARBOLES) errores.push(`${b.codigo}: poco arbolado`);
+    if (!cuenta(GREEN_POINTS, b.codigo)) errores.push(`${b.codigo}: sin punto verde`);
+    if (!espacios.has(b.codigo)) errores.push(`${b.codigo}: sin espacios verdes`);
+  }
+
+  // Un punto fuera de su barrio no se dibuja en el mapa de su zona.
+  for (const [que, items] of [
+    ['contenedor', CONTAINERS.map((x) => ({ id: x.code, zone: x.zone, lat: x.lat, lng: x.lng }))],
+    [
+      'punto verde',
+      GREEN_POINTS.map((x) => ({ id: x.code, zone: x.zone, lat: x.lat, lng: x.lng })),
+    ],
+    ['árbol', TREES.map((x) => ({ id: x.surveyCode, zone: x.zone, lat: x.lat, lng: x.lng }))],
+  ] as const) {
+    for (const i of items) {
+      const poligono = POLIGONOS.get(i.zone);
+      if (!poligono || !puntoEnGeometria([i.lng, i.lat], poligono))
+        errores.push(`${que} ${i.id}: cae fuera del barrio ${i.zone}`);
+    }
+  }
+  return errores;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2219,21 +2550,30 @@ function verificar(planes: Plan[]): void {
 
 /** Kg de un día normal, por recorrido y zona. */
 const KG_BASE: Record<string, Record<string, number>> = {
-  'R-REC-C13': { 'Z-BEL': 7800, 'Z-COL': 3900 },
-  'R-REC-PAL': { 'Z-PAL': 9600 },
-  'R-REC-RECO': { 'Z-REC': 7200 },
-  'R-REC-SNI': { 'Z-SNI': 6400, 'Z-RET': 3600 },
-  'R-REC-MON': { 'Z-MON': 5100 },
-  'R-REC-PMA': { 'Z-PMA': 2300 },
-  'R-RECI-PR': { 'Z-PAL': 2100, 'Z-REC': 1300 },
-  'R-RECI-BC': { 'Z-BEL': 1500, 'Z-COL': 800 },
-  'R-RECI-CEN': { 'Z-SNI': 2600, 'Z-MON': 1400, 'Z-RET': 1100 },
-  'R-BAR-CEN': { 'Z-SNI': 900, 'Z-MON': 700 },
-  'R-BAR-SF': { 'Z-PAL': 500, 'Z-REC': 450, 'Z-RET': 350 },
-  'R-BAR-CAB': { 'Z-COL': 250, 'Z-BEL': 600 },
-  'R-BAR-MAN-PAL': { 'Z-PAL': 350 },
-  'R-BAR-MAN-SNI': { 'Z-SNI': 600, 'Z-RET': 300 },
+  'R-REC-C13': { belgrano: 7800, colegiales: 3900 },
+  'R-REC-PAL': { palermo: 9600 },
+  'R-REC-RECO': { recoleta: 7200 },
+  'R-REC-SNI': { 'san-nicolas': 6400, retiro: 3600 },
+  'R-REC-MON': { montserrat: 5100 },
+  'R-REC-PMA': { 'puerto-madero': 2300 },
+  'R-RECI-PR': { palermo: 2100, recoleta: 1300 },
+  'R-RECI-BC': { belgrano: 1500, colegiales: 800 },
+  'R-RECI-CEN': { 'san-nicolas': 2600, montserrat: 1400, retiro: 1100 },
+  'R-BAR-CEN': { 'san-nicolas': 900, montserrat: 700 },
+  'R-BAR-SF': { palermo: 500, recoleta: 450, retiro: 350 },
+  'R-BAR-CAB': { colegiales: 250, belgrano: 600 },
+  'R-BAR-MAN-PAL': { palermo: 350 },
+  'R-BAR-MAN-SNI': { 'san-nicolas': 600, retiro: 300 },
 };
+
+// Lo recolectado en las comunas nuevas: entre 2,5 y 5 t por barrio y pasada, determinístico.
+for (const r of REGIONES) {
+  for (const ruta of r.rutas) {
+    KG_BASE[ruta.code] = Object.fromEntries(
+      ruta.zonas.map((z) => [z, 2500 + (semillaDe(`kg-${z}`) % 2500)]),
+    );
+  }
+}
 
 /** Densidad aproximada en el camión, kg/m³, para derivar el volumen. */
 const DENSIDAD: Record<WasteType, number> = {
@@ -2249,7 +2589,13 @@ function variacion(d: number, i: number): number {
   return 1 + ((((d + 40) * 7 + i * 3) % 11) - 5) / 50;
 }
 
-const transferencia = (zona: string) => (CENTRO.includes(zona) ? 'DS-TR-POMPEYA' : 'DS-TR-COLEG');
+/** El centro y el sur descargan en Pompeya; el norte y el oeste, en Colegiales. */
+const COMUNAS_DEL_SUR = [1, 3, 4, 5, 6, 7, 8, 9];
+const transferencia = (zona: string) =>
+  CENTRO.includes(zona) ||
+  COMUNAS_DEL_SUR.includes(BARRIOS.find((b) => b.codigo === zona)?.comuna ?? 0)
+    ? 'DS-TR-POMPEYA'
+    : 'DS-TR-COLEG';
 
 /** Qué residuo y a qué destino, para lo que genera recolección. */
 function destinoDe(p: Plan, zona: string): { residuo: WasteType; sitio: string } | null {
@@ -2358,20 +2704,32 @@ async function main() {
     tipos.set(st.code, row);
   }
 
-  const zonas = new Map<string, string>();
-  for (const z of ZONES) {
-    const zone = await prisma.zone.upsert({
-      where: { code: z.code },
-      update: { name: z.name },
-      create: { code: z.code, name: z.name },
-    });
-    zonas.set(z.code, zone.id);
-    await prisma.zoneNeighborhood.createMany({
-      data: z.neighborhoods.map((neighborhoodId) => ({ zoneId: zone.id, neighborhoodId })),
-      skipDuplicates: true,
-    });
+  // Las 48 zonas y las 15 comunas, con los UUID reales de M9 (snapshot). Idempotente.
+  const sync = await syncZones(prisma, cargarSnapshot());
+  if (sync.conflictos.length) {
+    throw new Error(
+      `seed: syncZones dejó zonas sin tocar por conflicto; resolvelas antes de sembrar: ${sync.conflictos.join('; ')}`,
+    );
   }
+  console.log(
+    `seed: comunas +${sync.communes.creadas}/~${sync.communes.actualizadas}, zonas +${sync.zones.creadas}/~${sync.zones.actualizadas}`,
+  );
+  const zonas = new Map(
+    (await prisma.zone.findMany({ where: { code: { in: TODAS_LAS_ZONAS } } })).map((z) => [
+      z.code,
+      z.id,
+    ]),
+  );
   const zoneId = (code: string): string => buscar(zonas, code, 'la zona');
+  /** Las columnas de `green_point`: `wasteTypes` va en su propia tabla. */
+  const filaPuntoVerde = (gp: PuntoVerdeSeed) => ({
+    code: gp.code,
+    name: gp.name,
+    address: gp.address,
+    lat: gp.lat,
+    lng: gp.lng,
+    zoneId: zoneId(gp.zone),
+  });
 
   const recorridos = new Map<string, string>();
   for (const r of ROUTES) {
@@ -2440,56 +2798,115 @@ async function main() {
   }
 
   // ── Inventario urbano ──────────────────────────────────
-  const contenedores = new Map<string, string>();
-  for (const c of CONTAINERS) {
+  // Lo escrito a mano va por upsert (corrige datos en una segunda corrida); lo generado, que
+  // son cientos de filas, por createMany: contra una base remota un upsert por fila tarda de más.
+  for (const c of CONTAINERS_BASE) {
     const { zone, ...datos } = c;
-    const row = await prisma.container.upsert({
+    await prisma.container.upsert({
       where: { code: c.code },
       update: { ...datos, zoneId: zoneId(zone) },
       create: { ...datos, zoneId: zoneId(zone) },
     });
-    contenedores.set(c.code, row.id);
   }
+  await prisma.container.createMany({
+    data: INVENTARIO.contenedores.map(({ zone, ...datos }) => ({ ...datos, zoneId: zoneId(zone) })),
+    skipDuplicates: true,
+  });
+  const contenedores = new Map(
+    (await prisma.container.findMany({ select: { id: true, code: true } })).map((c) => [
+      c.code,
+      c.id,
+    ]),
+  );
 
-  const puntosVerdes = new Map<string, string>();
-  for (const gp of GREEN_POINTS) {
-    const { zone, wasteTypes, ...datos } = gp;
-    const row = await prisma.greenPoint.upsert({
+  for (const gp of GREEN_POINTS_BASE) {
+    const datos = filaPuntoVerde(gp);
+    await prisma.greenPoint.upsert({
       where: { code: gp.code },
-      update: { ...datos, zoneId: zoneId(zone) },
-      create: { ...datos, zoneId: zoneId(zone) },
-    });
-    puntosVerdes.set(gp.code, row.id);
-    await prisma.greenPointWasteType.createMany({
-      data: wasteTypes.map((wasteType) => ({ greenPointId: row.id, wasteType })),
-      skipDuplicates: true,
+      update: datos,
+      create: datos,
     });
   }
+  await prisma.greenPoint.createMany({
+    data: INVENTARIO.puntosVerdes.map(filaPuntoVerde),
+    skipDuplicates: true,
+  });
+  const puntosVerdes = new Map(
+    (await prisma.greenPoint.findMany({ select: { id: true, code: true } })).map((g) => [
+      g.code,
+      g.id,
+    ]),
+  );
+  await prisma.greenPointWasteType.createMany({
+    data: GREEN_POINTS.flatMap((gp) =>
+      gp.wasteTypes.map((wasteType) => ({
+        greenPointId: buscar(puntosVerdes, gp.code, 'el punto verde'),
+        wasteType,
+      })),
+    ),
+    skipDuplicates: true,
+  });
 
-  const arboles = new Map<string, string>();
-  for (const t of TREES) {
+  for (const t of TREES_BASE) {
     const { zone, ...datos } = t;
-    const row = await prisma.tree.upsert({
+    await prisma.tree.upsert({
       where: { surveyCode: t.surveyCode },
       update: { ...datos, zoneId: zoneId(zone) },
       create: { ...datos, zoneId: zoneId(zone) },
     });
-    arboles.set(t.surveyCode, row.id);
   }
+  await prisma.tree.createMany({
+    data: INVENTARIO.arboles.map(({ zone, ...datos }) => ({ ...datos, zoneId: zoneId(zone) })),
+    skipDuplicates: true,
+  });
+  const arboles = new Map(
+    (await prisma.tree.findMany({ select: { id: true, surveyCode: true } })).map((t) => [
+      t.surveyCode,
+      t.id,
+    ]),
+  );
 
-  // GreenSpace tampoco tiene clave natural: se busca por nombre, que en la
-  // práctica no se repite entre plazas de la Ciudad, y se actualiza.
+  // GreenSpace no tiene clave natural: se identifica por zona y nombre. Se crean solo las
+  // que faltan (un nombre puede repetirse en un barrio, así que se cuentan) y de una vez.
+  const clave = (zona: string, nombre: string) => `${zona}|${nombre}`;
+  const hay = new Map<string, number>();
+  for (const g of await prisma.greenSpace.findMany({ select: { zoneId: true, name: true } })) {
+    const k = clave(g.zoneId, g.name);
+    hay.set(k, (hay.get(k) ?? 0) + 1);
+  }
+  const pedidos = new Map<string, number>();
+  const nuevos: Prisma.GreenSpaceCreateManyInput[] = [];
+  for (const e of ESPACIOS) {
+    const k = clave(zoneId(e.barrio), e.nombre);
+    const orden = (pedidos.get(k) ?? 0) + 1;
+    pedidos.set(k, orden);
+    if (orden <= (hay.get(k) ?? 0)) continue;
+    nuevos.push({
+      name: e.nombre,
+      spaceType: TIPO_ESPACIO[e.clasificacion],
+      zoneId: zoneId(e.barrio),
+      lat: e.lat,
+      lng: e.lng,
+      areaM2: e.areaM2,
+    });
+  }
+  await prisma.greenSpace.createMany({ data: nuevos });
+  const filasEv = new Map<string, { id: string }[]>();
+  for (const g of await prisma.greenSpace.findMany({
+    select: { id: true, zoneId: true, name: true },
+    orderBy: { createdAt: 'asc' },
+  })) {
+    const k = clave(g.zoneId, g.name);
+    filasEv.set(k, [...(filasEv.get(k) ?? []), g]);
+  }
   const espaciosVerdes = new Map<string, string>();
-  for (const gs of GREEN_SPACES) {
-    const { zone, ...datos } = gs;
-    const existing = await prisma.greenSpace.findFirst({ where: { name: gs.name } });
-    const row = existing
-      ? await prisma.greenSpace.update({
-          where: { id: existing.id },
-          data: { ...datos, zoneId: zoneId(zone) },
-        })
-      : await prisma.greenSpace.create({ data: { ...datos, zoneId: zoneId(zone) } });
-    espaciosVerdes.set(gs.name, row.id);
+  const vistos = new Map<string, number>();
+  for (const e of ESPACIOS) {
+    const k = clave(zoneId(e.barrio), e.nombre);
+    const orden = vistos.get(k) ?? 0;
+    vistos.set(k, orden + 1);
+    const fila = filasEv.get(k)?.[orden];
+    if (fila) espaciosVerdes.set(claveEspacio(e.id), fila.id);
   }
 
   // ServiceFrequency no tiene clave única: se identifica por tipo, recorrido y turno.
@@ -2538,7 +2955,8 @@ async function main() {
   // sin operación, y la próxima corrida arranca limpia.
   await prisma.$transaction((tx) => sembrarOperacion(tx, planes, catalogo), {
     maxWait: 30_000,
-    timeout: 10 * 60_000,
+    // La agenda llega hasta el fin de la cursada: contra una base remota son miles de inserciones en serie.
+    timeout: 60 * 60_000,
   });
 
   await resumen();
@@ -2960,6 +3378,51 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     },
   );
 
+  // Un ejemplar relevado en cada una de las comunas que el arbolado escrito a mano no toca.
+  const COMUNAS_SIN_ARBOLADO = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15];
+  const muestraArboles = COMUNAS_SIN_ARBOLADO.map(
+    (c) =>
+      INVENTARIO.arboles.find(
+        (t) => BARRIOS.find((b) => b.codigo === t.zone)?.comuna === c,
+      ) as ArbolSeed,
+  );
+  const PATRONES: Omit<(typeof relevamientos)[number], 'arbol' | 'dia'>[] = [
+    {
+      healthStatus: TreeHealthStatus.WEAKENED,
+      riskLevel: RiskLevel.HIGH,
+      riskType: RiskType.FALLING_BRANCH,
+      suggestedIntervention: TreeInterventionType.SAFETY_PRUNING,
+      notes: 'Rama principal agrietada sobre la vereda.',
+    },
+    {
+      healthStatus: TreeHealthStatus.DEAD,
+      riskLevel: RiskLevel.CRITICAL,
+      riskType: RiskType.TRUNK_INSTABILITY,
+      suggestedIntervention: TreeInterventionType.REMOVAL,
+      requiresStreetClosure: true,
+      notes: 'Ejemplar seco en pie, sin brotación.',
+    },
+    {
+      healthStatus: TreeHealthStatus.HEALTHY,
+      riskLevel: RiskLevel.NONE,
+      notes: 'Sin observaciones.',
+    },
+    {
+      healthStatus: TreeHealthStatus.DISEASED,
+      riskLevel: RiskLevel.MEDIUM,
+      riskType: RiskType.PEST_INFESTATION,
+      suggestedIntervention: TreeInterventionType.TREATMENT,
+      notes: 'Cochinilla en ramas secundarias.',
+    },
+  ];
+  muestraArboles.forEach((t, j) =>
+    relevamientos.push({
+      arbol: t.surveyCode,
+      dia: -4 - ((j * 3) % 14),
+      ...PATRONES[j % PATRONES.length],
+    }),
+  );
+
   for (const r of relevamientos) {
     const { arbol: codigo, dia: d, ...datos } = r;
     const survey = await tx.treeSurvey.create({
@@ -3184,7 +3647,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     desde: momento(3, 10, 30),
     hasta: momento(3, 13),
     estado: StreetClosureRequestStatus.APPROVED,
-    closureId: `M7-CL-${ANIO}-01184`,
+    closureId: uuidDe('cierre-m7-01184'),
     calle: ['Av. Pres. Figueroa Alcorta', 'Jerónimo Salguero', 'Cavia'],
     creado: momento(-6, 12),
   });
@@ -3233,7 +3696,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     desde: new Date(hidrolavado.scheduledDate.getTime() + 3.5 * 3_600_000),
     hasta: new Date(hidrolavado.scheduledDate.getTime() + 7 * 3_600_000),
     estado: StreetClosureRequestStatus.ENDED,
-    closureId: `M7-CL-${ANIO}-01102`,
+    closureId: uuidDe('cierre-m7-01102'),
     calle: ['Av. de Mayo', 'Bolívar', 'Perú'],
     creado: new Date(hidrolavado.scheduledDate.getTime() - 3 * 86_400_000),
   });
@@ -3282,7 +3745,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     enId: servicio('rotura-compactador').id,
     riesgo: true,
     estado: RepairRequestStatus.IN_PROGRESS,
-    ot: `M3-OT-${ANIO}-00742`,
+    ot: uuidDe('ot-m3-00742'),
     pedida: momento(-9, 10),
   });
   await reparacion({
@@ -3313,9 +3776,61 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     enId: hidrolavado.id,
     riesgo: true,
     estado: RepairRequestStatus.IN_PROGRESS,
-    ot: `M3-OT-${ANIO}-00788`,
+    ot: uuidDe('ot-m3-00788'),
     pedida: new Date(hidrolavado.scheduledDate.getTime() + 8 * 3_600_000),
   });
+
+  // ── Derivaciones en otras comunas ──────────────────────
+  //
+  // Lo mismo que arriba, repartido por el resto de la Ciudad: cada ejemplar de riesgo alto o
+  // crítico pide su intervención; el seco además pide el corte de calle a M7; y las cuadrillas
+  // regionales derivan roturas de vereda a M3.
+  let cortesNuevos = 0;
+  for (const [j, t] of muestraArboles.entries()) {
+    const patron = PATRONES[j % PATRONES.length];
+    if (patron.riskLevel !== RiskLevel.HIGH && patron.riskLevel !== RiskLevel.CRITICAL) continue;
+    const critico = patron.riskLevel === RiskLevel.CRITICAL;
+    const interv = await intervencion({
+      tipo: critico ? REMOVAL : SAFETY_PRUNING,
+      arbol: t.surveyCode,
+      estado: critico ? PENDING_AUTHORIZATION : REQUESTED,
+      prioridad: critico ? Severity.CRITICAL : Severity.HIGH,
+      corte: critico,
+      justificacion: critico
+        ? 'Ejemplar seco en pie con riesgo de caída sobre la vereda.'
+        : undefined,
+    });
+    if (critico && cortesNuevos++ < 2) {
+      await corte({
+        motivo: 'Extracción de ejemplar con riesgo de caída. Corte total de la calzada.',
+        origen: 'TREE_INTERVENTION',
+        origenId: interv.id,
+        tipo: StreetClosureType.TOTAL,
+        desde: momento(8 + j, 8),
+        hasta: momento(8 + j, 16),
+        estado: StreetClosureRequestStatus.REQUESTED,
+        calle: [t.address, 'a confirmar', 'a confirmar'],
+        creado: momento(-1 - j, 15),
+      });
+    }
+  }
+  for (const region of ['SUR-REC', 'OESTE-REC', 'NORTE-REC']) {
+    const delaRegion = [...porPlan].find(([p]) => p.cuadrilla === region);
+    const cont = CONTAINERS.find(
+      (c) => regionDe(c.zone)?.clave === region && c.code.startsWith('CT-'),
+    );
+    if (!delaRegion || !cont) continue;
+    await reparacion({
+      tipo: RepairDamageType.BROKEN_SIDEWALK,
+      severidad: Severity.MEDIUM,
+      direccion: cont.address,
+      en: 'SERVICE',
+      enId: delaRegion[1].id,
+      riesgo: false,
+      estado: RepairRequestStatus.REQUESTED,
+      pedida: momento(-2 - REGIONES.findIndex((r) => r.clave === region), 11),
+    });
+  }
 
   // ── Control ambiental ──────────────────────────────────
   //
@@ -3324,6 +3839,17 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   // la inspección, el servicio que la ejecutó, el acta y la resolución de M4. Los
   // que llegan de un reclamo de M2 no traen coordenadas (la v1.6 de su
   // contrato sacó latitude/longitude); los de oficio sí.
+  /** Una plaza o parque real del barrio como referencia del hallazgo (con sus coordenadas). */
+  const lugar = (barrio: string, k = 0) => {
+    const e =
+      ESPACIOS.filter(
+        (x) => x.barrio === barrio && !x.nombreDerivado && x.clasificacion !== 'PLAZOLETA',
+      )
+        .sort((a, b) => b.areaM2 - a.areaM2)
+        .at(k) ?? (ESPACIOS.find((x) => x.barrio === barrio) as (typeof ESPACIOS)[number]);
+    return { address: `Frente a ${e.nombre}`, lat: e.lat, lng: e.lng };
+  };
+
   const denuncia = (
     status: EnvironmentalReportStatus,
     reportType: EnvironmentalReportType,
@@ -3357,7 +3883,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     fallo?: string,
   ) => {
     const issuedAt = momento(emitida, 9);
-    const establishmentId = `est-m4-${uuidDe(`establecimiento-${report.address}`).slice(0, 8)}`;
+    const establishmentId = uuidDe(`establecimiento-${report.address}`);
     const notice = await tx.violationNotice.create({
       data: {
         noticeNumber: numeroActa(emitida),
@@ -3427,9 +3953,10 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   const vuelco = await denuncia(
     EnvironmentalReportStatus.CLOSED,
     EnvironmentalReportType.ILLEGAL_DUMPSITE,
-    'Av. Juan B. Justo 1900',
+    lugar('barracas').address,
     -16,
     {
+      ...lugar('barracas'),
       ticketId: ticketDe('insp-vuelco'),
       reporterSnapshot: { isAnonymous: true },
       priority: Severity.HIGH,
@@ -3476,11 +4003,12 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   const ruido = await denuncia(
     EnvironmentalReportStatus.INSPECTION_SCHEDULED,
     EnvironmentalReportType.NOISE,
-    'Honduras 5800',
+    lugar('caballito').address,
     -3,
     {
+      ...lugar('caballito'),
       ticketId: ticketDe('insp-ruido'),
-      reporterSnapshot: { isAnonymous: false, citizenId: 'cit-m1-88421' },
+      reporterSnapshot: { isAnonymous: false, citizenId: uuidDe('m1-citizen-ruido-honduras') },
       deadlineAt: momento(12, 23, 59),
     },
   );
@@ -3519,9 +4047,10 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   await denuncia(
     EnvironmentalReportStatus.RECEIVED,
     EnvironmentalReportType.DUMPING,
-    'Paraguay 600',
+    lugar('flores').address,
     -1,
     {
+      ...lugar('flores'),
       ticketId: uuidDe('ticket-m2-dumping-paraguay'),
       reporterSnapshot: { isAnonymous: true },
       deadlineAt: momento(15, 23, 59),
@@ -3530,11 +4059,12 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   await denuncia(
     EnvironmentalReportStatus.UNDER_REVIEW,
     EnvironmentalReportType.PEST_INFESTATION,
-    'Moreno y Piedras',
+    lugar('liniers').address,
     -2,
     {
+      ...lugar('liniers'),
       ticketId: uuidDe('ticket-m2-roedores-moreno'),
-      reporterSnapshot: { isAnonymous: false, citizenId: 'cit-m1-90112' },
+      reporterSnapshot: { isAnonymous: false, citizenId: uuidDe('m1-citizen-roedores-moreno') },
       deadlineAt: momento(13, 23, 59),
     },
   );
@@ -3553,9 +4083,10 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   await denuncia(
     EnvironmentalReportStatus.DISMISSED,
     EnvironmentalReportType.NOISE,
-    'Alsina 1200',
+    lugar('balvanera').address,
     -7,
     {
+      ...lugar('balvanera'),
       ticketId: uuidDe('ticket-m2-ruido-alsina'),
       reporterSnapshot: { isAnonymous: true },
       priority: Severity.LOW,
@@ -3599,9 +4130,10 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   const basural = await denuncia(
     EnvironmentalReportStatus.VIOLATION_FOUND,
     EnvironmentalReportType.ILLEGAL_DUMPSITE,
-    'French y Billinghurst',
+    lugar('villa-lugano').address,
     -4,
     {
+      ...lugar('villa-lugano'),
       ticketId: ticketDe('insp-recoleta'),
       reporterSnapshot: { isAnonymous: true },
       priority: Severity.HIGH,
@@ -3715,7 +4247,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     enId: lavalle.insp.id,
     riesgo: false,
     estado: RepairRequestStatus.CLOSED,
-    ot: `M3-OT-${ANIO}-00517`,
+    ot: uuidDe('ot-m3-00517'),
     pedida: momento(-3, 17),
   });
 
@@ -3774,7 +4306,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   recibido(
     'corte-figueroa-aprobado',
     'streetClosureApproved',
-    { closureRequestId: corteFigueroa.id, closureId: `M7-CL-${ANIO}-01184` },
+    { closureRequestId: corteFigueroa.id, closureId: uuidDe('cierre-m7-01184') },
     momento(-5, 11),
   );
   recibido(
@@ -3787,37 +4319,37 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   recibido(
     'corte-hidrolavado-aprobado',
     'streetClosureApproved',
-    { closureRequestId: corteHidrolavado.id, closureId: `M7-CL-${ANIO}-01102` },
+    { closureRequestId: corteHidrolavado.id, closureId: uuidDe('cierre-m7-01102') },
     new Date(diaHidrolavado - 2 * 86_400_000 + 14 * 3_600_000),
   );
   recibido(
     'corte-hidrolavado-terminado',
     'streetClosureEnded',
-    { closureRequestId: corteHidrolavado.id, closureId: `M7-CL-${ANIO}-01102` },
+    { closureRequestId: corteHidrolavado.id, closureId: uuidDe('cierre-m7-01102') },
     new Date(diaHidrolavado + 7.2 * 3_600_000),
   );
   recibido(
     'ot-arribenos',
     'workOrderScheduled',
-    { sourceRequestId: reparacionArribenos.id, workOrderId: `M3-OT-${ANIO}-00742` },
+    { sourceRequestId: reparacionArribenos.id, workOrderId: uuidDe('ot-m3-00742') },
     momento(-7, 10),
   );
   recibido(
     'ot-puente-de-la-mujer',
     'workOrderScheduled',
-    { sourceRequestId: reparacionPuente.id, workOrderId: `M3-OT-${ANIO}-00788` },
+    { sourceRequestId: reparacionPuente.id, workOrderId: uuidDe('ot-m3-00788') },
     new Date(reparacionPuente.requestedAt.getTime() + 26 * 3_600_000),
   );
   recibido(
     'ot-plaza-lavalle-agendada',
     'workOrderScheduled',
-    { sourceRequestId: reparacionLavalle.id, workOrderId: `M3-OT-${ANIO}-00517` },
+    { sourceRequestId: reparacionLavalle.id, workOrderId: uuidDe('ot-m3-00517') },
     momento(-2, 10),
   );
   recibido(
     'ot-plaza-lavalle-completada',
     'workOrderCompleted',
-    { sourceRequestId: reparacionLavalle.id, workOrderId: `M3-OT-${ANIO}-00517` },
+    { sourceRequestId: reparacionLavalle.id, workOrderId: uuidDe('ot-m3-00517') },
     momento(-1, 15),
   );
   await tx.inboxEvent.createMany({ data: entrantes });
@@ -3825,7 +4357,11 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
 
 async function resumen() {
   const porEstado = await prisma.service.groupBy({ by: ['status'], _count: { _all: true } });
+  // Roles de M6 de la demo. Directo a la tabla, sin auditoría: es dato de arranque.
+  await prisma.userRoleAssignment.createMany({ data: rolesDeLaDemo(), skipDuplicates: true });
+
   console.table({
+    userRoleAssignments: await prisma.userRoleAssignment.count(),
     zones: await prisma.zone.count(),
     zoneNeighborhoods: await prisma.zoneNeighborhood.count(),
     routes: await prisma.route.count(),
@@ -3852,9 +4388,12 @@ async function resumen() {
   console.table(Object.fromEntries(porEstado.map((f) => [f.status, f._count._all])));
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+// Importable desde los specs sin tocar la base: solo corre como script.
+if (require.main === module) {
+  main()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}

@@ -35,9 +35,18 @@ package "Configuración y planificación" #EEF4FB {
       active : boolean
   }
 
+  entity "commune" as commune {
+    * id : uuid <<PK>>
+    --
+    * code : varchar <<UK>> ' comuna-N de M9
+    * name : varchar
+      active : boolean
+  }
+
   entity "zone" as zone {
     * id : uuid <<PK>>
     --
+      commune_id : uuid <<FK>> ' opcional
     * code : varchar <<UK>>
     * name : varchar
       active : boolean
@@ -460,6 +469,7 @@ package "Integración (técnico, no de dominio)" #EFEFEF {
 ' RELACIONES
 ' ==========================================================
 
+commune           ||--o{ zone : agrupa
 zone              ||--o{ zone_neighborhood : agrupa
 route             ||--|{ route_stop : ordena
 zone              ||--o{ route_stop : "es parada de"
