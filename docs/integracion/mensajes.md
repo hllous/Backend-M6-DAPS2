@@ -72,9 +72,9 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
-## Propuestos, sin enviar (26/10, M1)
+## Enviado el 26/10 (M1)
 
-**→ M1 (Ciudadanos)** — *propuesto, sin enviar*
+**→ M1 (Ciudadanos)** — *enviado el 26/10; M1 respondió el mismo día (URL del login: la remiten a Discord y al documento; la cuenta se comparte; su programa no está hosteado; ver [`m1.md`](m1.md#respuesta-al-seguimiento-2610-cuenta-compartida-y-m1-no-hosteado))*
 
 > Gracias. Dos datos más: ¿cuál es la URL base del login? Y esa cuenta (la de empleado que nos pasaron) ¿es compartida entre grupos? Si lo es, más adelante pedimos una propia con rol `RESPONSABLE_AREA`.
 
