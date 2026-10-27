@@ -54,7 +54,7 @@ import {
   cargarPoligonos,
   MIN_ARBOLES,
   MIN_CONTENEDORES,
-  generarInventario,
+  cargarInventario,
 } from './seed-lugares';
 
 const prisma = new PrismaClient();
@@ -1140,22 +1140,13 @@ const TREES_BASE: ArbolSeed[] = [
 ];
 
 /**
- * Inventario completo: lo escrito a mano para los ocho barrios originales y, en todos los
- * barrios, lo que falta hasta el mínimo, generado dentro del polígono oficial del barrio.
+ * Inventario completo: lo escrito a mano para los ocho barrios originales (los escenarios del
+ * resto del seed lo referencian por código) más la muestra real de IDECABA en los 48 barrios
+ * (`prisma/data/*-ciudad.json`, #439). Nada se genera al azar.
  */
 const POLIGONOS = cargarPoligonos();
 
-function contarPorZona(items: { zone: string }[]): Map<string, number> {
-  const n = new Map<string, number>();
-  for (const i of items) n.set(i.zone, (n.get(i.zone) ?? 0) + 1);
-  return n;
-}
-
-const INVENTARIO = generarInventario(POLIGONOS, {
-  contenedores: contarPorZona(CONTAINERS_BASE),
-  puntosVerdes: contarPorZona(GREEN_POINTS_BASE),
-  arboles: contarPorZona(TREES_BASE),
-});
+const INVENTARIO = cargarInventario();
 
 export const CONTAINERS: ContenedorSeed[] = [...CONTAINERS_BASE, ...INVENTARIO.contenedores];
 export const GREEN_POINTS: PuntoVerdeSeed[] = [...GREEN_POINTS_BASE, ...INVENTARIO.puntosVerdes];
@@ -1921,7 +1912,9 @@ const PUNTOS: Plan[] = [
   punto('CONT-VAC', -12, 'BEL-REC', 'AB456CE', COMPLETED, cont('CT-BEL-0009'), MANUAL, {
     notas: 'Último vaciado antes del retiro: la cuadra pasa a ser peatonal.',
   }),
-  punto('CONT-VAC', -8, 'BEL-REC', 'AB456CE', COMPLETED, cont('CT-BEL-0003'), TICKET),
+  punto('CONT-VAC', -8, 'BEL-REC', 'AB456CE', COMPLETED, cont('CT-BEL-0003'), TICKET, {
+    notas: 'Vaciado por reclamo; el contenedor volvió a desbordar y tiene otro vaciado pendiente.',
+  }),
   punto('CONT-VAC', -5, 'BEL-REC', 'AB456CE', COMPLETED, cont('CT-COL-0001'), PLANNED),
   punto('CONT-VAC', -2, 'BEL-REC', 'AB456CE', COMPLETED, cont('CT-BEL-0001'), PLANNED),
   punto('CONT-VAC', -9, 'PAL-REC', 'AC012DG', COMPLETED, cont('CT-PAL-0001'), PLANNED),
@@ -2257,6 +2250,106 @@ function puntualesRegionales(previos: Plan[]): Plan[] {
       );
     }
   });
+  // ── Contenedores reales en distintos estados (#439) ─────
+  //
+  // Un servicio de vaciado por cada situación de los contenedores de `CONTENEDORES_DEMO`, en
+  // comunas que no son las ocho originales: los desbordados se vacían (los de hoy en adelante,
+  // por reclamo de vecinos), a los dañados o en reubicación se les cancela el vaciado y los
+  // que están en el taller tuvieron su último vaciado antes de llevarlos. Los daños ya salen
+  // como `containerDamaged` hacia M3. Lavado (`CONT-LAV`) no: solo lo hace la cuadrilla de Recoleta.
+  // Los cancelados nacen PLANNED, con cuadrilla y vehículo asignados: la máquina de estados lo
+  // permite (se cancela un servicio ya asignado). Un contenedor que sigue desbordado tiene su
+  // vaciado pendiente; uno COMPLETED sobre un contenedor fuera de uso lleva una nota que lo explica.
+  // Los avisos de demora se escriben con `detectado` relativo a HOY: el día real del servicio
+  // lo decide el choque de cuadrillas, y un aviso no puede estar en el futuro.
+  const sobreContenedor = (
+    codigo: string,
+    estado: ServiceStatus,
+    preferido: number,
+    extra: Partial<Plan> = {},
+  ): void => {
+    const c = CONTAINERS.find((x) => x.code === codigo);
+    const region = c && regionDe(c.zone);
+    if (!c || !region) throw new Error(`seed: escenario con un contenedor inexistente '${codigo}'`);
+    // Lo agendado busca hacia adelante; lo ya hecho o cancelado, hacia atrás (sin salir del pasado).
+    const dias = Array.from({ length: 12 }, (_, i) =>
+      estado === SCHEDULED ? preferido + i : preferido - i,
+    );
+    for (const franja of [fr('06:30', '08:00'), fr('08:15', '09:45'), fr('11:15', '12:45')]) {
+      for (const d of dias) {
+        if (d > HASTA || d < DESDE) continue;
+        const q = {
+          tipo: 'CONT-VAC',
+          franja,
+          cuadrilla: region.clave,
+          vehiculo: region.patente,
+          objetivo: { tipo: 'CONTAINER' as const, codigo },
+          dia: d,
+        };
+        if (!libre(todos(), q)) continue;
+        const ticket =
+          extra.origen === TICKET ? `CONT-VAC-${d}-${region.clave}-${codigo}` : undefined;
+        const demoras = extra.demoras?.map((x) => ({
+          ...x,
+          detectado: [x.detectado[0] - d, x.detectado[1], x.detectado[2]] as [
+            number,
+            number,
+            number,
+          ],
+        }));
+        salida.push({
+          ...q,
+          estado,
+          origen: PLANNED,
+          ...extra,
+          ...(demoras && { demoras }),
+          ...(ticket && { ticket }),
+        });
+        return;
+      }
+    }
+    throw new Error(`seed: no hay un día libre para vaciar ${codigo}`);
+  };
+  const reclamo = { origen: TICKET };
+  sobreContenedor('CT-balvanera-0001', SCHEDULED, 1, {
+    ...reclamo,
+    notas: 'Desborde reportado por vecinos frente a un local gastronómico.',
+    demoras: [
+      {
+        tipo: DelayType.START,
+        minutos: 40,
+        motivo: 'El camión compactador sale tarde de la base por una falla de arranque.',
+        estado: SCHEDULED,
+        detectado: [-1, 20, 15],
+        finEstimado: [0, 8, 40],
+        reportadoPor: '171',
+      },
+    ],
+  });
+  sobreContenedor('CT-flores-0001', SCHEDULED, 2, reclamo);
+  sobreContenedor('CT-villa-crespo-0001', SCHEDULED, 1, reclamo);
+  // Siguen desbordados, con el vaciado pendiente; el completado va sobre otro contenedor activo.
+  sobreContenedor('CT-almagro-0001', SCHEDULED, 1, reclamo);
+  sobreContenedor('CT-caballito-0001', SCHEDULED, 1, reclamo);
+  sobreContenedor('CT-almagro-0002', COMPLETED, -2);
+  sobreContenedor('CT-monte-castro-0001', COMPLETED, -6, {
+    notas: 'Último vaciado antes de llevarlo al taller.',
+  });
+  sobreContenedor('CT-villa-urquiza-0001', COMPLETED, -5, {
+    notas: 'Último vaciado antes de llevarlo al taller.',
+  });
+  sobreContenedor('CT-barracas-0001', CANCELLED, -4, {
+    motivo: 'Contenedor con la tapa rota: se pidió la reparación y se lo retira del vaciado.',
+  });
+  sobreContenedor('CT-villa-lugano-0001', CANCELLED, -3, {
+    motivo: 'Daño estructural: la reparación requiere obra pública y el contenedor no se vacía.',
+  });
+  sobreContenedor('CT-liniers-0001', CANCELLED, -2, {
+    motivo: 'Contenedor vandalizado: se pidió la reparación antes de volver a vaciarlo.',
+  });
+  sobreContenedor('CT-villa-devoto-0001', CANCELLED, -1, {
+    motivo: 'Contenedor en reubicación: el vaciado se retoma cuando quede en su lugar nuevo.',
+  });
   return salida;
 }
 
@@ -2444,9 +2537,24 @@ export function verificar(planes: Plan[]): void {
       if (d.tipo !== esperado)
         errores.push(`${id}: demora ${d.tipo} con el servicio en ${d.estado}`);
     }
+    // Un aviso se levanta cuando ya ocurrió: no puede estar en el futuro.
+    for (const d of p.demoras ?? []) {
+      if (p.dia + d.detectado[0] > 0)
+        errores.push(`${id}: aviso de demora con detectedAt en el futuro`);
+    }
     const vigente = p.demoras?.at(-1);
     if (vigente && entre(p.estado, [SCHEDULED, IN_PROGRESS]) && vigente.estado !== p.estado)
       errores.push(`${id}: el aviso vigente no corresponde al estado actual`);
+
+    // Un contenedor que sigue fuera de servicio (o desbordado) no puede figurar vaciado
+    // hace días sin una nota que lo explique (p. ej. «último vaciado antes de...»).
+    if (p.objetivo?.tipo === 'CONTAINER' && p.tipo === 'CONT-VAC' && p.estado === COMPLETED) {
+      const c = CONTAINERS.find((x) => x.code === p.objetivo?.codigo);
+      if (c && (c.status ?? ContainerStatus.ACTIVE) !== ContainerStatus.ACTIVE && !p.notas)
+        errores.push(
+          `${id}: vaciado completado de un contenedor ${c.status} sin nota que lo explique`,
+        );
+    }
 
     // Un contenedor fuera de uso no se vacía ni se lava.
     if (p.objetivo?.tipo === 'CONTAINER' && p.dia >= 0) {
@@ -2499,7 +2607,10 @@ export function verificar(planes: Plan[]): void {
  */
 export const TOPE_SERVICIOS = 800;
 
-/** Reparto por comuna y por barrio: nada de la Ciudad queda sin recorridos, servicios ni inventario. */
+/**
+ * Reparto por comuna y por barrio: nada de la Ciudad queda sin recorridos, servicios ni
+ * inventario. Los puntos verdes no se exigen por barrio: la Ciudad publica solo 19 (#439).
+ */
 export function verificarCobertura(planes: Plan[]): string[] {
   const errores: string[] = [];
   const comunaDe = new Map(BARRIOS.map((b) => [b.codigo, b.comuna]));
@@ -2522,7 +2633,6 @@ export function verificarCobertura(planes: Plan[]): string[] {
     if (cuenta(CONTAINERS, b.codigo) < MIN_CONTENEDORES)
       errores.push(`${b.codigo}: pocos contenedores`);
     if (cuenta(TREES, b.codigo) < MIN_ARBOLES) errores.push(`${b.codigo}: poco arbolado`);
-    if (!cuenta(GREEN_POINTS, b.codigo)) errores.push(`${b.codigo}: sin punto verde`);
     if (!espacios.has(b.codigo)) errores.push(`${b.codigo}: sin espacios verdes`);
   }
 
@@ -2856,7 +2966,17 @@ async function main() {
     });
   }
   await prisma.tree.createMany({
-    data: INVENTARIO.arboles.map(({ zone, ...datos }) => ({ ...datos, zoneId: zoneId(zone) })),
+    // `healthStatus` es del relevamiento, no del árbol: se siembra más abajo.
+    data: INVENTARIO.arboles.map((t) => ({
+      surveyCode: t.surveyCode,
+      species: t.species,
+      address: t.address,
+      lat: t.lat,
+      lng: t.lng,
+      heightM: t.heightM,
+      diameterCm: t.diameterCm,
+      zoneId: zoneId(t.zone),
+    })),
     skipDuplicates: true,
   });
   const arboles = new Map(
@@ -3415,6 +3535,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
       notes: 'Cochinilla en ramas secundarias.',
     },
   ];
+  const conPatron = new Set(muestraArboles.map((t) => t.surveyCode));
   muestraArboles.forEach((t, j) =>
     relevamientos.push({
       arbol: t.surveyCode,
@@ -3446,6 +3567,26 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
       });
     }
   }
+
+  // La vitalidad real del censo de IDECABA: lo que no está sano queda relevado (los
+  // ejemplares con relevamiento de demo arriba ya tienen el suyo).
+  const delCenso = INVENTARIO.arboles.filter(
+    (t) =>
+      t.healthStatus && t.healthStatus !== TreeHealthStatus.HEALTHY && !conPatron.has(t.surveyCode),
+  );
+  await tx.treeSurvey.createMany({
+    data: delCenso.map((t) => ({
+      treeId: buscar(cat.arboles, t.surveyCode, 'el árbol'),
+      surveyedAt: momento(-30, 10),
+      inspectorId: '402',
+      healthStatus: t.healthStatus as TreeHealthStatus,
+      // Riesgo inventado (el censo no lo trae), siempre bajo HIGH: HIGH y CRITICAL emiten
+      // `treeRiskDetected` al outbox. WEAKENED copa rala -> LOW; DISEASED en seguimiento y
+      // DEAD (tocón o cepa, sin copa que caiga) -> MEDIUM.
+      riskLevel: t.healthStatus === TreeHealthStatus.WEAKENED ? RiskLevel.LOW : RiskLevel.MEDIUM,
+      notes: `Vitalidad según el censo de arbolado público de IDECABA (${t.healthStatus}).`,
+    })),
+  });
 
   // ── Intervenciones de arbolado ─────────────────────────
   //

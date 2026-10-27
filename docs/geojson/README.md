@@ -22,6 +22,8 @@ El dataset de espacios verdes escribe `MONSERRAT` y `LA BOCA` donde los otros do
 
 ## Fuente
 
-Cargados por el equipo el 27/10/2026. Las propiedades corresponden a los datasets abiertos de la Ciudad de Buenos Aires (BA Data, comunas y barrios). Confirmar la licencia en el portal oficial antes de redistribuirlos fuera del proyecto.
+Cargados por el equipo el 27/10/2026. Las propiedades corresponden a los datasets abiertos de la Ciudad de Buenos Aires (BA Data, comunas y barrios). Licencia: Creative Commons Atribución 2.5 Argentina (CC BY 2.5 AR, https://creativecommons.org/licenses/by/2.5/ar/), fuente https://data.buenosaires.gob.ar/es_AR/dataset/espacios-verdes; los datos se utilizaron con fines académicos y adaptados para su integración en el proyecto.
 
-`espacio_verde_publico.geojson`: dataset «Espacios verdes» de BA Data (https://data.buenosaires.gob.ar/dataset/espacios-verdes), descargado el 27/10/2026, versionado tal cual. Licencia a confirmar en el portal.
+`espacio_verde_publico.geojson`: dataset «Espacios verdes» de BA Data (https://data.buenosaires.gob.ar/dataset/espacios-verdes), descargado el 27/10/2026, versionado tal cual. Licencia: CC BY 2.5 AR (https://creativecommons.org/licenses/by/2.5/ar/), confirmada por el PO.
+
+`caba_barrios.geojson` también decide el barrio de cada contenedor, punto verde y árbol de IDECABA (`scripts/build-datos-ciudad.ts`, ver `prisma/data/README.md`): por punto-en-polígono, no por el campo `bar` del WFS.
