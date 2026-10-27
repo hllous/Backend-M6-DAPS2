@@ -4,6 +4,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { OutboxService } from '../../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../../events/event-types';
 import { treeRiskDetected } from '../../../events/payloads';
+import { zoneNeighborhoodId } from '../../zones/zone-neighborhood';
 import { CreateTreeSurveyDto, QueryTreeSurveysDto, TreeSurveyResponseDto } from './dto';
 import { PaginatedResponseDto } from '../../../common/dto';
 import { todayArgentina } from '../../../common/utils/date-only';
@@ -66,7 +67,7 @@ export class TreeSurveysService {
           eventType: EventType.TREE_RISK_DETECTED,
           aggregateType: AggregateType.TREE_SURVEY,
           aggregateId: row.id,
-          payload: treeRiskDetected(tree, row),
+          payload: treeRiskDetected(tree, row, await zoneNeighborhoodId(tx, tree.zoneId)),
           occurredAt: row.surveyedAt,
         });
       }

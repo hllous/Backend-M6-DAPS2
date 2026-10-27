@@ -22,8 +22,15 @@ erDiagram
         boolean requires_vehicle
         boolean active
     }
+    COMMUNE {
+        uuid id PK
+        varchar code UK "comuna-N de M9"
+        varchar name
+        boolean active
+    }
     ZONE {
         uuid id PK
+        uuid commune_id FK "opcional"
         varchar code UK
         varchar name
         boolean active
@@ -376,6 +383,7 @@ erDiagram
     }
 
     %% ======== RELACIONES ========
+    COMMUNE           ||--o{ ZONE : agrupa
     ZONE              ||--o{ ZONE_NEIGHBORHOOD : agrupa
     ROUTE             ||--|{ ROUTE_STOP : ordena
     ZONE              ||--o{ ROUTE_STOP : "es parada de"
@@ -439,4 +447,4 @@ erDiagram
 
 El estado vivo está en [bloqueantes.md](bloqueantes.md); acá solo lo que toca el esquema.
 
-- **Catálogo de barrios de M9 todavía sin adoptar.** M9 lo expone desde el 22/10 con `id` UUID, pero `ZONE_NEIGHBORHOOD.neighborhood_id` sigue siendo `VARCHAR` sin validación hasta [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376); los ids de arranque de M9 son ficticios, no se migra con ellos.
+- **Catálogo de barrios de M9 todavía sin adoptar.** M9 lo expone desde el 22/10 con `id` UUID, pero `ZONE_NEIGHBORHOOD.neighborhood_id` sigue siendo `VARCHAR` sin validación hasta [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376); M9 cargó los 48 barrios reales de CABA el 27/10 (los ficticios están de baja); la adopción sigue pendiente y las zonas operativas serán una por barrio.

@@ -13,6 +13,8 @@ import { JwtAuthGuard, RolesGuard } from './common/guards';
 
 // Módulos de dominio
 import { ZonesModule } from './modules/zones/zones.module';
+import { NeighborhoodsModule } from './modules/neighborhoods/neighborhoods.module';
+import { CommunesModule } from './modules/communes/communes.module';
 import { ServiceTypesModule } from './modules/service-types/service-types.module';
 import { DisposalSitesModule } from './modules/disposal-sites/disposal-sites.module';
 import { RoutesModule } from './modules/routes/routes.module';
@@ -50,6 +52,8 @@ import { RoleAssignmentsModule } from './modules/role-assignments/role-assignmen
 
     // ─── Dominios de negocio ────────────────────────
     ZonesModule,
+    NeighborhoodsModule,
+    CommunesModule,
     ServiceTypesModule,
     DisposalSitesModule,
     RoutesModule,

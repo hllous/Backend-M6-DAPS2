@@ -1,7 +1,7 @@
 /**
  * Los eventos que M6 escucha.
  *
- * Nueve de la cohorte más `weatherAlertIssued`, que **no lo publica nadie** y
+ * Ocho de la cohorte más `weatherAlertIssued`, que **no lo publica nadie** y
  * simulamos internamente (docs/eventos/consumidos/weatherAlertIssued.md).
  *
  * `notificationSent` está documentado como consumido pero **no tiene handler**:

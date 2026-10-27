@@ -1,0 +1,162 @@
+[
+ {
+  "id": "6017e857-394e-4e65-9daf-f8f32c2fbd45",
+  "codigo": "centro",
+  "nombre": "Centro",
+  "descripcion": "Casco historico y area administrativa",
+  "activo": false,
+  "barrios": 3
+ },
+ {
+  "id": "464df597-166a-492f-9f94-ae74f58687dd",
+  "codigo": "comuna-1",
+  "nombre": "Comuna 1",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 6
+ },
+ {
+  "id": "c3d2d448-b13e-4c34-93ea-b9707585e21c",
+  "codigo": "comuna-10",
+  "nombre": "Comuna 10",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 6
+ },
+ {
+  "id": "109920a0-6ea8-48d9-b79a-ff4a0348f971",
+  "codigo": "comuna-11",
+  "nombre": "Comuna 11",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 4
+ },
+ {
+  "id": "4569d41a-3b6b-4b78-9dcc-9583b6f4b79f",
+  "codigo": "comuna-12",
+  "nombre": "Comuna 12",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 4
+ },
+ {
+  "id": "ba503674-7c7c-4284-a3d9-7948164eadde",
+  "codigo": "comuna-13",
+  "nombre": "Comuna 13",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 3
+ },
+ {
+  "id": "b56d15eb-cc03-4839-af5b-a68f3f6bb3c4",
+  "codigo": "comuna-14",
+  "nombre": "Comuna 14",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 1
+ },
+ {
+  "id": "a6ac10d7-acc4-4d78-b4ac-8db27344fa14",
+  "codigo": "comuna-15",
+  "nombre": "Comuna 15",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 6
+ },
+ {
+  "id": "e0d24979-1827-474b-99be-4475e7badbb7",
+  "codigo": "comuna-2",
+  "nombre": "Comuna 2",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 1
+ },
+ {
+  "id": "fecb8f5b-274e-489d-aa16-1a980b80d717",
+  "codigo": "comuna-3",
+  "nombre": "Comuna 3",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 2
+ },
+ {
+  "id": "306f13c3-8dcd-4b4d-aee7-91db3373966c",
+  "codigo": "comuna-4",
+  "nombre": "Comuna 4",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 4
+ },
+ {
+  "id": "761b4a13-e445-4b7f-b345-beecf35c66c1",
+  "codigo": "comuna-5",
+  "nombre": "Comuna 5",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 2
+ },
+ {
+  "id": "6ef9c84f-76b3-4c84-a560-09900e57765a",
+  "codigo": "comuna-6",
+  "nombre": "Comuna 6",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 1
+ },
+ {
+  "id": "f4e0b601-c532-4b9a-8442-3ea40e6ac9cb",
+  "codigo": "comuna-7",
+  "nombre": "Comuna 7",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 2
+ },
+ {
+  "id": "a3b4da6e-9946-4ab8-91f9-7e564d43f6ca",
+  "codigo": "comuna-8",
+  "nombre": "Comuna 8",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 3
+ },
+ {
+  "id": "f2c0c99d-f9f6-4993-96f0-ec684fa16c4e",
+  "codigo": "comuna-9",
+  "nombre": "Comuna 9",
+  "descripcion": "Comuna de la Ciudad Autonoma de Buenos Aires",
+  "activo": true,
+  "barrios": 3
+ },
+ {
+  "id": "3e72c851-ab9e-4efb-af5c-f36a98a41b51",
+  "codigo": "ribera",
+  "nombre": "Ribera",
+  "descripcion": "Barrios costeros y area portuaria",
+  "activo": false,
+  "barrios": 3
+ },
+ {
+  "id": "58acbabc-14e6-4479-8fc6-076f00b58ffe",
+  "codigo": "norte",
+  "nombre": "Zona Norte",
+  "descripcion": "Barrios residenciales del norte",
+  "activo": false,
+  "barrios": 4
+ },
+ {
+  "id": "b873f44a-ebaa-4d7c-864a-7b25bd5894ee",
+  "codigo": "oeste",
+  "nombre": "Zona Oeste",
+  "descripcion": "Barrios del oeste y periferia",
+  "activo": false,
+  "barrios": 3
+ },
+ {
+  "id": "667b7485-3c58-46cb-ae03-e077b31a5dc2",
+  "codigo": "sur",
+  "nombre": "Zona Sur",
+  "descripcion": "Area industrial y residencial del sur",
+  "activo": false,
+  "barrios": 3
+ }
+]

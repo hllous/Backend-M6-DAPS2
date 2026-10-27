@@ -6,7 +6,7 @@ El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde e
 
 El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
-> 140 rutas, agrupadas en 25 tags de Swagger (cuenta contrastada contra `openapi.json`).
+> 142 rutas, agrupadas en 27 tags de Swagger (cuenta contrastada contra `openapi.json`).
 
 ## Convenciones
 
@@ -21,7 +21,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **Tope de tamaño**: `search` admite hasta 100 caracteres; los ids externos (`ticketId`, `publicId`, `weatherAlertId`, `leaderUserId`, `organizationId`, `authorizedByUserId`, `inspectorId`, `eventId` y cada elemento de `userIds` y `neighborhoodIds`) hasta 100; en el sobre del bus, `eventType` hasta 120, `sourceModule` hasta 60 y `eventVersion` hasta 20 (los topes del Core); `reason` de un aviso de demora hasta 500 y `notes` de un servicio y `description` de un expediente hasta 2000. Los arrays (`userIds`, `neighborhoodIds`, `treeIds`, `wasteTypes`) admiten hasta 100 elementos. Pasarse da 400.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
 - **CORS**: los orígenes permitidos salen de `CORS_ORIGINS`. Sin esa variable se acepta cualquiera, que es lo que hace falta en desarrollo. El JWT viaja en un header y no en una cookie, así que esto no cierra un CSRF — es higiene, no un límite de seguridad.
-- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 23 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
+- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 27 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
 
 ## Rol requerido por endpoint
@@ -32,6 +32,7 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 
 | Método | Ruta | Rol |
 | --- | --- | --- |
+| GET | `/communes` | cualquier rol de M6 |
 | GET | `/containers` | cualquier rol de M6 |
 | POST | `/containers` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | GET | `/containers/:id` | cualquier rol de M6 |
@@ -91,6 +92,7 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 | GET | `/indicators/incidents` | cualquier rol de M6 |
 | GET | `/indicators/waste` | cualquier rol de M6 |
 | GET | `/me` | cualquier empleado |
+| GET | `/neighborhoods` | cualquier rol de M6 |
 | GET | `/public/green-points` | público |
 | GET | `/public/reports/:ticketId` | público |
 | GET | `/public/services` | público |
@@ -208,16 +210,28 @@ No filtra los listados: Campo sigue viendo todo en los `GET`; la pertenencia es 
 
 Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append-only) en la misma transacción. La asignación **no** se valida contra el rol de M1 del destinatario (M6 no tiene directorio de M1): rige al leer, por la intersección.
 
+## `neighborhoods` — catálogo de barrios de M9
+
+| Método | Ruta             | Descripción                                                                                                                                                                                  |
+| ------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/neighborhoods` | Barrios del catálogo de M9 cacheados (se leen del Core al arrancar y cada 6 h). Filtros: `soloActivos`, `zona` (comuna), `q`. Sin paginar. 503 si el catálogo todavía no se pudo leer |
+
+## `communes` — comunas
+
+| Método | Ruta       | Descripción |
+| ------ | ---------- | ----------- |
+| GET    | `/communes` | Comunas con sus zonas y los barrios de cada zona (`codigo`/`nombre` de la caché de M9; sin catálogo solo el `id`). Filtro: `active`. Ordenadas por número de comuna. Sin paginar. Cualquier rol de M6 |
+
 ## `zones` — zonas operativas
 
 | Método | Ruta                                       | Qué hace                                            |
 | ------ | ------------------------------------------ | --------------------------------------------------- |
-| POST   | `/zones`                                   | Crear zona operativa                                |
-| GET    | `/zones`                                   | Listar. Filtros: `active`, `search` (nombre)        |
+| POST   | `/zones`                                   | Crear zona operativa. `communeId` opcional (400 si la comuna no existe) |
+| GET    | `/zones`                                   | Listar, con `commune` y `neighborhood` (uno solo, el primero por id con UUID, aunque la zona tenga varios; el detalle trae todos en `neighborhoods[]`). Filtros: `active`, `search` (nombre), `communeId` |
 | GET    | `/zones/:id`                               | Detalle, con los barrios asignados                  |
-| PATCH  | `/zones/:id`                               | Actualizar nombre y estado. El código es inmutable  |
+| PATCH  | `/zones/:id`                               | Actualizar nombre, estado y `communeId` (400 si la comuna no existe; `null` la desasigna). El código es inmutable |
 | DELETE | `/zones/:id`                               | Baja lógica                                         |
-| POST   | `/zones/:id/neighborhoods`                 | Asignar barrios (catálogo de M9). Ignora duplicados |
+| POST   | `/zones/:id/neighborhoods`                 | Asignar barrios (catálogo de M9). Ignora duplicados. Con el catálogo cargado, un `id` desconocido da 400 (un barrio dado de baja, `activo:false`, sigue siendo válido: en M9 nada se borra); sin catálogo se acepta con warning |
 | DELETE | `/zones/:id/neighborhoods/:neighborhoodId` | Quitar un barrio                                    |
 
 ## `routes` — recorridos
