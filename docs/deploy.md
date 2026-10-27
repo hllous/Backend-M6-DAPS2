@@ -159,7 +159,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 | Lugar | Variable | Qué va | Por qué | A quién pedirlo | Cuándo | Secreto |
 |---|---|---|---|---|---|---|
 | Render | `JWT_SECRET` | Base64 de 32 bytes o más. Provisorio: `openssl rand -base64 32` | La validación del token de M1 cambió (#354). Con el valor viejo en texto plano **el servicio no arranca** | Al PO de M6: M1 manda el definitivo por el grupo de POs | **Antes del deploy** | Sí |
-| Render | `M6_BOOTSTRAP_ADMIN_USER_IDS` | `user_id` de M1 del primer admin (varios, separados por coma) | Sin él nadie puede asignar roles (#161) | M1 entregó el `user_id` 1 (26/10); confirmarlo con el `sub` del token de esa cuenta (`RESPONSABLE_AREA`) | Con el deploy de la base de roles | No |
+| Render | `M6_BOOTSTRAP_ADMIN_USER_IDS` | `user_id` de M1 del primer admin (varios, separados por coma) | Sin él nadie puede asignar roles (#161) | M1 entregó el `user_id` 1 (26/10); M1 no está hosteado, así que no se verifica con un token de M1: cargar `1` y regenerar `M6_DEV_JWT` con el script (abajo) | Con el deploy de la base de roles | No |
 | Render | `RABBITMQ_URL` | `amqps://module_ambiente:<clave>@core-uade-2026.duckdns.org:5671/core` (clave percent-encoded si lleva `/ ? # @ : %`) | Conecta con el bus del Core. Sin ella la app arranca, pero no publica ni consume | Al PO de M6: ficha privada de M9, usuario `module_ambiente` | Cuando llegue la ficha | **Sí** |
 | Render | `CORE_API_URL` | `https://core-uade-2026.duckdns.org` | API REST del Core (token de módulo y registro de suscripciones) | No hace falta pedirla: es un dato conocido | Con la ficha | No |
 | Render | `CORE_MODULE_SECRET` | El secret de máquina de M9 | Pide el token de módulo al Core; obligatoria si hay `CORE_API_URL` | Al PO de M6: ficha privada de M9 | Cuando llegue la ficha | **Sí** |
@@ -172,7 +172,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 
 | Lugar | Variable | Qué va | Por qué | A quién pedirlo | Cuándo | Secreto |
 |---|---|---|---|---|---|---|
-| Vercel | `M6_DEV_JWT` | Se genera con `node scripts/generate-demo-jwt.mjs <JWT_SECRET de Render> RESPONSABLE_AREA <user_id del admin inicial>` (el mismo id de `M6_BOOTSTRAP_ADMIN_USER_IDS`) | Token de demo del BFF. **Dura 15 minutos** y tiene que ser de un empleado | Lo genera DevOps con el secreto de Render | Después de cargar el `JWT_SECRET` | Sí |
+| Vercel | `M6_DEV_JWT` | Se genera con `node scripts/generate-demo-jwt.mjs <JWT_SECRET de Render> RESPONSABLE_AREA <user_id del admin inicial>` (el mismo id de `M6_BOOTSTRAP_ADMIN_USER_IDS`) | Token de demo del BFF. **Dura 15 minutos** y tiene que ser de un empleado. Excepción de demo al [ADR-004](decisiones/adr-004-jwt-m1-y-puerto-identidad.md) mientras M1 no esté hosteado: lo firmamos nosotros ([ficha de M1](integracion/m1.md#respuesta-al-seguimiento-2610-cuenta-compartida-y-m1-no-hosteado)) | Lo genera DevOps con el secreto de Render | Después de cargar el `JWT_SECRET` | Sí |
 | Vercel | `M6_SESSION_SECRET` | Valor aleatorio propio | Sella la cookie de sesión del BFF | Lo genera DevOps | Si no existe | Sí |
 | Vercel | `M6_AUTH_MODE`, `M6_BACKEND_ORIGIN` | `backend-development` y `https://m6-backend-m64k.onrender.com` | Modo demo contra el backend real | – | Solo verificar | No |
 
