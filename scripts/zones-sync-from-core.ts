@@ -6,8 +6,9 @@
  *
  * - `--dry-run`: solo lee; imprime el plan y no escribe en la base.
  * - `--from-snapshot`: usa `prisma/data/m9-*.json` en vez del Core (no pide token).
+ *   No se combina con `--clean-legacy`.
  * - `--clean-legacy`: DESTRUCTIVO. Borra las filas `zone_neighborhood` cuyo
- *   `neighborhoodId` no está en el catálogo (ids viejos tipo `caba-…`), salvo las
+ *   `neighborhoodId` no es un UUID (ids viejos `caba-…`) ni está en el catálogo, salvo las
  *   de zonas con servicios, recorridos u otros datos. Nunca borra zonas. Sin la
  *   bandera, esas filas solo se listan.
  *
@@ -18,7 +19,12 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import configuration from '../src/config/configuration';
 import { CoreClient } from '../src/core/core.client';
-import { cargarDesdeCore, cargarSnapshot, syncZones } from '../src/core/zones-sync';
+import {
+  cargarDesdeCore,
+  cargarSnapshot,
+  syncZones,
+  validarOpcionesCli,
+} from '../src/core/zones-sync';
 
 try {
   process.loadEnvFile('.env');
@@ -33,6 +39,7 @@ async function main(): Promise<void> {
   }
   const arg = (f: string): boolean => process.argv.includes(f);
 
+  validarOpcionesCli({ cleanLegacy: arg('--clean-legacy') }, arg('--from-snapshot'));
   let catalogo;
   if (arg('--from-snapshot')) {
     catalogo = cargarSnapshot();

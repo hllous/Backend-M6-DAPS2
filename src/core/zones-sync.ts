@@ -35,7 +35,13 @@ export interface LegacyRow {
 export interface SyncReport {
   dryRun: boolean;
   communes: { creadas: number; actualizadas: number; sinCambios: number };
-  zones: { creadas: number; actualizadas: number; desactivadas: number; sinCambios: number };
+  zones: {
+    creadas: number;
+    actualizadas: number;
+    desactivadas: number;
+    desactivadasConDatos: number;
+    sinCambios: number;
+  };
   /** Zonas existentes con el `code` de un barrio pero de otro origen: no se tocaron. */
   conflictos: string[];
   /** Barrios activos cuya comuna no está entre las comunas activas: sin zona. */
@@ -93,13 +99,23 @@ export async function cargarDesdeCore(core: CoreClient): Promise<CatalogoM9> {
     const b = body as {
       data?: unknown;
       next?: unknown;
+      page?: unknown;
+      limit?: unknown;
+      totalPages?: unknown;
+      hasNext?: unknown;
+      hasMore?: unknown;
       total?: unknown;
       meta?: { total?: unknown };
     };
     const total = b?.total ?? b?.meta?.total;
     const n = Array.isArray(b?.data) ? b.data.length : 0;
-    // M9 no confirmó si pagina: una página parcial desactivaría zonas por error.
-    if (b?.next || (typeof total === 'number' && total > n)) {
+    // M9 no confirmó si pagina. Una página parcial haría desactivar zonas de barrios
+    // que sí siguen activos, así que ante cualquier marca de paginación se aborta.
+    const pagina = [b?.next, b?.page, b?.limit, b?.totalPages, b?.hasNext, b?.hasMore];
+    if (
+      pagina.some((x) => x !== undefined && x !== null && x !== false) ||
+      (typeof total === 'number' && total > n)
+    ) {
       throw new Error(`La respuesta de ${path} parece paginada: no se sincroniza truncada`);
     }
     return b?.data;
@@ -108,6 +124,17 @@ export async function cargarDesdeCore(core: CoreClient): Promise<CatalogoM9> {
     barrios: await pedir('/api/v1/catalogos/barrios'),
     zonas: await pedir('/api/v1/catalogos/zonas'),
   });
+}
+
+function tieneDatos(z: { _count: Record<string, number> }): boolean {
+  return Object.values(z._count).some((n) => n > 0);
+}
+
+/** `--clean-legacy` con el snapshot borraría según una foto vieja: no se permite. */
+export function validarOpcionesCli(opts: SyncOptions, desdeSnapshot: boolean): void {
+  if (opts.cleanLegacy && desdeSnapshot) {
+    throw new Error('--clean-legacy no se puede combinar con --from-snapshot: usá el Core');
+  }
 }
 
 type Db = Pick<PrismaClient, 'commune' | 'zone' | 'zoneNeighborhood'>;
@@ -137,7 +164,7 @@ async function ejecutar(
   const rep: SyncReport = {
     dryRun,
     communes: { creadas: 0, actualizadas: 0, sinCambios: 0 },
-    zones: { creadas: 0, actualizadas: 0, desactivadas: 0, sinCambios: 0 },
+    zones: { creadas: 0, actualizadas: 0, desactivadas: 0, desactivadasConDatos: 0, sinCambios: 0 },
     conflictos: [],
     sinComuna: [],
     zonasLegacy: [],
@@ -200,7 +227,9 @@ async function ejecutar(
     if (!b.activo) {
       // Sin zona no hay nada que dar de baja; los ficticios no se crean.
       if (z?.active) {
-        rep.zones.desactivadas++;
+        // Con servicios, recorridos o inventario: se informa aparte para revisarla.
+        if (tieneDatos(z)) rep.zones.desactivadasConDatos++;
+        else rep.zones.desactivadas++;
         if (!dryRun) await db.zone.update({ where: { id: z.id }, data: { active: false } });
       } else if (z) {
         rep.zones.sinCambios++;
@@ -251,10 +280,12 @@ async function ejecutar(
   const codigosM9 = new Set(barrios.map((b) => b.codigo));
   rep.zonasLegacy = zonasDb.filter((z) => !codigosM9.has(z.code)).map((z) => z.code);
   for (const z of zonasDb) {
-    const retenida = Object.values(z._count).some((n) => n > 0);
+    const retenida = tieneDatos(z);
     for (const n of z.neighborhoods.filter((x) => !validos.has(x.neighborhoodId))) {
       rep.legacyRows.push({ zoneCode: z.code, neighborhoodId: n.neighborhoodId, retenida });
-      if (opts.cleanLegacy && !retenida && !dryRun) {
+      // Solo ids que no son UUID (`caba-…`, `barrio-…`): un UUID ausente del catálogo
+      // puede ser un barrio real que un catálogo truncado o viejo no trae.
+      if (opts.cleanLegacy && !retenida && !dryRun && !UUID.test(n.neighborhoodId)) {
         await db.zoneNeighborhood.delete({
           where: { zoneId_neighborhoodId: { zoneId: z.id, neighborhoodId: n.neighborhoodId } },
         });

@@ -6,6 +6,7 @@ import {
   cargarSnapshot,
   syncZones,
   validarCatalogo,
+  validarOpcionesCli,
 } from './zones-sync';
 
 const U1 = '11111111-1111-4111-8111-111111111111';
@@ -118,7 +119,13 @@ describe('syncZones', () => {
     );
     const r = await run(p);
     expect(r.communes.sinCambios).toBe(2);
-    expect(r.zones).toEqual({ creadas: 0, actualizadas: 0, desactivadas: 0, sinCambios: 1 });
+    expect(r.zones).toEqual({
+      creadas: 0,
+      actualizadas: 0,
+      desactivadas: 0,
+      desactivadasConDatos: 0,
+      sinCambios: 1,
+    });
     expect(p.zone.create).not.toHaveBeenCalled();
     expect(p.zone.update).not.toHaveBeenCalled();
     expect(p.commune.update).not.toHaveBeenCalled();
@@ -316,5 +323,102 @@ describe('cargarDesdeCore', () => {
         core(() => Promise.resolve({ ok: true, json: () => Promise.reject(new Error('x')) })),
       ),
     ).rejects.toThrow(/inválido/);
+  });
+});
+
+describe('syncZones: casos de la ronda 1', () => {
+  const sinUso = (id: string, ns: string[]) => ({
+    id,
+    code: `L-${id}`,
+    name: 'x',
+    active: true,
+    communeId: null,
+    neighborhoods: ns.map((neighborhoodId) => ({ neighborhoodId })),
+    _count: {
+      routeStops: 0,
+      serviceZones: 0,
+      zoneResults: 0,
+      containers: 0,
+      greenPoints: 0,
+      trees: 0,
+      greenSpaces: 0,
+    },
+  });
+
+  it('cleanLegacy + dryRun reporta retenida y no borra nada', async () => {
+    const p = mkPrisma(
+      [],
+      [
+        sinUso('z2', ['caba-x']),
+        {
+          ...sinUso('z3', ['caba-y']),
+          _count: {
+            routeStops: 1,
+            serviceZones: 0,
+            zoneResults: 0,
+            containers: 0,
+            greenPoints: 0,
+            trees: 0,
+            greenSpaces: 0,
+          },
+        },
+      ],
+    );
+    const r = await run(p, catalogo(), { dryRun: true, cleanLegacy: true });
+    expect(r.legacyRows.map((l) => l.retenida)).toEqual([false, true]);
+    expect(r.legacyEliminadas).toBe(0);
+    expect(p.zoneNeighborhood.delete).not.toHaveBeenCalled();
+  });
+
+  it('un UUID ausente del catálogo se reporta pero cleanLegacy no lo borra', async () => {
+    const real = '99999999-9999-4999-8999-999999999999';
+    const p = mkPrisma([], [sinUso('z2', [real, 'barrio-viejo'])]);
+    const r = await run(p, catalogo(), { cleanLegacy: true });
+    expect(r.legacyRows).toHaveLength(2);
+    expect(r.legacyEliminadas).toBe(1);
+    expect(p.zoneNeighborhood.delete).toHaveBeenCalledTimes(1);
+    expect(
+      p.zoneNeighborhood.delete.mock.calls[0][0].where.zoneId_neighborhoodId.neighborhoodId,
+    ).toBe('barrio-viejo');
+  });
+
+  it('cuenta aparte la zona desactivada que tiene datos asociados', async () => {
+    const c = catalogo();
+    c.barrios[0].activo = false;
+    const conDatos = zonaDb({ _count: { ...count, serviceZones: 3 } });
+    const p = mkPrisma([], [conDatos]);
+    const r = await run(p, c);
+    expect(r.zones.desactivadasConDatos).toBe(1);
+    expect(r.zones.desactivadas).toBe(0);
+    expect(p.zone.update).toHaveBeenCalledWith({ where: { id: 'z1' }, data: { active: false } });
+  });
+});
+
+describe('validarOpcionesCli', () => {
+  it('rechaza --clean-legacy con --from-snapshot', () => {
+    expect(() => validarOpcionesCli({ cleanLegacy: true }, true)).toThrow(/--clean-legacy/);
+  });
+  it('acepta el resto de las combinaciones', () => {
+    expect(() => validarOpcionesCli({ cleanLegacy: true }, false)).not.toThrow();
+    expect(() => validarOpcionesCli({ cleanLegacy: false }, true)).not.toThrow();
+  });
+});
+
+describe('cargarDesdeCore: marcas de paginación', () => {
+  it.each([
+    [{ page: 1 }],
+    [{ limit: 50 }],
+    [{ totalPages: 2 }],
+    [{ hasNext: true }],
+    [{ hasMore: true }],
+  ])('aborta con %j', async (marca) => {
+    const core = {
+      request: jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ data: catalogo().barrios, ...marca }),
+      }),
+    } as unknown as CoreClient;
+    await expect(cargarDesdeCore(core)).rejects.toThrow(/paginada/);
   });
 });
