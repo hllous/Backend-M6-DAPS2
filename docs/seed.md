@@ -47,11 +47,11 @@ Reglas con las que está escrito:
 
 **Inventario urbano** (por barrio)
 - **Espacios verdes**: los 1366 plazas, parques, plazoletas y paseos del dataset de BA Data, cada uno en la zona de su barrio, con nombre, tipo (`PLAZA` y `PLAZOLETA` → `SQUARE`; `PARQUE`, `PARQUE SEMIPÚBLICO` y `JARDÍN BOTÁNICO` → `PARK`; `PASEO` → `PROMENADE`), coordenadas y superficie. **Nombre = el del dataset, o la ubicación (con el tipo adelante) si falta**: 557 llevan el nombre derivado de la ubicación.
-- **Contenedores, puntos verdes y arbolado**: los escritos a mano para los ocho barrios originales y, en todos los barrios, lo que falta hasta el mínimo (4 a 6 contenedores y 3 a 4 árboles por barrio, un punto verde por barrio). Cada punto cae dentro del polígono oficial del barrio (`docs/geojson/caba_barrios.geojson`) y, cuando se puede, a decenas de metros de una plaza real del barrio; el punto verde se ubica en la plaza más grande.
+- **Contenedores, puntos verdes y arbolado** (258 contenedores, 49 puntos verdes y 177 árboles en total): los escritos a mano para los ocho barrios originales y, en todos los barrios, lo que falta hasta el mínimo (4 a 6 contenedores y 3 a 4 árboles por barrio, un punto verde por barrio). Cada punto cae dentro del polígono oficial del barrio (`docs/geojson/caba_barrios.geojson`) y, cuando se puede, a decenas de metros de una plaza real del barrio; el punto verde se ubica en la plaza más grande.
 - Relevamientos de arbolado con sus estados sanitarios.
 
 **Operación** (solo en base sin servicios)
-- Servicios planificados desde **hace 14 días hasta el 16/12/2026** (fin de la cursada): pasado `COMPLETED`, hoy según el turno, futuro `SCHEDULED`. Unos 790 servicios (el seed anterior tenía 710), repartidos entre las 15 comunas: los recorridos del centro y el norte se espaciaron para dejar lugar a los de las otras comunas, y cada comuna suma un recorrido semanal y servicios puntuales (vaciado, riego o mantenimiento de una plaza real, inspección, poda). Incluye incidencias reales (parciales, suspendidos, demoras).
+- Servicios planificados desde **hace 14 días hasta el 16/12/2026** (fin de la cursada): pasado `COMPLETED`, hoy según el turno, futuro `SCHEDULED`. 788 servicios (el seed anterior tenía 710), repartidos entre las 15 comunas: los recorridos del centro y el norte se espaciaron para dejar lugar a los de las otras comunas, y cada comuna suma un recorrido semanal y servicios puntuales (vaciado, riego o mantenimiento de una plaza real, inspección, poda). Incluye incidencias reales (parciales, suspendidos, demoras).
 - Resultados por zona, registros de recolección y avisos de demora.
 - Intervenciones de arbolado en distintos estados, con relevamientos y pedidos también en las otras comunas.
 - Control ambiental: expedientes en todos los estados, inspecciones, actas, resoluciones de M4; varios con ubicación en otras comunas (referencia a una plaza real del barrio).
@@ -105,6 +105,8 @@ npm run prisma:seed
 Para **refrescar las fechas** de una base que ya tiene servicios hay que vaciarla primero, porque el seed no toca lo operativo si encuentra servicios. En local: `npx prisma migrate reset` (borra todo, migra y siembra solo).
 
 **Aplicar esta versión a una base que ya tiene el seed anterior no actualiza lo operativo.** El seed agrega zonas, comunas, espacios verdes e inventario, pero no recrea servicios ni derivaciones, porque ve servicios cargados y se detiene. Para tener el reparto nuevo hay que vaciar lo operativo y volver a sembrar: es un paso **aparte y destructivo** (borra servicios, expedientes, derivaciones y eventos) que no se hace en la base desplegada sin acordarlo con el equipo; el seed no pisa el trabajo que alguien cargó a mano.
+
+**Base desplegada (Supabase), pendiente de aplicar** (27/10; con confirmación del PO, no antes). Orden: (1) `npm run zones:sync-from-core` (el simulacro contra Supabase creaba 15 comunas y 48 zonas, sin conflictos; las 8 zonas legacy `Z-PMA`, `Z-SNI`, `Z-PAL`, `Z-BEL`, `Z-MON`, `Z-RET`, `Z-REC` y `Z-COL` quedan retenidas mientras tengan datos), (2) vaciar las tablas operativas, (3) `npm run prisma:seed`. Probado contra un Postgres 16 descartable: migrar y sembrar dos veces tardó 11,8 s y 6,7 s, idempotente.
 
 La transacción de lo operativo tardó ~17 min contra Supabase con 710 servicios y vence a la hora; por eso `verificarCobertura()` fija un tope de 800. Antes de subirlo, medir de nuevo.
 

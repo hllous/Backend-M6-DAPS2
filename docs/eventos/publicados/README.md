@@ -30,7 +30,7 @@ Los nueve que se cayeron del contrato están en [descartados.md](descartados.md)
 
 **Si la publicación falla, la fila no se pierde ni se reintenta para siempre.** `outbox_event.attempts` cuenta los intentos y `last_error` guarda por qué falló el último; a los cinco intentos la fila pasa a `FAILED` y deja de barrerse, para que un broker caído no genere una cola infinita de reintentos. Del lado entrante, `inbox_event.error` deja el rastro: un handler que falla deja la fila **sin** `processed_at` y con el error. El reintento lo hace el Core, que reentrega con su backoff (hasta tres reintentos con esperas de 5 s, 30 s y 2 min, ver [m9.md](../../integracion/m9.md)) hasta la DLQ, y reenviar el mismo `eventId` vuelve a correr el handler; ver [consumidos](../consumidos/README.md#qué-se-consume-hoy).
 
-⚠️ **`location.neighborhoodId` viaja ausente** en `containerDamaged` y `treeRiskDetected`: es el `id` UUID del catálogo de barrios de M9, que M9 ya expone por REST (22/10, datos ficticios hasta que cargue los de CABA) pero M6 todavía no consume ([#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)). Era un campo requerido de `_shared.location` y pasó a opcional hasta la adopción. Hay que avisarle a M3.
+`location.neighborhoodId` viaja en `containerDamaged` y `treeRiskDetected` cuando la zona tiene un único barrio (es el `id` UUID del catálogo de M9, [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)); con cero o varios viaja ausente, por eso es opcional en `_shared.location`. En `infrastructureRepairRequested` y `environmentalViolationDetected` la `location` no lo lleva.
 
 ## Los schemas
 
