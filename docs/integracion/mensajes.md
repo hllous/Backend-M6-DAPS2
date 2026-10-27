@@ -72,11 +72,11 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
-## Pendiente de enviar (27/10, M9)
+## Enviado el 27/10 a las 11:14 (M9)
 
-> Redactado el 27/10 a las 11:14 ([#412](https://github.com/hllous/Backend-M6-DAPS2/issues/412), [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)). **Falta enviar**; al enviarlo, anotar la fecha acá y mover la respuesta a [`m9.md`](m9.md).
+> Redactado el 27/10 a las 11:14 ([#412](https://github.com/hllous/Backend-M6-DAPS2/issues/412), [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)). **Enviado el mismo 27/10**; al responder M9, mover la respuesta a [`m9.md`](m9.md).
 
-**→ M9 (Core)** — barrios, zonas, red del 5671 y evento de prueba — *pendiente de enviar*
+**→ M9 (Core)** — barrios, zonas, red del 5671 y evento de prueba — *enviado el 27/10 a las 11:14*
 
 > *27/10/2026, 11:14.* Gracias por cargar los barrios reales de CABA. Cuatro puntos:
 >
