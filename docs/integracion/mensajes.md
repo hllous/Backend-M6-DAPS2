@@ -74,11 +74,11 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 ## Pendiente de enviar (27/10, M9)
 
-> Redactado el 27/10 ([#412](https://github.com/hllous/Backend-M6-DAPS2/issues/412), [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)). **Falta enviar**; al enviarlo, anotar la fecha acá y mover la respuesta a [`m9.md`](m9.md).
+> Redactado el 27/10 a las 11:14 ([#412](https://github.com/hllous/Backend-M6-DAPS2/issues/412), [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)). **Falta enviar**; al enviarlo, anotar la fecha acá y mover la respuesta a [`m9.md`](m9.md).
 
 **→ M9 (Core)** — barrios, zonas, red del 5671 y evento de prueba — *pendiente de enviar*
 
-> Gracias por cargar los barrios reales de CABA. Cuatro puntos:
+> *27/10/2026, 11:14.* Gracias por cargar los barrios reales de CABA. Cuatro puntos:
 >
 > 1. **Identificador de barrio.** En `location.neighborhoodId` (lo que mandamos a M2 y M3) y en nuestra tabla de zonas, ¿qué debemos guardar y enviar: el `codigo` (slug, ej. `palermo`) o el `id` UUID? Hoy pensamos guardar el UUID porque M2 lo exige en ese campo. ¿El `id` es estable (no cambia al cargar o actualizar barrios) y sigue viniendo en la respuesta de `GET /api/v1/catalogos/barrios`?
 > 2. **Zonas.** ¿Las zonas administrativas del Core son ahora las 15 comunas (`comuna-1` a `comuna-15`)? Les avisamos que nuestras zonas operativas son propias de M6 y van **por barrio**: no usamos las comunas para armarlas.
