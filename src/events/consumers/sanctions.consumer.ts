@@ -110,8 +110,6 @@ export class SanctionsConsumer implements OnModuleInit {
         data: {
           violationNoticeId: notice.id,
           decision,
-          // decidedAt y externalRef los confirmaron verbalmente el 24/08 pero
-          // su documento todavía no los muestra en el payload de ejemplo.
           // `actId` es otro dato (el id interno del acta de M4 que fundamenta la
           // sanción, confirmado el 21/10): no es la referencia visible, no se
           // usa de respaldo de `externalRef` y no se guarda.
