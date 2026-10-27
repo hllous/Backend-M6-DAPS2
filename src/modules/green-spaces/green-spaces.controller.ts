@@ -20,7 +20,8 @@ import {
   QueryGreenSpacesDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_OPERACIONES } from '../../auth/role-groups';
 
 @ApiTags('green-spaces')
 @ApiBearerAuth('JWT-auth')
@@ -29,6 +30,7 @@ export class GreenSpacesController {
   constructor(private readonly greenSpacesService: GreenSpacesService) {}
 
   @Post()
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Registrar un espacio verde',
     description:
@@ -47,11 +49,6 @@ export class GreenSpacesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para registrar espacios verdes',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -124,6 +121,7 @@ export class GreenSpacesController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Actualizar un espacio verde',
     description:
@@ -150,11 +148,6 @@ export class GreenSpacesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para actualizar espacios verdes',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 404,
     description: 'Espacio verde o zona no encontrada',
     type: ErrorResponseDto,
@@ -172,6 +165,7 @@ export class GreenSpacesController {
   }
 
   @Delete(':id')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Desactivar un espacio verde',
@@ -190,11 +184,6 @@ export class GreenSpacesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para desactivar espacios verdes',
     type: ErrorResponseDto,
   })
   @ApiResponse({

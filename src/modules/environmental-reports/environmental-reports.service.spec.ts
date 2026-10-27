@@ -1,5 +1,10 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { EnvironmentalReport, EnvironmentalReportStatus as S, Prisma } from '@prisma/client';
+import {
+  EnvironmentalReport,
+  EnvironmentalReportStatus as S,
+  M6Role,
+  Prisma,
+} from '@prisma/client';
 import { QueryEnvironmentalReportsDto, RequestInformationDto } from './dto';
 import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from '../../events/m2-contract.testing';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -153,7 +158,7 @@ describe('EnvironmentalReportsService', () => {
 
   describe('alta y listado', () => {
     it('un expediente de oficio nace en RECEIVED y sin reclamo', async () => {
-      await service.create({ reportType: 'NOISE' } as any);
+      await service.create({ reportType: 'NOISE' } as any, [M6Role.M6_ADMIN]);
 
       expect(prisma.environmentalReport.create.mock.calls[0][0].data).toMatchObject({
         reportType: 'NOISE',
@@ -163,13 +168,36 @@ describe('EnvironmentalReportsService', () => {
       });
     });
 
+    it.each([
+      [M6Role.M6_CAMPO_INSPECTOR, true],
+      [M6Role.M6_CAMPO_CUADRILLA, true],
+      [M6Role.M6_OFICINA_AMBIENTAL, false],
+      [M6Role.M6_ADMIN, false],
+    ])('con ticketId, el rol %s %s', async (rol, rechaza) => {
+      const alta = service.create({ reportType: 'NOISE', ticketId: 'TCK-1' } as any, [rol]);
+      if (rechaza) {
+        await expect(alta).rejects.toThrow(/Oficina Ambiental/);
+        expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+      } else {
+        await expect(alta).resolves.toBeDefined();
+      }
+    });
+
+    it('un inspector sí abre expedientes de oficio (sin ticketId)', async () => {
+      await service.create({ reportType: 'NOISE' } as any, [M6Role.M6_CAMPO_INSPECTOR]);
+      expect(prisma.environmentalReport.create).toHaveBeenCalled();
+    });
+
     it('un expediente nacido de un reclamo guarda el ticketId', async () => {
-      await service.create({
-        reportType: 'NOISE',
-        ticketId: 'TCK-1',
-        address: 'Rivadavia 100',
-        priority: 'HIGH',
-      } as any);
+      await service.create(
+        {
+          reportType: 'NOISE',
+          ticketId: 'TCK-1',
+          address: 'Rivadavia 100',
+          priority: 'HIGH',
+        } as any,
+        [M6Role.M6_ADMIN],
+      );
 
       expect(prisma.environmentalReport.create.mock.calls[0][0].data).toMatchObject({
         ticketId: 'TCK-1',
@@ -184,7 +212,9 @@ describe('EnvironmentalReportsService', () => {
       prisma.environmentalReport.findUnique.mockResolvedValue(expediente({ description: texto }));
       prisma.environmentalReport.findMany.mockResolvedValue([expediente({ description: texto })]);
 
-      const creado = await service.create({ reportType: 'NOISE', description: texto } as any);
+      const creado = await service.create({ reportType: 'NOISE', description: texto } as any, [
+        M6Role.M6_ADMIN,
+      ]);
 
       expect(prisma.environmentalReport.create.mock.calls[0][0].data.description).toBe(texto);
       expect(creado.description).toBe(texto);
@@ -193,8 +223,8 @@ describe('EnvironmentalReportsService', () => {
     });
 
     it('sin descripción (o solo espacios, que @Trim deja vacía) guarda null (#218)', async () => {
-      await service.create({ reportType: 'NOISE' } as any);
-      await service.create({ reportType: 'NOISE', description: '' } as any);
+      await service.create({ reportType: 'NOISE' } as any, [M6Role.M6_ADMIN]);
+      await service.create({ reportType: 'NOISE', description: '' } as any, [M6Role.M6_ADMIN]);
 
       const calls = prisma.environmentalReport.create.mock.calls;
       expect(calls[0][0].data.description).toBeNull();
@@ -227,7 +257,7 @@ describe('EnvironmentalReportsService', () => {
         pageSize: 20,
         skip: 0,
         take: 20,
-        status: S.UNDER_REVIEW,
+        status: [S.UNDER_REVIEW],
         reportType: 'NOISE',
         priority: 'HIGH',
         ticketId: 'TCK-1',
@@ -236,7 +266,7 @@ describe('EnvironmentalReportsService', () => {
       } as any);
 
       expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual({
-        status: S.UNDER_REVIEW,
+        status: { in: [S.UNDER_REVIEW] },
         reportType: 'NOISE',
         priority: 'HIGH',
         ticketId: 'TCK-1',
@@ -343,11 +373,13 @@ describe('EnvironmentalReportsService', () => {
     const consulta = (q: object) => Object.assign(new QueryEnvironmentalReportsDto(), q);
 
     it('from/to filtran updatedAt por días argentinos, to inclusivo, combinado con otros filtros', async () => {
-      await service.findAll(consulta({ status: 'RECEIVED', from: '2026-09-01', to: '2026-09-30' }));
+      await service.findAll(
+        consulta({ status: ['RECEIVED'], from: '2026-09-01', to: '2026-09-30' }),
+      );
 
       // 00:00 ART del 01/09 = 03:00 UTC; el 30/09 entero cierra a las 03:00 UTC del 01/10 (exclusivo).
       const where = {
-        status: 'RECEIVED',
+        status: { in: ['RECEIVED'] },
         updatedAt: {
           gte: new Date('2026-09-01T03:00:00.000Z'),
           lt: new Date('2026-10-01T03:00:00.000Z'),
@@ -355,6 +387,24 @@ describe('EnvironmentalReportsService', () => {
       };
       expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual(where);
       expect(prisma.environmentalReport.count).toHaveBeenCalledWith({ where });
+    });
+
+    it('status con varios valores filtra con in y count usa el mismo where (meta.total filtrado)', async () => {
+      prisma.environmentalReport.count.mockResolvedValue(7);
+
+      const lista = await service.findAll(consulta({ status: ['RECEIVED', 'UNDER_REVIEW'] }));
+
+      const where = { status: { in: ['RECEIVED', 'UNDER_REVIEW'] } };
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual(where);
+      expect(prisma.environmentalReport.count).toHaveBeenCalledWith({ where });
+      expect(lista.meta.total).toBe(7);
+    });
+
+    it('sin status el where no trae la clave', async () => {
+      await service.findAll(consulta({}));
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).not.toHaveProperty(
+        'status',
+      );
     });
 
     it('acepta solo from o solo to', async () => {
@@ -378,10 +428,9 @@ describe('EnvironmentalReportsService', () => {
     });
 
     it('el alta y las transiciones también devuelven assignedCrewId', async () => {
-      expect(await service.create({ reportType: 'NOISE' } as any)).toHaveProperty(
-        'assignedCrewId',
-        null,
-      );
+      expect(
+        await service.create({ reportType: 'NOISE' } as any, [M6Role.M6_ADMIN]),
+      ).toHaveProperty('assignedCrewId', null);
       expect(prisma.environmentalReport.create.mock.calls[0][0].include).toBeDefined();
 
       prisma.environmentalReport.findUnique.mockResolvedValue(
@@ -434,13 +483,28 @@ describe('EnvironmentalReportsService', () => {
       });
     });
 
-    it.each(['ROUTED', 'IN_REVIEW'])('startReview con el ticket en %s manda STARTED', async (e) => {
-      prisma.ticketM2State.findUnique.mockResolvedValue({ status: e });
+    it.each(['ROUTED', null])('startReview con el ticket en %s manda STARTED', async (e) => {
+      prisma.ticketM2State.findUnique.mockResolvedValue(e && { status: e });
 
       const { encolado } = await transicionar(S.RECEIVED, (s) => s.startReview(ID, ACTOR));
 
       expect(encolado[0].payload).toMatchObject({ updateType: 'STARTED' });
     });
+
+    // M2 solo acepta STARTED desde ROUTED (#396): la revisión arranca igual, sin aviso.
+    it.each(['IN_REVIEW', 'PENDING_INFORMATION', 'CLOSED'])(
+      'startReview con el ticket en %s transiciona y no publica',
+      async (e) => {
+        prisma.ticketM2State.findUnique.mockResolvedValue({ status: e });
+
+        const { escrito, encolado } = await transicionar(S.RECEIVED, (s) =>
+          s.startReview(ID, ACTOR),
+        );
+
+        expect(escrito.data.status).toBe(S.UNDER_REVIEW);
+        expect(encolado).toEqual([]);
+      },
+    );
 
     it('startReview de un expediente sin ticketId no consulta el estado ni publica', async () => {
       const { encolado } = await transicionar(S.RECEIVED, async (s) => {
@@ -704,13 +768,13 @@ describe('EnvironmentalReportsService', () => {
 
   describe('create y listado', () => {
     it('nace en RECEIVED aunque el DTO no lo diga', async () => {
-      await service.create({ reportType: 'NOISE' } as any);
+      await service.create({ reportType: 'NOISE' } as any, [M6Role.M6_ADMIN]);
 
       expect(prisma.environmentalReport.create.mock.calls[0][0].data.status).toBe(S.RECEIVED);
     });
 
     it('los campos opcionales ausentes se guardan como null, no undefined', async () => {
-      await service.create({ reportType: 'NOISE' } as any);
+      await service.create({ reportType: 'NOISE' } as any, [M6Role.M6_ADMIN]);
 
       expect(prisma.environmentalReport.create.mock.calls[0][0].data).toMatchObject({
         address: null,

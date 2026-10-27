@@ -21,7 +21,8 @@ import {
   ConfirmRelocationDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
 
 @ApiTags('containers')
 @ApiBearerAuth('JWT-auth')
@@ -32,6 +33,7 @@ export class ContainersController {
   // ─── CRUD ──────────────────────────────────────────
 
   @Post()
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Registrar un contenedor',
     description:
@@ -50,11 +52,6 @@ export class ContainersController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para registrar contenedores',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -133,6 +130,7 @@ export class ContainersController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Actualizar datos de un contenedor',
     description:
@@ -159,11 +157,6 @@ export class ContainersController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para actualizar contenedores',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 404,
     description: 'Contenedor o zona no encontrada',
     type: ErrorResponseDto,
@@ -183,6 +176,7 @@ export class ContainersController {
   // ─── Transiciones de estado ────────────────────────
 
   @Post(':id/report-overflow')
+  @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Reportar desborde de un contenedor',
@@ -223,6 +217,7 @@ export class ContainersController {
   }
 
   @Post(':id/report-damage')
+  @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Reportar daño en un contenedor',
@@ -272,6 +267,7 @@ export class ContainersController {
   }
 
   @Post(':id/empty')
+  @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Registrar vaciado de un contenedor',
@@ -313,6 +309,7 @@ export class ContainersController {
   }
 
   @Post(':id/start-repair')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Enviar un contenedor a reparación',
@@ -354,6 +351,7 @@ export class ContainersController {
   }
 
   @Post(':id/complete-repair')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Completar reparación de un contenedor',
@@ -395,6 +393,7 @@ export class ContainersController {
   }
 
   @Post(':id/relocate')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Iniciar reubicación de un contenedor',
@@ -436,6 +435,7 @@ export class ContainersController {
   }
 
   @Post(':id/confirm-relocation')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Confirmar reubicación de un contenedor',
@@ -485,6 +485,7 @@ export class ContainersController {
   }
 
   @Post(':id/remove')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Retirar un contenedor definitivamente',

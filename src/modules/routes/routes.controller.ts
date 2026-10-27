@@ -22,7 +22,8 @@ import {
   UpdateRouteDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_ADMIN } from '../../auth/role-groups';
 
 @ApiTags('routes')
 @ApiBearerAuth('JWT-auth')
@@ -31,6 +32,7 @@ export class RoutesController {
   constructor(private readonly routesService: RoutesService) {}
 
   @Post()
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Crear un recorrido',
     description:
@@ -43,11 +45,6 @@ export class RoutesController {
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para crear recorridos',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({
     status: 409,
     description: 'Ya existe un recorrido con ese código',
@@ -86,6 +83,7 @@ export class RoutesController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Actualizar un recorrido',
     description:
@@ -99,11 +97,6 @@ export class RoutesController {
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para actualizar recorridos',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({ status: 404, description: 'Recorrido no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async update(
@@ -114,6 +107,7 @@ export class RoutesController {
   }
 
   @Delete(':id')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Desactivar un recorrido',
@@ -123,11 +117,6 @@ export class RoutesController {
   @ApiParam({ name: 'id', description: 'UUID del recorrido', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Recorrido desactivado exitosamente' })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para desactivar recorridos',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({ status: 404, description: 'Recorrido no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
@@ -137,6 +126,7 @@ export class RoutesController {
   // ─── Paradas ──────────────────────────────────────
 
   @Put(':id/stops')
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Definir la secuencia de paradas de un recorrido',
     description:
@@ -154,11 +144,6 @@ export class RoutesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para editar recorridos',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({
     status: 404,
     description: 'Recorrido no encontrado, o alguna zona referenciada no existe',

@@ -1,6 +1,6 @@
 # Acuerdo de Eventos — Módulo 6
 
-**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión del 21 de octubre de 2026**
+**Ambiente, Higiene y Servicios Urbanos · Grupo 04 · versión 2.2 · 23 de octubre de 2026**
 
 Este documento sirve para cerrar el contrato de eventos antes de empezar a programar. Tiene tres partes y les pedimos tres cosas distintas:
 
@@ -12,7 +12,7 @@ Este documento sirve para cerrar el contrato de eventos antes de empezar a progr
 
 Notación: `?` es campo opcional o que puede venir en nulo, `[]` es lista. Todos los nombres van en **camelCase**, que es lo que usa la recopilación de la cohorte.
 
-**Los mensajes completos, con el sobre del Core, están en [Sobres-M6.md](Sobres-M6.md)**: un ejemplo copiable de cada evento que publicamos y de cada uno que recibimos. Este Acuerdo describe los `data`; el sobre que los transporta es el del Core (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `sourceModule`, `correlationId`, `causationId?`, `data`). Ese sobre llega a cada módulo re-serializado por el Core (sin los campos en `null` y con `occurredAt` normalizado), y los `correlationId` y `causationId` que heredamos solo tienen que tener la forma 8-4-4-4-12; el detalle está en la Parte 1 de Sobres.
+**Los mensajes completos, con el sobre del Core, están en los Sobres (PDF)**: un ejemplo copiable de cada evento que publicamos y de cada uno que recibimos. Este Acuerdo describe los `data`; el sobre que los transporta es el del Core (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `sourceModule`, `correlationId`, `causationId?`, `data`). Ese sobre llega a cada módulo re-serializado por el Core (sin los campos en `null` y con `occurredAt` normalizado), y los `correlationId` y `causationId` que heredamos solo tienen que tener la forma 8-4-4-4-12; el detalle está en la Parte 1 de Sobres.
 
 ---
 
@@ -55,11 +55,11 @@ Nuestros:     serviceId, inspectionId, reportId, violationId, requestId,
               interventionId, containerId, treeId, zoneId, crewId, vehicleId
 De M2:        ticketId
 De M4:        establishmentId
-A confirmar:  neighborhoodId (catálogo de barrios sin publicar)
+A confirmar:  neighborhoodId (catálogo de barrios de M9 ya publicado; falta que cargue los barrios reales y que M6 lo adopte)
 De M1:        citizenId, organizationId
 ```
 
-`neighborhoodId` es **opcional** y hoy viaja ausente: sale del catálogo de barrios, que todavía no se publicó. Hay una discrepancia abierta sobre quién lo publica: M9 dice que no es del Core y el enunciado del TPO (§9) se lo asigna.
+`neighborhoodId` es **opcional** y hoy viaja ausente: es el `id` (UUID) del catálogo de barrios de M9 (`GET /api/v1/catalogos/barrios`), que M9 ya expone con datos de arranque ficticios. M6 lo va a adoptar cuando M9 cargue los barrios reales. El Core reconoció el 22 de octubre que el catálogo es suyo.
 
 Los campos que terminan en `At` son **fecha y hora**. El formato es el del sobre del Core: `occurredAt` en ISO 8601 con offset (ver Sobres, Parte 1).
 
@@ -179,25 +179,25 @@ Esta es la tabla con la que lo implementamos. La columna izquierda son **hechos 
 | Hecho nuestro | `updateType` | Qué mandamos |
 |---|---|---|
 | Se agenda un servicio nacido de un reclamo, o se confirma su reprogramación | `STARTED` o `PROGRESS`, según el estado del ticket (ver abajo) | fecha y franja agendadas **como texto en `publicMessage`** (así lo confirmó M2 el 20/10: el contrato no tiene campo estructurado) |
-| Se reactiva un expediente devuelto porque M2 lo derivó otra vez | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «Su denuncia ambiental está en análisis.» |
-| Inicia un servicio nacido de un reclamo | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «La cuadrilla comenzó a atender su reclamo.». Agendar ya arrancó el ticket, así que no repetimos `STARTED` |
-| Se inicia la revisión de un expediente (denuncia ambiental) | `STARTED` (o `PROGRESS` si el ticket ya está `IN_PROGRESS`) | `publicMessage`: «Su denuncia ambiental está en análisis.» |
+| Se reactiva un expediente devuelto porque M2 lo derivó otra vez | `STARTED` si el ticket está en `ROUTED` o sin estado conocido; `PROGRESS` si ya está `IN_PROGRESS`; nada con cualquier otro estado | `publicMessage`: «Su denuncia ambiental está en análisis.» |
+| Inicia un servicio nacido de un reclamo | `STARTED` si el ticket está en `ROUTED` o sin estado conocido; `PROGRESS` si ya está `IN_PROGRESS`; nada con cualquier otro estado | `publicMessage`: «La cuadrilla comenzó a atender su reclamo.». Agendar ya arrancó el ticket, así que no repetimos `STARTED` |
+| Se inicia la revisión de un expediente (denuncia ambiental) | `STARTED` si el ticket está en `ROUTED` o sin estado conocido; `PROGRESS` si ya está `IN_PROGRESS`; nada con cualquier otro estado | `publicMessage`: «Su denuncia ambiental está en análisis.» |
 | Se avisa una demora de un servicio en curso | `PROGRESS` | motivo en `publicMessage`/`internalMessage`. Solo con el servicio en curso; una demora antes de arrancar no se informa |
 | Se completa un servicio | `RESOLVED` | `details.resolution.type` (`ACTION_COMPLETED`) y `publicMessage` («El servicio se completó.»). El contrato admite la foto del trabajo en `attachments[]`, pero hoy no la mandamos |
-| Se emite un acta ambiental | `PROGRESS` (`STARTED` si el ticket está en `ROUTED`, `IN_REVIEW` o sin estado conocido; nada con `PENDING_INFORMATION` o estado terminal) | `publicMessage`: «Se constató una infracción y se emitió el acta correspondiente.». El caso sigue en M4; nunca el contenido del acta |
+| Se emite un acta ambiental | `PROGRESS` (`STARTED` si el ticket está en `ROUTED` o sin estado conocido; nada con `IN_REVIEW`, `PENDING_INFORMATION` o estado terminal) | `publicMessage`: «Se constató una infracción y se emitió el acta correspondiente.». El caso sigue en M4; nunca el contenido del acta |
 | Se cancela un servicio | `REJECTED` | `details.cancellation.reasonCode` (`OTHER`) + el motivo del operador en `internalMessage`, siempre |
 | Se desestima el expediente | `REJECTED` | `details.cancellation.reasonCode` (`DOES_NOT_APPLY`) + el motivo del operador en `internalMessage`, siempre |
 | El reclamo no es de nuestra área (se devuelve el expediente) | `RETURNED` | `details.returnInfo.reasonCode` (`REQUEST_TYPE_MISMATCH`) + el motivo del operador en `internalMessage`, siempre. Vuelve a M2 para que lo re-derive, en vez de cancelárselo al vecino |
 | Se cierra el expediente | `RESOLVED` | `details.resolution.type` (`ACTION_COMPLETED`) y `publicMessage` («Su denuncia ambiental fue cerrada.»). Si el expediente ya estaba devuelto o desestimado, no sale nada |
-| El operador necesita un dato del vecino (expediente con reclamo, en revisión y sin otra solicitud pendiente) | `INFORMATION_REQUIRED` | Emitimos `INFORMATION_REQUIRED` cuando el operador lo pide. `details.informationRequest.messageForCitizen` (obligatorio, hasta 500 caracteres; es el mismo texto que `publicMessage`) y `requiredBy` opcional (fecha límite sugerida, futura, que M2 fija como efectiva a su criterio; si no el pedido se rechaza con 400; ISO con zona; si el operador manda solo una fecha, vence a las 23:59:59 hora argentina); `internalMessage` con una nota interna opcional que el vecino no ve. Sin `progress` ni adjuntos. Solo sale con el ticket en `IN_PROGRESS` o `ROUTED`, o sin estado conocido (ver abajo) |
+| El operador necesita un dato del vecino (expediente con reclamo, en revisión y sin otra solicitud pendiente) | `INFORMATION_REQUIRED` | Emitimos `INFORMATION_REQUIRED` cuando el operador lo pide. `details.informationRequest.messageForCitizen` (obligatorio, hasta 500 caracteres; es el mismo texto que `publicMessage`) y `requiredBy` opcional (fecha límite sugerida, futura, en ISO con zona; la fecha efectiva la fija M2, y si la sugerida es inválida M2 rechaza el pedido con 400; si el operador manda solo una fecha, vence a las 23:59:59 hora argentina); `internalMessage` con una nota interna opcional que el vecino no ve. Sin `progress` ni adjuntos. Solo sale con el ticket en `IN_PROGRESS` o `ROUTED`, o sin estado conocido (ver abajo) |
 
-**Qué elegimos para la programación.** Según el estado del ticket que M6 deduce de lo que ya envió y de lo que M2 informa en `ticketUpdated`: `STARTED` si nunca lo vimos o está en `ROUTED` o `IN_REVIEW` (también al reprogramar, mientras siga en uno de esos estados); `PROGRESS` si está en `IN_PROGRESS`; con cualquier otro estado (`REGISTERED`, `DUPLICATE`, `PENDING_INFORMATION`, `RESOLVED`, `CLOSED`, `CANCELLED`) no mandamos nada.
+**Qué elegimos para la programación.** Según el estado del ticket que M6 deduce de lo que ya envió y de lo que M2 informa en `ticketUpdated`: `STARTED` si nunca lo vimos o está en `ROUTED` (M2 acepta `STARTED` solo desde `ROUTED`; también al reprogramar, mientras siga ahí); `PROGRESS` si está en `IN_PROGRESS`; con cualquier otro estado (`REGISTERED`, `IN_REVIEW`, `DUPLICATE`, `PENDING_INFORMATION`, `RESOLVED`, `CLOSED`, `CANCELLED`) no mandamos nada.
 
 Los enums de `resolution.type`, `returnInfo.reasonCode` y `cancellation.reasonCode` están publicados desde la v1.5 (antes no estaban enumerados; en la v1.6 `resolution.type` usa `INQUIRY_ANSWERED` en lugar de `INFORMATION_PROVIDED`).
 
-**Secuencia.** `STARTED` va siempre antes de `PROGRESS`, y no repetimos un `STARTED` con el ticket ya en `IN_PROGRESS` (va `PROGRESS`): M2 trata como prematuro un `PROGRESS` sobre un ticket que sigue en `ROUTED`. El primer `updateTicketStatus` de un ticket es siempre `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`, o `INFORMATION_REQUIRED` si todavía no conocemos su estado. `RETURNED` y `REJECTED` llevan siempre un motivo (`internalMessage`, que M2 acepta como alternativa a `publicMessage`), porque el operador no puede derivar ni desestimar sin escribirlo.
+**Secuencia.** `STARTED` va siempre antes de `PROGRESS`, y no repetimos un `STARTED` con el ticket ya en `IN_PROGRESS` (va `PROGRESS`) y solo mandamos `STARTED` desde `ROUTED` (o con el estado desconocido), que es lo que M2 acepta: M2 trata como prematuro un `PROGRESS` sobre un ticket que sigue en `ROUTED`. El primer `updateTicketStatus` de un ticket es siempre `STARTED`, `RESOLVED`, `RETURNED` o `REJECTED`, o `INFORMATION_REQUIRED` si todavía no conocemos su estado. `RETURNED` y `REJECTED` llevan siempre un motivo (`internalMessage`, que M2 acepta como alternativa a `publicMessage`), porque el operador no puede derivar ni desestimar sin escribirlo.
 
-**Pedido de información al vecino (`INFORMATION_REQUIRED`).** Solo sale si M6 conoce o supone el ticket en `IN_PROGRESS` o `ROUTED`, o todavía no tiene un estado conocido para él; con `PENDING_INFORMATION`, `IN_REVIEW` o un estado terminal no mandamos nada y el pedido del operador se rechaza. Una sola solicitud pendiente por expediente. Esperamos de vuelta un `ticketUpdated / INFORMATION_PROVIDED` con la respuesta del vecino: la guardamos y damos la solicitud por cerrada (el que trae `purpose = "RECLASSIFICATION"` no cuenta como respuesta). Mientras hay una solicitud pendiente, M6 no devuelve, desestima ni cierra ese expediente. **Cómo termina el pedido.** Si el vecino responde, esperamos `INFORMATION_PROVIDED` con el `currentStatus` al que volvió el ticket. Si el pedido vence sin respuesta, M2 cancela el ticket (no vuelve al estado anterior) y esperamos un `ticketUpdated` `CANCELLED` con `reasonCode` `INFO_TIMEOUT`: cierra nuestra solicitud y desestima el expediente que estaba en revisión. Una cancelación administrativa también llega como `CANCELLED`. `requiredBy` es una fecha sugerida: M2 fija la efectiva. Mientras haya un pedido abierto no mandamos un segundo `INFORMATION_REQUIRED`. Además, la solicitud se da por cerrada con un `ticketUpdated` de cambio de estado (`STATUS_CHANGED`, `ROUTED`, `REOPENED`, `RESOLVED`, `CLOSED`, `CANCELLED` o `DUPLICATE_LINKED`) cuyo `currentStatus` sea uno de los nueve estados de M2 y no sea `PENDING_INFORMATION`; un evento viejo (atrasado respecto del último estado recibido) o un `currentStatus` fuera de esos nueve estados no la cierra, y una reclasificación (`RECLASSIFICATION`) nunca la cierra. `CANCELLED` la cierra aunque no traiga `currentStatus`. Es un `updateType` que ya existía en el contrato de M2; M6 pasa a ser productor. El ejemplo completo está en [Sobres-M6.md](Sobres-M6.md).
+**Pedido de información al vecino (`INFORMATION_REQUIRED`).** Solo sale si M6 conoce o supone el ticket en `IN_PROGRESS` o `ROUTED`, o todavía no tiene un estado conocido para él; con `PENDING_INFORMATION`, `IN_REVIEW` o un estado terminal no mandamos nada y el pedido del operador se rechaza. Una sola solicitud pendiente por expediente. Esperamos de vuelta un `ticketUpdated / INFORMATION_PROVIDED` con la respuesta del vecino: la guardamos y damos la solicitud por cerrada (el que trae `purpose = "RECLASSIFICATION"` no cuenta como respuesta). Mientras hay una solicitud pendiente, M6 no devuelve, desestima ni cierra ese expediente. **Cómo termina el pedido.** Si el vecino responde, esperamos `INFORMATION_PROVIDED` con el `currentStatus` al que volvió el ticket. Si el pedido vence sin respuesta, M2 cancela el ticket (no vuelve al estado anterior) y esperamos un `ticketUpdated` `CANCELLED` con `reasonCode` `INFO_TIMEOUT`: cierra nuestra solicitud y desestima el expediente que estaba en revisión. Una cancelación administrativa también llega como `CANCELLED`. `requiredBy` es una fecha sugerida (futura, en ISO 8601 con zona horaria): la efectiva la fija M2, y si la fecha que mandamos es inválida, M2 rechaza el pedido con 400. Mientras haya un pedido abierto no mandamos un segundo `INFORMATION_REQUIRED`. Además, la solicitud se da por cerrada con un `ticketUpdated` de cambio de estado (`STATUS_CHANGED`, `ROUTED`, `REOPENED`, `RESOLVED`, `CLOSED`, `CANCELLED` o `DUPLICATE_LINKED`) cuyo `currentStatus` sea uno de los nueve estados de M2 y no sea `PENDING_INFORMATION`; un evento viejo (atrasado respecto del último estado recibido) o un `currentStatus` fuera de esos nueve estados no la cierra, y una reclasificación (`RECLASSIFICATION`) nunca la cierra. `CANCELLED` la cierra aunque no traiga `currentStatus`. Es un `updateType` que ya existía en el contrato de M2; M6 pasa a ser productor. El ejemplo completo está en los Sobres (PDF).
 
 Los otros dos no tienen una traducción directa, y conviene que quede escrito por qué:
 
@@ -240,7 +240,7 @@ Tres eventos, y ya confirmaron que los consumen los tres: `infrastructureRepairR
 
 Un evento: `environmentalViolationDetected` (4).
 
-- **`establishmentId` es obligatorio y viaja siempre** (el formato del identificador es de M4: los ejemplos usan `EST-004512`, a confirmar con ellos). Intimar, clausurar y multar se le aplican a un comercio habilitado; un acta sin establecimiento no les serviría, así que esas las cerramos nosotros y no se las mandamos.
+- **`establishmentId` es obligatorio y viaja siempre** (el identificador es de M4 y es un UUID, confirmado; lo tratamos como string opaco, sin validar ningún formato). Intimar, clausurar y multar se le aplican a un comercio habilitado; un acta sin establecimiento no les serviría, así que esas las cerramos nosotros y no se las mandamos.
 - **`suggestedAction` no es vinculante.** La decisión es de ustedes.
 - **`priorNoticeCount`** es la cantidad de actas previas al mismo establecimiento según nuestro histórico: les adelanta la reincidencia.
 
@@ -388,7 +388,7 @@ estimatedDuration: PT4H
 
 **Aviso de renombre:** `closureOrdered` y `closureLifted` se fusionaron en `closureUpdate` con `status: ORDERED | LIFTED`.
 
-⚠️ **`commercialFineGenerated` sigue rotulado solo hacia Rentas.** Confirmen que también nos lo rutean a nosotros — sigue sin confirmar.
+✅ **`commercialFineGenerated` también nos llega.** M4 confirmó el 21 de octubre que lo recibimos además de Rentas cuando la multa nace de una infracción ambiental, y `closureUpdate` cuando corresponda; estamos suscriptos a ambos en el Core.
 
 **Decisión que les avisamos: no les pedimos un evento de desestimación.** El caso "M4 decide que no corresponde castigo" no dispara ningún evento, ni siquiera `closureUpdate / LIFTED`. Lo resolvemos de nuestro lado cerrando el expediente por vencimiento de un plazo configurable. Una dependencia menos.
 
@@ -446,7 +446,7 @@ streetClosureEnded
 
 M9 respondió el 20/10 que `notificationSent` **no existe en su catálogo**: ningún módulo lo declara ni lo escucha. El enunciado del TPO (§9 y §6) pone las notificaciones en el Core y lista `NotificacionEnviada` entre los eventos que consumimos, así que **no lo sacamos todavía**: pedimos que lo publiquen o que se retire de todos los módulos.
 
-**Lo que les pedimos por REST:** catálogo de barrios con `neighborhoodId` estable, y validación del JWT. M9 dice que el catálogo de barrios no es del Core y supone que es de Ciudadanos; el TPO (§9) se lo asigna al Core. Está abierto.
+**Lo que consultamos por REST:** el catálogo de barrios (`GET /api/v1/catalogos/barrios`; M9 reconoció el 22 de octubre que es suyo, con datos ficticios hasta que carguen los barrios reales). Está en adopción.
 
 ---
 
@@ -457,7 +457,7 @@ M9 respondió el 20/10 que `notificationSent` **no existe en su catálogo**: nin
 | # | Qué pasa | Con quién |
 |---|---|---|
 | 1 | **M2 publicó su contrato (ahora v1.78, WIP) y ningún otro módulo está escrito contra él.** M4, M5 y M8 siguen publicando `ticketInProgress`, `ticketUpdate`, `ticketCompleted` y `ticketRejected`, que M2 no consume: lo suyo va por `updateTicketStatus` con `updateType`. Y los seis eventos de ciclo de vida que M1, M3, M5, M7 y M8 esperan son hoy variantes de `ticketUpdated`, no eventos. **Los cinco tienen que releer el contrato**. El documento de M1 del 13/10 ya no lista esos eventos, pero sus ejemplos de `updateTicketStatus` de M2 (`COMPLETED`, `UPDATED`, `ADDITIONAL_INFO_REQUIRED`, `statusChangedAt`, `AREA_USER`) son del contrato viejo | M1, M3, M4, M5, M8 |
-| 2 | **`commercialFineGenerated` figura rotulado solo hacia Rentas**, pero nosotros lo necesitamos para cerrar el expediente | M4 |
+| 2 | ✅ **`commercialFineGenerated`:** M4 confirmó el 21/10 que también nos lo rutean (y `closureUpdate` cuando corresponda); estamos suscriptos a ambos | M4 |
 | 3 | **M4 declara consumir `updateTicketStatus`.** Es el canal de entrada de M2 desde las áreas operativas: ningún otro módulo tendría que escucharlo | M4 |
 | 4 | ~~**`workOrderScheduled` reemplazó a `workOrderCreated`**~~ ✅ Cerrado el 5 oct 2026: se dispare al abrir o al agendar, no nos cambia nada | M3 |
 | 5 | ✅ **Cerrado el 7 oct 2026: el sobre vigente es el del Core.** M2 había definido `specVersion`, `eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `subject` y `data`; M9 publicó el suyo (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `sourceModule`, `correlationId?`, `causationId?`, `data`) para toda la cohorte y el de M2 queda reemplazado, también para M2 | M9, toda la cohorte |
@@ -498,3 +498,17 @@ Un huérfano es un evento que alguien espera y nadie publica. Esta lista se achi
 ## 3.3 Un riesgo en el bloque común
 
 ✅ **Resuelto el 20/10.** Habíamos advertido que `eventProcessingFailed` podía generar una tormenta de eventos técnicos. M9 confirmó que `eventProcessingFailed` y `eventRejected` son del propio Core, que nunca circuló ninguno y que los da de baja del catálogo: la DLQ (`GET /api/v1/dlq`), su auditoría (`/dlq/{id}/audit`) y el estado de cada evento (`/events/{eventId}`) ya cubren ese papel. M6 no los publica ni los consume; si alguien los tenía declarados, que los saque.
+
+
+---
+
+## Historial de versiones
+
+El número de versión es del **documento** (no confundir con la `eventVersion` de los mensajes ni con las versiones del contrato de M2, como la v1.78). El Acuerdo y los Sobres comparten número porque viajan juntos. **Mayor** cuando cambia el contrato y los demás módulos tienen que hacer algo; **menor** para aclaraciones o confirmaciones. La numeración se puso el 22 de octubre de 2026: las ediciones anteriores se numeraron después, a partir del historial.
+
+| Versión | Fecha | Qué cambió |
+|---|---|---|
+| **2.2** | 23 de octubre de 2026 | Ajustes pedidos por M2 al revisar la v2.1: `STARTED` sale solo con el ticket en `ROUTED` o sin estado conocido (con `IN_REVIEW` no mandamos nada, igual que con `PENDING_INFORMATION`); los ejemplos de M4 usan UUID en `establishmentId` y `actId`, que tratamos como string opaco; se corrigió la fila de `INFORMATION_REQUIRED` y se sacó lo de que M9 verifica el `userId` AMQP. Sin cambios de payload |
+| **2.1** | 22 de octubre de 2026 | Confirmaciones de M2 (el pedido de información que vence cancela el ticket; `STARTED` solo desde `ROUTED`), de M4 (nos rutean `commercialFineGenerated`; `actId` y `externalRef` son distintos) y de M9 (el catálogo de barrios es del Core y ya está publicado). Sin cambios de contrato |
+| **2.0** | 21 de octubre de 2026 | Publicamos **seis** eventos: `urbanServiceScheduled` y `treePruningScheduled` dejan de emitirse (M7 solo consume `streetClosureRequested`). Emitimos `INFORMATION_REQUIRED`. Baja de los eventos técnicos. Cadena de reintentos de la guía común del Core |
+| **1.0** | 13 de octubre de 2026 | Primera edición con el sobre del Core y el anexo de Sobres (M2 v1.75) |

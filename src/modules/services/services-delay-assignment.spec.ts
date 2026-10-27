@@ -5,6 +5,7 @@ import { OutboxService } from '../../events/outbox/outbox.service';
 import { ServicesService } from './services.service';
 import { ConflictResource } from './dto';
 
+const USER_ID = '4242';
 const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
 const OTRO_ID = '22222222-2222-2222-2222-222222222222';
 const CREW = '33333333-3333-3333-3333-333333333333';
@@ -27,7 +28,7 @@ describe('ServicesService — demora y doble reserva', () => {
     scheduledDate: new Date('2026-09-15T00:00:00.000Z'),
     windowFrom: hora('06:00'),
     windowTo: hora('11:00'),
-    crewId: null,
+    crewId: CREW,
     vehicleId: null,
     ticketId: null,
     statusReason: null,
@@ -60,6 +61,7 @@ describe('ServicesService — demora y doble reserva', () => {
         update: jest.fn(({ data }: any) => Promise.resolve(servicio(data))),
       },
       crew: {
+        count: jest.fn().mockResolvedValue(1),
         findUnique: jest
           .fn()
           .mockResolvedValue({ id: CREW, active: true, name: 'Cuadrilla Centro 1' }),
@@ -239,6 +241,7 @@ describe('ServicesService — demora y doble reserva', () => {
     });
 
     it('sin cuadrilla ni vehículo que evaluar no consulta nada', async () => {
+      prisma.service.findUnique.mockResolvedValue(servicio({ crewId: null }));
       const r = await service.getAssignmentConflicts(SERVICE_ID, {});
 
       expect(r.hasConflicts).toBe(false);
@@ -298,7 +301,7 @@ describe('ServicesService — demora y doble reserva', () => {
 
     it('un servicio que no arrancó admite START', async () => {
       await expect(
-        service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.START })),
+        service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.START }), USER_ID),
       ).resolves.toBeDefined();
     });
 
@@ -306,7 +309,7 @@ describe('ServicesService — demora y doble reserva', () => {
       prisma.service.findUnique.mockResolvedValue(servicio({ status: ServiceStatus.IN_PROGRESS }));
 
       await expect(
-        service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION })),
+        service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), USER_ID),
       ).resolves.toBeDefined();
     });
 
@@ -316,7 +319,7 @@ describe('ServicesService — demora y doble reserva', () => {
      */
     it('un servicio que no arrancó rechaza DURATION', async () => {
       await expect(
-        service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION })),
+        service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), USER_ID),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -324,7 +327,7 @@ describe('ServicesService — demora y doble reserva', () => {
       prisma.service.findUnique.mockResolvedValue(servicio({ status: ServiceStatus.IN_PROGRESS }));
 
       await expect(
-        service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.START })),
+        service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.START }), USER_ID),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -337,7 +340,7 @@ describe('ServicesService — demora y doble reserva', () => {
     ])('un servicio en %s no se puede demorar', async (status) => {
       prisma.service.findUnique.mockResolvedValue(servicio({ status }));
 
-      await expect(service.addDelayNotice(SERVICE_ID, aviso())).rejects.toBeInstanceOf(
+      await expect(service.addDelayNotice(SERVICE_ID, aviso(), USER_ID)).rejects.toBeInstanceOf(
         ConflictException,
       );
     });
@@ -348,7 +351,7 @@ describe('ServicesService — demora y doble reserva', () => {
     it('un aviso nuevo reemplaza al vigente en vez de pisarlo', async () => {
       prisma.serviceDelayNotice.findFirst.mockResolvedValue({ id: 'aviso-viejo' });
 
-      await service.addDelayNotice(SERVICE_ID, aviso());
+      await service.addDelayNotice(SERVICE_ID, aviso(), USER_ID);
 
       expect(prisma.serviceDelayNotice.update).toHaveBeenCalledWith({
         where: { id: 'aviso-viejo' },
@@ -357,7 +360,7 @@ describe('ServicesService — demora y doble reserva', () => {
     });
 
     it('el primero no reemplaza a nadie', async () => {
-      await service.addDelayNotice(SERVICE_ID, aviso());
+      await service.addDelayNotice(SERVICE_ID, aviso(), USER_ID);
 
       expect(prisma.serviceDelayNotice.update).not.toHaveBeenCalled();
     });
@@ -365,7 +368,7 @@ describe('ServicesService — demora y doble reserva', () => {
     it('el reemplazo y el alta van en la misma transacción', async () => {
       prisma.serviceDelayNotice.findFirst.mockResolvedValue({ id: 'aviso-viejo' });
 
-      await service.addDelayNotice(SERVICE_ID, aviso());
+      await service.addDelayNotice(SERVICE_ID, aviso(), USER_ID);
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     });

@@ -15,7 +15,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto, UpdateVehicleDto, VehicleResponseDto, QueryVehiclesDto } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_ADMIN } from '../../auth/role-groups';
 
 @ApiTags('vehicles')
 @ApiBearerAuth('JWT-auth')
@@ -24,6 +25,7 @@ export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 
   @Post()
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Registrar un vehículo',
     description:
@@ -42,11 +44,6 @@ export class VehiclesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para registrar vehículos',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -115,6 +112,7 @@ export class VehiclesController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_ADMIN)
   @ApiOperation({
     summary: 'Actualizar un vehículo',
     description:
@@ -134,11 +132,6 @@ export class VehiclesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para actualizar vehículos',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -164,6 +157,7 @@ export class VehiclesController {
   }
 
   @Delete(':id')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Desactivar un vehículo',
@@ -178,11 +172,6 @@ export class VehiclesController {
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para desactivar vehículos',
     type: ErrorResponseDto,
   })
   @ApiResponse({

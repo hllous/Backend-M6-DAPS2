@@ -9,8 +9,8 @@ import {
   crearZona,
   createTestApp,
   hoy,
-  tokenFor,
   truncateAll,
+  seedActores,
 } from './helpers';
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -44,8 +44,9 @@ describe('Vencimiento de cortes aprobados (e2e)', () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
     sweeper = app.get(StreetClosureExpirySweeper);
-    api = new Api(app, tokenFor(['SUPERVISOR']));
+    api = Api.porRol(app);
     await truncateAll(prisma);
+    await seedActores(prisma);
     rutaId = (await crearRuta(api, [(await crearZona(api)).id])).id;
     tipoId = (await crearTipoServicio(api, { mode: 'ROUTE' })).id;
   });

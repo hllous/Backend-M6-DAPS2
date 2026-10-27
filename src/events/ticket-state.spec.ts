@@ -65,7 +65,7 @@ describe('ticket-state', () => {
   describe('scheduleUpdate', () => {
     const texto = 'Su servicio fue programado para el lunes.';
 
-    it.each(['ROUTED', 'IN_REVIEW', null, undefined])('con el ticket en %s: STARTED', (estado) => {
+    it.each(['ROUTED', null, undefined])('con el ticket en %s: STARTED', (estado) => {
       expect(scheduleUpdate(estado, texto)).toEqual({
         updateType: 'STARTED',
         publicMessage: texto,
@@ -79,12 +79,18 @@ describe('ticket-state', () => {
       });
     });
 
-    it.each(['PENDING_INFORMATION', 'RESOLVED', 'CLOSED', 'CANCELLED', 'DUPLICATE', 'LO_QUE_SEA'])(
-      'con el ticket en %s: no publica',
-      (estado) => {
-        expect(scheduleUpdate(estado, texto)).toBeNull();
-      },
-    );
+    it.each([
+      'REGISTERED',
+      'IN_REVIEW',
+      'PENDING_INFORMATION',
+      'RESOLVED',
+      'CLOSED',
+      'CANCELLED',
+      'DUPLICATE',
+      'LO_QUE_SEA',
+    ])('con el ticket en %s: no publica', (estado) => {
+      expect(scheduleUpdate(estado, texto)).toBeNull();
+    });
   });
 
   describe('startUpdate', () => {
@@ -92,12 +98,21 @@ describe('ticket-state', () => {
       expect(startUpdate('IN_PROGRESS')).toBe('PROGRESS');
     });
 
-    it.each(['ROUTED', 'IN_REVIEW', null, undefined, 'PENDING_INFORMATION'])(
-      'con %s sigue siendo STARTED',
-      (estado) => {
-        expect(startUpdate(estado)).toBe('STARTED');
-      },
-    );
+    it.each(['ROUTED', null, undefined])('con %s es STARTED', (estado) => {
+      expect(startUpdate(estado)).toBe('STARTED');
+    });
+
+    it.each([
+      'REGISTERED',
+      'IN_REVIEW',
+      'PENDING_INFORMATION',
+      'RESOLVED',
+      'CLOSED',
+      'CANCELLED',
+      'DUPLICATE',
+    ])('con %s no publica', (estado) => {
+      expect(startUpdate(estado)).toBeNull();
+    });
   });
 
   describe('persistencia', () => {

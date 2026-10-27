@@ -9,6 +9,7 @@ import { startOfDayArgentina, toDateOnly } from '../../common/utils/date-only';
 import {
   EnvironmentalReport,
   EnvironmentalReportStatus as S,
+  M6Role,
   Prisma,
   ServiceStatus,
 } from '@prisma/client';
@@ -93,6 +94,9 @@ function toNumber(value: Prisma.Decimal | null): number | null {
   return value === null ? null : Number(value);
 }
 
+// Quién puede abrir un expediente con reclamo de M2 (ticketId).
+const CON_RECLAMO: readonly M6Role[] = [M6Role.M6_ADMIN, M6Role.M6_OFICINA_AMBIENTAL];
+
 @Injectable()
 export class EnvironmentalReportsService {
   private readonly logger = new Logger(EnvironmentalReportsService.name);
@@ -102,7 +106,18 @@ export class EnvironmentalReportsService {
     private readonly outbox: OutboxService,
   ) {}
 
-  async create(dto: CreateEnvironmentalReportDto): Promise<EnvironmentalReportResponseDto> {
+  async create(
+    dto: CreateEnvironmentalReportDto,
+    roles: readonly M6Role[],
+  ): Promise<EnvironmentalReportResponseDto> {
+    // El alta con reclamo de M2 es de Oficina Ambiental. Quien solo tiene Campo
+    // (el inspector) abre expedientes de oficio: sin ticketId, que ataría el
+    // expediente a un reclamo ajeno y haría salir eventos hacia M2.
+    if (dto.ticketId && !roles.some((r) => CON_RECLAMO.includes(r))) {
+      throw new BadRequestException(
+        'El alta con reclamo (ticketId) la hace Oficina Ambiental. Un inspector abre expedientes de oficio, sin ticketId',
+      );
+    }
     const report = await this.prisma.environmentalReport.create({
       data: {
         reportType: dto.reportType,
@@ -144,7 +159,7 @@ export class EnvironmentalReportsService {
       };
     }
 
-    if (query.status) where.status = query.status;
+    if (query.status) where.status = { in: query.status };
     if (query.reportType) where.reportType = query.reportType;
     if (query.priority) where.priority = query.priority;
     if (query.ticketId) where.ticketId = query.ticketId;
@@ -195,14 +210,21 @@ export class EnvironmentalReportsService {
   async startReview(id: string, actorId: string): Promise<EnvironmentalReportResponseDto> {
     const report = await this.getReport(id);
     // Si agendar un servicio ya arrancó el ticket, repetir STARTED no es válido
-    // para M2: el mismo aviso viaja como PROGRESS (#303).
+    // para M2: el mismo aviso viaja como PROGRESS (#303). Desde un estado que no
+    // admite STARTED (#396) la revisión arranca igual, sin aviso.
     const estadoTicket = report.ticketId ? await leerEstado(this.prisma, report.ticketId) : null;
-    return this.transition(report, S.UNDER_REVIEW, {}, [
-      ...this.ticketEvents(report, actorId, {
-        updateType: startUpdate(estadoTicket),
-        publicMessage: 'Su denuncia ambiental está en análisis.',
-      }),
-    ]);
+    const updateType = startUpdate(estadoTicket);
+    return this.transition(
+      report,
+      S.UNDER_REVIEW,
+      {},
+      updateType
+        ? this.ticketEvents(report, actorId, {
+            updateType,
+            publicMessage: 'Su denuncia ambiental está en análisis.',
+          })
+        : [],
+    );
   }
 
   /**

@@ -4,6 +4,8 @@ import { InboxService, IngestResult } from './inbox.service';
 import { IngestEventDto, toInboundEnvelope } from './ingest-event.dto';
 import { IngestResultDto, RegisteredHandlersDto } from './inbox-response.dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { Roles } from '../../common/decorators';
+import { ROLES_ADMIN } from '../../auth/role-groups';
 
 /**
  * Entrada manual de eventos.
@@ -21,6 +23,7 @@ export class InboxController {
   constructor(private readonly inbox: InboxService) {}
 
   @Post('inbox')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Ingerir un evento entrante',

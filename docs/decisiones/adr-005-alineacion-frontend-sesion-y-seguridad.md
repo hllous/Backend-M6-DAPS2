@@ -23,6 +23,8 @@ Durante la etapa de diseño de arquitectura y mapa de Wayfinder del Frontend (Is
    - **Allowlist server-side:** Cualquier endpoint de exportación o reporte debe filtrar los campos permitidos en la respuesta del servidor y no delegar el filtrado de columnas confidenciales al frontend.
 4. **Cierre transaccional de Contenedores:** Se confirma el diseño implementado en Backend (services.service.ts / Issue #63): al completar un Service con `targetType = CONTAINER` en estado COMPLETED, el contenedor transiciona automáticamente en la misma transacción (OVERFLOWED/UNDER_REPAIR → ACTIVE, y RELOCATING → ACTIVE si se proveyó containerLocation), garantizando consistencia atómica sin depender de una segunda llamada del cliente.
 
+> **Nota del 2026-10-21:** la exclusividad Office/Field de la decisión 2 se aplica en el backend desde #161 ([ADR-008](adr-008-roles-m6-adaptados-desde-m1.md)): `PUT /role-assignments/:userId` rechaza con 400 mezclar `M6_ADMIN`/`M6_OFICINA_*` con `M6_CAMPO_*`.
+
 ## Alternativas consideradas
 
 - **Permitir que el navegador gestione directamente el JWT de M1:** Descartada por riesgo de robo de token ante vulnerabilidades XSS en el navegador.

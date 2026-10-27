@@ -24,3 +24,13 @@
 5. **Las decisiones técnicas** van en un ADR, no acá.
 6. **Un dato vive en un solo lugar**; los demás documentos enlazan.
 7. Antes de abrir el PR: `npm run docs:check`.
+
+### Antes de recircular el Acuerdo y los Sobres
+
+Los dos documentos que circulan a la cohorte ([`Acuerdo-Eventos-M6.md`](../Acuerdo-Eventos-M6.md) y [`Sobres-M6.md`](../Sobres-M6.md)) llevan **número de versión y fecha de edición** en el encabezado, con el mismo número en los dos. Cada vez que se regeneran los PDF para mandarlos:
+
+1. Subir la versión: **mayor** si cambia el contrato y los demás módulos tienen que hacer algo; **menor** si son aclaraciones o confirmaciones.
+2. Poner en el encabezado de los dos la **fecha en que se genera** esa edición.
+3. Agregar una fila al «Historial de versiones» del final del Acuerdo.
+4. Al exportar, nombrar los PDF con la versión (`Acuerdo-Eventos-M6-v2.1.pdf`, `Sobres-M6-v2.1.pdf`), como hace M2 con su paquete.
+

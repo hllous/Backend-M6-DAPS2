@@ -17,9 +17,10 @@ const validarActa = (d: Data): string[] =>
  * Correlacionan por `sourceViolationId`, que es el `violationId` que mandamos
  * en el acta. Era el pedido bloqueante con M4 y quedó cerrado el 24/08.
  *
- * ⚠️ **`commercialFineGenerated` sigue rotulado solo "→ Rentas"** en el
- * documento de M4: falta que confirmen que también nos lo rutean. El handler
- * está listo; si no nos llega, el expediente cierra por vencimiento del plazo.
+ * M4 confirmó el 21/10 que `commercialFineGenerated` también nos llega (además
+ * de a Rentas) cuando la multa nace de una infracción ambiental, y
+ * `closureUpdate` cuando corresponda. Si no llega, el expediente cierra por
+ * vencimiento del plazo.
  */
 @Injectable()
 export class SanctionsConsumer implements OnModuleInit {
@@ -111,10 +112,13 @@ export class SanctionsConsumer implements OnModuleInit {
           decision,
           // decidedAt y externalRef los confirmaron verbalmente el 24/08 pero
           // su documento todavía no los muestra en el payload de ejemplo.
+          // `actId` es otro dato (el id interno del acta de M4 que fundamenta la
+          // sanción, confirmado el 21/10): no es la referencia visible, no se
+          // usa de respaldo de `externalRef` y no se guarda.
           decidedAt: data.decidedAt ? new Date(String(data.decidedAt)) : null,
           // `?? null`: el Core entrega ausente lo que M4 mande null (#296), y
           // `undefined` ya no es lo mismo que null para quien lea el código.
-          externalRef: (data.externalRef ?? data.actId ?? null) as string | null,
+          externalRef: (data.externalRef ?? null) as string | null,
         },
       });
 

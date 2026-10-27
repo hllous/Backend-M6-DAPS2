@@ -513,7 +513,7 @@ Un botón que falta casi siempre significa que ese paso no corresponde al estado
 *Tipo Diátaxis: Referencia. Estado al 20/10/2026.*
 
 - **Ingreso:** hoy se entra eligiendo un escenario; el ingreso real con M1 está a la espera de que M1 publique su contrato.
-- **Catálogo de barrios:** la lista de barrios usada para armar zonas es provisoria; su fuente definitiva sigue sin definirse.
+- **Catálogo de barrios:** la lista de barrios usada para armar zonas es provisoria; la fuente definitiva es el catálogo de M9, que todavía no está conectado.
 - **Establecimientos:** la búsqueda del establecimiento al emitir un acta usa una lista local hasta que M4 publique la suya.
 - **Inventario:** la entrada del menú existe pero todavía no tiene contenido; use **Catálogo**.
 - **Campo y el catálogo:** reportar desbordes y daños de contenedores y registrar relevamientos de árboles están permitidos para Campo, pero el menú de Campo no incluye **Catálogo**; hoy lo hace Oficina.

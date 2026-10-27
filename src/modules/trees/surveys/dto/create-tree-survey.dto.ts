@@ -50,7 +50,9 @@ export class CreateTreeSurveyDto {
 
   @ApiPropertyOptional({
     maxLength: MAX_EXTERNAL_ID_LENGTH,
-    description: 'ID del inspector que realizó el relevamiento (usuario interno M6)',
+    deprecated: true,
+    description:
+      'DEPRECADO e ignorado: el inspector es el usuario del token. Se acepta para no romper clientes viejos, pero su valor no se usa',
     example: 'usr-00015',
   })
   @IsOptional()

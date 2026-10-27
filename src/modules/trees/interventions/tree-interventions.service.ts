@@ -141,7 +141,11 @@ export class TreeInterventionsService {
   /**
    * PENDING_AUTHORIZATION → AUTHORIZED (o REQUESTED → AUTHORIZED para podas).
    */
-  async authorize(id: string, dto: AuthorizeInterventionDto): Promise<TreeInterventionResponseDto> {
+  async authorize(
+    id: string,
+    dto: AuthorizeInterventionDto,
+    userId: string,
+  ): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
 
     // Sin esto una extracción se autoriza directo desde REQUESTED y el control
@@ -157,7 +161,8 @@ export class TreeInterventionsService {
     }
 
     return this.transition(intervention, TreeInterventionStatus.AUTHORIZED, {
-      authorizedByUserId: dto.authorizedByUserId ?? null,
+      // Quién autoriza lo dice el token, nunca el body (dto.authorizedByUserId está deprecado e ignorado).
+      authorizedByUserId: userId,
       authorizedAt: new Date(),
       ...(dto.justification && { justification: dto.justification }),
     });

@@ -1,4 +1,4 @@
-import { ExecutionContext } from '@nestjs/common';
+import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
@@ -41,5 +41,30 @@ describe('JwtAuthGuard', () => {
     expect(passportCanActivate).toHaveBeenCalledWith(context);
 
     passportCanActivate.mockRestore();
+  });
+
+  describe('handleRequest', () => {
+    const user = (subType: 'EMPLEADO' | 'CIUDADANO') => ({
+      userId: '1',
+      m1Role: 'ADMINISTRATIVO',
+      roles: [],
+      subType,
+    });
+
+    it('deja pasar a un empleado', () => {
+      const u = user('EMPLEADO');
+      expect(guard.handleRequest(null, u)).toBe(u);
+    });
+
+    it('rechaza a un ciudadano con 403 y mensaje claro', () => {
+      expect(() => guard.handleRequest(null, user('CIUDADANO'))).toThrow(
+        new ForbiddenException('Este sistema es solo para personal municipal'),
+      );
+    });
+
+    it('sin usuario o con error de passport sigue siendo 401', () => {
+      expect(() => guard.handleRequest(null, false)).toThrow(UnauthorizedException);
+      expect(() => guard.handleRequest(new Error('x'), user('EMPLEADO'))).toThrow('x');
+    });
   });
 });

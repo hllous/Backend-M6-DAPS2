@@ -18,6 +18,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -33,13 +34,14 @@ export class CreateInspectionDto {
   serviceId?: string;
 
   @ApiPropertyOptional({
-    description: 'Inspector asignado. Interno: nunca sale hacia M2.',
-    example: 'user-014',
-    maxLength: 64,
+    description:
+      'Inspector que Oficina asigna (id numérico de M1). Opcional. Esa persona tiene que tener el rol M6_CAMPO_INSPECTOR, si no es 400. Interno: nunca sale hacia M2. Quien cierra la inspección se registra aparte (`completedByUserId`), desde el token',
+    example: '42',
+    maxLength: 19,
   })
   @IsOptional()
   @IsString()
-  @MaxLength(64)
+  @Matches(/^\d{1,19}$/, { message: 'inspectorId debe ser el id numérico de M1 (solo dígitos)' })
   inspectorId?: string;
 }
 
@@ -188,8 +190,8 @@ export class IssueViolationNoticeDto {
 
   @ApiPropertyOptional({
     description:
-      'Establecimiento habilitado de M4. **Sin esto el acta no se deriva** y el expediente cierra de nuestro lado: es lo único sobre lo que M4 puede actuar.',
-    example: 'EST-004512',
+      'Establecimiento habilitado de M4 (UUID; M6 lo trata como string opaco). **Sin esto el acta no se deriva** y el expediente cierra de nuestro lado: es lo único sobre lo que M4 puede actuar.',
+    example: '7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47',
     maxLength: 64,
   })
   @IsOptional()

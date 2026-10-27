@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   ContainerStatus,
   Prisma,
@@ -14,6 +19,7 @@ import { EnvironmentalInspectionsService } from '../environmental-inspections/en
 import { ServiceTargetType } from './dto';
 import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from '../../events/m2-contract.testing';
 
+const USER_ID = '4242';
 const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
 const TYPE_ID = '22222222-2222-2222-2222-222222222222';
 const ROUTE_ID = '33333333-3333-3333-3333-333333333333';
@@ -44,7 +50,7 @@ describe('ServicesService', () => {
     scheduledDate: new Date('2026-09-15T00:00:00.000Z'),
     windowFrom: null,
     windowTo: null,
-    crewId: null,
+    crewId: CREW_ID,
     vehicleId: null,
     ticketId: null,
     weatherAlertId: null,
@@ -92,6 +98,7 @@ describe('ServicesService', () => {
       greenSpace: { findUnique: jest.fn() },
       greenPoint: { findUnique: jest.fn() },
       crew: {
+        count: jest.fn().mockResolvedValue(1),
         findUnique: jest.fn().mockResolvedValue({ id: CREW_ID, active: true, name: 'Norte' }),
       },
       vehicle: {
@@ -563,8 +570,13 @@ describe('ServicesService', () => {
   // ─── Máquina de estados ──────────────────────────
 
   describe('máquina de estados', () => {
-    it('no deja iniciar sin cuadrilla asignada', async () => {
-      await expect(service.start(SERVICE_ID)).rejects.toThrow(ConflictException);
+    it('no deja iniciar sin cuadrilla asignada: nadie es de su cuadrilla (403 NOT_ASSIGNED)', async () => {
+      prisma.service.findUnique.mockResolvedValue(serviceRow({ crewId: null }));
+
+      const error = await service.start(SERVICE_ID, USER_ID).catch((e) => e);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect(error.getResponse()).toMatchObject({ code: 'NOT_ASSIGNED' });
       expect(prisma.service.update).not.toHaveBeenCalled();
     });
 
@@ -575,13 +587,13 @@ describe('ServicesService', () => {
         requiresVehicle: true,
       });
 
-      await expect(service.start(SERVICE_ID)).rejects.toThrow(ConflictException);
+      await expect(service.start(SERVICE_ID, USER_ID)).rejects.toThrow(ConflictException);
     });
 
     it('inicia cuando hay cuadrilla y el tipo no exige vehiculo', async () => {
       prisma.service.findUnique.mockResolvedValue(serviceRow({ crewId: CREW_ID }));
 
-      await service.start(SERVICE_ID);
+      await service.start(SERVICE_ID, USER_ID);
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -601,7 +613,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.IN_PROGRESS }),
       );
 
-      await service.suspend(SERVICE_ID, 'Rotura del camión');
+      await service.suspend(SERVICE_ID, USER_ID, 'Rotura del camión');
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -619,7 +631,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.IN_PROGRESS }),
       );
 
-      await service.suspend(SERVICE_ID, 'Rotura', '   ');
+      await service.suspend(SERVICE_ID, USER_ID, 'Rotura', '   ');
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ statusNote: null }) }),
@@ -631,7 +643,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.SUSPENDED, statusNote: 'x' }),
       );
 
-      await service.resume(SERVICE_ID);
+      await service.resume(SERVICE_ID, USER_ID);
       await service.cancel(SERVICE_ID, 'motivo');
 
       for (const [arg] of prisma.service.update.mock.calls) {
@@ -645,7 +657,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.IN_PROGRESS }),
       );
 
-      await service.suspend(SERVICE_ID, 'Rotura', 'Sin frenos');
+      await service.suspend(SERVICE_ID, USER_ID, 'Rotura', 'Sin frenos');
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -663,14 +675,14 @@ describe('ServicesService', () => {
     ])('reanudar desde %s da 409 y no escribe (no saltea el chequeo de start)', async (status) => {
       prisma.service.findUnique.mockResolvedValue(serviceRow({ status }));
 
-      await expect(service.resume(SERVICE_ID)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.resume(SERVICE_ID, USER_ID)).rejects.toBeInstanceOf(ConflictException);
       expect(prisma.service.update).not.toHaveBeenCalled();
     });
 
     it('reanudar escribe condicionado al estado leído', async () => {
       prisma.service.findUnique.mockResolvedValue(serviceRow({ status: ServiceStatus.SUSPENDED }));
 
-      await service.resume(SERVICE_ID);
+      await service.resume(SERVICE_ID, USER_ID);
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: SERVICE_ID, status: ServiceStatus.SUSPENDED } }),
@@ -683,7 +695,7 @@ describe('ServicesService', () => {
         new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5.22.0' }),
       );
 
-      await expect(service.resume(SERVICE_ID)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.resume(SERVICE_ID, USER_ID)).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('reanudar limpia el motivo de la suspension', async () => {
@@ -691,7 +703,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.SUSPENDED, statusReason: 'Rotura' }),
       );
 
-      await service.resume(SERVICE_ID);
+      await service.resume(SERVICE_ID, USER_ID);
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -796,7 +808,7 @@ describe('ServicesService', () => {
         }),
       );
 
-      await service.complete(SERVICE_ID);
+      await service.complete(SERVICE_ID, {}, USER_ID);
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -816,7 +828,7 @@ describe('ServicesService', () => {
         }),
       );
 
-      await service.complete(SERVICE_ID);
+      await service.complete(SERVICE_ID, {}, USER_ID);
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -833,7 +845,7 @@ describe('ServicesService', () => {
         }),
       );
 
-      await expect(service.complete(SERVICE_ID)).rejects.toThrow(ConflictException);
+      await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(ConflictException);
       expect(prisma.service.update).not.toHaveBeenCalled();
     });
 
@@ -860,7 +872,7 @@ describe('ServicesService', () => {
           prisma.service.findUnique.mockResolvedValue(closable());
           prisma.container.findUnique.mockResolvedValue(containerIn(status));
 
-          await service.complete(SERVICE_ID);
+          await service.complete(SERVICE_ID, {}, USER_ID);
 
           expect(prisma.container.update).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -875,7 +887,11 @@ describe('ServicesService', () => {
         prisma.service.findUnique.mockResolvedValue(closable());
         prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.RELOCATING));
 
-        await service.complete(SERVICE_ID, { containerLocation: { address: 'Av. Nueva 100' } });
+        await service.complete(
+          SERVICE_ID,
+          { containerLocation: { address: 'Av. Nueva 100' } },
+          USER_ID,
+        );
 
         expect(prisma.container.update).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -891,7 +907,7 @@ describe('ServicesService', () => {
           new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5.22.0' }),
         );
 
-        await expect(service.complete(SERVICE_ID)).rejects.toThrow(ConflictException);
+        await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(ConflictException);
         expect(outbox.enqueueMany).not.toHaveBeenCalled();
       });
 
@@ -899,7 +915,7 @@ describe('ServicesService', () => {
         prisma.service.findUnique.mockResolvedValue(closable());
         prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
 
-        await service.complete(SERVICE_ID);
+        await service.complete(SERVICE_ID, {}, USER_ID);
 
         expect(prisma.service.update).toHaveBeenCalledWith(
           expect.objectContaining({ where: { id: SERVICE_ID, status: ServiceStatus.IN_PROGRESS } }),
@@ -913,7 +929,7 @@ describe('ServicesService', () => {
           new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5.22.0' }),
         );
 
-        await expect(service.complete(SERVICE_ID)).rejects.toThrow(ConflictException);
+        await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(ConflictException);
         expect(prisma.container.update).not.toHaveBeenCalled();
         expect(outbox.enqueueMany).not.toHaveBeenCalled();
       });
@@ -923,7 +939,7 @@ describe('ServicesService', () => {
         prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
         prisma.container.update.mockRejectedValue(new Error('db caída'));
 
-        await expect(service.complete(SERVICE_ID)).rejects.toThrow('db caída');
+        await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow('db caída');
       });
     });
   });
@@ -939,29 +955,41 @@ describe('ServicesService', () => {
 
     it('exige motivo cuando la zona no quedo SERVICED', async () => {
       await expect(
-        service.addZoneResult(SERVICE_ID, {
-          zoneId: ZONE_A,
-          status: ZoneResultStatus.NOT_SERVICED,
-        }),
+        service.addZoneResult(
+          SERVICE_ID,
+          {
+            zoneId: ZONE_A,
+            status: ZoneResultStatus.NOT_SERVICED,
+          },
+          USER_ID,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('rechaza motivo cuando la zona quedo SERVICED', async () => {
       await expect(
-        service.addZoneResult(SERVICE_ID, {
-          zoneId: ZONE_A,
-          status: ZoneResultStatus.SERVICED,
-          reason: 'WEATHER' as never,
-        }),
+        service.addZoneResult(
+          SERVICE_ID,
+          {
+            zoneId: ZONE_A,
+            status: ZoneResultStatus.SERVICED,
+            reason: 'WEATHER' as never,
+          },
+          USER_ID,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('rechaza una zona que no pertenece al servicio', async () => {
       await expect(
-        service.addZoneResult(SERVICE_ID, {
-          zoneId: '99999999-9999-9999-9999-999999999999',
-          status: ZoneResultStatus.SERVICED,
-        }),
+        service.addZoneResult(
+          SERVICE_ID,
+          {
+            zoneId: '99999999-9999-9999-9999-999999999999',
+            status: ZoneResultStatus.SERVICED,
+          },
+          USER_ID,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -974,10 +1002,14 @@ describe('ServicesService', () => {
       );
 
       await expect(
-        service.addZoneResult(SERVICE_ID, {
-          zoneId: ZONE_A,
-          status: ZoneResultStatus.SERVICED,
-        }),
+        service.addZoneResult(
+          SERVICE_ID,
+          {
+            zoneId: ZONE_A,
+            status: ZoneResultStatus.SERVICED,
+          },
+          USER_ID,
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -985,10 +1017,14 @@ describe('ServicesService', () => {
       prisma.service.findUnique.mockResolvedValue(serviceRow());
 
       await expect(
-        service.addZoneResult(SERVICE_ID, {
-          zoneId: ZONE_A,
-          status: ZoneResultStatus.SERVICED,
-        }),
+        service.addZoneResult(
+          SERVICE_ID,
+          {
+            zoneId: ZONE_A,
+            status: ZoneResultStatus.SERVICED,
+          },
+          USER_ID,
+        ),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -1010,10 +1046,14 @@ describe('ServicesService', () => {
       });
 
       await expect(
-        service.addCollectionRecord(SERVICE_ID, {
-          wasteType: WasteType.HOUSEHOLD,
-          disposalSiteId: SITE_ID,
-        }),
+        service.addCollectionRecord(
+          SERVICE_ID,
+          {
+            wasteType: WasteType.HOUSEHOLD,
+            disposalSiteId: SITE_ID,
+          },
+          USER_ID,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -1021,20 +1061,28 @@ describe('ServicesService', () => {
       prisma.disposalSite.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.addCollectionRecord(SERVICE_ID, {
-          wasteType: WasteType.HOUSEHOLD,
-          disposalSiteId: SITE_ID,
-        }),
+        service.addCollectionRecord(
+          SERVICE_ID,
+          {
+            wasteType: WasteType.HOUSEHOLD,
+            disposalSiteId: SITE_ID,
+          },
+          USER_ID,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('rechaza un zoneResultId de otro servicio', async () => {
       await expect(
-        service.addCollectionRecord(SERVICE_ID, {
-          wasteType: WasteType.HOUSEHOLD,
-          disposalSiteId: SITE_ID,
-          zoneResultId: '99999999-9999-9999-9999-999999999999',
-        }),
+        service.addCollectionRecord(
+          SERVICE_ID,
+          {
+            wasteType: WasteType.HOUSEHOLD,
+            disposalSiteId: SITE_ID,
+            zoneResultId: '99999999-9999-9999-9999-999999999999',
+          },
+          USER_ID,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -1042,10 +1090,14 @@ describe('ServicesService', () => {
       prisma.service.findUnique.mockResolvedValue(serviceRow());
 
       await expect(
-        service.addCollectionRecord(SERVICE_ID, {
-          wasteType: WasteType.HOUSEHOLD,
-          disposalSiteId: SITE_ID,
-        }),
+        service.addCollectionRecord(
+          SERVICE_ID,
+          {
+            wasteType: WasteType.HOUSEHOLD,
+            disposalSiteId: SITE_ID,
+          },
+          USER_ID,
+        ),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -1101,7 +1153,7 @@ describe('ServicesService', () => {
       expect(prisma.ticketM2State.findUnique).not.toHaveBeenCalled();
     });
 
-    it.each(['ROUTED', 'IN_REVIEW', null])(
+    it.each(['ROUTED', null])(
       'agendar con el ticket en %s manda STARTED con la programación',
       async (estado) => {
         conTicketEn(estado);
@@ -1127,7 +1179,7 @@ describe('ServicesService', () => {
       expect(hacia()).toEqual([expect.objectContaining({ updateType: 'PROGRESS' })]);
     });
 
-    it.each(['PENDING_INFORMATION', 'RESOLVED', 'CLOSED', 'CANCELLED', 'DUPLICATE'])(
+    it.each(['IN_REVIEW', 'PENDING_INFORMATION', 'RESOLVED', 'CLOSED', 'CANCELLED', 'DUPLICATE'])(
       'agendar con el ticket en %s no publica (M2 lo rechazaría)',
       async (estado) => {
         conTicketEn(estado);
@@ -1260,7 +1312,7 @@ describe('ServicesService', () => {
         prisma.service.findUnique.mockResolvedValue(iniciable());
         conTicketEn('IN_PROGRESS');
 
-        await service.start(SERVICE_ID);
+        await service.start(SERVICE_ID, USER_ID);
 
         expect(hacia()).toEqual([
           expect.objectContaining({
@@ -1270,14 +1322,28 @@ describe('ServicesService', () => {
         ]);
       });
 
-      it.each(['ROUTED', 'IN_REVIEW', null])('con el ticket en %s sigue en STARTED', async (e) => {
+      it.each(['ROUTED', null])('con el ticket en %s manda STARTED', async (e) => {
         prisma.service.findUnique.mockResolvedValue(iniciable());
         conTicketEn(e);
 
-        await service.start(SERVICE_ID);
+        await service.start(SERVICE_ID, USER_ID);
 
         expect(hacia()).toEqual([expect.objectContaining({ updateType: 'STARTED' })]);
       });
+
+      // M2 solo acepta STARTED desde ROUTED (#396): el servicio arranca igual, sin aviso.
+      it.each(['IN_REVIEW', 'PENDING_INFORMATION', 'RESOLVED', 'CANCELLED'])(
+        'con el ticket en %s inicia el servicio y no publica',
+        async (e) => {
+          prisma.service.findUnique.mockResolvedValue(iniciable());
+          conTicketEn(e);
+
+          await service.start(SERVICE_ID, USER_ID);
+
+          expect(prisma.service.update).toHaveBeenCalled();
+          expect(hacia()).toEqual([]);
+        },
+      );
     });
   });
 

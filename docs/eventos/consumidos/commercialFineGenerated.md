@@ -13,18 +13,18 @@ El `SanctionOutcome` es un **espejo de solo lectura**: no lo editamos, existe pa
 | Campo | Nota |
 |---|---|
 | ✅ `sourceViolationId` | El `violationId` que mandamos en [`environmentalViolationDetected`](../publicados/environmentalViolationDetected.md). **Confirmado (24/08)** en el payload de ejemplo. Era nuestro bloqueante principal, queda cerrado |
-| `actId` | Nuevo en el documento vigente. 🟡 A confirmar si es el mismo dato que `externalRef` o dos identificadores distintos |
+| `actId` | ✅ Confirmado (21/10): es distinto de `externalRef`. Es el identificador interno del acta de M4 que fundamenta la sanción. No lo persistimos: queda como dato del evento |
 | `decision` | Qué resolvieron |
 | ⚠️ `decidedAt` | Confirmado verbalmente (24/08) que lo reincorporan — el ejemplo publicado todavía no lo muestra |
-| ⚠️ `externalRef` | Su identificador de la multa. Mismo caso que `decidedAt`: confirmado, no publicado todavía |
+| ⚠️ `externalRef` | La referencia administrativa visible de la resolución, disposición o multa (es lo que guardamos en `SanctionOutcome.externalRef`). Mismo caso que `decidedAt`: confirmado, no publicado todavía |
 
 Nice to have: `establishmentId`, que ya tienen — lo aprovechamos, pero no reemplaza a `sourceViolationId`.
 
-## Lo que falta confirmar
+## Ruteo y suscripción
 
-⚠️ **Sigue rotulado solo "M4 → Core → Rentas"** en su documento vigente. Falta que confirmen que **también nos lo rutean a nosotros**: sin este evento no cerramos el expediente por la vía de la multa. Ver [bloqueantes.md](../../integracion/m4.md#m4--habilitaciones--con-dos-preguntas-abiertas).
+✅ **Confirmado (21/10):** M4 lo manda además a Rentas cuando la multa se origina en una infracción ambiental. Hay que estar suscripto en el Core: `commercialFineGenerated` ya figura entre las 8 suscripciones del registro de #266 (`ConsumedEvent` en `src/events/inbox/consumed-events.ts`, consumido por `src/core/core-registry.service.ts`). Ver [m4.md](../../integracion/m4.md#acordado-el-2110).
 
-🟡 **¿`actId` es lo mismo que `externalRef`?** Si es el mismo número con otro nombre, conviene decírselo para no duplicar el campo.
+⚠️ **Código a revisar:** `sanctions.consumer.ts` guarda `externalRef ?? actId` en `SanctionOutcome.externalRef`. Como son datos distintos, el respaldo con `actId` no corresponde; derivado al implementador.
 
 ## Nota de vocabulario
 

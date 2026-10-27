@@ -34,7 +34,7 @@ De todo `ticketUpdated` de un ticket **nuestro** (`responsibleAreaId = M6`), sea
 
 **Desde el 20/10 (M2) se ordena por `data.updatedAt`**, cuándo M2 persistió el cambio, y no por el `occurredAt` del sobre, que es cuándo se publicó y puede ser posterior si la publicación se demoró o se reintentó. El `occurredAt` queda de respaldo si `updatedAt` falta, es ilegible o está más de 5 minutos en el futuro. Los timestamps sirven para descartar un evento viejo que llega tarde, no para decidir el estado del ticket (eso lo define `currentStatus` de M2). No se comparan con timestamps de otro productor (por ejemplo, el `updateOccurredAt` de M3). Donde más abajo dice «`occurredAt`» en este apartado, leer «el timestamp de orden».
 
-El Core reintenta un handler fallido con su backoff (escalones de 5 s, 30 s, 2 min y 10 min según el intento, ver [m9.md](../../integracion/m9.md)) hasta la DLQ y M9 no garantiza el orden, así que un evento viejo puede aplicarse **después** de uno más nuevo del mismo ticket. Los `updateType` que pisan un dato lo comparan con el `occurredAt` del último aplicado **a ese dato**, guardado en el expediente:
+El Core reintenta un handler fallido con su backoff (hasta tres reintentos con esperas de 5 s, 30 s y 2 min, ver [m9.md](../../integracion/m9.md)) hasta la DLQ y M9 no garantiza el orden, así que un evento viejo puede aplicarse **después** de uno más nuevo del mismo ticket. Los `updateType` que pisan un dato lo comparan con el `occurredAt` del último aplicado **a ese dato**, guardado en el expediente:
 
 | `updateType` | Marca en `environmental_report` |
 |---|---|
@@ -96,7 +96,7 @@ En la v1.5, `requestType`, `summary`, `description` y `location` eran campos **c
 | `ticketId` | Lo guardamos en el `Service` y en el `EnvironmentalReport`. **Obligatorio junto con `updateType`: sin ellos `POST /events/inbox` responde 400 y no se guarda** |
 | `responsibleAreaId` | ✅ Nos dice si el `ROUTED` es nuestro |
 | `citizenId`, `isAnonymous` | Decide si hace falta identificar al denunciante para el expediente |
-| `details.routing.location.neighborhoodId` | **No se usa hoy.** El plan era asignar zona operativa a partir del barrio, pero el handler no lo lee — pendiente de que M9 publique el catálogo de barrios |
+| `details.routing.location.neighborhoodId` | **No se usa hoy.** El plan era asignar zona operativa a partir del barrio, pero el handler no lo lee — pendiente de que adoptemos el catálogo de barrios que M9 ya expone ([#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)) |
 | `details.routing.requestType` | Contenido/categoría del reclamo. String, sin ID |
 | `details.routing.summary`, `.description` | Contenido del reclamo |
 

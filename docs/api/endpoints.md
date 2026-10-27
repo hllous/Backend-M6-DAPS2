@@ -6,14 +6,14 @@ El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde e
 
 El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
-> 135 rutas, agrupadas en 23 tags de Swagger (cuenta contrastada contra `openapi.json`).
+> 140 rutas, agrupadas en 25 tags de Swagger (cuenta contrastada contra `openapi.json`).
 
 ## Convenciones
 
 Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo para leer esta tabla:
 
-- **Autenticación**: todo exige `Authorization: Bearer <JWT>` salvo lo marcado como público. El `JwtAuthGuard` está registrado como guard global, así que un endpoint nuevo nace protegido; los públicos se marcan explícitamente con `@Public()`. Ver [ADR-002](../decisiones/adr-002-auth-provisoria.md).
-- **Autorización por rol**: todavía no existe. Cualquier usuario autenticado puede llamar cualquier endpoint — pendiente de una fuente de rol verificable de M1: su login hoy no devuelve token firmado. El plan (adapter del rol de M1 + roles propios de M6 asignados localmente) está en el Issue #161; el estado con M1, en [bloqueantes.md](../bloqueantes.md). No aplica a los `@Public()` (`health` y los cuatro de `citizen-portal`): esos ni siquiera piden JWT, autenticado o no.
+- **Autenticación**: todo exige `Authorization: Bearer <JWT>` salvo lo marcado como público. El `JwtAuthGuard` está registrado como guard global, así que un endpoint nuevo nace protegido; los públicos se marcan explícitamente con `@Public()`. **Solo personal municipal**: el guard exige `sub_type: EMPLEADO`; un token válido de ciudadano (`sub_type: CIUDADANO`) recibe **403** (`Este sistema es solo para personal municipal`) en todo endpoint no público, incluido `POST /events/inbox`. Sin token o con token inválido sigue siendo 401. Ver [ADR-002](../decisiones/adr-002-auth-provisoria.md).
+- **Autorización por rol**: el `RolesGuard` es global, después del `JwtAuthGuard` ([ADR-008](../decisiones/adr-008-roles-m6-adaptados-desde-m1.md)). Cada escritura declara `@Roles` (tabla "Rol requerido por endpoint" de abajo); sin el rol, **403** con `code: "ROLE_REQUIRED"`. Un GET sin `@Roles` exige cualquier rol de M6 (el auditor incluido): un empleado sin ningún rol de M6 recibe 403 también en lectura, salvo en `GET /me`. Una escritura sin `@Roles` se rechaza para todos. Los roles de M6 son efectivos = asignados por un `M6_ADMIN` ∩ lo que permite el rol de M1; se leen por request (`GET /me` los muestra). No aplica a los `@Public()` (`health` y los cuatro de `citizen-portal`): esos ni siquiera piden JWT.
 - **Listados**: paginados con `?page` (default 1) y `?pageSize` (default 20, máx 100). Devuelven `{ data: [...], meta: { total, page, pageSize, totalPages } }`.
 - **Booleanos**: en filtros (`?active=`) y en bodies se acepta `true` o `false`, sin distinguir mayúsculas. Cualquier otro valor (`0`, `1`, vacío, `maybe`) da 400.
 - **Textos**: `code`, `name`, `plate` y `surveyCode` se recortan (bordes) antes de validar y guardar. Un valor que quede vacío (solo espacios) da 400. Lo mismo vale para los textos obligatorios de motivo y dirección (`reason`, `address` de reubicación, `streetName`, `fromCross`, `toCross`, `itemCode`, `label`). Cualquier string con el carácter nulo (`\u0000`) en body o query, a cualquier profundidad, da 400 (Postgres no lo acepta).
@@ -24,6 +24,169 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 23 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
 
+## Rol requerido por endpoint
+
+Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si queda desactualizada. "Cualquier rol de M6" = un GET sin `@Roles`: lo pueden todos los roles de M6, el auditor incluido, pero no un empleado sin roles. Una escritura sin `@Roles` se rechaza para todos.
+
+<!-- roles:start (generado por npm run docs:roles, no editar a mano) -->
+
+| Método | Ruta | Rol |
+| --- | --- | --- |
+| GET | `/containers` | cualquier rol de M6 |
+| POST | `/containers` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/containers/:id` | cualquier rol de M6 |
+| PATCH | `/containers/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/containers/:id/complete-repair` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/containers/:id/confirm-relocation` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/containers/:id/empty` | `M6_CAMPO_CUADRILLA` |
+| POST | `/containers/:id/relocate` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/containers/:id/remove` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/containers/:id/report-damage` | `M6_CAMPO_CUADRILLA` |
+| POST | `/containers/:id/report-overflow` | `M6_CAMPO_CUADRILLA` |
+| POST | `/containers/:id/start-repair` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/crews` | cualquier rol de M6 |
+| POST | `/crews` | `M6_ADMIN` |
+| DELETE | `/crews/:id` | `M6_ADMIN` |
+| GET | `/crews/:id` | cualquier rol de M6 |
+| PATCH | `/crews/:id` | `M6_ADMIN` |
+| POST | `/crews/:id/members` | `M6_ADMIN` |
+| DELETE | `/crews/:id/members/:userId` | `M6_ADMIN` |
+| GET | `/disposal-sites` | cualquier rol de M6 |
+| POST | `/disposal-sites` | `M6_ADMIN` |
+| DELETE | `/disposal-sites/:id` | `M6_ADMIN` |
+| GET | `/disposal-sites/:id` | cualquier rol de M6 |
+| PATCH | `/disposal-sites/:id` | `M6_ADMIN` |
+| GET | `/environmental-inspections/:id` | cualquier rol de M6 |
+| POST | `/environmental-inspections/:id/complete` | `M6_CAMPO_INSPECTOR` |
+| GET | `/environmental-inspections/:id/violation-notice` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL`, `M6_CAMPO_INSPECTOR`, `M6_AUDITOR` |
+| POST | `/environmental-inspections/:id/violation-notice` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| GET | `/environmental-reports` | cualquier rol de M6 |
+| POST | `/environmental-reports` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL`, `M6_CAMPO_INSPECTOR` |
+| GET | `/environmental-reports/:id` | cualquier rol de M6 |
+| POST | `/environmental-reports/:id/close` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| POST | `/environmental-reports/:id/dismiss` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| POST | `/environmental-reports/:id/forward` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| POST | `/environmental-reports/:id/request-information` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| POST | `/environmental-reports/:id/start-review` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| GET | `/environmental-reports/:reportId/inspections` | cualquier rol de M6 |
+| POST | `/environmental-reports/:reportId/inspections` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
+| GET | `/events/handlers` | cualquier rol de M6 |
+| POST | `/events/inbox` | `M6_ADMIN` |
+| GET | `/evidence` | cualquier rol de M6 |
+| POST | `/evidence` | `M6_CAMPO_CUADRILLA`, `M6_CAMPO_INSPECTOR` |
+| GET | `/green-points` | cualquier rol de M6 |
+| POST | `/green-points` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| DELETE | `/green-points/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/green-points/:id` | cualquier rol de M6 |
+| PATCH | `/green-points/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/green-spaces` | cualquier rol de M6 |
+| POST | `/green-spaces` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| DELETE | `/green-spaces/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/green-spaces/:id` | cualquier rol de M6 |
+| PATCH | `/green-spaces/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/health` | público |
+| GET | `/health/ready` | público |
+| GET | `/indicators/compliance` | cualquier rol de M6 |
+| GET | `/indicators/coverage` | cualquier rol de M6 |
+| GET | `/indicators/incidents` | cualquier rol de M6 |
+| GET | `/indicators/waste` | cualquier rol de M6 |
+| GET | `/me` | cualquier empleado |
+| GET | `/public/green-points` | público |
+| GET | `/public/reports/:ticketId` | público |
+| GET | `/public/services` | público |
+| GET | `/public/zones` | público |
+| GET | `/repair-requests` | cualquier rol de M6 |
+| POST | `/repair-requests` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/repair-requests/:id` | cualquier rol de M6 |
+| POST | `/repair-requests/:id/close` | `M6_ADMIN` |
+| POST | `/repair-requests/:id/start` | `M6_ADMIN` |
+| GET | `/role-assignments` | `M6_ADMIN` |
+| DELETE | `/role-assignments/:userId` | `M6_ADMIN` |
+| GET | `/role-assignments/:userId` | `M6_ADMIN` |
+| PUT | `/role-assignments/:userId` | `M6_ADMIN` |
+| GET | `/routes` | cualquier rol de M6 |
+| POST | `/routes` | `M6_ADMIN` |
+| DELETE | `/routes/:id` | `M6_ADMIN` |
+| GET | `/routes/:id` | cualquier rol de M6 |
+| PATCH | `/routes/:id` | `M6_ADMIN` |
+| PUT | `/routes/:id/stops` | `M6_ADMIN` |
+| GET | `/service-frequencies` | cualquier rol de M6 |
+| POST | `/service-frequencies` | `M6_ADMIN` |
+| DELETE | `/service-frequencies/:id` | `M6_ADMIN` |
+| GET | `/service-frequencies/:id` | cualquier rol de M6 |
+| PATCH | `/service-frequencies/:id` | `M6_ADMIN` |
+| GET | `/service-types` | cualquier rol de M6 |
+| POST | `/service-types` | `M6_ADMIN` |
+| DELETE | `/service-types/:id` | `M6_ADMIN` |
+| GET | `/service-types/:id` | cualquier rol de M6 |
+| PATCH | `/service-types/:id` | `M6_ADMIN` |
+| GET | `/services` | cualquier rol de M6 |
+| POST | `/services` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/services/:id` | cualquier rol de M6 |
+| PATCH | `/services/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/services/:id/assign-crew` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/services/:id/assignment-conflicts` | cualquier rol de M6 |
+| POST | `/services/:id/cancel` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/services/:id/collection-records` | cualquier rol de M6 |
+| POST | `/services/:id/collection-records` | `M6_CAMPO_CUADRILLA` |
+| POST | `/services/:id/complete` | `M6_CAMPO_CUADRILLA` |
+| POST | `/services/:id/confirm-reschedule` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/services/:id/delay-notices` | cualquier rol de M6 |
+| POST | `/services/:id/delay-notices` | `M6_CAMPO_CUADRILLA` |
+| POST | `/services/:id/reschedule` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/services/:id/resume` | `M6_CAMPO_CUADRILLA` |
+| POST | `/services/:id/start` | `M6_CAMPO_CUADRILLA` |
+| POST | `/services/:id/suspend` | `M6_CAMPO_CUADRILLA` |
+| GET | `/services/:id/zone-results` | cualquier rol de M6 |
+| POST | `/services/:id/zone-results` | `M6_CAMPO_CUADRILLA` |
+| GET | `/street-closure-requests` | cualquier rol de M6 |
+| POST | `/street-closure-requests` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/street-closure-requests/:id` | cualquier rol de M6 |
+| POST | `/street-closure-requests/:id/approve` | `M6_ADMIN` |
+| POST | `/street-closure-requests/:id/end` | `M6_ADMIN` |
+| POST | `/street-closure-requests/:id/reject` | `M6_ADMIN` |
+| GET | `/tree-interventions` | cualquier rol de M6 |
+| POST | `/tree-interventions` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/tree-interventions/:id` | cualquier rol de M6 |
+| POST | `/tree-interventions/:id/assign-service` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/tree-interventions/:id/authorize` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/tree-interventions/:id/reject` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| POST | `/tree-interventions/:id/submit-for-authorization` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/trees` | cualquier rol de M6 |
+| POST | `/trees` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| DELETE | `/trees/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/trees/:id` | cualquier rol de M6 |
+| PATCH | `/trees/:id` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
+| GET | `/trees/:treeId/surveys` | cualquier rol de M6 |
+| POST | `/trees/:treeId/surveys` | `M6_CAMPO_CUADRILLA` |
+| GET | `/trees/:treeId/surveys/:surveyId` | cualquier rol de M6 |
+| GET | `/vehicles` | cualquier rol de M6 |
+| POST | `/vehicles` | `M6_ADMIN` |
+| DELETE | `/vehicles/:id` | `M6_ADMIN` |
+| GET | `/vehicles/:id` | cualquier rol de M6 |
+| PATCH | `/vehicles/:id` | `M6_ADMIN` |
+| GET | `/zones` | cualquier rol de M6 |
+| POST | `/zones` | `M6_ADMIN` |
+| DELETE | `/zones/:id` | `M6_ADMIN` |
+| GET | `/zones/:id` | cualquier rol de M6 |
+| PATCH | `/zones/:id` | `M6_ADMIN` |
+| POST | `/zones/:id/neighborhoods` | `M6_ADMIN` |
+| DELETE | `/zones/:id/neighborhoods/:neighborhoodId` | `M6_ADMIN` |
+
+<!-- roles:end -->
+
+### Pertenencia de Campo (#365, #394)
+
+Tener el rol de Campo no alcanza: además hay que ser parte del objeto. Si no, `403` con `code: NOT_ASSIGNED` (el `ErrorResponse` estándar; no dice de quién es el objeto). Se chequea **después del 404 y antes de cualquier regla de estado**, así que un servicio sin cuadrilla da 403, no 409. Oficina (`M6_ADMIN`, Operaciones, Ambiental) no tiene restricciones: sus endpoints no chequean pertenencia.
+
+| Quién | Endpoints | Pertenece si… |
+|---|---|---|
+| `M6_CAMPO_CUADRILLA` | `POST /services/:id/{start,suspend,resume,complete}`, `/zone-results`, `/collection-records`, `/delay-notices` | el usuario del token es **líder o integrante** de la cuadrilla del servicio. Sin cuadrilla asignada, nadie pertenece |
+| `M6_CAMPO_INSPECTOR` | `POST /environmental-inspections/:id/complete` | es el `inspectorId` asignado; **sin inspector asignado, cualquier inspector** |
+| Campo | `POST /evidence` | según `ownerType`: `SERVICE` y `ZONE_RESULT`, la cuadrilla del servicio; `INSPECTION`, el inspector asignado (o cualquiera si no hay); `CONTAINER` no tiene dueño de Campo |
+
+No filtra los listados: Campo sigue viendo todo en los `GET`; la pertenencia es solo de ejecución. Los ids de `leaderUserId` y de integrantes (`POST /crews`, `PATCH /crews/:id`, `POST /crews/:id/members`) son ids numéricos de M1 (solo dígitos, hasta 19) y se normalizan sin ceros a la izquierda (`007` = `7`); `DELETE /crews/:id/members/:userId` **no** valida el formato, para poder quitar filas heredadas `usr-…`. Las cuadrillas con ids `usr-…` se migran con `npm run crews:migrate-user-ids` antes de activar la regla ([deploy.md](../deploy.md#migrar-las-cuadrillas-de-usr-a-ids-de-m1-365)).
+
 ---
 
 ## `health`
@@ -32,6 +195,18 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 | ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/health`       | Liveness: el proceso responde. **Público**, no consulta la base (lo usa el keepalive).                                       |
 | GET    | `/health/ready` | Readiness: `SELECT 1` con timeout de 3 s. **Público**. 200 `database: up` o 503 si la base no responde; usar para monitoreo. |
+
+## `auth` y `role-assignments` — identidad y roles de M6
+
+| Método | Ruta                        | Rol        | Qué hace                                                                                                                                                                 |
+| ------ | --------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/me`                       | cualquiera | `userId`, `subType`, `m1Role` (rol de M1 del token) y `roles` de M6 efectivos. El frontend usa esto en vez de deducir permisos del token                                 |
+| GET    | `/role-assignments`         | `M6_ADMIN` | Listado paginado de usuarios con roles asignados                                                                                                                         |
+| GET    | `/role-assignments/:userId` | `M6_ADMIN` | Roles asignados al usuario (`[]` si no tiene). `:userId` es el id numérico de M1                                                                                         |
+| PUT    | `/role-assignments/:userId` | `M6_ADMIN` | Reemplaza el conjunto de roles. 400: rol inexistente/repetido o mezcla Oficina (`M6_ADMIN`, `M6_OFICINA_*`) con Campo (`M6_CAMPO_*`). 409: quitaría el último `M6_ADMIN` |
+| DELETE | `/role-assignments/:userId` | `M6_ADMIN` | Quita todos los roles (204, idempotente). Mismo 409 del último admin                                                                                                     |
+
+Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append-only) en la misma transacción. La asignación **no** se valida contra el rol de M1 del destinatario (M6 no tiene directorio de M1): rige al leer, por la intersección.
 
 ## `zones` — zonas operativas
 
@@ -127,13 +302,13 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 
 | Método | Ruta                               | Transición                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/services/:id/start`              | `SCHEDULED → IN_PROGRESS`. **409 sin cuadrilla asignada**, o sin vehículo si el `ServiceType` lo exige                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| POST   | `/services/:id/suspend`            | `IN_PROGRESS → SUSPENDED`. Motivo obligatorio, `note` opcional (máx. 500; solo-espacios queda `null`), devuelta como `statusNote`. `resume` y `cancel` limpian `statusNote`. `cancel` y `reschedule` no aceptan `note` (400 por `forbidNonWhitelisted`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| POST   | `/services/:id/start`              | `SCHEDULED → IN_PROGRESS`. **403 `NOT_ASSIGNED` si el usuario no es de la cuadrilla (también si no hay cuadrilla asignada)**; 409 sin vehículo si el `ServiceType` lo exige                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| POST   | `/services/:id/suspend`            | `IN_PROGRESS → SUSPENDED`. Motivo obligatorio, `note` opcional (máx. 500; solo-espacios queda `null`), devuelta como `statusNote`. `resume` y `cancel` limpian `statusNote`. `cancel` y `reschedule` no aceptan `note` (400 por `forbidNonWhitelisted`)                                                                                                                                                                                                                                                                                             |
 | POST   | `/services/:id/resume`             | `SUSPENDED → IN_PROGRESS`. Limpia el motivo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | POST   | `/services/:id/complete`           | `IN_PROGRESS → COMPLETED` o `PARTIALLY_COMPLETED`. **El estado final se calcula**, no se elige: parcial si alguna zona quedó `NOT_SERVICED` o `PARTIAL`. 409 si falta el resultado de alguna zona. Si el servicio atiende un contenedor y cierra `COMPLETED`, **el contenedor transiciona en la misma transacción** (ver [container.md](../entidades/container.md)); si está en `RELOCATING` hace falta `containerLocation` en el body o da 400. 409 también si el servicio o el contenedor cambiaron de estado durante el cierre (nada se escribe) |
 | POST   | `/services/:id/cancel`             | `SCHEDULED`, `RESCHEDULED` o `SUSPENDED` → `CANCELLED`. Motivo obligatorio. **`IN_PROGRESS` no se cancela**: hay que suspenderlo o cerrarlo                                                                                                                                                                                                                                                                                                                                                                                                         |
 | POST   | `/services/:id/reschedule`         | `SCHEDULED → RESCHEDULED`. Deja el servicio a la espera de fecha nueva, con el motivo. Es donde caen los servicios ante una alerta meteorológica o el rechazo de un corte                                                                                                                                                                                                                                                                                                                                                                           |
-| POST   | `/services/:id/confirm-reschedule` | `RESCHEDULED → SCHEDULED` con la fecha y ventana nuevas. 400 si la fecha es anterior a hoy (día argentino). Con `ticketId`, informa la nueva fecha y franja a M2 como texto (#303)                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| POST   | `/services/:id/confirm-reschedule` | `RESCHEDULED → SCHEDULED` con la fecha y ventana nuevas. 400 si la fecha es anterior a hoy (día argentino). Con `ticketId`, informa la nueva fecha y franja a M2 como texto (#303)                                                                                                                                                                                                                                                                                                                                                                  |
 
 **`RESCHEDULED` no obliga a reprogramar.** Es el estado "hay que moverlo pero todavía no sé adónde", y el sistema mete servicios ahí solo: lo hacen el rechazo de un corte de calle de M7 y la alerta meteorológica. Si el motivo es definitivo —M7 rechaza el corte porque hay obra por dos meses— **se cancela directo**, sin pasar por una fecha inventada.
 
@@ -218,10 +393,10 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 
 ## `events` — ingesta de eventos entrantes
 
-| Método | Ruta               | Qué hace                                                                                                                                                                                                                                                                                        |
-| ------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Método | Ruta               | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/events/inbox`    | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. 400 si `occurredAt` no es ISO 8601, si `correlationId` o `causationId` (este puede ir `null`) no son UUID, si `eventId`, `eventType`, `sourceModule` o `eventVersion` pasan su tope, si `sourceModule` trae algo que no sea letras, números, `-` o `_`, o si el `data` de un evento con handler no trae sus campos obligatorios (no se guarda; ver [consumidos](../eventos/consumidos/README.md)) |
-| GET    | `/events/handlers` | Los tipos de evento con handler registrado                                                                                                                                                                                                                                                      |
+| GET    | `/events/handlers` | Los tipos de evento con handler registrado                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 **La idempotencia es por `eventId`** y vive en el inbox, no en cada handler: un mensaje ya procesado (o en curso) se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. La decide el `@unique` de `InboxEvent.messageId`, no una consulta previa que podría correr en paralelo con otra igual.
 
@@ -258,7 +433,7 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 | GET    | `/street-closure-requests/:id`         | Detalle con sus tramos                                                                                                                                                                                                                                                                                                    |
 | POST   | `/street-closure-requests/:id/approve` | → `APPROVED`, guarda el `closureId` de M7. **Normalmente lo dispara `streetClosureApproved`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                               |
 | POST   | `/street-closure-requests/:id/reject`  | → `REJECTED`. **Normalmente lo dispara `streetClosureRejected`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                                                            |
-| POST   | `/street-closure-requests/:id/end`     | → `ENDED`, desde `REQUESTED`, `APPROVED` o `EXPIRED`. **Normalmente lo dispara `streetClosureEnded`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                                                                  |
+| POST   | `/street-closure-requests/:id/end`     | → `ENDED`, desde `REQUESTED`, `APPROVED` o `EXPIRED`. **Normalmente lo dispara `streetClosureEnded`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                       |
 
 `sourceRef` apunta al `Service` o a la `TreeIntervention` que origina el corte: es lo que hace que la respuesta de M7 se pueda aplicar sobre el trabajo correcto.
 
@@ -268,16 +443,16 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 
 El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emisiones—, con su máquina de 11 estados. Puede nacer de un reclamo de M2 (`ticketId`) o de una **detección de oficio**, que es el camino que no depende de ningún otro módulo.
 
-| Método | Ruta                                      | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| POST   | `/environmental-reports`                  | Abrir expediente. Nace en `RECEIVED`. `description` (opcional, hasta 2000) es interna: no sale en el portal ni en eventos. La respuesta ya trae `assignedCrewId` (`null`: todavía no tiene inspecciones)                                                                                                                                                                                                                                               |
-| GET    | `/environmental-reports`                  | Listar (cada item trae `escalated`, `citizenResponse` y `assignedCrewId`, igual que el alta, el detalle y las respuestas de las transiciones; ver entidad). Filtros: `status`, `reportType`, `priority`, `ticketId`, `publicId` (TK-…, exacto), `crewId` (UUID; expedientes con **alguna** inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base: la página y `meta.total` ya vienen recortados; 400 si no es UUID), `from`/`to` (YYYY-MM-DD, inclusivos, día argentino UTC-3; filtran por `updatedAt`, la columna «Actualizado» de la cola, **pendiente de confirmar con el PO** si debe ser `createdAt`; 400 si `from` > `to`; `meta.total` ya refleja el rango), `search` |
-| GET    | `/environmental-reports/:id`              | Detalle, con su plazo de vencimiento si lo tiene y `assignedCrewId` (cuadrilla de la inspección más reciente con servicio no cancelado)                                                                                                                                                                                                                                                                                                                |
-| POST   | `/environmental-reports/:id/start-review` | `RECEIVED → UNDER_REVIEW`                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| POST   | `/environmental-reports/:id/request-information` | Pide información al vecino (#169). Solo `UNDER_REVIEW` con `ticketId`. Body `{ message, requiredBy?, internalNote? }`: `message` (máx. 500) es lo que ve el vecino; `requiredBy` `YYYY-MM-DD` (vence a las 23:59:59 ART) o ISO con zona, futura; `internalNote` no la ve el vecino. Hacia M2 sale como `INFORMATION_REQUIRED`. 409 si no hay `ticketId`, si no está en `UNDER_REVIEW`, si ya hay una pendiente o si el ticket está en `PENDING_INFORMATION`/terminal. La respuesta trae `informationRequestPending` y los datos de la solicitud; se apaga con la respuesta de M2 o con un cambio de estado recibido de M2 distinto de PENDING_INFORMATION. Mientras está pendiente, `forward`, `dismiss` y `close` dan 409 |
-| POST   | `/environmental-reports/:id/forward`      | `UNDER_REVIEW → FORWARDED`. Hacia M2 sale como **`RETURNED`**, no `REJECTED`: devolver lo que no es de nuestra área es distinto de desestimarlo                                                                                                                                                                                                                                                                                                        |
-| POST   | `/environmental-reports/:id/dismiss`      | `UNDER_REVIEW → DISMISSED`. Hacia M2 sale como `REJECTED`                                                                                                                                                                                                                                                                                                                                                                                              |
-| POST   | `/environmental-reports/:id/close`        | Cierre manual                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Método | Ruta                                             | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------ | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/environmental-reports`                         | Abrir expediente. Nace en `RECEIVED`. `description` (opcional, hasta 2000) es interna: no sale en el portal ni en eventos. La respuesta ya trae `assignedCrewId` (`null`: todavía no tiene inspecciones) **`ticketId` solo si el actor es Oficina Ambiental o Admin**: un actor solo de Campo (inspector) que lo manda recibe 400; abre expedientes de oficio. |
+| GET    | `/environmental-reports`                         | Listar (cada item trae `escalated`, `citizenResponse` y `assignedCrewId`, igual que el alta, el detalle y las respuestas de las transiciones; ver entidad). Filtros: `status` (uno o varios, OR; formato canónico parámetro repetido `status=RECEIVED&status=UNDER_REVIEW`, también acepta comas; duplicados se ignoran; valor desconocido o vacío da 400 con los válidos; `meta.total` ya filtrado), `reportType`, `priority`, `ticketId`, `publicId` (TK-…, exacto), `crewId` (UUID; expedientes con **alguna** inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base: la página y `meta.total` ya vienen recortados; 400 si no es UUID), `from`/`to` (YYYY-MM-DD, inclusivos, día argentino UTC-3; filtran por `updatedAt`, la columna «Actualizado» de la cola, **pendiente de confirmar con el PO** si debe ser `createdAt`; 400 si `from` > `to`; `meta.total` ya refleja el rango), `search` |
+| GET    | `/environmental-reports/:id`                     | Detalle, con su plazo de vencimiento si lo tiene y `assignedCrewId` (cuadrilla de la inspección más reciente con servicio no cancelado)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| POST   | `/environmental-reports/:id/start-review`        | `RECEIVED → UNDER_REVIEW`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| POST   | `/environmental-reports/:id/request-information` | Pide información al vecino (#169). Solo `UNDER_REVIEW` con `ticketId`. Body `{ message, requiredBy?, internalNote? }`: `message` (máx. 500) es lo que ve el vecino; `requiredBy` `YYYY-MM-DD` (vence a las 23:59:59 ART) o ISO con zona, futura; `internalNote` no la ve el vecino. Hacia M2 sale como `INFORMATION_REQUIRED`. 409 si no hay `ticketId`, si no está en `UNDER_REVIEW`, si ya hay una pendiente o si el ticket está en `PENDING_INFORMATION`/terminal. La respuesta trae `informationRequestPending` y los datos de la solicitud; se apaga con la respuesta de M2 o con un cambio de estado recibido de M2 distinto de PENDING_INFORMATION. Mientras está pendiente, `forward`, `dismiss` y `close` dan 409                                                                                                                                                                                                   |
+| POST   | `/environmental-reports/:id/forward`             | `UNDER_REVIEW → FORWARDED`. Hacia M2 sale como **`RETURNED`**, no `REJECTED`: devolver lo que no es de nuestra área es distinto de desestimarlo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| POST   | `/environmental-reports/:id/dismiss`             | `UNDER_REVIEW → DISMISSED`. Hacia M2 sale como `REJECTED`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| POST   | `/environmental-reports/:id/close`               | Cierre manual                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 **Cierre por vencimiento.** `NOTICE_ISSUED → CLOSED` lo hace el sistema solo cuando pasa `deadlineAt`, sin endpoint. No es un atajo: M4 no publica nada cuando decide que no corresponde castigo, así que sin ese cierre el expediente quedaría abierto para siempre. El plazo se configura con `SANCTION_DEADLINE_DAYS`.
 
@@ -292,7 +467,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | POST   | `/environmental-inspections/:id/violation-notice` | **Emitir el acta.** Solo sobre una inspección `VIOLATION_FOUND`                                                                                                                                                                                              |
 | GET    | `/environmental-inspections/:id/violation-notice` | El acta emitida; `200` con `null` (JSON literal) si la inspección no tiene acta, `404` solo si no existe                                                                                                                                                     |
 
-**`checklist[]`, `findings`, `conclusion` e `inspectorId` son internos: nunca salen hacia M2.**
+**`checklist[]`, `findings`, `conclusion`, `inspectorId` y `completedByUserId` son internos: nunca salen hacia M2.** `inspectorId` es la asignación opcional de Oficina al programar (id numérico de M1; debe tener `M6_CAMPO_INSPECTOR`, si no 400). `completedByUserId` lo llena `complete` siempre desde el token y no pisa al asignado.
 
 **Al cerrar, `complete` acepta además `conclusion`, `violationType`, `severity` y `suggestedAction`**, todos opcionales, y el detalle los devuelve. `conclusion` es texto libre de hasta 2000 caracteres; los otros tres usan los mismos enums que el acta. Son orientativos: el acta los vuelve a pedir y lo que se deriva a M4 es lo del acta. No hay reglas cruzadas con `outcome`.
 
@@ -304,7 +479,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 | Método | Ruta        | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| POST   | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key`. Un archivo mayor a `MAX_EVIDENCE_SIZE_BYTES` (10 MB) da **413**: multer lo corta antes de llegar al service. Sin `R2_BUCKET` / `R2_PUBLIC_URL_BASE` configurados, el camino válido responde **503** (no 500) y no persiste nada |
+| POST   | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key`. Un archivo mayor a `MAX_EVIDENCE_SIZE_BYTES` (10 MB) da **413**: multer lo corta antes de llegar al service. Sin `R2_BUCKET` / `R2_PUBLIC_URL_BASE` configurados, el camino válido responde **503** (no 500) y no persiste nada **Rol por `ownerType`:** `INSPECTION` solo `M6_CAMPO_INSPECTOR`; `SERVICE`, `ZONE_RESULT` y `CONTAINER` solo `M6_CAMPO_CUADRILLA`; otro rol recibe 403 `ROLE_REQUIRED` (un `M6_ADMIN` no tiene Campo). |
 | GET    | `/evidence` | Lista la evidencia de un `ownerType`/`ownerId`, por query params                                                                                                                                                                                                                                                                                                                                                                     |
 
 **Genérico por diseño (Issue #64).** Un solo módulo sirve a los cuatro tipos de recurso en vez de reimplementar la subida por cada uno — el modelo `Attachment` ya era polimórfico en el schema, esto le agrega el endpoint que faltaba.
@@ -380,6 +555,6 @@ No hay límite global: también alcanzaría a un operador municipal en su turno,
 
 ## Lo que todavía no existe
 
-| Qué falta            | Detalle                                                                                                                                                                                                                                                        |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Autorización por rol | Cualquier usuario autenticado puede llamar cualquier endpoint (salvo los `@Public()` — `health` y los cuatro de `citizen-portal` —, que ni siquiera piden JWT). Diferida hasta tener una fuente de rol verificable de M1 (su login no devuelve token firmado). Plan en el Issue #161; estado en [bloqueantes.md](../bloqueantes.md) |
+| Qué falta                                         | Detalle                                                                                                                                                                                                                                                               |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Autorización por rol en el resto de los endpoints | Solo `role-assignments` exige rol. Cualquier empleado autenticado puede llamar los demás (salvo los `@Public()`). Base hecha en el PR 1 de #161; el corte (`RolesGuard` global, `@Roles` en las escrituras) es el PR 2. Estado en [bloqueantes.md](../bloqueantes.md) |

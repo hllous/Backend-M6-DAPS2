@@ -41,8 +41,8 @@ describe('EnvironmentalInspectionsController', () => {
 
   it('complete delega id y dto', async () => {
     const dto = {} as CompleteInspectionDto;
-    await controller.complete(ID, dto);
-    expect(service.complete).toHaveBeenCalledWith(ID, dto);
+    await controller.complete(ID, dto, 'user-7');
+    expect(service.complete).toHaveBeenCalledWith(ID, dto, 'user-7');
   });
 
   it('issueNotice delega id, dto y userId', async () => {
