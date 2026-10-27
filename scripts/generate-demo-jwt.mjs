@@ -1,5 +1,5 @@
 // Firma un access token con el contrato de M1 (HS256, clave en base64, iss, typ, rol).
-// Uso: node scripts/generate-demo-jwt.mjs <JWT_SECRET en base64> [ROL] [SUB]
+// Uso: node scripts/generate-demo-jwt.mjs <JWT_SECRET en base64> [ROL] [SUB] [HASTA AAAA-MM-DD]
 // Para el token de demo del administrador inicial: ROL = RESPONSABLE_AREA y SUB = el
 // user_id de M1 cargado en M6_BOOTSTRAP_ADMIN_USER_IDS.
 import { createHmac } from "node:crypto";
@@ -16,10 +16,18 @@ if (!/^\d{1,19}$/.test(sub)) {
   process.exit(1);
 }
 
+// Como M1: 15 min, salvo que se pase una fecha límite (AAAA-MM-DD, fin de ese día UTC).
+const now = Math.floor(Date.now() / 1000);
+const hasta = process.argv[5];
+const exp = hasta ? Math.floor(Date.parse(`${hasta}T23:59:59Z`) / 1000) : now + 900;
+if (!Number.isFinite(exp) || exp <= now) {
+  console.error("La fecha límite tiene que ser AAAA-MM-DD y estar en el futuro");
+  process.exit(1);
+}
+
 const base64url = (value) =>
   Buffer.from(JSON.stringify(value)).toString("base64url");
 
-const now = Math.floor(Date.now() / 1000);
 const header = { alg: "HS256", typ: "JWT" };
 const payload = {
   iss: process.env.JWT_ISSUER ?? "modulo1-ciudadanos",
@@ -28,8 +36,7 @@ const payload = {
   rol,
   typ: "access",
   iat: now,
-  // Como M1: 15 min. Para una demo larga, regenerar el token.
-  exp: now + 900,
+  exp,
 };
 
 const unsigned = `${base64url(header)}.${base64url(payload)}`;
