@@ -223,7 +223,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 
 ## 6. Estado de la app end-to-end
 
-> Conteos contrastados con el código el 04/10/2026 (135 rutas en 23 tags Swagger al 04/10; hoy 140 en 25). El estado en vivo de Render y Vercel hay que confirmarlo con los `curl` de abajo: no se asume.
+> Conteos contrastados con el código el 04/10/2026 (135 rutas en 23 tags Swagger al 04/10; hoy 141 en 26). El estado en vivo de Render y Vercel hay que confirmarlo con los `curl` de abajo: no se asume.
 
 La infraestructura está deployada, las migraciones corren solas en cada deploy y la API sirve datos reales.
 

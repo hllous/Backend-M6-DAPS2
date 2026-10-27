@@ -99,6 +99,68 @@ describe('NeighborhoodsCatalogService', () => {
     s.onModuleDestroy();
   });
 
+  it('una lista vacía o toda descartada cuenta como fallo y conserva el catálogo', async () => {
+    const request = jest
+      .fn()
+      .mockResolvedValueOnce(json([PALERMO]))
+      .mockResolvedValueOnce(json([]))
+      .mockResolvedValue(json([{ id: 'sin-forma' }]));
+    const s = crear(request);
+    await s.refrescar();
+    await s.refrescar();
+    await s.refrescar();
+
+    expect(s.list()).toEqual([PALERMO]);
+    s.onModuleDestroy();
+  });
+
+  it('sin catálogo previo, una lista vacía deja disponible=false', async () => {
+    const s = crear(jest.fn().mockResolvedValue(json([])));
+    await s.refrescar();
+
+    expect(s.disponible).toBe(false);
+    s.onModuleDestroy();
+  });
+
+  it('cuenta los ítems descartados, incluidos los sin zona o zonaNombre', async () => {
+    const sinZona = { ...BALVANERA, zona: undefined };
+    const sinNombre = { ...BALVANERA, zonaNombre: undefined };
+    const s = crear(jest.fn().mockResolvedValue(json([PALERMO, sinZona, sinNombre])));
+    const warn = jest.spyOn(s['logger'], 'warn').mockImplementation();
+    await s.refrescar();
+
+    expect(s.list()).toEqual([PALERMO]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('2 ítems descartados'));
+    s.onModuleDestroy();
+  });
+
+  it.each([
+    ['next', { data: [PALERMO], next: '/api/v1/catalogos/barrios?page=2' }],
+    ['total', { data: [PALERMO], total: 48 }],
+    ['meta.total', { data: [PALERMO], meta: { total: 48 } }],
+  ])('avisa de posible truncado por %s', async (_n, body) => {
+    const s = crear(jest.fn().mockResolvedValue(json(body)));
+    const warn = jest.spyOn(s['logger'], 'warn').mockImplementation();
+    await s.refrescar();
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('paginada'));
+    expect(s.disponible).toBe(true);
+    s.onModuleDestroy();
+  });
+
+  it('los warnings no filtran token ni secret', async () => {
+    const request = jest
+      .fn()
+      .mockRejectedValue(new Error('El Core rechazó el pedido de token de módulo (HTTP 401)'));
+    const s = crear(request);
+    const warn = jest.spyOn(s['logger'], 'warn').mockImplementation();
+    await s.refrescar();
+
+    const logueado = warn.mock.calls.map((c) => String(c[0])).join(' ');
+    expect(logueado).not.toMatch(/Bearer|secret=|accessToken/i);
+    s.onModuleDestroy();
+  });
+
   it('cerrada la app no vuelve a agendar', async () => {
     const request = jest.fn().mockResolvedValue(json([PALERMO]));
     const s = crear(request);

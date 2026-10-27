@@ -208,7 +208,8 @@ export class ZonesController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos de entrada inválidos',
+    description:
+      'Datos de entrada inválidos, o barrios que no están en el catálogo de M9 (solo se valida con el catálogo disponible)',
     type: ErrorResponseDto,
   })
   @ApiResponse({

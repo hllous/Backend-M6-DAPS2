@@ -63,7 +63,11 @@ export class NeighborhoodsCatalogService implements OnApplicationBootstrap, OnMo
     );
   }
 
-  /** `undefined` si no hay catálogo: no se puede afirmar nada. */
+  /**
+   * `undefined` si no hay catálogo: no se puede afirmar nada. Un barrio dado de
+   * baja (`activo:false`) sigue existiendo: en M9 nada se borra y un id guardado
+   * no deja de ser válido.
+   */
   existe(id: string): boolean | undefined {
     return this.barrios?.some((b) => b.id === id);
   }
@@ -76,8 +80,26 @@ export class NeighborhoodsCatalogService implements OnApplicationBootstrap, OnMo
       const body = (await res.json().catch(() => undefined)) as unknown;
       const lista = Array.isArray(body) ? body : (body as { data?: unknown } | undefined)?.data;
       if (!Array.isArray(lista)) throw new Error('la respuesta no es una lista');
-      this.barrios = lista.filter(esBarrio);
-      this.logger.log(`Catálogo de barrios cargado: ${this.barrios.length}`);
+      const validos = lista.filter(esBarrio);
+      // Una lista vacía (o toda descartada) no pisa un catálogo bueno ni lo da por cargado.
+      if (!validos.length) {
+        throw new Error(
+          `sin barrios válidos (${lista.length} recibidos, ${lista.length} descartados)`,
+        );
+      }
+      const descartados = lista.length - validos.length;
+      if (descartados) {
+        this.logger.warn(
+          `Catálogo de barrios: ${descartados} ítems descartados por forma inválida`,
+        );
+      }
+      if (hayMasPaginas(body, lista.length)) {
+        this.logger.warn(
+          'La respuesta del catálogo de barrios parece paginada: puede estar truncada',
+        );
+      }
+      this.barrios = validos;
+      this.logger.log(`Catálogo de barrios cargado: ${validos.length}`);
     } catch (err) {
       // Solo el mensaje: el error de fetch puede arrastrar URL o cabeceras.
       this.logger.warn(
@@ -87,6 +109,7 @@ export class NeighborhoodsCatalogService implements OnApplicationBootstrap, OnMo
       if (!this.barrios) proximo = REINTENTO_MS;
     }
     if (this.cerrado) return;
+    clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.refrescar(), proximo);
     this.timer.unref();
   }
@@ -98,6 +121,16 @@ function esBarrio(b: unknown): b is Barrio {
     typeof x?.id === 'string' &&
     typeof x.codigo === 'string' &&
     typeof x.nombre === 'string' &&
+    typeof x.zona === 'string' &&
+    typeof x.zonaNombre === 'string' &&
     typeof x.activo === 'boolean'
   );
+}
+
+/** M9 no confirmó si pagina: `next` o un total mayor a lo recibido delatan una página parcial. */
+function hayMasPaginas(body: unknown, recibidos: number): boolean {
+  if (Array.isArray(body)) return false;
+  const b = body as { next?: unknown; total?: unknown; meta?: { total?: unknown } };
+  const total = b.total ?? b.meta?.total;
+  return Boolean(b.next) || (typeof total === 'number' && total > recibidos);
 }

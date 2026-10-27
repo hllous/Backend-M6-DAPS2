@@ -22,6 +22,8 @@ addFormats(ajv);
 ajv.addSchema(leerSchema('_shared.schema.json'), '_shared.schema.json');
 const validarTreeRiskDetected = ajv.compile(leerSchema('treeRiskDetected.schema.json'));
 
+const UUID_BARRIO = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+
 describe('TreeSurveysService', () => {
   let prisma: any;
   let outbox: any;
@@ -214,11 +216,26 @@ describe('TreeSurveysService', () => {
     });
 
     it('una zona de un solo barrio completa location.neighborhoodId del evento', async () => {
-      prisma.zoneNeighborhood.findMany.mockResolvedValue([{ neighborhoodId: 'uuid-palermo' }]);
+      prisma.zoneNeighborhood.findMany.mockResolvedValue([{ neighborhoodId: UUID_BARRIO }]);
       await service.create(TREE, dtoAlto(), 'user-7');
 
       const [, entrada] = outbox.enqueue.mock.calls[0];
-      expect(entrada.payload.location.neighborhoodId).toBe('uuid-palermo');
+      expect(entrada.payload.location.neighborhoodId).toBe(UUID_BARRIO);
+    });
+
+    it.each([
+      ['cero barrios', []],
+      [
+        'varios barrios',
+        [{ neighborhoodId: UUID_BARRIO }, { neighborhoodId: UUID_BARRIO.replace('7', '8') }],
+      ],
+      ['un id que no es UUID', [{ neighborhoodId: 'barrio-palermo' }]],
+    ])('con %s el evento no lleva neighborhoodId', async (_n, rows) => {
+      prisma.zoneNeighborhood.findMany.mockResolvedValue(rows);
+      await service.create(TREE, dtoAlto(), 'user-7');
+
+      const [, entrada] = outbox.enqueue.mock.calls[0];
+      expect(entrada.payload.location).not.toHaveProperty('neighborhoodId');
     });
 
     it('la fecha llega como string y se guarda como Date', async () => {

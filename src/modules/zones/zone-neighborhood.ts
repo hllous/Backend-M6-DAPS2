@@ -1,3 +1,6 @@
+// Filas viejas pueden traer texto libre (`barrio-palermo`): M3 espera un UUID de M9.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Lo mínimo del cliente Prisma (o de una transacción) que hace falta acá. */
 interface ZoneNeighborhoodReader {
   zoneNeighborhood: {
@@ -14,7 +17,7 @@ interface ZoneNeighborhoodReader {
  *
  * Las zonas operativas son una por barrio: solo si la zona tiene exactamente un
  * barrio se sabe en cuál está la ubicación. Con cero o varios no se adivina y el
- * campo viaja ausente.
+ * campo viaja ausente. Lo mismo si el valor guardado no es un UUID.
  */
 export async function zoneNeighborhoodId(
   db: ZoneNeighborhoodReader,
@@ -25,5 +28,6 @@ export async function zoneNeighborhoodId(
     select: { neighborhoodId: true },
     take: 2,
   });
-  return rows.length === 1 ? rows[0].neighborhoodId : undefined;
+  const id = rows.length === 1 ? rows[0].neighborhoodId : undefined;
+  return id && UUID.test(id) ? id : undefined;
 }

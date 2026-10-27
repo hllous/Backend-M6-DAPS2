@@ -24,8 +24,8 @@ import {
  *
  * `neighborhoodId` es el id (UUID) del catálogo de M9, ya publicado. Solo lo
  * completan los eventos que lo reciben resuelto desde la zona (las zonas son una
- * por barrio); el resto lo manda ausente. `street` lleva la dirección sin partir, porque el modelo la
- * guarda como texto libre. Ver la descripción en `_shared.schema.json`.
+ * por barrio); el resto lo manda ausente. `street` lleva la dirección sin
+ * partir, porque el modelo la guarda como texto libre. Ver la descripción en `_shared.schema.json`.
  */
 function location(
   source: {

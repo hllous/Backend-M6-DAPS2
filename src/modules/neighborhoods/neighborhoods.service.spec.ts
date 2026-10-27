@@ -23,6 +23,13 @@ describe('NeighborhoodsService / Controller', () => {
     expect(res).toEqual([{ ...BARRIO, metadatos: null }]);
   });
 
+  it('pasa soloActivos y zona tal cual al catálogo', () => {
+    catalog.disponible = true;
+    service.findAll({ soloActivos: true, zona: 'comuna-14' });
+
+    expect(catalog.list).toHaveBeenLastCalledWith({ soloActivos: true, zona: 'comuna-14' });
+  });
+
   it('sin catálogo responde 503, no una lista vacía', () => {
     catalog.disponible = false;
     expect(() => service.findAll({})).toThrow(ServiceUnavailableException);
