@@ -21,7 +21,7 @@ Define de qué tipo puede ser un servicio y en qué modo se ejecuta. `requiresVe
 
 **Zona operativa nuestra**: agrupa uno o más barrios (`neighborhoodIds[]`, del catálogo de M9) para armar recorridos y asignar cuadrillas. No es la zona de M9: las del Core son administrativas (`centro`, `norte`, `sur`, `oeste`, `ribera`) y solo agrupan barrios; la zona operativa es de M6 (resuelto el 22/10, ver [m9.md](../integracion/m9.md#catálogos-globales-del-core-2010)).
 
-`neighborhoodId` es el `id` UUID del catálogo de barrios de M9, que M9 reconoció como suyo y expone desde el 22/10 (datos ficticios hasta que cargue los de CABA; [detalle](../integracion/m9.md#catálogos-globales-del-core-2010)). Hoy es texto libre, sin validar: la adopción del catálogo es [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376). Las 5 zonas del Core son administrativas y no reemplazan a `Zone`.
+`neighborhoodId` es el `id` UUID del catálogo de barrios de M9, que M9 reconoció como suyo y expone desde el 22/10 (datos ficticios hasta que cargue los de CABA; [detalle](../integracion/m9.md#catálogos-globales-del-core-2010)). Hoy es texto libre, sin validar: la adopción del catálogo es [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376). Las zonas del Core (desde el 27/10, las 15 comunas de CABA) son administrativas y no reemplazan a `Zone`. **Decisión de M6 (27/10, #376): una zona operativa por barrio**; las comunas de M9 son solo referencia.
 
 ### `Route`
 

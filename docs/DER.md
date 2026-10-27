@@ -439,4 +439,4 @@ erDiagram
 
 El estado vivo está en [bloqueantes.md](bloqueantes.md); acá solo lo que toca el esquema.
 
-- **Catálogo de barrios de M9 todavía sin adoptar.** M9 lo expone desde el 22/10 con `id` UUID, pero `ZONE_NEIGHBORHOOD.neighborhood_id` sigue siendo `VARCHAR` sin validación hasta [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376); los ids de arranque de M9 son ficticios, no se migra con ellos.
+- **Catálogo de barrios de M9 todavía sin adoptar.** M9 lo expone desde el 22/10 con `id` UUID, pero `ZONE_NEIGHBORHOOD.neighborhood_id` sigue siendo `VARCHAR` sin validación hasta [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376); M9 cargó los 48 barrios reales de CABA el 27/10 (los ficticios están de baja); la adopción sigue pendiente y las zonas operativas serán una por barrio.
