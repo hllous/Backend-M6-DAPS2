@@ -186,6 +186,16 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 4. Regenerar `M6_DEV_JWT` en Vercel.
 5. Cuando llegue la ficha de M9: cargar `RABBITMQ_URL`, `CORE_API_URL` y `CORE_MODULE_SECRET` y reiniciar. Verificar el registro con `GET /api/v1/event-types/map`.
 
+### Sincronizar zonas y comunas con el catálogo de M9 (#421)
+
+Carga las 15 comunas (`Commune`) y una `Zone` por barrio activo con su `ZoneNeighborhood` (UUID de M9). Orden en una base nueva o existente: **`prisma migrate deploy` → `zones:sync-from-core` → seed**. No corre solo al arrancar: es un paso manual del deploy.
+
+1. Simulacro (no escribe): `DATABASE_URL=<base> npm run zones:sync-from-core -- --dry-run`. Con Core usa `CORE_API_URL` y `CORE_MODULE_SECRET`; sin Core, agregar `--from-snapshot` (usa `prisma/data/m9-*.json`).
+2. Aplicar: el mismo comando sin `--dry-run` (una transacción). Idempotente: la segunda corrida informa todo en `sinCambios`.
+3. El reporte lista creadas, actualizadas, desactivadas y sin cambios, además de `conflictos` (zona existente con el `code` de un barrio pero con otros barrios: no se toca), `sinComuna` y las zonas/filas **legacy**. No imprime token ni secret.
+4. **Legacy.** Las zonas del seed viejo (`Z-PAL`…) y las filas de `zone_neighborhood` con ids que no están en el catálogo (`caba-…`) solo se **reportan**. `--clean-legacy` es **destructivo**: borra esas filas (nunca zonas), salvo las de zonas con servicios, recorridos, contenedores, árboles u otros datos asociados (marcadas `retenida`). Correr antes con `--dry-run --clean-legacy` y revisar `legacyRows`.
+5. Un barrio con `activo:false` en M9 desactiva su zona (`active=false`); nunca se borra. No se crean zonas para barrios inactivos.
+
 ### Migrar las cuadrillas de usr-… a ids de M1 (#365)
 
 **Bloquea el despliegue de la pertenencia de Campo (#365/#394).** La regla compara el `sub` numérico del token de M1 con el líder y los integrantes de la cuadrilla; las filas sembradas con ids `usr-…` nunca coinciden, así que activar la regla sin migrar deja a esas cuadrillas sin poder ejecutar servicios. Correr el script **antes** de promover (el código nuevo y la migración no se pisan: el código viejo no mira estos ids).
