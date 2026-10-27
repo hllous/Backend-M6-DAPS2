@@ -13664,6 +13664,13 @@
             "format": "date-time",
             "example": "2026-09-29T18:00:00Z"
           },
+          "occuredAt": {
+            "type": "string",
+            "description": "Alias tolerado de occurredAt (typo de M1 v3.0); preferir occurredAt",
+            "format": "date-time",
+            "example": "2026-09-29T18:00:00Z",
+            "deprecated": true
+          },
           "sourceModule": {
             "type": "string",
             "maxLength": 60,

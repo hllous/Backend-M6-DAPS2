@@ -1,4 +1,5 @@
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { buildEnvelope } from '../envelope';
 import { IngestEventDto, toInboundEnvelope } from './ingest-event.dto';
 
 describe('IngestEventDto', () => {
@@ -137,5 +138,56 @@ describe('IngestEventDto', () => {
         await expect(conFecha(valor)).rejects.toBeInstanceOf(BadRequestException);
       },
     );
+
+    // M1 v3.0 escribe `occuredAt`: tiene que entrar y ordenar como `occurredAt`.
+    const conAlias = (extra: Record<string, unknown>) =>
+      pipe.transform(
+        { eventId: 'e-1', eventType: 'x', data: {}, ...extra },
+        { type: 'body', metatype: IngestEventDto },
+      );
+
+    it('tolera occuredAt (typo de M1) y lo expone como occurredAt', async () => {
+      const dto = await conAlias({ occuredAt: '2026-10-27T10:00:00Z' });
+      expect(toInboundEnvelope(dto).occurredAt).toBe('2026-10-27T10:00:00Z');
+    });
+
+    it('si vienen los dos manda occurredAt', async () => {
+      const dto = await conAlias({
+        occurredAt: '2026-10-27T10:00:00Z',
+        occuredAt: '2020-01-01T00:00:00Z',
+      });
+      expect(toInboundEnvelope(dto).occurredAt).toBe('2026-10-27T10:00:00Z');
+    });
+
+    it.each([[null], [undefined]])(
+      'occurredAt=%s con occuredAt válido: usa el alias',
+      async (v) => {
+        const dto = await conAlias({ occurredAt: v, occuredAt: '2026-10-27T10:00:00Z' });
+        expect(toInboundEnvelope(dto).occurredAt).toBe('2026-10-27T10:00:00Z');
+      },
+    );
+
+    it('sin ninguno de los dos no es 400: occurredAt queda ausente', async () => {
+      const dto = await conAlias({});
+      expect(toInboundEnvelope(dto).occurredAt).toBeUndefined();
+    });
+
+    it('rechaza un occuredAt ilegible', async () => {
+      await expect(conAlias({ occuredAt: 'ayer' })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('el sobre que emitimos usa occurredAt y nunca occuredAt', () => {
+      const env = buildEnvelope({
+        eventId: 'e',
+        eventType: 'x',
+        occurredAt: new Date('2026-10-27T10:00:00Z'),
+        sourceModule: 'm6',
+        correlationId: 'c',
+        causationId: null,
+        data: {},
+      });
+      expect(env.occurredAt).toBe('2026-10-27T10:00:00.000Z');
+      expect(env).not.toHaveProperty('occuredAt');
+    });
   });
 });
