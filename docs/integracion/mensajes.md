@@ -72,6 +72,19 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Pendiente de enviar (27/10, M9)
+
+> Redactado el 27/10 ([#412](https://github.com/hllous/Backend-M6-DAPS2/issues/412), [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)). **Falta enviar**; al enviarlo, anotar la fecha acá y mover la respuesta a [`m9.md`](m9.md).
+
+**→ M9 (Core)** — barrios, zonas, red del 5671 y evento de prueba — *pendiente de enviar*
+
+> Gracias por cargar los barrios reales de CABA. Cuatro puntos:
+>
+> 1. **Identificador de barrio.** En `location.neighborhoodId` (lo que mandamos a M2 y M3) y en nuestra tabla de zonas, ¿qué debemos guardar y enviar: el `codigo` (slug, ej. `palermo`) o el `id` UUID? Hoy pensamos guardar el UUID porque M2 lo exige en ese campo. ¿El `id` es estable (no cambia al cargar o actualizar barrios) y sigue viniendo en la respuesta de `GET /api/v1/catalogos/barrios`?
+> 2. **Zonas.** ¿Las zonas administrativas del Core son ahora las 15 comunas (`comuna-1` a `comuna-15`)? Les avisamos que nuestras zonas operativas son propias de M6 y van **por barrio**: no usamos las comunas para armarlas.
+> 3. **Red.** Les pasamos el 20/10 los rangos de salida de Render para el 5671: `74.220.48.0/24` y `74.220.56.0/24`. ¿Pueden revisar si se habilitaron en el firewall? Entendemos que hoy el 5671 admite una sola IP y que lo abre quien administra la instancia; si es otra persona, ¿nos dicen a quién pedírselo?
+> 4. **Prueba aislada.** Proponemos el tipo de evento `pruebaConexionM6`, suscripto solo a `q.ambiente`, para probar la circulación sin alcanzar a otros módulos. El horario lo coordinamos en el grupo general (a definir).
+
 ## Enviado el 26/10 (M1)
 
 **→ M1 (Ciudadanos)** — *enviado el 26/10; M1 respondió el mismo día (URL del login: la remiten a Discord y al documento; la cuenta se comparte; su programa no está hosteado; ver [`m1.md`](m1.md#respuesta-al-seguimiento-2610-cuenta-compartida-y-m1-no-hosteado))*
