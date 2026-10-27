@@ -6,7 +6,7 @@ El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde e
 
 El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
-> 141 rutas, agrupadas en 26 tags de Swagger (cuenta contrastada contra `openapi.json`).
+> 142 rutas, agrupadas en 27 tags de Swagger (cuenta contrastada contra `openapi.json`).
 
 ## Convenciones
 
@@ -32,6 +32,7 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 
 | Método | Ruta | Rol |
 | --- | --- | --- |
+| GET | `/communes` | cualquier rol de M6 |
 | GET | `/containers` | cualquier rol de M6 |
 | POST | `/containers` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | GET | `/containers/:id` | cualquier rol de M6 |
@@ -215,14 +216,20 @@ Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append
 | ------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/neighborhoods` | Barrios del catálogo de M9 cacheados (se leen del Core al arrancar y cada 6 h). Filtros: `soloActivos`, `zona` (comuna), `q`. Sin paginar. 503 si el catálogo todavía no se pudo leer |
 
+## `communes` — comunas
+
+| Método | Ruta       | Descripción |
+| ------ | ---------- | ----------- |
+| GET    | `/communes` | Comunas con sus zonas y los barrios de cada zona (`codigo`/`nombre` de la caché de M9; sin catálogo solo el `id`). Filtro: `active`. Sin paginar (15 comunas). Cualquier rol de M6 |
+
 ## `zones` — zonas operativas
 
 | Método | Ruta                                       | Qué hace                                            |
 | ------ | ------------------------------------------ | --------------------------------------------------- |
 | POST   | `/zones`                                   | Crear zona operativa                                |
-| GET    | `/zones`                                   | Listar. Filtros: `active`, `search` (nombre)        |
+| GET    | `/zones`                                   | Listar, con `commune` y `neighborhood`. Filtros: `active`, `search` (nombre), `communeId` |
 | GET    | `/zones/:id`                               | Detalle, con los barrios asignados                  |
-| PATCH  | `/zones/:id`                               | Actualizar nombre y estado. El código es inmutable  |
+| PATCH  | `/zones/:id`                               | Actualizar nombre, estado y `communeId` (400 si la comuna no existe). El código es inmutable |
 | DELETE | `/zones/:id`                               | Baja lógica                                         |
 | POST   | `/zones/:id/neighborhoods`                 | Asignar barrios (catálogo de M9). Ignora duplicados. Con el catálogo cargado, un `id` desconocido da 400 (un barrio dado de baja, `activo:false`, sigue siendo válido: en M9 nada se borra); sin catálogo se acepta con warning |
 | DELETE | `/zones/:id/neighborhoods/:neighborhoodId` | Quitar un barrio                                    |

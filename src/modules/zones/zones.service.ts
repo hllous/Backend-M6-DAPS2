@@ -17,6 +17,9 @@ import {
 import { PaginatedResponseDto } from '../../common/dto';
 import { NeighborhoodsCatalogService } from '../../core/neighborhoods-catalog.service';
 
+const ZONE_INCLUDE = { commune: true, neighborhoods: true } satisfies Prisma.ZoneInclude;
+type ZoneWithRelations = Prisma.ZoneGetPayload<{ include: typeof ZONE_INCLUDE }>;
+
 @Injectable()
 export class ZonesService {
   private readonly logger = new Logger(ZonesService.name);
@@ -31,13 +34,16 @@ export class ZonesService {
    * Falla si el código ya existe (unique constraint).
    */
   async create(dto: CreateZoneDto): Promise<ZoneResponseDto> {
+    if (dto.communeId) await this.ensureCommuneExists(dto.communeId);
     try {
       const zone = await this.prisma.zone.create({
         data: {
           code: dto.code,
           name: dto.name,
           active: dto.active ?? true,
+          communeId: dto.communeId,
         },
+        include: ZONE_INCLUDE,
       });
 
       this.logger.log(`Zona creada: ${zone.code} (${zone.id})`);
@@ -60,6 +66,10 @@ export class ZonesService {
       where.active = query.active;
     }
 
+    if (query.communeId) {
+      where.communeId = query.communeId;
+    }
+
     if (query.search) {
       where.name = { contains: query.search, mode: 'insensitive' };
     }
@@ -67,6 +77,7 @@ export class ZonesService {
     const [zones, total] = await Promise.all([
       this.prisma.zone.findMany({
         where,
+        include: ZONE_INCLUDE,
         skip: query.skip,
         take: query.take,
         orderBy: { code: 'asc' },
@@ -88,7 +99,7 @@ export class ZonesService {
   async findOne(id: string): Promise<ZoneResponseDto> {
     const zone = await this.prisma.zone.findUnique({
       where: { id },
-      include: { neighborhoods: true },
+      include: ZONE_INCLUDE,
     });
 
     if (!zone) {
@@ -103,10 +114,13 @@ export class ZonesService {
    */
   async update(id: string, dto: UpdateZoneDto): Promise<ZoneResponseDto> {
     await this.ensureExists(id);
+    if (dto.communeId) await this.ensureCommuneExists(dto.communeId);
 
     const zone = await this.prisma.zone.update({
       where: { id },
+      include: ZONE_INCLUDE,
       data: {
+        ...(dto.communeId !== undefined && { communeId: dto.communeId }),
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.active !== undefined && { active: dto.active }),
       },
@@ -194,11 +208,21 @@ export class ZonesService {
     }
   }
 
+  private async ensureCommuneExists(id: string): Promise<void> {
+    const exists = await this.prisma.commune.findUnique({ where: { id }, select: { id: true } });
+    if (!exists) {
+      throw new BadRequestException(`La comuna '${id}' no existe`);
+    }
+  }
+
   /**
    * Mapea la entidad Prisma al DTO de respuesta.
    * @param includeNeighborhoods incluir barrios (solo en detalle)
    */
-  private toResponseDto(zone: any, includeNeighborhoods = false): ZoneResponseDto {
+  private toResponseDto(zone: ZoneWithRelations, includeNeighborhoods = false): ZoneResponseDto {
+    // Una zona es un barrio: el primero asignado (por id, para ser estable) es "el" barrio.
+    const barrioId = zone.neighborhoods.map((n) => n.neighborhoodId).sort()[0];
+    const barrio = barrioId ? this.catalog.list().find((b) => b.id === barrioId) : undefined;
     const dto: ZoneResponseDto = {
       id: zone.id,
       code: zone.code,
@@ -206,10 +230,16 @@ export class ZonesService {
       active: zone.active,
       createdAt: zone.createdAt,
       updatedAt: zone.updatedAt,
+      commune: zone.commune
+        ? { id: zone.commune.id, code: zone.commune.code, name: zone.commune.name }
+        : null,
+      neighborhood: barrioId
+        ? { id: barrioId, codigo: barrio?.codigo, nombre: barrio?.nombre }
+        : null,
     };
 
-    if (includeNeighborhoods && zone.neighborhoods) {
-      dto.neighborhoods = zone.neighborhoods.map((n: { neighborhoodId: string }) => ({
+    if (includeNeighborhoods) {
+      dto.neighborhoods = zone.neighborhoods.map((n) => ({
         neighborhoodId: n.neighborhoodId,
       }));
     }

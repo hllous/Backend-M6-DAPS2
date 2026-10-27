@@ -1,15 +1,16 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ZonesService } from './zones.service';
 import { NeighborhoodsCatalogService } from '../../core/neighborhoods-catalog.service';
 
 const ID = '33333333-3333-3333-3333-333333333333';
+const COMUNA = '44444444-4444-4444-4444-444444444444';
 
 describe('ZonesService', () => {
   let prisma: any;
   let service: ZonesService;
-  let catalog: { disponible: boolean; existe: jest.Mock };
+  let catalog: { disponible: boolean; existe: jest.Mock; list: jest.Mock };
 
   const zona = (over: Record<string, unknown> = {}) => ({
     id: ID,
@@ -18,6 +19,8 @@ describe('ZonesService', () => {
     active: true,
     createdAt: new Date('2026-08-01T10:00:00.000Z'),
     updatedAt: new Date('2026-08-02T10:00:00.000Z'),
+    commune: null,
+    neighborhoods: [],
     ...over,
   });
 
@@ -30,13 +33,18 @@ describe('ZonesService', () => {
         count: jest.fn().mockResolvedValue(1),
         update: jest.fn().mockResolvedValue(zona()),
       },
+      commune: { findUnique: jest.fn().mockResolvedValue({ id: COMUNA }) },
       zoneNeighborhood: {
         createMany: jest.fn().mockResolvedValue({ count: 2 }),
         deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
     // Por defecto sin catálogo: es lo que pasa sin CORE_API_URL.
-    catalog = { disponible: false, existe: jest.fn((id: string) => id.startsWith('b-')) };
+    catalog = {
+      disponible: false,
+      existe: jest.fn((id: string) => id.startsWith('b-')),
+      list: jest.fn().mockReturnValue([]),
+    };
     service = new ZonesService(
       prisma as unknown as PrismaService,
       catalog as unknown as NeighborhoodsCatalogService,
@@ -54,6 +62,16 @@ describe('ZonesService', () => {
       await service.create({ code: 'Z-SUR', name: 'Zona Sur', active: false } as any);
 
       expect(prisma.zone.create.mock.calls[0][0].data.active).toBe(false);
+    });
+
+    it('crea con comuna existente; con una inexistente da 400', async () => {
+      await service.create({ code: 'palermo', name: 'Palermo', communeId: COMUNA } as any);
+      expect(prisma.zone.create.mock.calls[0][0].data.communeId).toBe(COMUNA);
+
+      prisma.commune.findUnique.mockResolvedValue(null);
+      await expect(
+        service.create({ code: 'x', name: 'X', communeId: COMUNA } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('un código repetido da 409, no un error de Prisma', async () => {
@@ -88,6 +106,21 @@ describe('ZonesService', () => {
       await service.update(ID, {} as any);
 
       expect(prisma.zone.update.mock.calls[0][0].data).toEqual({});
+    });
+
+    it('asigna la comuna si existe', async () => {
+      await service.update(ID, { communeId: COMUNA } as any);
+
+      expect(prisma.zone.update.mock.calls[0][0].data).toEqual({ communeId: COMUNA });
+    });
+
+    it('una comuna inexistente da 400 y no escribe', async () => {
+      prisma.commune.findUnique.mockResolvedValue(null);
+
+      await expect(service.update(ID, { communeId: COMUNA } as any)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prisma.zone.update).not.toHaveBeenCalled();
     });
 
     it('una zona inexistente da 404', async () => {
@@ -212,6 +245,40 @@ describe('ZonesService', () => {
       );
       const detalle = await service.findOne(ID);
       expect(detalle.neighborhoods).toEqual([{ neighborhoodId: 'b-1' }]);
+    });
+
+    it('filtra por comuna', async () => {
+      await service.findAll({ page: 1, pageSize: 20, communeId: COMUNA } as any);
+
+      expect(prisma.zone.findMany.mock.calls[0][0].where).toEqual({ communeId: COMUNA });
+    });
+
+    it('expone la comuna y el barrio resuelto del catálogo', async () => {
+      catalog.list.mockReturnValue([{ id: 'b-1', codigo: 'palermo', nombre: 'Palermo' }]);
+      prisma.zone.findMany.mockResolvedValue([
+        zona({
+          commune: { id: COMUNA, code: 'comuna-14', name: 'Comuna 14', active: true },
+          neighborhoods: [{ neighborhoodId: 'b-1' }],
+        }),
+      ]);
+
+      const { data } = await service.findAll({ page: 1, pageSize: 20 } as any);
+
+      expect(data[0].commune).toEqual({ id: COMUNA, code: 'comuna-14', name: 'Comuna 14' });
+      expect(data[0].neighborhood).toEqual({ id: 'b-1', codigo: 'palermo', nombre: 'Palermo' });
+    });
+
+    it('sin catálogo el barrio lleva solo el id; sin barrio ni comuna, null', async () => {
+      prisma.zone.findMany.mockResolvedValue([
+        zona({ neighborhoods: [{ neighborhoodId: 'b-1' }] }),
+        zona(),
+      ]);
+
+      const { data } = await service.findAll({ page: 1, pageSize: 20 } as any);
+
+      expect(data[0].neighborhood).toEqual({ id: 'b-1', codigo: undefined, nombre: undefined });
+      expect(data[1].neighborhood).toBeNull();
+      expect(data[1].commune).toBeNull();
     });
 
     it('findOne da 404 si no está', async () => {

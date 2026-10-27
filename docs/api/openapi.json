@@ -377,6 +377,17 @@
               "example": "Norte",
               "type": "string"
             }
+          },
+          {
+            "name": "communeId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por comuna (UUID)",
+            "schema": {
+              "format": "uuid",
+              "example": "c0a80101-0000-4000-8000-000000000014",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -947,6 +958,78 @@
         },
         "tags": [
           "neighborhoods"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/communes": {
+      "get": {
+        "operationId": "CommunesController_findAll",
+        "summary": "Listar las comunas con sus zonas y barrios",
+        "description": "Devuelve cada comuna (agrupación de barrios de M9) con las zonas operativas que agrupa y los barrios de cada zona, para armar selectores y mapas. Sin paginar: son 15 comunas, igual que el catálogo de barrios.",
+        "parameters": [
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por estado activo/inactivo",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comunas con sus zonas y barrios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommuneResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros de consulta inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "communes"
         ],
         "security": [
           {
@@ -13283,6 +13366,10 @@
       "description": "Catálogo de barrios de M9 (caché de solo lectura)"
     },
     {
+      "name": "communes",
+      "description": "Comunas: agrupación de barrios y zonas (solo lectura)"
+    },
+    {
       "name": "routes",
       "description": "Recorridos y su secuencia de paradas"
     },
@@ -13699,6 +13786,12 @@
             "description": "Si la zona está activa para asignación de servicios",
             "example": true,
             "default": true
+          },
+          "communeId": {
+            "type": "string",
+            "description": "UUID de la comuna que agrupa a la zona (debe existir)",
+            "example": "c0a80101-0000-4000-8000-000000000014",
+            "format": "uuid"
           }
         },
         "required": [
@@ -13706,13 +13799,62 @@
           "name"
         ]
       },
+      "CommuneRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID de la comuna",
+            "format": "uuid",
+            "example": "c0a80101-0000-4000-8000-000000000014"
+          },
+          "code": {
+            "type": "string",
+            "description": "Código de M9 de la comuna",
+            "example": "comuna-14"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la comuna",
+            "example": "Comuna 14"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name"
+        ]
+      },
+      "NeighborhoodRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID del barrio en M9",
+            "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Slug del barrio en M9. Ausente si el catálogo de M9 no está disponible",
+            "example": "palermo"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del barrio en M9. Ausente si el catálogo de M9 no está disponible",
+            "example": "Palermo"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
       "ZoneNeighborhoodResponseDto": {
         "type": "object",
         "properties": {
           "neighborhoodId": {
             "type": "string",
-            "description": "ID del barrio asignado (catálogo externo de M9)",
-            "example": "barrio-palermo"
+            "description": "UUID del barrio asignado (catálogo externo de M9)",
+            "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
           }
         },
         "required": [
@@ -13742,6 +13884,24 @@
             "type": "boolean",
             "description": "Si la zona está activa para asignación de servicios",
             "example": true
+          },
+          "commune": {
+            "description": "Comuna que agrupa a la zona; null si todavía no se la asignó",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CommuneRefDto"
+              }
+            ]
+          },
+          "neighborhood": {
+            "description": "Barrio de la zona (una zona es un barrio); null si no tiene barrio asignado. Codigo y nombre salen del catálogo cacheado de M9",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NeighborhoodRefDto"
+              }
+            ]
           },
           "neighborhoods": {
             "description": "Barrios asignados a esta zona. Incluido solo en GET por ID",
@@ -13816,6 +13976,12 @@
             "type": "boolean",
             "description": "Si la zona está activa para asignación de servicios",
             "example": false
+          },
+          "communeId": {
+            "type": "string",
+            "description": "UUID de la comuna que agrupa a la zona (debe existir)",
+            "example": "c0a80101-0000-4000-8000-000000000014",
+            "format": "uuid"
           }
         }
       },
@@ -13887,6 +14053,80 @@
           "zona",
           "zonaNombre",
           "activo"
+        ]
+      },
+      "CommuneZoneResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID de la zona",
+            "format": "uuid",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "code": {
+            "type": "string",
+            "description": "Código de la zona (slug del barrio en M9)",
+            "example": "palermo"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la zona (el del barrio)",
+            "example": "Palermo"
+          },
+          "neighborhoods": {
+            "description": "Barrios de la zona. Codigo y nombre salen del catálogo cacheado de M9",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NeighborhoodRefDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "neighborhoods"
+        ]
+      },
+      "CommuneResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID de la comuna",
+            "format": "uuid",
+            "example": "c0a80101-0000-4000-8000-000000000014"
+          },
+          "code": {
+            "type": "string",
+            "description": "Código de M9 de la comuna",
+            "example": "comuna-14"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la comuna",
+            "example": "Comuna 14"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Si la comuna está activa",
+            "example": true
+          },
+          "zones": {
+            "description": "Zonas (barrios) que agrupa la comuna",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommuneZoneResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "active",
+          "zones"
         ]
       },
       "CreateServiceTypeDto": {
