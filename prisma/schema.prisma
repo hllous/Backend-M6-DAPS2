@@ -315,14 +315,30 @@ model ServiceType {
   @@map("service_type")
 }
 
-model Zone {
+// Agrupación de barrios (comuna de M9). Una Zone es un barrio; la comuna las agrupa.
+model Commune {
   id        String   @id @default(uuid()) @db.Uuid
-  code      String   @unique
+  code      String   @unique // `comuna-N` de M9
   name      String
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  zones Zone[]
+
+  @@map("commune")
+}
+
+model Zone {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  name      String
+  active    Boolean  @default(true)
+  communeId String?  @map("commune_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  commune       Commune?           @relation(fields: [communeId], references: [id], onDelete: Restrict)
   neighborhoods ZoneNeighborhood[]
   routeStops    RouteStop[]
   serviceZones  ServiceZone[]
@@ -332,6 +348,7 @@ model Zone {
   trees         Tree[]
   greenSpaces   GreenSpace[]
 
+  @@index([communeId])
   @@map("zone")
 }
 

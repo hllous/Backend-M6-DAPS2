@@ -22,8 +22,15 @@ erDiagram
         boolean requires_vehicle
         boolean active
     }
+    COMMUNE {
+        uuid id PK
+        varchar code UK "comuna-N de M9"
+        varchar name
+        boolean active
+    }
     ZONE {
         uuid id PK
+        uuid commune_id FK "opcional"
         varchar code UK
         varchar name
         boolean active
@@ -376,6 +383,7 @@ erDiagram
     }
 
     %% ======== RELACIONES ========
+    COMMUNE           ||--o{ ZONE : agrupa
     ZONE              ||--o{ ZONE_NEIGHBORHOOD : agrupa
     ROUTE             ||--|{ ROUTE_STOP : ordena
     ZONE              ||--o{ ROUTE_STOP : "es parada de"

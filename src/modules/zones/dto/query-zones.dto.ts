@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional } from 'class-validator';
+import { IsOptional, IsUUID } from 'class-validator';
 import { SearchText, ToBoolean } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
@@ -19,4 +19,13 @@ export class QueryZonesDto extends PaginationQueryDto {
   @IsOptional()
   @SearchText()
   search?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filtrar por comuna (UUID)',
+    example: 'c0a80101-0000-4000-8000-000000000014',
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  communeId?: string;
 }
