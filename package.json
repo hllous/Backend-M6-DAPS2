@@ -25,6 +25,7 @@
     "core:register": "ts-node -P tsconfig.json scripts/core-register.ts",
     "core:unregister": "ts-node -P tsconfig.json scripts/core-unregister.ts",
     "espacios-verdes:build": "ts-node -P tsconfig.json scripts/build-espacios-verdes.ts",
+    "datos-ciudad:build": "ts-node -P tsconfig.json scripts/build-datos-ciudad.ts",
     "zones:sync-from-core": "ts-node -P tsconfig.json scripts/zones-sync-from-core.ts",
     "crews:migrate-user-ids": "ts-node -P tsconfig.json scripts/migrate-crew-user-ids.ts",
     "openapi:generate": "ts-node -P tsconfig.json scripts/generate-openapi.ts",

@@ -28,11 +28,11 @@ Convenciones del esquema:
 
 ## 2. Qué es el seed
 
-Un dataset de demostración **realista y determinístico** de Servicios Urbanos en los **48 barrios y las 15 comunas** de CABA. Ocho barrios (Belgrano, Palermo, Colegiales, Recoleta, San Nicolás, Puerto Madero, Montserrat y Retiro) conservan las calles, recorridos e incidencias escritas a mano, con coordenadas del normalizador USIG verificadas contra los polígonos oficiales; el resto de la Ciudad se completa con recorridos regionales, inventario generado dentro de cada barrio y espacios verdes reales.
+Un dataset de demostración **realista y determinístico** de Servicios Urbanos en los **48 barrios y las 15 comunas** de CABA. Ocho barrios (Belgrano, Palermo, Colegiales, Recoleta, San Nicolás, Puerto Madero, Montserrat y Retiro) conservan las calles, recorridos e incidencias escritas a mano, con coordenadas del normalizador USIG verificadas contra los polígonos oficiales; el resto de la Ciudad se completa con recorridos regionales, contenedores, puntos verdes y arbolado reales de IDECABA (una muestra) y espacios verdes reales.
 
 Reglas con las que está escrito:
 
-- **Determinístico**: nada de `Math.random`. Dos corridas el mismo día dan la misma base y una falla se reproduce. Lo generado sale de un PRNG con semilla (`prng(semillaDe('inventario-<barrio>'))`). Los UUID de otros módulos se derivan de un texto con `uuidDe(semilla)` (forma v4, siempre el mismo valor para la misma semilla).
+- **Determinístico**: nada de `Math.random`. Dos corridas el mismo día dan la misma base y una falla se reproduce. La muestra de IDECABA se sortea una vez con un PRNG con semilla (`npm run datos-ciudad:build`) y queda versionada en `prisma/data/`; el seed solo la lee. Los UUID de otros módulos se derivan de un texto con `uuidDe(semilla)` (forma v4, siempre el mismo valor para la misma semilla).
 - **Relativo a hoy**: las fechas se calculan desde «hoy» en Argentina (`todayArgentina()`), no son fijas. Un seed con fechas fijas envejece y la agenda aparece vacía.
 - **Idempotente por partes**: zonas y comunas van por `syncZones`; los catálogos por `upsert` (lo escrito a mano) o `createMany` con `skipDuplicates` (lo generado); los espacios verdes se crean solo si faltan. Lo operativo (servicios, expedientes, derivaciones, eventos) se crea en **una sola transacción y solo si no hay servicios cargados**. Una segunda corrida no duplica nada, y tampoco refresca las fechas (ver 5).
 - **Se valida antes de escribir**: `verificar()` revisa la planificación (sin choques de vehículo ni de cuadrilla, estados coherentes con el día) y `verificarCobertura()` el reparto (toda comuna con recorridos y servicios, todo barrio con inventario dentro de su polígono, tope de 800 servicios). Si algo no cierra aborta antes de tocar la base. `prisma/seed.spec.ts` corre las mismas comprobaciones.
@@ -47,11 +47,13 @@ Reglas con las que está escrito:
 
 **Inventario urbano** (por barrio)
 - **Espacios verdes**: los 1366 plazas, parques, plazoletas y paseos del dataset de BA Data, cada uno en la zona de su barrio, con nombre, tipo (`PLAZA` y `PLAZOLETA` → `SQUARE`; `PARQUE`, `PARQUE SEMIPÚBLICO` y `JARDÍN BOTÁNICO` → `PARK`; `PASEO` → `PROMENADE`), coordenadas y superficie. **Nombre = el del dataset, o la ubicación (con el tipo adelante) si falta**: 557 llevan el nombre derivado de la ubicación.
-- **Contenedores, puntos verdes y arbolado** (258 contenedores, 49 puntos verdes y 177 árboles en total): los escritos a mano para los ocho barrios originales y, en todos los barrios, lo que falta hasta el mínimo (4 a 6 contenedores y 3 a 4 árboles por barrio, un punto verde por barrio). Cada punto cae dentro del polígono oficial del barrio (`docs/geojson/caba_barrios.geojson`) y, cuando se puede, a decenas de metros de una plaza real del barrio; el punto verde se ubica en la plaza más grande.
+- **Contenedores, puntos verdes y arbolado** (500 contenedores, 28 puntos verdes y 442 árboles en total): los escritos a mano para los ocho barrios originales (52, 9 y 34; los escenarios de servicios, derivaciones y relevamientos los referencian por código) más la **muestra real de IDECABA** en los 48 barrios: **448 contenedores** (325 negros `HOUSEHOLD` + 123 verdes `RECYCLABLE`), de modo que la base tiene **exactamente 500** (356 `HOUSEHOLD`, 139 `RECYCLABLE` y 5 `GREEN`/`BULKY` de los escritos a mano), 9 a 11 por barrio y 2 a 3 verdes en cada uno, **los 19 puntos verdes** de la Ciudad y **408 árboles** (8 a 9 por barrio) con especie y vitalidad del censo. El barrio de cada punto se decide por geometría contra `docs/geojson/caba_barrios.geojson`; todo cae dentro de su polígono. De los árboles que el censo marca «En Observación» (`DISEASED`, 12), «Escasa Foliación» (`WEAKENED`, 9), «Tocón» o «Cepa» (`DEAD`, 1) se siembra un relevamiento con el estado mapeado; los que ya llevan un relevamiento de demostración no se duplican.
 - Relevamientos de arbolado con sus estados sanitarios.
+- **Contenedores reales en distintos estados** (#439): 11 contenedores de IDECABA con estado de demostración, uno por barrio y todos fuera de las comunas originales (1, 2, 13, 14): 5 `OVERFLOWED` (Balvanera c3, Almagro c5, Caballito c6, Flores c7, Villa Crespo c15), 3 `DAMAGED` (Barracas c4 tapa rota, Villa Lugano c8 daño estructural con obra pública, Liniers c9 vandalizado; cada uno emite `containerDamaged` hacia M3), 2 `UNDER_REPAIR` (Monte Castro c10, Villa Urquiza c12) y 1 `RELOCATING` (Villa Devoto c11). Hay **12 servicios de vaciado** sobre ellos, con la cuadrilla regional de su comuna: 5 agendados por reclamo de vecinos, uno por cada desbordado (Balvanera, con un aviso de demora de inicio levantado ayer a la noche; Almagro, Caballito, Flores y Villa Crespo), de modo que los 5 siguen `OVERFLOWED` con su vaciado pendiente; 1 completado sobre un contenedor activo de Almagro; 2 completados con la nota «último vaciado antes de llevarlo al taller» (Monte Castro, Villa Urquiza); y 4 cancelados con motivo (dañados y en reubicación). Los vaciados completados tienen su registro de recolección. Los servicios quedan en 800, justo en el tope. `verificar()` exige que un vaciado completado de un contenedor que no está `ACTIVE` lleve una nota que lo explique, y que un aviso de demora no esté en el futuro. No hay lavados (`CONT-LAV`): solo lo hace la cuadrilla de Recoleta. Los códigos de estos contenedores son `CT-<barrio>-0001`, el negro de menor `id` de IDECABA del barrio.
+- > **Nota (#439):** `TreeSurvey` suma hasta 22 filas sembradas para los árboles de la muestra de IDECABA que no están sanos, con un riesgo **inventado** (la fuente no lo trae): `LOW` para `WEAKENED` (copa rala), `MEDIUM` para `DISEASED` (en seguimiento) y para `DEAD` (tocón o cepa: no queda copa que caiga). Se evitó `HIGH` y `CRITICAL` porque emiten `treeRiskDetected` al outbox. No generan eventos. Un árbol que ya lleva un relevamiento de demo no se duplica, así que pueden ser algunas menos.
 
 **Operación** (solo en base sin servicios)
-- Servicios planificados desde **hace 14 días hasta el 16/12/2026** (fin de la cursada): pasado `COMPLETED`, hoy según el turno, futuro `SCHEDULED`. 788 servicios (el seed anterior tenía 710), repartidos entre las 15 comunas: los recorridos del centro y el norte se espaciaron para dejar lugar a los de las otras comunas, y cada comuna suma un recorrido semanal y servicios puntuales (vaciado, riego o mantenimiento de una plaza real, inspección, poda). Incluye incidencias reales (parciales, suspendidos, demoras).
+- Servicios planificados desde **hace 14 días hasta el 16/12/2026** (fin de la cursada): pasado `COMPLETED`, hoy según el turno, futuro `SCHEDULED`. 800 servicios (el seed anterior tenía 710), repartidos entre las 15 comunas: los recorridos del centro y el norte se espaciaron para dejar lugar a los de las otras comunas, y cada comuna suma un recorrido semanal y servicios puntuales (vaciado, riego o mantenimiento de una plaza real, inspección, poda). Incluye incidencias reales (parciales, suspendidos, demoras).
 - Resultados por zona, registros de recolección y avisos de demora.
 - Intervenciones de arbolado en distintos estados, con relevamientos y pedidos también en las otras comunas.
 - Control ambiental: expedientes en todos los estados, inspecciones, actas, resoluciones de M4; varios con ubicación en otras comunas (referencia a una plaza real del barrio).
@@ -78,6 +80,7 @@ Los ids son los `sub` numéricos del token de M1 y **no cambian** con el catálo
 **Auténtico**
 - Las **zonas, comunas y sus UUID** (snapshot de M9 del 27/10/2026) y los polígonos de barrios y comunas (`docs/geojson/`).
 - Los **espacios verdes**: dataset abierto «Espacios verdes» de BA Data (https://data.buenosaires.gob.ar/dataset/espacios-verdes), descargado el 27/10/2026. Nombres, clasificación y superficie son del dataset; el punto es uno representativo que cae dentro del polígono. La licencia se confirma en el portal (ver `prisma/data/README.md`). Se regenera con `npm run espacios-verdes:build`.
+- **Contenedores, puntos verdes y arbolado** (#439): muestra de las capas `contenedores_negros`, `contenedores_verdes`, `puntos_verdes` y `arbolado_publico` (censo 2017-2018) del WFS de IDECABA (https://geoserver.buenosaires.gob.ar/geoserver/catalogo_og_130/wfs), descargada el 27/10/2026. Direcciones, coordenadas, especie, medidas y vitalidad son de la fuente; el mapeo a nuestros enums, la licencia por capa y los parámetros exactos están en `prisma/data/README.md`. Se regenera con `npm run datos-ciudad:build` (necesita red; el seed no).
 - Las calles y coordenadas escritas a mano de los ocho barrios originales (USIG).
 - **Cuatro espacios verdes que nombran los servicios escritos a mano son aproximados**, porque el dataset no trae uno equivalente exacto:
   - «Parque Tres de Febrero (Bosques de Palermo)» → id 1537, *Lago de Regatas Ernesto Jaimovich* (Palermo; el dataset no trae el parque como tal y el lago es parte de él).
@@ -86,7 +89,8 @@ Los ids son los `sub` numéricos del token de M1 y **no cambian** con el catálo
   - «Plaza Vicente López» → id 481, *Plaza V. López y Planes* (Recoleta).
 
 **No auténtico**
-- **Contenedores, puntos verdes y arbolado generados**: posiciones pseudoaleatorias dentro del barrio; la dirección es «Frente a <plaza real>», no una dirección postal. Códigos atados al barrio (no a su posición, así no se corren si M9 suma o baja uno): `CT-<codigo>-NNNN`, `GP-<codigo>-01`, `ARB-<codigo>-9NNNN`.
+- **Atributos de la muestra de IDECABA que no existen en la fuente**: la capacidad de los contenedores (se alterna 2400/3200 L), su estado (`ACTIVE`, salvo los 11 de demostración de `CONTENEDORES_DEMO` y los escritos a mano) y el riesgo de los relevamientos (`LOW` para `WEAKENED`, `MEDIUM` para `DISEASED` y `DEAD`). Los puntos verdes no se exigen por barrio (la Ciudad publica solo 19; faltan, p. ej., en la comuna 11). Los puntos verdes escritos a mano (9) siguen ahí porque los servicios los referencian; también los contenedores y árboles escritos a mano.
+- Los códigos los arma el seed por barrio y orden estable de `id` de IDECABA (negros antes que verdes), así que no dependen de la posición en el barrio de M9: `CT-<codigo>-NNNN`, `GP-<codigo>-NN`, `ARB-<codigo>-9NNNN`.
 - Servicios, recorridos regionales, cuadrillas, vehículos (patentes ficticias), personas, expedientes, actas y derivaciones.
 - Los `ticketId`, `workOrderId`, `establishmentId` y `streetClosureId` son UUID derivados con `uuidDe`: no existen en M2, M3, M4 ni M7.
 - Los `citizenId` son UUID derivados con `uuidDe` (M1 v3.0 los emite UUIDv4); no existen en M1.
@@ -94,6 +98,8 @@ Los ids son los `sub` numéricos del token de M1 y **no cambian** con el catálo
 - Los eventos del outbox/inbox sembrados **no se publicaron al bus**; son historia para el tablero.
 
 ## 5. Cómo correrlo
+
+> **Base con el inventario viejo (previo a #439): el vaciado es OBLIGATORIO.** Contenedores, puntos verdes y árboles se siembran con `createMany` + `skipDuplicates` y los códigos `CT-<barrio>-NNNN`, `GP-<barrio>-01` y `ARB-<barrio>-9NNNN` coinciden con los del generador anterior. Sin vaciar, quedan las coordenadas pseudoaleatorias viejas mezcladas con las reales y huérfanos los códigos que ya no existen. Usar el bloque de vaciado de más abajo.
 
 ```bash
 # Contra una base LOCAL (nunca la desplegada sin querer)
@@ -111,7 +117,7 @@ Para **refrescar las fechas** de una base que ya tiene servicios hay que vaciarl
 2. `prisma migrate status`: las 23 migraciones ya estaban aplicadas (Render corre `migrate deploy` al arrancar).
 3. Vaciado: `TRUNCATE ... RESTART IDENTITY CASCADE` de las 38 tablas de `public` salvo `_prisma_migrations` y `role_assignment_audit`, en una sola transacción (`psql -1`, `ON_ERROR_STOP`). `role_assignment_audit` es de solo agregado y un trigger bloquea el `TRUNCATE` a propósito: no se saltea; queda como está.
 4. `npm run prisma:seed` con `DATABASE_URL` apuntando a Supabase: **16 min 20 s**. El seed hace su propio `syncZones`, así que no hace falta correr antes `zones:sync-from-core`.
-5. Verificado con SQL y contra la API desplegada: 15 comunas, 48 zonas (ninguna `Z-…`, todas con comuna y barrio UUID), 788 servicios, 1400 `service_zone`, 1366 espacios verdes, 258 contenedores, 49 puntos verdes, 177 árboles, 72 roles, 0 eventos `PENDING`.
+5. Verificado con SQL y contra la API desplegada: 15 comunas, 48 zonas (ninguna `Z-…`, todas con comuna y barrio UUID), 788 servicios, 1400 `service_zone`, 1366 espacios verdes, 258 contenedores, 49 puntos verdes, 177 árboles (el inventario previo a #439; el de IDECABA todavía no está aplicado), 72 roles, 0 eventos `PENDING`.
 
 Para repetirlo, el vaciado es este bloque (no hay script):
 ```sql
@@ -124,7 +130,7 @@ END $$;
 ```
 Es destructivo: borra también `user_role_assignment` (el seed regenera los roles de la demo; hasta que termina, solo entra el admin de `M6_BOOTSTRAP_ADMIN_USER_IDS`) y los eventos del outbox y del inbox. El seed los siembra como `SENT` o `FAILED`, nunca `PENDING`, para que el despachador no mande nada al bus.
 
-La transacción de lo operativo vence a la hora; con 788 servicios tardó ~16 min contra Supabase, y `verificarCobertura()` fija un tope de 800. Antes de subirlo, medir de nuevo.
+La transacción de lo operativo vence a la hora; con 788 servicios tardó ~16 min contra Supabase (con 800 no está medido, es un 1,5% más) y `verificarCobertura()` fija un tope de 800. Antes de subirlo, medir de nuevo.
 
 **Limitaciones conocidas:** dos espacios verdes con el mismo nombre en un barrio se emparejan por orden de creación (no hay desempate real), y las `ServiceFrequency` ya creadas no se actualizan en una segunda corrida (se identifican por tipo, recorrido y turno).
 
