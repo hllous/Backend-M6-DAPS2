@@ -12,7 +12,8 @@ TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal d
 6. [docs/enumeraciones.md](docs/enumeraciones.md) — catálogo de valores cerrados usados en entidades y eventos
 7. [docs/api/](docs/api/) — estándar Swagger + endpoints REST del backend
 8. [docs/decisiones/](docs/decisiones/) — ADRs (decisiones técnicas)
-9. [docs/gestion/](docs/gestion/) — proceso Scrum: DoD, sprints, retros, bitácoras individuales
+9. [docs/seed.md](docs/seed.md) — el seed de demo (qué genera, roles, fechas) y cómo se usa Prisma
+10. [docs/gestion/](docs/gestion/) — proceso Scrum: DoD, sprints, retros, bitácoras individuales
 
 ## Comandos
 

@@ -11,6 +11,7 @@ import {
   GreenSpaceType,
   InspectionNextStep,
   InspectionOutcome,
+  M6Role,
   NotServicedReason,
   OutboxEventStatus,
   Prisma,
@@ -572,7 +573,7 @@ const CREWS: CuadrillaSeed[] = [
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.AFTERNOON,
     leaderUserId: '201',
-    organizationId: 'org-m1-coop-recuperadores-palermo',
+    organizationId: '3301',
     members: ['201', '202', '203', '204'],
     active: true,
     tipos: ['REC-REC', 'CONT-VAC'],
@@ -586,7 +587,7 @@ const CREWS: CuadrillaSeed[] = [
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.AFTERNOON,
     leaderUserId: '211',
-    organizationId: 'org-m1-coop-recuperadores-comuna-13',
+    organizationId: '3302',
     members: ['211', '212', '213'],
     active: false,
     tipos: ['REC-REC'],
@@ -661,13 +662,45 @@ const CREWS: CuadrillaSeed[] = [
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.NIGHT,
     leaderUserId: '221',
-    organizationId: 'org-m1-coop-recuperadores-microcentro',
+    organizationId: '3303',
     members: ['221', '222', '223', '224'],
     active: true,
     tipos: ['REC-REC', 'CONT-VAC'],
     zonas: CENTRO,
   },
 ];
+
+/**
+ * Personal de Oficina y auditoría de la demo. Los ids son los `sub` numéricos del
+ * token de M1 (no hay usuarios reales: M1 no está hosteado y los tokens de demo los
+ * firma scripts/generate-demo-jwt.mjs). El id 1 es el admin inicial y NO lleva fila:
+ * es M6_ADMIN por M6_BOOTSTRAP_ADMIN_USER_IDS. Campo sale de las cuadrillas (CREWS).
+ */
+const PERSONAL_DE_OFICINA: { userId: string; roles: M6Role[] }[] = [
+  { userId: '2', roles: [M6Role.M6_ADMIN] },
+  { userId: '3', roles: [M6Role.M6_OFICINA_OPERACIONES] },
+  { userId: '4', roles: [M6Role.M6_OFICINA_OPERACIONES] },
+  { userId: '5', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '6', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '7', roles: [M6Role.M6_OFICINA_OPERACIONES, M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '8', roles: [M6Role.M6_AUDITOR] },
+  { userId: '9', roles: [M6Role.M6_AUDITOR] },
+];
+
+/** Los roles de M6 de cada usuario de la demo: Oficina fija y Campo según su cuadrilla. */
+function rolesDeLaDemo(): { userId: string; role: M6Role }[] {
+  const filas = PERSONAL_DE_OFICINA.flatMap((p) =>
+    p.roles.map((role) => ({ userId: p.userId, role })),
+  );
+  for (const c of CREWS) {
+    for (const userId of new Set([c.leaderUserId, ...c.members])) {
+      filas.push({ userId, role: M6Role.M6_CAMPO_CUADRILLA });
+      // La cuadrilla de inspección también cierra las inspecciones ambientales.
+      if (c.clave === 'INSP') filas.push({ userId, role: M6Role.M6_CAMPO_INSPECTOR });
+    }
+  }
+  return filas;
+}
 
 /**
  * Franjas en las que trabaja cada turno, en minutos del día. La noche va en
@@ -1211,9 +1244,12 @@ const FRANJA = {
   mananaTemprano: fr('06:00', '11:00'),
 };
 
-/** Días que genera la planificación semanal: dos semanas de historia y tres días de agenda. */
+/** Fin de la cursada: la agenda llega hasta acá (al menos tres días, si se siembra después). */
+const FIN_DE_CURSADA = Date.UTC(2026, 11, 16);
+
+/** Días que genera la planificación semanal: dos semanas de historia y la agenda hasta el fin de la cursada. */
 const DESDE = -14;
-const HASTA = 3;
+const HASTA = Math.max(3, Math.round((FIN_DE_CURSADA - HOY.getTime()) / 86_400_000));
 
 const TODOS = [1, 2, 3, 4, 5, 6, 7];
 const LMV = [1, 3, 5];
@@ -3184,7 +3220,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     desde: momento(3, 10, 30),
     hasta: momento(3, 13),
     estado: StreetClosureRequestStatus.APPROVED,
-    closureId: `M7-CL-${ANIO}-01184`,
+    closureId: uuidDe('cierre-m7-01184'),
     calle: ['Av. Pres. Figueroa Alcorta', 'Jerónimo Salguero', 'Cavia'],
     creado: momento(-6, 12),
   });
@@ -3233,7 +3269,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     desde: new Date(hidrolavado.scheduledDate.getTime() + 3.5 * 3_600_000),
     hasta: new Date(hidrolavado.scheduledDate.getTime() + 7 * 3_600_000),
     estado: StreetClosureRequestStatus.ENDED,
-    closureId: `M7-CL-${ANIO}-01102`,
+    closureId: uuidDe('cierre-m7-01102'),
     calle: ['Av. de Mayo', 'Bolívar', 'Perú'],
     creado: new Date(hidrolavado.scheduledDate.getTime() - 3 * 86_400_000),
   });
@@ -3282,7 +3318,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     enId: servicio('rotura-compactador').id,
     riesgo: true,
     estado: RepairRequestStatus.IN_PROGRESS,
-    ot: `M3-OT-${ANIO}-00742`,
+    ot: uuidDe('ot-m3-00742'),
     pedida: momento(-9, 10),
   });
   await reparacion({
@@ -3313,7 +3349,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     enId: hidrolavado.id,
     riesgo: true,
     estado: RepairRequestStatus.IN_PROGRESS,
-    ot: `M3-OT-${ANIO}-00788`,
+    ot: uuidDe('ot-m3-00788'),
     pedida: new Date(hidrolavado.scheduledDate.getTime() + 8 * 3_600_000),
   });
 
@@ -3357,7 +3393,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     fallo?: string,
   ) => {
     const issuedAt = momento(emitida, 9);
-    const establishmentId = `est-m4-${uuidDe(`establecimiento-${report.address}`).slice(0, 8)}`;
+    const establishmentId = uuidDe(`establecimiento-${report.address}`);
     const notice = await tx.violationNotice.create({
       data: {
         noticeNumber: numeroActa(emitida),
@@ -3480,7 +3516,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     -3,
     {
       ticketId: ticketDe('insp-ruido'),
-      reporterSnapshot: { isAnonymous: false, citizenId: 'cit-m1-88421' },
+      reporterSnapshot: { isAnonymous: false, citizenId: '88421' },
       deadlineAt: momento(12, 23, 59),
     },
   );
@@ -3534,7 +3570,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     -2,
     {
       ticketId: uuidDe('ticket-m2-roedores-moreno'),
-      reporterSnapshot: { isAnonymous: false, citizenId: 'cit-m1-90112' },
+      reporterSnapshot: { isAnonymous: false, citizenId: '90112' },
       deadlineAt: momento(13, 23, 59),
     },
   );
@@ -3715,7 +3751,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     enId: lavalle.insp.id,
     riesgo: false,
     estado: RepairRequestStatus.CLOSED,
-    ot: `M3-OT-${ANIO}-00517`,
+    ot: uuidDe('ot-m3-00517'),
     pedida: momento(-3, 17),
   });
 
@@ -3774,7 +3810,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   recibido(
     'corte-figueroa-aprobado',
     'streetClosureApproved',
-    { closureRequestId: corteFigueroa.id, closureId: `M7-CL-${ANIO}-01184` },
+    { closureRequestId: corteFigueroa.id, closureId: uuidDe('cierre-m7-01184') },
     momento(-5, 11),
   );
   recibido(
@@ -3787,37 +3823,37 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   recibido(
     'corte-hidrolavado-aprobado',
     'streetClosureApproved',
-    { closureRequestId: corteHidrolavado.id, closureId: `M7-CL-${ANIO}-01102` },
+    { closureRequestId: corteHidrolavado.id, closureId: uuidDe('cierre-m7-01102') },
     new Date(diaHidrolavado - 2 * 86_400_000 + 14 * 3_600_000),
   );
   recibido(
     'corte-hidrolavado-terminado',
     'streetClosureEnded',
-    { closureRequestId: corteHidrolavado.id, closureId: `M7-CL-${ANIO}-01102` },
+    { closureRequestId: corteHidrolavado.id, closureId: uuidDe('cierre-m7-01102') },
     new Date(diaHidrolavado + 7.2 * 3_600_000),
   );
   recibido(
     'ot-arribenos',
     'workOrderScheduled',
-    { sourceRequestId: reparacionArribenos.id, workOrderId: `M3-OT-${ANIO}-00742` },
+    { sourceRequestId: reparacionArribenos.id, workOrderId: uuidDe('ot-m3-00742') },
     momento(-7, 10),
   );
   recibido(
     'ot-puente-de-la-mujer',
     'workOrderScheduled',
-    { sourceRequestId: reparacionPuente.id, workOrderId: `M3-OT-${ANIO}-00788` },
+    { sourceRequestId: reparacionPuente.id, workOrderId: uuidDe('ot-m3-00788') },
     new Date(reparacionPuente.requestedAt.getTime() + 26 * 3_600_000),
   );
   recibido(
     'ot-plaza-lavalle-agendada',
     'workOrderScheduled',
-    { sourceRequestId: reparacionLavalle.id, workOrderId: `M3-OT-${ANIO}-00517` },
+    { sourceRequestId: reparacionLavalle.id, workOrderId: uuidDe('ot-m3-00517') },
     momento(-2, 10),
   );
   recibido(
     'ot-plaza-lavalle-completada',
     'workOrderCompleted',
-    { sourceRequestId: reparacionLavalle.id, workOrderId: `M3-OT-${ANIO}-00517` },
+    { sourceRequestId: reparacionLavalle.id, workOrderId: uuidDe('ot-m3-00517') },
     momento(-1, 15),
   );
   await tx.inboxEvent.createMany({ data: entrantes });
@@ -3825,7 +3861,11 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
 
 async function resumen() {
   const porEstado = await prisma.service.groupBy({ by: ['status'], _count: { _all: true } });
+  // Roles de M6 de la demo. Directo a la tabla, sin auditoría: es dato de arranque.
+  await prisma.userRoleAssignment.createMany({ data: rolesDeLaDemo(), skipDuplicates: true });
+
   console.table({
+    userRoleAssignments: await prisma.userRoleAssignment.count(),
     zones: await prisma.zone.count(),
     zoneNeighborhoods: await prisma.zoneNeighborhood.count(),
     routes: await prisma.route.count(),
