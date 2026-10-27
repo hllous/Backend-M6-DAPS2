@@ -24,8 +24,8 @@ Depende de `status`:
 | `actId` | ✅ Confirmado (21/10): es distinto de `externalRef`. Es el identificador interno del acta de M4 que fundamenta la sanción. No lo persistimos: queda como dato del evento |
 | `establishmentId` | Ya lo tienen, lo aprovechamos |
 | `decision` | Qué resolvieron |
-| ✅ `decidedAt` | Confirmado por M4 (27/10), ya en su contrato |
-| ✅ `externalRef` | La referencia administrativa visible de la clausura (se guarda en `SanctionOutcome.externalRef`). Confirmado por M4 (27/10), ya en su contrato |
+| ✅ `decidedAt` | Confirmado por M4 (27/10), ya en su contrato. Opcional: M4 lo envía al formalizar la decisión |
+| ✅ `externalRef` | La referencia administrativa visible de la clausura (se guarda en `SanctionOutcome.externalRef`). Confirmado por M4 (27/10), ya en su contrato. Opcional: M4 lo envía al formalizar la decisión |
 
 ## Por qué adoptamos `LIFTED` como señal de cierre
 
