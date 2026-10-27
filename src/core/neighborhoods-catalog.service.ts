@@ -115,7 +115,7 @@ export class NeighborhoodsCatalogService implements OnApplicationBootstrap, OnMo
   }
 }
 
-function esBarrio(b: unknown): b is Barrio {
+export function esBarrio(b: unknown): b is Barrio {
   const x = b as Partial<Barrio> | null;
   return (
     typeof x?.id === 'string' &&

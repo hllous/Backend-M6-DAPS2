@@ -93,3 +93,7 @@ Para **refrescar las fechas** de una base que ya tiene servicios hay que vaciarl
 - Agregar una cuadrilla o un integrante → `CREWS`; sus roles de Campo salen solos. Personal de Oficina → `PERSONAL_DE_OFICINA`.
 - Todo id de otro módulo nuevo respeta el formato de la sección 1 (M1 numérico, el resto UUID con `uuidDe`).
 - Si cambia la fecha de fin de la cursada, es `FIN_DE_CURSADA`.
+
+## 7. Zonas y comunas desde M9 (#421)
+
+Las zonas reales no las crea el seed: las carga `npm run zones:sync-from-core` (ver [deploy.md](deploy.md#sincronizar-zonas-y-comunas-con-el-catálogo-de-m9-421)). Orden: migrar → sync → seed. El sync lee el catálogo del Core, o con `--from-snapshot` el snapshot versionado `prisma/data/m9-barrios.json` y `m9-zonas.json` (64 barrios, 48 activos de CABA; 20 zonas administrativas, 15 comunas activas; los ids UUID no son secretos). El snapshot es una foto del 27/10: si M9 cambia el catálogo hay que volver a bajarlo. El seed de demostración todavía crea zonas propias (`Z-PAL`…); adaptarlo al sync es [#422](https://github.com/hllous/Backend-M6-DAPS2/issues/422).

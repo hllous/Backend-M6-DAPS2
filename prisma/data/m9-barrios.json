@@ -1,0 +1,578 @@
+[
+ {
+  "id": "e33c4e08-c7d1-4a67-9b56-b7f45b5794e5",
+  "codigo": "agronomia",
+  "nombre": "Agronomia",
+  "zona": "comuna-15",
+  "zonaNombre": "Comuna 15",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "5201c4c0-db91-4e33-958f-86191e426bac",
+  "codigo": "almagro",
+  "nombre": "Almagro",
+  "zona": "comuna-5",
+  "zonaNombre": "Comuna 5",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "4d5deb65-8d4c-4c09-83ed-c2d69095b8d9",
+  "codigo": "alto-verde",
+  "nombre": "Alto Verde",
+  "zona": "norte",
+  "zonaNombre": "Zona Norte",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "b024441e-c5c9-41f1-9952-d396a241f1e9",
+  "codigo": "balvanera",
+  "nombre": "Balvanera",
+  "zona": "comuna-3",
+  "zonaNombre": "Comuna 3",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "ec681a91-a679-4956-a828-d09a6c502576",
+  "codigo": "barracas",
+  "nombre": "Barracas",
+  "zona": "comuna-4",
+  "zonaNombre": "Comuna 4",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "85ab580b-8af1-450f-8b9f-d8eced3ce4a4",
+  "codigo": "barrio-obrero",
+  "nombre": "Barrio Obrero",
+  "zona": "sur",
+  "zonaNombre": "Zona Sur",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "2b6713de-b628-4d8d-89d6-bcd1f6594c7f",
+  "codigo": "belgrano",
+  "nombre": "Belgrano",
+  "zona": "comuna-13",
+  "zonaNombre": "Comuna 13",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "ecc23638-1aaa-4cd4-8b58-5de5b9ac66bc",
+  "codigo": "boedo",
+  "nombre": "Boedo",
+  "zona": "comuna-5",
+  "zonaNombre": "Comuna 5",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "41189841-51cd-40ab-99ea-e402978f912e",
+  "codigo": "caballito",
+  "nombre": "Caballito",
+  "zona": "comuna-6",
+  "zonaNombre": "Comuna 6",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "7d24dfbb-de60-47db-b452-39bb68f47ce3",
+  "codigo": "chacarita",
+  "nombre": "Chacarita",
+  "zona": "comuna-15",
+  "zonaNombre": "Comuna 15",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "2bd2a46f-02b0-4154-bf48-775d7c1b9e14",
+  "codigo": "coghlan",
+  "nombre": "Coghlan",
+  "zona": "comuna-12",
+  "zonaNombre": "Comuna 12",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "fe4e8d41-9855-4aa0-8d74-6a3816ff7c8b",
+  "codigo": "colegiales",
+  "nombre": "Colegiales",
+  "zona": "comuna-13",
+  "zonaNombre": "Comuna 13",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "7a2468be-e4d8-4b7e-95c4-be92a13c782a",
+  "codigo": "constitucion",
+  "nombre": "Constitucion",
+  "zona": "comuna-1",
+  "zonaNombre": "Comuna 1",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "0e8b93bd-08c1-4bc8-abcd-23315a337ad2",
+  "codigo": "costanera",
+  "nombre": "Costanera",
+  "zona": "ribera",
+  "zonaNombre": "Ribera",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "9e34badb-4aba-42b5-905a-36a1ae56ccbd",
+  "codigo": "el-molino",
+  "nombre": "El Molino",
+  "zona": "oeste",
+  "zonaNombre": "Zona Oeste",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "a1b42b9a-a5a7-44ee-b363-32c1099b8499",
+  "codigo": "flores",
+  "nombre": "Flores",
+  "zona": "comuna-7",
+  "zonaNombre": "Comuna 7",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "c47154e2-2041-4623-bdb7-98a820f9b99f",
+  "codigo": "floresta",
+  "nombre": "Floresta",
+  "zona": "comuna-10",
+  "zonaNombre": "Comuna 10",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "ba8bef8c-5f25-4c84-a9e0-79350d882d5c",
+  "codigo": "isla-verde",
+  "nombre": "Isla Verde",
+  "zona": "ribera",
+  "zonaNombre": "Ribera",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "681d15c6-9878-4558-9ab9-c53bc45e1bce",
+  "codigo": "la-boca",
+  "nombre": "La Boca",
+  "zona": "comuna-4",
+  "zonaNombre": "Comuna 4",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "a2c7e641-e63c-4d0c-b722-8a166623ef17",
+  "codigo": "la-paternal",
+  "nombre": "La Paternal",
+  "zona": "comuna-15",
+  "zonaNombre": "Comuna 15",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "21cdc71c-e06c-49bd-8e9c-19bfada955fb",
+  "codigo": "las-quintas",
+  "nombre": "Las Quintas",
+  "zona": "sur",
+  "zonaNombre": "Zona Sur",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "06dc3966-fc6c-4e84-bdc4-15872bc96cd1",
+  "codigo": "liniers",
+  "nombre": "Liniers",
+  "zona": "comuna-9",
+  "zonaNombre": "Comuna 9",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "4a5e7840-65fe-445b-ad3f-f1a0f3ae836d",
+  "codigo": "loma-linda",
+  "nombre": "Loma Linda",
+  "zona": "oeste",
+  "zonaNombre": "Zona Oeste",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "bca6d854-ee8d-4f4c-aeba-27e3bdb02e63",
+  "codigo": "los-aromos",
+  "nombre": "Los Aromos",
+  "zona": "norte",
+  "zonaNombre": "Zona Norte",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "ead61273-c0d2-4da6-9375-5f68348b5da3",
+  "codigo": "mataderos",
+  "nombre": "Mataderos",
+  "zona": "comuna-9",
+  "zonaNombre": "Comuna 9",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "2485795f-cdfa-4238-91fb-f9f0329e295d",
+  "codigo": "mercado-viejo",
+  "nombre": "Mercado Viejo",
+  "zona": "centro",
+  "zonaNombre": "Centro",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "2e127348-9b0c-4f07-85dc-b79186167bd3",
+  "codigo": "monte-castro",
+  "nombre": "Monte Castro",
+  "zona": "comuna-10",
+  "zonaNombre": "Comuna 10",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "8aef0088-efb4-4d22-9139-068a9ebf1731",
+  "codigo": "montserrat",
+  "nombre": "Montserrat",
+  "zona": "comuna-1",
+  "zonaNombre": "Comuna 1",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "54b3ccc2-464f-4e3d-a242-ca794907b0d0",
+  "codigo": "nueva-pompeya",
+  "nombre": "Nueva Pompeya",
+  "zona": "comuna-4",
+  "zonaNombre": "Comuna 4",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "7505aec1-4712-4953-a26e-5bb9d752669e",
+  "codigo": "nunez",
+  "nombre": "Nuñez",
+  "zona": "comuna-13",
+  "zonaNombre": "Comuna 13",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "11d698be-5c10-42be-80f9-30254f108ad2",
+  "codigo": "palermo",
+  "nombre": "Palermo",
+  "zona": "comuna-14",
+  "zonaNombre": "Comuna 14",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "1e40c130-67e5-462d-9c6e-d694e2de3cfb",
+  "codigo": "parque-avellaneda",
+  "nombre": "Parque Avellaneda",
+  "zona": "comuna-9",
+  "zonaNombre": "Comuna 9",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "32afafe1-0194-4ec7-9b5c-48e0d1e53cb5",
+  "codigo": "parque-chacabuco",
+  "nombre": "Parque Chacabuco",
+  "zona": "comuna-7",
+  "zonaNombre": "Comuna 7",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "237a67e1-37e2-409f-8992-5180efffafd1",
+  "codigo": "parque-chas",
+  "nombre": "Parque Chas",
+  "zona": "comuna-15",
+  "zonaNombre": "Comuna 15",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "a0e55208-cc4c-411f-814c-36e59add037b",
+  "codigo": "parque-industrial",
+  "nombre": "Parque Industrial",
+  "zona": "sur",
+  "zonaNombre": "Zona Sur",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "2a193df5-a760-4aee-926b-f7b0e4081095",
+  "codigo": "parque-patricios",
+  "nombre": "Parque Patricios",
+  "zona": "comuna-4",
+  "zonaNombre": "Comuna 4",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "d5fa80b0-37c4-4a85-9b7b-1376c48a852f",
+  "codigo": "plaza-mayor",
+  "nombre": "Plaza Mayor",
+  "zona": "centro",
+  "zonaNombre": "Centro",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "ef518b35-dbd6-42b1-a1d1-60861306830c",
+  "codigo": "puerto-madero",
+  "nombre": "Puerto Madero",
+  "zona": "comuna-1",
+  "zonaNombre": "Comuna 1",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "5977d553-6d2b-4359-99f3-5b22dadba8af",
+  "codigo": "puerto-viejo",
+  "nombre": "Puerto Viejo",
+  "zona": "ribera",
+  "zonaNombre": "Ribera",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "a26cc6ab-2cb6-4e35-b940-e4775d3c8d76",
+  "codigo": "recoleta",
+  "nombre": "Recoleta",
+  "zona": "comuna-2",
+  "zonaNombre": "Comuna 2",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "e75b989f-d49f-4676-a7f2-4de195523342",
+  "codigo": "retiro",
+  "nombre": "Retiro",
+  "zona": "comuna-1",
+  "zonaNombre": "Comuna 1",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "5999e801-bc2d-41b5-960f-06a088522ed3",
+  "codigo": "saavedra",
+  "nombre": "Saavedra",
+  "zona": "comuna-12",
+  "zonaNombre": "Comuna 12",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "80abb4a7-596e-4a92-80fc-5459f8640aa4",
+  "codigo": "san-cayetano",
+  "nombre": "San Cayetano",
+  "zona": "norte",
+  "zonaNombre": "Zona Norte",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "c29d70d6-c6fb-477a-82c3-d5b9de0d2188",
+  "codigo": "san-cristobal",
+  "nombre": "San Cristobal",
+  "zona": "comuna-3",
+  "zonaNombre": "Comuna 3",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "ba3b31ad-0fcf-4728-8a0a-b744338d4ac1",
+  "codigo": "san-nicolas",
+  "nombre": "San Nicolas",
+  "zona": "comuna-1",
+  "zonaNombre": "Comuna 1",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "2b33ba5e-d31a-4213-9521-10c4f6acc5e2",
+  "codigo": "san-telmo",
+  "nombre": "San Telmo",
+  "zona": "comuna-1",
+  "zonaNombre": "Comuna 1",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "c48c3b81-a8e8-45fd-b30b-6edda2e7e37a",
+  "codigo": "santa-rita",
+  "nombre": "Santa Rita",
+  "zona": "oeste",
+  "zonaNombre": "Zona Oeste",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "07515a8b-8e8d-4c2c-a03a-f1f287472710",
+  "codigo": "tribunales",
+  "nombre": "Tribunales",
+  "zona": "centro",
+  "zonaNombre": "Centro",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "4c8ad465-c110-4c6b-8aa7-2d9a9e879508",
+  "codigo": "velez-sarsfield",
+  "nombre": "Velez Sarsfield",
+  "zona": "comuna-10",
+  "zonaNombre": "Comuna 10",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "9ce96584-dd84-4838-85e8-adac8be9ec3a",
+  "codigo": "versalles",
+  "nombre": "Versalles",
+  "zona": "comuna-10",
+  "zonaNombre": "Comuna 10",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "9e61dc1d-89d7-4328-bebf-2166443752eb",
+  "codigo": "villa-crespo",
+  "nombre": "Villa Crespo",
+  "zona": "comuna-15",
+  "zonaNombre": "Comuna 15",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "b0e937d5-7221-4bdd-821a-1f0025373307",
+  "codigo": "villa-devoto",
+  "nombre": "Villa Devoto",
+  "zona": "comuna-11",
+  "zonaNombre": "Comuna 11",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "ed545725-8761-4a1a-858f-14f4418b12d3",
+  "codigo": "villa-elisa",
+  "nombre": "Villa Elisa",
+  "zona": "norte",
+  "zonaNombre": "Zona Norte",
+  "metadatos": {},
+  "activo": false
+ },
+ {
+  "id": "ca5060d9-9d22-446b-bde9-e9a0adf9256d",
+  "codigo": "villa-general-mitre",
+  "nombre": "Villa General Mitre",
+  "zona": "comuna-11",
+  "zonaNombre": "Comuna 11",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "452cda91-4dc0-4edf-950e-4c9de6d182c2",
+  "codigo": "villa-lugano",
+  "nombre": "Villa Lugano",
+  "zona": "comuna-8",
+  "zonaNombre": "Comuna 8",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "b5f847bb-1864-4bc7-8731-5f02e59d8ef6",
+  "codigo": "villa-luro",
+  "nombre": "Villa Luro",
+  "zona": "comuna-10",
+  "zonaNombre": "Comuna 10",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "c763b04b-bf12-4e14-8a13-232dbc9db5ab",
+  "codigo": "villa-ortuzar",
+  "nombre": "Villa Ortuzar",
+  "zona": "comuna-15",
+  "zonaNombre": "Comuna 15",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "a21bceec-c50b-4945-88f4-e9d04639e1a6",
+  "codigo": "villa-pueyrredon",
+  "nombre": "Villa Pueyrredon",
+  "zona": "comuna-12",
+  "zonaNombre": "Comuna 12",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "9a6cf750-9dda-4e14-bfb5-e49ddc249041",
+  "codigo": "villa-real",
+  "nombre": "Villa Real",
+  "zona": "comuna-10",
+  "zonaNombre": "Comuna 10",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "941cc51f-ecc8-4db5-8e6a-1e020038eb5d",
+  "codigo": "villa-riachuelo",
+  "nombre": "Villa Riachuelo",
+  "zona": "comuna-8",
+  "zonaNombre": "Comuna 8",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "d7252f29-c55d-43b5-b971-bbe0dff600df",
+  "codigo": "villa-santa-rita",
+  "nombre": "Villa Santa Rita",
+  "zona": "comuna-11",
+  "zonaNombre": "Comuna 11",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "4c5bdacb-ea13-4e35-82d2-b81c11fa9e4d",
+  "codigo": "villa-soldati",
+  "nombre": "Villa Soldati",
+  "zona": "comuna-8",
+  "zonaNombre": "Comuna 8",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "424c609f-96f0-4f64-9a27-4fafc7d6fbe4",
+  "codigo": "villa-urquiza",
+  "nombre": "Villa Urquiza",
+  "zona": "comuna-12",
+  "zonaNombre": "Comuna 12",
+  "metadatos": {},
+  "activo": true
+ },
+ {
+  "id": "a37f4aed-c4ba-4495-b898-8e0dcd4b3588",
+  "codigo": "villa-del-parque",
+  "nombre": "Villa del Parque",
+  "zona": "comuna-11",
+  "zonaNombre": "Comuna 11",
+  "metadatos": {},
+  "activo": true
+ }
+]
