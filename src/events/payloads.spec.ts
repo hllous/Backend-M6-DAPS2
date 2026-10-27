@@ -92,10 +92,13 @@ describe('payloads de los eventos publicados', () => {
       expectValido('containerDamaged', p);
     });
 
-    it('nunca manda neighborhoodId: el catalogo es de M9 y no existe', () => {
-      const p = payloads.containerDamaged(container);
+    it('sin barrio resuelto no manda neighborhoodId; con barrio valida contra el schema', () => {
+      const sin = payloads.containerDamaged(container);
+      expect(sin.location).not.toHaveProperty('neighborhoodId');
 
-      expect(p.location).not.toHaveProperty('neighborhoodId');
+      const con = payloads.containerDamaged(container, undefined, ID(7));
+      expect(con.location).toMatchObject({ neighborhoodId: ID(7) });
+      expectValido('containerDamaged', con);
     });
   });
 
@@ -129,6 +132,13 @@ describe('payloads de los eventos publicados', () => {
       notes: null,
       createdAt: new Date(),
     } as never;
+
+    it('con barrio resuelto lo manda en location y valida', () => {
+      const p = payloads.treeRiskDetected(tree, survey, ID(7));
+
+      expect(p.location).toMatchObject({ neighborhoodId: ID(7) });
+      expectValido('treeRiskDetected', p);
+    });
 
     it('valida con los enums del catalogo que fijo ADR-003', () => {
       const p = payloads.treeRiskDetected(tree, survey);

@@ -44,6 +44,7 @@ describe('ContainersService', () => {
         count: jest.fn().mockResolvedValue(1),
         update: jest.fn().mockImplementation(({ data }: any) => Promise.resolve(contenedor(data))),
       },
+      zoneNeighborhood: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
@@ -274,6 +275,29 @@ describe('ContainersService', () => {
         aggregateType: 'CONTAINER',
         aggregateId: ID,
       });
+    });
+
+    it('una zona de un solo barrio completa location.neighborhoodId', async () => {
+      desde(C.ACTIVE);
+      prisma.zoneNeighborhood.findMany.mockResolvedValue([
+        { neighborhoodId: '7c9e6679-7425-40de-944b-e07fc1f90ae7' },
+      ]);
+      await service.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any);
+
+      const [, entrada] = outbox.enqueue.mock.calls[0];
+      expect(entrada.payload.location.neighborhoodId).toBe('7c9e6679-7425-40de-944b-e07fc1f90ae7');
+    });
+
+    it('sin barrio o con varios no adivina: neighborhoodId ausente', async () => {
+      desde(C.ACTIVE);
+      prisma.zoneNeighborhood.findMany.mockResolvedValue([
+        { neighborhoodId: '7c9e6679-7425-40de-944b-e07fc1f90ae7' },
+        { neighborhoodId: '0b8f1a52-3c4d-4e6f-9a1b-2c3d4e5f6a7b' },
+      ]);
+      await service.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any);
+
+      const [, entrada] = outbox.enqueue.mock.calls[0];
+      expect(entrada.payload.location).not.toHaveProperty('neighborhoodId');
     });
 
     it('sin requiresPublicWorks explícito asume false, no null', async () => {

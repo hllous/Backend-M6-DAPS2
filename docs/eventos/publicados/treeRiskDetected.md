@@ -20,6 +20,7 @@ surveyedAt
 
 | Campo | Nota |
 |---|---|
+| `location` | Con `neighborhoodId` (`id` UUID del catálogo de M9) cuando la zona del árbol tiene exactamente un barrio asignado (las zonas son una por barrio); con cero o varios viaja ausente ([#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)) |
 | `riskLevel` | Solo `HIGH` o `CRITICAL` salen del módulo |
 | `suggestedIntervention` | Lo que el relevamiento recomienda. No es vinculante para nadie: la intervención la programamos nosotros |
 | `requiresStreetClosure` | Booleano. Anticipa que después va a llegar un [`streetClosureRequested`](streetClosureRequested.md) |
