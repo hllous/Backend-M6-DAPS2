@@ -106,9 +106,25 @@ Para **refrescar las fechas** de una base que ya tiene servicios hay que vaciarl
 
 **Aplicar esta versión a una base que ya tiene el seed anterior no actualiza lo operativo.** El seed agrega zonas, comunas, espacios verdes e inventario, pero no recrea servicios ni derivaciones, porque ve servicios cargados y se detiene. Para tener el reparto nuevo hay que vaciar lo operativo y volver a sembrar: es un paso **aparte y destructivo** (borra servicios, expedientes, derivaciones y eventos) que no se hace en la base desplegada sin acordarlo con el equipo; el seed no pisa el trabajo que alguien cargó a mano.
 
-**Base desplegada (Supabase), pendiente de aplicar** (27/10; con confirmación del PO, no antes). Orden: (1) `npm run zones:sync-from-core` (el simulacro contra Supabase creaba 15 comunas y 48 zonas, sin conflictos; las 8 zonas legacy `Z-PMA`, `Z-SNI`, `Z-PAL`, `Z-BEL`, `Z-MON`, `Z-RET`, `Z-REC` y `Z-COL` quedan retenidas mientras tengan datos), (2) vaciar las tablas operativas, (3) `npm run prisma:seed`. Probado contra un Postgres 16 descartable: migrar y sembrar dos veces tardó 11,8 s y 6,7 s, idempotente.
+**Base desplegada (Supabase): aplicado el 27/10 con confirmación del PO.** Se hizo así:
+1. `pg_dump` del esquema `public` como copia (fuera del repo). Supabase corre PostgreSQL 17: el `pg_dump` tiene que ser de la misma versión.
+2. `prisma migrate status`: las 23 migraciones ya estaban aplicadas (Render corre `migrate deploy` al arrancar).
+3. Vaciado: `TRUNCATE ... RESTART IDENTITY CASCADE` de las 38 tablas de `public` salvo `_prisma_migrations` y `role_assignment_audit`, en una sola transacción (`psql -1`, `ON_ERROR_STOP`). `role_assignment_audit` es de solo agregado y un trigger bloquea el `TRUNCATE` a propósito: no se saltea; queda como está.
+4. `npm run prisma:seed` con `DATABASE_URL` apuntando a Supabase: **16 min 20 s**. El seed hace su propio `syncZones`, así que no hace falta correr antes `zones:sync-from-core`.
+5. Verificado con SQL y contra la API desplegada: 15 comunas, 48 zonas (ninguna `Z-…`, todas con comuna y barrio UUID), 788 servicios, 1400 `service_zone`, 1366 espacios verdes, 258 contenedores, 49 puntos verdes, 177 árboles, 72 roles, 0 eventos `PENDING`.
 
-La transacción de lo operativo tardó ~17 min contra Supabase con 710 servicios y vence a la hora; por eso `verificarCobertura()` fija un tope de 800. Antes de subirlo, medir de nuevo.
+Para repetirlo, el vaciado es este bloque (no hay script):
+```sql
+DO $$ DECLARE r record; BEGIN
+  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+           AND tablename NOT IN ('_prisma_migrations', 'role_assignment_audit') LOOP
+    EXECUTE format('TRUNCATE TABLE public.%I RESTART IDENTITY CASCADE', r.tablename);
+  END LOOP;
+END $$;
+```
+Es destructivo: borra también `user_role_assignment` (el seed regenera los roles de la demo; hasta que termina, solo entra el admin de `M6_BOOTSTRAP_ADMIN_USER_IDS`) y los eventos del outbox y del inbox. El seed los siembra como `SENT` o `FAILED`, nunca `PENDING`, para que el despachador no mande nada al bus.
+
+La transacción de lo operativo vence a la hora; con 788 servicios tardó ~16 min contra Supabase, y `verificarCobertura()` fija un tope de 800. Antes de subirlo, medir de nuevo.
 
 **Limitaciones conocidas:** dos espacios verdes con el mismo nombre en un barrio se emparejan por orden de creación (no hay desempate real), y las `ServiceFrequency` ya creadas no se actualizan en una segunda corrida (se identifican por tipo, recorrido y turno).
 
