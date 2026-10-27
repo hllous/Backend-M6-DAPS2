@@ -188,7 +188,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 
 ### Sincronizar zonas y comunas con el catálogo de M9 (#421)
 
-Carga las 15 comunas (`Commune`) y una `Zone` por barrio activo con su `ZoneNeighborhood` (UUID de M9). Orden en una base nueva o existente: **`prisma migrate deploy` → `zones:sync-from-core` → seed**. No corre solo al arrancar: es un paso manual del deploy.
+Carga las 15 comunas (`Commune`) y una `Zone` por barrio activo con su `ZoneNeighborhood` (UUID de M9). Orden en una base nueva o existente: **`prisma migrate deploy` → `zones:sync-from-core` → seed**. No corre solo al arrancar: es un paso manual del deploy. El seed (#422) ya llama a `syncZones` con el snapshot, así que el sync previo es opcional: sirve para cargar las zonas con el catálogo vivo del Core antes de sembrar y para el simulacro `--dry-run`.
 
 1. Simulacro (no escribe): `DATABASE_URL=<base> npm run zones:sync-from-core -- --dry-run`. Con Core usa `CORE_API_URL` y `CORE_MODULE_SECRET`; sin Core, agregar `--from-snapshot` (usa `prisma/data/m9-*.json`).
 2. Aplicar: el mismo comando sin `--dry-run` (una transacción). Idempotente: la segunda corrida informa todo en `sinCambios`.

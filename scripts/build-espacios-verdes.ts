@@ -27,7 +27,11 @@ export const CLASIFICACIONES = [
 export type Clasificacion = (typeof CLASIFICACIONES)[number];
 
 /** El dataset escribe distinto a M9 en estos barrios (ver docs/geojson/README.md). */
-const ALIAS_BARRIO: Record<string, string> = { monserrat: 'montserrat', paternal: 'la-paternal' };
+const ALIAS_BARRIO: Record<string, string> = {
+  monserrat: 'montserrat',
+  paternal: 'la-paternal',
+  boca: 'la-boca',
+};
 
 export interface EspacioVerde {
   id: number;

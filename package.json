@@ -95,7 +95,7 @@
       "ts"
     ],
     "rootDir": "src",
-    "roots": ["<rootDir>", "<rootDir>/../scripts"],
+    "roots": ["<rootDir>", "<rootDir>/../scripts", "<rootDir>/../prisma"],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
