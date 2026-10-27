@@ -145,7 +145,7 @@ No hay que hacer nada manual: el deploy sale con el release a `main`. Un push a 
 |---|---|
 | `M6_AUTH_MODE` | `backend-development` (demo contra el backend real) |
 | `M6_BACKEND_ORIGIN` | `https://m6-backend-m64k.onrender.com` |
-| `M6_DEV_JWT` | Access token con el contrato de M1 (`node scripts/generate-demo-jwt.mjs <JWT_SECRET base64>`; dura 15 min) |
+| `M6_DEV_JWT` | Access token con el contrato de M1 (`node scripts/generate-demo-jwt.mjs <JWT_SECRET base64> RESPONSABLE_AREA 1 2026-12-16`; sin la fecha final dura 15 min) |
 | `M6_SESSION_SECRET` | Clave secreta para sellar la cookie de sesión del Next.js BFF |
 
 > `M6_AUTH_MODE=backend-development` reenvía cada petición del BFF al backend con `M6_DEV_JWT` como Bearer. `M6_BACKEND_ORIGIN`, `M6_DEV_JWT` y `M6_SESSION_SECRET` se leen en runtime (server-side), así que se pueden cambiar sin rebuild. `NEXT_PUBLIC_API_URL` quedó obsoleto: el código actual no lo usa.
@@ -172,7 +172,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 
 | Lugar | Variable | Qué va | Por qué | A quién pedirlo | Cuándo | Secreto |
 |---|---|---|---|---|---|---|
-| Vercel | `M6_DEV_JWT` | Se genera con `node scripts/generate-demo-jwt.mjs <JWT_SECRET de Render> RESPONSABLE_AREA <user_id del admin inicial>` (el mismo id de `M6_BOOTSTRAP_ADMIN_USER_IDS`) | Token de demo del BFF. **Dura 15 minutos** y tiene que ser de un empleado. Excepción de demo al [ADR-004](decisiones/adr-004-jwt-m1-y-puerto-identidad.md) mientras M1 no esté hosteado: lo firmamos nosotros ([ficha de M1](integracion/m1.md#respuesta-al-seguimiento-2610-cuenta-compartida-y-m1-no-hosteado)) | Lo genera DevOps con el secreto de Render | Después de cargar el `JWT_SECRET` | Sí |
+| Vercel | `M6_DEV_JWT` | Se genera con `node scripts/generate-demo-jwt.mjs <JWT_SECRET de Render> RESPONSABLE_AREA <user_id del admin inicial>` (el mismo id de `M6_BOOTSTRAP_ADMIN_USER_IDS`) | Token de demo del BFF. **Dura 15 minutos salvo que se pase una fecha límite como 5.º argumento (`... 2026-12-16`, fin de la cursada); no se puede revocar sin rotar `JWT_SECRET`.** Tiene que ser de un empleado. Excepción de demo al [ADR-004](decisiones/adr-004-jwt-m1-y-puerto-identidad.md) mientras M1 no esté hosteado: lo firmamos nosotros ([ficha de M1](integracion/m1.md#respuesta-al-seguimiento-2610-cuenta-compartida-y-m1-no-hosteado)) | Lo genera DevOps con el secreto de Render | Después de cargar el `JWT_SECRET` | Sí |
 | Vercel | `M6_SESSION_SECRET` | Valor aleatorio propio | Sella la cookie de sesión del BFF | Lo genera DevOps | Si no existe | Sí |
 | Vercel | `M6_AUTH_MODE`, `M6_BACKEND_ORIGIN` | `backend-development` y `https://m6-backend-m64k.onrender.com` | Modo demo contra el backend real | – | Solo verificar | No |
 
