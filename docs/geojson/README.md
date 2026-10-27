@@ -13,7 +13,7 @@ CRS: `urn:ogc:def:crs:OGC:1.3:CRS84` (longitud, latitud; equivale a EPSG:4326).
 
 El catálogo de M9 (`GET /api/v1/catalogos/barrios`) identifica el barrio por `codigo` (slug sin acentos) y la comuna en `zona` (`comuna-N`).
 
-- Barrio: normalizar `BARRIO` (sin acentos, minúsculas, espacios y signos a `-`, `GRAL.` como `general`) y buscar el `codigo`. Controlado el 27/10/2026 contra el catálogo real: coinciden los 48 barrios activos. Casos a mano: `MONSERRAT` ↔ `montserrat` y `BOCA` ↔ `la-boca`.
+- Barrio: normalizar `BARRIO` (sin acentos, minúsculas, espacios y signos a `-`, `GRAL.` como `general`) y buscar el `codigo`. Controlado el 27/10/2026 contra el catálogo real: coinciden los 48 barrios activos. Caso a mano: `BOCA` ↔ `la-boca`.
 - Comuna: `COMUNA` (o `COMUNAS`) `N` ↔ `comuna-N`. Controlado el mismo día: el número coincide con el `zona` de M9 en los 48 barrios.
 - El catálogo de M9 también trae 16 barrios ficticios dados de baja (`activo: false`) que no aparecen en estos archivos.
 
