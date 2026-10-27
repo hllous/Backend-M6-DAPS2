@@ -200,6 +200,8 @@ Carga las 15 comunas (`Commune`) y una `Zone` por barrio activo con su `ZoneNeig
 
 ### Migrar las cuadrillas de usr-… a ids de M1 (#365)
 
+> **Nota (27/10):** en la base desplegada ya no hace falta. Los integrantes de cuadrilla y las asignaciones de rol son numéricos desde el seed nuevo (#422, aplicado el 27/10; verificado en solo lectura), y el mapeo ya no se pide a M1 (decisión del PO). El procedimiento queda como referencia para una base con ids `usr-…`.
+
 **Bloquea el despliegue de la pertenencia de Campo (#365/#394).** La regla compara el `sub` numérico del token de M1 con el líder y los integrantes de la cuadrilla; las filas sembradas con ids `usr-…` nunca coinciden, así que activar la regla sin migrar deja a esas cuadrillas sin poder ejecutar servicios. Correr el script **antes** de promover (el código nuevo y la migración no se pisan: el código viejo no mira estos ids).
 
 1. Pedir a M1 el mapeo `usr-… → user_id` y guardarlo como JSON fuera del repo: `{ "usr-00010": "10", "usr-00011": "11" }` (los destinos tienen que ser numéricos).
