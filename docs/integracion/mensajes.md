@@ -72,11 +72,17 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Enviado el 26/10 (M1)
+
+**→ M1 (Ciudadanos)** — *enviado el 26/10; M1 respondió el mismo día (URL del login: la remiten a Discord y al documento; la cuenta se comparte; su programa no está hosteado; ver [`m1.md`](m1.md#respuesta-al-seguimiento-2610-cuenta-compartida-y-m1-no-hosteado))*
+
+> Gracias. Dos datos más: ¿cuál es la URL base del login? Y esa cuenta (la de empleado que nos pasaron) ¿es compartida entre grupos? Si lo es, más adelante pedimos una propia con rol `RESPONSABLE_AREA`.
+
 ## Enviados el 21/10
 
 > Redactados el 21/10 y enviados ese mismo día por el PO (#345, #347). Cuando respondan, mover la respuesta a la ficha (`m2.md`, `m7.md`, `m9.md`).
 
-**→ M7 (Tránsito)** — respuesta a sus dos mensajes del 20/10 — *enviado el 21 oct 2026, sin respuesta todavía*
+**→ M7 (Tránsito)** — respuesta a sus dos mensajes del 20/10 — *enviado el 21 oct 2026; respondido el 23/10 (UUID o `null`, ver [historial](historial.md))*
 
 > Gracias por las respuestas, nos ordenan mucho. Sí, estamos de acuerdo: a partir de ahora **dejamos de emitir `urbanServiceScheduled` y `treePruningScheduled`**, y `treeRiskDetected` va solo a M3. Lo único que les mandamos es `streetClosureRequested`. Cuando un servicio o una poda necesita cortar la calle, la solicitud la pedimos siempre con ese evento, con `sourceRef` apuntando al servicio o a la poda que origina el corte. No cambia nada de su lado ni del payload que ya tienen.
 >
@@ -91,6 +97,42 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 > Les avisamos que M6 pasa a ser productor real de `updateTicketStatus` con `updateType: INFORMATION_REQUIRED`. Lo emitimos cuando el operador le pide más información al vecino durante la revisión de la denuncia: lleva `publicMessage` con lo que se le pide y `requiredBy` (fecha límite, siempre futura); solo sale si el ticket está `IN_PROGRESS` o `ROUTED`, o si todavía no conocemos su estado. Dos confirmaciones: (1) cuando la solicitud vence o se cancela, ¿M2 emite un `ticketUpdated` con el estado al que vuelve el ticket? Nosotros cerramos la solicitud al recibir cualquier `ticketUpdated` de cambio de estado cuyo `currentStatus` ya no sea `PENDING_INFORMATION`. (2) Si mandamos `STARTED` con el ticket ya `IN_PROGRESS`, ¿lo registran y confirman sin aplicar, sin `nack`?
 >
 > Además, en el contrato nuevo (el Acuerdo y los Sobres del 21/10) M6 publica 6 eventos; los dos que dejamos de emitir (`urbanServiceScheduled` y `treePruningScheduled`) no los consumía M2, así que no cambia nada de su lado.
+
+## Pendientes de enviar (21/10, rol `SERVICIO`)
+
+**→ M1 y M9** — qué `sub_type` lleva el token de `SERVICIO` ([#363](https://github.com/hllous/Backend-M6-DAPS2/issues/363)) — *pendiente de enviar*
+
+> Una consulta sobre el rol `SERVICIO`: en la guía v2.1 de M1 el claim `sub_type` solo toma `CIUDADANO` o `EMPLEADO`, y M1 nos dijo que `SERVICIO` lo tiene M9. Cuando un módulo llame a otro con ese rol, ¿qué `sub_type` lleva su token? Hoy M6 acepta solo `CIUDADANO` y `EMPLEADO`, y rechaza con 401 cualquier otro valor; además, un `CIUDADANO` recibe 403 en toda la API. Por ahora los eventos de M9 nos llegan por RabbitMQ y no necesitamos que nos llamen por HTTP con ese rol, así que no es urgente: solo queremos tenerlo claro antes de aceptarlo.
+
+## Pendientes de enviar (21/10, M1 y M2)
+
+> Redactado el 21/10 para que el PO lo envíe. **Pendiente de enviar.** Al enviarlos, anotar la fecha acá y mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — usuario empleado y admin de roles — *enviado el 26 oct 2026, sin respuesta todavía* (respondían: «¿Para qué necesitan un usuario admin? Hoy el endpoint de login solo sirve para autenticar ciudadanos, no empleados. Es más, el id es distinto»)
+
+> Necesitamos un admin porque M6 autoriza por rol y, sin al menos un usuario con rol, toda nuestra API responde 403. Les pedimos:
+>
+> 1. Un usuario **empleado** con rol `RESPONSABLE_AREA` (o cómo lo registramos) y su `user_id` numérico, para cargarlo como administrador inicial de roles de M6.
+>
+> Y nos ayudaría que nos aclaren:
+>
+> 2. ¿El login sirve o no para empleados? Su v2.1 dice que `POST /auth/usuario/login` entrega token para `CIUDADANO` y `EMPLEADO`.
+> 3. ¿Qué quiere decir «el id es distinto»? Su doc dice que el `sub` del token es el `user_id` (bigint) del login. Si no coinciden, se nos rompe la pertenencia de Campo.
+> 4. ¿`POST /auth/refresh` y el logout siguen existiendo?
+> 5. ¿Qué significa `auth: false` en el login? ¿Un login fallido responde 401 o 200?
+
+**→ M1 (Ciudadanos)** — seguimiento a su guía v2.1 y a lo que aclaró el PO — *enviado el 21 oct 2026, sin respuesta todavía*
+
+> Gracias por la guía v2.1 y por las aclaraciones: con la lista de roles (`CIUDADANO`, `MESA_ENTRADAS`, `ADMINISTRATIVO`, `RESPONSABLE_AREA`, `AUDITOR`, `SERVICIO`), el `user_id` igual al `citizenId` y el contrato del token (HS256, clave compartida en base64, claims `iss`, `sub`, `rol`, `typ`, 15 minutos, sin `aud`) ya sabemos cómo validar. Nos quedan unos puntos:
+>
+> 1. **Secreto:** quedamos a la espera del valor de `APP_JWT_SECRET` por el grupo de POs. Sin él no podemos validar tokens reales en el despliegue.
+> 2. **Refresh y logout:** el PO nos dijo que ya no están, pero el PDF todavía documenta `POST /auth/refresh` y el logout. ¿Cuál vale? A nosotros no nos cambia (no aceptamos refresh), pero queremos que el contrato quede claro.
+> 3. **Sobre de eventos:** el del documento sigue siendo el viejo (`producer`, `subject`, `eventId` `M1-EVT-…`). Para publicar por el Core tienen que usar el sobre del Core, y el `correlationId` tiene que ser un UUID: un valor como `M6-REQ-000045` lo rechaza el Core y también nuestro buzón de entrada.
+> 4. **`auth: false`:** ¿qué significa en la respuesta del login? ¿Un login fallido responde 401 o 200 con `auth: false`?
+
+**→ M2 (Atención Ciudadana)** — ids numéricos en `updatedBy.id` — *enviado el 21 oct 2026, sin respuesta todavía*
+
+> M1 nos confirma que sus ids de usuario son numéricos: el `user_id` del login es el `citizenId`, y su base es numérica. Nos dice también que ustedes van a tener que adaptar `updatedBy.id`, que en la v1.78 exige un UUID. Mientras tanto mandamos `id: null` (salvo que el identificador ya sea un UUID). ¿Qué acepta M2 para identificar a quien actúa desde otro módulo: un número, un string o `null`?
 
 ## Pendientes de enviar (20/10)
 
@@ -109,7 +151,7 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 
 > Seguimos esperando el JWT. Para integrar necesitamos: dónde viaja (header), `alg`, claves o JWKS, claims, `iss`/`aud`, TTL, y si `RESPONSABLE_AREA` lleva un área asociada. Además, M2 v1.78 exige que `updatedBy.id` sea **UUID**, y su login devuelve `user_id` como `bigint`: ¿qué identificador viaja en el token? Hoy mandamos el `sub` si tiene forma de UUID y `null` si no. Por último, su documento sigue con el sobre viejo (`producer`, `subject`, `eventId` tipo `M1-EVT-…`): hay que pasar al sobre del Core, que además exige `correlationId` en forma UUID.
 
-**→ M4 (Habilitaciones)**
+**→ M4 (Habilitaciones)** — *respondido el 21/10 (ver `m4.md`)*
 
 > Cuatro confirmaciones sobre su contrato de octubre: (1) en `environmentalViolationDetected` mandamos `suggestedAction` con cuatro valores: `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE`. Su documento lista tres; ¿toleran `FORMAL_NOTICE`? El campo no es vinculante. (2) ¿`commercialFineGenerated` también nos lo rutean a nosotros, o solo `closureUpdate`? (3) ¿`actId` y `externalRef` son el mismo dato? (4) ¿Dejaron de publicar `ticketInProgress`? Aclaración: `sourceViolationId` reproduce exactamente el `violationId` UUID que les mandamos.
 

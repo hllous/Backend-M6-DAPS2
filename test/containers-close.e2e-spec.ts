@@ -8,8 +8,8 @@ import {
   crearZona,
   createTestApp,
   hoy,
-  tokenFor,
   truncateAll,
+  seedActores,
 } from './helpers';
 
 /**
@@ -55,8 +55,9 @@ describe('Cierre de servicio que transiciona el contenedor (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor(['SUPERVISOR']));
+    api = Api.porRol(app);
     await truncateAll(prisma);
+    await seedActores(prisma);
 
     zoneId = (await crearZona(api)).id;
     serviceTypeId = (await crearTipoServicio(api, { mode: 'POINT' })).id;

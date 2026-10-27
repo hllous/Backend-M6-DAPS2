@@ -3,7 +3,8 @@ import configuration from './configuration';
 /** El mínimo que el esquema exige para poder construir la config. */
 const BASE = {
   DATABASE_URL: 'postgresql://u:p@localhost:5432/db?schema=public',
-  JWT_SECRET: 'un-secreto-de-desarrollo',
+  // Bytes distintos: en producción un byte repetido se rechaza.
+  JWT_SECRET: Buffer.from(Array.from({ length: 32 }, (_, i) => i * 7 + 1)).toString('base64'),
 };
 
 function config(extra: Record<string, string> = {}) {
@@ -15,6 +16,71 @@ function config(extra: Record<string, string> = {}) {
     process.env = previo;
   }
 }
+
+describe('configuration — admins de bootstrap', () => {
+  it('sin la variable (o vacía) no hay admins', () => {
+    expect(config().bootstrapAdminUserIds).toEqual([]);
+    expect(config({ M6_BOOTSTRAP_ADMIN_USER_IDS: '' }).bootstrapAdminUserIds).toEqual([]);
+  });
+
+  it('parsea la lista, tolera espacios y normaliza ceros a la izquierda', () => {
+    expect(
+      config({ M6_BOOTSTRAP_ADMIN_USER_IDS: '1, 042 ,9007199254740993' }).bootstrapAdminUserIds,
+    ).toEqual(['1', '42', '9007199254740993']);
+  });
+
+  it.each(['abc', '1,,2', '1,', ',1', '1;2', '-1', '1.5'])('rechaza %p', (v) => {
+    expect(() => config({ M6_BOOTSTRAP_ADMIN_USER_IDS: v })).toThrow(/ids numéricos/);
+  });
+});
+
+describe('configuration — JWT', () => {
+  it('el emisor por defecto es el de M1', () => {
+    expect(config().jwt.issuer).toBe('modulo1-ciudadanos');
+    expect(config({ JWT_ISSUER: 'otro' }).jwt.issuer).toBe('otro');
+  });
+
+  it('rechaza un secreto que no es base64 o tiene menos de 256 bits', () => {
+    expect(() => config({ JWT_SECRET: 'un secreto con espacios' })).toThrow(/base64/);
+    expect(() => config({ JWT_SECRET: Buffer.alloc(31).toString('base64') })).toThrow(/256/);
+    expect(() => config({ JWT_SECRET: '' })).toThrow();
+  });
+
+  it('exige base64 estándar: rechaza base64url, largo no múltiplo de 4 y espacios o saltos', () => {
+    const buf = Buffer.alloc(33, 0xfb); // 0xfb.. produce `+` y `/` en estándar
+    expect(config({ JWT_SECRET: buf.toString('base64') }).jwt.secret).toBe(buf.toString('base64'));
+    expect(() => config({ JWT_SECRET: buf.toString('base64url') })).toThrow(/base64/);
+    expect(() =>
+      config({ JWT_SECRET: Buffer.alloc(32, 7).toString('base64').slice(0, -1) }),
+    ).toThrow(/largo|base64/);
+    const ok = Buffer.alloc(32, 7).toString('base64');
+    expect(() => config({ JWT_SECRET: ` ${ok}` })).toThrow(/base64/);
+    expect(() => config({ JWT_SECRET: `${ok.slice(0, 8)}\n${ok.slice(8)}` })).toThrow(/base64/);
+  });
+
+  it('en producción rechaza secretos públicos o de un byte repetido, sin imprimirlos', () => {
+    const ejemplo = 'Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==';
+    for (const s of [
+      ejemplo,
+      Buffer.alloc(32).toString('base64'),
+      Buffer.alloc(32, 9).toString('base64'),
+      Buffer.alloc(40, 0x41).toString('base64'),
+    ]) {
+      let msg = '';
+      try {
+        config({ NODE_ENV: 'production', JWT_SECRET: s });
+      } catch (e) {
+        msg = String(e);
+      }
+      expect(msg).toMatch(/JWT_SECRET no puede ser/);
+      expect(msg).not.toContain(s);
+    }
+    // Fuera de producción el de ejemplo sigue sirviendo, y uno real pasa en producción.
+    expect(config({ JWT_SECRET: ejemplo }).jwt.secret).toBe(ejemplo);
+    const real = Buffer.from(Array.from({ length: 32 }, (_, i) => i * 7 + 1)).toString('base64');
+    expect(config({ NODE_ENV: 'production', JWT_SECRET: real }).jwt.secret).toBe(real);
+  });
+});
 
 describe('configuration — CORS', () => {
   /**
@@ -133,6 +199,8 @@ describe('configuration — Core', () => {
       moduleId: 'ambiente',
       apiUrl: undefined,
       moduleSecret: undefined,
+      subscriptionMaxAttempts: 4,
+      registerOnBoot: true,
     });
     expect(config({ CORE_API_URL: '', CORE_MODULE_SECRET: '' }).core.apiUrl).toBeUndefined();
   });
@@ -140,7 +208,25 @@ describe('configuration — Core', () => {
   it('toma la URL y el secret', () => {
     expect(
       config({ CORE_API_URL: 'http://localhost:4000', CORE_MODULE_SECRET: 's3cr3t' }).core,
-    ).toEqual({ moduleId: 'ambiente', apiUrl: 'http://localhost:4000', moduleSecret: 's3cr3t' });
+    ).toMatchObject({
+      moduleId: 'ambiente',
+      apiUrl: 'http://localhost:4000',
+      moduleSecret: 's3cr3t',
+    });
+  });
+
+  it('maxAttempts y el registro al arrancar se configuran', () => {
+    const core = config({
+      CORE_SUBSCRIPTION_MAX_ATTEMPTS: '6',
+      CORE_REGISTER_ON_BOOT: 'false',
+    }).core;
+    expect(core.subscriptionMaxAttempts).toBe(6);
+    expect(core.registerOnBoot).toBe(false);
+    expect(() => config({ CORE_SUBSCRIPTION_MAX_ATTEMPTS: '0' })).toThrow();
+    expect(() => config({ CORE_REGISTER_ON_BOOT: 'quizas' })).toThrow();
+    expect(config({ CORE_REGISTER_ON_BOOT: ' FALSE ' }).core.registerOnBoot).toBe(false);
+    expect(config({ CORE_REGISTER_ON_BOOT: '0' }).core.registerOnBoot).toBe(false);
+    expect(config({ CORE_REGISTER_ON_BOOT: '1' }).core.registerOnBoot).toBe(true);
   });
 
   it('con CORE_API_URL exige CORE_MODULE_SECRET', () => {

@@ -1,5 +1,5 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { OutboxEventStatus } from '@prisma/client';
+import { M6Role, OutboxEventStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -7,9 +7,11 @@ import {
   crearTipoServicio,
   crearZona,
   createTestApp,
+  grantRoles,
   hoy,
-  tokenFor,
   truncateAll,
+  seedActores,
+  tokenFor,
 } from './helpers';
 
 /**
@@ -33,8 +35,9 @@ describe('Flujo del expediente ambiental (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor(['INSPECTOR']));
+    api = Api.porRol(app);
     await truncateAll(prisma);
+    await seedActores(prisma);
   });
 
   afterAll(async () => {
@@ -66,11 +69,14 @@ describe('Flujo del expediente ambiental (e2e)', () => {
   });
 
   it('programa la inspección y deja el expediente en INSPECTION_SCHEDULED', async () => {
+    // Oficina asigna al inspector 9007; es él quien cierra (la pertenencia, #365, lo exige).
+    await grantRoles(prisma, '9007', [M6Role.M6_CAMPO_INSPECTOR]);
     const res = await api
-      .post(`/environmental-reports/${reportId}/inspections`, { inspectorId: 'user-e2e' })
+      .post(`/environmental-reports/${reportId}/inspections`, { inspectorId: '9007' })
       .expect(201);
 
     inspectionId = res.body.id;
+    expect(res.body).toMatchObject({ inspectorId: '9007', completedByUserId: null });
 
     const expediente = await prisma.environmentalReport.findUniqueOrThrow({
       where: { id: reportId },
@@ -118,7 +124,7 @@ describe('Flujo del expediente ambiental (e2e)', () => {
       severity: 'HIGH',
       suggestedAction: 'FINE',
     };
-    const res = await api
+    const res = await new Api(app, tokenFor('ADMINISTRATIVO', '9007'))
       .post(`/environmental-inspections/${inspectionId}/complete`, {
         inspectedAt: new Date().toISOString(),
         outcome: 'VIOLATION_FOUND',
@@ -133,6 +139,12 @@ describe('Flujo del expediente ambiental (e2e)', () => {
 
     expect(res.body.outcome).toBe('VIOLATION_FOUND');
     expect(res.body).toMatchObject(cierre);
+    // completedByUserId sale del token, no del body; el asignado no se pisa.
+    expect(res.body).toMatchObject({ completedByUserId: '9007', inspectorId: '9007' });
+    const guardada = await prisma.environmentalInspection.findUniqueOrThrow({
+      where: { id: inspectionId },
+    });
+    expect(guardada).toMatchObject({ completedByUserId: '9007', inspectorId: '9007' });
 
     const detalle = await api.get(`/environmental-inspections/${inspectionId}`).expect(200);
     expect(detalle.body).toMatchObject(cierre);
@@ -159,7 +171,7 @@ describe('Flujo del expediente ambiental (e2e)', () => {
         violationType: 'UNTREATED_DISCHARGE',
         severity: 'HIGH',
         suggestedAction: 'FINE',
-        establishmentId: 'EST-E2E-01',
+        establishmentId: '7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47',
       })
       .expect(201);
 
@@ -177,7 +189,7 @@ describe('Flujo del expediente ambiental (e2e)', () => {
     expect(encolados).toHaveLength(1);
     expect(encolados[0].status).toBe(OutboxEventStatus.PENDING);
     expect((encolados[0].payload as { establishmentId: string }).establishmentId).toBe(
-      'EST-E2E-01',
+      '7b3f9c2e-4d1a-4e8b-9f60-2a5c8d1e3b47',
     );
 
     // Un solo hilo para la acción (#267): el acta hacia M4 y la novedad hacia M2

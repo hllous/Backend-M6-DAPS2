@@ -1,7 +1,7 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { Api, createTestApp, tokenFor, truncateAll } from './helpers';
+import { ACTORES, Api, createTestApp, seedActores, truncateAll } from './helpers';
 
 /**
  * #325: el aviso del acta a M2 depende del estado del ticket. PROGRESS solo
@@ -16,8 +16,9 @@ describe('Acta ambiental: aviso a M2 según el estado del ticket (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor(['INSPECTOR']));
+    api = Api.porRol(app);
     await truncateAll(prisma);
+    await seedActores(prisma);
   });
 
   afterAll(async () => {
@@ -47,8 +48,11 @@ describe('Acta ambiental: aviso a M2 según el estado del ticket (e2e)', () => {
     }
 
     const insp = await api
-      .post(`/environmental-reports/${reportId}/inspections`, { inspectorId: 'user-e2e' })
+      .post(`/environmental-reports/${reportId}/inspections`, {
+        inspectorId: ACTORES.inspector.userId,
+      })
       .expect(201);
+    expect(insp.body.inspectorId).toBe(ACTORES.inspector.userId);
     await api
       .post(`/environmental-inspections/${insp.body.id}/complete`, {
         inspectedAt: new Date().toISOString(),

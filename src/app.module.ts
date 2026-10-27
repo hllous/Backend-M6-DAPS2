@@ -9,7 +9,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
 import { CoreModule } from './core/core.module';
-import { JwtAuthGuard } from './common/guards';
+import { JwtAuthGuard, RolesGuard } from './common/guards';
 
 // Módulos de dominio
 import { ZonesModule } from './modules/zones/zones.module';
@@ -31,6 +31,7 @@ import { CitizenPortalModule } from './modules/citizen-portal/citizen-portal.mod
 import { WeatherAlertsModule } from './modules/weather-alerts/weather-alerts.module';
 import { AttachmentsModule } from './modules/attachments/attachments.module';
 import { IndicatorsModule } from './modules/indicators/indicators.module';
+import { RoleAssignmentsModule } from './modules/role-assignments/role-assignments.module';
 
 @Module({
   imports: [
@@ -67,10 +68,13 @@ import { IndicatorsModule } from './modules/indicators/indicators.module';
     WeatherAlertsModule,
     AttachmentsModule,
     IndicatorsModule,
+    RoleAssignmentsModule,
   ],
   providers: [
     // Todo endpoint exige JWT por defecto. Los publicos se marcan con @Public().
+    // El orden importa: RolesGuard lee el usuario que deja JwtAuthGuard.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AppModule {}

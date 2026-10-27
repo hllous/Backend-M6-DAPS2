@@ -15,7 +15,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { TreesService } from './trees.service';
 import { CreateTreeDto, UpdateTreeDto, TreeResponseDto, QueryTreesDto } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_OPERACIONES } from '../../auth/role-groups';
 
 @ApiTags('trees')
 @ApiBearerAuth('JWT-auth')
@@ -24,6 +25,7 @@ export class TreesController {
   constructor(private readonly treesService: TreesService) {}
 
   @Post()
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Registrar un árbol',
     description:
@@ -32,11 +34,6 @@ export class TreesController {
   @ApiResponse({ status: 201, description: 'Árbol registrado exitosamente', type: TreeResponseDto })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para registrar árboles',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({
     status: 404,
     description: 'Zona referenciada no encontrada',
@@ -80,6 +77,7 @@ export class TreesController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Actualizar datos de un árbol',
     description: 'Actualiza los campos mutables. El código de relevamiento no se puede cambiar.',
@@ -92,7 +90,6 @@ export class TreesController {
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({ status: 403, description: 'Sin permisos', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Árbol o zona no encontrada', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async update(
@@ -103,6 +100,7 @@ export class TreesController {
   }
 
   @Delete(':id')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Desactivar un árbol del inventario',
@@ -111,7 +109,6 @@ export class TreesController {
   @ApiParam({ name: 'id', description: 'UUID del árbol', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Árbol desactivado exitosamente' })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({ status: 403, description: 'Sin permisos', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Árbol no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {

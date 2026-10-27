@@ -10,8 +10,12 @@ export default () => {
     },
     jwt: {
       secret: parsed.JWT_SECRET,
-      expirationSeconds: parsed.JWT_EXPIRATION,
+      issuer: parsed.JWT_ISSUER,
     },
+    // Ids como string, sin ceros a la izquierda ('007' y '7' son el mismo `sub` de M1).
+    bootstrapAdminUserIds: (parsed.M6_BOOTSTRAP_ADMIN_USER_IDS?.split(',') ?? []).map((id) =>
+      BigInt(id.trim()).toString(),
+    ),
     sanctionDeadlineDays: parsed.SANCTION_DEADLINE_DAYS,
     rabbitmq: {
       url: parsed.RABBITMQ_URL,
@@ -23,6 +27,8 @@ export default () => {
       moduleId: parsed.CORE_MODULE_ID,
       apiUrl: parsed.CORE_API_URL,
       moduleSecret: parsed.CORE_MODULE_SECRET,
+      subscriptionMaxAttempts: parsed.CORE_SUBSCRIPTION_MAX_ATTEMPTS,
+      registerOnBoot: parsed.CORE_REGISTER_ON_BOOT,
     },
     corsOrigins: parsed.CORS_ORIGINS?.split(',')
       .map((o) => o.trim())

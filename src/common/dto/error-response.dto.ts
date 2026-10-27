@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
  * DTO estándar de error para documentar @ApiResponse de errores.
@@ -13,6 +13,13 @@ export class ErrorResponseDto {
 
   @ApiProperty({ example: 'Not Found' })
   error: string;
+
+  @ApiPropertyOptional({
+    example: 'ROLE_REQUIRED',
+    description:
+      'Código estable, solo en algunos errores: ROLE_REQUIRED (403 por falta de rol de M6) o NOT_ASSIGNED (403 por pertenencia: el recurso no es de su cuadrilla ni se le asignó)',
+  })
+  code?: string;
 
   @ApiProperty({ example: '2026-08-20T10:00:00.000Z' })
   timestamp: string;

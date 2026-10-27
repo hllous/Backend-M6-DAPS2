@@ -13,6 +13,7 @@ import {
   hoy,
   tokenFor,
   truncateAll,
+  seedActores,
 } from './helpers';
 
 /** El sobre de la cohorte v1.70: `producer` viaja como objeto, no como string. */
@@ -50,8 +51,9 @@ describe('Inbox de eventos entrantes (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    api = new Api(app, tokenFor(['SUPERVISOR']));
+    api = Api.porRol(app);
     await truncateAll(prisma);
+    await seedActores(prisma);
 
     const zona = await crearZona(api);
     zoneId = zona.id;
@@ -355,5 +357,22 @@ describe('Inbox de eventos entrantes (e2e)', () => {
     const fila = await prisma.inboxEvent.findUniqueOrThrow({ where: { messageId: eventId } });
     // Queda el marcador de idempotencia, no el contenido de negocio ajeno.
     expect(fila.payload).toEqual({ redacted: 'contenido no persistido' });
+  });
+
+  describe('solo personal municipal (#359)', () => {
+    it('un token de ciudadano recibe 403 en lectura, escritura e inbox; el de empleado pasa', async () => {
+      // M1 emite al vecino con rol PERSONA; el rol CIUDADANO se cubre por si cambia.
+      const vecino = new Api(app, tokenFor('PERSONA', '1', 'CIUDADANO'));
+      await new Api(app, tokenFor('CIUDADANO', '1', 'CIUDADANO')).get('/zones').expect(403);
+
+      const lectura = await vecino.get('/zones').expect(403);
+      expect(lectura.body.message).toBe('Este sistema es solo para personal municipal');
+      await vecino.post('/zones', { code: 'X', name: 'X' }).expect(403);
+      await vecino
+        .post('/events/inbox', sobre(randomUUID(), 'eventoQueNadieEscucha', { algo: 1 }))
+        .expect(403);
+
+      await api.get('/zones').expect(200);
+    });
   });
 });

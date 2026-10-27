@@ -54,15 +54,23 @@ export function deducirEstado(updateType: TicketUpdateType): string | null {
 }
 
 /**
- * Agendar cuenta como tomar la gestión (M2, 20/10). Solo en estos estados M2
- * acepta un `STARTED`; en `IN_PROGRESS` lo que vale es un `PROGRESS`.
+ * Agendar o iniciar cuenta como tomar la gestión (M2, 20/10). M2 acepta un
+ * `STARTED` solo desde `ROUTED` (§8.2, respuesta del 23/10, #396); en
+ * `IN_PROGRESS` lo que vale es un `PROGRESS`.
  *
  * "Desconocido" es solo `null`/`undefined`: un ticket que nunca vimos ni
  * deducimos (p. ej. uno que ya estaba `IN_PROGRESS` antes del deploy). Se trata
  * como `ROUTED`, que es como M2 entrega un ticket al área. Un valor fuera de
  * la lista de M2 no se persiste (ver `esEstadoM2`), así que tampoco llega acá.
  */
-const ACEPTA_STARTED = ['ROUTED', 'IN_REVIEW'];
+const ACEPTA_STARTED = ['ROUTED'];
+
+/** Mismo criterio para `scheduleUpdate` y `startUpdate`, para que no vuelvan a divergir. */
+function updateTypeDesde(estadoActual: string | null | undefined): 'STARTED' | 'PROGRESS' | null {
+  if (estadoActual === 'IN_PROGRESS') return 'PROGRESS';
+  if (!estadoActual || ACEPTA_STARTED.includes(estadoActual)) return 'STARTED';
+  return null;
+}
 
 /**
  * El evento hacia M2 que informa la programación, o `null` si no corresponde
@@ -73,20 +81,20 @@ export function scheduleUpdate(
   estadoActual: string | null | undefined,
   publicMessage: string,
 ): { updateType: 'STARTED' | 'PROGRESS'; publicMessage: string } | null {
-  if (estadoActual === 'IN_PROGRESS') return { updateType: 'PROGRESS', publicMessage };
-  if (!estadoActual || ACEPTA_STARTED.includes(estadoActual)) {
-    return { updateType: 'STARTED', publicMessage };
-  }
-  return null;
+  const updateType = updateTypeDesde(estadoActual);
+  return updateType && { updateType, publicMessage };
 }
 
 /**
  * `STARTED` al comenzar la gestión, salvo que el ticket ya esté `IN_PROGRESS`
  * (porque agendar ya lo arrancó): ahí repetir `STARTED` no es válido y se manda
- * `PROGRESS` con el mismo mensaje.
+ * `PROGRESS` con el mismo mensaje. `null` si M2 no aceptaría ninguno de los dos:
+ * la transición de dominio se completa igual, solo se omite el aviso.
  */
-export function startUpdate(estadoActual: string | null | undefined): 'STARTED' | 'PROGRESS' {
-  return estadoActual === 'IN_PROGRESS' ? 'PROGRESS' : 'STARTED';
+export function startUpdate(
+  estadoActual: string | null | undefined,
+): 'STARTED' | 'PROGRESS' | null {
+  return updateTypeDesde(estadoActual);
 }
 
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];

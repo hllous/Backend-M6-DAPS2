@@ -21,11 +21,11 @@ Depende de `status`:
 |---|---|
 | `status` | `ORDERED` \| `LIFTED`. Discrimina cuál de los dos comportamientos aplicar |
 | ✅ `sourceViolationId` | El `violationId` de nuestra acta. **Confirmado (24/08)** en el payload de ejemplo. Era nuestro bloqueante principal, queda cerrado |
-| `actId` | Nuevo en el documento vigente. 🟡 A confirmar si es el mismo dato que `externalRef` (ver [`commercialFineGenerated`](commercialFineGenerated.md)) |
+| `actId` | ✅ Confirmado (21/10): es distinto de `externalRef`. Es el identificador interno del acta de M4 que fundamenta la sanción. No lo persistimos: queda como dato del evento |
 | `establishmentId` | Ya lo tienen, lo aprovechamos |
 | `decision` | Qué resolvieron |
 | ⚠️ `decidedAt` | Confirmado verbalmente (24/08) que lo reincorporan — el ejemplo publicado todavía no lo muestra |
-| ⚠️ `externalRef` | Su identificador de la clausura. Mismo caso que `decidedAt` |
+| ⚠️ `externalRef` | La referencia administrativa visible de la clausura (se guarda en `SanctionOutcome.externalRef`). Mismo caso que `decidedAt` |
 
 ## Por qué adoptamos `LIFTED` como señal de cierre
 
@@ -44,8 +44,10 @@ Conviene tener claro qué cubre y qué no, porque no son sinónimos exactos:
 
 Es menos preciso que un evento —una desestimación y una demora de M4 se ven igual— pero evita el expediente eterno y **no depende de que otro grupo agregue nada**. Ese es el argumento a favor: una dependencia menos.
 
-## Lo que falta confirmar
+## Ruteo y suscripción
 
-🟡 **¿`actId` es lo mismo que `externalRef`?** Si es el mismo número con otro nombre, conviene decírselo para no duplicar el campo.
+✅ **Confirmado (21/10):** M4 nos manda `closureUpdate` cuando corresponda. Ya figura entre las 8 suscripciones del registro de #266 (`src/events/inbox/consumed-events.ts`, `src/core/core-registry.service.ts`).
 
-Ver el resto de M4 en [bloqueantes.md](../../integracion/m4.md#m4--habilitaciones--con-dos-preguntas-abiertas).
+⚠️ **Código a revisar:** `sanctions.consumer.ts` guarda `externalRef ?? actId`; como son datos distintos, el respaldo con `actId` no corresponde (derivado al implementador).
+
+Ver el resto de M4 en [m4.md](../../integracion/m4.md#acordado-el-2110).

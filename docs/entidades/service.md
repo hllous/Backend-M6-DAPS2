@@ -55,6 +55,8 @@ stateDiagram-v2
 
 `statusNote` es el detalle opcional de la suspensión: solo vive mientras el servicio está `SUSPENDED`; `resume` y `cancel` lo ponen en `null`. Solo `suspend` la recibe.
 
+**Quién ejecuta (#365).** `start`, `suspend`, `resume`, `complete` y los POST de `zone-results`, `collection-records` y `delay-notices` los hace la cuadrilla del servicio: el usuario del token tiene que ser el líder (`leaderUserId`) o un integrante (`CrewMember.userId`) de `crewId`; si no, `403 NOT_ASSIGNED`. Un servicio sin cuadrilla no pertenece a nadie, así que también da 403 (antes `start` daba 409). El chequeo va antes que la máquina de estados. Oficina (asignar, cancelar, reprogramar) no tiene la restricción. Los ids de líder e integrantes son los `user_id` numéricos de M1, normalizados sin ceros a la izquierda. Detalle en [endpoints](../api/endpoints.md#pertenencia-de-campo-365-394) y [ADR-008](../decisiones/adr-008-roles-m6-adaptados-desde-m1.md).
+
 `DELAYED` **no es un estado**: es un aviso, y vive en su propia tabla. El servicio sigue en `SCHEDULED` o en `IN_PROGRESS` mientras se demora, y esos son los dos únicos momentos en los que un retraso significa algo — uno cerrado ya no se demora, y uno suspendido tiene su motivo en `statusReason`.
 
 El tipo tiene que coincidir con el momento: `START` es empezar tarde y solo aplica antes de arrancar; `DURATION` es tardar más, y solo aplica con la cuadrilla trabajando. Aceptar la combinación cruzada dejaría entrar datos que después nadie sabe leer.

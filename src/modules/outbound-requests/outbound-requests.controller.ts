@@ -23,14 +23,10 @@ import {
   StreetClosureRequestResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
-const FORBIDDEN = {
-  status: 403,
-  description: 'Sin permisos sobre derivaciones',
-  type: ErrorResponseDto,
-};
 const CONFLICT = {
   status: 409,
   description: 'Transición de estado inválida desde el estado actual',
@@ -45,6 +41,7 @@ export class RepairRequestsController {
   constructor(private readonly service: OutboundRequestsService) {}
 
   @Post()
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Solicitar una reparación a Obras Públicas',
     description:
@@ -62,7 +59,6 @@ export class RepairRequestsController {
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
-  @ApiResponse(FORBIDDEN)
   @ApiResponse(SERVER)
   async create(@Body() dto: CreateRepairRequestDto): Promise<RepairRequestResponseDto> {
     return this.service.createRepairRequest(dto);
@@ -95,6 +91,7 @@ export class RepairRequestsController {
   }
 
   @Post(':id/start')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Marcar la reparación como en curso',
@@ -104,7 +101,6 @@ export class RepairRequestsController {
   @ApiParam({ name: 'id', description: 'UUID de la solicitud', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Solicitud en curso', type: RepairRequestResponseDto })
   @ApiResponse(AUTH)
-  @ApiResponse(FORBIDDEN)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
@@ -116,6 +112,7 @@ export class RepairRequestsController {
   }
 
   @Post(':id/close')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cerrar la solicitud de reparación',
@@ -125,7 +122,6 @@ export class RepairRequestsController {
   @ApiParam({ name: 'id', description: 'UUID de la solicitud', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Solicitud cerrada', type: RepairRequestResponseDto })
   @ApiResponse(AUTH)
-  @ApiResponse(FORBIDDEN)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
@@ -141,6 +137,7 @@ export class StreetClosureRequestsController {
   constructor(private readonly service: OutboundRequestsService) {}
 
   @Post()
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Solicitar un corte de calle a Tránsito',
     description:
@@ -168,7 +165,6 @@ export class StreetClosureRequestsController {
     type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
-  @ApiResponse(FORBIDDEN)
   @ApiResponse(SERVER)
   async create(
     @Body() dto: CreateStreetClosureRequestDto,
@@ -208,6 +204,7 @@ export class StreetClosureRequestsController {
   }
 
   @Post(':id/approve')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Registrar la aprobación del corte',
@@ -221,7 +218,6 @@ export class StreetClosureRequestsController {
     type: StreetClosureRequestResponseDto,
   })
   @ApiResponse(AUTH)
-  @ApiResponse(FORBIDDEN)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
@@ -233,6 +229,7 @@ export class StreetClosureRequestsController {
   }
 
   @Post(':id/reject')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Registrar el rechazo del corte',
@@ -247,7 +244,6 @@ export class StreetClosureRequestsController {
   })
   @ApiResponse({ status: 400, description: 'Falta el motivo', type: ErrorResponseDto })
   @ApiResponse(AUTH)
-  @ApiResponse(FORBIDDEN)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
@@ -259,6 +255,7 @@ export class StreetClosureRequestsController {
   }
 
   @Post(':id/end')
+  @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Registrar el fin del corte',
@@ -272,7 +269,6 @@ export class StreetClosureRequestsController {
     type: StreetClosureRequestResponseDto,
   })
   @ApiResponse(AUTH)
-  @ApiResponse(FORBIDDEN)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)

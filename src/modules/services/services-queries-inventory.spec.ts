@@ -12,6 +12,7 @@ import { ServiceTargetType } from './dto';
  * `services-delay-assignment.spec.ts` (demora y solapamiento) y
  * `services-container-close.spec.ts` (cierre).
  */
+const USER_ID = '4242';
 const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
 const TYPE_ID = '22222222-2222-2222-2222-222222222222';
 const ROUTE_ID = '33333333-3333-3333-3333-333333333333';
@@ -39,7 +40,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
     scheduledDate: new Date('2026-09-15T00:00:00.000Z'),
     windowFrom: null,
     windowTo: null,
-    crewId: null,
+    crewId: CREW_ID,
     vehicleId: null,
     ticketId: null,
     notes: null,
@@ -74,6 +75,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
       greenSpace: { findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_A }) },
       greenPoint: { findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_A }) },
       crew: {
+        count: jest.fn().mockResolvedValue(1),
         findUnique: jest.fn().mockResolvedValue({ id: CREW_ID, active: true, name: 'Norte' }),
       },
       vehicle: {
@@ -403,7 +405,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
     it('registra la recolección de un servicio iniciado', async () => {
       prisma.service.findUnique.mockResolvedValue(enCurso());
 
-      await service.addCollectionRecord(SERVICE_ID, dto);
+      await service.addCollectionRecord(SERVICE_ID, dto, USER_ID);
 
       expect(prisma.collectionRecord.create.mock.calls[0][0].data).toMatchObject({
         serviceId: SERVICE_ID,
@@ -413,7 +415,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
     });
 
     it('no se registra sobre un servicio que todavía no arrancó', async () => {
-      await expect(service.addCollectionRecord(SERVICE_ID, dto)).rejects.toBeInstanceOf(
+      await expect(service.addCollectionRecord(SERVICE_ID, dto, USER_ID)).rejects.toBeInstanceOf(
         ConflictException,
       );
     });
@@ -422,7 +424,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
       prisma.service.findUnique.mockResolvedValue(enCurso());
       prisma.disposalSite.findUnique.mockResolvedValue(null);
 
-      await expect(service.addCollectionRecord(SERVICE_ID, dto)).rejects.toBeInstanceOf(
+      await expect(service.addCollectionRecord(SERVICE_ID, dto, USER_ID)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -435,7 +437,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
         active: false,
       });
 
-      await expect(service.addCollectionRecord(SERVICE_ID, dto)).rejects.toBeInstanceOf(
+      await expect(service.addCollectionRecord(SERVICE_ID, dto, USER_ID)).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
@@ -445,7 +447,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
       prisma.service.findUnique.mockResolvedValue(enCurso());
 
       await expect(
-        service.addCollectionRecord(SERVICE_ID, { ...dto, zoneResultId: 'de-otro' }),
+        service.addCollectionRecord(SERVICE_ID, { ...dto, zoneResultId: 'de-otro' }, USER_ID),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -457,7 +459,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
         }),
       );
 
-      await service.addCollectionRecord(SERVICE_ID, { ...dto, zoneResultId: 'zr1' });
+      await service.addCollectionRecord(SERVICE_ID, { ...dto, zoneResultId: 'zr1' }, USER_ID);
 
       expect(prisma.collectionRecord.create.mock.calls[0][0].data.zoneResultId).toBe('zr1');
     });

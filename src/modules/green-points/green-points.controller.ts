@@ -20,7 +20,8 @@ import {
   UpdateGreenPointDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ROLES_OPERACIONES } from '../../auth/role-groups';
 
 @ApiTags('green-points')
 @ApiBearerAuth('JWT-auth')
@@ -29,6 +30,7 @@ export class GreenPointsController {
   constructor(private readonly greenPointsService: GreenPointsService) {}
 
   @Post()
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Registrar un punto verde',
     description:
@@ -41,11 +43,6 @@ export class GreenPointsController {
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para registrar puntos verdes',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({
     status: 404,
     description: 'Zona referenciada no encontrada',
@@ -89,6 +86,7 @@ export class GreenPointsController {
   }
 
   @Patch(':id')
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Actualizar un punto verde',
     description:
@@ -103,11 +101,6 @@ export class GreenPointsController {
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para actualizar puntos verdes',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 404,
     description: 'Punto verde o zona no encontrada',
     type: ErrorResponseDto,
@@ -121,6 +114,7 @@ export class GreenPointsController {
   }
 
   @Delete(':id')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Deshabilitar un punto verde',
@@ -130,11 +124,6 @@ export class GreenPointsController {
   @ApiParam({ name: 'id', description: 'UUID del punto verde', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Punto verde deshabilitado exitosamente' })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para deshabilitar puntos verdes',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({ status: 404, description: 'Punto verde no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {

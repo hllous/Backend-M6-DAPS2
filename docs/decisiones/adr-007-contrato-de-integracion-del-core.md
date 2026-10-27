@@ -70,6 +70,8 @@ Respuesta a #258, punto por punto en [bloqueantes.md](../bloqueantes.md). No cam
 
 **Nota del 20/10 (actualizado el 20/10 con la decisión del PO).** La cadena de reintentos vigente es la de la guía común de M9: escalones de 5 s, 30 s, 2 min y 10 min según el intento, y `maxAttempts=4` como cuatro intentos totales, incluido el inicial (tres reintentos); agotados, queda una entrega fallida y una dead letter en el Core. La cadena 15 s → 1 m → 5 m → 15 m (`RETRY_DELAYS=15,60,300,900`) que M9 había informado antes quedó **reemplazada** y se conserva arriba solo como registro histórico. La guía no detalla qué escalón usa cada intento, así que los docs no dan un total. No cambia nada del código (`nack` sin reencolar). Ver [m9.md](../integracion/m9.md).
 
+**Nota de corrección del 22/10.** M9 precisó que con `maxAttempts=4` hay un intento inicial y hasta tres reintentos con esperas de 5 s, 30 s y 120 s (155 s nominales): el escalón de 10 min de la nota anterior no se usa.
+
 ## Referencias
 
 - [ADR-006](adr-006-rabbitmq-como-bus.md) — reemplazado parcialmente por este ADR.

@@ -19,7 +19,8 @@ import {
   AssignInterventionServiceDto,
 } from './dto';
 import { ErrorResponseDto } from '../../../common/dto';
-import { ApiPaginatedResponse } from '../../../common/decorators';
+import { ApiPaginatedResponse, CurrentUser, Roles } from '../../../common/decorators';
+import { ROLES_OPERACIONES } from '../../../auth/role-groups';
 
 @ApiTags('tree-interventions')
 @ApiBearerAuth('JWT-auth')
@@ -28,6 +29,7 @@ export class TreeInterventionsController {
   constructor(private readonly treeInterventionsService: TreeInterventionsService) {}
 
   @Post()
+  @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Solicitar una intervención sobre árboles',
     description:
@@ -40,11 +42,6 @@ export class TreeInterventionsController {
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Sin permisos para solicitar intervenciones',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({
     status: 404,
     description: 'Uno o más árboles no encontrados',
@@ -94,6 +91,7 @@ export class TreeInterventionsController {
   // ─── Transiciones de estado ────────────────────────
 
   @Post(':id/submit-for-authorization')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Enviar extracción a autorización',
@@ -122,11 +120,12 @@ export class TreeInterventionsController {
   }
 
   @Post(':id/authorize')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Autorizar una intervención',
     description:
-      'Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó y cuándo.',
+      'Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó (el usuario del token) y cuándo.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la intervención', format: 'uuid' })
   @ApiResponse({
@@ -141,11 +140,13 @@ export class TreeInterventionsController {
   async authorize(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AuthorizeInterventionDto,
+    @CurrentUser('userId') userId: string,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.authorize(id, dto);
+    return this.treeInterventionsService.authorize(id, dto, userId);
   }
 
   @Post(':id/reject')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Rechazar una intervención',
@@ -166,6 +167,7 @@ export class TreeInterventionsController {
   }
 
   @Post(':id/assign-service')
+  @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Asociar la intervención al servicio que la ejecuta',
@@ -184,7 +186,6 @@ export class TreeInterventionsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({ status: 403, description: 'Sin permisos', type: ErrorResponseDto })
   @ApiResponse({
     status: 404,
     description: 'Intervención o servicio no encontrado',

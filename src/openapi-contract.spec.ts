@@ -9,7 +9,7 @@ import { PrismaService } from './prisma/prisma.service';
 import { buildSwaggerConfig } from './swagger-config';
 
 process.env.DATABASE_URL ??= 'postgresql://openapi:openapi@localhost:5432/openapi?schema=public';
-process.env.JWT_SECRET ??= 'solo-para-generar-el-contrato';
+process.env.JWT_SECRET ??= Buffer.alloc(32).toString('base64');
 
 describe('contrato OpenAPI', () => {
   let documento: ReturnType<typeof SwaggerModule.createDocument>;

@@ -55,9 +55,8 @@ const TEXTOS: Array<[string, new () => object, string, number]> = [
   ['CreateServiceDto', CreateServiceDto, 'weatherAlertId', 100],
   ['CreateEnvironmentalReportDto', CreateEnvironmentalReportDto, 'description', 2000],
   ['UpdateServiceDto', UpdateServiceDto, 'notes', 2000],
-  ['CreateCrewDto', CreateCrewDto, 'leaderUserId', 100],
+  // leaderUserId e integrantes de cuadrilla son ids numericos de M1 (hasta 19 digitos): crew-user-ids.dto.spec.
   ['CreateCrewDto', CreateCrewDto, 'organizationId', 100],
-  ['UpdateCrewDto', UpdateCrewDto, 'leaderUserId', 100],
   ['UpdateCrewDto', UpdateCrewDto, 'organizationId', 100],
   ['AuthorizeInterventionDto', AuthorizeInterventionDto, 'authorizedByUserId', 100],
   ['CreateTreeSurveyDto', CreateTreeSurveyDto, 'inspectorId', 100],
@@ -71,7 +70,7 @@ const TEXTOS: Array<[string, new () => object, string, number]> = [
 const UUID = (i: number) => `550e8400-e29b-41d4-a716-${String(i).padStart(12, '0')}`;
 const ARRAYS: Array<[string, new () => object, string, (i: number) => unknown]> = [
   ['CreateTreeInterventionDto', CreateTreeInterventionDto, 'treeIds', UUID],
-  ['AddCrewMembersDto', AddCrewMembersDto, 'userIds', (i) => `usr-${i}`],
+  ['AddCrewMembersDto', AddCrewMembersDto, 'userIds', (i) => String(i + 1)],
   ['AddNeighborhoodsDto', AddNeighborhoodsDto, 'neighborhoodIds', (i) => `barrio-${i}`],
 ];
 
@@ -87,8 +86,10 @@ function titulos<A extends unknown[]>(tabla: Array<[string, ...A]>): Array<[stri
   return tabla.map(([n, ...r]) => [`${n}.${String(r[1])}`, ...r] as [string, ...A]);
 }
 
-// El UUID de treeIds ya acota el largo del elemento: solo se prueba el tamano.
-const ARRAYS_DE_TEXTO = ARRAYS.filter(([, , campo]) => campo !== 'treeIds');
+// El UUID de treeIds y el id numerico de M1 de los integrantes ya acotan el largo del elemento: solo se prueba el tamano.
+const ARRAYS_DE_TEXTO = ARRAYS.filter(
+  ([n, , campo]) => campo !== 'treeIds' && n !== 'AddCrewMembersDto',
+);
 
 describe('topes de largo de los DTO de entrada', () => {
   it.each(titulos(TEXTOS))('%s: el tope pasa y tope+1 falla', async (_n, clase, campo, tope) => {

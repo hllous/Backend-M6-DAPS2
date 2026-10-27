@@ -2,11 +2,12 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 /**
  * Extrae el usuario autenticado del request (puesto por JwtStrategy).
- * El shape del user depende del claim set de M1 — pendiente de definir.
+ * Es un `AuthenticatedUser` (`userId`, `subType`, `m1Role` y `roles` de M6
+ * efectivos), armado por JwtStrategy a partir del access token de M1.
  *
  * @example
  * @Get('profile')
- * getProfile(@CurrentUser() user: JwtPayload) { ... }
+ * getProfile(@CurrentUser() user: AuthenticatedUser) { ... }
  *
  * @example con campo específico
  * @Get('profile')

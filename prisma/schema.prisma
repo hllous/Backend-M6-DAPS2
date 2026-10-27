@@ -815,22 +815,24 @@ model EnvironmentalReport {
 }
 
 model EnvironmentalInspection {
-  id              String              @id @default(uuid()) @db.Uuid
-  reportId        String              @map("report_id") @db.Uuid
-  serviceId       String?             @unique @map("service_id") @db.Uuid
-  inspectorId     String?             @map("inspector_id") // EXT M1 — interno
-  inspectedAt     DateTime?           @map("inspected_at")
-  findings        String?             @db.Text // interno
-  outcome         InspectionOutcome?
-  nextStep        InspectionNextStep? @map("next_step")
+  id                String              @id @default(uuid()) @db.Uuid
+  reportId          String              @map("report_id") @db.Uuid
+  serviceId         String?             @unique @map("service_id") @db.Uuid
+  inspectorId       String?             @map("inspector_id") // EXT M1 — interno: el inspector que Oficina asignó al programar (opcional)
+  // Quien cerró la inspección: siempre el usuario del token en `complete`. No pisa inspectorId.
+  completedByUserId String?             @map("completed_by_user_id") // EXT M1 — interno
+  inspectedAt       DateTime?           @map("inspected_at")
+  findings          String?             @db.Text // interno
+  outcome           InspectionOutcome?
+  nextStep          InspectionNextStep? @map("next_step")
   // Lo que el inspector deja al cerrar (#217). Los tres de infracción son
   // orientativos: el acta los vuelve a pedir y es la que vale ante M4.
-  conclusion      String?             @db.Text // interno
-  violationType   ViolationType?      @map("violation_type")
-  severity        Severity?
-  suggestedAction SuggestedAction?    @map("suggested_action")
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
+  conclusion        String?             @db.Text // interno
+  violationType     ViolationType?      @map("violation_type")
+  severity          Severity?
+  suggestedAction   SuggestedAction?    @map("suggested_action")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
 
   report          EnvironmentalReport @relation(fields: [reportId], references: [id])
   service         Service?            @relation(fields: [serviceId], references: [id])
@@ -1013,4 +1015,49 @@ model TicketM2State {
   updatedAt  DateTime          @updatedAt @map("updated_at")
 
   @@map("ticket_m2_state")
+}
+
+// ── Roles de M6 (#161, ADR-008) ──────────────────────────────────────────────
+
+// Roles propios de M6. Ninguno viene de M1: los asigna un M6_ADMIN y el rol de
+// M1 solo dice cuáles se le pueden asignar a la persona.
+enum M6Role {
+  M6_ADMIN
+  M6_OFICINA_OPERACIONES
+  M6_OFICINA_AMBIENTAL
+  M6_CAMPO_CUADRILLA
+  M6_CAMPO_INSPECTOR
+  M6_AUDITOR
+}
+
+enum RoleAssignmentAction {
+  GRANT
+  REVOKE
+}
+
+// Asignación local de un rol de M6 a un usuario de M1. `userId` es el `sub` del
+// token (id numérico de M1) guardado como TEXTO: un bigint pierde precisión en
+// JSON y M6 no hace cuentas con él.
+model UserRoleAssignment {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") // EXT M1
+  role      M6Role
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, role])
+  @@map("user_role_assignment")
+}
+
+// Registro append-only de cada alta/baja de rol. Sin UPDATE ni DELETE: lo
+// impone un trigger en la migración, no solo el código.
+model RoleAssignmentAudit {
+  id           String               @id @default(uuid()) @db.Uuid
+  actorUserId  String               @map("actor_user_id") // quién cambió (M1)
+  targetUserId String               @map("target_user_id") // a quién (M1)
+  action       RoleAssignmentAction
+  role         M6Role
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  @@index([targetUserId, createdAt])
+  @@map("role_assignment_audit")
 }
