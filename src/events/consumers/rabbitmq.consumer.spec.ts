@@ -71,6 +71,11 @@ describe('RabbitMqConsumer', () => {
       expect(inbox.ingest.mock.calls[0][0].occurredAt).toBeUndefined();
     });
 
+    it('un sobre de M1 con occuredAt llega al inbox con occurredAt poblado', async () => {
+      await consumer.handle(json({ ...sobre, occuredAt: '2026-10-27T10:00:00Z' }));
+      expect(inbox.ingest.mock.calls[0][0].occurredAt).toBe('2026-10-27T10:00:00Z');
+    });
+
     it('el sobre del Core llega al inbox con eventId y la correlación', async () => {
       const core = {
         eventId: '3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11',

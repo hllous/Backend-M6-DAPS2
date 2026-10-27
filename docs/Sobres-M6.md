@@ -542,13 +542,13 @@ Cada entrega por `q.ambiente` se contesta así:
 
 - Reenviar el `eventId` de un evento **cuyo handler falló** vuelve a correr el handler. Uno ya procesado o en curso sale como duplicado.
 - Un mensaje inválido no se guarda: no ocupa el `eventId` y se puede reenviar corregido con el mismo.
-- Los campos extra dentro de `data` se toleran al recibir. Los del sobre se toleran por el bus (por ejemplo `receivedAt`) y se rechazan por `POST /events/inbox`.
+- Los campos extra dentro de `data` se toleran al recibir. Los del sobre se toleran por el bus (por ejemplo `receivedAt`) y se rechazan por `POST /events/inbox`, salvo `occuredAt` (typo de M1 v3.0), que se acepta como alias de `occurredAt`.
 
 **Errores comunes**
 
 | Qué | Consecuencia |
 |---|---|
-| `occuredAt` (una sola `r`) | El Core lo rechaza o el `occurredAt` queda ausente |
+| `occuredAt` (una sola `r`) | Al emitir: el Core lo rechaza o el `occurredAt` queda ausente. Al recibir de M1 se tolera: el inbox lo lee como `occurredAt` (si vienen los dos manda `occurredAt`) |
 | Un `eventId` repetido para eventos distintos | El segundo se descarta como duplicado |
 | `correlationId` o `causationId` que no tiene forma de UUID (por ejemplo `M6-REQ-000045`) | Rechazo del mensaje |
 | `correlationId` con forma 8-4-4-4-12 pero sin versión o variante válida (por ejemplo todo ceros) | Lo aceptamos y lo propagamos tal cual en lo que publicamos a partir de ese evento |
