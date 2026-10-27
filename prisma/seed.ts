@@ -2574,7 +2574,8 @@ async function main() {
   // sin operación, y la próxima corrida arranca limpia.
   await prisma.$transaction((tx) => sembrarOperacion(tx, planes, catalogo), {
     maxWait: 30_000,
-    timeout: 10 * 60_000,
+    // La agenda llega hasta el fin de la cursada: contra una base remota son miles de inserciones en serie.
+    timeout: 60 * 60_000,
   });
 
   await resumen();
