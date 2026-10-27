@@ -72,9 +72,14 @@ export class ZonesController {
   @ApiOperation({
     summary: 'Listar zonas operativas',
     description:
-      'Retorna un listado paginado de zonas operativas. Se puede filtrar por estado activo/inactivo y buscar por nombre.',
+      'Retorna un listado paginado de zonas operativas. Se puede filtrar por estado activo/inactivo y buscar por nombre o por comuna (`communeId`). Cada zona incluye su `commune` y su `neighborhood` (uno solo: el primero por id si la zona tiene varios).',
   })
   @ApiPaginatedResponse(ZoneResponseDto, 'Listado paginado de zonas')
+  @ApiResponse({
+    status: 400,
+    description: 'Parámetros de consulta inválidos (por ejemplo, communeId que no es UUID)',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',

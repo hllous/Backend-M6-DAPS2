@@ -6,6 +6,8 @@ import { NeighborhoodsCatalogService } from '../../core/neighborhoods-catalog.se
 
 const ID = '33333333-3333-3333-3333-333333333333';
 const COMUNA = '44444444-4444-4444-4444-444444444444';
+const B1 = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+const B2 = 'ffffffff-7425-40de-944b-e07fc1f90ae7';
 
 describe('ZonesService', () => {
   let prisma: any;
@@ -112,6 +114,13 @@ describe('ZonesService', () => {
       await service.update(ID, { communeId: COMUNA } as any);
 
       expect(prisma.zone.update.mock.calls[0][0].data).toEqual({ communeId: COMUNA });
+    });
+
+    it('communeId null desasigna la comuna sin consultar', async () => {
+      await service.update(ID, { communeId: null } as any);
+
+      expect(prisma.zone.update.mock.calls[0][0].data).toEqual({ communeId: null });
+      expect(prisma.commune.findUnique).not.toHaveBeenCalled();
     });
 
     it('una comuna inexistente da 400 y no escribe', async () => {
@@ -254,31 +263,65 @@ describe('ZonesService', () => {
     });
 
     it('expone la comuna y el barrio resuelto del catálogo', async () => {
-      catalog.list.mockReturnValue([{ id: 'b-1', codigo: 'palermo', nombre: 'Palermo' }]);
+      catalog.list.mockReturnValue([{ id: B1, codigo: 'palermo', nombre: 'Palermo' }]);
       prisma.zone.findMany.mockResolvedValue([
         zona({
           commune: { id: COMUNA, code: 'comuna-14', name: 'Comuna 14', active: true },
-          neighborhoods: [{ neighborhoodId: 'b-1' }],
+          neighborhoods: [{ neighborhoodId: B1 }],
         }),
       ]);
 
       const { data } = await service.findAll({ page: 1, pageSize: 20 } as any);
 
       expect(data[0].commune).toEqual({ id: COMUNA, code: 'comuna-14', name: 'Comuna 14' });
-      expect(data[0].neighborhood).toEqual({ id: 'b-1', codigo: 'palermo', nombre: 'Palermo' });
+      expect(data[0].neighborhood).toEqual({ id: B1, codigo: 'palermo', nombre: 'Palermo' });
     });
 
     it('sin catálogo el barrio lleva solo el id; sin barrio ni comuna, null', async () => {
       prisma.zone.findMany.mockResolvedValue([
-        zona({ neighborhoods: [{ neighborhoodId: 'b-1' }] }),
+        zona({ neighborhoods: [{ neighborhoodId: B1 }] }),
         zona(),
       ]);
 
       const { data } = await service.findAll({ page: 1, pageSize: 20 } as any);
 
-      expect(data[0].neighborhood).toEqual({ id: 'b-1', codigo: undefined, nombre: undefined });
+      expect(data[0].neighborhood).toEqual({ id: B1, codigo: undefined, nombre: undefined });
       expect(data[1].neighborhood).toBeNull();
       expect(data[1].commune).toBeNull();
+    });
+
+    it('con varios barrios, neighborhood es uno solo: el primero por id que sea UUID', async () => {
+      catalog.list.mockReturnValue([{ id: B1, codigo: 'palermo', nombre: 'Palermo' }]);
+      prisma.zone.findUnique.mockResolvedValue(
+        zona({
+          neighborhoods: [
+            { neighborhoodId: B2 },
+            { neighborhoodId: 'barrio-legacy' },
+            { neighborhoodId: B1 },
+          ],
+        }),
+      );
+
+      const dto = await service.findOne(ID);
+
+      expect(dto.neighborhood).toEqual({ id: B1, codigo: 'palermo', nombre: 'Palermo' });
+      expect(dto.neighborhoods).toHaveLength(3);
+    });
+
+    it('una fila legacy no UUID no se expone como neighborhood', async () => {
+      prisma.zone.findUnique.mockResolvedValue(
+        zona({ neighborhoods: [{ neighborhoodId: 'barrio-palermo' }] }),
+      );
+
+      expect((await service.findOne(ID)).neighborhood).toBeNull();
+    });
+
+    it('arma el mapa del catálogo una vez por listado', async () => {
+      prisma.zone.findMany.mockResolvedValue([zona(), zona(), zona()]);
+
+      await service.findAll({ page: 1, pageSize: 20 } as any);
+
+      expect(catalog.list).toHaveBeenCalledTimes(1);
     });
 
     it('findOne da 404 si no está', async () => {

@@ -48,6 +48,18 @@ describe('CommunesService / Controller', () => {
     expect(prisma.commune.findMany.mock.calls[0][0].where).toEqual({});
   });
 
+  it('ordena por número de comuna y admite comunas sin zonas', async () => {
+    prisma.commune.findMany.mockResolvedValue([
+      { ...comuna, id: 'c-10', code: 'comuna-10', zones: [] },
+      { ...comuna, id: 'c-2', code: 'comuna-2', zones: [] },
+    ]);
+
+    const res = await service.findAll({});
+
+    expect(res.map((c) => c.code)).toEqual(['comuna-2', 'comuna-10']);
+    expect(res[0].zones).toEqual([]);
+  });
+
   it('filtra por active y, sin catálogo, deja solo el id del barrio', async () => {
     catalog.list.mockReturnValue([]);
 

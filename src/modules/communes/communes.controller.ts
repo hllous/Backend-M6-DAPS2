@@ -14,7 +14,7 @@ export class CommunesController {
   @ApiOperation({
     summary: 'Listar las comunas con sus zonas y barrios',
     description:
-      'Devuelve cada comuna (agrupación de barrios de M9) con las zonas operativas que agrupa y los barrios de cada zona, para armar selectores y mapas. Sin paginar: son 15 comunas, igual que el catálogo de barrios.',
+      'Devuelve cada comuna (agrupación de barrios de M9) con las zonas operativas que agrupa y los barrios de cada zona, para armar selectores y mapas. Ordenadas por número de comuna. Sin paginar: son pocas comunas, igual que el catálogo de barrios.',
   })
   @ApiResponse({
     status: 200,

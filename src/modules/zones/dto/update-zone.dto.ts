@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, MaxLength, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsNotEmpty, IsUUID, ValidateIf } from 'class-validator';
 import { ToBoolean, Trim } from '../../../common/decorators';
 
 export class UpdateZoneDto {
@@ -24,11 +24,13 @@ export class UpdateZoneDto {
   active?: boolean;
 
   @ApiPropertyOptional({
-    description: 'UUID de la comuna que agrupa a la zona (debe existir)',
+    description: 'UUID de la comuna que agrupa a la zona (debe existir). null desasigna la comuna',
+    type: String,
+    nullable: true,
     example: 'c0a80101-0000-4000-8000-000000000014',
     format: 'uuid',
   })
-  @IsOptional()
+  @ValidateIf((_, v) => v !== undefined && v !== null)
   @IsUUID()
-  communeId?: string;
+  communeId?: string | null;
 }

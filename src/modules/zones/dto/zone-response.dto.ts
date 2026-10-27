@@ -69,20 +69,20 @@ export class ZoneResponseDto {
   })
   active: boolean;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Comuna que agrupa a la zona; null si todavía no se la asignó',
     type: CommuneRefDto,
     nullable: true,
   })
-  commune?: CommuneRefDto | null;
+  commune: CommuneRefDto | null;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description:
-      'Barrio de la zona (una zona es un barrio); null si no tiene barrio asignado. Codigo y nombre salen del catálogo cacheado de M9',
+      'Barrio de la zona (una zona es un barrio); null si no tiene barrio con id UUID. Si la zona tiene varios barrios, es uno solo (el primero por id) y `neighborhoods` (detalle) trae todos. Codigo y nombre salen del catálogo cacheado de M9',
     type: NeighborhoodRefDto,
     nullable: true,
   })
-  neighborhood?: NeighborhoodRefDto | null;
+  neighborhood: NeighborhoodRefDto | null;
 
   @ApiPropertyOptional({
     description: 'Barrios asignados a esta zona. Incluido solo en GET por ID',

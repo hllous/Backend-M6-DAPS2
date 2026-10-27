@@ -331,7 +331,7 @@
       "get": {
         "operationId": "ZonesController_findAll",
         "summary": "Listar zonas operativas",
-        "description": "Retorna un listado paginado de zonas operativas. Se puede filtrar por estado activo/inactivo y buscar por nombre.",
+        "description": "Retorna un listado paginado de zonas operativas. Se puede filtrar por estado activo/inactivo y buscar por nombre o por comuna (`communeId`). Cada zona incluye su `commune` y su `neighborhood` (uno solo: el primero por id si la zona tiene varios).",
         "parameters": [
           {
             "name": "page",
@@ -412,6 +412,16 @@
                       "$ref": "#/components/schemas/PaginationMeta"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros de consulta inválidos (por ejemplo, communeId que no es UUID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -970,7 +980,7 @@
       "get": {
         "operationId": "CommunesController_findAll",
         "summary": "Listar las comunas con sus zonas y barrios",
-        "description": "Devuelve cada comuna (agrupación de barrios de M9) con las zonas operativas que agrupa y los barrios de cada zona, para armar selectores y mapas. Sin paginar: son 15 comunas, igual que el catálogo de barrios.",
+        "description": "Devuelve cada comuna (agrupación de barrios de M9) con las zonas operativas que agrupa y los barrios de cada zona, para armar selectores y mapas. Ordenadas por número de comuna. Sin paginar: son pocas comunas, igual que el catálogo de barrios.",
         "parameters": [
           {
             "name": "active",
@@ -13895,7 +13905,7 @@
             ]
           },
           "neighborhood": {
-            "description": "Barrio de la zona (una zona es un barrio); null si no tiene barrio asignado. Codigo y nombre salen del catálogo cacheado de M9",
+            "description": "Barrio de la zona (una zona es un barrio); null si no tiene barrio con id UUID. Si la zona tiene varios barrios, es uno solo (el primero por id) y `neighborhoods` (detalle) trae todos. Codigo y nombre salen del catálogo cacheado de M9",
             "nullable": true,
             "allOf": [
               {
@@ -13928,6 +13938,8 @@
           "code",
           "name",
           "active",
+          "commune",
+          "neighborhood",
           "createdAt",
           "updatedAt"
         ]
@@ -13979,7 +13991,8 @@
           },
           "communeId": {
             "type": "string",
-            "description": "UUID de la comuna que agrupa a la zona (debe existir)",
+            "description": "UUID de la comuna que agrupa a la zona (debe existir). null desasigna la comuna",
+            "nullable": true,
             "example": "c0a80101-0000-4000-8000-000000000014",
             "format": "uuid"
           }

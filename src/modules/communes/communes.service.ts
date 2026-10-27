@@ -14,12 +14,14 @@ export class CommunesService {
   async findAll(query: QueryCommunesDto): Promise<CommuneResponseDto[]> {
     const communes = await this.prisma.commune.findMany({
       where: query.active === undefined ? {} : { active: query.active },
-      orderBy: { code: 'asc' },
       include: {
         zones: { orderBy: { code: 'asc' }, include: { neighborhoods: true } },
       },
     });
     const catalogo = new Map(this.catalog.list().map((b) => [b.id, b]));
+
+    // Orden natural por número: `comuna-2` antes de `comuna-10` (el orden de la base es léxico).
+    communes.sort((a, b) => a.code.localeCompare(b.code, 'es', { numeric: true }));
 
     return communes.map((c) => ({
       id: c.id,

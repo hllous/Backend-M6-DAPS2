@@ -21,7 +21,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **Tope de tamaño**: `search` admite hasta 100 caracteres; los ids externos (`ticketId`, `publicId`, `weatherAlertId`, `leaderUserId`, `organizationId`, `authorizedByUserId`, `inspectorId`, `eventId` y cada elemento de `userIds` y `neighborhoodIds`) hasta 100; en el sobre del bus, `eventType` hasta 120, `sourceModule` hasta 60 y `eventVersion` hasta 20 (los topes del Core); `reason` de un aviso de demora hasta 500 y `notes` de un servicio y `description` de un expediente hasta 2000. Los arrays (`userIds`, `neighborhoodIds`, `treeIds`, `wasteTypes`) admiten hasta 100 elementos. Pasarse da 400.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
 - **CORS**: los orígenes permitidos salen de `CORS_ORIGINS`. Sin esa variable se acepta cualquiera, que es lo que hace falta en desarrollo. El JWT viaja en un header y no en una cookie, así que esto no cierra un CSRF — es higiene, no un límite de seguridad.
-- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 26 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
+- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 27 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
 
 ## Rol requerido por endpoint
@@ -220,16 +220,16 @@ Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append
 
 | Método | Ruta       | Descripción |
 | ------ | ---------- | ----------- |
-| GET    | `/communes` | Comunas con sus zonas y los barrios de cada zona (`codigo`/`nombre` de la caché de M9; sin catálogo solo el `id`). Filtro: `active`. Sin paginar (15 comunas). Cualquier rol de M6 |
+| GET    | `/communes` | Comunas con sus zonas y los barrios de cada zona (`codigo`/`nombre` de la caché de M9; sin catálogo solo el `id`). Filtro: `active`. Ordenadas por número de comuna. Sin paginar. Cualquier rol de M6 |
 
 ## `zones` — zonas operativas
 
 | Método | Ruta                                       | Qué hace                                            |
 | ------ | ------------------------------------------ | --------------------------------------------------- |
-| POST   | `/zones`                                   | Crear zona operativa                                |
-| GET    | `/zones`                                   | Listar, con `commune` y `neighborhood`. Filtros: `active`, `search` (nombre), `communeId` |
+| POST   | `/zones`                                   | Crear zona operativa. `communeId` opcional (400 si la comuna no existe) |
+| GET    | `/zones`                                   | Listar, con `commune` y `neighborhood` (uno solo, el primero por id con UUID, aunque la zona tenga varios; el detalle trae todos en `neighborhoods[]`). Filtros: `active`, `search` (nombre), `communeId` |
 | GET    | `/zones/:id`                               | Detalle, con los barrios asignados                  |
-| PATCH  | `/zones/:id`                               | Actualizar nombre, estado y `communeId` (400 si la comuna no existe). El código es inmutable |
+| PATCH  | `/zones/:id`                               | Actualizar nombre, estado y `communeId` (400 si la comuna no existe; `null` la desasigna). El código es inmutable |
 | DELETE | `/zones/:id`                               | Baja lógica                                         |
 | POST   | `/zones/:id/neighborhoods`                 | Asignar barrios (catálogo de M9). Ignora duplicados. Con el catálogo cargado, un `id` desconocido da 400 (un barrio dado de baja, `activo:false`, sigue siendo válido: en M9 nada se borra); sin catálogo se acepta con warning |
 | DELETE | `/zones/:id/neighborhoods/:neighborhoodId` | Quitar un barrio                                    |
