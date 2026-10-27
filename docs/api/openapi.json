@@ -852,6 +852,109 @@
         ]
       }
     },
+    "/neighborhoods": {
+      "get": {
+        "operationId": "NeighborhoodsController_findAll",
+        "summary": "Listar los barrios del catálogo de M9",
+        "description": "Devuelve el catálogo de barrios de M9 que M6 mantiene en caché (se lee del Core al arrancar y se renueva cada 6 horas), para que el frontend arme selectores sin hablar con el Core. Los `id` son los que se mandan al asignar barrios a una zona. Sin paginar: son unas decenas de barrios.",
+        "parameters": [
+          {
+            "name": "soloActivos",
+            "required": false,
+            "in": "query",
+            "description": "Solo los barrios activos en M9",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "zona",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por comuna de M9",
+            "schema": {
+              "example": "comuna-14",
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Buscar por nombre o código (coincidencia parcial, sin distinguir mayúsculas)",
+            "schema": {
+              "maxLength": 100,
+              "example": "paler",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Barrios del catálogo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NeighborhoodResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros de consulta inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "El catálogo todavía no se pudo leer del Core (sin CORE_API_URL o Core caído)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "neighborhoods"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
     "/service-types": {
       "post": {
         "operationId": "ServiceTypesController_create",
@@ -13176,6 +13279,10 @@
       "description": "Zonas operativas y los barrios que agrupan"
     },
     {
+      "name": "neighborhoods",
+      "description": "Catálogo de barrios de M9 (caché de solo lectura)"
+    },
+    {
       "name": "routes",
       "description": "Recorridos y su secuencia de paradas"
     },
@@ -13719,8 +13826,8 @@
             "type": "array",
             "description": "IDs de barrios a asignar a la zona (catálogo de M9)",
             "example": [
-              "barrio-palermo",
-              "barrio-belgrano"
+              "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "0b8f1a52-3c4d-4e6f-9a1b-2c3d4e5f6a7b"
             ],
             "items": {
               "type": "string",
@@ -13731,6 +13838,55 @@
         },
         "required": [
           "neighborhoodIds"
+        ]
+      },
+      "NeighborhoodResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID del barrio en M9: es lo que se guarda en una zona y viaja en los eventos",
+            "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Slug legible sin acentos",
+            "example": "palermo"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del barrio",
+            "example": "Palermo"
+          },
+          "zona": {
+            "type": "string",
+            "description": "Comuna administrativa de M9 (solo referencia, no es una zona operativa)",
+            "example": "comuna-14"
+          },
+          "zonaNombre": {
+            "type": "string",
+            "description": "Nombre de la comuna",
+            "example": "Comuna 14"
+          },
+          "metadatos": {
+            "type": "object",
+            "description": "Datos adicionales que carga M9",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "activo": {
+            "type": "boolean",
+            "description": "M9 no borra barrios: una baja es activo=false",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "zona",
+          "zonaNombre",
+          "activo"
         ]
       },
       "CreateServiceTypeDto": {

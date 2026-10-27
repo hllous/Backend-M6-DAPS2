@@ -6,7 +6,7 @@
   "$defs": {
     "location": {
       "type": "object",
-      "description": "Ubicacion en la via publica. neighborhoodId es el id (UUID) del catalogo de barrios de M9 (GET /api/v1/catalogos/barrios, publicado el 22/10): M6 todavia no lo consume (docs/bloqueantes.md), asi que hoy no puede completarlo y el campo viaja ausente. street lleva la direccion tal como la tenemos, sin partir en calle y numero, porque el modelo la guarda como texto libre. Los dos pasaran a requeridos cuando M6 adopte el catalogo y M9 cargue los barrios reales.",
+      "description": "Ubicacion en la via publica. neighborhoodId es el id (UUID) del catalogo de barrios de M9 (GET /api/v1/catalogos/barrios, publicado el 22/10): M6 lo completa en containerDamaged y treeRiskDetected cuando la zona tiene exactamente un barrio asignado; si no, viaja ausente. street lleva la direccion tal como la tenemos, sin partir en calle y numero, porque el modelo la guarda como texto libre. Los dos pasaran a requeridos cuando M6 adopte el catalogo y M9 cargue los barrios reales.",
       "properties": {
         "street": {
           "type": "string"

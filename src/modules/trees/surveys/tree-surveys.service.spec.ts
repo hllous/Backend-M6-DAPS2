@@ -76,6 +76,7 @@ describe('TreeSurveysService', () => {
         findFirst: jest.fn().mockResolvedValue(relevamiento()),
         count: jest.fn().mockResolvedValue(1),
       },
+      zoneNeighborhood: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
@@ -210,6 +211,14 @@ describe('TreeSurveysService', () => {
 
       const [, entrada] = outbox.enqueue.mock.calls[0];
       expect(entrada.occurredAt).toEqual(new Date('2026-08-20T10:00:00.000Z'));
+    });
+
+    it('una zona de un solo barrio completa location.neighborhoodId del evento', async () => {
+      prisma.zoneNeighborhood.findMany.mockResolvedValue([{ neighborhoodId: 'uuid-palermo' }]);
+      await service.create(TREE, dtoAlto(), 'user-7');
+
+      const [, entrada] = outbox.enqueue.mock.calls[0];
+      expect(entrada.payload.location.neighborhoodId).toBe('uuid-palermo');
     });
 
     it('la fecha llega como string y se guarda como Date', async () => {

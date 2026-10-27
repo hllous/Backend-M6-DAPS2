@@ -12,7 +12,7 @@ import { MAX_EXTERNAL_ID_LENGTH, MAX_LIST_SIZE } from '../../../common/decorator
 export class AddNeighborhoodsDto {
   @ApiProperty({
     description: 'IDs de barrios a asignar a la zona (catálogo de M9)',
-    example: ['barrio-palermo', 'barrio-belgrano'],
+    example: ['7c9e6679-7425-40de-944b-e07fc1f90ae7', '0b8f1a52-3c4d-4e6f-9a1b-2c3d4e5f6a7b'],
     type: 'array',
     items: { type: 'string', maxLength: MAX_EXTERNAL_ID_LENGTH },
     maxItems: MAX_LIST_SIZE,

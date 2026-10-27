@@ -2,12 +2,14 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ZonesService } from './zones.service';
+import { NeighborhoodsCatalogService } from '../../core/neighborhoods-catalog.service';
 
 const ID = '33333333-3333-3333-3333-333333333333';
 
 describe('ZonesService', () => {
   let prisma: any;
   let service: ZonesService;
+  let catalog: { disponible: boolean; existe: jest.Mock };
 
   const zona = (over: Record<string, unknown> = {}) => ({
     id: ID,
@@ -33,7 +35,12 @@ describe('ZonesService', () => {
         deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
-    service = new ZonesService(prisma as unknown as PrismaService);
+    // Por defecto sin catálogo: es lo que pasa sin CORE_API_URL.
+    catalog = { disponible: false, existe: jest.fn((id: string) => id.startsWith('b-')) };
+    service = new ZonesService(
+      prisma as unknown as PrismaService,
+      catalog as unknown as NeighborhoodsCatalogService,
+    );
   });
 
   describe('create', () => {
@@ -133,6 +140,27 @@ describe('ZonesService', () => {
       const dto = await service.addNeighborhoods(ID, { neighborhoodIds: ['b-1'] } as any);
 
       expect(dto.neighborhoods).toEqual([{ neighborhoodId: 'b-1' }, { neighborhoodId: 'b-2' }]);
+    });
+
+    it('con catálogo, un id que M9 no tiene da 400 y no escribe nada', async () => {
+      catalog.disponible = true;
+
+      await expect(
+        service.addNeighborhoods(ID, { neighborhoodIds: ['b-1', 'x-9'] } as any),
+      ).rejects.toThrow(/x-9/);
+      expect(prisma.zoneNeighborhood.createMany).not.toHaveBeenCalled();
+    });
+
+    it('con catálogo, ids válidos se asignan', async () => {
+      catalog.disponible = true;
+
+      await service.addNeighborhoods(ID, { neighborhoodIds: ['b-1'] } as any);
+      expect(prisma.zoneNeighborhood.createMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('sin catálogo degrada: asigna aunque el id sea desconocido', async () => {
+      await service.addNeighborhoods(ID, { neighborhoodIds: ['x-9'] } as any);
+      expect(prisma.zoneNeighborhood.createMany).toHaveBeenCalledTimes(1);
     });
 
     it('asignar barrios a una zona inexistente da 404', async () => {

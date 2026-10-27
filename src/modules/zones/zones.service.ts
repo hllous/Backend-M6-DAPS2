@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -9,12 +15,16 @@ import {
   AddNeighborhoodsDto,
 } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
+import { NeighborhoodsCatalogService } from '../../core/neighborhoods-catalog.service';
 
 @Injectable()
 export class ZonesService {
   private readonly logger = new Logger(ZonesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly catalog: NeighborhoodsCatalogService,
+  ) {}
 
   /**
    * Crea una nueva zona operativa.
@@ -123,10 +133,23 @@ export class ZonesService {
 
   /**
    * Asigna barrios a una zona.
-   * Ignora duplicados silenciosamente (skipDuplicates).
+   * Ignora duplicados silenciosamente (skipDuplicates). Los ids se validan contra
+   * el catálogo de M9 cacheado; sin catálogo se acepta con un warning, porque un
+   * Core caído no tiene que impedir armar zonas.
    */
   async addNeighborhoods(zoneId: string, dto: AddNeighborhoodsDto): Promise<ZoneResponseDto> {
     await this.ensureExists(zoneId);
+
+    if (this.catalog.disponible) {
+      const inexistentes = dto.neighborhoodIds.filter((id) => !this.catalog.existe(id));
+      if (inexistentes.length) {
+        throw new BadRequestException(
+          `Barrios que no están en el catálogo de M9: ${inexistentes.join(', ')}`,
+        );
+      }
+    } else {
+      this.logger.warn('Catálogo de barrios no disponible: se asignan sin validar contra M9');
+    }
 
     await this.prisma.zoneNeighborhood.createMany({
       data: dto.neighborhoodIds.map((neighborhoodId) => ({

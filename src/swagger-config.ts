@@ -33,6 +33,7 @@ export function buildSwaggerConfig() {
       // primero sobre qué se programa, después la operación, después el inventario.
       // ─── Configuración y planificación ────────────
       .addTag('zones', 'Zonas operativas y los barrios que agrupan')
+      .addTag('neighborhoods', 'Catálogo de barrios de M9 (caché de solo lectura)')
       .addTag('routes', 'Recorridos y su secuencia de paradas')
       .addTag('service-frequencies', 'Reglas que generan los servicios planificados')
       .addTag('service-types', 'Catálogo de tipos de servicio')

@@ -91,6 +91,7 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 | GET | `/indicators/incidents` | cualquier rol de M6 |
 | GET | `/indicators/waste` | cualquier rol de M6 |
 | GET | `/me` | cualquier empleado |
+| GET | `/neighborhoods` | cualquier rol de M6 |
 | GET | `/public/green-points` | público |
 | GET | `/public/reports/:ticketId` | público |
 | GET | `/public/services` | público |
@@ -208,6 +209,12 @@ No filtra los listados: Campo sigue viendo todo en los `GET`; la pertenencia es 
 
 Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append-only) en la misma transacción. La asignación **no** se valida contra el rol de M1 del destinatario (M6 no tiene directorio de M1): rige al leer, por la intersección.
 
+## `neighborhoods` — catálogo de barrios de M9
+
+| Método | Ruta             | Descripción                                                                                                                                                                                  |
+| ------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/neighborhoods` | Barrios del catálogo de M9 cacheados (se leen del Core al arrancar y cada 6 h). Filtros: `soloActivos`, `zona` (comuna), `q`. Sin paginar. 503 si el catálogo todavía no se pudo leer |
+
 ## `zones` — zonas operativas
 
 | Método | Ruta                                       | Qué hace                                            |
@@ -217,7 +224,7 @@ Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append
 | GET    | `/zones/:id`                               | Detalle, con los barrios asignados                  |
 | PATCH  | `/zones/:id`                               | Actualizar nombre y estado. El código es inmutable  |
 | DELETE | `/zones/:id`                               | Baja lógica                                         |
-| POST   | `/zones/:id/neighborhoods`                 | Asignar barrios (catálogo de M9). Ignora duplicados |
+| POST   | `/zones/:id/neighborhoods`                 | Asignar barrios (catálogo de M9). Ignora duplicados. Con el catálogo cargado, un `id` desconocido da 400; sin catálogo se acepta con warning |
 | DELETE | `/zones/:id/neighborhoods/:neighborhoodId` | Quitar un barrio                                    |
 
 ## `routes` — recorridos

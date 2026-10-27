@@ -22,16 +22,21 @@ import {
 /**
  * La ubicación tal como la podemos armar hoy.
  *
- * `neighborhoodId` sale del catálogo de M9, que sigue sin exponerse, así que
- * viaja ausente. `street` lleva la dirección sin partir, porque el modelo la
+ * `neighborhoodId` es el id (UUID) del catálogo de M9, ya publicado. Solo lo
+ * completan los eventos que lo reciben resuelto desde la zona (las zonas son una
+ * por barrio); el resto lo manda ausente. `street` lleva la dirección sin partir, porque el modelo la
  * guarda como texto libre. Ver la descripción en `_shared.schema.json`.
  */
-function location(source: {
-  address: string | null;
-  lat: unknown;
-  lng: unknown;
-}): Record<string, unknown> {
+function location(
+  source: {
+    address: string | null;
+    lat: unknown;
+    lng: unknown;
+  },
+  neighborhoodId?: string,
+): Record<string, unknown> {
   const loc: Record<string, unknown> = {};
+  if (neighborhoodId) loc.neighborhoodId = neighborhoodId;
   if (source.address) loc.street = source.address;
   if (source.lat !== null && source.lat !== undefined) loc.lat = Number(source.lat);
   if (source.lng !== null && source.lng !== undefined) loc.lng = Number(source.lng);
@@ -57,12 +62,16 @@ function compact<T extends Record<string, unknown>>(obj: T): T {
 
 // ─── containerDamaged → M3 ────────────────────────
 
-export function containerDamaged(container: Container, ticketId?: string): Record<string, unknown> {
+export function containerDamaged(
+  container: Container,
+  ticketId?: string,
+  neighborhoodId?: string,
+): Record<string, unknown> {
   return compact({
     containerId: container.id,
     containerCode: container.code,
     zoneId: container.zoneId,
-    location: location(container),
+    location: location(container, neighborhoodId),
     damageType: container.damageType as string,
     severity: container.severity as string,
     requiresPublicWorks: container.requiresPublicWorks ?? false,
@@ -73,13 +82,17 @@ export function containerDamaged(container: Container, ticketId?: string): Recor
 
 // ─── treeRiskDetected → M3 ────────────────────
 
-export function treeRiskDetected(tree: Tree, survey: TreeSurvey): Record<string, unknown> {
+export function treeRiskDetected(
+  tree: Tree,
+  survey: TreeSurvey,
+  neighborhoodId?: string,
+): Record<string, unknown> {
   return compact({
     treeId: tree.id,
     surveyCode: tree.surveyCode,
     species: tree.species ?? undefined,
     zoneId: tree.zoneId,
-    location: location(tree),
+    location: location(tree, neighborhoodId),
     riskLevel: survey.riskLevel,
     riskType: survey.riskType as string,
     healthStatus: survey.healthStatus,

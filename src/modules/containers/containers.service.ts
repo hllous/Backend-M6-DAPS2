@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import { containerDamaged } from '../../events/payloads';
+import { zoneNeighborhoodId } from '../zones/zone-neighborhood';
 import {
   CreateContainerDto,
   UpdateContainerDto,
@@ -193,11 +194,11 @@ export class ContainersService {
         requiresPublicWorks: dto.requiresPublicWorks ?? false,
       },
       // requiresPublicWorks = true es lo que hace que a M3 le sirva el evento.
-      (container) => ({
+      (container, neighborhoodId) => ({
         eventType: EventType.CONTAINER_DAMAGED,
         aggregateType: AggregateType.CONTAINER,
         aggregateId: container.id,
-        payload: containerDamaged(container),
+        payload: containerDamaged(container, undefined, neighborhoodId),
       }),
     );
   }
@@ -251,7 +252,7 @@ export class ContainersService {
     additionalData: Record<string, any> = {},
     // Si viene, la fila del outbox se escribe en la MISMA transaccion que el
     // cambio de estado: o quedan los dos, o no queda ninguno.
-    event?: (container: Container) => OutboxEntry,
+    event?: (container: Container, neighborhoodId?: string) => OutboxEntry,
     // Orígenes propios de la acción cuando el destino se alcanza desde varios.
     from?: ContainerStatus[],
   ): Promise<ContainerResponseDto> {
@@ -282,7 +283,10 @@ export class ContainersService {
             ...additionalData,
           },
         });
-        if (event) await this.outbox.enqueue(tx, event(row));
+        if (event) {
+          const neighborhoodId = await zoneNeighborhoodId(tx, row.zoneId);
+          await this.outbox.enqueue(tx, event(row, neighborhoodId));
+        }
         return row;
       })
       .catch((error: unknown) => {

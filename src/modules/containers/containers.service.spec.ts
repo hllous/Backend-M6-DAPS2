@@ -44,6 +44,7 @@ describe('ContainersService', () => {
         count: jest.fn().mockResolvedValue(1),
         update: jest.fn().mockImplementation(({ data }: any) => Promise.resolve(contenedor(data))),
       },
+      zoneNeighborhood: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
@@ -274,6 +275,27 @@ describe('ContainersService', () => {
         aggregateType: 'CONTAINER',
         aggregateId: ID,
       });
+    });
+
+    it('una zona de un solo barrio completa location.neighborhoodId', async () => {
+      desde(C.ACTIVE);
+      prisma.zoneNeighborhood.findMany.mockResolvedValue([{ neighborhoodId: 'uuid-palermo' }]);
+      await service.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any);
+
+      const [, entrada] = outbox.enqueue.mock.calls[0];
+      expect(entrada.payload.location.neighborhoodId).toBe('uuid-palermo');
+    });
+
+    it('sin barrio o con varios no adivina: neighborhoodId ausente', async () => {
+      desde(C.ACTIVE);
+      prisma.zoneNeighborhood.findMany.mockResolvedValue([
+        { neighborhoodId: 'a' },
+        { neighborhoodId: 'b' },
+      ]);
+      await service.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any);
+
+      const [, entrada] = outbox.enqueue.mock.calls[0];
+      expect(entrada.payload.location).not.toHaveProperty('neighborhoodId');
     });
 
     it('sin requiresPublicWorks explícito asume false, no null', async () => {
