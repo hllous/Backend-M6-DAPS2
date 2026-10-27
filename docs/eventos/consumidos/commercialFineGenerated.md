@@ -15,16 +15,14 @@ El `SanctionOutcome` es un **espejo de solo lectura**: no lo editamos, existe pa
 | ✅ `sourceViolationId` | El `violationId` que mandamos en [`environmentalViolationDetected`](../publicados/environmentalViolationDetected.md). **Confirmado (24/08)** en el payload de ejemplo. Era nuestro bloqueante principal, queda cerrado |
 | `actId` | ✅ Confirmado (21/10): es distinto de `externalRef`. Es el identificador interno del acta de M4 que fundamenta la sanción. No lo persistimos: queda como dato del evento |
 | `decision` | Qué resolvieron |
-| ⚠️ `decidedAt` | Confirmado verbalmente (24/08) que lo reincorporan — el ejemplo publicado todavía no lo muestra |
-| ⚠️ `externalRef` | La referencia administrativa visible de la resolución, disposición o multa (es lo que guardamos en `SanctionOutcome.externalRef`). Mismo caso que `decidedAt`: confirmado, no publicado todavía |
+| ✅ `decidedAt` | Confirmado por M4 (27/10), ya en su contrato |
+| ✅ `externalRef` | La referencia administrativa visible de la resolución, disposición o multa (es lo que guardamos en `SanctionOutcome.externalRef`). Confirmado por M4 (27/10), ya en su contrato |
 
 Nice to have: `establishmentId`, que ya tienen — lo aprovechamos, pero no reemplaza a `sourceViolationId`.
 
 ## Ruteo y suscripción
 
 ✅ **Confirmado (21/10):** M4 lo manda además a Rentas cuando la multa se origina en una infracción ambiental. Hay que estar suscripto en el Core: `commercialFineGenerated` ya figura entre las 8 suscripciones del registro de #266 (`ConsumedEvent` en `src/events/inbox/consumed-events.ts`, consumido por `src/core/core-registry.service.ts`). Ver [m4.md](../../integracion/m4.md#acordado-el-2110).
-
-⚠️ **Código a revisar:** `sanctions.consumer.ts` guarda `externalRef ?? actId` en `SanctionOutcome.externalRef`. Como son datos distintos, el respaldo con `actId` no corresponde; derivado al implementador.
 
 ## Nota de vocabulario
 

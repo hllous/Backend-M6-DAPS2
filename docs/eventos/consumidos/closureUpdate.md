@@ -24,8 +24,8 @@ Depende de `status`:
 | `actId` | ✅ Confirmado (21/10): es distinto de `externalRef`. Es el identificador interno del acta de M4 que fundamenta la sanción. No lo persistimos: queda como dato del evento |
 | `establishmentId` | Ya lo tienen, lo aprovechamos |
 | `decision` | Qué resolvieron |
-| ⚠️ `decidedAt` | Confirmado verbalmente (24/08) que lo reincorporan — el ejemplo publicado todavía no lo muestra |
-| ⚠️ `externalRef` | La referencia administrativa visible de la clausura (se guarda en `SanctionOutcome.externalRef`). Mismo caso que `decidedAt` |
+| ✅ `decidedAt` | Confirmado por M4 (27/10), ya en su contrato |
+| ✅ `externalRef` | La referencia administrativa visible de la clausura (se guarda en `SanctionOutcome.externalRef`). Confirmado por M4 (27/10), ya en su contrato |
 
 ## Por qué adoptamos `LIFTED` como señal de cierre
 
@@ -47,7 +47,5 @@ Es menos preciso que un evento —una desestimación y una demora de M4 se ven i
 ## Ruteo y suscripción
 
 ✅ **Confirmado (21/10):** M4 nos manda `closureUpdate` cuando corresponda. Ya figura entre las 8 suscripciones del registro de #266 (`src/events/inbox/consumed-events.ts`, `src/core/core-registry.service.ts`).
-
-⚠️ **Código a revisar:** `sanctions.consumer.ts` guarda `externalRef ?? actId`; como son datos distintos, el respaldo con `actId` no corresponde (derivado al implementador).
 
 Ver el resto de M4 en [m4.md](../../integracion/m4.md#acordado-el-2110).
