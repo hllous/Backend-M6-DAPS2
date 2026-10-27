@@ -23,6 +23,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "core:register": "ts-node -P tsconfig.json scripts/core-register.ts",
+    "espacios-verdes:build": "ts-node -P tsconfig.json scripts/build-espacios-verdes.ts",
     "zones:sync-from-core": "ts-node -P tsconfig.json scripts/zones-sync-from-core.ts",
     "crews:migrate-user-ids": "ts-node -P tsconfig.json scripts/migrate-crew-user-ids.ts",
     "openapi:generate": "ts-node -P tsconfig.json scripts/generate-openapi.ts",
