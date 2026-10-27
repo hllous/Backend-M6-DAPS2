@@ -18,9 +18,12 @@
 # idempotente: despertar alcanza para ponerse al día. Este ping ayuda a que
 # el servicio esté tibio para una demo, pero nada depende de él.
 #
-# Se hace desde acá y no desde UptimeRobot o cron-job.org porque así queda
-# versionado y a la vista: un alta manual en un servicio de terceros es algo
-# que nadie encuentra cuando deja de funcionar.
+# Quien mantiene despierto el servicio es un pinger externo (UptimeRobot o
+# cron-job.org, monitor HTTP cada 5 min sobre RENDER_HEALTH_URL), porque el cron
+# de GitHub no alcanza. Este workflow queda como respaldo y como alerta: si el
+# health check falla, el job se pone rojo. Dejar anotado acá quién dio de alta
+# el pinger y en qué cuenta, así no se pierde cuando deja de funcionar:
+#   pinger: cron-job.org, cuenta de Benjamin Martinez
 #
 # Dos límites conocidos, los dos aceptables para la ventana del TPO:
 #   - El cron de GitHub Actions es best-effort: puede atrasarse varios
@@ -66,7 +69,14 @@ jobs:
           # base free también despierta, así que pasar de 90 s es normal. Con
           # 90 s este job falló dos veces por timeout sin que el servicio
           # tuviera nada roto (#150).
-          codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 180 --retry 2 --retry-delay 15 "$HEALTH_URL")
+          #
+          # --retry-all-errors + `|| true`: curl a veces corta con exit 23 (error
+          # de escritura) a los pocos segundos, sin timeout de por medio. Por
+          # defecto --retry no reintenta eso y `bash -e` abortaba el job antes
+          # de llegar al chequeo del código HTTP.
+          # El cuerpo va a un archivo y no a /dev/null: es lo que más se acerca a
+          # descartar la causa del exit 23 sin poder reproducirlo.
+          codigo=$(curl -s -o "$RUNNER_TEMP/health" -w '%{http_code}' --max-time 180 --retry 2 --retry-all-errors --retry-delay 15 "$HEALTH_URL" || true)
 
           echo "GET $HEALTH_URL → $codigo"
           if [ "$codigo" != "200" ]; then
