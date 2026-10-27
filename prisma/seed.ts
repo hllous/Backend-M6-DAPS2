@@ -1183,14 +1183,14 @@ const ESPACIO_POR_NOMBRE: Record<string, number> = {
   'Plaza Manuel Belgrano': 1154,
   'Plaza Noruega': 911,
   'Plaza Castelli': 899,
-  'Parque Tres de Febrero (Bosques de Palermo)': 2397,
+  'Parque Tres de Febrero (Bosques de Palermo)': 1537,
   'Jardín Botánico Carlos Thays': 1330,
   'Plaza Italia': 885,
   'El Rosedal de Palermo': 1490,
   'Plaza Güemes': 630,
   'Plaza Mafalda': 1160,
   'Plaza Francia': 887,
-  'Plaza Vicente López': 913,
+  'Plaza Vicente López': 481,
   'Plaza Intendente Alvear': 482,
   'Plaza Lavalle': 881,
   'Plaza de la República': 647,
@@ -2706,6 +2706,11 @@ async function main() {
 
   // Las 48 zonas y las 15 comunas, con los UUID reales de M9 (snapshot). Idempotente.
   const sync = await syncZones(prisma, cargarSnapshot());
+  if (sync.conflictos.length) {
+    throw new Error(
+      `seed: syncZones dejó zonas sin tocar por conflicto; resolvelas antes de sembrar: ${sync.conflictos.join('; ')}`,
+    );
+  }
   console.log(
     `seed: comunas +${sync.communes.creadas}/~${sync.communes.actualizadas}, zonas +${sync.zones.creadas}/~${sync.zones.actualizadas}`,
   );

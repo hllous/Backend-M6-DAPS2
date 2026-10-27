@@ -79,9 +79,14 @@ Los ids son los `sub` numéricos del token de M1 y **no cambian** con el catálo
 - Las **zonas, comunas y sus UUID** (snapshot de M9 del 27/10/2026) y los polígonos de barrios y comunas (`docs/geojson/`).
 - Los **espacios verdes**: dataset abierto «Espacios verdes» de BA Data (https://data.buenosaires.gob.ar/dataset/espacios-verdes), descargado el 27/10/2026. Nombres, clasificación y superficie son del dataset; el punto es uno representativo que cae dentro del polígono. La licencia se confirma en el portal (ver `prisma/data/README.md`). Se regenera con `npm run espacios-verdes:build`.
 - Las calles y coordenadas escritas a mano de los ocho barrios originales (USIG).
+- **Cuatro espacios verdes que nombran los servicios escritos a mano son aproximados**, porque el dataset no trae uno equivalente exacto:
+  - «Parque Tres de Febrero (Bosques de Palermo)» → id 1537, *Lago de Regatas Ernesto Jaimovich* (Palermo; el dataset no trae el parque como tal y el lago es parte de él).
+  - «Plaza de Mayo» → id 883, *Plaza 25 de Mayo* (Montserrat).
+  - «Paseo de la Costanera Sur» → id 1274, *Reserva Ecológica* (Puerto Madero).
+  - «Plaza Vicente López» → id 481, *Plaza V. López y Planes* (Recoleta).
 
 **No auténtico**
-- **Contenedores, puntos verdes y arbolado generados**: posiciones pseudoaleatorias dentro del barrio; la dirección es «Frente a <plaza real>», no una dirección postal. Códigos `CT-NN-NNNN`, `GP-NN-01`, `ARB-CC-9NNNN`.
+- **Contenedores, puntos verdes y arbolado generados**: posiciones pseudoaleatorias dentro del barrio; la dirección es «Frente a <plaza real>», no una dirección postal. Códigos atados al barrio (no a su posición, así no se corren si M9 suma o baja uno): `CT-<codigo>-NNNN`, `GP-<codigo>-01`, `ARB-<codigo>-9NNNN`.
 - Servicios, recorridos regionales, cuadrillas, vehículos (patentes ficticias), personas, expedientes, actas y derivaciones.
 - Los `ticketId`, `workOrderId`, `establishmentId` y `streetClosureId` son UUID derivados con `uuidDe`: no existen en M2, M3, M4 ni M7.
 - Los `citizenId` son UUID derivados con `uuidDe` (M1 v3.0 los emite UUIDv4); no existen en M1.
@@ -102,6 +107,8 @@ Para **refrescar las fechas** de una base que ya tiene servicios hay que vaciarl
 **Aplicar esta versión a una base que ya tiene el seed anterior no actualiza lo operativo.** El seed agrega zonas, comunas, espacios verdes e inventario, pero no recrea servicios ni derivaciones, porque ve servicios cargados y se detiene. Para tener el reparto nuevo hay que vaciar lo operativo y volver a sembrar: es un paso **aparte y destructivo** (borra servicios, expedientes, derivaciones y eventos) que no se hace en la base desplegada sin acordarlo con el equipo; el seed no pisa el trabajo que alguien cargó a mano.
 
 La transacción de lo operativo tardó ~17 min contra Supabase con 710 servicios y vence a la hora; por eso `verificarCobertura()` fija un tope de 800. Antes de subirlo, medir de nuevo.
+
+**Limitaciones conocidas:** dos espacios verdes con el mismo nombre en un barrio se emparejan por orden de creación (no hay desempate real), y las `ServiceFrequency` ya creadas no se actualizan en una segunda corrida (se identifican por tipo, recorrido y turno).
 
 ## 6. Cómo mantenerlo
 

@@ -137,7 +137,6 @@ export function generarInventario(
   },
 ): Inventario {
   const inv: Inventario = { contenedores: [], puntosVerdes: [], arboles: [] };
-  const porComuna = new Map<number, number>();
   const tipos = [
     ContainerType.HOUSEHOLD,
     ContainerType.HOUSEHOLD,
@@ -187,7 +186,7 @@ export function generarInventario(
       const tipo = tipos[(n + i) % tipos.length];
       const dañado = n === 0 && i % 7 === 3;
       inv.contenedores.push({
-        code: `CT-${String(i + 1).padStart(2, '0')}-${String(n + 1).padStart(4, '0')}`,
+        code: `CT-${b.codigo}-${String(n + 1).padStart(4, '0')}`,
         zone: b.codigo,
         containerType: tipo,
         address: ancla ? `Frente a ${ancla.nombre}` : `${b.nombre}, vereda`,
@@ -209,7 +208,7 @@ export function generarInventario(
       const sede = anclas.find((e) => puntoEnGeometria([e.lng, e.lat], poligono));
       const p: Position = sede ? [sede.lng, sede.lat] : cerca(0, 0, 0).p;
       inv.puntosVerdes.push({
-        code: `GP-${String(i + 1).padStart(2, '0')}-01`,
+        code: `GP-${b.codigo}-01`,
         name: sede ? `Punto Verde ${sede.nombre}` : `Punto Verde ${b.nombre}`,
         zone: b.codigo,
         address: sede ? sede.nombre : b.nombre,
@@ -222,10 +221,8 @@ export function generarInventario(
     const nArb = Math.max(0, MIN_ARBOLES + (i % 2) - (existentes.arboles.get(b.codigo) ?? 0));
     for (let n = 0; n < nArb; n++) {
       const { p, ancla } = cerca(n + 3, 15, 60);
-      const orden = (porComuna.get(b.comuna) ?? 0) + 1;
-      porComuna.set(b.comuna, orden);
       inv.arboles.push({
-        surveyCode: `ARB-${String(b.comuna).padStart(2, '0')}-9${String(orden).padStart(4, '0')}`,
+        surveyCode: `ARB-${b.codigo}-9${String(n + 1).padStart(4, '0')}`,
         zone: b.codigo,
         species: ESPECIES[Math.floor(azar() * ESPECIES.length)],
         address: ancla ? `Vereda de ${ancla.nombre}` : `${b.nombre}, vereda`,

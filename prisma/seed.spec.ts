@@ -1,5 +1,12 @@
 import { puntoEnGeometria } from '../src/common/utils/geo';
-import { TIPO_ESPACIO, TOPE_SERVICIOS, planificar, verificar, verificarCobertura } from './seed';
+import {
+  CONTAINERS,
+  TIPO_ESPACIO,
+  TOPE_SERVICIOS,
+  planificar,
+  verificar,
+  verificarCobertura,
+} from './seed';
 import {
   BARRIOS,
   ESPACIOS,
@@ -78,6 +85,18 @@ describe('seed: inventario generado', () => {
       ...inv.arboles.map((t) => t.surveyCode),
     ];
     expect(new Set(codigos).size).toBe(codigos.length);
+  });
+
+  it('los códigos dependen del barrio y no de su posición: estables y sin choques con los escritos a mano', () => {
+    const sinPrimero = generarInventario(poligonos, SIN_INVENTARIO);
+    const code = (c: { code: string }) => c.code;
+    expect(inv.contenedores.map(code)).toContain('CT-belgrano-0001');
+    expect(inv.puntosVerdes.map(code)).toContain('GP-palermo-01');
+    expect(inv.arboles.map((t) => t.surveyCode)).toContain('ARB-villa-luro-90001');
+    expect(sinPrimero.contenedores.map(code)).toEqual(inv.contenedores.map(code));
+    const aMano = new Set(CONTAINERS.concat().map(code));
+    expect(aMano.size).toBe(CONTAINERS.length);
+    expect(new Set(inv.puntosVerdes.map(code)).size).toBe(inv.puntosVerdes.length);
   });
 
   it('completa solo lo que falta cuando ya hay inventario cargado', () => {
