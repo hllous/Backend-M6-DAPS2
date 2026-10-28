@@ -45,8 +45,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       // M1 comparte la clave en base64: se verifica con los bytes, no con el texto.
       secretOrKey: Buffer.from(config.getOrThrow<string>('jwt.secret'), 'base64'),
-      // Sin esto se aceptaría cualquier HS*.
-      algorithms: ['HS256'],
+      // Solo HMAC (M1 v3.1: JJWT elige HS256/384/512 según el largo de la clave); sin lista se aceptaría cualquier alg.
+      algorithms: ['HS256', 'HS384', 'HS512'],
       issuer: config.getOrThrow<string>('jwt.issuer'),
       ignoreExpiration: false,
     });
