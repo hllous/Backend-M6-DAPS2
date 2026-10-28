@@ -132,7 +132,7 @@ No hay que hacer nada manual: el deploy sale con el release a `main`. Un push a 
 > | `CORE_MODULE_ID` | `ambiente` (default) |
 > | `CORE_MODULE_SECRET` | **lo entrega M9 por privado** |
 >
-> El vhost `core` va en la **ruta** de la URL del broker y la clave va **percent-encoded** (`/ ? # @ : %`). La validación de env rechaza `amqp://` y el usuario `guest` con `NODE_ENV=production`. Readiness del Core: `https://core-uade-2026.duckdns.org/health/ready`. La **contraseña de RabbitMQ, el `CORE_MODULE_SECRET`, el acceso al dashboard y la ficha se piden a M9 por privado**: nunca van al repo, a capturas, a logs ni a variables públicas del frontend. Además, el puerto 5671 solo abre para la IP pública de salida de Render que M9 haya dado de alta; si Render la cambia, avisar antes de volver a probar.
+> El vhost `core` va en la **ruta** de la URL del broker y la clave va **percent-encoded** (`/ ? # @ : %`). La validación de env rechaza `amqp://` y el usuario `guest` con `NODE_ENV=production`. Readiness del Core: `https://core-uade-2026.duckdns.org/health/ready`. La **contraseña de RabbitMQ, el `CORE_MODULE_SECRET`, el acceso al dashboard y la ficha se piden a M9 por privado**: nunca van al repo, a capturas, a logs ni a variables públicas del frontend. Además, el puerto 5671 solo abre para las IP de salida dadas de alta en M9 (los rangos de Render están habilitados desde el 28/10); si Render las cambia, avisar antes de volver a probar.
 
 > **IP de salida de Render (para el alta del puerto 5671 en el Core):** `74.220.48.0/24` y `74.220.56.0/24` (rangos que muestra el panel de Render para el servicio). Son públicos, por eso van versionados. **Son compartidos por todos los servicios de Render de la región**: al habilitarlos, M9 abre el 5671 a cualquier servicio alojado ahí, y lo que protege la conexión es la autenticación del usuario `module_ambiente`, no el origen. Si Render cambia los rangos, hay que avisarle a M9 antes de volver a probar.
 >
@@ -177,7 +177,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 | Vercel | `M6_SESSION_SECRET` | Valor aleatorio propio | Sella la cookie de sesión del BFF | Lo genera DevOps | Si no existe | Sí |
 | Vercel | `M6_AUTH_MODE`, `M6_BACKEND_ORIGIN` | `backend-development` y `https://m6-backend-m64k.onrender.com` | Modo demo contra el backend real | – | Solo verificar | No |
 
-**Del lado de M9** (lo coordina el PO): que hayan dado de alta los rangos de salida de Render, `74.220.48.0/24` y `74.220.56.0/24`. Sin eso el puerto 5671 no abre.
+**Del lado de M9** (lo coordina el PO): los rangos de salida de Render, `74.220.48.0/24` y `74.220.56.0/24`, están habilitados desde el 28/10 (dato de M9; falta probar desde Render). Si Render cambia sus IPs, avisar.
 
 **Orden sugerido**
 
