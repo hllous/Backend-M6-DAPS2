@@ -72,11 +72,11 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
-## Para enviar a M7 (redactado el 28/10, sin enviar)
+## Enviado el 28/10 a las 17:47 (M7)
 
-> Redactado el 28/10 tras recibir `M6_a_M7_Contrato_Cortes_Final_2026-10-28.md` ([#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447)). **Al enviarlo, anotar la hora acá y mover la respuesta a [`m7.md`](m7.md).**
+> Redactado el 28/10 tras recibir `M6_a_M7_Contrato_Cortes_Final_2026-10-28.md` ([#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447)). **Enviado el mismo 28/10 a las 17:47** (el PO lo manda al recibirlo); al responder M7, mover la respuesta a [`m7.md`](m7.md).
 
-**→ M7 (Tránsito)** — validación del contrato final de cortes
+**→ M7 (Tránsito)** — validación del contrato final de cortes — *enviado el 28/10 a las 17:47*
 
 > Hola M7, gracias por el contrato final de cortes. Lo revisamos contra nuestro código; esto es lo que ya cumplimos y lo que necesitamos de ustedes:
 >
