@@ -32,8 +32,7 @@ describe('seed: distribución sobre los 48 barrios y 15 comunas', () => {
     expect(() => verificar(planes)).not.toThrow();
     expect(planes.length).toBeLessThanOrEqual(TOPE_SERVICIOS);
     expect(planes.length).toBeGreaterThan(600);
-    // 788 + 12 vaciados sobre contenedores reales en distintos estados.
-    expect(planes).toHaveLength(800);
+    // El total baja con los días: se agenda desde hoy hasta el fin de la cursada.
   });
 
   it('toda comuna tiene recorridos y servicios, y todo barrio inventario', () => {
