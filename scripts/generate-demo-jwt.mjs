@@ -1,4 +1,4 @@
-// Firma un access token con el contrato de M1 (HS256, clave en base64, iss, typ, rol).
+// Firma un access token con el contrato de M1 (HMAC, firmamos HS256; clave en base64, iss, typ, rol).
 // Uso: node scripts/generate-demo-jwt.mjs <JWT_SECRET en base64> [ROL] [SUB] [HASTA AAAA-MM-DD]
 // Para el token de demo del administrador inicial: ROL = RESPONSABLE_AREA y SUB = el
 // user_id de M1 cargado en M6_BOOTSTRAP_ADMIN_USER_IDS.

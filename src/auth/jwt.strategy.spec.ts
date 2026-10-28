@@ -129,6 +129,19 @@ describe('JwtStrategy', () => {
     expect(findMany).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    ['HS384', 'sha384'],
+    ['HS512', 'sha512'],
+  ])('acepta firmado con %s (JJWT elige según el largo de la clave de M1)', async (alg, hmac) => {
+    const r = await authenticate(sign({}, { alg, hmac }));
+    expect(r.user).toMatchObject({ userId: '42' });
+  });
+
+  it('acepta un ciudadano con rol PERSONA, el claim que emite M1 v3.1', async () => {
+    const r = await authenticate(sign({ sub_type: 'CIUDADANO', rol: 'PERSONA' }));
+    expect(r.user).toMatchObject({ roles: [], m1Role: 'PERSONA', subType: 'CIUDADANO' });
+  });
+
   it('acepta un ciudadano, sin roles de M6', async () => {
     const r = await authenticate(sign({ sub_type: 'CIUDADANO', rol: 'CIUDADANO' }));
     expect(r.user).toMatchObject({ roles: [], m1Role: 'CIUDADANO', subType: 'CIUDADANO' });
@@ -143,7 +156,7 @@ describe('JwtStrategy', () => {
     ['sin exp', sign({ exp: undefined })],
     ['vencido', sign({ exp: Math.floor(Date.now() / 1000) - 10 })],
     ['alg none', sign({}, { alg: 'none' })],
-    ['alg HS512', sign({}, { alg: 'HS512', hmac: 'sha512' })],
+    ['alg RS256', sign({}, { alg: 'RS256' })],
     ['sin rol', sign({ rol: undefined })],
     ['rol vacío', sign({ rol: '' })],
     ['rol como array', sign({ rol: ['ADMINISTRATIVO'] })],

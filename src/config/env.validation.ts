@@ -47,7 +47,7 @@ export const envSchema = z
     // cierra un CSRF: es higiene, no un limite de seguridad.
     CORS_ORIGINS: z.string().optional(),
 
-    // JWT de M1: HS256 con la clave simétrica compartida (`APP_JWT_SECRET` de M1),
+    // JWT de M1: HMAC (HS256, HS384 o HS512) con la clave simétrica compartida (`APP_JWT_SECRET` de M1),
     // en BASE64 y de al menos 256 bits. Nunca en el repo.
     JWT_SECRET: z
       .string()
