@@ -110,14 +110,15 @@ describe('seed: inventario real de IDECABA', () => {
     expect(cuenta).toEqual(CONTENEDORES_A_MANO);
   });
 
-  it('el seed reparte parejo contando todos: 9 a 11 contenedores por barrio y al menos un verde', () => {
+  it('el seed reparte parejo contando todos: 9 a 13 contenedores por barrio y al menos un verde', () => {
     const porBarrio = BARRIOS.map((b) => CONTAINERS.filter((c) => c.zone === b.codigo));
     for (const c of porBarrio) {
       expect(c.length).toBeGreaterThanOrEqual(MIN_CONTENEDORES);
       expect(c.some((x) => x.containerType === 'RECYCLABLE')).toBe(true);
     }
     const n = porBarrio.map((c) => c.length);
-    expect(Math.max(...n) - Math.min(...n)).toBeLessThanOrEqual(8);
+    expect(Math.min(...n)).toBeGreaterThanOrEqual(9);
+    expect(Math.max(...n)).toBeLessThanOrEqual(13);
   });
 
   it('escenarios de demo: contenedores reales desbordados, dañados, en taller y en reubicación', () => {
