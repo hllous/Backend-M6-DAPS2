@@ -72,6 +72,20 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Enviado el 28/10 a las 12:40 (grupo general)
+
+> Redactado el 28/10 a las 12:40 ([#442](https://github.com/hllous/Backend-M6-DAPS2/issues/442), [#299](https://github.com/hllous/Backend-M6-DAPS2/issues/299), [#328](https://github.com/hllous/Backend-M6-DAPS2/issues/328)). **Enviado el mismo 28/10**; el horario es una propuesta, al responder los módulos anotar el acordado en [`m9.md`](m9.md).
+
+**→ Grupo general (M9 y todos los módulos)** — primera prueba de M6 contra el Core real — *enviado el 28/10 a las 12:40*
+
+> *28/10/2026, 12:40.* Hola a todos, somos M6 (Ambiente). Con el 5671 habilitado (gracias M9) vamos a hacer nuestra **primera prueba contra el Core real**. Como el ambiente es único y compartido, la avisamos antes:
+>
+> 1. **Prueba pasiva** (TCP/TLS, autenticación y `q.ambiente` en modo pasivo): no publicamos ni consumimos, no afecta a nadie.
+> 2. **Prueba de circulación con un evento exclusivo, `pruebaConexionM6`:** creamos esa suscripción solo a `q.ambiente`. M9 publica un evento de ese tipo por HTTP con datos ficticios y nosotros lo recibimos por AMQP. **No llega a ningún otro módulo** y no se publica ningún evento de negocio nuestro.
+> 3. Al terminar, damos de baja la suscripción de prueba.
+>
+> **Horario propuesto: hoy 28/10 a las 16:00, unos 30 minutos.** Si a algún módulo le molesta (por ejemplo, está probando con el Core ahora), que lo diga y lo movemos. **M9:** ¿alguien puede publicar el `pruebaConexionM6` en ese horario? Les avisamos al empezar y al terminar. — M6 Ambiente
+
 ## Enviado el 27/10 a las 11:14 (M9)
 
 > Redactado el 27/10 a las 11:14 ([#412](https://github.com/hllous/Backend-M6-DAPS2/issues/412), [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)). **Enviado el mismo 27/10**; al responder M9, mover la respuesta a [`m9.md`](m9.md).
