@@ -220,14 +220,14 @@ Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append
 
 | Método | Ruta       | Descripción |
 | ------ | ---------- | ----------- |
-| GET    | `/communes` | Comunas con sus zonas y los barrios de cada zona (`codigo`/`nombre` de la caché de M9; sin catálogo solo el `id`). Filtro: `active`. Ordenadas por número de comuna. Sin paginar. Cualquier rol de M6 |
+| GET    | `/communes` | Comunas con sus zonas y los barrios de cada zona (`codigo`/`nombre` de la caché de M9; sin catálogo solo el `id`). Filtro: `active`. Ordenadas por `number` (el N de `comuna-N`, entero). Sin paginar. Cualquier rol de M6 |
 
 ## `zones` — zonas operativas
 
 | Método | Ruta                                       | Qué hace                                            |
 | ------ | ------------------------------------------ | --------------------------------------------------- |
 | POST   | `/zones`                                   | Crear zona operativa. `communeId` opcional (400 si la comuna no existe) |
-| GET    | `/zones`                                   | Listar, con `commune` y `neighborhood` (uno solo, el primero por id con UUID, aunque la zona tenga varios; el detalle trae todos en `neighborhoods[]`). Filtros: `active`, `search` (nombre), `communeId` |
+| GET    | `/zones`                                   | Listar ordenado por número de comuna (1 a 15), luego por nombre; las zonas sin comuna al final. Con `commune {id, code, number, name}` y `neighborhood` (uno solo, el primero por id con UUID, aunque la zona tenga varios; el detalle trae todos en `neighborhoods[]`). Filtros: `active`, `search` (nombre), `communeId` |
 | GET    | `/zones/:id`                               | Detalle, con los barrios asignados                  |
 | PATCH  | `/zones/:id`                               | Actualizar nombre, estado y `communeId` (400 si la comuna no existe; `null` la desasigna). El código es inmutable |
 | DELETE | `/zones/:id`                               | Baja lógica                                         |
@@ -397,12 +397,12 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 
 | Método | Ruta                                               | Qué hace                                                                                                                                                                                                                                            |
 | ------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/tree-interventions`                              | Crear intervención sobre uno o más árboles                                                                                                                                                                                                          |
+| POST   | `/tree-interventions`                              | Crear intervención sobre uno o más árboles; registra `requestedByUserId` (el usuario del token)                                                                                                                                                                                                          |
 | GET    | `/tree-interventions`                              | Listar. Filtros: `interventionType`, `status`, `priority` (`LOW`/`MEDIUM`/`HIGH`/`CRITICAL`), `treeId` (las que incluyen ese árbol)                                                                                                                 |
 | GET    | `/tree-interventions/:id`                          | Detalle                                                                                                                                                                                                                                             |
 | POST   | `/tree-interventions/:id/submit-for-authorization` | `REQUESTED → PENDING_AUTHORIZATION`. Solo para `REMOVAL`                                                                                                                                                                                            |
-| POST   | `/tree-interventions/:id/authorize`                | `→ AUTHORIZED`. Una `REMOVAL` en `REQUESTED` da 409: tiene que pasar por `PENDING_AUTHORIZATION`                                                                                                                                                    |
-| POST   | `/tree-interventions/:id/reject`                   | `PENDING_AUTHORIZATION → REJECTED`                                                                                                                                                                                                                  |
+| POST   | `/tree-interventions/:id/authorize`                | `→ AUTHORIZED`. Una `REMOVAL` en `REQUESTED` da 409: tiene que pasar por `PENDING_AUTHORIZATION`. Autorizar una `REMOVAL` exige `M6_ADMIN` (403 `ROLE_REQUIRED` para `M6_OFICINA_OPERACIONES`); un admin puede autorizar lo que él mismo solicitó y `requestedByUserId` y `authorizedByUserId` quedan en la respuesta                                                                                                                                                    |
+| POST   | `/tree-interventions/:id/reject`                   | `PENDING_AUTHORIZATION → REJECTED`. Rechazar una `REMOVAL` también exige `M6_ADMIN`                                                                                                                                                                                                                  |
 | POST   | `/tree-interventions/:id/assign-service`           | Asociar la intervención al `Service` que la ejecuta. La intervención guarda **qué** hay que hacer; el servicio, **cuándo, con qué cuadrilla y cómo terminó**. Solo una intervención `AUTHORIZED`, contra un servicio `POINT` que no ejecute ya otra |
 
 ## `events` — ingesta de eventos entrantes

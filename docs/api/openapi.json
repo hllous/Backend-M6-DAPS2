@@ -5985,7 +5985,7 @@
       "post": {
         "operationId": "TreeInterventionsController_create",
         "summary": "Solicitar una intervención sobre árboles",
-        "description": "Crea una solicitud de intervención (poda, extracción, plantación o tratamiento) sobre uno o más árboles. Se crea en estado REQUESTED. Las extracciones (REMOVAL) requieren autorización adicional vía el endpoint submit-for-authorization.",
+        "description": "Crea una solicitud de intervención (poda, extracción, plantación o tratamiento) sobre uno o más árboles. Se crea en estado REQUESTED y registra quién la solicitó (el usuario del token). Las extracciones (REMOVAL) requieren autorización adicional vía el endpoint submit-for-authorization.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -6397,7 +6397,7 @@
       "post": {
         "operationId": "TreeInterventionsController_authorize",
         "summary": "Autorizar una intervención",
-        "description": "Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó (el usuario del token) y cuándo.",
+        "description": "Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó (el usuario del token) y cuándo. Autorizar una extracción (REMOVAL) exige M6_ADMIN, aunque la solicite otro; un M6_ADMIN puede autorizar lo que él mismo solicitó y ambos ids quedan registrados. Las podas no requieren autorización.",
         "parameters": [
           {
             "name": "id",
@@ -6442,7 +6442,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "Falta el rol de M6 (code ROLE_REQUIRED). Una extracción (REMOVAL) requiere M6_ADMIN; las podas, cualquiera de los roles de operaciones",
             "content": {
               "application/json": {
                 "schema": {
@@ -6496,7 +6496,7 @@
       "post": {
         "operationId": "TreeInterventionsController_reject",
         "summary": "Rechazar una intervención",
-        "description": "Transición PENDING_AUTHORIZATION → REJECTED. Estado terminal.",
+        "description": "Transición PENDING_AUTHORIZATION → REJECTED. Estado terminal. Rechazar una extracción (REMOVAL) exige M6_ADMIN, igual que autorizarla.",
         "parameters": [
           {
             "name": "id",
@@ -6531,7 +6531,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "Falta el rol de M6 (code ROLE_REQUIRED). Una extracción (REMOVAL) requiere M6_ADMIN; las podas, cualquiera de los roles de operaciones",
             "content": {
               "application/json": {
                 "schema": {
@@ -13830,6 +13830,11 @@
             "description": "Código de M9 de la comuna",
             "example": "comuna-14"
           },
+          "number": {
+            "type": "integer",
+            "description": "Número de la comuna (1 a 15): el orden de los listados",
+            "example": 14
+          },
           "name": {
             "type": "string",
             "description": "Nombre de la comuna",
@@ -13839,6 +13844,7 @@
         "required": [
           "id",
           "code",
+          "number",
           "name"
         ]
       },
@@ -14123,6 +14129,11 @@
             "description": "Código de M9 de la comuna",
             "example": "comuna-14"
           },
+          "number": {
+            "type": "integer",
+            "description": "Número de la comuna (1 a 15): el orden del listado",
+            "example": 14
+          },
           "name": {
             "type": "string",
             "description": "Nombre de la comuna",
@@ -14144,6 +14155,7 @@
         "required": [
           "id",
           "code",
+          "number",
           "name",
           "active",
           "zones"
@@ -15978,14 +15990,20 @@
             ],
             "nullable": true
           },
+          "requestedByUserId": {
+            "type": "string",
+            "description": "ID del usuario que solicitó la intervención (el del token al crearla). Null en las anteriores a este campo",
+            "example": "usr-00002",
+            "nullable": true
+          },
           "authorizedByUserId": {
             "type": "string",
-            "description": "ID del usuario que autorizó (solo REMOVAL)",
+            "description": "ID del usuario que autorizó (el del token en authorize; también en las podas). Null mientras no se autorice",
             "nullable": true
           },
           "authorizedAt": {
             "type": "string",
-            "description": "Fecha de autorización (solo REMOVAL)",
+            "description": "Fecha de autorización (también en las podas). Null mientras no se autorice",
             "format": "date-time",
             "nullable": true
           },

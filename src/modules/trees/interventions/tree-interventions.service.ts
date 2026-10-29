@@ -5,7 +5,13 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { Prisma, ServiceMode, TreeInterventionStatus, TreeInterventionType } from '@prisma/client';
+import {
+  M6Role,
+  Prisma,
+  ServiceMode,
+  TreeInterventionStatus,
+  TreeInterventionType,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
   AssignInterventionServiceDto,
@@ -15,6 +21,7 @@ import {
   AuthorizeInterventionDto,
 } from './dto';
 import { PaginatedResponseDto } from '../../../common/dto';
+import { roleRequiredException } from '../../../common/decorators';
 
 /**
  * Transiciones válidas de TreeIntervention:
@@ -37,7 +44,10 @@ export class TreeInterventionsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateTreeInterventionDto): Promise<TreeInterventionResponseDto> {
+  async create(
+    dto: CreateTreeInterventionDto,
+    userId: string,
+  ): Promise<TreeInterventionResponseDto> {
     // Verificar que todos los árboles existen
     const trees = await this.prisma.tree.findMany({
       where: { id: { in: dto.treeIds } },
@@ -56,6 +66,8 @@ export class TreeInterventionsService {
         address: dto.address ?? null,
         requiresStreetClosure: dto.requiresStreetClosure ?? false,
         status: TreeInterventionStatus.REQUESTED,
+        // Quién solicita lo dice el token: sin esto no se puede auditar la separación de funciones.
+        requestedByUserId: userId,
         priority: dto.priority ?? null,
         justification: dto.justification ?? null,
         trees: {
@@ -145,8 +157,10 @@ export class TreeInterventionsService {
     id: string,
     dto: AuthorizeInterventionDto,
     userId: string,
+    roles: readonly M6Role[] = [],
   ): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
+    this.assertCanDecideRemoval(intervention, userId, roles);
 
     // Sin esto una extracción se autoriza directo desde REQUESTED y el control
     // de autorización queda salteado: la tabla de transiciones habilita
@@ -160,20 +174,30 @@ export class TreeInterventionsService {
       );
     }
 
-    return this.transition(intervention, TreeInterventionStatus.AUTHORIZED, {
-      // Quién autoriza lo dice el token, nunca el body (dto.authorizedByUserId está deprecado e ignorado).
-      authorizedByUserId: userId,
-      authorizedAt: new Date(),
-      ...(dto.justification && { justification: dto.justification }),
-    });
+    return this.transition(
+      intervention,
+      TreeInterventionStatus.AUTHORIZED,
+      {
+        // Quién autoriza lo dice el token, nunca el body (dto.authorizedByUserId está deprecado e ignorado).
+        authorizedByUserId: userId,
+        authorizedAt: new Date(),
+        ...(dto.justification && { justification: dto.justification }),
+      },
+      userId,
+    );
   }
 
   /**
    * PENDING_AUTHORIZATION → REJECTED.
    */
-  async reject(id: string): Promise<TreeInterventionResponseDto> {
+  async reject(
+    id: string,
+    userId: string,
+    roles: readonly M6Role[] = [],
+  ): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
-    return this.transition(intervention, TreeInterventionStatus.REJECTED);
+    this.assertCanDecideRemoval(intervention, userId, roles);
+    return this.transition(intervention, TreeInterventionStatus.REJECTED, {}, userId);
   }
 
   /**
@@ -244,10 +268,34 @@ export class TreeInterventionsService {
     return intervention;
   }
 
+  /**
+   * Autorizar o rechazar una extracción es decisión del responsable de área
+   * (M6_ADMIN), no de quien la solicita. Se chequea acá y no solo en @Roles porque
+   * la misma ruta sirve a las podas, que no requieren autorización. Un admin puede
+   * decidir sobre lo que él mismo solicitó: queda registrado en requestedByUserId.
+   */
+  private assertCanDecideRemoval(
+    intervention: { id: string; interventionType: TreeInterventionType },
+    userId: string,
+    roles: readonly M6Role[],
+  ): void {
+    if (
+      intervention.interventionType === TreeInterventionType.REMOVAL &&
+      !roles.includes(M6Role.M6_ADMIN)
+    ) {
+      // Para detectar quién intenta decidir una extracción sin ser responsable de área.
+      this.logger.warn(
+        `Decisión sobre extracción denegada: usuario=${userId} intervención=${intervention.id} (requiere M6_ADMIN)`,
+      );
+      throw roleRequiredException();
+    }
+  }
+
   private async transition(
     intervention: any,
     targetStatus: TreeInterventionStatus,
     additionalData: Record<string, any> = {},
+    userId?: string,
   ): Promise<TreeInterventionResponseDto> {
     const currentStatus = intervention.status as TreeInterventionStatus;
     const allowed = VALID_TRANSITIONS[currentStatus] ?? [];
@@ -263,7 +311,9 @@ export class TreeInterventionsService {
       include: { trees: true },
     });
 
-    this.logger.log(`Intervención ${intervention.id}: ${intervention.status} → ${targetStatus}`);
+    this.logger.log(
+      `Intervención ${intervention.id}: ${intervention.status} → ${targetStatus}${userId ? ` (usuario ${userId})` : ''}`,
+    );
     return this.toResponseDto(updated);
   }
 
@@ -276,6 +326,7 @@ export class TreeInterventionsService {
       address: intervention.address,
       requiresStreetClosure: intervention.requiresStreetClosure,
       priority: intervention.priority,
+      requestedByUserId: intervention.requestedByUserId,
       authorizedByUserId: intervention.authorizedByUserId,
       authorizedAt: intervention.authorizedAt,
       justification: intervention.justification,
