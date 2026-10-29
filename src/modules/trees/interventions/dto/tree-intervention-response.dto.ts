@@ -62,14 +62,24 @@ export class TreeInterventionResponseDto {
   priority: Severity | null;
 
   @ApiPropertyOptional({
-    description: 'ID del usuario que autorizó (solo REMOVAL)',
+    description:
+      'ID del usuario que solicitó la intervención (el del token al crearla). Null en las anteriores a este campo',
+    example: 'usr-00002',
+    type: String,
+    nullable: true,
+  })
+  requestedByUserId: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'ID del usuario que autorizó (el del token en authorize; también en las podas). Null mientras no se autorice',
     type: String,
     nullable: true,
   })
   authorizedByUserId: string | null;
 
   @ApiPropertyOptional({
-    description: 'Fecha de autorización (solo REMOVAL)',
+    description: 'Fecha de autorización (también en las podas). Null mientras no se autorice',
     format: 'date-time',
     type: String,
     nullable: true,

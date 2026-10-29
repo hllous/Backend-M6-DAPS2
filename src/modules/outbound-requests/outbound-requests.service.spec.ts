@@ -1,5 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import {
+  EnvironmentalReportType,
+  InspectionOutcome,
   RepairDamageType,
   RepairRequestStatus,
   Severity,
@@ -55,11 +57,18 @@ describe('OutboundRequestsService', () => {
     ...over,
   });
 
+  const inspectionRow = (
+    outcome: InspectionOutcome | null = InspectionOutcome.VIOLATION_FOUND,
+    reportType: EnvironmentalReportType = EnvironmentalReportType.WATER_DISCHARGE,
+    ticketId: string | null = null,
+  ) => ({ outcome, report: { reportType, ticketId } });
+
   beforeEach(() => {
     prisma = {
       repairRequest: {
         create: jest.fn().mockResolvedValue(repairRow()),
         findUnique: jest.fn().mockResolvedValue(repairRow()),
+        findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn().mockResolvedValue(repairRow()),
         findMany: jest.fn(),
         count: jest.fn(),
@@ -75,7 +84,7 @@ describe('OutboundRequestsService', () => {
       treeIntervention: {
         findUnique: jest.fn().mockResolvedValue({ id: SERVICE_ID, status: 'AUTHORIZED' }),
       },
-      environmentalInspection: { findUnique: jest.fn().mockResolvedValue({ id: SERVICE_ID }) },
+      environmentalInspection: { findUnique: jest.fn().mockResolvedValue(inspectionRow()) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
@@ -121,13 +130,23 @@ describe('OutboundRequestsService', () => {
       expect(enqueued().payload.ticketId).toBe('TCK-2026-900');
     });
 
-    it('una deteccion en inspeccion no busca ticket: cuelga de un expediente', async () => {
+    it('una deteccion en inspeccion lleva el ticketId de su expediente', async () => {
+      prisma.environmentalInspection.findUnique.mockResolvedValue(
+        inspectionRow(InspectionOutcome.VIOLATION_FOUND, 'WATER_DISCHARGE', 'TCK-2026-77'),
+      );
+
       await service.createRepairRequest({
         ...dto,
         detectedInType: DetectedInType.INSPECTION,
       });
 
       expect(prisma.service.findUnique).not.toHaveBeenCalled();
+      expect(enqueued().payload.ticketId).toBe('TCK-2026-77');
+    });
+
+    it('una inspeccion de un expediente sin ticket no manda ticketId', async () => {
+      await service.createRepairRequest({ ...dto, detectedInType: DetectedInType.INSPECTION });
+
       expect(enqueued().payload).not.toHaveProperty('ticketId');
     });
 
@@ -163,10 +182,71 @@ describe('OutboundRequestsService', () => {
 
       expect(prisma.environmentalInspection.findUnique).toHaveBeenCalledWith({
         where: { id: SERVICE_ID },
-        select: { id: true },
+        select: { outcome: true, report: { select: { reportType: true, ticketId: true } } },
       });
       expect(prisma.service.findUnique).not.toHaveBeenCalled();
       expect(outbox.enqueue).toHaveBeenCalledTimes(1);
+    });
+
+    describe('origen INSPECTION que no justifica reparación (409)', () => {
+      const fromInspection = { ...dto, detectedInType: DetectedInType.INSPECTION };
+
+      it.each([
+        ['sin cerrar', null, 'WATER_DISCHARGE', /todavía no se cerró/],
+        ['NO_VIOLATION', InspectionOutcome.NO_VIOLATION, 'WATER_DISCHARGE', /NO_VIOLATION/],
+        ['expediente NOISE', InspectionOutcome.VIOLATION_FOUND, 'NOISE', /NOISE no admite/],
+        ['expediente ODOR', InspectionOutcome.INCONCLUSIVE, 'ODOR', /ODOR no admite/],
+        [
+          'expediente PEST_INFESTATION',
+          InspectionOutcome.VIOLATION_FOUND,
+          'PEST_INFESTATION',
+          /no admite/,
+        ],
+        ['expediente AIR_EMISSION', InspectionOutcome.VIOLATION_FOUND, 'AIR_EMISSION', /no admite/],
+      ] as const)('%s', async (_n, outcome, reportType, message) => {
+        prisma.environmentalInspection.findUnique.mockResolvedValue(
+          inspectionRow(outcome, reportType),
+        );
+
+        await expect(service.createRepairRequest(fromInspection)).rejects.toThrow(
+          ConflictException,
+        );
+        await expect(service.createRepairRequest(fromInspection)).rejects.toThrow(message);
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+        expect(outbox.enqueue).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        [InspectionOutcome.VIOLATION_FOUND, 'DUMPING'],
+        [InspectionOutcome.INCONCLUSIVE, 'ILLEGAL_DUMPSITE'],
+        [InspectionOutcome.VIOLATION_FOUND, 'OTHER'],
+      ] as const)('%s en %s sí se deriva', async (outcome, reportType) => {
+        prisma.environmentalInspection.findUnique.mockResolvedValue(
+          inspectionRow(outcome, reportType),
+        );
+
+        await service.createRepairRequest(fromInspection);
+
+        expect(outbox.enqueue).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('un pedido abierto para el mismo origen y daño: 409 y no se crea ni se encola', async () => {
+      prisma.repairRequest.findFirst.mockResolvedValue({ id: 'abierta-1' });
+
+      await expect(service.createRepairRequest(dto)).rejects.toThrow(ConflictException);
+
+      expect(prisma.repairRequest.findFirst).toHaveBeenCalledWith({
+        where: {
+          detectedInType: dto.detectedInType,
+          detectedInId: dto.detectedInId,
+          damageType: dto.damageType,
+          status: { not: RepairRequestStatus.CLOSED },
+        },
+        select: { id: true },
+      });
+      expect(prisma.repairRequest.create).not.toHaveBeenCalled();
+      expect(outbox.enqueue).not.toHaveBeenCalled();
     });
 
     it('la fila y el evento se escriben en la misma transaccion', async () => {

@@ -241,8 +241,9 @@ erDiagram
         boolean requires_street_closure
         enum status "TreeInterventionStatus"
         enum priority "Severity"
-        varchar authorized_by_user_id "solo REMOVAL"
-        timestamp authorized_at "solo REMOVAL"
+        varchar requested_by_user_id "quien la solicitó (token)"
+        varchar authorized_by_user_id "al autorizar (REMOVAL y podas)"
+        timestamp authorized_at "al autorizar (REMOVAL y podas)"
         text justification "solo REMOVAL"
         timestamp pruning_scheduled_at "columna sin uso: antes marca de treePruningScheduled emitido"
     }

@@ -64,6 +64,7 @@ export function buildSwaggerConfig() {
       )
       // ─── Integración ──────────────────────────────
       .addTag('events', 'Ingesta de eventos entrantes y estado de los handlers')
+      .addTag('outbox', 'Eventos salientes: consulta y reintento de los fallidos')
       // ─── Tablero ──────────────────────────────────
       .addTag('indicators', 'Indicadores de cobertura, cumplimiento, incidencias y residuos')
       // ─── Identidad y roles ────────────────────────

@@ -9,7 +9,7 @@ import { M6_ROLES, M6Role } from './m6-role';
  * (por metadata, sin levantar la app) para que una escritura nueva sin @Roles,
  * o con un rol inventado, rompa el build en vez de quedar abierta o inservible.
  */
-const RUTAS_ESPERADAS = 144;
+const RUTAS_ESPERADAS = 148;
 
 describe('cobertura de @Roles por ruta', () => {
   const routes = listRoutes(AppModule);
@@ -31,6 +31,8 @@ describe('cobertura de @Roles por ruta', () => {
       .map((r) => `${label(r)} -> ${r.roles}`);
     expect(gets).toEqual([
       'GET /environmental-inspections/:id/violation-notice -> M6_ADMIN,M6_OFICINA_AMBIENTAL,M6_CAMPO_INSPECTOR,M6_AUDITOR',
+      'GET /events/outbox -> M6_ADMIN,M6_AUDITOR',
+      'GET /events/outbox/:id -> M6_ADMIN',
       'GET /role-assignments -> M6_ADMIN',
       'GET /role-assignments/:userId -> M6_ADMIN',
     ]);
@@ -73,6 +75,13 @@ describe('cobertura de @Roles por ruta', () => {
   it('POST /events/inbox es solo de M6_ADMIN', () => {
     const inbox = routes.find((r) => r.method === 'POST' && r.path === '/events/inbox');
     expect(inbox?.roles).toEqual([M6Role.M6_ADMIN]);
+  });
+
+  it('el outbox: el payload (detalle) y el reintento son solo de M6_ADMIN', () => {
+    const rol = (m: string, p: string) => routes.find((r) => r.method === m && r.path === p)?.roles;
+    expect(rol('GET', '/events/outbox/:id')).toEqual([M6Role.M6_ADMIN]);
+    expect(rol('POST', '/events/outbox/:id/retry')).toEqual([M6Role.M6_ADMIN]);
+    expect(rol('POST', '/events/outbox/retry-failed')).toEqual([M6Role.M6_ADMIN]);
   });
 
   it('solo los públicos esperados saltean la autorización', () => {

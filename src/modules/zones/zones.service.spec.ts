@@ -256,6 +256,16 @@ describe('ZonesService', () => {
       expect(detalle.neighborhoods).toEqual([{ neighborhoodId: 'b-1' }]);
     });
 
+    it('ordena por número de comuna, luego por nombre, con id de desempate', async () => {
+      await service.findAll({ page: 1, pageSize: 20 } as any);
+
+      expect(prisma.zone.findMany.mock.calls[0][0].orderBy).toEqual([
+        { commune: { number: 'asc' } },
+        { name: 'asc' },
+        { id: 'asc' },
+      ]);
+    });
+
     it('filtra por comuna', async () => {
       await service.findAll({ page: 1, pageSize: 20, communeId: COMUNA } as any);
 
@@ -266,14 +276,19 @@ describe('ZonesService', () => {
       catalog.list.mockReturnValue([{ id: B1, codigo: 'palermo', nombre: 'Palermo' }]);
       prisma.zone.findMany.mockResolvedValue([
         zona({
-          commune: { id: COMUNA, code: 'comuna-14', name: 'Comuna 14', active: true },
+          commune: { id: COMUNA, code: 'comuna-14', number: 14, name: 'Comuna 14', active: true },
           neighborhoods: [{ neighborhoodId: B1 }],
         }),
       ]);
 
       const { data } = await service.findAll({ page: 1, pageSize: 20 } as any);
 
-      expect(data[0].commune).toEqual({ id: COMUNA, code: 'comuna-14', name: 'Comuna 14' });
+      expect(data[0].commune).toEqual({
+        id: COMUNA,
+        code: 'comuna-14',
+        number: 14,
+        name: 'Comuna 14',
+      });
       expect(data[0].neighborhood).toEqual({ id: B1, codigo: 'palermo', nombre: 'Palermo' });
     });
 

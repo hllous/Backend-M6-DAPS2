@@ -331,6 +331,7 @@ model ServiceType {
 model Commune {
   id        String   @id @default(uuid()) @db.Uuid
   code      String   @unique // `comuna-N` de M9
+  number    Int // N de `comuna-N`: ordena 1..15 (el code como string da 1, 10, 11...)
   name      String
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
@@ -777,8 +778,10 @@ model TreeIntervention {
   requiresStreetClosure Boolean                @default(false) @map("requires_street_closure")
   status                TreeInterventionStatus
   priority              Severity?
-  authorizedByUserId    String?                @map("authorized_by_user_id") // solo REMOVAL
-  authorizedAt          DateTime?              @map("authorized_at") // solo REMOVAL
+  // Quién la solicitó (token del POST). Null en las anteriores a #456.
+  requestedByUserId     String?                @map("requested_by_user_id")
+  authorizedByUserId    String?                @map("authorized_by_user_id") // quien llamó a authorize (REMOVAL: M6_ADMIN; las podas también lo registran)
+  authorizedAt          DateTime?              @map("authorized_at") // al pasar a AUTHORIZED (extracciones y podas)
   justification         String?                @db.Text // solo REMOVAL
   // Sin uso desde #345: treePruningScheduled dejó de emitirse (M7 solo consume
   // streetClosureRequested). La columna queda sin migrar.
@@ -1033,9 +1036,26 @@ model OutboxEvent {
   // directa en M6 (un endpoint, un barrido).
   causationId   String?           @map("causation_id") @db.Uuid
 
+  retries OutboxRetryAudit[]
+
   // El dispatcher barre PENDING en orden de ocurrencia.
   @@index([status, occurredAt])
   @@map("outbox_event")
+}
+
+// Quién reencoló a mano un evento FAILED, y cómo estaba antes: el reintento
+// resetea attempts y lastError, así que sin esto el rastro del fallo se perdería.
+model OutboxRetryAudit {
+  id               String      @id @default(uuid()) @db.Uuid
+  outboxEventId    String      @map("outbox_event_id") @db.Uuid
+  actorUserId      String      @map("actor_user_id") // quién reintentó (M1, del token)
+  at               DateTime    @default(now())
+  previousAttempts Int         @map("previous_attempts")
+  previousError    String?     @map("previous_error")
+  outboxEvent      OutboxEvent @relation(fields: [outboxEventId], references: [id])
+
+  @@index([outboxEventId, at])
+  @@map("outbox_retry_audit")
 }
 
 model InboxEvent {

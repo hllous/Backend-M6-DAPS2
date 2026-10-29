@@ -8,6 +8,7 @@ import {
   EnvironmentalReportStatus as S,
   InspectionNextStep,
   InspectionOutcome,
+  Prisma,
   ServiceMode,
   Severity,
   SuggestedAction,
@@ -17,6 +18,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { EnvironmentalReportsService } from '../environmental-reports/environmental-reports.service';
 import { EnvironmentalInspectionsService } from './environmental-inspections.service';
 import { CompleteInspectionDto, CreateInspectionDto } from './dto';
+import { ALLOWED_FOLLOW_UPS } from './allowed-follow-ups';
 
 describe('EnvironmentalInspectionsService', () => {
   const INSPECTION_ID = '11111111-1111-1111-1111-111111111111';
@@ -59,6 +61,13 @@ describe('EnvironmentalInspectionsService', () => {
     severity: null,
     suggestedAction: null,
     checklistItems: [],
+    violationNotice: null,
+    report: {
+      reportType: 'ILLEGAL_DUMPSITE',
+      address: 'Camino de Cintura 4500',
+      lat: new Prisma.Decimal('-34.6037000'),
+      lng: new Prisma.Decimal('-58.3816000'),
+    },
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -637,6 +646,86 @@ describe('EnvironmentalInspectionsService', () => {
     it('findOne devuelve la inspección', async () => {
       const result = await service.findOne(INSPECTION_ID);
       expect(result.id).toBe(INSPECTION_ID);
+    });
+
+    it('findOne expone tipo, dirección y coordenadas del expediente (Decimal a number)', async () => {
+      const result = await service.findOne(INSPECTION_ID);
+
+      expect(result).toMatchObject({
+        reportType: 'ILLEGAL_DUMPSITE',
+        address: 'Camino de Cintura 4500',
+        lat: -34.6037,
+        lng: -58.3816,
+      });
+    });
+
+    it('findOne devuelve lat y lng null si el expediente no tiene coordenadas', async () => {
+      prisma.environmentalInspection.findUnique.mockResolvedValue(
+        inspection({ report: { reportType: 'NOISE', address: null, lat: null, lng: null } }),
+      );
+
+      const result = await service.findOne(INSPECTION_ID);
+
+      expect(result).toMatchObject({ address: null, lat: null, lng: null });
+    });
+
+    it.each([
+      ['NOISE', InspectionOutcome.VIOLATION_FOUND, false, true, ViolationType.NOISE_LIMIT],
+      ['ODOR', InspectionOutcome.INCONCLUSIVE, false, false, null],
+      [
+        'WATER_DISCHARGE',
+        InspectionOutcome.VIOLATION_FOUND,
+        true,
+        true,
+        ViolationType.UNTREATED_DISCHARGE,
+      ],
+      ['DUMPING', InspectionOutcome.NO_VIOLATION, false, false, ViolationType.ILLEGAL_DUMPING],
+      ['OTHER', InspectionOutcome.INCONCLUSIVE, true, false, null],
+      ['OTHER', null, false, false, null],
+    ] as const)(
+      'findOne: allowedActions de %s con resultado %s',
+      async (reportType, outcome, repair, notice, suggestedViolationType) => {
+        prisma.environmentalInspection.findUnique.mockResolvedValue(
+          inspection({
+            outcome,
+            report: { reportType, address: null, lat: null, lng: null },
+          }),
+        );
+
+        const result = await service.findOne(INSPECTION_ID);
+
+        expect(result.allowedActions).toEqual({ repair, notice, suggestedViolationType });
+      },
+    );
+
+    it.each(Object.entries(ALLOWED_FOLLOW_UPS))(
+      'findOne: matriz completa, %s con VIOLATION_FOUND',
+      async (reportType, fila) => {
+        prisma.environmentalInspection.findUnique.mockResolvedValue(
+          inspection({
+            outcome: InspectionOutcome.VIOLATION_FOUND,
+            report: { reportType, address: null, lat: null, lng: null },
+          }),
+        );
+
+        const { allowedActions } = await service.findOne(INSPECTION_ID);
+
+        expect(allowedActions).toEqual({
+          repair: fila.repair,
+          notice: fila.notice,
+          suggestedViolationType: fila.suggestedViolationType,
+        });
+      },
+    );
+
+    it('findOne: con acta ya emitida, allowedActions.notice es false', async () => {
+      prisma.environmentalInspection.findUnique.mockResolvedValue(
+        inspection({ violationNotice: { id: 'acta-1' } }),
+      );
+
+      const { allowedActions } = await service.findOne(INSPECTION_ID);
+
+      expect(allowedActions.notice).toBe(false);
     });
 
     it('findOne lanza 404 si no existe', async () => {
