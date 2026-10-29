@@ -1,3 +1,4 @@
+import { M6Role } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { TreeInterventionsController } from './tree-interventions.controller';
@@ -29,10 +30,10 @@ describe('TreeInterventionsController', () => {
     controller = new TreeInterventionsController(service);
   });
 
-  it('create delega el dto', async () => {
+  it('create delega el dto y el usuario del token', async () => {
     const dto = {} as CreateTreeInterventionDto;
-    await expect(controller.create(dto)).resolves.toBe(RESULT);
-    expect(service.create).toHaveBeenCalledWith(dto);
+    await expect(controller.create(dto, 'user-2')).resolves.toBe(RESULT);
+    expect(service.create).toHaveBeenCalledWith(dto, 'user-2');
   });
 
   it('findAll delega la query', async () => {
@@ -66,15 +67,15 @@ describe('TreeInterventionsController', () => {
     expect(service.submitForAuthorization).toHaveBeenCalledWith(ID);
   });
 
-  it('authorize delega id, dto y el usuario del token', async () => {
+  it('authorize delega id, dto, el usuario y sus roles del token', async () => {
     const dto = {} as AuthorizeInterventionDto;
-    await controller.authorize(ID, dto, 'user-7');
-    expect(service.authorize).toHaveBeenCalledWith(ID, dto, 'user-7');
+    await controller.authorize(ID, dto, 'user-7', ['M6_ADMIN' as M6Role]);
+    expect(service.authorize).toHaveBeenCalledWith(ID, dto, 'user-7', ['M6_ADMIN']);
   });
 
-  it('reject delega el id', async () => {
-    await controller.reject(ID);
-    expect(service.reject).toHaveBeenCalledWith(ID);
+  it('reject delega el id y los roles del token', async () => {
+    await controller.reject(ID, 'user-7', ['M6_ADMIN' as M6Role]);
+    expect(service.reject).toHaveBeenCalledWith(ID, 'user-7', ['M6_ADMIN']);
   });
 
   it('assignService delega id y dto', async () => {

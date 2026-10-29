@@ -283,8 +283,9 @@ package "Inventario urbano" #EAF6EE {
       requires_street_closure : boolean
     * status : enum <<TreeInterventionStatus>>
       priority : enum <<Severity>>
-      authorized_by_user_id : varchar <<solo REMOVAL>>
-      authorized_at : timestamp <<solo REMOVAL>>
+      requested_by_user_id : varchar <<quien solicitó>>
+      authorized_by_user_id : varchar <<al autorizar>>
+      authorized_at : timestamp <<al autorizar>>
       justification : text <<solo REMOVAL>>
       pruning_scheduled_at : timestamp <<sin uso: antes marca de treePruningScheduled>>
   }

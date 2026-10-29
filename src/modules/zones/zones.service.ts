@@ -81,7 +81,10 @@ export class ZonesService {
         include: ZONE_INCLUDE,
         skip: query.skip,
         take: query.take,
-        orderBy: { code: 'asc' },
+        // Por número de comuna y, dentro de ella, por barrio. Las zonas sin comuna van al
+        // final (Postgres ordena NULL al último en ASC). `id` desempata para que la
+        // paginación sea estable entre páginas.
+        orderBy: [{ commune: { number: 'asc' } }, { name: 'asc' }, { id: 'asc' }],
       }),
       this.prisma.zone.count({ where }),
     ]);
@@ -246,7 +249,12 @@ export class ZonesService {
       createdAt: zone.createdAt,
       updatedAt: zone.updatedAt,
       commune: zone.commune
-        ? { id: zone.commune.id, code: zone.commune.code, name: zone.commune.name }
+        ? {
+            id: zone.commune.id,
+            code: zone.commune.code,
+            number: zone.commune.number,
+            name: zone.commune.name,
+          }
         : null,
       neighborhood: barrioId
         ? { id: barrioId, codigo: barrio?.codigo, nombre: barrio?.nombre }

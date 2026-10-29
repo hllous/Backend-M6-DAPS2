@@ -126,6 +126,13 @@ export async function cargarDesdeCore(core: CoreClient): Promise<CatalogoM9> {
   });
 }
 
+/** N de un código `comuna-N` de M9. Sin número no hay orden posible: se aborta antes de escribir algo a medias. */
+function numeroDeComuna(codigo: string): number {
+  const m = /^comuna-(\d+)$/.exec(codigo);
+  if (!m) throw new Error(`La zona activa '${codigo}' de M9 no tiene el formato comuna-N`);
+  return Number(m[1]);
+}
+
 function tieneDatos(z: { _count: Record<string, number> }): boolean {
   return Object.values(z._count).some((n) => n > 0);
 }
@@ -177,22 +184,28 @@ async function ejecutar(
   const existentes = await db.commune.findMany();
   for (const z of zonas.filter((x) => x.activo)) {
     const ya = existentes.find((c) => c.code === z.codigo);
+    const number = numeroDeComuna(z.codigo);
     if (!ya) {
       rep.communes.creadas++;
       // En dry-run no hay id real; alcanza con saber que la comuna existiría.
       const creada = dryRun
         ? undefined
-        : await db.commune.create({ data: { code: z.codigo, name: z.nombre, active: true } });
+        : await db.commune.create({
+            data: { code: z.codigo, number, name: z.nombre, active: true },
+          });
       comunaId.set(z.codigo, creada?.id ?? `dry-${z.codigo}`);
       continue;
     }
     comunaId.set(z.codigo, ya.id);
-    if (ya.name === z.nombre && ya.active) {
+    if (ya.name === z.nombre && ya.active && ya.number === number) {
       rep.communes.sinCambios++;
     } else {
       rep.communes.actualizadas++;
       if (!dryRun) {
-        await db.commune.update({ where: { id: ya.id }, data: { name: z.nombre, active: true } });
+        await db.commune.update({
+          where: { id: ya.id },
+          data: { name: z.nombre, number, active: true },
+        });
       }
     }
   }

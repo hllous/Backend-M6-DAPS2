@@ -112,8 +112,8 @@ describe('syncZones', () => {
   it('es idempotente: la segunda corrida no cambia nada', async () => {
     const p = mkPrisma(
       [
-        { id: 'c1', code: 'comuna-1', name: 'Comuna 1', active: true },
-        { id: 'c2', code: 'comuna-2', name: 'Comuna 2', active: true },
+        { id: 'c1', code: 'comuna-1', number: 1, name: 'Comuna 1', active: true },
+        { id: 'c2', code: 'comuna-2', number: 2, name: 'Comuna 2', active: true },
       ],
       [zonaDb()],
     );
@@ -133,7 +133,7 @@ describe('syncZones', () => {
 
   it('actualiza nombre, comuna, reactivación y el vínculo faltante', async () => {
     const p = mkPrisma(
-      [{ id: 'c1', code: 'comuna-1', name: 'vieja', active: false }],
+      [{ id: 'c1', code: 'comuna-1', number: 1, name: 'vieja', active: false }],
       [zonaDb({ name: 'Otro', active: false, neighborhoods: [] })],
     );
     const r = await run(p);
@@ -150,7 +150,7 @@ describe('syncZones', () => {
     const c = catalogo();
     c.barrios[0].activo = false;
     const p = mkPrisma(
-      [{ id: 'c1', code: 'comuna-1', name: 'Comuna 1', active: true }],
+      [{ id: 'c1', code: 'comuna-1', number: 1, name: 'Comuna 1', active: true }],
       [zonaDb()],
     );
     const r = await run(p, c);
@@ -175,6 +175,23 @@ describe('syncZones', () => {
     expect(p.zone.create).not.toHaveBeenCalled();
   });
 
+  it('completa el número de la comuna al crearla y al corregirla', async () => {
+    const p = mkPrisma([{ id: 'c1', code: 'comuna-1', number: 0, name: 'Comuna 1', active: true }]);
+    const r = await run(p);
+    expect(p.commune.create.mock.calls[0][0].data).toMatchObject({ code: 'comuna-2', number: 2 });
+    expect(r.communes.actualizadas).toBe(1);
+    expect(p.commune.update).toHaveBeenCalledWith({
+      where: { id: 'c1' },
+      data: { name: 'Comuna 1', number: 1, active: true },
+    });
+  });
+
+  it('aborta si una zona activa de M9 no tiene el formato comuna-N', async () => {
+    const c = catalogo();
+    c.zonas.push({ id: 'd', codigo: 'centro', nombre: 'Centro', activo: true });
+    await expect(run(mkPrisma(), c)).rejects.toThrow('comuna-N');
+  });
+
   it('comuna sin barrios: se crea igual', async () => {
     const p = mkPrisma();
     await run(p);
@@ -195,7 +212,10 @@ describe('syncZones', () => {
   it('dry-run de actualizaciones y bajas tampoco escribe', async () => {
     const c = catalogo();
     c.barrios[0].activo = false;
-    const p = mkPrisma([{ id: 'c1', code: 'comuna-1', name: 'x', active: true }], [zonaDb()]);
+    const p = mkPrisma(
+      [{ id: 'c1', code: 'comuna-1', number: 1, name: 'x', active: true }],
+      [zonaDb()],
+    );
     const r = await run(p, c, { dryRun: true, cleanLegacy: true });
     expect(r.communes.actualizadas).toBe(1);
     expect(r.zones.desactivadas).toBe(1);
