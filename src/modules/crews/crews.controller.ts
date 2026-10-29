@@ -19,10 +19,12 @@ import {
   CrewResponseDto,
   QueryCrewsDto,
   AddCrewMembersDto,
+  CreateCrewZoneAssignmentDto,
+  CrewZoneAssignmentResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
-import { ROLES_ADMIN } from '../../auth/role-groups';
+import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
 
 @ApiTags('crews')
 @ApiBearerAuth('JWT-auth')
@@ -37,7 +39,7 @@ export class CrewsController {
   @ApiOperation({
     summary: 'Crear una cuadrilla',
     description:
-      'Registra una nueva cuadrilla con su tipo, turno por defecto y opcionalmente un líder y organización. Se crea activa por defecto.',
+      'Registra una nueva cuadrilla con su tipo, especialidad y turno por defecto, y opcionalmente zona base, líder y organización (con sus nombres, que se guardan como copia de M1). Se crea activa por defecto.',
   })
   @ApiResponse({
     status: 201,
@@ -46,12 +48,17 @@ export class CrewsController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos de entrada inválidos (validación fallida)',
+    description: 'Datos de entrada inválidos (validación fallida) o zona base dada de baja',
     type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'La zona base no existe',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -67,9 +74,15 @@ export class CrewsController {
   @ApiOperation({
     summary: 'Listar cuadrillas',
     description:
-      'Retorna un listado paginado de cuadrillas. Se puede filtrar por estado activo/inactivo, tipo de cuadrilla y turno.',
+      'Retorna un listado paginado de cuadrillas con su cantidad de integrantes y su zona efectiva hoy. Se puede filtrar por estado activo/inactivo, tipo, turno, especialidad y zona efectiva hoy (`zoneId`: la reubicación vigente o, si no hay, la zona base).',
   })
   @ApiPaginatedResponse(CrewResponseDto, 'Listado paginado de cuadrillas')
+  @ApiResponse({
+    status: 400,
+    description:
+      'Filtros inválidos (por ejemplo `specialty` fuera del enum o `zoneId` que no es UUID)',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({
     status: 401,
     description: 'Token JWT inválido o ausente',
@@ -87,7 +100,8 @@ export class CrewsController {
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener una cuadrilla por ID',
-    description: 'Retorna el detalle de una cuadrilla incluyendo la lista de miembros asignados.',
+    description:
+      'Retorna el detalle de una cuadrilla incluyendo la lista de miembros asignados, con sus nombres.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la cuadrilla', format: 'uuid' })
   @ApiResponse({
@@ -119,7 +133,7 @@ export class CrewsController {
   @ApiOperation({
     summary: 'Actualizar una cuadrilla',
     description:
-      'Actualiza los campos mutables de una cuadrilla (nombre, turno, líder, organización, estado). El tipo de cuadrilla no se puede cambiar después de la creación.',
+      'Actualiza los campos mutables de una cuadrilla (nombre, turno, especialidad, zona base, líder, organización, sus nombres y estado). El tipo de cuadrilla no se puede cambiar después de la creación.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la cuadrilla', format: 'uuid' })
   @ApiResponse({
@@ -129,7 +143,7 @@ export class CrewsController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos de entrada inválidos',
+    description: 'Datos de entrada inválidos o zona base dada de baja',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -139,7 +153,7 @@ export class CrewsController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Cuadrilla no encontrada',
+    description: 'Cuadrilla o zona base no encontrada',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -193,7 +207,7 @@ export class CrewsController {
   @ApiOperation({
     summary: 'Agregar miembros a una cuadrilla',
     description:
-      'Asigna uno o más usuarios internos de M6 como miembros de la cuadrilla. Los duplicados se ignoran silenciosamente. Retorna la cuadrilla actualizada con todos sus miembros.',
+      'Asigna uno o más usuarios internos de M6 como miembros de la cuadrilla. Se envían en `members` (id de M1 y nombre opcional) o, por compatibilidad, en `userIds` (solo ids). Si un integrante ya estaba, se lo ignora salvo que traiga nombre: ahí se actualiza. Retorna la cuadrilla actualizada con todos sus miembros.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la cuadrilla', format: 'uuid' })
   @ApiResponse({
@@ -264,5 +278,92 @@ export class CrewsController {
     @Param('userId') userId: string,
   ): Promise<void> {
     return this.crewsService.removeMember(id, userId);
+  }
+
+  // ─── Reubicaciones de zona (sub-recurso) ────────────
+
+  @Post(':id/zone-assignments')
+  @Roles(...ROLES_OPERACIONES)
+  @ApiOperation({
+    summary: 'Reubicar una cuadrilla en otra zona por un período',
+    description:
+      'Registra que la cuadrilla trabaja en otra zona entre `validFrom` y `validTo` (inclusive; sin `validTo`, hasta nuevo aviso). No cambia la zona base: al vencer, la cuadrilla vuelve a ella. Una cuadrilla no puede tener dos reubicaciones que se superpongan. Quien la carga queda registrado a partir del token.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID de la cuadrilla', format: 'uuid' })
+  @ApiResponse({
+    status: 201,
+    description: 'Reubicación registrada',
+    type: CrewZoneAssignmentResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos inválidos: `validTo` anterior a `validFrom` o zona dada de baja',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token JWT inválido o ausente',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'El rol del usuario no puede reubicar cuadrillas',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cuadrilla o zona no encontrada',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'El período se superpone con otra reubicación de la cuadrilla',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  async createZoneAssignment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateCrewZoneAssignmentDto,
+    @CurrentUser('userId') userId: string,
+  ): Promise<CrewZoneAssignmentResponseDto> {
+    return this.crewsService.createZoneAssignment(id, dto, userId);
+  }
+
+  @Get(':id/zone-assignments')
+  @ApiOperation({
+    summary: 'Listar las reubicaciones de una cuadrilla',
+    description:
+      'Historial de reubicaciones de zona de la cuadrilla, la más reciente primero: vigentes, futuras y vencidas.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID de la cuadrilla', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Reubicaciones de la cuadrilla',
+    type: CrewZoneAssignmentResponseDto,
+    isArray: true,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token JWT inválido o ausente',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cuadrilla no encontrada',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  async listZoneAssignments(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<CrewZoneAssignmentResponseDto[]> {
+    return this.crewsService.listZoneAssignments(id);
   }
 }

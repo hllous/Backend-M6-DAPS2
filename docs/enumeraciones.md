@@ -37,6 +37,7 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 | `SuggestedAction` | `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE` |
 | `SanctionDecision` | `FINE_ISSUED`, `CLOSURE_ORDERED`, `FORMAL_NOTICE_ISSUED`, `DISMISSED` |
 | `CrewType` | `MUNICIPAL`, `COOPERATIVE`, `CONTRACTOR` |
+| `CrewSpecialty` | `COLLECTION`, `SWEEPING`, `CLEANING`, `RECYCLING`, `TREES`, `GREEN_SPACES`, `INSPECTION` |
 | `VehicleType` | `COMPACTOR_TRUCK`, `DUMP_TRUCK`, `SWEEPER`, `WATER_TANKER`, `CRANE_TRUCK`, `VAN` |
 | `Shift` | `MORNING`, `AFTERNOON`, `NIGHT` |
 | `RepairDamageType` | `BROKEN_PAVEMENT`, `BROKEN_SIDEWALK`, `BROKEN_STREETLIGHT`, `BLOCKED_DRAIN`, `DAMAGED_STRUCTURE` |

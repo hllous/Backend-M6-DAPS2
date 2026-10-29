@@ -3427,7 +3427,7 @@
       "post": {
         "operationId": "CrewsController_create",
         "summary": "Crear una cuadrilla",
-        "description": "Registra una nueva cuadrilla con su tipo, turno por defecto y opcionalmente un líder y organización. Se crea activa por defecto.",
+        "description": "Registra una nueva cuadrilla con su tipo, especialidad y turno por defecto, y opcionalmente zona base, líder y organización (con sus nombres, que se guardan como copia de M1). Se crea activa por defecto.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3451,7 +3451,7 @@
             }
           },
           "400": {
-            "description": "Datos de entrada inválidos (validación fallida)",
+            "description": "Datos de entrada inválidos (validación fallida) o zona base dada de baja",
             "content": {
               "application/json": {
                 "schema": {
@@ -3472,6 +3472,16 @@
           },
           "403": {
             "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La zona base no existe",
             "content": {
               "application/json": {
                 "schema": {
@@ -3503,7 +3513,7 @@
       "get": {
         "operationId": "CrewsController_findAll",
         "summary": "Listar cuadrillas",
-        "description": "Retorna un listado paginado de cuadrillas. Se puede filtrar por estado activo/inactivo, tipo de cuadrilla y turno.",
+        "description": "Retorna un listado paginado de cuadrillas con su cantidad de integrantes y su zona efectiva hoy. Se puede filtrar por estado activo/inactivo, tipo, turno, especialidad y zona efectiva hoy (`zoneId`: la reubicación vigente o, si no hay, la zona base).",
         "parameters": [
           {
             "name": "page",
@@ -3568,6 +3578,36 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "specialty",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por especialidad",
+            "schema": {
+              "example": "COLLECTION",
+              "enum": [
+                "COLLECTION",
+                "SWEEPING",
+                "CLEANING",
+                "RECYCLING",
+                "TREES",
+                "GREEN_SPACES",
+                "INSPECTION"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "zoneId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por la zona **efectiva hoy**: la de la reubicación vigente si hay una; si no, la zona base",
+            "schema": {
+              "format": "uuid",
+              "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3592,6 +3632,16 @@
                       "$ref": "#/components/schemas/PaginationMeta"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos (por ejemplo `specialty` fuera del enum o `zoneId` que no es UUID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -3631,7 +3681,7 @@
       "get": {
         "operationId": "CrewsController_findOne",
         "summary": "Obtener una cuadrilla por ID",
-        "description": "Retorna el detalle de una cuadrilla incluyendo la lista de miembros asignados.",
+        "description": "Retorna el detalle de una cuadrilla incluyendo la lista de miembros asignados, con sus nombres.",
         "parameters": [
           {
             "name": "id",
@@ -3698,7 +3748,7 @@
       "patch": {
         "operationId": "CrewsController_update",
         "summary": "Actualizar una cuadrilla",
-        "description": "Actualiza los campos mutables de una cuadrilla (nombre, turno, líder, organización, estado). El tipo de cuadrilla no se puede cambiar después de la creación.",
+        "description": "Actualiza los campos mutables de una cuadrilla (nombre, turno, especialidad, zona base, líder, organización, sus nombres y estado). El tipo de cuadrilla no se puede cambiar después de la creación.",
         "parameters": [
           {
             "name": "id",
@@ -3733,7 +3783,7 @@
             }
           },
           "400": {
-            "description": "Datos de entrada inválidos",
+            "description": "Datos de entrada inválidos o zona base dada de baja",
             "content": {
               "application/json": {
                 "schema": {
@@ -3763,7 +3813,7 @@
             }
           },
           "404": {
-            "description": "Cuadrilla no encontrada",
+            "description": "Cuadrilla o zona base no encontrada",
             "content": {
               "application/json": {
                 "schema": {
@@ -3867,7 +3917,7 @@
       "post": {
         "operationId": "CrewsController_addMembers",
         "summary": "Agregar miembros a una cuadrilla",
-        "description": "Asigna uno o más usuarios internos de M6 como miembros de la cuadrilla. Los duplicados se ignoran silenciosamente. Retorna la cuadrilla actualizada con todos sus miembros.",
+        "description": "Asigna uno o más usuarios internos de M6 como miembros de la cuadrilla. Se envían en `members` (id de M1 y nombre opcional) o, por compatibilidad, en `userIds` (solo ids). Si un integrante ya estaba, se lo ignora salvo que traiga nombre: ahí se actualiza. Retorna la cuadrilla actualizada con todos sus miembros.",
         "parameters": [
           {
             "name": "id",
@@ -4014,6 +4064,185 @@
           },
           "404": {
             "description": "Cuadrilla o miembro no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "crews"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/crews/{id}/zone-assignments": {
+      "post": {
+        "operationId": "CrewsController_createZoneAssignment",
+        "summary": "Reubicar una cuadrilla en otra zona por un período",
+        "description": "Registra que la cuadrilla trabaja en otra zona entre `validFrom` y `validTo` (inclusive; sin `validTo`, hasta nuevo aviso). No cambia la zona base: al vencer, la cuadrilla vuelve a ella. Una cuadrilla no puede tener dos reubicaciones que se superpongan. Quien la carga queda registrado a partir del token.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la cuadrilla",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCrewZoneAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reubicación registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewZoneAssignmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: `validTo` anterior a `validFrom` o zona dada de baja",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cuadrilla o zona no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El período se superpone con otra reubicación de la cuadrilla",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "crews"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "CrewsController_listZoneAssignments",
+        "summary": "Listar las reubicaciones de una cuadrilla",
+        "description": "Historial de reubicaciones de zona de la cuadrilla, la más reciente primero: vigentes, futuras y vencidas.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la cuadrilla",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reubicaciones de la cuadrilla",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrewZoneAssignmentResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cuadrilla no encontrada",
             "content": {
               "application/json": {
                 "schema": {
@@ -8119,7 +8348,7 @@
             }
           },
           "409": {
-            "description": "La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada",
+            "description": "La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, o la cuadrilla no es de la zona o la especialidad del servicio, y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada",
             "content": {
               "application/json": {
                 "schema": {
@@ -8575,7 +8804,7 @@
       "post": {
         "operationId": "ServicesController_assignCrew",
         "summary": "Asignar cuadrilla a un servicio",
-        "description": "La cuadrilla es opcional al programar y obligatoria para iniciar. Permite asignar el vehículo en la misma operación.",
+        "description": "La cuadrilla es opcional al programar y obligatoria para iniciar. Permite asignar el vehículo en la misma operación. Avisa, sin bloquear, si la cuadrilla no es la de la zona del servicio o su especialidad no corresponde al tipo de servicio: igual que un solapamiento, exige `overrideNote`.",
         "parameters": [
           {
             "name": "id",
@@ -8650,7 +8879,7 @@
             }
           },
           "409": {
-            "description": "El servicio ya arrancó o cerró, o hay solapamiento y falta `overrideNote`. El solapamiento no bloquea: con la nota, la asignación se hace igual.",
+            "description": "El servicio ya arrancó o cerró, o hay solapamiento (o la cuadrilla no es de la zona o la especialidad del servicio) y falta `overrideNote`. Nada de eso bloquea: con la nota, la asignación se hace igual.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8684,7 +8913,7 @@
       "get": {
         "operationId": "ServicesController_assignmentConflicts",
         "summary": "Con qué se solapa asignar estos recursos",
-        "description": "Los servicios del mismo día cuya franja horaria se pisa con la de este y que ya tienen tomada la cuadrilla o el vehículo. Existe para poder **avisar antes de enviar**: sin esta consulta, el planificador se enteraría por un 409. Sin `crewId` ni `vehicleId` evalúa los que el servicio ya tiene asignados. Una franja horaria ausente se trata como todo el día.",
+        "description": "Los servicios del mismo día cuya franja horaria se pisa con la de este y que ya tienen tomada la cuadrilla o el vehículo. Existe para poder **avisar antes de enviar**: sin esta consulta, el planificador se enteraría por un 409. Sin `crewId` ni `vehicleId` evalúa los que el servicio ya tiene asignados. Una franja horaria ausente se trata como todo el día. Además informa en `warnings` si la cuadrilla no trabaja en la zona del servicio ese día o su especialidad no corresponde al tipo de servicio; esos avisos también exigen `overrideNote`.",
         "parameters": [
           {
             "name": "id",
@@ -15535,6 +15764,38 @@
             "description": "ID de la organización (para cuadrillas de cooperativa o contratista)",
             "example": "org-coop-recicladores"
           },
+          "leaderName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Nombre del líder, tal como figura en M1. Se guarda como copia para poder mostrarlo: M6 no consulta a M1",
+            "example": "Marta Gómez"
+          },
+          "organizationName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Nombre de la organización (cooperativa o contratista), copia del dato de M1",
+            "example": "Cooperativa Recicladores del Sur"
+          },
+          "specialty": {
+            "type": "string",
+            "description": "Especialidad de la cuadrilla: con qué tipos de servicio se la espera ver",
+            "enum": [
+              "COLLECTION",
+              "SWEEPING",
+              "CLEANING",
+              "RECYCLING",
+              "TREES",
+              "GREEN_SPACES",
+              "INSPECTION"
+            ],
+            "example": "COLLECTION"
+          },
+          "homeZoneId": {
+            "type": "string",
+            "description": "Zona base de la cuadrilla (UUID). Una sola; las reubicaciones van aparte",
+            "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+            "format": "uuid"
+          },
           "active": {
             "type": "boolean",
             "description": "Si la cuadrilla está activa y disponible para asignación",
@@ -15545,7 +15806,8 @@
         "required": [
           "name",
           "crewType",
-          "defaultShift"
+          "defaultShift",
+          "specialty"
         ]
       },
       "CrewMemberResponseDto": {
@@ -15555,10 +15817,17 @@
             "type": "string",
             "description": "ID del usuario miembro (usuario interno de M6)",
             "example": "10"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Nombre del integrante (copia del dato de M1). `null` si no se informó",
+            "example": "Lucía Fernández",
+            "nullable": true
           }
         },
         "required": [
-          "userId"
+          "userId",
+          "displayName"
         ]
       },
       "CrewResponseDto": {
@@ -15584,6 +15853,52 @@
               "CONTRACTOR"
             ],
             "example": "MUNICIPAL"
+          },
+          "leaderName": {
+            "type": "string",
+            "description": "Nombre del líder (copia del dato de M1). `null` si no se informó",
+            "example": "Marta Gómez",
+            "nullable": true
+          },
+          "organizationName": {
+            "type": "string",
+            "description": "Nombre de la organización (copia del dato de M1). `null` si no se informó",
+            "example": "Cooperativa Recicladores del Sur",
+            "nullable": true
+          },
+          "specialty": {
+            "type": "string",
+            "description": "Especialidad. `null` en cuadrillas anteriores a que existiera el campo",
+            "enum": [
+              "COLLECTION",
+              "SWEEPING",
+              "CLEANING",
+              "RECYCLING",
+              "TREES",
+              "GREEN_SPACES",
+              "INSPECTION"
+            ],
+            "example": "COLLECTION",
+            "nullable": true
+          },
+          "homeZoneId": {
+            "type": "string",
+            "description": "UUID de la zona base. `null` si la cuadrilla no tiene una",
+            "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+            "format": "uuid",
+            "nullable": true
+          },
+          "effectiveZoneId": {
+            "type": "string",
+            "description": "UUID de la zona donde trabaja hoy: la de la reubicación vigente o, si no hay, la zona base. `null` si no tiene ninguna",
+            "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+            "format": "uuid",
+            "nullable": true
+          },
+          "membersCount": {
+            "type": "number",
+            "description": "Cantidad de integrantes (el líder no se cuenta aparte)",
+            "example": 4
           },
           "defaultShift": {
             "type": "string",
@@ -15613,7 +15928,7 @@
             "example": true
           },
           "members": {
-            "description": "Miembros de la cuadrilla. Incluido solo en GET por ID",
+            "description": "Miembros de la cuadrilla. Se incluye en el detalle (GET por ID) y al agregar integrantes (POST /crews/:id/members); el listado trae solo `membersCount`",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CrewMemberResponseDto"
@@ -15636,6 +15951,12 @@
           "id",
           "name",
           "crewType",
+          "leaderName",
+          "organizationName",
+          "specialty",
+          "homeZoneId",
+          "effectiveZoneId",
+          "membersCount",
           "defaultShift",
           "active",
           "createdAt",
@@ -15673,6 +15994,41 @@
             "description": "ID de la organización",
             "example": "org-coop-recicladores"
           },
+          "leaderName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Nombre del líder (copia del dato de M1). Vacío o `null` lo borra",
+            "example": "Marta Gómez",
+            "nullable": true
+          },
+          "organizationName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Nombre de la organización (copia del dato de M1). Vacío o `null` lo borra",
+            "example": "Cooperativa Recicladores del Sur",
+            "nullable": true
+          },
+          "specialty": {
+            "type": "string",
+            "description": "Especialidad de la cuadrilla",
+            "enum": [
+              "COLLECTION",
+              "SWEEPING",
+              "CLEANING",
+              "RECYCLING",
+              "TREES",
+              "GREEN_SPACES",
+              "INSPECTION"
+            ],
+            "example": "SWEEPING"
+          },
+          "homeZoneId": {
+            "type": "string",
+            "description": "Zona base de la cuadrilla (UUID). `null` la deja sin zona base",
+            "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+            "format": "uuid",
+            "nullable": true
+          },
           "active": {
             "type": "boolean",
             "description": "Si la cuadrilla está activa",
@@ -15680,12 +16036,40 @@
           }
         }
       },
+      "CrewMemberInputDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Id de M1 (numérico, solo dígitos) del integrante",
+            "example": "10",
+            "maxLength": 100
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Nombre del integrante, tal como figura en M1. Se guarda como copia para poder mostrarlo: M6 no consulta a M1",
+            "example": "Lucía Fernández",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
       "AddCrewMembersDto": {
         "type": "object",
         "properties": {
+          "members": {
+            "description": "Integrantes con su nombre opcional. Hace falta al menos uno de `members` o `userIds`. Si el integrante ya estaba, se le actualiza el nombre cuando viene. Forma recomendada; `userIds` se mantiene por compatibilidad",
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CrewMemberInputDto"
+            }
+          },
           "userIds": {
             "type": "array",
-            "description": "Ids de M1 (numéricos, solo dígitos) de los usuarios a agregar como integrantes de la cuadrilla. Es lo que habilita a cada uno a ejecutar los servicios de la cuadrilla",
+            "description": "Ids de M1 (numéricos, solo dígitos) de los usuarios a agregar como integrantes de la cuadrilla, sin nombre. Hace falta al menos uno de `members` o `userIds`. Es lo que habilita a cada uno a ejecutar los servicios de la cuadrilla",
             "example": [
               "10",
               "11",
@@ -15697,9 +16081,98 @@
             },
             "maxItems": 100
           }
+        }
+      },
+      "CreateCrewZoneAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "description": "Zona donde se reubica la cuadrilla (UUID)",
+            "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+            "format": "uuid"
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Primer día de la reubicación (YYYY-MM-DD). Puede ser futuro",
+            "example": "2026-11-02"
+          },
+          "validTo": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Último día de la reubicación (YYYY-MM-DD), inclusive. Sin fecha queda vigente hasta nuevo aviso",
+            "example": "2026-11-15"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo de la reubicación",
+            "example": "Refuerzo por acumulación de residuos tras el temporal",
+            "maxLength": 500
+          }
         },
         "required": [
-          "userIds"
+          "zoneId",
+          "reason"
+        ]
+      },
+      "CrewZoneAssignmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID de la reubicación",
+            "format": "uuid"
+          },
+          "crewId": {
+            "type": "string",
+            "description": "UUID de la cuadrilla",
+            "format": "uuid"
+          },
+          "zoneId": {
+            "type": "string",
+            "description": "UUID de la zona donde se reubica",
+            "format": "uuid"
+          },
+          "validFrom": {
+            "type": "string",
+            "description": "Primer día de vigencia",
+            "example": "2026-11-02",
+            "format": "date"
+          },
+          "validTo": {
+            "type": "string",
+            "description": "Último día de vigencia. `null`: hasta nuevo aviso",
+            "example": "2026-11-15",
+            "format": "date",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo de la reubicación"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "Id de M1 de quien la cargó",
+            "example": "3"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fecha de carga"
+          }
+        },
+        "required": [
+          "id",
+          "crewId",
+          "zoneId",
+          "validFrom",
+          "validTo",
+          "reason",
+          "createdBy",
+          "createdAt"
         ]
       },
       "CreateVehicleDto": {
@@ -17277,7 +17750,7 @@
           },
           "overrideNote": {
             "type": "string",
-            "description": "Por qué se programa igual con una cuadrilla o vehículo ya tomado ese día en una franja que se pisa. **Obligatorio si hay solapamiento**, igual que en `assign-crew`; sin solapamiento se ignora.",
+            "description": "Por qué se programa igual con una cuadrilla o vehículo ya tomado ese día en una franja que se pisa. **Obligatorio si hay solapamiento o la cuadrilla no encaja con la zona o el tipo del servicio**, igual que en `assign-crew`; sin nada que justificar se ignora.",
             "minLength": 10,
             "maxLength": 500,
             "example": "La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla."
@@ -17647,7 +18120,7 @@
           },
           "overrideNote": {
             "type": "string",
-            "description": "Por qué se asigna igual un recurso que ya está tomado ese día. **Obligatorio si hay solapamiento**: la asignación avisa y deja pasar, pero no en silencio. Consultar antes con `GET /services/:id/assignment-conflicts`.",
+            "description": "Por qué se asigna igual un recurso que ya está tomado ese día, o una cuadrilla de otra zona o especialidad. **Obligatorio si hay solapamiento o la cuadrilla no encaja con la zona o el tipo del servicio**: la asignación avisa y deja pasar, pero no en silencio. Consultar antes con `GET /services/:id/assignment-conflicts`.",
             "minLength": 10,
             "maxLength": 500,
             "example": "La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla."
@@ -17728,6 +18201,28 @@
           "windowTo"
         ]
       },
+      "AssignmentWarningDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "CREW_ZONE_MISMATCH",
+              "CREW_SPECIALTY_MISMATCH"
+            ],
+            "description": "`CREW_ZONE_MISMATCH`: la zona del servicio no es la zona efectiva de la cuadrilla en la fecha. `CREW_SPECIALTY_MISMATCH`: la especialidad de la cuadrilla no corresponde al tipo de servicio."
+          },
+          "message": {
+            "type": "string",
+            "description": "Explicación lista para mostrar al planificador",
+            "example": "La cuadrilla 'Cuadrilla Recolección — Palermo' trabaja en Palermo y el servicio es en otra zona"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
       "AssignmentConflictsResponseDto": {
         "type": "object",
         "properties": {
@@ -17738,7 +18233,7 @@
           },
           "hasConflicts": {
             "type": "boolean",
-            "description": "Si hay algún solapamiento. Con `true`, asignar exige `overrideNote`; la asignación se permite igual.",
+            "description": "Si hay algún solapamiento o aviso de encaje. Con `true`, asignar exige `overrideNote`; la asignación se permite igual.",
             "example": true
           },
           "conflicts": {
@@ -17746,12 +18241,20 @@
             "items": {
               "$ref": "#/components/schemas/AssignmentConflictDto"
             }
+          },
+          "warnings": {
+            "description": "Avisos de que la cuadrilla no es la esperable para el servicio (zona o especialidad). Vacío si no hay cuadrilla o ella no tiene zona ni especialidad cargadas. Cuentan igual que los solapamientos: exigen `overrideNote`, no bloquean.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignmentWarningDto"
+            }
           }
         },
         "required": [
           "serviceId",
           "hasConflicts",
-          "conflicts"
+          "conflicts",
+          "warnings"
         ]
       },
       "CreateDelayNoticeDto": {

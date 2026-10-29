@@ -35,6 +35,8 @@ import {
   AssignCrewDto,
   AssignmentConflictDto,
   AssignmentConflictsResponseDto,
+  AssignmentWarningCode,
+  AssignmentWarningDto,
   ConflictResource,
   CreateDelayNoticeDto,
   DelayNoticeResponseDto,
@@ -54,6 +56,8 @@ import {
 import { PaginatedResponseDto } from '../../common/dto';
 import { notAssignedException } from '../../common/decorators';
 import { belongsToCrew } from '../../common/ownership';
+import { SERVICE_TYPE_SPECIALTY } from '../crews/crew-specialty';
+import { reubicacionVigente, zonaEfectiva } from '../crews/crew-zone';
 
 /**
  * Transiciones válidas. Derivado del diagrama de docs/entidades/service.md,
@@ -220,7 +224,13 @@ export class ServicesService {
       dto.crewId,
       dto.vehicleId,
     );
-    this.assertOverrideNote(conflictos, dto.overrideNote);
+    const avisos = await this.findCrewFitWarnings(
+      dto.crewId,
+      serviceType.code,
+      zones.map((z) => z.zoneId),
+      toDateOnly(dto.scheduledDate),
+    );
+    this.assertOverrideNote(conflictos, avisos, dto.overrideNote);
 
     const service = await this.prisma.$transaction(async (tx) => {
       const created = await tx.service.create({
@@ -242,7 +252,7 @@ export class ServicesService {
           weatherAlertId: dto.weatherAlertId || null,
           notes: dto.notes ?? null,
           createdBy: createdBy ?? null,
-          ...(conflictos.length > 0 &&
+          ...(conflictos.length + avisos.length > 0 &&
             dto.overrideNote && {
               assignmentOverrideNote: dto.overrideNote,
               assignmentOverrideBy: createdBy ?? null,
@@ -366,7 +376,8 @@ export class ServicesService {
               : (dto.vehicleId ?? undefined),
           )
         : [];
-    this.assertOverrideNote(conflictos, dto.overrideNote);
+    // La cuadrilla no cambia en un PATCH: no hay encaje de zona o especialidad que avisar.
+    this.assertOverrideNote(conflictos, [], dto.overrideNote);
 
     const service = await this.prisma.$transaction(async (tx) => {
       const row = await tx.service.update({
@@ -401,6 +412,9 @@ export class ServicesService {
    * que no se acepta es hacerlo en silencio, asi que con solapamiento la nota
    * es obligatoria y queda persistida con quien la escribio.
    *
+   * Lo mismo vale si la cuadrilla no trabaja en la zona del servicio ese dia o
+   * su especialidad no corresponde al tipo (#455): se avisa, no se bloquea.
+   *
    * El frontend deberia consultar antes `GET /services/:id/assignment-conflicts`
    * para poder avisar; el 409 de aca es la red, no el camino previsto.
    */
@@ -410,7 +424,8 @@ export class ServicesService {
     await this.assertResourcesExist(dto.crewId, dto.vehicleId);
 
     const conflictos = await this.findAssignmentConflicts(current, dto.crewId, dto.vehicleId);
-    this.assertOverrideNote(conflictos, dto.overrideNote);
+    const avisos = await this.findCrewFitWarningsFor(current, dto.crewId);
+    this.assertOverrideNote(conflictos, avisos, dto.overrideNote);
 
     const service = await this.prisma.$transaction(async (tx) => {
       const row = await tx.service.update({
@@ -419,8 +434,8 @@ export class ServicesService {
           crewId: dto.crewId,
           ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
           // La nota solo se guarda si hubo algo que justificar: mandarla sin
-          // solapamiento no deja rastro de un override que no ocurrio.
-          ...(conflictos.length > 0 &&
+          // solapamiento ni aviso no deja rastro de un override que no ocurrio.
+          ...(conflictos.length + avisos.length > 0 &&
             dto.overrideNote && {
               assignmentOverrideNote: dto.overrideNote,
               assignmentOverrideBy: actorId ?? null,
@@ -433,8 +448,8 @@ export class ServicesService {
     });
 
     this.logger.log(
-      conflictos.length > 0
-        ? `Servicio ${id}: cuadrilla ${dto.crewId} asignada con override sobre ${conflictos.length} solapamiento/s`
+      conflictos.length + avisos.length > 0
+        ? `Servicio ${id}: cuadrilla ${dto.crewId} asignada con override sobre ${conflictos.length} solapamiento/s y ${avisos.length} aviso/s de encaje`
         : `Servicio ${id}: cuadrilla ${dto.crewId} asignada`,
     );
     return this.toResponseDto(service);
@@ -462,17 +477,114 @@ export class ServicesService {
       query.vehicleId ?? current.vehicleId ?? undefined,
     );
 
-    return { serviceId: id, hasConflicts: conflicts.length > 0, conflicts };
+    const warnings = await this.findCrewFitWarningsFor(
+      current,
+      query.crewId ?? current.crewId ?? undefined,
+    );
+
+    return {
+      serviceId: id,
+      hasConflicts: conflicts.length > 0 || warnings.length > 0,
+      conflicts,
+      warnings,
+    };
   }
 
-  private assertOverrideNote(conflictos: AssignmentConflictDto[], overrideNote?: string): void {
-    if (conflictos.length > 0 && !overrideNote) {
+  private assertOverrideNote(
+    conflictos: AssignmentConflictDto[],
+    avisos: AssignmentWarningDto[],
+    overrideNote?: string,
+  ): void {
+    if ((conflictos.length > 0 || avisos.length > 0) && !overrideNote) {
+      const motivos = [
+        ...(conflictos.length > 0
+          ? [
+              `se solapa con ${conflictos.length} servicio/s ya programado/s: ${conflictos
+                .map((c) => `${c.resourceName} en ${c.serviceId}`)
+                .join('; ')}`,
+            ]
+          : []),
+        ...avisos.map((a) => a.message),
+      ];
       throw new ConflictException(
-        `La asignacion se solapa con ${conflictos.length} servicio/s ya programado/s: ${conflictos
-          .map((c) => `${c.resourceName} en ${c.serviceId}`)
-          .join('; ')}. Se puede asignar igual, pero hace falta 'overrideNote' explicando por que.`,
+        `La asignacion tiene reparos: ${motivos.join('. ')}. Se puede asignar igual, pero hace falta 'overrideNote' explicando por que.`,
       );
     }
+  }
+
+  /** Atajo para un servicio ya persistido: su tipo y sus zonas salen de la base. */
+  private async findCrewFitWarningsFor(
+    service: Pick<ServiceWithRelations, 'serviceTypeId' | 'scheduledDate' | 'zones'>,
+    crewId?: string,
+  ): Promise<AssignmentWarningDto[]> {
+    if (!crewId) return [];
+    const type = await this.prisma.serviceType.findUnique({
+      where: { id: service.serviceTypeId },
+      select: { code: true },
+    });
+    return this.findCrewFitWarnings(
+      crewId,
+      type?.code,
+      service.zones.map((z) => z.zoneId),
+      service.scheduledDate,
+    );
+  }
+
+  /**
+   * Si la cuadrilla no es la esperable para este servicio: trabaja en otra zona
+   * ese dia o su especialidad no corresponde al tipo.
+   *
+   * Es un aviso y no un bloqueo, como el solapamiento: el que planifica puede
+   * mandar refuerzos a otra zona. Se evalua en la fecha del servicio y no hoy,
+   * porque una reubicacion que arranca la semana que viene ya aplica a lo que se
+   * programa para entonces. **Si falta el dato (zona, especialidad o tipo sin
+   * mapear) no se avisa**: las cuadrillas anteriores a #455 no lo tienen.
+   */
+  private async findCrewFitWarnings(
+    crewId: string | undefined,
+    serviceTypeCode: string | undefined,
+    serviceZoneIds: string[],
+    scheduledDate: Date,
+  ): Promise<AssignmentWarningDto[]> {
+    if (!crewId) return [];
+
+    const crew = await this.prisma.crew.findUnique({
+      where: { id: crewId },
+      select: {
+        name: true,
+        specialty: true,
+        homeZoneId: true,
+        homeZone: { select: { name: true } },
+        zoneAssignments: {
+          where: reubicacionVigente(scheduledDate),
+          orderBy: { validFrom: 'desc' },
+          take: 1,
+          select: { zoneId: true, zone: { select: { name: true } } },
+        },
+      },
+    });
+    if (!crew) return [];
+
+    const avisos: AssignmentWarningDto[] = [];
+
+    const zonaCrew = zonaEfectiva(crew, crew.zoneAssignments);
+    if (zonaCrew && serviceZoneIds.length > 0 && !serviceZoneIds.includes(zonaCrew)) {
+      const nombre = crew.zoneAssignments[0]?.zone.name ?? crew.homeZone?.name ?? zonaCrew;
+      avisos.push({
+        code: AssignmentWarningCode.CREW_ZONE_MISMATCH,
+        message: `La cuadrilla '${crew.name}' trabaja en ${nombre} y el servicio es en otra zona`,
+      });
+    }
+
+    const esperada = serviceTypeCode ? SERVICE_TYPE_SPECIALTY[serviceTypeCode] : undefined;
+    if (crew.specialty && esperada && crew.specialty !== esperada) {
+      avisos.push({
+        code: AssignmentWarningCode.CREW_SPECIALTY_MISMATCH,
+        message: `La cuadrilla '${crew.name}' es de ${crew.specialty} y el servicio '${serviceTypeCode}' corresponde a ${esperada}`,
+      });
+    }
+
+    return avisos;
   }
 
   /** `id` es undefined al programar: el servicio todavia no existe. */

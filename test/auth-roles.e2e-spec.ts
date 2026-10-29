@@ -67,6 +67,18 @@ describe('Roles de M6: matriz por rol (e2e)', () => {
     { grupo: 'lectura', method: 'get', path: '/zones', permitidos: TODOS },
     { grupo: 'recursos (crews)', method: 'post', path: '/crews', permitidos: ['admin'] },
     {
+      grupo: 'recursos (crews)',
+      method: 'post',
+      path: `/crews/${U}/zone-assignments`,
+      permitidos: ['admin', 'operaciones'],
+    },
+    {
+      grupo: 'recursos (crews)',
+      method: 'get',
+      path: `/crews/${U}/zone-assignments`,
+      permitidos: TODOS,
+    },
+    {
       grupo: 'inventario (green-spaces)',
       method: 'post',
       path: '/green-spaces',

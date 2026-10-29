@@ -263,6 +263,7 @@ export async function crearCuadrilla(
       name: `Cuadrilla ${unique('CR')}`,
       crewType: 'MUNICIPAL',
       defaultShift: 'MORNING',
+      specialty: 'COLLECTION',
     })
     .expect(201);
   if (integrantes.length > 0) {

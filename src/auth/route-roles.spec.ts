@@ -9,7 +9,7 @@ import { M6_ROLES, M6Role } from './m6-role';
  * (por metadata, sin levantar la app) para que una escritura nueva sin @Roles,
  * o con un rol inventado, rompa el build en vez de quedar abierta o inservible.
  */
-const RUTAS_ESPERADAS = 146;
+const RUTAS_ESPERADAS = 148;
 
 describe('cobertura de @Roles por ruta', () => {
   const routes = listRoutes(AppModule);

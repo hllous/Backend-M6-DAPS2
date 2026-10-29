@@ -72,12 +72,26 @@ erDiagram
         enum crew_type "CrewType"
         varchar leader_user_id "EXT M1"
         varchar organization_id "EXT M1"
+        varchar leader_name "copia de M1"
+        varchar organization_name "copia de M1"
+        enum specialty "CrewSpecialty, nullable"
+        uuid home_zone_id FK "zona base, nullable"
         enum default_shift "Shift"
         boolean active
     }
     CREW_MEMBER {
         uuid crew_id PK
         varchar user_id PK "EXT M1"
+        varchar display_name "copia de M1"
+    }
+    CREW_ZONE_ASSIGNMENT {
+        uuid id PK
+        uuid crew_id FK
+        uuid zone_id FK
+        date valid_from
+        date valid_to "null = hasta nuevo aviso"
+        varchar reason
+        varchar created_by "EXT M1"
     }
     VEHICLE {
         uuid id PK
@@ -106,7 +120,7 @@ erDiagram
         varchar ticket_id "EXT M2"
         varchar weather_alert_id "alerta simulada, sin tabla ni FK"
         text notes
-        text assignment_override_note "solo si se asigno o programo sobre un solapamiento"
+        text assignment_override_note "solo si se asigno o programo sobre un solapamiento o un aviso de zona o especialidad"
         varchar assignment_override_by "EXT M1"
         timestamp assignment_override_at
     }
@@ -393,6 +407,9 @@ erDiagram
     SERVICE_FREQUENCY ||--|{ FREQUENCY_WEEKDAY : "corre los"
 
     CREW              ||--o{ CREW_MEMBER : integra
+    ZONE              ||--o{ CREW : "zona base de"
+    CREW              ||--o{ CREW_ZONE_ASSIGNMENT : "se reubica por"
+    ZONE              ||--o{ CREW_ZONE_ASSIGNMENT : "recibe"
     SERVICE_TYPE      ||--o{ SERVICE : tipifica
     ROUTE             ||--o{ SERVICE : "recorre en ROUTE"
     CREW              ||--o{ SERVICE : ejecuta

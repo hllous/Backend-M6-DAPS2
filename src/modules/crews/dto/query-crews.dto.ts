@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { ToBoolean } from '../../../common/decorators';
-import { CrewType, Shift } from '@prisma/client';
+import { CrewSpecialty, CrewType, Shift } from '@prisma/client';
 import { PaginationQueryDto } from '../../../common/dto';
 
 export class QueryCrewsDto extends PaginationQueryDto {
@@ -30,4 +30,23 @@ export class QueryCrewsDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(Shift)
   defaultShift?: Shift;
+
+  @ApiPropertyOptional({
+    description: 'Filtrar por especialidad',
+    enum: CrewSpecialty,
+    example: CrewSpecialty.COLLECTION,
+  })
+  @IsOptional()
+  @IsEnum(CrewSpecialty)
+  specialty?: CrewSpecialty;
+
+  @ApiPropertyOptional({
+    description:
+      'Filtrar por la zona **efectiva hoy**: la de la reubicación vigente si hay una; si no, la zona base',
+    example: 'a1b2c3d4-e5f6-4789-8abc-def012345678',
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  zoneId?: string;
 }
