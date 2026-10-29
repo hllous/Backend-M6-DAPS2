@@ -241,6 +241,440 @@
         ]
       }
     },
+    "/events/outbox": {
+      "get": {
+        "operationId": "OutboxController_findAll",
+        "summary": "Listar los eventos salientes del outbox",
+        "description": "Listado paginado, del más nuevo al más viejo, con estado, intentos y último error. Filtra por `status`, `eventType` y rango de `occurredAt` (días argentinos, inclusivos). No incluye el payload, que puede traer datos del vecino: está en el detalle, solo para admin.",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-indexed)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Registros por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por estado del envío",
+            "schema": {
+              "example": "FAILED",
+              "enum": [
+                "PENDING",
+                "SENT",
+                "FAILED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por tipo de evento (exacto, camelCase)",
+            "schema": {
+              "maxLength": 100,
+              "example": "containerDamaged",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Ocurridos desde este día, inclusive (YYYY-MM-DD, día argentino UTC-3). Filtra por `occurredAt`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Ocurridos hasta este día, inclusive: hasta las 23:59:59 ART (YYYY-MM-DD). No puede ser anterior a `from`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado de eventos salientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutboxEventResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros inválidos (estado desconocido, fecha mal formada, `from` > `to`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_AUDITOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "outbox"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/events/outbox/{id}": {
+      "get": {
+        "operationId": "OutboxController_findOne",
+        "summary": "Detalle de un evento saliente, con su payload",
+        "description": "Devuelve el evento completo: el payload tal como se publica y los reintentos manuales que se le hicieron (quién, cuándo y cómo estaba antes). Solo admin, porque el payload puede incluir datos personales.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del evento del outbox",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evento con payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEventDetailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El id no es un UUID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe ese evento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "outbox"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/events/outbox/retry-failed": {
+      "post": {
+        "operationId": "OutboxController_retryFailed",
+        "summary": "Reencolar en lote los eventos FAILED",
+        "description": "Pasa a PENDING (attempts = 0) los FAILED más viejos, hasta `limit` (tope 100 por pedido), y audita cada uno con el usuario del token. Exige `confirm: true` (solo el booleano `true` o la cadena \"true\"). Mismas salvedades que el reintento individual sobre el `eventId`. 409 si otro reintento concurrente tocó eventos de la tanda (no se reencola nada). Devuelve cuántos reencoló y cuántos FAILED quedan; repetir el pedido sigue con la tanda siguiente. Con el receptor todavía caído los eventos vuelven a FAILED tras 5 intentos.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryFailedOutboxDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado del lote",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetryFailedOutboxResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta `confirm: true` o `limit` fuera de 1..100",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Otro reintento concurrente tocó eventos de la tanda; no se reencoló nada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "outbox"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/events/outbox/{id}/retry": {
+      "post": {
+        "operationId": "OutboxController_retry",
+        "summary": "Reintentar un evento FAILED",
+        "description": "Pasa un evento FAILED a PENDING con attempts = 0 para que el dispatcher lo reenvíe en la próxima barrida (cada 10 s). Queda auditado quién lo reencoló, cuándo y con qué intentos y error previos. Republica con el mismo `eventId`: los módulos receptores deduplican por él, pero el Core de M9 puede no redistribuir un `eventId` ya registrado, así que si el motivo del FAILED fue un payload rechazado el reintento no lo arregla. Un evento PENDING o SENT no se reenvía: 409.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del evento del outbox",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evento reencolado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEventResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El id no es un UUID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe ese evento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El evento no está en FAILED (ya salió o está en cola)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "outbox"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
     "/zones": {
       "post": {
         "operationId": "ZonesController_create",
@@ -13456,6 +13890,10 @@
       "description": "Ingesta de eventos entrantes y estado de los handlers"
     },
     {
+      "name": "outbox",
+      "description": "Eventos salientes: consulta y reintento de los fallidos"
+    },
+    {
       "name": "indicators",
       "description": "Indicadores de cobertura, cumplimiento, incidencias y residuos"
     },
@@ -13783,6 +14221,288 @@
           "eventTypes"
         ]
       },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 142,
+            "description": "Total de registros"
+          },
+          "page": {
+            "type": "number",
+            "example": 1,
+            "description": "Página actual (1-indexed)"
+          },
+          "pageSize": {
+            "type": "number",
+            "example": 20,
+            "description": "Registros por página"
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 8,
+            "description": "Total de páginas"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "pageSize",
+          "totalPages"
+        ]
+      },
+      "OutboxEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a1b2c3d4-e5f6-4a78-9b01-234567890abc",
+            "description": "Id de la fila; es también el `eventId` del sobre que ve el receptor"
+          },
+          "eventType": {
+            "type": "string",
+            "example": "containerDamaged",
+            "description": "Tipo de evento (camelCase)"
+          },
+          "aggregateType": {
+            "type": "string",
+            "example": "CONTAINER",
+            "description": "Agregado de dominio que lo originó"
+          },
+          "aggregateId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "b2c3d4e5-f6a7-4b89-8c12-34567890abcd"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "SENT",
+              "FAILED"
+            ],
+            "example": "FAILED"
+          },
+          "attempts": {
+            "type": "number",
+            "example": 5,
+            "description": "Intentos de envío hechos (se reinicia al reintentar)"
+          },
+          "lastError": {
+            "type": "string",
+            "nullable": true,
+            "example": "connect ECONNREFUSED 127.0.0.1:5672",
+            "description": "Error del último intento fallido"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-28T14:30:00.000Z"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuándo se publicó al bus; null si no salió"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c3d4e5f6-a7b8-4c90-9d23-4567890abcde"
+          },
+          "causationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "eventId del evento consumido que lo causó; null si nació de una acción directa"
+          }
+        },
+        "required": [
+          "id",
+          "eventType",
+          "aggregateType",
+          "aggregateId",
+          "status",
+          "attempts",
+          "occurredAt",
+          "correlationId"
+        ]
+      },
+      "OutboxRetryAuditResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "d4e5f6a7-b8c9-4d01-8e34-567890abcdef"
+          },
+          "actorUserId": {
+            "type": "string",
+            "example": "usr-001",
+            "description": "Usuario de M1 que reintentó (sale del token)"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-28T15:00:00.000Z"
+          },
+          "previousAttempts": {
+            "type": "number",
+            "example": 5,
+            "description": "Intentos que tenía antes del reintento"
+          },
+          "previousError": {
+            "type": "string",
+            "nullable": true,
+            "example": "connect ECONNREFUSED 127.0.0.1:5672",
+            "description": "Error que tenía antes del reintento"
+          }
+        },
+        "required": [
+          "id",
+          "actorUserId",
+          "at",
+          "previousAttempts"
+        ]
+      },
+      "OutboxEventDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a1b2c3d4-e5f6-4a78-9b01-234567890abc",
+            "description": "Id de la fila; es también el `eventId` del sobre que ve el receptor"
+          },
+          "eventType": {
+            "type": "string",
+            "example": "containerDamaged",
+            "description": "Tipo de evento (camelCase)"
+          },
+          "aggregateType": {
+            "type": "string",
+            "example": "CONTAINER",
+            "description": "Agregado de dominio que lo originó"
+          },
+          "aggregateId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "b2c3d4e5-f6a7-4b89-8c12-34567890abcd"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "SENT",
+              "FAILED"
+            ],
+            "example": "FAILED"
+          },
+          "attempts": {
+            "type": "number",
+            "example": 5,
+            "description": "Intentos de envío hechos (se reinicia al reintentar)"
+          },
+          "lastError": {
+            "type": "string",
+            "nullable": true,
+            "example": "connect ECONNREFUSED 127.0.0.1:5672",
+            "description": "Error del último intento fallido"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-28T14:30:00.000Z"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuándo se publicó al bus; null si no salió"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c3d4e5f6-a7b8-4c90-9d23-4567890abcde"
+          },
+          "causationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "eventId del evento consumido que lo causó; null si nació de una acción directa"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "containerId": "b2c3d4e5-f6a7-4b89-8c12-34567890abcd",
+              "severity": "HIGH"
+            },
+            "description": "Payload tal como se publica. Puede incluir datos personales"
+          },
+          "retries": {
+            "description": "Reintentos manuales que se le hicieron, del más viejo al más nuevo",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutboxRetryAuditResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "eventType",
+          "aggregateType",
+          "aggregateId",
+          "status",
+          "attempts",
+          "occurredAt",
+          "correlationId",
+          "payload",
+          "retries"
+        ]
+      },
+      "RetryFailedOutboxDto": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "description": "Confirmación explícita: tiene que ser `true`. Reencola eventos que el receptor ya rechazó, así que no se hace por omisión",
+            "example": true
+          },
+          "limit": {
+            "type": "number",
+            "description": "Cuántos FAILED reencolar como máximo, los más viejos primero (tope 100)",
+            "default": 100,
+            "minimum": 1,
+            "maximum": 100,
+            "example": 20
+          }
+        },
+        "required": [
+          "confirm"
+        ]
+      },
+      "RetryFailedOutboxResponseDto": {
+        "type": "object",
+        "properties": {
+          "requeued": {
+            "type": "number",
+            "example": 12,
+            "description": "Eventos FAILED que se pasaron a PENDING"
+          },
+          "remainingFailed": {
+            "type": "number",
+            "example": 3,
+            "description": "FAILED que siguen sin reencolar (por el tope)"
+          }
+        },
+        "required": [
+          "requeued",
+          "remainingFailed"
+        ]
+      },
       "CreateZoneDto": {
         "type": "object",
         "properties": {
@@ -13949,37 +14669,6 @@
           "neighborhood",
           "createdAt",
           "updatedAt"
-        ]
-      },
-      "PaginationMeta": {
-        "type": "object",
-        "properties": {
-          "total": {
-            "type": "number",
-            "example": 142,
-            "description": "Total de registros"
-          },
-          "page": {
-            "type": "number",
-            "example": 1,
-            "description": "Página actual (1-indexed)"
-          },
-          "pageSize": {
-            "type": "number",
-            "example": 20,
-            "description": "Registros por página"
-          },
-          "totalPages": {
-            "type": "number",
-            "example": 8,
-            "description": "Total de páginas"
-          }
-        },
-        "required": [
-          "total",
-          "page",
-          "pageSize",
-          "totalPages"
         ]
       },
       "UpdateZoneDto": {

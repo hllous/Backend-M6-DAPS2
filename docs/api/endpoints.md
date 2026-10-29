@@ -73,6 +73,10 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 | POST | `/environmental-reports/:reportId/inspections` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
 | GET | `/events/handlers` | cualquier rol de M6 |
 | POST | `/events/inbox` | `M6_ADMIN` |
+| GET | `/events/outbox` | `M6_ADMIN`, `M6_AUDITOR` |
+| GET | `/events/outbox/:id` | `M6_ADMIN` |
+| POST | `/events/outbox/:id/retry` | `M6_ADMIN` |
+| POST | `/events/outbox/retry-failed` | `M6_ADMIN` |
 | GET | `/evidence` | cualquier rol de M6 |
 | POST | `/evidence` | `M6_CAMPO_CUADRILLA`, `M6_CAMPO_INSPECTOR` |
 | GET | `/green-points` | cualquier rol de M6 |
@@ -421,6 +425,21 @@ El sobre es el del Core (`sourceModule`, `correlationId`, `causationId`). El de 
 **El inbox no guarda contenido de negocio ajeno.** Un evento sin handler, o un `ticketUpdated` cuyo `responsibleAreaId` no es M6 (§2 y §11 del contrato de M2), deja la fila con `messageId`, `eventType` y `processedAt` —lo justo para la idempotencia— y un `payload` reemplazado por un marcador `{ "redacted": ... }`. El `ticketUpdated` de M6 conserva el payload completo, incluso los `updateType` que se descartan a propósito.
 
 > Este endpoint es la vía manual: sirve para ejercitar los consumidores sin broker o mientras el Core no registra nuestras suscripciones. El consumidor de RabbitMQ (`q.ambiente`) llama al mismo `ingest()`.
+
+## `outbox` — eventos salientes: consulta y reintento
+
+Contraparte de `POST /events/inbox`: sin entrar a la base se ve qué salió, qué falló y por qué, y se reencola lo `FAILED`. El dispatcher deja una fila en `FAILED` a los 5 intentos y deja de barrerla (ver [eventos publicados](../eventos/publicados/README.md)).
+
+| Método | Ruta                          | Roles                | Qué hace |
+| ------ | ----------------------------- | -------------------- | -------- |
+| GET    | `/events/outbox`              | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más nuevo al más viejo. Filtros: `status` (`PENDING`/`SENT`/`FAILED`), `eventType`, `from`/`to` (días argentinos inclusivos sobre `occurredAt`; 400 si `from` > `to`). **No trae el `payload`**: puede incluir datos del vecino |
+| GET    | `/events/outbox/:id`          | `M6_ADMIN`           | Detalle con el `payload` y los reintentos manuales que se le hicieron. 404 si no existe |
+| POST   | `/events/outbox/:id/retry`    | `M6_ADMIN`           | `FAILED` → `PENDING` con `attempts = 0`; el dispatcher lo reenvía en la próxima barrida (cada 10 s). 409 si no está en `FAILED` (un `SENT` no se reenvía; un `PENDING` ya está en cola) |
+| POST   | `/events/outbox/retry-failed` | `M6_ADMIN`           | Lo mismo en lote. Body `{ "confirm": true, "limit": 20 }`: `confirm` obligatorio (solo el booleano `true` o la cadena `"true"`; cualquier otra cosa da 400), `limit` opcional (1 a 100, por omisión 100), los más viejos primero. Devuelve `{ requeued, remainingFailed }`; 409 si otro reintento concurrente tocó eventos de la tanda (no se reencola ni audita nada: repetir el pedido) |
+
+**Auditoría.** Cada reintento escribe una fila en `outbox_retry_audit` (`outboxEventId`, `actorUserId`, `at`, `previousAttempts`, `previousError`) en la misma transacción que el cambio de estado: el reintento borra `attempts` y `lastError`, y ahí queda cómo estaban. El actor sale del token, nunca del body. **Reintentar republica con el mismo `eventId`** (es el id de la fila). Los módulos receptores deduplican por `eventId`, así que no hay doble efecto si el primer envío había llegado a salir. Pero el Core de M9 puede no redistribuir un `eventId` que ya registró, y uno `REJECTED` tampoco se revalida al retransmitirlo (ver [m9.md](../integracion/m9.md)): **si el motivo del `FAILED` fue un payload rechazado, el reintento no lo arregla**; hay que coordinar el reproceso con M9. Sirve sobre todo cuando el fallo fue de transporte (broker caído, red). Con el receptor todavía caído, el evento vuelve a `FAILED` tras 5 intentos. No hay reintento automático de un `FAILED`: es una acción humana auditada.
+
+**`lastError` puede incluir datos de infraestructura** (host y puerto del broker, hasta 500 caracteres) y lo ve también el auditor en el listado; por eso el detalle, que agrega el payload y el `previousError` de cada reintento, es solo para `M6_ADMIN`.
 
 ## `repair-requests` — reparaciones derivadas a M3
 
