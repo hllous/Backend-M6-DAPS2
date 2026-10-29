@@ -23,6 +23,7 @@ import * as payloads from '../../events/payloads';
 import { paraLog } from '../../events/log-safe';
 import { leerEstado, scheduleUpdate } from '../../events/ticket-state';
 import { EnvironmentalReportsService } from '../environmental-reports/environmental-reports.service';
+import { allowedActionsFor } from './allowed-follow-ups';
 import {
   CompleteInspectionDto,
   CreateInspectionDto,
@@ -33,6 +34,10 @@ import {
 
 const INSPECTION_INCLUDE = {
   checklistItems: true,
+  // Ubicación y tipo del expediente, solo lectura (#452 etapa 1, #451).
+  report: { select: { reportType: true, address: true, lat: true, lng: true } },
+  // Solo para saber si ya hay acta (allowedActions.notice); el acta no sale en la respuesta.
+  violationNotice: { select: { id: true } },
 } satisfies Prisma.EnvironmentalInspectionInclude;
 
 type InspectionWithItems = Prisma.EnvironmentalInspectionGetPayload<{
@@ -432,6 +437,15 @@ export class EnvironmentalInspectionsService {
     return {
       id: inspection.id,
       reportId: inspection.reportId,
+      reportType: inspection.report.reportType,
+      address: inspection.report.address,
+      lat: inspection.report.lat === null ? null : Number(inspection.report.lat),
+      lng: inspection.report.lng === null ? null : Number(inspection.report.lng),
+      allowedActions: allowedActionsFor(
+        inspection.report.reportType,
+        inspection.outcome,
+        Boolean(inspection.violationNotice),
+      ),
       serviceId: inspection.serviceId,
       inspectorId: inspection.inspectorId,
       completedByUserId: inspection.completedByUserId,
