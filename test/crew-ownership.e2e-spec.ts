@@ -353,7 +353,9 @@ describe('Pertenencia de Campo (e2e)', () => {
       const res = await oficina
         .post(`/crews/${cuadrillaB}/members`, { userIds: ['09012'] })
         .expect(201);
-      expect(res.body.members).toEqual(expect.arrayContaining([{ userId: '9012' }]));
+      expect(res.body.members).toEqual(
+        expect.arrayContaining([expect.objectContaining({ userId: '9012' })]),
+      );
     });
   });
 });

@@ -174,12 +174,13 @@ export class CreateServiceDto {
 
   @ApiPropertyOptional({
     description:
-      'Por qué se programa igual con una cuadrilla o vehículo ya tomado ese día en una franja que se pisa. **Obligatorio si hay solapamiento**, igual que en `assign-crew`; sin solapamiento se ignora.',
+      'Por qué se programa igual con una cuadrilla o vehículo ya tomado ese día en una franja que se pisa. **Obligatorio si hay solapamiento o la cuadrilla no encaja con la zona o el tipo del servicio**, igual que en `assign-crew`; sin nada que justificar se ignora.',
     minLength: 10,
     maxLength: 500,
     example: 'La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla.',
   })
   @IsOptional()
+  @Trim()
   @IsString()
   @MinLength(10)
   @MaxLength(500)

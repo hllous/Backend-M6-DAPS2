@@ -76,7 +76,7 @@ export class ServicesController {
   @ApiResponse({
     status: 409,
     description:
-      'La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada',
+      'La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, o la cuadrilla no es de la zona o la especialidad del servicio, y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
@@ -158,7 +158,7 @@ export class ServicesController {
   @ApiOperation({
     summary: 'Asignar cuadrilla a un servicio',
     description:
-      'La cuadrilla es opcional al programar y obligatoria para iniciar. Permite asignar el vehículo en la misma operación.',
+      'La cuadrilla es opcional al programar y obligatoria para iniciar. Permite asignar el vehículo en la misma operación. Avisa, sin bloquear, si la cuadrilla no es la de la zona del servicio o su especialidad no corresponde al tipo de servicio: igual que un solapamiento, exige `overrideNote`.',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Cuadrilla asignada', type: ServiceResponseDto })
@@ -176,8 +176,8 @@ export class ServicesController {
   @ApiResponse({
     status: 409,
     description:
-      'El servicio ya arrancó o cerró, o hay solapamiento y falta `overrideNote`. ' +
-      'El solapamiento no bloquea: con la nota, la asignación se hace igual.',
+      'El servicio ya arrancó o cerró, o hay solapamiento (o la cuadrilla no es de la zona o la especialidad del servicio) y falta `overrideNote`. ' +
+      'Nada de eso bloquea: con la nota, la asignación se hace igual.',
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
@@ -196,7 +196,8 @@ export class ServicesController {
       'Los servicios del mismo día cuya franja horaria se pisa con la de este y que ya tienen tomada la cuadrilla o el vehículo. ' +
       'Existe para poder **avisar antes de enviar**: sin esta consulta, el planificador se enteraría por un 409. ' +
       'Sin `crewId` ni `vehicleId` evalúa los que el servicio ya tiene asignados. ' +
-      'Una franja horaria ausente se trata como todo el día.',
+      'Una franja horaria ausente se trata como todo el día. ' +
+      'Además informa en `warnings` si la cuadrilla no trabaja en la zona del servicio ese día o su especialidad no corresponde al tipo de servicio; esos avisos también exigen `overrideNote`.',
   })
   @ApiParam({ name: 'id', description: 'UUID del servicio', format: 'uuid' })
   @ApiResponse({

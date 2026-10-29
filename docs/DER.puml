@@ -100,6 +100,10 @@ package "Recursos" #F3F0FA {
     * crew_type : enum <<CrewType>>
       leader_user_id : varchar <<EXT M1>>
       organization_id : varchar <<EXT M1>>
+      leader_name : varchar ' copia de M1
+      organization_name : varchar ' copia de M1
+      specialty : enum <<CrewSpecialty>> ' nullable
+      home_zone_id : uuid <<FK>> ' zona base, nullable
       default_shift : enum <<Shift>>
       active : boolean
   }
@@ -107,6 +111,18 @@ package "Recursos" #F3F0FA {
   entity "crew_member" as crew_member {
     * crew_id : uuid <<PK>> <<FK>>
     * user_id : varchar <<PK>> <<EXT M1>>
+      display_name : varchar ' copia de M1
+  }
+
+  entity "crew_zone_assignment" as crew_zone_assignment {
+    * id : uuid <<PK>>
+    --
+    * crew_id : uuid <<FK>>
+    * zone_id : uuid <<FK>>
+    * valid_from : date
+      valid_to : date ' null = hasta nuevo aviso
+    * reason : varchar
+    * created_by : varchar <<EXT M1>>
   }
 
   entity "vehicle" as vehicle {
@@ -141,7 +157,7 @@ package "Ejecución" #FDF3E7 {
       ticket_id : varchar <<EXT M2>>
       weather_alert_id : varchar ' alerta simulada, sin tabla ni FK
       notes : text
-      assignment_override_note : text ' solo si se asigno sobre un solapamiento
+      assignment_override_note : text ' solo si se asigno sobre un solapamiento o un aviso de zona o especialidad
       assignment_override_by : varchar <<EXT M1>>
       assignment_override_at : timestamp
   }
@@ -478,6 +494,9 @@ route             ||--o{ service_frequency : "se repite en"
 service_frequency ||--|{ frequency_weekday : "corre los"
 
 crew              ||--o{ crew_member : integra
+zone              ||--o{ crew : "zona base de"
+crew              ||--o{ crew_zone_assignment : "se reubica por"
+zone              ||--o{ crew_zone_assignment : recibe
 service_type      ||--o{ service : tipifica
 route             ||--o{ service : "recorre (mode = ROUTE)"
 crew              ||--o{ service : ejecuta

@@ -99,7 +99,15 @@ describe('ServicesService', () => {
       greenPoint: { findUnique: jest.fn() },
       crew: {
         count: jest.fn().mockResolvedValue(1),
-        findUnique: jest.fn().mockResolvedValue({ id: CREW_ID, active: true, name: 'Norte' }),
+        // Sin zona ni especialidad cargadas: no hay avisos de encaje (#455).
+        findUnique: jest.fn().mockResolvedValue({
+          id: CREW_ID,
+          active: true,
+          name: 'Norte',
+          specialty: null,
+          homeZoneId: null,
+          zoneAssignments: [],
+        }),
       },
       vehicle: {
         findUnique: jest.fn().mockResolvedValue({ id: VEHICLE_ID, active: true, plate: 'AA123BB' }),
@@ -452,6 +460,60 @@ describe('ServicesService', () => {
 
       expect(prisma.service.findMany).toHaveBeenCalledTimes(1);
       expect(prisma.service.create).toHaveBeenCalled();
+    });
+
+    describe('encaje de la cuadrilla (#455)', () => {
+      const crewDe = (over: Record<string, unknown>) => ({
+        id: CREW_ID,
+        active: true,
+        name: 'Norte',
+        specialty: null,
+        homeZoneId: null,
+        homeZone: null,
+        zoneAssignments: [],
+        ...over,
+      });
+
+      it('cuadrilla de una zona que el recorrido no toca: pide nota y no crea', async () => {
+        prisma.crew.findUnique.mockResolvedValue(
+          crewDe({ homeZoneId: 'zona-ajena', homeZone: { name: 'Palermo' } }),
+        );
+
+        await expect(service.create(dtoConRecursos)).rejects.toThrow(/Palermo.*overrideNote/);
+        expect(prisma.service.create).not.toHaveBeenCalled();
+      });
+
+      it('con nota crea igual y la deja guardada', async () => {
+        prisma.crew.findUnique.mockResolvedValue(
+          crewDe({ homeZoneId: 'zona-ajena', homeZone: { name: 'Palermo' } }),
+        );
+
+        await service.create(
+          { ...dtoConRecursos, overrideNote: 'Refuerzo coordinado con la zona' },
+          'planificador-1',
+        );
+
+        expect(prisma.service.create.mock.calls[0][0].data).toMatchObject({
+          assignmentOverrideNote: 'Refuerzo coordinado con la zona',
+          assignmentOverrideBy: 'planificador-1',
+        });
+      });
+
+      it('cuadrilla de la zona del recorrido y especialidad correcta: crea sin nota', async () => {
+        prisma.crew.findUnique.mockResolvedValue(
+          crewDe({ homeZoneId: ZONE_B, specialty: 'COLLECTION' }),
+        );
+
+        await service.create(dtoConRecursos);
+
+        expect(prisma.service.create).toHaveBeenCalled();
+      });
+
+      it('especialidad que no corresponde al tipo REC-DOM: pide nota', async () => {
+        prisma.crew.findUnique.mockResolvedValue(crewDe({ specialty: 'SWEEPING' }));
+
+        await expect(service.create(dtoConRecursos)).rejects.toThrow(ConflictException);
+      });
     });
 
     it('rechaza con 409 si la cuadrilla se solapa, sin crear ni encolar', async () => {

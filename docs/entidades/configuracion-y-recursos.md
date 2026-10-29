@@ -42,16 +42,19 @@ La regla que genera los servicios planificados (`origin = PLANNED`), del tipo "r
 
 | Entidad | Campos principales |
 |---|---|
-| `Crew` | `name`, `crewType`, `leaderUserId`, `memberUserIds[]`, `organizationId`, `defaultShift`, `status` |
+| `Crew` | `name`, `crewType`, `specialty`, `homeZoneId`, `leaderUserId`, `leaderName`, `memberUserIds[]`, `organizationId`, `organizationName`, `defaultShift`, `status` |
+| `CrewZoneAssignment` | `crewId`, `zoneId`, `validFrom`, `validTo?`, `reason`, `createdBy` |
 | `Vehicle` | `plate`, `vehicleType`, `capacity`, `status` |
 
-Enums: `crewType` es `CrewType`, `vehicleType` es `VehicleType`, `defaultShift` es `Shift` — ver [enumeraciones.md](../enumeraciones.md).
+Enums: `crewType` es `CrewType`, `specialty` es `CrewSpecialty`, `vehicleType` es `VehicleType`, `defaultShift` es `Shift` — ver [enumeraciones.md](../enumeraciones.md).
 
 ### `Crew`
 
-Equipo de trabajo, municipal o de cooperativa. `organizationId` es de M1: **las cooperativas existen acá como cuadrillas, no como beneficiarias de un programa social** — su registro como organización es de M1, no de M8. Para mostrar el nombre de la cooperativa en pantalla hace falta la consulta REST a M1, que sigue [pendiente de confirmar](../integracion/m1.md#m1--ciudadanos--jwt-confirmado-sin-integración-de-dominio-actual).
+Equipo de trabajo, municipal o de cooperativa. `organizationId` es de M1: **las cooperativas existen acá como cuadrillas, no como beneficiarias de un programa social** — su registro como organización es de M1, no de M8. El nombre de la cooperativa se muestra desde una **copia** (`organizationName`, #454) que carga quien da de alta la cuadrilla; no hay consulta a M1 ni sincronización. La consulta REST a M1 para obtener el nombre real sigue [pendiente de confirmar](../integracion/m1.md#m1--ciudadanos--jwt-confirmado-sin-integración-de-dominio-actual) y, cuando exista, reemplazaría a la copia.
 
-`leaderUserId` y `memberUserIds[]` son usuarios de **M1**, que es quien los gestiona y emite el JWT. No los replicamos: guardamos el id y nada más.
+`leaderUserId` y `memberUserIds[]` son usuarios de **M1**, que es quien los gestiona y emite el JWT. Guardamos el id y, como **copia para poder mostrarlos** (#454), el nombre que quien carga la cuadrilla informa: `Crew.leaderName`, `Crew.organizationName` y `CrewMember.displayName`. Son opcionales (un id sin nombre funciona) y no se sincronizan con M1: si el nombre cambia allá, hay que volver a cargarlo acá.
+
+**Zona y especialidad (#455).** `specialty` (`CrewSpecialty`) dice con qué se espera ver trabajar a la cuadrilla, y `homeZoneId` es su **única** zona base (no hay tabla `CrewZone`). Una reubicación transitoria va en `CrewZoneAssignment`: entre `validFrom` y `validTo` (inclusive; sin `validTo`, hasta nuevo aviso) la **zona efectiva** es la de la reubicación, y al vencer vuelve a la base. Para una cuadrilla los rangos no se pisan, así que hay a lo sumo una vigente por fecha. Al asignar una cuadrilla a un servicio, si la zona del servicio no es la efectiva ese día o la especialidad no corresponde al tipo (mapa `SERVICE_TYPE_SPECIALTY` en `src/modules/crews/crew-specialty.ts`) se **avisa y se exige `overrideNote`**, sin bloquear. `specialty` es nullable en la base solo por las filas anteriores; el alta la exige.
 
 ### `Vehicle`
 

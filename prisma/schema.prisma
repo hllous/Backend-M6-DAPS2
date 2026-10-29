@@ -235,6 +235,18 @@ enum CrewType {
   CONTRACTOR
 }
 
+/// Rubro de trabajo de una cuadrilla. Se contrasta con el tipo de servicio al asignarla
+/// (mapa en src/modules/crews/crew-specialty.ts).
+enum CrewSpecialty {
+  COLLECTION
+  SWEEPING
+  CLEANING
+  RECYCLING
+  TREES
+  GREEN_SPACES
+  INSPECTION
+}
+
 enum VehicleType {
   COMPACTOR_TRUCK
   DUMP_TRUCK
@@ -338,15 +350,17 @@ model Zone {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  commune       Commune?           @relation(fields: [communeId], references: [id], onDelete: Restrict)
-  neighborhoods ZoneNeighborhood[]
-  routeStops    RouteStop[]
-  serviceZones  ServiceZone[]
-  zoneResults   ZoneResult[]
-  containers    Container[]
-  greenPoints   GreenPoint[]
-  trees         Tree[]
-  greenSpaces   GreenSpace[]
+  commune         Commune?             @relation(fields: [communeId], references: [id], onDelete: Restrict)
+  neighborhoods   ZoneNeighborhood[]
+  routeStops      RouteStop[]
+  serviceZones    ServiceZone[]
+  zoneResults     ZoneResult[]
+  containers      Container[]
+  greenPoints     GreenPoint[]
+  trees           Tree[]
+  greenSpaces     GreenSpace[]
+  homeCrews       Crew[]               @relation("CrewHomeZone")
+  crewAssignments CrewZoneAssignment[]
 
   @@index([communeId])
   @@map("zone")
@@ -424,30 +438,61 @@ model FrequencyWeekday {
 // ════════════════════════════════════════════════════════════════
 
 model Crew {
-  id             String   @id @default(uuid()) @db.Uuid
-  name           String
-  crewType       CrewType @map("crew_type")
-  leaderUserId   String?  @map("leader_user_id") // EXT M1
-  organizationId String?  @map("organization_id") // EXT M1
-  defaultShift   Shift    @map("default_shift")
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id               String         @id @default(uuid()) @db.Uuid
+  name             String
+  crewType         CrewType       @map("crew_type")
+  leaderUserId     String?        @map("leader_user_id") // EXT M1
+  organizationId   String?        @map("organization_id") // EXT M1
+  // Snapshot de los nombres de M1 (#454): M6 no puede consultar a M1 para mostrarlos.
+  leaderName       String?        @map("leader_name")
+  organizationName String?        @map("organization_name")
+  defaultShift     Shift          @map("default_shift")
+  // Nullable solo para no romper filas anteriores a #455; el alta la exige.
+  specialty        CrewSpecialty?
+  homeZoneId       String?        @map("home_zone_id") @db.Uuid
+  active           Boolean        @default(true)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
 
-  members  CrewMember[]
-  services Service[]
+  homeZone        Zone?                @relation("CrewHomeZone", fields: [homeZoneId], references: [id], onDelete: Restrict)
+  members         CrewMember[]
+  services        Service[]
+  zoneAssignments CrewZoneAssignment[]
 
+  @@index([homeZoneId])
   @@map("crew")
 }
 
 model CrewMember {
-  crewId String @map("crew_id") @db.Uuid
-  userId String @map("user_id") // EXT M1
+  crewId      String  @map("crew_id") @db.Uuid
+  userId      String  @map("user_id") // EXT M1
+  // Snapshot del nombre en M1 (#454); null si quien lo cargó no lo informó.
+  displayName String? @map("display_name")
 
   crew Crew @relation(fields: [crewId], references: [id], onDelete: Cascade)
 
   @@id([crewId, userId])
   @@map("crew_member")
+}
+
+/// Reubicación transitoria de una cuadrilla en otra zona (#455). Sin `validTo` queda
+/// vigente hasta nuevo aviso. Para una misma cuadrilla los rangos no se pisan.
+model CrewZoneAssignment {
+  id        String    @id @default(uuid()) @db.Uuid
+  crewId    String    @map("crew_id") @db.Uuid
+  zoneId    String    @map("zone_id") @db.Uuid
+  validFrom DateTime  @map("valid_from") @db.Date
+  validTo   DateTime? @map("valid_to") @db.Date
+  reason    String
+  createdBy String    @map("created_by") // EXT M1
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  crew Crew @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+
+  @@index([crewId, validFrom])
+  @@index([zoneId])
+  @@map("crew_zone_assignment")
 }
 
 model Vehicle {
@@ -489,8 +534,9 @@ model Service {
   // simulada y no se persiste), asi que es una referencia externa sin FK.
   weatherAlertId         String?       @map("weather_alert_id")
   notes                  String?       @db.Text
-  // Por que se asigno una cuadrilla o un vehiculo que ya estaba tomado. Se
-  // exige cuando hay solapamiento: la asignacion avisa y deja pasar, pero no
+  // Por que se asigno una cuadrilla o un vehiculo que ya estaba tomado, o una
+  // cuadrilla de otra zona o especialidad (#455). Se exige cuando hay
+  // solapamiento o aviso de encaje: la asignacion avisa y deja pasar, pero no
   // en silencio (Issue #123).
   assignmentOverrideNote String?       @map("assignment_override_note") @db.Text
   assignmentOverrideBy   String?       @map("assignment_override_by")

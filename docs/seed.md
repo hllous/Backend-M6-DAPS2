@@ -73,6 +73,8 @@ Reglas con las que está escrito:
 | 61 líderes e integrantes de las 16 cuadrillas (`101`–`104`, `111`–`115`, `151`–`154`, `161`–`164`, `171`–`174`, `181`–`184`, `201`–`204`, …) | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` |
 | `601`, `602` (cuadrilla de inspección) | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` y `M6_CAMPO_INSPECTOR` |
 
+Las 16 cuadrillas se persisten con los datos del modelo de #454 y #455: `specialty` (la de sus tipos de servicio si todos pertenecen a una misma; **`null` si la cuadrilla atiende varias especialidades**, para que sus servicios sembrados no disparen avisos de desencaje), `homeZoneId` (**solo las cuadrillas de una única zona**; las que cubren varias quedan sin zona base) y nombres de ejemplo: `leaderName` y `CrewMember.displayName` salen de dos listas cortas según el id (el mismo id da siempre el mismo nombre) y `organizationName` de las cooperativas es el nombre de la cuadrilla antes del " — ". Son datos de demostración, no los de M1.
+
 Los ids son los `sub` numéricos del token de M1 y **no cambian** con el catálogo v3.0 (lo que pasa a UUID es el `citizenId` de los eventos). No existen usuarios reales: M1 no está hosteado, así que los tokens de demo los firma `scripts/generate-demo-jwt.mjs` (ver [deploy.md](deploy.md)). Las filas se insertan directo en `user_role_assignment`, **sin auditoría**: es dato de arranque, no una asignación hecha por un admin. Oficina y Campo no se mezclan (ADR-005), y los ids de cuadrilla coinciden con `crew.leader_user_id` y `crew_member.user_id`, que es lo que exige la pertenencia de Campo (#365).
 
 ## 4. Qué es auténtico y qué no

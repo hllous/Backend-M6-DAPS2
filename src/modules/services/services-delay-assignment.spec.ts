@@ -53,6 +53,17 @@ describe('ServicesService — demora y doble reserva', () => {
     ...over,
   });
 
+  const crewRow = (over: Record<string, unknown> = {}) => ({
+    id: CREW,
+    active: true,
+    name: 'Cuadrilla Centro 1',
+    specialty: null,
+    homeZoneId: null,
+    homeZone: null,
+    zoneAssignments: [],
+    ...over,
+  });
+
   beforeEach(() => {
     prisma = {
       service: {
@@ -62,10 +73,10 @@ describe('ServicesService — demora y doble reserva', () => {
       },
       crew: {
         count: jest.fn().mockResolvedValue(1),
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ id: CREW, active: true, name: 'Cuadrilla Centro 1' }),
+        // Sin zona ni especialidad cargadas: no hay avisos de encaje (#455).
+        findUnique: jest.fn().mockResolvedValue(crewRow()),
       },
+      serviceType: { findUnique: jest.fn().mockResolvedValue({ code: 'REC-DOM' }) },
       vehicle: {
         findUnique: jest.fn().mockResolvedValue({ id: VEHICLE, active: true, plate: 'AB123CD' }),
       },
@@ -93,6 +104,122 @@ describe('ServicesService — demora y doble reserva', () => {
       outbox as unknown as OutboxService,
       {} as never,
     );
+  });
+
+  // ─── #455: encaje de la cuadrilla con la zona y el tipo ────────────
+
+  describe('encaje de la cuadrilla (#455)', () => {
+    const ZONA_SERVICIO = '55555555-5555-5555-5555-555555555555';
+    const ZONA_CREW = '66666666-6666-6666-6666-666666666666';
+
+    beforeEach(() => {
+      prisma.service.findUnique.mockResolvedValue(servicio({ zones: [{ zoneId: ZONA_SERVICIO }] }));
+    });
+
+    it('cuadrilla de otra zona: rebota pidiendo nota y no escribe', async () => {
+      prisma.crew.findUnique.mockResolvedValue(
+        crewRow({ homeZoneId: ZONA_CREW, homeZone: { name: 'Palermo' } }),
+      );
+
+      const err = await service.assignCrew(SERVICE_ID, { crewId: CREW }).catch((e) => e);
+
+      expect(err).toBeInstanceOf(ConflictException);
+      expect(err.message).toContain('Palermo');
+      expect(err.message).toContain('overrideNote');
+      expect(prisma.service.update).not.toHaveBeenCalled();
+    });
+
+    it('con nota se asigna igual y la nota queda guardada', async () => {
+      prisma.crew.findUnique.mockResolvedValue(
+        crewRow({ homeZoneId: ZONA_CREW, homeZone: { name: 'Palermo' } }),
+      );
+
+      await service.assignCrew(
+        SERVICE_ID,
+        { crewId: CREW, overrideNote: 'Refuerzo por el temporal en la zona' },
+        ACTOR,
+      );
+
+      const { data } = prisma.service.update.mock.calls[0][0];
+      expect(data.crewId).toBe(CREW);
+      expect(data.assignmentOverrideNote).toContain('temporal');
+      expect(data.assignmentOverrideBy).toBe(ACTOR);
+    });
+
+    it('la reubicación vigente manda sobre la zona base', async () => {
+      // Base en otra zona, pero reubicada justo en la del servicio: no hay aviso.
+      prisma.crew.findUnique.mockResolvedValue(
+        crewRow({
+          homeZoneId: ZONA_CREW,
+          zoneAssignments: [{ zoneId: ZONA_SERVICIO, zone: { name: 'Belgrano' } }],
+        }),
+      );
+
+      await service.assignCrew(SERVICE_ID, { crewId: CREW });
+
+      expect(prisma.service.update).toHaveBeenCalled();
+      // Se busca la reubicación vigente en la fecha del servicio, no "hoy".
+      const where = prisma.crew.findUnique.mock.calls[1][0].select.zoneAssignments.where;
+      expect(where.validFrom).toEqual({ lte: new Date('2026-09-15T00:00:00.000Z') });
+    });
+
+    it('un servicio con varias zonas encaja si una es la de la cuadrilla', async () => {
+      prisma.service.findUnique.mockResolvedValue(
+        servicio({ zones: [{ zoneId: ZONA_CREW }, { zoneId: ZONA_SERVICIO }] }),
+      );
+      prisma.crew.findUnique.mockResolvedValue(crewRow({ homeZoneId: ZONA_CREW }));
+
+      await service.assignCrew(SERVICE_ID, { crewId: CREW });
+
+      expect(prisma.service.update).toHaveBeenCalled();
+    });
+
+    it('especialidad que no corresponde al tipo: avisa', async () => {
+      prisma.crew.findUnique.mockResolvedValue(crewRow({ specialty: 'TREES' }));
+
+      const err = await service.assignCrew(SERVICE_ID, { crewId: CREW }).catch((e) => e);
+
+      expect(err).toBeInstanceOf(ConflictException);
+      expect(err.message).toContain('COLLECTION');
+    });
+
+    it('especialidad correcta: no avisa', async () => {
+      prisma.crew.findUnique.mockResolvedValue(crewRow({ specialty: 'COLLECTION' }));
+
+      await service.assignCrew(SERVICE_ID, { crewId: CREW });
+
+      expect(prisma.service.update).toHaveBeenCalled();
+    });
+
+    it('un tipo de servicio sin mapear no genera aviso', async () => {
+      prisma.serviceType.findUnique.mockResolvedValue({ code: 'NUEVO-TIPO' });
+      prisma.crew.findUnique.mockResolvedValue(crewRow({ specialty: 'TREES' }));
+
+      await service.assignCrew(SERVICE_ID, { crewId: CREW });
+
+      expect(prisma.service.update).toHaveBeenCalled();
+    });
+
+    it('zona y especialidad a la vez: dos avisos, una sola nota alcanza', async () => {
+      prisma.crew.findUnique.mockResolvedValue(
+        crewRow({ specialty: 'TREES', homeZoneId: ZONA_CREW }),
+      );
+
+      const res = await service.getAssignmentConflicts(SERVICE_ID, { crewId: CREW });
+
+      expect(res.hasConflicts).toBe(true);
+      expect(res.conflicts).toEqual([]);
+      expect(res.warnings.map((w) => w.code)).toEqual([
+        'CREW_ZONE_MISMATCH',
+        'CREW_SPECIALTY_MISMATCH',
+      ]);
+    });
+
+    it('sin avisos ni solapamientos, la consulta no marca conflicto', async () => {
+      const res = await service.getAssignmentConflicts(SERVICE_ID, { crewId: CREW });
+
+      expect(res).toMatchObject({ hasConflicts: false, conflicts: [], warnings: [] });
+    });
   });
 
   // ─── #123: doble reserva ────────────────────────────

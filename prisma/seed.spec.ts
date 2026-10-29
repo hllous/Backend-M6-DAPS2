@@ -1,12 +1,17 @@
 import { DelayType } from '@prisma/client';
 import { puntoEnGeometria } from '../src/common/utils/geo';
 import { CONTENEDORES_A_MANO } from '../scripts/build-datos-ciudad';
+import { SERVICE_TYPE_SPECIALTY } from '../src/modules/crews/crew-specialty';
 import {
   CONTAINERS,
+  CREWS,
   GREEN_POINTS,
   TREES,
   TIPO_ESPACIO,
   TOPE_SERVICIOS,
+  especialidadDe,
+  nombreDePersona,
+  organizacionDe,
   planificar,
   verificar,
   verificarCobertura,
@@ -186,5 +191,69 @@ describe('seed: inventario real de IDECABA', () => {
       expect(t.heightM).toBeGreaterThan(0);
       expect(t.diameterCm).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('seed: especialidad y zona base de las cuadrillas (#455)', () => {
+  it('todos los tipos que atiende una cuadrilla tienen especialidad en el mapa', () => {
+    const sinMapa = CREWS.flatMap((c) => c.tipos).filter((t) => !SERVICE_TYPE_SPECIALTY[t]);
+    expect(sinMapa).toEqual([]);
+  });
+
+  it('la especialidad derivada es null o cubre TODOS los tipos que atiende la cuadrilla', () => {
+    for (const c of CREWS) {
+      const esp = especialidadDe(c.tipos);
+      if (esp === null) continue;
+      for (const t of c.tipos)
+        expect({ cuadrilla: c.clave, tipo: t, esp }).toEqual({
+          cuadrilla: c.clave,
+          tipo: t,
+          esp: SERVICE_TYPE_SPECIALTY[t],
+        });
+    }
+  });
+
+  it('las cuadrillas mixtas quedan sin especialidad y las de un solo rubro la tienen', () => {
+    const porClave = (k: string) => especialidadDe(CREWS.find((c) => c.clave === k)!.tipos);
+    // PAL-REC mezcla recolección y barrido; COOP-PAL, reciclables y recolección de contenedores.
+    expect(porClave('PAL-REC')).toBeNull();
+    expect(porClave('COOP-PAL')).toBeNull();
+    expect(porClave('ARBOLADO')).toBe('TREES');
+    expect(porClave('INSP')).toBe('INSPECTION');
+    expect(CREWS.some((c) => especialidadDe(c.tipos) === null)).toBe(true);
+    expect(CREWS.some((c) => especialidadDe(c.tipos) !== null)).toBe(true);
+  });
+
+  it('la zona base solo existe para cuadrillas de una zona, y las hay de las dos clases', () => {
+    expect(new Set(CREWS.map((c) => c.zonas.length === 1)).size).toBe(2);
+  });
+});
+
+describe('seed: nombres de ejemplo de las cuadrillas (#454)', () => {
+  it('el mismo id da siempre el mismo nombre, con nombre y apellido', () => {
+    expect(nombreDePersona('101')).toBe(nombreDePersona('101'));
+    expect(nombreDePersona('101')).toMatch(/^\S+ \S+$/);
+  });
+
+  it('los integrantes de una misma cuadrilla no repiten nombre', () => {
+    for (const c of CREWS) {
+      const nombres = c.members.map(nombreDePersona);
+      expect(new Set(nombres).size).toBe(nombres.length);
+    }
+  });
+
+  it('el responsable figura entre los integrantes con el mismo nombre', () => {
+    for (const c of CREWS) expect(c.members).toContain(c.leaderUserId);
+  });
+
+  it('solo las cuadrillas que no son municipales tienen nombre de organización', () => {
+    for (const c of CREWS) {
+      const org = organizacionDe(c);
+      if (c.crewType === 'MUNICIPAL') expect(org).toBeNull();
+      else expect(org).toMatch(/^Cooperativa de Recuperadores \S+/);
+    }
+    expect(organizacionDe({ crewType: 'COOPERATIVE', name: 'Coop X — Reciclables' } as never)).toBe(
+      'Coop X',
+    );
   });
 });

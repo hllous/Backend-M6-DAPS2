@@ -1,6 +1,7 @@
 import {
   ContainerStatus,
   ContainerType,
+  CrewSpecialty,
   CrewType,
   DamageType,
   DelayType,
@@ -44,6 +45,7 @@ import { cargarSnapshot, syncZones } from '../src/core/zones-sync';
 import { AggregateType, EventType } from '../src/events/event-types';
 import * as payloads from '../src/events/payloads';
 import { puntoEnGeometria, semillaDe } from '../src/common/utils/geo';
+import { SERVICE_TYPE_SPECIALTY } from '../src/modules/crews/crew-specialty';
 import {
   ArbolSeed,
   BARRIOS,
@@ -492,9 +494,11 @@ const VEHICULOS_APTOS: Record<string, VehicleType[]> = {
 /**
  * Doce cuadrillas, cuatro por turno.
  *
- * El modelo no guarda zona ni especialidad de una cuadrilla: `tipos` y `zonas`
- * no se persisten, son el contrato que el seed se obliga a cumplir al
- * asignarle servicios (ver `verificar`). `bajaDesde` es el día desde el que no
+ * `tipos` y `zonas` son el contrato que el seed se obliga a cumplir al
+ * asignarle servicios (ver `verificar`). Del modelo (#455) solo se persiste lo
+ * que cabe: la especialidad solo existe si todos sus tipos pertenecen a una misma
+ * (ver `especialidadDe`) y la zona base solo si cubre una única zona (`homeZoneId`
+ * es una sola; las que cubren varias quedan sin zona base). `bajaDesde` es el día desde el que no
  * está disponible.
  *
  * Las cooperativas son de recuperadores urbanos: en la Ciudad la fracción
@@ -668,6 +672,63 @@ export const CREWS: CuadrillaSeed[] = [
     zonas: CENTRO,
   },
 ];
+
+/**
+ * La especialidad de una cuadrilla del seed: la de sus tipos si todos mapean a una
+ * sola; `null` si mezclan especialidades. Con `null` el backend no avisa de
+ * desencaje al asignarle servicios, que es lo honesto para una cuadrilla mixta
+ * (elegir una haría saltar avisos en servicios que sí le corresponden).
+ */
+export function especialidadDe(tipos: string[]): CrewSpecialty | null {
+  const especialidades = new Set(tipos.map((t) => SERVICE_TYPE_SPECIALTY[t]));
+  return especialidades.size === 1 ? [...especialidades][0] : null;
+}
+
+const NOMBRES = [
+  'Marta',
+  'Lucía',
+  'Carlos',
+  'Julián',
+  'Sofía',
+  'Diego',
+  'Valeria',
+  'Mateo',
+  'Camila',
+  'Ramón',
+  'Florencia',
+  'Héctor',
+];
+const APELLIDOS = [
+  'Gómez',
+  'Fernández',
+  'Rodríguez',
+  'López',
+  'Martínez',
+  'Sosa',
+  'Acosta',
+  'Benítez',
+  'Medina',
+  'Ríos',
+  'Domínguez',
+  'Aguirre',
+  'Silva',
+];
+
+/**
+ * Nombre de ejemplo para un id de M1 del seed: el mismo id da siempre el mismo
+ * nombre (sin azar), así una segunda corrida no lo cambia. Los apellidos son 13 y
+ * los nombres 12, coprimos, para que ids consecutivos no repitan la combinación
+ * hasta pasadas 156 personas.
+ */
+export function nombreDePersona(userId: string): string {
+  const n = Number(userId);
+  return `${NOMBRES[n % NOMBRES.length]} ${APELLIDOS[n % APELLIDOS.length]}`;
+}
+
+/** Las cooperativas y contratistas se nombran por la organización: lo que va antes del " — ". */
+export function organizacionDe(c: Pick<CuadrillaSeed, 'crewType' | 'name'>): string | null {
+  return c.crewType === CrewType.MUNICIPAL ? null : c.name.split(' — ')[0];
+}
 
 /**
  * Personal de Oficina y auditoría de la demo. Los ids son los `sub` numéricos del
@@ -2894,6 +2955,10 @@ async function main() {
       defaultShift: c.defaultShift,
       leaderUserId: c.leaderUserId,
       organizationId: c.organizationId,
+      leaderName: nombreDePersona(c.leaderUserId),
+      organizationName: organizacionDe(c),
+      specialty: especialidadDe(c.tipos),
+      homeZoneId: c.zonas.length === 1 ? zoneId(c.zonas[0]) : null,
       active: c.active,
     };
     const existing = await prisma.crew.findFirst({ where: { name: c.name } });
@@ -2901,10 +2966,15 @@ async function main() {
       ? await prisma.crew.update({ where: { id: existing.id }, data: datos })
       : await prisma.crew.create({ data: datos });
     cuadrillas.set(c.clave, crew.id);
-    await prisma.crewMember.createMany({
-      data: c.members.map((userId) => ({ crewId: crew.id, userId })),
-      skipDuplicates: true,
-    });
+    // upsert y no createMany: una segunda corrida tiene que poder corregir el nombre.
+    for (const userId of c.members) {
+      const displayName = nombreDePersona(userId);
+      await prisma.crewMember.upsert({
+        where: { crewId_userId: { crewId: crew.id, userId } },
+        update: { displayName },
+        create: { crewId: crew.id, userId, displayName },
+      });
+    }
   }
 
   // ── Inventario urbano ──────────────────────────────────
