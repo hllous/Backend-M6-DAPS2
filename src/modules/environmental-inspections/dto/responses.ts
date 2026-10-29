@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  EnvironmentalReportType,
   InspectionNextStep,
   InspectionOutcome,
   Severity,
@@ -24,12 +25,73 @@ export class ChecklistItemResponseDto {
   observations: string | null;
 }
 
+export class AllowedActionsDto {
+  @ApiProperty({
+    description:
+      'Se puede derivar una reparación a Obras Públicas (M3): el tipo de expediente admite daño de infraestructura y la inspección está cerrada con un resultado distinto de NO_VIOLATION. Aun así, `POST /repair-requests` rechaza con 409 un duplicado abierto.',
+    example: false,
+  })
+  repair: boolean;
+
+  @ApiProperty({
+    description:
+      'Se puede emitir el acta (POST /environmental-inspections/:id/violation-notice): el tipo de expediente admite acta, el resultado es VIOLATION_FOUND y todavía no se emitió una (el acta es inmutable: una segunda da 409).',
+    example: true,
+  })
+  notice: boolean;
+
+  @ApiProperty({
+    description:
+      'Tipo de infracción que corresponde al tipo de expediente. Null si no hay uno canónico.',
+    enum: ViolationType,
+    nullable: true,
+  })
+  suggestedViolationType: ViolationType | null;
+}
+
 export class InspectionResponseDto {
   @ApiProperty({ description: 'UUID de la inspección', format: 'uuid' })
   id: string;
 
   @ApiProperty({ description: 'Expediente al que pertenece', format: 'uuid' })
   reportId: string;
+
+  @ApiProperty({
+    description: 'Tipo del expediente (solo lectura, copiado del expediente)',
+    enum: EnvironmentalReportType,
+  })
+  reportType: EnvironmentalReportType;
+
+  @ApiProperty({
+    description: 'Dirección del expediente de origen (solo lectura)',
+    nullable: true,
+    type: String,
+    example: 'Frente a Almte. Guillermo Brown',
+  })
+  address: string | null;
+
+  @ApiProperty({
+    description: 'Latitud del expediente de origen (solo lectura)',
+    nullable: true,
+    type: Number,
+    example: -34.6037,
+  })
+  lat: number | null;
+
+  @ApiProperty({
+    description: 'Longitud del expediente de origen (solo lectura)',
+    nullable: true,
+    type: Number,
+    example: -58.3816,
+  })
+  lng: number | null;
+
+  @ApiProperty({
+    description:
+      'Qué se puede derivar a partir de esta inspección hoy, según el tipo de expediente, el resultado y si ya tiene acta. No cubre los duplicados de reparación: eso lo rechaza `POST /repair-requests` con 409.',
+    type: AllowedActionsDto,
+  })
+  allowedActions: AllowedActionsDto;
 
   @ApiPropertyOptional({
     description: 'Servicio que la ejecuta. Null hasta que se asocia.',

@@ -990,9 +990,26 @@ model OutboxEvent {
   // directa en M6 (un endpoint, un barrido).
   causationId   String?           @map("causation_id") @db.Uuid
 
+  retries OutboxRetryAudit[]
+
   // El dispatcher barre PENDING en orden de ocurrencia.
   @@index([status, occurredAt])
   @@map("outbox_event")
+}
+
+// Quién reencoló a mano un evento FAILED, y cómo estaba antes: el reintento
+// resetea attempts y lastError, así que sin esto el rastro del fallo se perdería.
+model OutboxRetryAudit {
+  id               String      @id @default(uuid()) @db.Uuid
+  outboxEventId    String      @map("outbox_event_id") @db.Uuid
+  actorUserId      String      @map("actor_user_id") // quién reintentó (M1, del token)
+  at               DateTime    @default(now())
+  previousAttempts Int         @map("previous_attempts")
+  previousError    String?     @map("previous_error")
+  outboxEvent      OutboxEvent @relation(fields: [outboxEventId], references: [id])
+
+  @@index([outboxEventId, at])
+  @@map("outbox_retry_audit")
 }
 
 model InboxEvent {

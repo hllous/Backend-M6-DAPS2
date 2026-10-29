@@ -73,6 +73,10 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 | POST | `/environmental-reports/:reportId/inspections` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
 | GET | `/events/handlers` | cualquier rol de M6 |
 | POST | `/events/inbox` | `M6_ADMIN` |
+| GET | `/events/outbox` | `M6_ADMIN`, `M6_AUDITOR` |
+| GET | `/events/outbox/:id` | `M6_ADMIN` |
+| POST | `/events/outbox/:id/retry` | `M6_ADMIN` |
+| POST | `/events/outbox/retry-failed` | `M6_ADMIN` |
 | GET | `/evidence` | cualquier rol de M6 |
 | POST | `/evidence` | `M6_CAMPO_CUADRILLA`, `M6_CAMPO_INSPECTOR` |
 | GET | `/green-points` | cualquier rol de M6 |
@@ -422,13 +426,28 @@ El sobre es el del Core (`sourceModule`, `correlationId`, `causationId`). El de 
 
 > Este endpoint es la vía manual: sirve para ejercitar los consumidores sin broker o mientras el Core no registra nuestras suscripciones. El consumidor de RabbitMQ (`q.ambiente`) llama al mismo `ingest()`.
 
+## `outbox` — eventos salientes: consulta y reintento
+
+Contraparte de `POST /events/inbox`: sin entrar a la base se ve qué salió, qué falló y por qué, y se reencola lo `FAILED`. El dispatcher deja una fila en `FAILED` a los 5 intentos y deja de barrerla (ver [eventos publicados](../eventos/publicados/README.md)).
+
+| Método | Ruta                          | Roles                | Qué hace |
+| ------ | ----------------------------- | -------------------- | -------- |
+| GET    | `/events/outbox`              | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más nuevo al más viejo. Filtros: `status` (`PENDING`/`SENT`/`FAILED`), `eventType`, `from`/`to` (días argentinos inclusivos sobre `occurredAt`; 400 si `from` > `to`). **No trae el `payload`**: puede incluir datos del vecino |
+| GET    | `/events/outbox/:id`          | `M6_ADMIN`           | Detalle con el `payload` y los reintentos manuales que se le hicieron. 404 si no existe |
+| POST   | `/events/outbox/:id/retry`    | `M6_ADMIN`           | `FAILED` → `PENDING` con `attempts = 0`; el dispatcher lo reenvía en la próxima barrida (cada 10 s). 409 si no está en `FAILED` (un `SENT` no se reenvía; un `PENDING` ya está en cola) |
+| POST   | `/events/outbox/retry-failed` | `M6_ADMIN`           | Lo mismo en lote. Body `{ "confirm": true, "limit": 20 }`: `confirm` obligatorio (solo el booleano `true` o la cadena `"true"`; cualquier otra cosa da 400), `limit` opcional (1 a 100, por omisión 100), los más viejos primero. Devuelve `{ requeued, remainingFailed }`; 409 si otro reintento concurrente tocó eventos de la tanda (no se reencola ni audita nada: repetir el pedido) |
+
+**Auditoría.** Cada reintento escribe una fila en `outbox_retry_audit` (`outboxEventId`, `actorUserId`, `at`, `previousAttempts`, `previousError`) en la misma transacción que el cambio de estado: el reintento borra `attempts` y `lastError`, y ahí queda cómo estaban. El actor sale del token, nunca del body. **Reintentar republica con el mismo `eventId`** (es el id de la fila). Los módulos receptores deduplican por `eventId`, así que no hay doble efecto si el primer envío había llegado a salir. Pero el Core de M9 puede no redistribuir un `eventId` que ya registró, y uno `REJECTED` tampoco se revalida al retransmitirlo (ver [m9.md](../integracion/m9.md)): **si el motivo del `FAILED` fue un payload rechazado, el reintento no lo arregla**; hay que coordinar el reproceso con M9. Sirve sobre todo cuando el fallo fue de transporte (broker caído, red). Con el receptor todavía caído, el evento vuelve a `FAILED` tras 5 intentos. No hay reintento automático de un `FAILED`: es una acción humana auditada.
+
+**`lastError` puede incluir datos de infraestructura** (host y puerto del broker, hasta 500 caracteres) y lo ve también el auditor en el listado; por eso el detalle, que agrega el payload y el `previousError` de cada reintento, es solo para `M6_ADMIN`.
+
 ## `repair-requests` — reparaciones derivadas a M3
 
 El daño de infraestructura que detectamos pero que no nos corresponde arreglar. La solicitud existe para **poder seguir el pedido**: publicar el evento no alcanza, porque la respuesta de M3 vuelve asincrónica.
 
 | Método | Ruta                         | Qué hace                                                                                                                                                                                              |
 | ------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/repair-requests`           | Crear y publicar `infrastructureRepairRequested` → M3. Si el daño salió de un servicio nacido de un reclamo, el `ticketId` viaja en el evento. 404 si el servicio o la inspección de origen no existe |
+| POST   | `/repair-requests`           | Crear y publicar `infrastructureRepairRequested` → M3. Si el daño salió de un servicio nacido de un reclamo —o de una inspección, vía el `ticketId` de su expediente— el `ticketId` viaja en el evento. 404 si el servicio o la inspección de origen no existe. **409** si el origen es una inspección sin cerrar, `NO_VIOLATION` o de un expediente `NOISE`/`ODOR`/`PEST_INFESTATION`/`AIR_EMISSION` (ver `ALLOWED_FOLLOW_UPS`), o si ya hay una solicitud no cerrada para el mismo origen y `damageType` |
 | GET    | `/repair-requests`           | Listar. Filtros: `status`, `damageType`, `severity`, `detectedInId`                                                                                                                                   |
 | GET    | `/repair-requests/:id`       | Detalle, con la orden de trabajo de M3 si la informaron                                                                                                                                               |
 | POST   | `/repair-requests/:id/start` | → `IN_PROGRESS`. **Normalmente lo dispara `workOrderScheduled`** (Fase 6). **409** si la transición no es válida desde el estado actual                                                               |
@@ -476,7 +495,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | POST   | `/environmental-reports/:reportId/inspections`    | Programar. Lleva el expediente a `INSPECTION_SCHEDULED`. Se ejecuta como un `Service` de modo `POINT`                                                                                                                                                        |
 | GET    | `/environmental-reports/:reportId/inspections`    | Inspecciones del expediente                                                                                                                                                                                                                                  |
-| GET    | `/environmental-inspections/:id`                  | Detalle con checklist y hallazgos                                                                                                                                                                                                                            |
+| GET    | `/environmental-inspections/:id`                  | Detalle con checklist y hallazgos, más `reportType`, `address`, `lat` y `lng` del expediente (solo lectura) y `allowedActions` (`repair`, `notice`, `suggestedViolationType`: la matriz por tipo de expediente cruzada con el resultado; también en el listado por expediente)                                                                                                                                                                                                                            |
 | POST   | `/environmental-inspections/:id/complete`         | Cierra con su `outcome`. Lleva el expediente a `INSPECTED` y de ahí, en la misma operación, a `NO_VIOLATION` o `VIOLATION_FOUND`. Un `INCONCLUSIVE` lo deja en `INSPECTED`. 400 si `inspectedAt` está en el futuro o si `VIOLATION_FOUND` no trae `nextStep` |
 | POST   | `/environmental-inspections/:id/violation-notice` | **Emitir el acta.** Solo sobre una inspección `VIOLATION_FOUND`                                                                                                                                                                                              |
 | GET    | `/environmental-inspections/:id/violation-notice` | El acta emitida; `200` con `null` (JSON literal) si la inspección no tiene acta, `404` solo si no existe                                                                                                                                                     |

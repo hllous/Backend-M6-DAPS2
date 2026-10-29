@@ -11,7 +11,7 @@ Enums: `damageType` es `RepairDamageType`, `severity` es `Severity` — ver [enu
 
 ## `RepairRequest` → M3
 
-Un daño de infraestructura que detectamos pero que no nos corresponde arreglar: pavimento roto, vereda hundida, luminaria caída, sumidero tapado. `detectedIn` guarda el `serviceId` o el `inspectionId` que lo originó, y el origen tiene que existir (404 si no).
+Un daño de infraestructura que detectamos pero que no nos corresponde arreglar: pavimento roto, vereda hundida, luminaria caída, sumidero tapado. `detectedIn` guarda el `serviceId` o el `inspectionId` que lo originó, y el origen tiene que existir (404 si no). Si el origen es una inspección, solo justifica una reparación si está cerrada con un resultado distinto de `NO_VIOLATION` y el tipo de expediente admite daño de infraestructura (`NOISE`, `ODOR`, `PEST_INFESTATION` y `AIR_EMISSION` no): 409 si no. Tampoco se admite una segunda solicitud no cerrada para el mismo origen y `damageType` (409). Ese control es del service, sin índice único: dos POST simultáneos podrían pasar ambos, un riesgo que se acepta por ahora porque evita una migración y el uso es de a un operador por vez; el unique parcial sobre `(detectedInType, detectedInId, damageType)` con `status <> CLOSED` queda como mejora. El `ticketId` del expediente viaja en el evento.
 
 **`publicSafetyRisk` es un campo propio y no se deriva de `severity`.** Son dos cosas distintas: una vereda rota puede ser de severidad baja y aun así tener a un chico cayéndose adentro. M3 prioriza con este campo y su schema lo exige, así que lo carga quien reporta el daño.
 
