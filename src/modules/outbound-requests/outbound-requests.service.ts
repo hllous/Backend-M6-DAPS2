@@ -19,6 +19,10 @@ import { OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
 import {
+  ALLOWED_FOLLOW_UPS,
+  repairJustifiedBy,
+} from '../environmental-inspections/allowed-follow-ups';
+import {
   ApproveClosureDto,
   ClosureSourceType,
   CreateRepairRequestDto,
@@ -61,6 +65,28 @@ export class OutboundRequestsService {
     const ticketId = await this.resolveRepairOrigin(dto.detectedInType, dto.detectedInId);
 
     const request = await this.prisma.$transaction(async (tx) => {
+      // Un pedido abierto para el mismo daño en el mismo origen ya está en
+      // manos de M3: otro publicaría un segundo evento y una segunda orden de
+      // obra. Sin índice único (evita una migración para este fix), el chequeo es
+      // de service.
+      // ponytail: dos POST simultáneos pueden pasar ambos; si hace falta
+      // garantía real, unique parcial sobre (detected_in_type, detected_in_id,
+      // damage_type) WHERE status <> 'CLOSED'.
+      const open = await tx.repairRequest.findFirst({
+        where: {
+          detectedInType: dto.detectedInType,
+          detectedInId: dto.detectedInId,
+          damageType: dto.damageType,
+          status: { not: RepairRequestStatus.CLOSED },
+        },
+        select: { id: true },
+      });
+      if (open) {
+        throw new ConflictException(
+          `Ya hay una solicitud de reparación abierta (${open.id}) por ${dto.damageType} para este origen`,
+        );
+      }
+
       const row = await tx.repairRequest.create({
         data: {
           damageType: dto.damageType,
@@ -266,9 +292,11 @@ export class OutboundRequestsService {
    * detrás de él, si lo hay. Es una sola consulta por tipo: el ticket sale de la
    * misma lectura que prueba la existencia.
    *
-   * Solo un `Service` puede traer ticket: una inspección ambiental cuelga de un
-   * expediente. El chequeo es previo a escribir; no hay FK polimórfica ni lock,
-   * así que la carrera con un borrado concurrente queda aceptada.
+   * El ticket sale del `Service` o, para una inspección, de su expediente. Una
+   * inspección solo justifica una reparación si está cerrada con algo constatado
+   * y si el tipo de expediente admite daño de infraestructura (409 si no). El
+   * chequeo es previo a escribir; no hay FK polimórfica ni lock, así que la
+   * carrera con un borrado concurrente queda aceptada.
    */
   private async resolveRepairOrigin(type: DetectedInType, id: string): Promise<string | undefined> {
     switch (type) {
@@ -283,10 +311,22 @@ export class OutboundRequestsService {
       case DetectedInType.INSPECTION: {
         const inspection = await this.prisma.environmentalInspection.findUnique({
           where: { id },
-          select: { id: true },
+          select: { outcome: true, report: { select: { reportType: true, ticketId: true } } },
         });
         if (!inspection) throw new NotFoundException(`Inspección con id '${id}' no encontrada`);
-        return undefined;
+        if (!ALLOWED_FOLLOW_UPS[inspection.report.reportType].repair) {
+          throw new ConflictException(
+            `Un expediente de tipo ${inspection.report.reportType} no admite reparación: no deja daño de infraestructura`,
+          );
+        }
+        if (!repairJustifiedBy(inspection.outcome)) {
+          throw new ConflictException(
+            inspection.outcome
+              ? `La inspección '${id}' cerró con ${inspection.outcome}: no hay nada que reparar`
+              : `La inspección '${id}' todavía no se cerró: una reparación se deriva con el resultado en mano`,
+          );
+        }
+        return inspection.report.ticketId ?? undefined;
       }
       default:
         return assertNever(type);

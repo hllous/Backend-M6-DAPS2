@@ -11036,7 +11036,7 @@
       "post": {
         "operationId": "RepairRequestsController_create",
         "summary": "Solicitar una reparación a Obras Públicas",
-        "description": "Registra un daño de infraestructura que detectamos pero que no nos corresponde arreglar —pavimento roto, vereda hundida, luminaria caída, sumidero tapado— y publica infrastructureRepairRequested hacia M3. La solicitud existe para poder seguir el pedido: la respuesta de M3 vuelve asincrónica y hay que saber a qué solicitud contesta. Si el daño salió de un servicio nacido de un reclamo, el ticketId viaja en el evento.",
+        "description": "Registra un daño de infraestructura que detectamos pero que no nos corresponde arreglar —pavimento roto, vereda hundida, luminaria caída, sumidero tapado— y publica infrastructureRepairRequested hacia M3. La solicitud existe para poder seguir el pedido: la respuesta de M3 vuelve asincrónica y hay que saber a qué solicitud contesta. Si el daño salió de un servicio nacido de un reclamo, el ticketId viaja en el evento. Lo mismo si salió de una inspección: viaja el ticketId de su expediente. Una inspección solo origina una reparación si cerró con un resultado distinto de NO_VIOLATION y el tipo de expediente admite daño de infraestructura (no ruidos, olores, plagas ni emisiones); no admite un segundo pedido abierto para el mismo origen y tipo de daño.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -11091,6 +11091,16 @@
           },
           "404": {
             "description": "El servicio o la inspección de origen no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Origen INSPECTION que no justifica una reparación (sin cerrar, NO_VIOLATION, o expediente de tipo NOISE, ODOR, PEST_INFESTATION o AIR_EMISSION), o ya hay una solicitud no cerrada para el mismo origen y tipo de daño",
             "content": {
               "application/json": {
                 "schema": {
@@ -17371,6 +17381,40 @@
           }
         }
       },
+      "AllowedActionsDto": {
+        "type": "object",
+        "properties": {
+          "repair": {
+            "type": "boolean",
+            "description": "Se puede derivar una reparación a Obras Públicas (M3): el tipo de expediente admite daño de infraestructura y la inspección está cerrada con un resultado distinto de NO_VIOLATION. Aun así, `POST /repair-requests` rechaza con 409 un duplicado abierto.",
+            "example": false
+          },
+          "notice": {
+            "type": "boolean",
+            "description": "Se puede emitir el acta (POST /environmental-inspections/:id/violation-notice): el tipo de expediente admite acta, el resultado es VIOLATION_FOUND y todavía no se emitió una (el acta es inmutable: una segunda da 409).",
+            "example": true
+          },
+          "suggestedViolationType": {
+            "type": "string",
+            "description": "Tipo de infracción que corresponde al tipo de expediente. Null si no hay uno canónico.",
+            "enum": [
+              "NOISE_LIMIT",
+              "ILLEGAL_DUMPING",
+              "UNTREATED_DISCHARGE",
+              "HAZARDOUS_WASTE",
+              "AIR_EMISSION",
+              "NO_WASTE_MANAGEMENT",
+              "INSPECTION_OBSTRUCTION"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "repair",
+          "notice",
+          "suggestedViolationType"
+        ]
+      },
       "ChecklistItemResponseDto": {
         "type": "object",
         "properties": {
@@ -17417,6 +17461,46 @@
             "type": "string",
             "description": "Expediente al que pertenece",
             "format": "uuid"
+          },
+          "reportType": {
+            "type": "string",
+            "description": "Tipo del expediente (solo lectura, copiado del expediente)",
+            "enum": [
+              "NOISE",
+              "DUMPING",
+              "ILLEGAL_DUMPSITE",
+              "WATER_DISCHARGE",
+              "AIR_EMISSION",
+              "ODOR",
+              "PEST_INFESTATION",
+              "OTHER"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "description": "Dirección del expediente de origen (solo lectura)",
+            "nullable": true,
+            "example": "Frente a Almte. Guillermo Brown"
+          },
+          "lat": {
+            "type": "number",
+            "description": "Latitud del expediente de origen (solo lectura)",
+            "nullable": true,
+            "example": -34.6037
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitud del expediente de origen (solo lectura)",
+            "nullable": true,
+            "example": -58.3816
+          },
+          "allowedActions": {
+            "description": "Qué se puede derivar a partir de esta inspección hoy, según el tipo de expediente, el resultado y si ya tiene acta. No cubre los duplicados de reparación: eso lo rechaza `POST /repair-requests` con 409.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AllowedActionsDto"
+              }
+            ]
           },
           "serviceId": {
             "type": "string",
@@ -17527,6 +17611,11 @@
         "required": [
           "id",
           "reportId",
+          "reportType",
+          "address",
+          "lat",
+          "lng",
+          "allowedActions",
           "createdAt",
           "updatedAt"
         ]
