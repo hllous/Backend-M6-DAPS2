@@ -25,9 +25,9 @@ describe('AttachmentsController', () => {
     expect(service.upload).toHaveBeenCalledWith(dto, file, 'idem-1', ROLES, '4242');
   });
 
-  it('findByOwner delega la query', async () => {
+  it('findByOwner delega la query, los roles y el userId', async () => {
     const query = {} as QueryEvidenceDto;
-    await controller.findByOwner(query);
-    expect(service.findByOwner).toHaveBeenCalledWith(query);
+    await controller.findByOwner(query, ROLES, '4242');
+    expect(service.findByOwner).toHaveBeenCalledWith(query, ROLES, '4242');
   });
 });

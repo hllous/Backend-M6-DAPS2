@@ -13237,7 +13237,7 @@
       "get": {
         "operationId": "AttachmentsController_findByOwner",
         "summary": "Listar evidencia de un recurso",
-        "description": "Retorna toda la evidencia asociada a un ownerType/ownerId, ordenada por fecha.",
+        "description": "Retorna toda la evidencia asociada a un ownerType/ownerId, ordenada por fecha. Campo solo ve la de lo suyo (cuadrilla del servicio, inspector asignado); Oficina, Admin y Auditoría ven cualquiera.",
         "parameters": [
           {
             "name": "ownerType",
@@ -13283,6 +13283,26 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION) (no se revela de quién es)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Campo consulta un recurso que no existe",
             "content": {
               "application/json": {
                 "schema": {
