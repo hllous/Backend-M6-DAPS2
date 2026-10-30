@@ -33,6 +33,7 @@ describe('cobertura de @Roles por ruta', () => {
       'GET /environmental-inspections/:id/violation-notice -> M6_ADMIN,M6_OFICINA_AMBIENTAL,M6_CAMPO_INSPECTOR,M6_AUDITOR',
       'GET /events/outbox -> M6_ADMIN,M6_AUDITOR',
       'GET /events/outbox/:id -> M6_ADMIN',
+      'GET /evidence -> M6_ADMIN,M6_OFICINA_OPERACIONES,M6_OFICINA_AMBIENTAL,M6_AUDITOR,M6_CAMPO_CUADRILLA,M6_CAMPO_INSPECTOR',
       'GET /role-assignments -> M6_ADMIN',
       'GET /role-assignments/:userId -> M6_ADMIN',
     ]);
@@ -65,10 +66,11 @@ describe('cobertura de @Roles por ruta', () => {
     const mezclados = routes
       .filter((r) => r.roles?.includes(M6Role.M6_ADMIN) && r.roles.some((x) => campo.includes(x)))
       .map(label);
-    // Abrir expediente de oficio, y el acta (la leen Ambiental y el inspector).
+    // Abrir expediente de oficio, el acta (la leen Ambiental y el inspector) y leer evidencia (todo M6).
     expect(mezclados).toEqual([
       'GET /environmental-inspections/:id/violation-notice',
       'POST /environmental-reports',
+      'GET /evidence',
     ]);
   });
 
