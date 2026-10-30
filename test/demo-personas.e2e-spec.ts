@@ -85,14 +85,8 @@ describe('Personas de demostración (e2e)', () => {
     expect(res.body.isAssignedInspector).toBe(true);
   });
 
-  it('Operaciones no autoriza una extracción: 403 ROLE_REQUIRED', async () => {
-    const res = await request(app.getHttpServer())
-      .post(`/tree-interventions/${randomUUID()}/authorize`)
-      .set(bearer(tokenFor('ADMINISTRATIVO', '9002')))
-      .send({});
-    expect(res.status).toBe(403);
-    expect(res.body).toMatchObject({ code: 'ROLE_REQUIRED' });
-  });
+  // Operaciones no autoriza una extracción (403 ROLE_REQUIRED): lo cubre, con una
+  // extracción real pendiente, test/tree-intervention-authorization.e2e-spec.ts.
 
   it('Campo no opera el servicio de otra cuadrilla: 403 NOT_ASSIGNED', async () => {
     const res = await request(app.getHttpServer())
