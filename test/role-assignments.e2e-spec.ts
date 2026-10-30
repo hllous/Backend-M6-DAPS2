@@ -38,6 +38,8 @@ describe('Roles de M6 (e2e)', () => {
       subType: 'EMPLEADO',
       m1Role: 'ADMINISTRATIVO',
       roles: [],
+      crews: [],
+      isAssignedInspector: false,
     });
     const adm = await http().get('/me').set(admin()).expect(200);
     expect(adm.body.roles).toEqual(['M6_ADMIN']);

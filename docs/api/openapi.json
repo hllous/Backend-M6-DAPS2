@@ -61,7 +61,7 @@
       "get": {
         "operationId": "MeController_me",
         "summary": "Quién soy y qué puedo hacer",
-        "description": "Devuelve la identidad del token y los roles de M6 efectivos (asignaciones locales ∩ lo que permite el rol de M1). Se calcula en cada request: un cambio de asignación rige en la próxima llamada. El frontend usa esto en vez de deducir permisos del token.",
+        "description": "Devuelve la identidad del token, los roles de M6 efectivos (asignaciones locales ∩ lo que permite el rol de M1), las cuadrillas de la persona (id, nombre y si es responsable o integrante) y si es inspector. Se calcula en cada request: un cambio de asignación rige en la próxima llamada. El frontend usa esto en vez de deducir permisos del token.",
         "parameters": [],
         "responses": {
           "200": {
@@ -14277,6 +14277,34 @@
           "path"
         ]
       },
+      "MeCrewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "0b0e3b52-5c1a-4a3e-9d57-3c1f2a8f9c11",
+            "description": "Id de la cuadrilla"
+          },
+          "name": {
+            "type": "string",
+            "example": "Cuadrilla Municipal Belgrano y Colegiales — Recolección"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "LEADER",
+              "MEMBER"
+            ],
+            "example": "LEADER",
+            "description": "Rol de la persona dentro de la cuadrilla: responsable o integrante"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role"
+        ]
+      },
       "MeResponseDto": {
         "type": "object",
         "properties": {
@@ -14316,13 +14344,27 @@
                 "M6_AUDITOR"
               ]
             }
+          },
+          "crews": {
+            "description": "Cuadrillas a las que pertenece la persona (como responsable o integrante), según la misma pertenencia que exige Campo para operar. Solo propias: sin datos de otras personas. Vacío para Oficina y auditoría",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeCrewDto"
+            }
+          },
+          "isAssignedInspector": {
+            "type": "boolean",
+            "example": false,
+            "description": "true si tiene el rol efectivo M6_CAMPO_INSPECTOR: puede cerrar las inspecciones ambientales sin asignado o asignadas a su id"
           }
         },
         "required": [
           "userId",
           "subType",
           "m1Role",
-          "roles"
+          "roles",
+          "crews",
+          "isAssignedInspector"
         ]
       },
       "IngestEventDto": {
