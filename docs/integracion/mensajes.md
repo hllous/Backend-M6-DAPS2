@@ -72,6 +72,22 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Borrador del 31/10 (M7) — SIN ENVIAR
+
+> Redactado el 31/10 como respuesta a la aclaración de M7 sobre el contrato de cortes ([#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447)). **No enviado:** cuando el PO lo mande, cambiar el título a «Enviado el DD/MM a las HH:MM» y registrar la hora real. Conviene mandarlo recién cuando `direction` esté implementado, para no prometer una fecha.
+
+**→ M7 (Tránsito)** — confirmación del contrato de cortes
+
+> Hola M7, gracias por la respuesta. Confirmamos los cinco puntos:
+>
+> 1. **`affectedSections` estructurado:** lo adoptamos antes de la prueba E2E, con tramos `{street, from, to, direction}` y `direction` ∈ `FORWARD`, `REVERSE` o `BOTH`. No cambiamos el formato hasta tenerlo listo; les avisamos cuando esté en el ambiente para que coordinemos la prueba.
+> 2. **`sourceModule`:** mantenemos `"ambiente"` en el sobre y `"M6"` en `data.sourceModule`.
+> 3. **`previousClosureRequestId`:** queda opcional y no lo enviamos, porque no tenemos flujo de prórroga.
+> 4. **`closureType`:** lo vamos a enviar siempre, con `TOTAL` o `PARTIAL`.
+> 5. **`streetClosureEnded`:** seguimos suscriptos a `streetClosureEnded`. Esperamos su aviso de que la publicación quedó declarada en el Core para coordinar la E2E con un corte `ACTIVE` que finalice; recién después retiramos la suscripción histórica con typo.
+>
+> Un último punto: por nuestro lado leemos `startDate`/`endDate` en `streetClosureApproved` y `rejectionReason` en `streetClosureRejected`, tal como confirmaron. — M6 Ambiente
+
 ## Enviado el 28/10 a las 17:47 (M7)
 
 > Redactado el 28/10 tras recibir `M6_a_M7_Contrato_Cortes_Final_2026-10-28.md` ([#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447)). **Enviado el mismo 28/10 a las 17:47** (el PO lo manda al recibirlo); al responder M7, mover la respuesta a [`m7.md`](m7.md).
