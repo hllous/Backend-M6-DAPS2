@@ -17,6 +17,16 @@ export default () => {
       BigInt(id.trim()).toString(),
     ),
     sanctionDeadlineDays: parsed.SANCTION_DEADLINE_DAYS,
+    indicators: {
+      minSample: parsed.INDICATORS_MIN_SAMPLE,
+      targets: {
+        coveragePct: parsed.INDICATORS_TARGET_COVERAGE_PCT,
+        compliancePct: parsed.INDICATORS_TARGET_COMPLIANCE_PCT,
+        resolutionBusinessDays: parsed.INDICATORS_TARGET_RESOLUTION_BUSINESS_DAYS,
+        schedulingDeviationPct: parsed.INDICATORS_TARGET_SCHEDULING_DEVIATION_PCT,
+        landfillDiversionPct: parsed.INDICATORS_TARGET_LANDFILL_DIVERSION_PCT ?? null,
+      },
+    },
     rabbitmq: {
       url: parsed.RABBITMQ_URL,
       exchange: parsed.RABBITMQ_EXCHANGE,

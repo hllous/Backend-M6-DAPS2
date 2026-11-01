@@ -79,6 +79,22 @@ export const envSchema = z
     // expediente por vencimiento. Ver ReportDeadlineSweeper.
     SANCTION_DEADLINE_DAYS: z.coerce.number().int().positive().default(30),
 
+    // Metas del tablero de indicadores (docs/api/endpoints.md, sección indicators).
+    // Los valores por defecto son los que definió el equipo el 29/10 (#461).
+    INDICATORS_TARGET_COVERAGE_PCT: z.coerce.number().min(0).max(100).default(95),
+    INDICATORS_TARGET_COMPLIANCE_PCT: z.coerce.number().min(0).max(100).default(90),
+    // Días hábiles (lunes a viernes) entre el alta y el cierre de la denuncia.
+    INDICATORS_TARGET_RESOLUTION_BUSINESS_DAYS: z.coerce.number().positive().default(5),
+    INDICATORS_TARGET_SCHEDULING_DEVIATION_PCT: z.coerce.number().min(0).max(100).default(10),
+    // Sin meta acordada todavía: vacía o ausente = no hay meta (el tablero no la dibuja).
+    INDICATORS_TARGET_LANDFILL_DIVERSION_PCT: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.coerce.number().min(0).max(100).optional(),
+    ),
+    // Debajo de esta cantidad de programados el porcentaje de una zona o tipo de
+    // servicio se marca `lowSample`: 2 de 2 no es un 100 % que merezca festejo.
+    INDICATORS_MIN_SAMPLE: z.coerce.number().int().positive().default(5),
+
     // RabbitMQ — el bus del Core (M9). Sin RABBITMQ_URL los eventos se encolan
     // en el outbox y se registran en el log, no hay consumidor, y la app arranca
     // igual. Exchange y cola los crea el Core: M6 solo los verifica en modo
