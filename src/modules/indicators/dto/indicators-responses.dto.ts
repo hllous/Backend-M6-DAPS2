@@ -355,13 +355,6 @@ export class ReportStatusCountDto {
   count: number;
 }
 
-/**
- * Los tres bloques del indicador van en clases propias y no como tipos inline.
- *
- * Un `@ApiProperty` sobre un tipo literal de TypeScript se emite en el OpenAPI
- * como un `object` sin propiedades: el consumidor ve que el campo existe y no
- * qué trae adentro. Con una clase, Swagger lo describe entero.
- */
 /** Lo que se calcula por período con el historial: el total, cada punto de la serie y el período anterior. */
 export class ContainerHistoryTotalsDto {
   @ApiProperty({
@@ -398,6 +391,13 @@ export class ContainerHistoryDto extends ContainerHistoryTotalsDto {
   trackingSince: string | null;
 }
 
+/**
+ * Los tres bloques del indicador van en clases propias y no como tipos inline.
+ *
+ * Un `@ApiProperty` sobre un tipo literal de TypeScript se emite en el OpenAPI
+ * como un `object` sin propiedades: el consumidor ve que el campo existe y no
+ * qué trae adentro. Con una clase, Swagger lo describe entero.
+ */
 export class ContainerIncidentsDto {
   @ApiProperty({ type: [StatusCountDto], description: 'Todo el parque, por estado' })
   byStatus: StatusCountDto[];

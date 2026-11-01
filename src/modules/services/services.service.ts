@@ -763,7 +763,7 @@ export class ServicesService {
           // update aplicó: este camino mueve el contenedor sin pasar por ContainersService.
           await tx.containerStatusHistory.create({
             data: {
-              containerId: containerUpdate.args.where.id as string,
+              containerId: containerUpdate.containerId,
               fromStatus: containerUpdate.from,
               toStatus: ContainerStatus.ACTIVE,
             },
@@ -805,7 +805,11 @@ export class ServicesService {
     service: ServiceWithRelations,
     target: ServiceStatus,
     dto: CompleteServiceDto,
-  ): Promise<{ args: Prisma.ContainerUpdateArgs; from: ContainerStatus } | null> {
+  ): Promise<{
+    args: Prisma.ContainerUpdateArgs;
+    containerId: string;
+    from: ContainerStatus;
+  } | null> {
     // Un cierre parcial significa que el trabajo no se hizo.
     if (target !== ServiceStatus.COMPLETED) return null;
     if (service.targetType !== ServiceTargetType.CONTAINER || !service.targetId) return null;
@@ -831,6 +835,7 @@ export class ServicesService {
 
     return {
       args: { where: { id: container.id, status: container.status }, data },
+      containerId: container.id,
       from: container.status,
     };
   }

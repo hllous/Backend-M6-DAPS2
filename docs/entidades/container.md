@@ -58,7 +58,7 @@ Un cierre `PARTIALLY_COMPLETED` no transiciona el contenedor: el trabajo no se h
 - **Migración** (`20261030120000_container_status_history`): crea la tabla y siembra **una fila base por contenedor existente** (origen nulo, destino su estado actual, instante de la migración). No se reconstruyen desbordes ni daños anteriores: el historial empieza el día del despliegue y antes de eso el indicador dice «sin dato» (`null`), no cero.
 - **Sin actor:** quién hizo cada cambio es el alcance de #460 y no se adelanta acá.
 - **Qué se mide con esto:** incidentes de desborde (`OVERFLOWED`) y de daño (`DAMAGED`) por período, y daños pendientes (último estado `DAMAGED` o `UNDER_REPAIR`) al fin de cada período. Definiciones en [endpoints.md](../api/endpoints.md#definición-de-cada-indicador).
-- **Hueco conocido:** `POST /services/:id/complete` también mueve el contenedor (`OVERFLOWED`/`UNDER_REPAIR`/`RELOCATING` → `ACTIVE`) desde `ServicesService`, **no** desde `ContainersService`. Esa vía todavía no escribe en el historial (ver el estado del seguimiento en el PR de #475).
+- **El otro camino que mueve el estado:** `POST /services/:id/complete` también lleva el contenedor a `ACTIVE` (desde `OVERFLOWED`, `UNDER_REPAIR` o `RELOCATING`) desde `ServicesService`, no desde `ContainersService`. Escribe su fila de historial en la misma transacción, con el estado leído como origen y solo si el update del contenedor aplicó. Son los únicos dos escritores de `Container.status` en `src/`; el que agregue un tercero tiene que escribir la fila también.
 
 ## Qué publica
 
