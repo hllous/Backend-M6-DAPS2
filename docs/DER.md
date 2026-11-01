@@ -194,6 +194,13 @@ erDiagram
         enum severity "solo DAMAGED"
         boolean requires_public_works "solo DAMAGED"
     }
+    CONTAINER_STATUS_HISTORY {
+        uuid id PK
+        uuid container_id FK
+        enum from_status "ContainerStatus, null en el alta"
+        enum to_status "ContainerStatus"
+        timestamp changed_at
+    }
     GREEN_POINT {
         uuid id PK
         varchar code UK
@@ -426,6 +433,7 @@ erDiagram
     SERVICE_DELAY_NOTICE ||--o| SERVICE_DELAY_NOTICE : reemplaza
 
     ZONE              ||--o{ CONTAINER : ubica
+    CONTAINER         ||--o{ CONTAINER_STATUS_HISTORY : "tiene historial de"
     ZONE              ||--o{ GREEN_POINT : ubica
     ZONE              ||--o{ TREE : ubica
     ZONE              ||--o{ GREEN_SPACE : ubica
@@ -454,7 +462,7 @@ erDiagram
 | 4 | `VIOLATION_NOTICE` 1:1 con la inspección y sin `UPDATE` | Acta inmutable: si hay error se emite otra. En la práctica: sin endpoint de edición, y con trigger o permiso que bloquee `UPDATE`/`DELETE` |
 | 5 | `SANCTION_OUTCOME` separado del acta | Es espejo de solo lectura de lo que decide M4. Separarlo deja explícito que ese registro no lo escribe nuestro dominio sino el consumidor de eventos |
 | 6 | `ENVIRONMENTAL_REPORT.deadline_at` (campo agregado) | El paso `NOTICE_ISSUED → CLOSED` por vencimiento de plazo es diseño explícito, no atajo. Necesita una fecha materializada para que un job la barra; no está en el doc porque el doc modela el *qué*, no el *cómo* |
-| 7 | `damage_type`, `severity`, `requires_public_works` como columnas nullables en `CONTAINER` | Solo se llenan en `DAMAGED`. La alternativa (tabla `CONTAINER_DAMAGE` con historial) es mejor si se quiere saber cuántas veces se rompió un contenedor: hoy el doc no lo pide |
+| 7 | `damage_type`, `severity`, `requires_public_works` como columnas nullables en `CONTAINER` | Solo se llenan en `DAMAGED`. La alternativa (tabla `CONTAINER_DAMAGE` con historial) es mejor si se quiere saber cuántas veces se rompió un contenedor: hoy el doc no lo pide. El historial de **estados** sí existe desde #475 (`CONTAINER_STATUS_HISTORY`), pero no guarda el detalle del daño |
 | 8 | `OUTBOX_EVENT` / `INBOX_EVENT` | No son dominio, pero el módulo publica 6 eventos y consume 10. Sin outbox transaccional, un commit que falla al publicar deja el estado y el bus desincronizados; sin inbox con `message_id` único, un evento reentregado por M4 duplica el `SANCTION_OUTCOME` |
 | 8b | `TICKET_M2_STATE` | M2 no avisa el `IN_PROGRESS`: el estado del ticket lo llevamos nosotros (deducido de lo que publicamos, corregido con el `currentStatus` que M2 informa) para elegir entre `STARTED` y `PROGRESS` al informar la programación (#303). Sin FK: el `ticket_id` es de M2 y puede no tener expediente ni servicio |
 | 9 | Los enums viven en el código, no en tablas de catálogo | Son valores cerrados versionados con el código (33 en total). `SERVICE_TYPE` y `ZONE` sí son tablas: esos los configura el municipio |

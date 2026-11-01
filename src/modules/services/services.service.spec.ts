@@ -94,6 +94,7 @@ describe('ServicesService', () => {
         findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_B }),
         update: jest.fn(async (args: unknown) => args),
       },
+      containerStatusHistory: { create: jest.fn().mockResolvedValue(undefined) },
       tree: { findUnique: jest.fn() },
       greenSpace: { findUnique: jest.fn() },
       greenPoint: { findUnique: jest.fn() },
@@ -994,6 +995,74 @@ describe('ServicesService', () => {
         await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(ConflictException);
         expect(prisma.container.update).not.toHaveBeenCalled();
         expect(outbox.enqueueMany).not.toHaveBeenCalled();
+      });
+
+      describe('historial de estados del contenedor (#475)', () => {
+        it.each([
+          [ContainerStatus.OVERFLOWED, {}],
+          [ContainerStatus.UNDER_REPAIR, {}],
+          [ContainerStatus.RELOCATING, { containerLocation: { address: 'Av. Nueva 100' } }],
+        ])('cerrar desde %s deja una fila hacia ACTIVE', async (origen, dto) => {
+          prisma.service.findUnique.mockResolvedValue(closable());
+          prisma.container.findUnique.mockResolvedValue(containerIn(origen));
+
+          await service.complete(SERVICE_ID, dto, USER_ID);
+
+          expect(prisma.containerStatusHistory.create).toHaveBeenCalledTimes(1);
+          expect(prisma.containerStatusHistory.create).toHaveBeenCalledWith({
+            data: {
+              containerId: CONTAINER_ID,
+              fromStatus: origen,
+              toStatus: ContainerStatus.ACTIVE,
+            },
+          });
+        });
+
+        it('si el contenedor no transiciona (ACTIVE) no deja fila', async () => {
+          prisma.service.findUnique.mockResolvedValue(closable());
+          prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.ACTIVE));
+
+          await service.complete(SERVICE_ID, {}, USER_ID);
+
+          expect(prisma.containerStatusHistory.create).not.toHaveBeenCalled();
+        });
+
+        it('un cierre parcial no transiciona el contenedor ni deja fila', async () => {
+          prisma.service.findUnique.mockResolvedValue({
+            ...closable(),
+            zoneResults: [{ id: 'r1', zoneId: ZONE_A, status: ZoneResultStatus.NOT_SERVICED }],
+          });
+          prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
+
+          await service.complete(SERVICE_ID, {}, USER_ID);
+
+          expect(prisma.containerStatusHistory.create).not.toHaveBeenCalled();
+        });
+
+        it('un conflicto de concurrencia en el contenedor (409) no deja fila', async () => {
+          prisma.service.findUnique.mockResolvedValue(closable());
+          prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
+          prisma.container.update.mockRejectedValue(
+            new Prisma.PrismaClientKnownRequestError('x', {
+              code: 'P2025',
+              clientVersion: '5.22.0',
+            }),
+          );
+
+          await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(
+            ConflictException,
+          );
+          expect(prisma.containerStatusHistory.create).not.toHaveBeenCalled();
+        });
+
+        it('si falla la fila del historial el cierre entero falla', async () => {
+          prisma.service.findUnique.mockResolvedValue(closable());
+          prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
+          prisma.containerStatusHistory.create.mockRejectedValue(new Error('db caída'));
+
+          await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow('db caída');
+          expect(outbox.enqueueMany).not.toHaveBeenCalled();
+        });
       });
 
       it('no traduce a 409 los errores que no son P2025', async () => {
