@@ -61,17 +61,25 @@ export class ContainersService {
 
   async create(dto: CreateContainerDto): Promise<ContainerResponseDto> {
     try {
-      const container = await this.prisma.container.create({
-        data: {
-          code: dto.code,
-          containerType: dto.containerType,
-          zoneId: dto.zoneId,
-          capacityLiters: dto.capacityLiters,
-          address: dto.address ?? null,
-          lat: dto.lat ?? null,
-          lng: dto.lng ?? null,
-          status: ContainerStatus.ACTIVE,
-        },
+      // El alta y su fila inicial del historial (origen nulo, que no cuenta como
+      // incidente) van juntas: o quedan las dos o no queda ninguna.
+      const container = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.container.create({
+          data: {
+            code: dto.code,
+            containerType: dto.containerType,
+            zoneId: dto.zoneId,
+            capacityLiters: dto.capacityLiters,
+            address: dto.address ?? null,
+            lat: dto.lat ?? null,
+            lng: dto.lng ?? null,
+            status: ContainerStatus.ACTIVE,
+          },
+        });
+        await tx.containerStatusHistory.create({
+          data: { containerId: created.id, fromStatus: null, toStatus: ContainerStatus.ACTIVE },
+        });
+        return created;
       });
 
       this.logger.log(`Contenedor registrado: ${container.code} (${container.id})`);
@@ -282,6 +290,11 @@ export class ContainersService {
             status: targetStatus,
             ...additionalData,
           },
+        });
+        // Historial en la misma transacción y solo si el update aplicó: un 409 por
+        // concurrencia no deja fila, y si el historial falla se deshace el cambio.
+        await tx.containerStatusHistory.create({
+          data: { containerId: id, fromStatus: container.status, toStatus: targetStatus },
         });
         if (event) {
           const neighborhoodId = await zoneNeighborhoodId(tx, row.zoneId);

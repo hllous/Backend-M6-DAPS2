@@ -44,6 +44,7 @@ describe('ContainersService', () => {
         count: jest.fn().mockResolvedValue(1),
         update: jest.fn().mockImplementation(({ data }: any) => Promise.resolve(contenedor(data))),
       },
+      containerStatusHistory: { create: jest.fn().mockResolvedValue(undefined) },
       zoneNeighborhood: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
@@ -248,6 +249,99 @@ describe('ContainersService', () => {
           await expect(promesa).rejects.toBeInstanceOf(ConflictException);
         }
       }
+    });
+  });
+
+  // ─── El historial de estados (#475) ─────────────────
+
+  describe('historial de estados', () => {
+    /** Lo que quedó escrito en el historial, como pares origen → destino. */
+    const filas = () =>
+      prisma.containerStatusHistory.create.mock.calls.map(
+        ([arg]: any) => arg.data as { containerId: string; fromStatus: C | null; toStatus: C },
+      );
+
+    it('reportOverflow deja una fila ACTIVE → OVERFLOWED', async () => {
+      desde(C.ACTIVE);
+      await service.reportOverflow(ID);
+
+      expect(filas()).toEqual([{ containerId: ID, fromStatus: C.ACTIVE, toStatus: C.OVERFLOWED }]);
+    });
+
+    it.each([
+      ['empty', C.OVERFLOWED, C.ACTIVE, (s: ContainersService) => s.empty(ID)],
+      [
+        'reportDamage',
+        C.ACTIVE,
+        C.DAMAGED,
+        (s: ContainersService) =>
+          s.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any),
+      ],
+      ['startRepair', C.DAMAGED, C.UNDER_REPAIR, (s: ContainersService) => s.startRepair(ID)],
+      ['completeRepair', C.UNDER_REPAIR, C.ACTIVE, (s: ContainersService) => s.completeRepair(ID)],
+      ['relocate', C.ACTIVE, C.RELOCATING, (s: ContainersService) => s.relocate(ID)],
+      [
+        'confirmRelocation',
+        C.RELOCATING,
+        C.ACTIVE,
+        (s: ContainersService) => s.confirmRelocation(ID, { address: 'X 1' } as any),
+      ],
+      ['remove', C.DAMAGED, C.REMOVED, (s: ContainersService) => s.remove(ID)],
+    ] as const)('%s deja una fila %s → %s', async (_accion, origen, destino, correr) => {
+      desde(origen);
+      await correr(service);
+
+      expect(filas()).toEqual([{ containerId: ID, fromStatus: origen, toStatus: destino }]);
+    });
+
+    it('la fila se escribe en la misma transacción que el cambio de estado', async () => {
+      desde(C.ACTIVE);
+      await service.reportOverflow(ID);
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('un conflicto de concurrencia (409) no deja fila', async () => {
+      desde(C.OVERFLOWED);
+      prisma.container.update.mockRejectedValue(prismaError('P2025'));
+
+      await expect(service.empty(ID)).rejects.toBeInstanceOf(ConflictException);
+      expect(filas()).toEqual([]);
+    });
+
+    it('una transición inválida (409) no deja fila', async () => {
+      desde(C.REMOVED);
+
+      await expect(service.reportOverflow(ID)).rejects.toBeInstanceOf(ConflictException);
+      expect(filas()).toEqual([]);
+    });
+
+    it('si falla el historial la acción entera falla y no se publica el evento', async () => {
+      desde(C.ACTIVE);
+      prisma.containerStatusHistory.create.mockRejectedValue(new Error('la base se cayó'));
+
+      await expect(
+        service.reportDamage(ID, { damageType: 'BURNT', severity: 'LOW' } as any),
+      ).rejects.toThrow('la base se cayó');
+      expect(outbox.enqueue).not.toHaveBeenCalled();
+    });
+
+    it('el alta deja la fila inicial (origen nulo, destino ACTIVE) en la misma transacción', async () => {
+      await service.create({
+        code: 'CT-9',
+        containerType: 'HOUSEHOLD',
+        zoneId: 'z',
+        capacityLiters: 1100,
+      } as any);
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(filas()).toEqual([{ containerId: ID, fromStatus: null, toStatus: C.ACTIVE }]);
+    });
+
+    it('si falla la fila inicial el alta falla entera', async () => {
+      prisma.containerStatusHistory.create.mockRejectedValue(new Error('la base se cayó'));
+
+      await expect(service.create({ code: 'CT-9' } as any)).rejects.toThrow('la base se cayó');
     });
   });
 
