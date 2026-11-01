@@ -22,11 +22,13 @@ import {
 import {
   ComplianceIndicatorDto,
   ComplianceTotalsDto,
+  ContainerHistoryTotalsDto,
   CoverageBreakdownDto,
   CoverageIndicatorDto,
   CoverageTotalsDto,
   IncidentsIndicatorDto,
   PeriodDto,
+  OverdueDto,
   PeriodQueryDto,
   ReportsTotalsDto,
   ServicePeriodQueryDto,
@@ -39,12 +41,16 @@ const DIA_MS = 86_400_000;
 /** Lo que arma `configuration.ts` con las variables INDICATORS_*. */
 export interface IndicatorsConfig {
   minSample: number;
+  /** Plazo objetivo de resolución de una denuncia, en días hábiles. */
+  reportDeadlineBusinessDays: number;
   targets: {
     coveragePct: number;
     compliancePct: number;
     resolutionBusinessDays: number;
     schedulingDeviationPct: number;
     landfillDiversionPct: number | null;
+    reportsWithinDeadlinePct: number;
+    reportsOverduePct: number;
   };
 }
 
@@ -117,6 +123,16 @@ function periodoAnterior(p: Periodo): Periodo {
 /** Diferencia con un decimal; null si alguno de los dos lados no tiene base. */
 function diferencia(actual: number | null, previo: number | null): number | null {
   return actual === null || previo === null ? null : Math.round((actual - previo) * 10) / 10;
+}
+
+/** Diferencia de un conteo de contenedores; null si alguno de los dos lados no tiene historial. */
+function diferenciaConHistorial(
+  actual: ContainerHistoryTotalsDto,
+  previo: ContainerHistoryTotalsDto,
+  campo: 'overflowIncidents' | 'pendingDamage',
+): number | null {
+  if (actual.pendingDamage === null || previo.pendingDamage === null) return null;
+  return diferencia(actual[campo], previo[campo]);
 }
 
 /** Acumulador de cobertura, para no repetir la misma suma tres veces. */
@@ -328,13 +344,14 @@ export class IndicatorsService {
     const tramos = query.bucket ? intervalos(p.from, p.to, query.bucket) : undefined;
     const rango = { gte: p.desde, lt: p.hasta };
 
-    const [porEstado, porZona, zonas, riesgos, porTipo, porStatus, denuncias] = await Promise.all([
-      this.prisma.container.groupBy({ by: ['status'], _count: { _all: true } }),
-      this.prisma.container.groupBy({ by: ['zoneId', 'status'], _count: { _all: true } }),
-      this.prisma.zone.findMany({ select: { id: true, code: true, name: true } }),
-      // El último relevamiento de cada árbol: DISTINCT ON es exactamente eso
-      // en una pasada, y Prisma no lo expresa con su API de agregación.
-      this.prisma.$queryRaw<{ riskLevel: RiskLevel; count: bigint }[]>`
+    const [porEstado, porZona, zonas, riesgos, porTipo, porStatus, denuncias, historial] =
+      await Promise.all([
+        this.prisma.container.groupBy({ by: ['status'], _count: { _all: true } }),
+        this.prisma.container.groupBy({ by: ['zoneId', 'status'], _count: { _all: true } }),
+        this.prisma.zone.findMany({ select: { id: true, code: true, name: true } }),
+        // El último relevamiento de cada árbol: DISTINCT ON es exactamente eso
+        // en una pasada, y Prisma no lo expresa con su API de agregación.
+        this.prisma.$queryRaw<{ riskLevel: RiskLevel; count: bigint }[]>`
           SELECT ultimo.risk_level AS "riskLevel", COUNT(*) AS count
           FROM (
             SELECT DISTINCT ON (tree_id) tree_id, risk_level
@@ -344,18 +361,19 @@ export class IndicatorsService {
           JOIN tree t ON t.id = ultimo.tree_id AND t.active = true
           GROUP BY ultimo.risk_level
         `,
-      this.prisma.environmentalReport.groupBy({
-        by: ['reportType'],
-        where: { createdAt: rango },
-        _count: { _all: true },
-      }),
-      this.prisma.environmentalReport.groupBy({
-        by: ['status'],
-        where: { createdAt: rango },
-        _count: { _all: true },
-      }),
-      this.denunciasDelPeriodo(p),
-    ]);
+        this.prisma.environmentalReport.groupBy({
+          by: ['reportType'],
+          where: { createdAt: rango },
+          _count: { _all: true },
+        }),
+        this.prisma.environmentalReport.groupBy({
+          by: ['status'],
+          where: { createdAt: rango },
+          _count: { _all: true },
+        }),
+        this.denunciasDelPeriodo(p),
+        this.historialDeContenedores(p),
+      ]);
 
     const nombres = new Map(zonas.map((z) => [z.id, z]));
     const contadores = new Map<string, { overflowed: number; damaged: number; total: number }>();
@@ -367,12 +385,17 @@ export class IndicatorsService {
       contadores.set(fila.zoneId, c);
     }
 
-    const totales = resumenDenuncias(denuncias);
+    const plazo = this.cfg.reportDeadlineBusinessDays;
+    const totales = resumenDenuncias(denuncias, plazo);
 
     const result: IncidentsIndicatorDto = {
       period: p.dto,
       containers: {
         byStatus: porEstado.map((f) => ({ status: f.status, count: f._count._all })),
+        history: {
+          ...resumenContenedores(historial.filas, p),
+          trackingSince: historial.trackingSince?.toISOString() ?? null,
+        },
         byZone: [...contadores.entries()]
           .map(([zoneId, c]) => ({
             zoneId,
@@ -387,6 +410,8 @@ export class IndicatorsService {
       },
       reports: {
         ...totales,
+        deadlineBusinessDays: plazo,
+        overdue: resumenVencidas(denuncias, plazo, new Date()),
         byType: porTipo.map((f) => ({ reportType: f.reportType, count: f._count._all })),
         byStatus: porStatus.map((f) => ({ status: f.status, count: f._count._all })),
       },
@@ -395,6 +420,14 @@ export class IndicatorsService {
           value: this.cfg.targets.resolutionBusinessDays,
           direction: 'max',
         },
+        reportsWithinDeadlinePct: {
+          value: this.cfg.targets.reportsWithinDeadlinePct,
+          direction: 'min',
+        },
+        reportsOverduePct: { value: this.cfg.targets.reportsOverduePct, direction: 'max' },
+        // De tendencia: el equipo pidió que bajen, no fijó un número.
+        overflowTrend: { value: null, direction: 'down' },
+        pendingDamageTrend: { value: null, direction: 'down' },
       },
     };
     if (tramos) {
@@ -406,19 +439,35 @@ export class IndicatorsService {
             const creada = diaArgentino(d.createdAt);
             return creada >= t.from && creada <= t.to;
           }),
+          plazo,
         ),
+        containers: resumenContenedores(historial.filas, armarPeriodo(t.from, t.to)),
       }));
     }
     if (query.compare) {
       const anterior = periodoAnterior(p);
-      const previo = resumenDenuncias(await this.denunciasDelPeriodo(anterior));
-      result.previous = { period: anterior.dto, totals: previo };
+      const previo = resumenDenuncias(await this.denunciasDelPeriodo(anterior), plazo);
+      const contenedoresPrevio = resumenContenedores(historial.filas, anterior);
+      const contenedores = result.containers.history;
+      result.previous = {
+        period: anterior.dto,
+        totals: { ...previo, containers: contenedoresPrevio },
+      };
       result.delta = {
         avgResolutionDays: diferencia(totales.avgResolutionDays, previo.avgResolutionDays),
         avgResolutionBusinessDays: diferencia(
           totales.avgResolutionBusinessDays,
           previo.avgResolutionBusinessDays,
         ),
+        withinDeadlinePct: diferencia(totales.withinDeadline.pct, previo.withinDeadline.pct),
+        // Sin historial en alguno de los dos lados no hay base: ni los pendientes ni
+        // los desbordes (un 0 sin historial no es "ningún desborde") se comparan.
+        overflowIncidents: diferenciaConHistorial(
+          contenedores,
+          contenedoresPrevio,
+          'overflowIncidents',
+        ),
+        pendingDamage: diferenciaConHistorial(contenedores, contenedoresPrevio, 'pendingDamage'),
       };
     }
     return result;
@@ -543,6 +592,27 @@ export class IndicatorsService {
     });
   }
 
+  /**
+   * Todas las filas del historial de contenedores anteriores al fin del período,
+   * en orden, más el instante de la más antigua de todas. Alcanza una sola
+   * lectura: el período anterior de `compare` termina antes y sale del mismo
+   * arreglo, y los pendientes al fin de cada tramo también.
+   * ponytail: se agrega en memoria (un parque municipal son cientos de
+   * contenedores con pocas transiciones por mes); si el historial crece a años,
+   * esto pasa a DISTINCT ON / GROUP BY en SQL como el arbolado.
+   */
+  private async historialDeContenedores(p: Periodo) {
+    const [filas, primera] = await Promise.all([
+      this.prisma.containerStatusHistory.findMany({
+        where: { changedAt: { lt: p.hasta } },
+        select: { containerId: true, fromStatus: true, toStatus: true, changedAt: true },
+        orderBy: { changedAt: 'asc' },
+      }),
+      this.prisma.containerStatusHistory.aggregate({ _min: { changedAt: true } }),
+    ]);
+    return { filas, trackingSince: primera._min.changedAt };
+  }
+
   /** Solo los totales de cobertura de un período (el anterior de `compare`). */
   private async coberturaTotal(
     p: Periodo,
@@ -630,13 +700,81 @@ function resumenCumplimiento(
   };
 }
 
-/** Cantidad de denuncias y tiempo medio de resolución (corrido y hábil) de las cerradas. */
+interface FilaHistorial {
+  containerId: string;
+  fromStatus: ContainerStatus | null;
+  toStatus: ContainerStatus;
+  changedAt: Date;
+}
+
+/** Un daño sin resolver: el contenedor está dañado o esperando/en reparación. */
+const PENDIENTES: ContainerStatus[] = [ContainerStatus.DAMAGED, ContainerStatus.UNDER_REPAIR];
+
+/**
+ * Contenedores con un daño sin resolver en el instante `corte` (exclusivo): los
+ * que tienen `DAMAGED` o `UNDER_REPAIR` como último estado conocido hasta ahí.
+ * Un contenedor sin filas antes del corte no existía en el historial y no se
+ * cuenta. **Null si ningún contenedor tiene historial hasta el corte**: sin dato
+ * no es lo mismo que cero daños. `filas` va ordenado por `changedAt`.
+ */
+function pendientesAl(filas: FilaHistorial[], corte: Date): number | null {
+  const ultimo = new Map<string, ContainerStatus>();
+  for (const f of filas) {
+    if (f.changedAt < corte) ultimo.set(f.containerId, f.toStatus);
+  }
+  if (ultimo.size === 0) return null;
+  return [...ultimo.values()].filter((estado) => PENDIENTES.includes(estado)).length;
+}
+
+/**
+ * Incidentes del período: una transición a OVERFLOWED o a DAMAGED con origen no
+ * nulo. El alta y la fila base de la migración (origen nulo) solo sirven para
+ * reconstruir el estado.
+ */
+function resumenContenedores(filas: FilaHistorial[], p: Periodo): ContainerHistoryTotalsDto {
+  let overflowIncidents = 0;
+  let damageIncidents = 0;
+  for (const f of filas) {
+    if (f.fromStatus === null || f.changedAt < p.desde || f.changedAt >= p.hasta) continue;
+    if (f.toStatus === ContainerStatus.OVERFLOWED) overflowIncidents += 1;
+    if (f.toStatus === ContainerStatus.DAMAGED) damageIncidents += 1;
+  }
+  return { overflowIncidents, damageIncidents, pendingDamage: pendientesAl(filas, p.hasta) };
+}
+
+/** Un porcentaje con un decimal; null sobre base vacía (sin dato no es 0 %). */
+function pctONull(parte: number, total: number): number | null {
+  return total === 0 ? null : pct(parte, total);
+}
+
+/** Los reclamos "resueltos" son los CLOSED, como en el promedio de resolución. */
+function cerrada(d: { status: EnvironmentalReportStatus }): boolean {
+  return d.status === EnvironmentalReportStatus.CLOSED;
+}
+
+/**
+ * Cantidad de denuncias, tiempo medio de resolución (corrido y hábil) de las
+ * cerradas y cuántas se cerraron dentro del plazo objetivo (`plazo`, en días
+ * hábiles; justo el plazo cuenta como dentro).
+ */
 function resumenDenuncias(
   denuncias: { createdAt: Date; updatedAt: Date; status: EnvironmentalReportStatus }[],
+  plazo: number,
 ): ReportsTotalsDto {
-  const cerradas = denuncias.filter((d) => d.status === EnvironmentalReportStatus.CLOSED);
+  const cerradas = denuncias.filter(cerrada);
+  const dentro = cerradas.filter((d) => diasHabiles(d.createdAt, d.updatedAt) <= plazo).length;
+  const withinDeadline = {
+    resolved: cerradas.length,
+    withinDeadline: dentro,
+    pct: pctONull(dentro, cerradas.length),
+  };
   if (cerradas.length === 0) {
-    return { total: denuncias.length, avgResolutionDays: null, avgResolutionBusinessDays: null };
+    return {
+      total: denuncias.length,
+      avgResolutionDays: null,
+      avgResolutionBusinessDays: null,
+      withinDeadline,
+    };
   }
   const corridos = cerradas.reduce(
     (suma, d) => suma + (d.updatedAt.getTime() - d.createdAt.getTime()) / DIA_MS,
@@ -647,7 +785,26 @@ function resumenDenuncias(
     total: denuncias.length,
     avgResolutionDays: Math.round((corridos / cerradas.length) * 10) / 10,
     avgResolutionBusinessDays: Math.round((habiles / cerradas.length) * 10) / 10,
+    withinDeadline,
   };
+}
+
+/**
+ * Foto de hoy: de las denuncias creadas en el período, las abiertas y cuántas
+ * superaron el plazo. **Solo CLOSED es final.** Desestimado (DISMISSED), sin
+ * infracción (NO_VIOLATION) y derivado (FORWARDED) todavía pasan a CLOSED y se
+ * pueden reabrir (docs/entidades/environmental-report.md), así que cuentan como
+ * abiertos: es la lectura conservadora, que no da por resuelto lo que el modelo
+ * de estados no cerró. Los días hábiles corren hasta hoy (día argentino).
+ */
+function resumenVencidas(
+  denuncias: { createdAt: Date; status: EnvironmentalReportStatus }[],
+  plazo: number,
+  ahora: Date,
+): OverdueDto {
+  const abiertas = denuncias.filter((d) => !cerrada(d));
+  const vencidas = abiertas.filter((d) => diasHabiles(d.createdAt, ahora) > plazo).length;
+  return { open: abiertas.length, overdue: vencidas, pct: pctONull(vencidas, abiertas.length) };
 }
 
 /** Kilos, metros cúbicos y desvío del relleno de un grupo de registros. */

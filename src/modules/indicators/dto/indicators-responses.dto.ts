@@ -19,15 +19,22 @@ export class PeriodDto {
 
 /** Una meta del tablero: el valor y hacia qué lado se cumple. */
 export class TargetDto {
-  @ApiProperty({ example: 95 })
-  value: number;
+  @ApiProperty({
+    description:
+      'El número de la meta. **Null con `direction: down`**: es una meta de tendencia y nadie definió un número',
+    example: 95,
+    nullable: true,
+    type: Number,
+  })
+  value: number | null;
 
   @ApiProperty({
-    enum: ['min', 'max'],
-    description: '`min`: se cumple con un valor mayor o igual. `max`: con uno menor o igual.',
+    enum: ['min', 'max', 'down'],
+    description:
+      '`min`: se cumple con un valor mayor o igual. `max`: con uno menor o igual. `down`: se cumple si baja de un período al otro (tendencia descendente), sin valor numérico.',
     example: 'min',
   })
-  direction: 'min' | 'max';
+  direction: 'min' | 'max' | 'down';
 }
 
 // ─── Cobertura ──────────────────────────────────────
@@ -355,9 +362,52 @@ export class ReportStatusCountDto {
  * como un `object` sin propiedades: el consumidor ve que el campo existe y no
  * qué trae adentro. Con una clase, Swagger lo describe entero.
  */
+/** Lo que se calcula por período con el historial: el total, cada punto de la serie y el período anterior. */
+export class ContainerHistoryTotalsDto {
+  @ApiProperty({
+    description:
+      'Incidentes de desborde del período: una transición a `OVERFLOWED` cuenta una vez, así que un contenedor que se desborda dos veces suma dos. El alta y la fila base de la migración no cuentan',
+    example: 7,
+  })
+  overflowIncidents: number;
+
+  @ApiProperty({
+    description: 'Incidentes de daño del período: una transición a `DAMAGED` cuenta una vez',
+    example: 4,
+  })
+  damageIncidents: number;
+
+  @ApiProperty({
+    description:
+      'Contenedores cuyo último estado conocido al final del período (o del intervalo) es `DAMAGED` o `UNDER_REPAIR`: daño todavía sin resolver. **Null si ningún contenedor tiene historial hasta ese instante**: es la ausencia de dato, no un cero',
+    example: 3,
+    nullable: true,
+    type: Number,
+  })
+  pendingDamage: number | null;
+}
+
+export class ContainerHistoryDto extends ContainerHistoryTotalsDto {
+  @ApiProperty({
+    description:
+      'Instante (ISO 8601) de la fila más antigua del historial: desde cuándo existen datos. Null si todavía no hay ninguna. Los períodos anteriores no traen incidentes ni pendientes',
+    example: '2026-10-30T15:00:00.000Z',
+    nullable: true,
+    type: String,
+  })
+  trackingSince: string | null;
+}
+
 export class ContainerIncidentsDto {
   @ApiProperty({ type: [StatusCountDto], description: 'Todo el parque, por estado' })
   byStatus: StatusCountDto[];
+
+  @ApiProperty({
+    type: ContainerHistoryDto,
+    description:
+      'Lo que sí es del período, a partir del historial de estados. `byStatus` y `byZone` siguen siendo la foto del estado actual',
+  })
+  history: ContainerHistoryDto;
 
   @ApiProperty({
     type: [ContainersByZoneDto],
@@ -372,6 +422,28 @@ export class TreeIncidentsDto {
     description: 'Cada árbol cuenta una sola vez, por su último relevamiento',
   })
   byRiskLevel: RiskCountDto[];
+}
+
+/** Reclamos resueltos y cuántos se cerraron dentro del plazo objetivo. */
+export class WithinDeadlineDto {
+  @ApiProperty({ description: 'Reclamos resueltos (CLOSED) del período o intervalo', example: 12 })
+  resolved: number;
+
+  @ApiProperty({
+    description:
+      'Resueltos cuyos días hábiles entre el alta y el cierre son menores o iguales al plazo objetivo',
+    example: 10,
+  })
+  withinDeadline: number;
+
+  @ApiProperty({
+    description:
+      'Dentro del plazo ÷ resueltos, con un decimal. **Null si no hay resueltos**: es la ausencia de dato, no un 0 %',
+    example: 83.3,
+    nullable: true,
+    type: Number,
+  })
+  pct: number | null;
 }
 
 /** Lo que se calcula por período: el total, cada punto de la serie y el período anterior. */
@@ -398,9 +470,55 @@ export class ReportsTotalsDto {
     type: Number,
   })
   avgResolutionBusinessDays: number | null;
+
+  @ApiProperty({
+    type: WithinDeadlineDto,
+    description:
+      'Resolución dentro del plazo objetivo (`deadlineBusinessDays`): se compara con la meta `reportsWithinDeadlinePct`',
+  })
+  withinDeadline: WithinDeadlineDto;
+}
+
+/** Foto de hoy de los reclamos abiertos creados en el período. */
+export class OverdueDto {
+  @ApiProperty({
+    description: 'Reclamos abiertos (todo estado que no sea CLOSED) creados en el período',
+    example: 9,
+  })
+  open: number;
+
+  @ApiProperty({
+    description:
+      'Abiertos cuyos días hábiles desde el alta hasta hoy (día argentino) superan el plazo objetivo',
+    example: 1,
+  })
+  overdue: number;
+
+  @ApiProperty({
+    description:
+      'Vencidos ÷ abiertos, con un decimal. **Null si no hay abiertos**: es la ausencia de dato, no un 0 %',
+    example: 11.1,
+    nullable: true,
+    type: Number,
+  })
+  pct: number | null;
 }
 
 export class ReportIncidentsDto extends ReportsTotalsDto {
+  @ApiProperty({
+    description:
+      'Plazo objetivo de resolución en días hábiles (lunes a viernes, sin feriados), el mismo para todos los tipos de reclamo. Es un supuesto de M6 configurable (`INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS`) hasta que M2 acuerde el suyo',
+    example: 5,
+  })
+  deadlineBusinessDays: number;
+
+  @ApiProperty({
+    type: OverdueDto,
+    description:
+      'Foto del estado actual de los reclamos creados en el período, sin serie ni comparación: el sistema no guarda el historial de estados de los reclamos',
+  })
+  overdue: OverdueDto;
+
   @ApiProperty({ type: [ReportTypeCountDto] })
   byType: ReportTypeCountDto[];
 
@@ -408,7 +526,16 @@ export class ReportIncidentsDto extends ReportsTotalsDto {
   byStatus: ReportStatusCountDto[];
 }
 
-export class ReportsSeriesPointDto extends ReportsTotalsDto {
+/** Denuncias más contenedores: lo que lleva cada punto de la serie y el período anterior. */
+export class IncidentsTotalsDto extends ReportsTotalsDto {
+  @ApiProperty({
+    type: ContainerHistoryTotalsDto,
+    description: 'Incidentes y pendientes de contenedores del intervalo o período',
+  })
+  containers: ContainerHistoryTotalsDto;
+}
+
+export class ReportsSeriesPointDto extends IncidentsTotalsDto {
   @ApiProperty({ description: 'Primer día del intervalo (YYYY-MM-DD)', example: '2026-08-03' })
   from: string;
 
@@ -420,11 +547,38 @@ export class ReportsPreviousDto {
   @ApiProperty({ type: PeriodDto })
   period: PeriodDto;
 
-  @ApiProperty({ type: ReportsTotalsDto })
-  totals: ReportsTotalsDto;
+  @ApiProperty({ type: IncidentsTotalsDto })
+  totals: IncidentsTotalsDto;
 }
 
 export class ReportsDeltaDto {
+  @ApiProperty({
+    description:
+      'Puntos porcentuales de `withinDeadline.pct` contra el período anterior. Null si alguno de los dos no tiene reclamos resueltos',
+    nullable: true,
+    type: Number,
+    example: 4.2,
+  })
+  withinDeadlinePct: number | null;
+
+  @ApiProperty({
+    description:
+      'Incidentes de desborde contra el período anterior, en cantidades. Null si alguno de los dos períodos no tiene historial',
+    nullable: true,
+    type: Number,
+    example: -2,
+  })
+  overflowIncidents: number | null;
+
+  @ApiProperty({
+    description:
+      'Daños pendientes al fin del período contra los del anterior, en cantidades. Null si alguno de los dos no tiene historial',
+    nullable: true,
+    type: Number,
+    example: -1,
+  })
+  pendingDamage: number | null;
+
   @ApiProperty({
     description: 'Días corridos contra el período anterior. Null si alguno no cerró denuncias',
     nullable: true,
@@ -448,6 +602,32 @@ export class IncidentsTargetsDto {
     description: 'Meta de `reports.avgResolutionBusinessDays`',
   })
   resolutionBusinessDays: TargetDto;
+
+  @ApiProperty({
+    type: TargetDto,
+    description: 'Meta de `reports.withinDeadline.pct` (mínimo)',
+  })
+  reportsWithinDeadlinePct: TargetDto;
+
+  @ApiProperty({
+    type: TargetDto,
+    description: 'Meta de `reports.overdue.pct` (máximo)',
+  })
+  reportsOverduePct: TargetDto;
+
+  @ApiProperty({
+    type: TargetDto,
+    description:
+      'Meta de `containers.history.overflowIncidents`: tendencia mensual descendente, sin valor numérico (`direction: down`)',
+  })
+  overflowTrend: TargetDto;
+
+  @ApiProperty({
+    type: TargetDto,
+    description:
+      'Meta de `containers.history.pendingDamage`: reducir los pendientes mes a mes, sin valor numérico (`direction: down`)',
+  })
+  pendingDamageTrend: TargetDto;
 }
 
 export class IncidentsIndicatorDto {

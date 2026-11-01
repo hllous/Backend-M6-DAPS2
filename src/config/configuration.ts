@@ -19,12 +19,15 @@ export default () => {
     sanctionDeadlineDays: parsed.SANCTION_DEADLINE_DAYS,
     indicators: {
       minSample: parsed.INDICATORS_MIN_SAMPLE,
+      reportDeadlineBusinessDays: parsed.INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS,
       targets: {
         coveragePct: parsed.INDICATORS_TARGET_COVERAGE_PCT,
         compliancePct: parsed.INDICATORS_TARGET_COMPLIANCE_PCT,
         resolutionBusinessDays: parsed.INDICATORS_TARGET_RESOLUTION_BUSINESS_DAYS,
         schedulingDeviationPct: parsed.INDICATORS_TARGET_SCHEDULING_DEVIATION_PCT,
         landfillDiversionPct: parsed.INDICATORS_TARGET_LANDFILL_DIVERSION_PCT ?? null,
+        reportsWithinDeadlinePct: parsed.INDICATORS_TARGET_REPORTS_WITHIN_DEADLINE_PCT,
+        reportsOverduePct: parsed.INDICATORS_TARGET_REPORTS_OVERDUE_PCT,
       },
     },
     rabbitmq: {

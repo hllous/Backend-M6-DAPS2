@@ -91,6 +91,14 @@ export const envSchema = z
       (v) => (v === '' ? undefined : v),
       z.coerce.number().min(0).max(100).optional(),
     ),
+    // Plazo objetivo de resolución de una denuncia, en días hábiles (#475). Es un
+    // plazo único para todos los tipos: supuesto de M6 hasta que M2 acuerde el
+    // suyo. Lo comparten "resueltos dentro del plazo" y "pendientes vencidos".
+    INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS: z.coerce.number().positive().default(5),
+    // Resueltos dentro del plazo ÷ resueltos: se cumple con ≥ 85 %.
+    INDICATORS_TARGET_REPORTS_WITHIN_DEADLINE_PCT: z.coerce.number().min(0).max(100).default(85),
+    // Abiertos que superaron el plazo ÷ abiertos: se cumple con ≤ 10 %.
+    INDICATORS_TARGET_REPORTS_OVERDUE_PCT: z.coerce.number().min(0).max(100).default(10),
     // Debajo de esta cantidad de programados el porcentaje de una zona o tipo de
     // servicio se marca `lowSample`: 2 de 2 no es un 100 % que merezca festejo.
     INDICATORS_MIN_SAMPLE: z.coerce.number().int().positive().default(5),
