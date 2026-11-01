@@ -13336,7 +13336,7 @@
       "get": {
         "operationId": "IndicatorsController_coverage",
         "summary": "Cobertura del servicio",
-        "description": "Objetivos atendidos sobre programados, con desglose por zona operativa y por tipo de servicio. La unidad es el par servicio/zona: un recorrido que pasa por cuatro zonas y atiende tres cuenta como tres objetivos cumplidos y uno no. Los servicios cancelados no cuentan: dejaron de ser un objetivo.",
+        "description": "Objetivos atendidos sobre programados, con desglose por zona operativa y por tipo de servicio. La unidad es el par servicio/zona: un recorrido que pasa por cuatro zonas y atiende tres cuenta como tres objetivos cumplidos y uno no. Los servicios cancelados no cuentan: dejaron de ser un objetivo. Solo cuentan los objetivos con fecha vencida (hoy o antes): lo programado a futuro va aparte en `upcoming`. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido.",
         "parameters": [
           {
             "name": "from",
@@ -13355,6 +13355,32 @@
             "description": "Hasta (YYYY-MM-DD). Por defecto, hoy",
             "schema": {
               "example": "2026-08-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "required": false,
+            "in": "query",
+            "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "required": false,
+            "in": "query",
+            "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
+            "schema": {
+              "enum": [
+                "previous"
+              ],
               "type": "string"
             }
           },
@@ -13391,7 +13417,7 @@
             }
           },
           "400": {
-            "description": "Período inválido: from posterior a to",
+            "description": "Período inválido (from posterior a to), bucket o compare fuera de los valores permitidos, o un bucket que da más de 90 puntos en el rango pedido",
             "content": {
               "application/json": {
                 "schema": {
@@ -13435,7 +13461,7 @@
       "get": {
         "operationId": "IndicatorsController_compliance",
         "summary": "Cumplimiento y zonas no atendidas",
-        "description": "Servicios finalizados en término contra demorados, y el ranking de zonas que quedaron sin atender con los motivos que reportó la cuadrilla. \"En término\" se mide con el último resultado de campo cargado contra la fecha programada.",
+        "description": "Servicios finalizados en término contra demorados, y el ranking de zonas que quedaron sin atender con los motivos que reportó la cuadrilla. \"En término\" se mide con el último resultado de campo cargado contra la fecha programada. El desvío de programación son los servicios reprogramados o con aviso de demora sobre los del período. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido.",
         "parameters": [
           {
             "name": "from",
@@ -13454,6 +13480,32 @@
             "description": "Hasta (YYYY-MM-DD). Por defecto, hoy",
             "schema": {
               "example": "2026-08-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "required": false,
+            "in": "query",
+            "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "required": false,
+            "in": "query",
+            "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
+            "schema": {
+              "enum": [
+                "previous"
+              ],
               "type": "string"
             }
           },
@@ -13490,7 +13542,7 @@
             }
           },
           "400": {
-            "description": "Período inválido: from posterior a to",
+            "description": "Período inválido (from posterior a to), bucket o compare fuera de los valores permitidos, o un bucket que da más de 90 puntos en el rango pedido",
             "content": {
               "application/json": {
                 "schema": {
@@ -13534,7 +13586,7 @@
       "get": {
         "operationId": "IndicatorsController_incidents",
         "summary": "Incidencias del inventario y de las denuncias",
-        "description": "Contenedores desbordados y dañados por zona, árboles por nivel de riesgo según su último relevamiento, y denuncias por tipo y estado con el tiempo medio de resolución. Contenedores y arbolado son una foto del estado actual: el período solo filtra las denuncias.",
+        "description": "Contenedores desbordados y dañados por zona, árboles por nivel de riesgo según su último relevamiento, y denuncias por tipo y estado con el tiempo medio de resolución. Contenedores y arbolado son una foto del estado actual: el período solo filtra las denuncias, y solo ellas tienen serie y comparación. El tiempo de resolución se informa en días corridos y en días hábiles (lunes a viernes, sin feriados); la meta es en días hábiles. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido.",
         "parameters": [
           {
             "name": "from",
@@ -13555,6 +13607,32 @@
               "example": "2026-08-31",
               "type": "string"
             }
+          },
+          {
+            "name": "bucket",
+            "required": false,
+            "in": "query",
+            "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "required": false,
+            "in": "query",
+            "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
+            "schema": {
+              "enum": [
+                "previous"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -13569,7 +13647,7 @@
             }
           },
           "400": {
-            "description": "Período inválido: from posterior a to",
+            "description": "Período inválido (from posterior a to), bucket o compare fuera de los valores permitidos, o un bucket que da más de 90 puntos en el rango pedido",
             "content": {
               "application/json": {
                 "schema": {
@@ -13613,7 +13691,7 @@
       "get": {
         "operationId": "IndicatorsController_waste",
         "summary": "Residuos recolectados y destino final",
-        "description": "Kilos y metros cúbicos por tipo de residuo y por sitio de disposición, y el porcentaje desviado del relleno hacia planta de reciclado o de compostaje. La fecha del residuo es la del servicio que lo recolectó.",
+        "description": "Kilos y metros cúbicos por tipo de residuo y por sitio de disposición, y el porcentaje desviado del relleno hacia planta de reciclado o de compostaje. La fecha del residuo es la del servicio que lo recolectó. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido. La meta del desvío del relleno es null mientras el equipo no la defina.",
         "parameters": [
           {
             "name": "from",
@@ -13634,6 +13712,32 @@
               "example": "2026-08-31",
               "type": "string"
             }
+          },
+          {
+            "name": "bucket",
+            "required": false,
+            "in": "query",
+            "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "required": false,
+            "in": "query",
+            "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
+            "schema": {
+              "enum": [
+                "previous"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -13648,7 +13752,7 @@
             }
           },
           "400": {
-            "description": "Período inválido: from posterior a to",
+            "description": "Período inválido (from posterior a to), bucket o compare fuera de los valores permitidos, o un bucket que da más de 90 puntos en el rango pedido",
             "content": {
               "application/json": {
                 "schema": {
@@ -20078,7 +20182,7 @@
         "properties": {
           "scheduled": {
             "type": "number",
-            "description": "Objetivos programados en el período",
+            "description": "Objetivos programados en el período cuya fecha ya venció (hoy o antes)",
             "example": 240
           },
           "served": {
@@ -20098,8 +20202,13 @@
           },
           "pending": {
             "type": "number",
-            "description": "Todavía sin resultado cargado",
+            "description": "Vencidos (fecha programada de hoy o anterior) y todavía sin resultado cargado",
             "example": 9
+          },
+          "upcoming": {
+            "type": "number",
+            "description": "Programados para una fecha futura. No cuentan en `scheduled` ni en `coveragePct`: todavía no son un incumplimiento",
+            "example": 14
           },
           "coveragePct": {
             "type": "number",
@@ -20113,6 +20222,7 @@
           "partial",
           "notServiced",
           "pending",
+          "upcoming",
           "coveragePct"
         ]
       },
@@ -20121,7 +20231,7 @@
         "properties": {
           "scheduled": {
             "type": "number",
-            "description": "Objetivos programados en el período",
+            "description": "Objetivos programados en el período cuya fecha ya venció (hoy o antes)",
             "example": 240
           },
           "served": {
@@ -20141,8 +20251,13 @@
           },
           "pending": {
             "type": "number",
-            "description": "Todavía sin resultado cargado",
+            "description": "Vencidos (fecha programada de hoy o anterior) y todavía sin resultado cargado",
             "example": 9
+          },
+          "upcoming": {
+            "type": "number",
+            "description": "Programados para una fecha futura. No cuentan en `scheduled` ni en `coveragePct`: todavía no son un incumplimiento",
+            "example": 14
           },
           "coveragePct": {
             "type": "number",
@@ -20160,6 +20275,11 @@
           "name": {
             "type": "string",
             "example": "Centro"
+          },
+          "lowSample": {
+            "type": "boolean",
+            "description": "Hay menos programados que el umbral configurado: el porcentaje no es confiable (2 de 2 es 100 %)",
+            "example": false
           }
         },
         "required": [
@@ -20168,10 +20288,140 @@
           "partial",
           "notServiced",
           "pending",
+          "upcoming",
           "coveragePct",
           "id",
           "code",
-          "name"
+          "name",
+          "lowSample"
+        ]
+      },
+      "TargetDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "example": 95
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "min",
+              "max"
+            ],
+            "description": "`min`: se cumple con un valor mayor o igual. `max`: con uno menor o igual.",
+            "example": "min"
+          }
+        },
+        "required": [
+          "value",
+          "direction"
+        ]
+      },
+      "CoverageTargetsDto": {
+        "type": "object",
+        "properties": {
+          "coveragePct": {
+            "description": "Meta de `totals.coveragePct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "coveragePct"
+        ]
+      },
+      "CoverageSeriesPointDto": {
+        "type": "object",
+        "properties": {
+          "scheduled": {
+            "type": "number",
+            "description": "Objetivos programados en el período cuya fecha ya venció (hoy o antes)",
+            "example": 240
+          },
+          "served": {
+            "type": "number",
+            "description": "Atendidos por completo",
+            "example": 198
+          },
+          "partial": {
+            "type": "number",
+            "description": "Atendidos parcialmente",
+            "example": 21
+          },
+          "notServiced": {
+            "type": "number",
+            "description": "No atendidos",
+            "example": 12
+          },
+          "pending": {
+            "type": "number",
+            "description": "Vencidos (fecha programada de hoy o anterior) y todavía sin resultado cargado",
+            "example": 9
+          },
+          "upcoming": {
+            "type": "number",
+            "description": "Programados para una fecha futura. No cuentan en `scheduled` ni en `coveragePct`: todavía no son un incumplimiento",
+            "example": 14
+          },
+          "coveragePct": {
+            "type": "number",
+            "description": "Atendidos por completo sobre programados",
+            "example": 82.5
+          },
+          "from": {
+            "type": "string",
+            "description": "Primer día del intervalo (YYYY-MM-DD)",
+            "example": "2026-08-03"
+          },
+          "to": {
+            "type": "string",
+            "description": "Último día del intervalo, inclusive",
+            "example": "2026-08-09"
+          }
+        },
+        "required": [
+          "scheduled",
+          "served",
+          "partial",
+          "notServiced",
+          "pending",
+          "upcoming",
+          "coveragePct",
+          "from",
+          "to"
+        ]
+      },
+      "CoveragePreviousDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/PeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/CoverageTotalsDto"
+          }
+        },
+        "required": [
+          "period",
+          "totals"
+        ]
+      },
+      "CoverageDeltaDto": {
+        "type": "object",
+        "properties": {
+          "coveragePct": {
+            "type": "number",
+            "description": "Puntos porcentuales de `coveragePct` contra el período anterior. Null si alguno de los dos no tiene programados",
+            "nullable": true,
+            "example": 16.7
+          }
+        },
+        "required": [
+          "coveragePct"
         ]
       },
       "CoverageIndicatorDto": {
@@ -20196,13 +20446,40 @@
             "items": {
               "$ref": "#/components/schemas/CoverageBreakdownDto"
             }
+          },
+          "targets": {
+            "$ref": "#/components/schemas/CoverageTargetsDto"
+          },
+          "series": {
+            "description": "Solo con `bucket`. La suma de los puntos coincide con `totals`",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoverageSeriesPointDto"
+            }
+          },
+          "previous": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CoveragePreviousDto"
+              }
+            ]
+          },
+          "delta": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CoverageDeltaDto"
+              }
+            ]
           }
         },
         "required": [
           "period",
           "totals",
           "byZone",
-          "byServiceType"
+          "byServiceType",
+          "targets"
         ]
       },
       "ComplianceFinishedDto": {
@@ -20233,6 +20510,31 @@
           "onTime",
           "late",
           "onTimePct"
+        ]
+      },
+      "SchedulingDeviationDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Servicios del período, sin los cancelados",
+            "example": 240
+          },
+          "deviated": {
+            "type": "number",
+            "description": "Reprogramados (`RESCHEDULED`) o con al menos un aviso de demora. Cada servicio cuenta una sola vez",
+            "example": 18
+          },
+          "deviatedPct": {
+            "type": "number",
+            "description": "Desviados sobre servicios del período. No es el desvío del relleno sanitario (`divertedPct`)",
+            "example": 7.5
+          }
+        },
+        "required": [
+          "total",
+          "deviated",
+          "deviatedPct"
         ]
       },
       "ReasonCountDto": {
@@ -20297,6 +20599,109 @@
           "reasons"
         ]
       },
+      "ComplianceTargetsDto": {
+        "type": "object",
+        "properties": {
+          "compliancePct": {
+            "description": "Meta de `finished.onTimePct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          },
+          "schedulingDeviationPct": {
+            "description": "Meta de `schedulingDeviation.deviatedPct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "compliancePct",
+          "schedulingDeviationPct"
+        ]
+      },
+      "ComplianceSeriesPointDto": {
+        "type": "object",
+        "properties": {
+          "finished": {
+            "$ref": "#/components/schemas/ComplianceFinishedDto"
+          },
+          "schedulingDeviation": {
+            "$ref": "#/components/schemas/SchedulingDeviationDto"
+          },
+          "from": {
+            "type": "string",
+            "description": "Primer día del intervalo (YYYY-MM-DD)",
+            "example": "2026-08-03"
+          },
+          "to": {
+            "type": "string",
+            "description": "Último día del intervalo, inclusive",
+            "example": "2026-08-09"
+          }
+        },
+        "required": [
+          "finished",
+          "schedulingDeviation",
+          "from",
+          "to"
+        ]
+      },
+      "ComplianceTotalsDto": {
+        "type": "object",
+        "properties": {
+          "finished": {
+            "$ref": "#/components/schemas/ComplianceFinishedDto"
+          },
+          "schedulingDeviation": {
+            "$ref": "#/components/schemas/SchedulingDeviationDto"
+          }
+        },
+        "required": [
+          "finished",
+          "schedulingDeviation"
+        ]
+      },
+      "CompliancePreviousDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/PeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/ComplianceTotalsDto"
+          }
+        },
+        "required": [
+          "period",
+          "totals"
+        ]
+      },
+      "ComplianceDeltaDto": {
+        "type": "object",
+        "properties": {
+          "onTimePct": {
+            "type": "number",
+            "description": "Puntos porcentuales de `finished.onTimePct`. Null si alguno de los dos períodos no cerró servicios",
+            "nullable": true,
+            "example": -4.2
+          },
+          "deviatedPct": {
+            "type": "number",
+            "description": "Puntos porcentuales de `schedulingDeviation.deviatedPct`. Null si alguno de los dos períodos no tiene servicios",
+            "nullable": true,
+            "example": 1.5
+          }
+        },
+        "required": [
+          "onTimePct",
+          "deviatedPct"
+        ]
+      },
       "ComplianceIndicatorDto": {
         "type": "object",
         "properties": {
@@ -20306,18 +20711,54 @@
           "finished": {
             "$ref": "#/components/schemas/ComplianceFinishedDto"
           },
+          "schedulingDeviation": {
+            "description": "Servicios demorados o reprogramados sobre los del período",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SchedulingDeviationDto"
+              }
+            ]
+          },
           "notServicedRanking": {
             "description": "Ranking de zonas no atendidas, de mayor a menor",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/NotServicedZoneDto"
             }
+          },
+          "targets": {
+            "$ref": "#/components/schemas/ComplianceTargetsDto"
+          },
+          "series": {
+            "description": "Solo con `bucket`. Cada servicio cae en el intervalo de su fecha programada, como en el total",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplianceSeriesPointDto"
+            }
+          },
+          "previous": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CompliancePreviousDto"
+              }
+            ]
+          },
+          "delta": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ComplianceDeltaDto"
+              }
+            ]
           }
         },
         "required": [
           "period",
           "finished",
-          "notServicedRanking"
+          "schedulingDeviation",
+          "notServicedRanking",
+          "targets"
         ]
       },
       "StatusCountDto": {
@@ -20506,6 +20947,18 @@
             "description": "Denuncias abiertas en el período",
             "example": 18
           },
+          "avgResolutionDays": {
+            "type": "number",
+            "description": "Días corridos promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. **Null si no se cerró ninguno**: es la ausencia de dato, no un cero.",
+            "example": 4.3,
+            "nullable": true
+          },
+          "avgResolutionBusinessDays": {
+            "type": "number",
+            "description": "Días hábiles (lunes a viernes, sin feriados) promedio entre el alta y el cierre, contados en días argentinos: es lo que se compara con la meta. Null si no se cerró ninguno.",
+            "example": 3.1,
+            "nullable": true
+          },
           "byType": {
             "type": "array",
             "items": {
@@ -20517,19 +20970,132 @@
             "items": {
               "$ref": "#/components/schemas/ReportStatusCountDto"
             }
+          }
+        },
+        "required": [
+          "total",
+          "avgResolutionDays",
+          "avgResolutionBusinessDays",
+          "byType",
+          "byStatus"
+        ]
+      },
+      "IncidentsTargetsDto": {
+        "type": "object",
+        "properties": {
+          "resolutionBusinessDays": {
+            "description": "Meta de `reports.avgResolutionBusinessDays`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "resolutionBusinessDays"
+        ]
+      },
+      "ReportsSeriesPointDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Denuncias abiertas en el período",
+            "example": 18
           },
           "avgResolutionDays": {
             "type": "number",
-            "description": "Días promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. **Null si no se cerró ninguno**: es la ausencia de dato, no un cero.",
+            "description": "Días corridos promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. **Null si no se cerró ninguno**: es la ausencia de dato, no un cero.",
             "example": 4.3,
+            "nullable": true
+          },
+          "avgResolutionBusinessDays": {
+            "type": "number",
+            "description": "Días hábiles (lunes a viernes, sin feriados) promedio entre el alta y el cierre, contados en días argentinos: es lo que se compara con la meta. Null si no se cerró ninguno.",
+            "example": 3.1,
+            "nullable": true
+          },
+          "from": {
+            "type": "string",
+            "description": "Primer día del intervalo (YYYY-MM-DD)",
+            "example": "2026-08-03"
+          },
+          "to": {
+            "type": "string",
+            "description": "Último día del intervalo, inclusive",
+            "example": "2026-08-09"
+          }
+        },
+        "required": [
+          "total",
+          "avgResolutionDays",
+          "avgResolutionBusinessDays",
+          "from",
+          "to"
+        ]
+      },
+      "ReportsTotalsDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Denuncias abiertas en el período",
+            "example": 18
+          },
+          "avgResolutionDays": {
+            "type": "number",
+            "description": "Días corridos promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. **Null si no se cerró ninguno**: es la ausencia de dato, no un cero.",
+            "example": 4.3,
+            "nullable": true
+          },
+          "avgResolutionBusinessDays": {
+            "type": "number",
+            "description": "Días hábiles (lunes a viernes, sin feriados) promedio entre el alta y el cierre, contados en días argentinos: es lo que se compara con la meta. Null si no se cerró ninguno.",
+            "example": 3.1,
             "nullable": true
           }
         },
         "required": [
           "total",
-          "byType",
-          "byStatus",
-          "avgResolutionDays"
+          "avgResolutionDays",
+          "avgResolutionBusinessDays"
+        ]
+      },
+      "ReportsPreviousDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/PeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/ReportsTotalsDto"
+          }
+        },
+        "required": [
+          "period",
+          "totals"
+        ]
+      },
+      "ReportsDeltaDto": {
+        "type": "object",
+        "properties": {
+          "avgResolutionDays": {
+            "type": "number",
+            "description": "Días corridos contra el período anterior. Null si alguno no cerró denuncias",
+            "nullable": true,
+            "example": -1.2
+          },
+          "avgResolutionBusinessDays": {
+            "type": "number",
+            "description": "Días hábiles contra el período anterior. Null si alguno no cerró denuncias",
+            "nullable": true,
+            "example": -0.8
+          }
+        },
+        "required": [
+          "avgResolutionDays",
+          "avgResolutionBusinessDays"
         ]
       },
       "IncidentsIndicatorDto": {
@@ -20561,13 +21127,40 @@
                 "$ref": "#/components/schemas/ReportIncidentsDto"
               }
             ]
+          },
+          "targets": {
+            "$ref": "#/components/schemas/IncidentsTargetsDto"
+          },
+          "series": {
+            "description": "Solo con `bucket`. Son las denuncias, por día argentino de creación. Contenedores y arbolado no tienen serie: son una foto del estado actual",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportsSeriesPointDto"
+            }
+          },
+          "previous": {
+            "description": "Solo con `compare=previous`. Cubre las denuncias, no contenedores ni arbolado",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReportsPreviousDto"
+              }
+            ]
+          },
+          "delta": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReportsDeltaDto"
+              }
+            ]
           }
         },
         "required": [
           "period",
           "containers",
           "trees",
-          "reports"
+          "reports",
+          "targets"
         ]
       },
       "WasteTotalsDto": {
@@ -20669,6 +21262,93 @@
           "volumeM3"
         ]
       },
+      "WasteTargetsDto": {
+        "type": "object",
+        "properties": {
+          "landfillDiversionPct": {
+            "nullable": true,
+            "description": "Meta de `totals.divertedPct`. **Null mientras el equipo no la defina**: no hay meta acordada para el desvío del relleno",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "landfillDiversionPct"
+        ]
+      },
+      "WasteSeriesPointDto": {
+        "type": "object",
+        "properties": {
+          "weightKg": {
+            "type": "number",
+            "example": 128400.5
+          },
+          "volumeM3": {
+            "type": "number",
+            "example": 640.25
+          },
+          "divertedKg": {
+            "type": "number",
+            "description": "Peso que fue a planta de reciclado o de compostaje, no a relleno",
+            "example": 30400.5
+          },
+          "divertedPct": {
+            "type": "number",
+            "description": "Porcentaje desviado del relleno",
+            "example": 23.7
+          },
+          "from": {
+            "type": "string",
+            "description": "Primer día del intervalo (YYYY-MM-DD)",
+            "example": "2026-08-03"
+          },
+          "to": {
+            "type": "string",
+            "description": "Último día del intervalo, inclusive",
+            "example": "2026-08-09"
+          }
+        },
+        "required": [
+          "weightKg",
+          "volumeM3",
+          "divertedKg",
+          "divertedPct",
+          "from",
+          "to"
+        ]
+      },
+      "WastePreviousDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/PeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/WasteTotalsDto"
+          }
+        },
+        "required": [
+          "period",
+          "totals"
+        ]
+      },
+      "WasteDeltaDto": {
+        "type": "object",
+        "properties": {
+          "divertedPct": {
+            "type": "number",
+            "description": "Puntos porcentuales de `totals.divertedPct` contra el período anterior. Null si alguno de los dos no recolectó kilos",
+            "nullable": true,
+            "example": 2.4
+          }
+        },
+        "required": [
+          "divertedPct"
+        ]
+      },
       "WasteIndicatorDto": {
         "type": "object",
         "properties": {
@@ -20694,13 +21374,40 @@
             "type": "number",
             "description": "Cuántos registros de recolección sustentan las cifras",
             "example": 312
+          },
+          "targets": {
+            "$ref": "#/components/schemas/WasteTargetsDto"
+          },
+          "series": {
+            "description": "Solo con `bucket`. Cada registro cae en el intervalo de la fecha del servicio que lo recolectó, como en el total",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WasteSeriesPointDto"
+            }
+          },
+          "previous": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WastePreviousDto"
+              }
+            ]
+          },
+          "delta": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WasteDeltaDto"
+              }
+            ]
           }
         },
         "required": [
           "period",
           "totals",
           "byWasteType",
-          "byDisposalSite"
+          "byDisposalSite",
+          "targets"
         ]
       },
       "RoleAssignmentResponseDto": {

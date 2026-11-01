@@ -17,10 +17,31 @@ export class PeriodDto {
   to: string;
 }
 
+/** Una meta del tablero: el valor y hacia qué lado se cumple. */
+export class TargetDto {
+  @ApiProperty({ example: 95 })
+  value: number;
+
+  @ApiProperty({
+    enum: ['min', 'max'],
+    description: '`min`: se cumple con un valor mayor o igual. `max`: con uno menor o igual.',
+    example: 'min',
+  })
+  direction: 'min' | 'max';
+}
+
 // ─── Cobertura ──────────────────────────────────────
 
+export class CoverageTargetsDto {
+  @ApiProperty({ type: TargetDto, description: 'Meta de `totals.coveragePct`' })
+  coveragePct: TargetDto;
+}
+
 export class CoverageTotalsDto {
-  @ApiProperty({ description: 'Objetivos programados en el período', example: 240 })
+  @ApiProperty({
+    description: 'Objetivos programados en el período cuya fecha ya venció (hoy o antes)',
+    example: 240,
+  })
   scheduled: number;
 
   @ApiProperty({ description: 'Atendidos por completo', example: 198 })
@@ -32,8 +53,18 @@ export class CoverageTotalsDto {
   @ApiProperty({ description: 'No atendidos', example: 12 })
   notServiced: number;
 
-  @ApiProperty({ description: 'Todavía sin resultado cargado', example: 9 })
+  @ApiProperty({
+    description: 'Vencidos (fecha programada de hoy o anterior) y todavía sin resultado cargado',
+    example: 9,
+  })
   pending: number;
+
+  @ApiProperty({
+    description:
+      'Programados para una fecha futura. No cuentan en `scheduled` ni en `coveragePct`: todavía no son un incumplimiento',
+    example: 14,
+  })
+  upcoming: number;
 
   @ApiProperty({ description: 'Atendidos por completo sobre programados', example: 82.5 })
   coveragePct: number;
@@ -48,6 +79,41 @@ export class CoverageBreakdownDto extends CoverageTotalsDto {
 
   @ApiProperty({ example: 'Centro' })
   name: string;
+
+  @ApiProperty({
+    description:
+      'Hay menos programados que el umbral configurado: el porcentaje no es confiable (2 de 2 es 100 %)',
+    example: false,
+  })
+  lowSample: boolean;
+}
+
+/** Un intervalo de la serie: los totales de ese tramo del período. */
+export class CoverageSeriesPointDto extends CoverageTotalsDto {
+  @ApiProperty({ description: 'Primer día del intervalo (YYYY-MM-DD)', example: '2026-08-03' })
+  from: string;
+
+  @ApiProperty({ description: 'Último día del intervalo, inclusive', example: '2026-08-09' })
+  to: string;
+}
+
+export class CoveragePreviousDto {
+  @ApiProperty({ type: PeriodDto })
+  period: PeriodDto;
+
+  @ApiProperty({ type: CoverageTotalsDto })
+  totals: CoverageTotalsDto;
+}
+
+export class CoverageDeltaDto {
+  @ApiProperty({
+    description:
+      'Puntos porcentuales de `coveragePct` contra el período anterior. Null si alguno de los dos no tiene programados',
+    nullable: true,
+    type: Number,
+    example: 16.7,
+  })
+  coveragePct: number | null;
 }
 
 export class CoverageIndicatorDto {
@@ -62,6 +128,21 @@ export class CoverageIndicatorDto {
 
   @ApiProperty({ type: [CoverageBreakdownDto], description: 'Por tipo de servicio' })
   byServiceType: CoverageBreakdownDto[];
+
+  @ApiProperty({ type: CoverageTargetsDto })
+  targets: CoverageTargetsDto;
+
+  @ApiPropertyOptional({
+    type: [CoverageSeriesPointDto],
+    description: 'Solo con `bucket`. La suma de los puntos coincide con `totals`',
+  })
+  series?: CoverageSeriesPointDto[];
+
+  @ApiPropertyOptional({ type: CoveragePreviousDto, description: 'Solo con `compare=previous`' })
+  previous?: CoveragePreviousDto;
+
+  @ApiPropertyOptional({ type: CoverageDeltaDto, description: 'Solo con `compare=previous`' })
+  delta?: CoverageDeltaDto;
 }
 
 // ─── Cumplimiento ───────────────────────────────────
@@ -105,6 +186,78 @@ export class NotServicedZoneDto {
   reasons: ReasonCountDto[];
 }
 
+export class SchedulingDeviationDto {
+  @ApiProperty({ description: 'Servicios del período, sin los cancelados', example: 240 })
+  total: number;
+
+  @ApiProperty({
+    description:
+      'Reprogramados (`RESCHEDULED`) o con al menos un aviso de demora. Cada servicio cuenta una sola vez',
+    example: 18,
+  })
+  deviated: number;
+
+  @ApiProperty({
+    description:
+      'Desviados sobre servicios del período. No es el desvío del relleno sanitario (`divertedPct`)',
+    example: 7.5,
+  })
+  deviatedPct: number;
+}
+
+/** Lo que se calcula por período: el total, cada punto de la serie y el período anterior. */
+export class ComplianceTotalsDto {
+  @ApiProperty({ type: ComplianceFinishedDto })
+  finished: ComplianceFinishedDto;
+
+  @ApiProperty({ type: SchedulingDeviationDto })
+  schedulingDeviation: SchedulingDeviationDto;
+}
+
+export class ComplianceSeriesPointDto extends ComplianceTotalsDto {
+  @ApiProperty({ description: 'Primer día del intervalo (YYYY-MM-DD)', example: '2026-08-03' })
+  from: string;
+
+  @ApiProperty({ description: 'Último día del intervalo, inclusive', example: '2026-08-09' })
+  to: string;
+}
+
+export class CompliancePreviousDto {
+  @ApiProperty({ type: PeriodDto })
+  period: PeriodDto;
+
+  @ApiProperty({ type: ComplianceTotalsDto })
+  totals: ComplianceTotalsDto;
+}
+
+export class ComplianceDeltaDto {
+  @ApiProperty({
+    description:
+      'Puntos porcentuales de `finished.onTimePct`. Null si alguno de los dos períodos no cerró servicios',
+    nullable: true,
+    type: Number,
+    example: -4.2,
+  })
+  onTimePct: number | null;
+
+  @ApiProperty({
+    description:
+      'Puntos porcentuales de `schedulingDeviation.deviatedPct`. Null si alguno de los dos períodos no tiene servicios',
+    nullable: true,
+    type: Number,
+    example: 1.5,
+  })
+  deviatedPct: number | null;
+}
+
+export class ComplianceTargetsDto {
+  @ApiProperty({ type: TargetDto, description: 'Meta de `finished.onTimePct`' })
+  compliancePct: TargetDto;
+
+  @ApiProperty({ type: TargetDto, description: 'Meta de `schedulingDeviation.deviatedPct`' })
+  schedulingDeviationPct: TargetDto;
+}
+
 export class ComplianceIndicatorDto {
   @ApiProperty({ type: PeriodDto })
   period: PeriodDto;
@@ -113,10 +266,32 @@ export class ComplianceIndicatorDto {
   finished: ComplianceFinishedDto;
 
   @ApiProperty({
+    type: SchedulingDeviationDto,
+    description: 'Servicios demorados o reprogramados sobre los del período',
+  })
+  schedulingDeviation: SchedulingDeviationDto;
+
+  @ApiProperty({
     type: [NotServicedZoneDto],
     description: 'Ranking de zonas no atendidas, de mayor a menor',
   })
   notServicedRanking: NotServicedZoneDto[];
+
+  @ApiProperty({ type: ComplianceTargetsDto })
+  targets: ComplianceTargetsDto;
+
+  @ApiPropertyOptional({
+    type: [ComplianceSeriesPointDto],
+    description:
+      'Solo con `bucket`. Cada servicio cae en el intervalo de su fecha programada, como en el total',
+  })
+  series?: ComplianceSeriesPointDto[];
+
+  @ApiPropertyOptional({ type: CompliancePreviousDto, description: 'Solo con `compare=previous`' })
+  previous?: CompliancePreviousDto;
+
+  @ApiPropertyOptional({ type: ComplianceDeltaDto, description: 'Solo con `compare=previous`' })
+  delta?: ComplianceDeltaDto;
 }
 
 // ─── Incidencias ────────────────────────────────────
@@ -199,25 +374,80 @@ export class TreeIncidentsDto {
   byRiskLevel: RiskCountDto[];
 }
 
-export class ReportIncidentsDto {
+/** Lo que se calcula por período: el total, cada punto de la serie y el período anterior. */
+export class ReportsTotalsDto {
   @ApiProperty({ description: 'Denuncias abiertas en el período', example: 18 })
   total: number;
 
-  @ApiProperty({ type: [ReportTypeCountDto] })
-  byType: ReportTypeCountDto[];
-
-  @ApiProperty({ type: [ReportStatusCountDto] })
-  byStatus: ReportStatusCountDto[];
-
   @ApiProperty({
     description:
-      'Días promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. ' +
+      'Días corridos promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. ' +
       '**Null si no se cerró ninguno**: es la ausencia de dato, no un cero.',
     example: 4.3,
     nullable: true,
     type: Number,
   })
   avgResolutionDays: number | null;
+
+  @ApiProperty({
+    description:
+      'Días hábiles (lunes a viernes, sin feriados) promedio entre el alta y el cierre, contados en días argentinos: ' +
+      'es lo que se compara con la meta. Null si no se cerró ninguno.',
+    example: 3.1,
+    nullable: true,
+    type: Number,
+  })
+  avgResolutionBusinessDays: number | null;
+}
+
+export class ReportIncidentsDto extends ReportsTotalsDto {
+  @ApiProperty({ type: [ReportTypeCountDto] })
+  byType: ReportTypeCountDto[];
+
+  @ApiProperty({ type: [ReportStatusCountDto] })
+  byStatus: ReportStatusCountDto[];
+}
+
+export class ReportsSeriesPointDto extends ReportsTotalsDto {
+  @ApiProperty({ description: 'Primer día del intervalo (YYYY-MM-DD)', example: '2026-08-03' })
+  from: string;
+
+  @ApiProperty({ description: 'Último día del intervalo, inclusive', example: '2026-08-09' })
+  to: string;
+}
+
+export class ReportsPreviousDto {
+  @ApiProperty({ type: PeriodDto })
+  period: PeriodDto;
+
+  @ApiProperty({ type: ReportsTotalsDto })
+  totals: ReportsTotalsDto;
+}
+
+export class ReportsDeltaDto {
+  @ApiProperty({
+    description: 'Días corridos contra el período anterior. Null si alguno no cerró denuncias',
+    nullable: true,
+    type: Number,
+    example: -1.2,
+  })
+  avgResolutionDays: number | null;
+
+  @ApiProperty({
+    description: 'Días hábiles contra el período anterior. Null si alguno no cerró denuncias',
+    nullable: true,
+    type: Number,
+    example: -0.8,
+  })
+  avgResolutionBusinessDays: number | null;
+}
+
+export class IncidentsTargetsDto {
+  @ApiProperty({
+    type: TargetDto,
+    description: 'Meta de `reports.avgResolutionBusinessDays`',
+  })
+  resolutionBusinessDays: TargetDto;
 }
 
 export class IncidentsIndicatorDto {
@@ -240,6 +470,25 @@ export class IncidentsIndicatorDto {
 
   @ApiProperty({ type: ReportIncidentsDto, description: 'Denuncias abiertas en el período' })
   reports: ReportIncidentsDto;
+
+  @ApiProperty({ type: IncidentsTargetsDto })
+  targets: IncidentsTargetsDto;
+
+  @ApiPropertyOptional({
+    type: [ReportsSeriesPointDto],
+    description:
+      'Solo con `bucket`. Son las denuncias, por día argentino de creación. Contenedores y arbolado no tienen serie: son una foto del estado actual',
+  })
+  series?: ReportsSeriesPointDto[];
+
+  @ApiPropertyOptional({
+    type: ReportsPreviousDto,
+    description: 'Solo con `compare=previous`. Cubre las denuncias, no contenedores ni arbolado',
+  })
+  previous?: ReportsPreviousDto;
+
+  @ApiPropertyOptional({ type: ReportsDeltaDto, description: 'Solo con `compare=previous`' })
+  delta?: ReportsDeltaDto;
 }
 
 // ─── Residuos ───────────────────────────────────────
@@ -292,6 +541,43 @@ export class WasteTotalsDto {
   divertedPct: number;
 }
 
+export class WasteSeriesPointDto extends WasteTotalsDto {
+  @ApiProperty({ description: 'Primer día del intervalo (YYYY-MM-DD)', example: '2026-08-03' })
+  from: string;
+
+  @ApiProperty({ description: 'Último día del intervalo, inclusive', example: '2026-08-09' })
+  to: string;
+}
+
+export class WastePreviousDto {
+  @ApiProperty({ type: PeriodDto })
+  period: PeriodDto;
+
+  @ApiProperty({ type: WasteTotalsDto })
+  totals: WasteTotalsDto;
+}
+
+export class WasteDeltaDto {
+  @ApiProperty({
+    description:
+      'Puntos porcentuales de `totals.divertedPct` contra el período anterior. Null si alguno de los dos no recolectó kilos',
+    nullable: true,
+    type: Number,
+    example: 2.4,
+  })
+  divertedPct: number | null;
+}
+
+export class WasteTargetsDto {
+  @ApiProperty({
+    type: TargetDto,
+    nullable: true,
+    description:
+      'Meta de `totals.divertedPct`. **Null mientras el equipo no la defina**: no hay meta acordada para el desvío del relleno',
+  })
+  landfillDiversionPct: TargetDto | null;
+}
+
 export class WasteIndicatorDto {
   @ApiProperty({ type: PeriodDto })
   period: PeriodDto;
@@ -310,4 +596,20 @@ export class WasteIndicatorDto {
     example: 312,
   })
   records: number;
+
+  @ApiProperty({ type: WasteTargetsDto })
+  targets: WasteTargetsDto;
+
+  @ApiPropertyOptional({
+    type: [WasteSeriesPointDto],
+    description:
+      'Solo con `bucket`. Cada registro cae en el intervalo de la fecha del servicio que lo recolectó, como en el total',
+  })
+  series?: WasteSeriesPointDto[];
+
+  @ApiPropertyOptional({ type: WastePreviousDto, description: 'Solo con `compare=previous`' })
+  previous?: WastePreviousDto;
+
+  @ApiPropertyOptional({ type: WasteDeltaDto, description: 'Solo con `compare=previous`' })
+  delta?: WasteDeltaDto;
 }
