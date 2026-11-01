@@ -637,7 +637,7 @@ export class IncidentsIndicatorDto {
   @ApiProperty({
     type: ContainerIncidentsDto,
     description:
-      'Foto del estado actual del inventario, no del período: el inventario no guarda historial de estados. El período solo filtra las denuncias.',
+      'Conteos por estado y por zona: foto del estado actual, no del período. `history` es lo que sí se mide por período, desde el historial de estados.',
   })
   containers: ContainerIncidentsDto;
 
@@ -657,13 +657,14 @@ export class IncidentsIndicatorDto {
   @ApiPropertyOptional({
     type: [ReportsSeriesPointDto],
     description:
-      'Solo con `bucket`. Son las denuncias, por día argentino de creación. Contenedores y arbolado no tienen serie: son una foto del estado actual',
+      'Solo con `bucket`. Las denuncias por día argentino de creación y, en `containers`, los incidentes del intervalo y los daños pendientes a su fin. Los vencidos, los conteos por estado y el arbolado no tienen serie: son una foto de hoy',
   })
   series?: ReportsSeriesPointDto[];
 
   @ApiPropertyOptional({
     type: ReportsPreviousDto,
-    description: 'Solo con `compare=previous`. Cubre las denuncias, no contenedores ni arbolado',
+    description:
+      'Solo con `compare=previous`. Cubre las denuncias (sin los vencidos) y el historial de contenedores, no los conteos por estado ni el arbolado',
   })
   previous?: ReportsPreviousDto;
 

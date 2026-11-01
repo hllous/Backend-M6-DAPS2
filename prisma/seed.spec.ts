@@ -2,6 +2,7 @@ import { DelayType } from '@prisma/client';
 import { puntoEnGeometria } from '../src/common/utils/geo';
 import { CONTENEDORES_A_MANO } from '../scripts/build-datos-ciudad';
 import { SERVICE_TYPE_SPECIALTY } from '../src/modules/crews/crew-specialty';
+import { CONTAINER_TRANSITIONS } from '../src/modules/containers/containers.service';
 import {
   CONTAINERS,
   CREWS,
@@ -10,6 +11,7 @@ import {
   TIPO_ESPACIO,
   TOPE_SERVICIOS,
   especialidadDe,
+  historialDeContenedores,
   nombreDePersona,
   organizacionDe,
   planificar,
@@ -255,5 +257,68 @@ describe('seed: nombres de ejemplo de las cuadrillas (#454)', () => {
     expect(organizacionDe({ crewType: 'COOPERATIVE', name: 'Coop X — Reciclables' } as never)).toBe(
       'Coop X',
     );
+  });
+});
+
+describe('seed: historial de estados de los contenedores (#475)', () => {
+  const filas = historialDeContenedores(CONTAINERS);
+  const porCodigo = (codigo: string) => filas.filter((f) => f.code === codigo);
+  const hoy = new Date();
+
+  it('cada contenedor nace con una fila de alta (origen nulo, destino ACTIVE) antes que las demás', () => {
+    for (const c of CONTAINERS) {
+      const suyas = porCodigo(c.code);
+      expect(suyas[0]).toMatchObject({ from: null, to: 'ACTIVE' });
+      expect(suyas.filter((f) => f.from === null)).toHaveLength(1);
+    }
+  });
+
+  it('las filas de cada contenedor son cronológicas y encadenan: el origen es el destino anterior', () => {
+    for (const c of CONTAINERS) {
+      const suyas = porCodigo(c.code);
+      suyas.forEach((f, i) => {
+        if (i === 0) return;
+        expect(f.from).toBe(suyas[i - 1].to);
+        expect(f.at.getTime()).toBeGreaterThan(suyas[i - 1].at.getTime());
+      });
+    }
+  });
+
+  it('solo hace transiciones que la máquina de estados permite', () => {
+    for (const f of filas) {
+      if (f.from === null) continue;
+      expect(CONTAINER_TRANSITIONS[f.from]).toContain(f.to);
+    }
+  });
+
+  it('termina en el estado que el contenedor tiene hoy, sin contradecirlo', () => {
+    for (const c of CONTAINERS) {
+      expect(porCodigo(c.code).at(-1)!.to).toBe(c.status ?? 'ACTIVE');
+    }
+  });
+
+  it('cubre los once contenedores de demostración en sus estados finales', () => {
+    const finales = CONTAINERS.filter((c) => c.status && c.status !== 'ACTIVE');
+    expect(finales.length).toBeGreaterThanOrEqual(11);
+    for (const c of finales) expect(porCodigo(c.code).length).toBeGreaterThan(1);
+  });
+
+  it('no inventa el futuro', () => {
+    for (const f of filas) expect(f.at.getTime()).toBeLessThanOrEqual(hoy.getTime());
+  });
+
+  it('abarca varios meses de actividad, con desbordes, daños y reparaciones', () => {
+    const mes = (f: { at: Date }) => f.at.toISOString().slice(0, 7);
+    const desbordes = filas.filter((f) => f.from !== null && f.to === 'OVERFLOWED');
+    const danios = filas.filter((f) => f.from !== null && f.to === 'DAMAGED');
+    expect(new Set(desbordes.map(mes)).size).toBeGreaterThanOrEqual(4);
+    expect(new Set(danios.map(mes)).size).toBeGreaterThanOrEqual(4);
+    expect(filas.some((f) => f.to === 'UNDER_REPAIR')).toBe(true);
+    const primera = Math.min(...filas.map((f) => f.at.getTime()));
+    expect(hoy.getTime() - primera).toBeGreaterThan(120 * 86_400_000);
+  });
+
+  it('es determinístico: dos corridas dan las mismas filas', () => {
+    expect(historialDeContenedores(CONTAINERS)).toEqual(filas);
   });
 });
