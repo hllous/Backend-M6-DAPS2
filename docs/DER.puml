@@ -244,6 +244,15 @@ package "Inventario urbano" #EAF6EE {
       requires_public_works : boolean <<solo DAMAGED>>
   }
 
+  entity "container_status_history" as container_status_history {
+    * id : uuid <<PK>>
+    --
+    * container_id : uuid <<FK>>
+      from_status : enum <<ContainerStatus, null en el alta>>
+    * to_status : enum <<ContainerStatus>>
+    * changed_at : timestamp
+  }
+
   entity "green_point" as green_point {
     * id : uuid <<PK>>
     --
@@ -515,6 +524,7 @@ zone_result       ||--o{ collection_record : detalla
 disposal_site     ||--o{ collection_record : recibe
 
 zone              ||--o{ container : ubica
+container         ||--o{ container_status_history : "tiene historial de"
 zone              ||--o{ green_point : ubica
 zone              ||--o{ tree : ubica
 zone              ||--o{ green_space : ubica

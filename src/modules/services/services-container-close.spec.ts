@@ -69,6 +69,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
         findUnique: jest.fn().mockResolvedValue(container(ContainerStatus.OVERFLOWED)),
         update: jest.fn(async (args: unknown) => args),
       },
+      containerStatusHistory: { create: jest.fn().mockResolvedValue(undefined) },
       outboxEvent: { create: jest.fn(), createMany: jest.fn() },
       // complete() usa la forma de callback; otros metodos, la de array.
       $transaction: jest.fn((arg: unknown) =>

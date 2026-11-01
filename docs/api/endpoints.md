@@ -559,15 +559,15 @@ Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran p
 | Parámetro          | Qué hace                                                                                                                                                                                                                                                                                                        |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bucket`           | `day`, `week` o `month`. Suma `series`: un punto por intervalo (`from` y `to` inclusive, días argentinos UTC-3). `week` va de lunes a domingo y `month` es mes calendario; el primero y el último intervalo se recortan al período, así que **la suma de la serie es igual a `totals`**. Los intervalos vacíos van en cero. Más de **90 puntos** da 400, antes de leer la base |
-| `compare=previous` | Suma `previous` (`period` y `totals` del período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días, con un decimal; `null` si alguno de los dos lados no tiene base). Sin él, la respuesta no cambia                                                       |
+| `compare=previous` | Suma `previous` (`period` y `totals` del período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales, en días o en cantidades, con un decimal; `null` si alguno de los dos lados no tiene base). Sin él, la respuesta no cambia                                                       |
 
-Cada respuesta trae `targets`: la meta de sus indicadores como `{ value, direction }`, con `direction` `min` (se cumple con un valor mayor o igual) o `max` (menor o igual). Salen de variables de entorno (`INDICATORS_TARGET_*`, ver `.env.example`) con los valores que definió el equipo el 29/10.
+Cada respuesta trae `targets`: la meta de sus indicadores como `{ value, direction }`, con `direction` `min` (se cumple con un valor mayor o igual), `max` (menor o igual) o `down` (tendencia descendente: se cumple si baja de un período al otro; su `value` es `null` porque nadie definió un número). Salen de variables de entorno (`INDICATORS_TARGET_*`, ver `.env.example`) con los valores que definió el equipo el 29/10.
 
 | Método | Ruta                     | Qué hace                                                                                                                                                                                |
 | ------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/indicators/coverage`   | Objetivos atendidos sobre programados, con desglose por zona y por tipo de servicio. Filtros extra: `zoneId`, `serviceTypeId`. En todos los indicadores, `from` posterior a `to` da 400 |
 | GET    | `/indicators/compliance` | Finalizados en término contra demorados, y ranking de zonas no atendidas con sus motivos. Filtros extra: `zoneId`, `serviceTypeId`                                                      |
-| GET    | `/indicators/incidents`  | Contenedores desbordados y dañados por zona, árboles por nivel de riesgo, y denuncias por tipo y estado con el tiempo medio de resolución                                               |
+| GET    | `/indicators/incidents`  | Contenedores por estado y zona (foto actual) y sus desbordes, daños y daños pendientes por período (historial), árboles por nivel de riesgo, y denuncias por tipo y estado con el tiempo medio de resolución, las resueltas dentro del plazo y las vencidas |
 | GET    | `/indicators/waste`      | Kg y m³ por tipo de residuo y por destino, y porcentaje desviado del relleno                                                                                                            |
 
 **La unidad de cobertura es el par (servicio, zona), no el servicio.** Un recorrido que pasa por cuatro zonas y atiende tres no es "un servicio a medias": son tres objetivos cumplidos y uno no. `ServiceZone` ya es ese par y `ZoneResult` es su resultado, así que el desglose por zona sale del mismo dato que el total.
@@ -578,7 +578,7 @@ Cada respuesta trae `targets`: la meta de sus indicadores como `{ value, directi
 
 ### Definición de cada indicador
 
-Tabla de metas del equipo (29/10). Las que dicen "etapa 2" todavía no se calculan (ver [#461](https://github.com/hllous/Backend-M6-DAPS2/issues/461)).
+Tabla de metas del equipo (29/10). Se calculan todos menos zonas no atendidas, que sigue pendiente de definición (ver [#461](https://github.com/hllous/Backend-M6-DAPS2/issues/461); etapa 1 en #473, etapa 2 en #475).
 
 | Indicador | Campo | Cómo se mide | Meta |
 | --------- | ----- | ------------ | ---- |
@@ -588,9 +588,10 @@ Tabla de metas del equipo (29/10). Las que dicen "etapa 2" todavía no se calcul
 | Desvío de programación | `compliance.schedulingDeviation.deviatedPct` | Servicios reprogramados o con aviso de demora ÷ servicios del período × 100 | ≤ 10 % |
 | Desvío del relleno sanitario | `waste.totals.divertedPct` | Kg a planta de reciclado o de compostaje ÷ kg recolectados × 100 | sin meta acordada (`null`) |
 | Zonas no atendidas | — | Pendiente: hay que definir si cuenta solo "sin resultado" o también `NOT_SERVICED` | ≤ 5 % |
-| Contenedores desbordados y dañados | — | Etapa 2: necesita historial de estados (#460 / #453) | tendencia descendente |
-| Resolución dentro del plazo | — | Etapa 2: el plazo objetivo lo define M2 | ≥ 85 % |
-| Reclamos pendientes vencidos | — | Etapa 2: el plazo objetivo lo define M2 | ≤ 10 % |
+| Contenedores desbordados | `incidents.containers.history.overflowIncidents` | Incidentes de desborde del período: transiciones a `OVERFLOWED` con origen no nulo en el historial de estados (un contenedor que se desborda dos veces suma dos) | tendencia mensual descendente (`targets.overflowTrend`: `down`, sin valor) |
+| Contenedores dañados pendientes | `incidents.containers.history.pendingDamage` | Contenedores cuyo último estado conocido al final del período es `DAMAGED` o `UNDER_REPAIR`; `null` sin historial | reducir pendientes mes a mes (`targets.pendingDamageTrend`: `down`, sin valor) |
+| Resolución de reclamos dentro del plazo | `incidents.reports.withinDeadline.pct` | Reclamos `CLOSED` con días hábiles entre el alta y el cierre ≤ plazo objetivo ÷ reclamos `CLOSED` × 100; `null` sin cerrados | ≥ 85 % |
+| Reclamos pendientes vencidos | `incidents.reports.overdue.pct` | Reclamos abiertos con días hábiles desde el alta hasta hoy > plazo objetivo ÷ reclamos abiertos × 100; `null` sin abiertos | ≤ 10 % |
 
 **La cobertura solo cuenta lo vencido.** `scheduled` y `coveragePct` se calculan sobre los pares cuyo servicio tiene fecha programada de hoy o anterior (hoy es el día argentino). Lo programado a futuro va aparte en `upcoming`: todavía no es un incumplimiento. `pending` es "vencido y sin resultado cargado".
 
@@ -600,11 +601,25 @@ Tabla de metas del equipo (29/10). Las que dicen "etapa 2" todavía no se calcul
 
 **Desvío de programación.** Se mide en servicios, no en pares servicio/zona. Cuenta un servicio una sola vez si está `RESCHEDULED` o tiene al menos un aviso de demora (`ServiceDelayNotice`, vigente o reemplazado). Los `CANCELLED` no entran. No es el desvío del relleno sanitario: son indicadores distintos, con campos y metas propios.
 
-**Qué tiene serie y comparación.** Cobertura, cumplimiento y residuos agrupan por la fecha programada del servicio. Incidencias agrupa las **denuncias** por día argentino de creación; contenedores y arbolado no tienen serie ni `previous`.
+**Qué tiene serie y comparación.** Cobertura, cumplimiento y residuos agrupan por la fecha programada del servicio. Incidencias agrupa las **denuncias** por día argentino de creación y suma, en cada punto, el historial de contenedores del intervalo (`containers`: `overflowIncidents`, `damageIncidents` y `pendingDamage` al fin del intervalo). Los **vencidos**, los conteos por estado y zona de contenedores y el arbolado no tienen serie ni `previous`.
 
-**Contenedores y arbolado son una foto del estado actual, no del período.** El inventario no tiene historial de estados, así que el período solo filtra las denuncias. El nivel de riesgo de cada árbol sale de su último relevamiento, uno por árbol.
+**Contenedores: dos cosas distintas.** `containers.byStatus` y `containers.byZone` son una **foto del estado actual**: no dependen del período. `containers.history` sí es del período y sale del historial de estados (`container_status_history`, ver [entidades/container.md](../entidades/container.md#historial-de-estados-475)). El nivel de riesgo de cada árbol sale de su último relevamiento, uno por árbol.
 
-**El tiempo medio de resolución cuenta solo los expedientes `CLOSED`**, que es el único estado del que no se sale, medido de `createdAt` a `updatedAt`.
+**Historial de contenedores (#475).** `containers.history` trae `overflowIncidents`, `damageIncidents`, `pendingDamage` y `trackingSince`.
+
+- *Incidente* = una fila del historial con destino `OVERFLOWED` (o `DAMAGED`) y **origen no nulo**, dentro del período (días argentinos). Cuenta por transición, no por contenedor. El alta y la fila base que siembra la migración (origen nulo) nunca cuentan, así que el despliegue no genera un pico falso.
+- *Daño pendiente en T* = contenedores cuyo último estado conocido hasta T es `DAMAGED` o `UNDER_REPAIR` (T = último instante del último día argentino del período o intervalo). `ACTIVE`, `OVERFLOWED`, `RELOCATING` y `REMOVED` no son pendientes. Un contenedor sin filas hasta T no cuenta.
+- **Sin dato no es cero:** si ningún contenedor tiene historial hasta T, `pendingDamage` es `null`. `trackingSince` es el instante de la fila más antigua (`null` si no hay ninguna): antes de esa fecha no hay datos. **No se reconstruye el pasado** anterior a la migración.
+- `delta.overflowIncidents` y `delta.pendingDamage` son diferencias en **cantidades** (no porcentajes), `null` si alguno de los dos períodos no tiene historial.
+
+**Reclamos dentro del plazo y vencidos (#475).** El **plazo objetivo** lo informa la respuesta (`reports.deadlineBusinessDays`) y sale de `INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS` (5 por defecto, el mismo número que la meta del promedio de resolución). **Es un supuesto de M6, único para todos los tipos de reclamo, hasta que M2 acuerde el suyo**; no es un dato de M2. Se mide en días hábiles con la misma regla que `avgResolutionBusinessDays` (lunes a viernes, días argentinos, sin feriados, cuenta cada día hábil en `(alta, cierre]`).
+
+- `reports.withinDeadline` = `{ resolved, withinDeadline, pct }`: resueltos (`CLOSED`) cuyo cierre (la última modificación, como en el promedio) cae dentro del plazo; justo el plazo cuenta como dentro. `pct` es `null` sin resueltos. Tiene serie (por día argentino de creación) y `previous`/`delta` (`withinDeadlinePct`, en puntos porcentuales).
+- `reports.overdue` = `{ open, overdue, pct }`: **foto de hoy** de los reclamos creados en el período. *Abierto* = cualquier estado que no sea `CLOSED`; *vencido* = abierto cuyos días hábiles desde el alta hasta hoy (día argentino) superan el plazo. `pct` es `null` sin abiertos. Un reclamo cerrado nunca cuenta como abierto ni como vencido. **No tiene serie ni comparación**: el sistema no guarda el historial de estados de los reclamos.
+- **Estados finales:** solo `CLOSED` es final. `DISMISSED` (desestimado), `NO_VIOLATION` (sin infracción) y `FORWARDED` (derivado) todavía pasan a `CLOSED` y se pueden reabrir (ver [`EnvironmentalReport`](../entidades/environmental-report.md#estados)), así que cuentan como abiertos. Es la lectura conservadora: no se da por resuelto lo que el modelo de estados no cerró.
+- Variables nuevas, validadas al arrancar (plazo > 0; metas de 0 a 100): `INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS` (5), `INDICATORS_TARGET_REPORTS_WITHIN_DEADLINE_PCT` (85, `min`) e `INDICATORS_TARGET_REPORTS_OVERDUE_PCT` (10, `max`).
+
+**El tiempo medio de resolución cuenta solo los expedientes `CLOSED`**, medido de `createdAt` a `updatedAt`. Un expediente cerrado puede reabrirse (`CLOSED → UNDER_REVIEW`), pero mientras queda cerrado no se toca, así que `updatedAt` es una marca de cierre aceptable.
 
 ## `citizen-portal` — vista pública
 

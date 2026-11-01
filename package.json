@@ -133,6 +133,12 @@
         "functions": 85,
         "lines": 85
       },
+      "**/containers/containers.service.ts": {
+        "statements": 85,
+        "branches": 85,
+        "functions": 85,
+        "lines": 85
+      },
       "**/services/services.service.ts": {
         "statements": 85,
         "branches": 85,

@@ -156,6 +156,112 @@ function uuidDe(semilla: string): string {
 }
 
 // ════════════════════════════════════════════════════════════
+// HISTORIAL DE ESTADOS DE LOS CONTENEDORES (#475)
+// ════════════════════════════════════════════════════════════
+
+/** Una fila de `container_status_history`, con el contenedor por código. */
+export interface FilaHistorialSeed {
+  code: string;
+  from: ContainerStatus | null;
+  to: ContainerStatus;
+  at: Date;
+}
+
+/** Hash FNV-1a: el mismo texto da siempre el mismo número, sin `Math.random`. */
+function hashDe(texto: string): number {
+  let h = 0x811c9dc5;
+  for (const c of texto) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193);
+  return h >>> 0;
+}
+
+/**
+ * Historial de demostración: cada contenedor nace hace 180 días y, durante los
+ * últimos 5 meses, algunos se desbordan (y se vacían) o se dañan (y se reparan),
+ * con más actividad en los meses viejos que en los recientes, para que el tablero
+ * muestre una tendencia descendente. Lo que **no** se puede es contradecir el
+ * estado de hoy: los contenedores que hoy no están `ACTIVE` terminan con su
+ * transición abierta hace 2 a 7 días, y todo ciclo anterior se cierra antes.
+ *
+ * Es una función pura y determinística (hash del código, sin azar) y respeta la
+ * máquina de estados de `CONTAINER_TRANSITIONS`; el spec lo verifica.
+ */
+export function historialDeContenedores(
+  contenedores: { code: string; status?: ContainerStatus }[],
+): FilaHistorialSeed[] {
+  const filas: FilaHistorialSeed[] = [];
+
+  for (const c of contenedores) {
+    const estado = c.status ?? ContainerStatus.ACTIVE;
+    const paso = (n: number, to: ContainerStatus, from: ContainerStatus | null) =>
+      filas.push({
+        code: c.code,
+        from,
+        to,
+        at: momento(n, 8 + (hashDe(`${c.code}:h:${n}`) % 9)),
+      });
+
+    // Cola abierta: lo que explica el estado de hoy. `t` = hace cuántos días empezó.
+    const t = 2 + (hashDe(`${c.code}:t`) % 6);
+    const cola: { n: number; to: ContainerStatus }[] =
+      estado === ContainerStatus.ACTIVE
+        ? []
+        : estado === ContainerStatus.UNDER_REPAIR
+          ? [
+              { n: -(t + 3), to: ContainerStatus.DAMAGED },
+              { n: -t, to: ContainerStatus.UNDER_REPAIR },
+            ]
+          : estado === ContainerStatus.REMOVED
+            ? [
+                { n: -(t + 2), to: ContainerStatus.DAMAGED },
+                { n: -t, to: ContainerStatus.REMOVED },
+              ]
+            : [{ n: -t, to: estado }];
+    // Los ciclos terminan antes de que empiece la cola (o antes de ayer, sin cola).
+    const limite = cola.length ? cola[0].n - 1 : -2;
+
+    paso(-180, ContainerStatus.ACTIVE, null);
+    let actual: ContainerStatus = ContainerStatus.ACTIVE;
+    let libreDesde = -180;
+
+    // De los meses viejos a los recientes: cada ciclo arranca después de que terminó el anterior.
+    for (let mes = 5; mes >= 1; mes--) {
+      const ventana = -mes * 30;
+      // Más desbordes y daños en los meses viejos: la tendencia baja hacia hoy.
+      const sorteo = (clave: string) => hashDe(`${c.code}:${clave}:${mes}`);
+
+      if (sorteo('o') % 100 < 6 + 3 * (mes - 1)) {
+        const inicio = ventana + (sorteo('od') % 24);
+        const fin = inicio + 1 + (sorteo('of') % 3);
+        if (inicio > libreDesde && fin <= limite) {
+          paso(inicio, ContainerStatus.OVERFLOWED, actual);
+          paso(fin, ContainerStatus.ACTIVE, ContainerStatus.OVERFLOWED);
+          libreDesde = fin;
+        }
+      }
+
+      if (sorteo('d') % 100 < 3 + 2 * (mes - 1)) {
+        const inicio = ventana + (sorteo('dd') % 24);
+        const taller = inicio + 1 + (sorteo('dt') % 3);
+        // Reparaciones de 4 a 29 días: algunas cruzan el fin de mes y quedan pendientes.
+        const fin = taller + 4 + (sorteo('df') % 26);
+        if (inicio > libreDesde && fin <= limite) {
+          paso(inicio, ContainerStatus.DAMAGED, ContainerStatus.ACTIVE);
+          paso(taller, ContainerStatus.UNDER_REPAIR, ContainerStatus.DAMAGED);
+          paso(fin, ContainerStatus.ACTIVE, ContainerStatus.UNDER_REPAIR);
+          libreDesde = fin;
+        }
+      }
+    }
+
+    for (const siguiente of cola) {
+      paso(siguiente.n, siguiente.to, actual);
+      actual = siguiente.to;
+    }
+  }
+  return filas;
+}
+
+// ════════════════════════════════════════════════════════════
 // CATÁLOGOS
 // ════════════════════════════════════════════════════════════
 
@@ -3167,6 +3273,18 @@ interface Evento {
 
 async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<void> {
   const zoneId = (code: string) => buscar(cat.zonas, code, 'la zona');
+
+  // Historial de estados de los contenedores (#475): va con lo operativo porque es
+  // actividad de varios meses, no catálogo. Un contenedor sin historial no se
+  // puede medir en el tablero.
+  await tx.containerStatusHistory.createMany({
+    data: historialDeContenedores(CONTAINERS).map((f) => ({
+      containerId: buscar(cat.contenedores, f.code, 'el contenedor'),
+      fromStatus: f.from,
+      toStatus: f.to,
+      changedAt: f.at,
+    })),
+  });
   const eventos: Evento[] = [];
 
   // Lo que llegó de afuera y explica el estado de lo sembrado. Todo procesado:
@@ -4580,6 +4698,7 @@ async function resumen() {
     vehicles: await prisma.vehicle.count(),
     crews: await prisma.crew.count(),
     containers: await prisma.container.count(),
+    containerStatusHistory: await prisma.containerStatusHistory.count(),
     greenPoints: await prisma.greenPoint.count(),
     trees: await prisma.tree.count(),
     greenSpaces: await prisma.greenSpace.count(),

@@ -757,7 +757,18 @@ export class ServicesService {
           data: { status: target },
           include: SERVICE_INCLUDE,
         });
-        if (containerUpdate) await tx.container.update(containerUpdate);
+        if (containerUpdate) {
+          await tx.container.update(containerUpdate.args);
+          // El historial de estados (#475) va en la misma transacción y solo si el
+          // update aplicó: este camino mueve el contenedor sin pasar por ContainersService.
+          await tx.containerStatusHistory.create({
+            data: {
+              containerId: containerUpdate.containerId,
+              fromStatus: containerUpdate.from,
+              toStatus: ContainerStatus.ACTIVE,
+            },
+          });
+        }
         await this.outbox.enqueueMany(tx, events);
         return row;
       })
@@ -773,7 +784,7 @@ export class ServicesService {
     this.logger.log(`Servicio ${current.id}: ${current.status} -> ${target}`);
     if (containerUpdate) {
       this.logger.log(
-        `Servicio ${current.id}: contenedor ${current.targetId} -> ${String(containerUpdate.data.status)}`,
+        `Servicio ${current.id}: contenedor ${current.targetId} -> ${String(containerUpdate.args.data.status)}`,
       );
     }
     return this.toResponseDto(updated);
@@ -794,7 +805,11 @@ export class ServicesService {
     service: ServiceWithRelations,
     target: ServiceStatus,
     dto: CompleteServiceDto,
-  ): Promise<Prisma.ContainerUpdateArgs | null> {
+  ): Promise<{
+    args: Prisma.ContainerUpdateArgs;
+    containerId: string;
+    from: ContainerStatus;
+  } | null> {
     // Un cierre parcial significa que el trabajo no se hizo.
     if (target !== ServiceStatus.COMPLETED) return null;
     if (service.targetType !== ServiceTargetType.CONTAINER || !service.targetId) return null;
@@ -818,7 +833,11 @@ export class ServicesService {
       );
     }
 
-    return { where: { id: container.id, status: container.status }, data };
+    return {
+      args: { where: { id: container.id, status: container.status }, data },
+      containerId: container.id,
+      from: container.status,
+    };
   }
 
   private containerTransitionData(

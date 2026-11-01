@@ -7,12 +7,15 @@ import { IndicatorsService } from './indicators.service';
 /** Lo que `configuration.ts` arma con las metas por defecto del equipo. */
 const CONFIG_BASE = {
   minSample: 5,
+  reportDeadlineBusinessDays: 5,
   targets: {
     coveragePct: 95,
     compliancePct: 90,
     resolutionBusinessDays: 5,
     schedulingDeviationPct: 10,
     landfillDiversionPct: null as number | null,
+    reportsWithinDeadlinePct: 85,
+    reportsOverduePct: 10,
   },
 };
 
@@ -50,6 +53,19 @@ function servicio(over: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * Una fila del historial de estados de un contenedor. `desde` null es el alta (o la
+ * fila base de la migración): sirve para reconstruir el estado, no es un incidente.
+ */
+function fila(contenedor: string, desde: string | null, hacia: string, cuando: string) {
+  return {
+    containerId: contenedor,
+    fromStatus: desde,
+    toStatus: hacia,
+    changedAt: new Date(cuando),
+  };
+}
+
 /** Una denuncia: alta y última modificación (que es el cierre cuando está CLOSED). */
 function denuncia(creada: string, actualizada: string, status = 'CLOSED') {
   return { createdAt: new Date(creada), updatedAt: new Date(actualizada), status };
@@ -65,6 +81,10 @@ describe('IndicatorsService', () => {
     prisma = {
       service: { findMany: jest.fn().mockResolvedValue([]) },
       container: { groupBy: jest.fn().mockResolvedValue([]) },
+      containerStatusHistory: {
+        findMany: jest.fn().mockResolvedValue([]),
+        aggregate: jest.fn().mockResolvedValue({ _min: { changedAt: null } }),
+      },
       zone: { findMany: jest.fn().mockResolvedValue([]) },
       environmentalReport: {
         groupBy: jest.fn().mockResolvedValue([]),
@@ -837,6 +857,578 @@ describe('IndicatorsService', () => {
       expect(result.reports.avgResolutionBusinessDays).toBeNull();
     });
 
+    it('los campos que ya tenía incidencias no cambian con la etapa 2 (#475)', async () => {
+      prisma.environmentalReport.findMany.mockResolvedValue([
+        denuncia('2026-08-07T15:00:00.000Z', '2026-08-10T15:00:00.000Z'),
+      ]);
+
+      const result = await indicators.incidents({});
+
+      expect(result.containers.byStatus).toEqual([{ status: 'ACTIVE', count: 40 }]);
+      expect(result.containers.byZone.map((z) => z.code)).toEqual(['Z-SUR', 'Z-CENTRO']);
+      expect(result.trees).toEqual({ byRiskLevel: [{ riskLevel: 'HIGH', count: 12 }] });
+      expect(result.reports).toMatchObject({
+        total: 1,
+        avgResolutionDays: 3,
+        avgResolutionBusinessDays: 1,
+        byType: [],
+        byStatus: [],
+      });
+      expect(result.targets.resolutionBusinessDays).toEqual({ value: 5, direction: 'max' });
+    });
+
+    describe('historial de contenedores (#475)', () => {
+      /** Prisma devuelve las filas anteriores al corte que se le pide, en orden. */
+      function conHistorial(todas: ReturnType<typeof fila>[]) {
+        prisma.containerStatusHistory.findMany.mockImplementation(({ where }: any) =>
+          todas
+            .filter((f) => f.changedAt < where.changedAt.lt)
+            .sort((a, b) => a.changedAt.getTime() - b.changedAt.getTime()),
+        );
+        const primera = todas.map((f) => f.changedAt).sort((a, b) => a.getTime() - b.getTime())[0];
+        prisma.containerStatusHistory.aggregate.mockResolvedValue({
+          _min: { changedAt: primera ?? null },
+        });
+      }
+
+      const AGOSTO = { from: '2026-08-01', to: '2026-08-31' };
+
+      it('cuenta un incidente de desborde por transición, no por contenedor', async () => {
+        conHistorial([
+          fila('c1', null, 'ACTIVE', '2026-07-01T12:00:00.000Z'),
+          fila('c1', 'ACTIVE', 'OVERFLOWED', '2026-08-05T12:00:00.000Z'),
+          fila('c1', 'OVERFLOWED', 'ACTIVE', '2026-08-06T12:00:00.000Z'),
+          fila('c1', 'ACTIVE', 'OVERFLOWED', '2026-08-20T12:00:00.000Z'),
+          fila('c2', null, 'ACTIVE', '2026-07-01T12:00:00.000Z'),
+          fila('c2', 'ACTIVE', 'OVERFLOWED', '2026-08-10T12:00:00.000Z'),
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history.overflowIncidents).toBe(3);
+      });
+
+      it('las filas de alta y la fila base (origen nulo) nunca son incidentes', async () => {
+        conHistorial([
+          fila('c1', null, 'OVERFLOWED', '2026-08-05T12:00:00.000Z'),
+          fila('c2', null, 'DAMAGED', '2026-08-05T12:00:00.000Z'),
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history).toMatchObject({
+          overflowIncidents: 0,
+          damageIncidents: 0,
+        });
+      });
+
+      it('lo de fuera del período no cuenta, y los días son los argentinos', async () => {
+        conHistorial([
+          fila('c1', 'ACTIVE', 'OVERFLOWED', '2026-08-01T02:59:59.000Z'), // 23:59 ART del 31/7
+          fila('c2', 'ACTIVE', 'OVERFLOWED', '2026-08-01T03:00:00.000Z'), // 00:00 ART del 1/8
+          fila('c3', 'ACTIVE', 'OVERFLOWED', '2026-09-01T02:59:59.000Z'), // 23:59 ART del 31/8
+          fila('c4', 'ACTIVE', 'OVERFLOWED', '2026-09-01T03:00:00.000Z'), // 00:00 ART del 1/9
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history.overflowIncidents).toBe(2);
+      });
+
+      it('cuenta los incidentes de daño por transición a DAMAGED', async () => {
+        conHistorial([
+          fila('c1', 'ACTIVE', 'DAMAGED', '2026-08-05T12:00:00.000Z'),
+          fila('c1', 'DAMAGED', 'UNDER_REPAIR', '2026-08-06T12:00:00.000Z'),
+          fila('c1', 'UNDER_REPAIR', 'ACTIVE', '2026-08-07T12:00:00.000Z'),
+          fila('c1', 'ACTIVE', 'DAMAGED', '2026-08-20T12:00:00.000Z'),
+          fila('c2', 'ACTIVE', 'OVERFLOWED', '2026-08-10T12:00:00.000Z'),
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history).toMatchObject({
+          damageIncidents: 2,
+          overflowIncidents: 1,
+        });
+      });
+    });
+
+    describe('daños pendientes y desde cuándo hay historial (#475)', () => {
+      function conHistorial(todas: ReturnType<typeof fila>[]) {
+        prisma.containerStatusHistory.findMany.mockImplementation(({ where }: any) =>
+          todas
+            .filter((f) => f.changedAt < where.changedAt.lt)
+            .sort((a, b) => a.changedAt.getTime() - b.changedAt.getTime()),
+        );
+        const primera = todas.map((f) => f.changedAt).sort((a, b) => a.getTime() - b.getTime())[0];
+        prisma.containerStatusHistory.aggregate.mockResolvedValue({
+          _min: { changedAt: primera ?? null },
+        });
+      }
+
+      const AGOSTO = { from: '2026-08-01', to: '2026-08-31' };
+
+      it('dañado y en reparación son pendientes; el resto de los estados no', async () => {
+        conHistorial([
+          fila('c1', null, 'ACTIVE', '2026-07-01T12:00:00.000Z'),
+          fila('c1', 'ACTIVE', 'DAMAGED', '2026-08-05T12:00:00.000Z'), // pendiente
+          fila('c2', null, 'ACTIVE', '2026-07-01T12:00:00.000Z'),
+          fila('c2', 'ACTIVE', 'DAMAGED', '2026-08-05T12:00:00.000Z'),
+          fila('c2', 'DAMAGED', 'UNDER_REPAIR', '2026-08-06T12:00:00.000Z'), // pendiente
+          fila('c3', null, 'ACTIVE', '2026-07-01T12:00:00.000Z'),
+          fila('c3', 'ACTIVE', 'DAMAGED', '2026-08-05T12:00:00.000Z'),
+          fila('c3', 'DAMAGED', 'UNDER_REPAIR', '2026-08-06T12:00:00.000Z'),
+          fila('c3', 'UNDER_REPAIR', 'ACTIVE', '2026-08-07T12:00:00.000Z'), // reparado
+          fila('c4', null, 'ACTIVE', '2026-07-01T12:00:00.000Z'),
+          fila('c4', 'ACTIVE', 'DAMAGED', '2026-08-05T12:00:00.000Z'),
+          fila('c4', 'DAMAGED', 'REMOVED', '2026-08-06T12:00:00.000Z'), // dado de baja
+          fila('c5', null, 'ACTIVE', '2026-07-01T12:00:00.000Z'),
+          fila('c5', 'ACTIVE', 'RELOCATING', '2026-08-05T12:00:00.000Z'), // reubicado
+          fila('c6', null, 'ACTIVE', '2026-07-01T12:00:00.000Z'),
+          fila('c6', 'ACTIVE', 'OVERFLOWED', '2026-08-05T12:00:00.000Z'), // desbordado
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history.pendingDamage).toBe(2);
+      });
+
+      it('lo que pasa después del fin del período no cambia los pendientes', async () => {
+        conHistorial([
+          fila('c1', null, 'ACTIVE', '2026-07-01T12:00:00.000Z'),
+          fila('c1', 'ACTIVE', 'DAMAGED', '2026-08-31T20:00:00.000Z'), // 17:00 ART del 31
+          fila('c1', 'DAMAGED', 'UNDER_REPAIR', '2026-09-01T02:59:59.000Z'), // sigue pendiente
+          fila('c1', 'UNDER_REPAIR', 'ACTIVE', '2026-09-01T03:00:00.000Z'), // 1/9: ya es de septiembre
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history.pendingDamage).toBe(1);
+      });
+
+      it('un contenedor sin filas hasta el fin del período no cuenta', async () => {
+        conHistorial([
+          fila('c1', null, 'ACTIVE', '2026-07-01T12:00:00.000Z'),
+          fila('c1', 'ACTIVE', 'DAMAGED', '2026-08-05T12:00:00.000Z'),
+          fila('c2', null, 'DAMAGED', '2026-09-10T12:00:00.000Z'), // nace después
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history.pendingDamage).toBe(1);
+      });
+
+      it('sin ninguna fila hasta el fin del período los pendientes son null, no cero', async () => {
+        conHistorial([fila('c1', null, 'DAMAGED', '2026-09-10T12:00:00.000Z')]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history.pendingDamage).toBeNull();
+      });
+
+      it('con historial pero sin daños, los pendientes son cero (hay dato)', async () => {
+        conHistorial([fila('c1', null, 'ACTIVE', '2026-07-01T12:00:00.000Z')]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history.pendingDamage).toBe(0);
+      });
+
+      it('trackingSince es el instante de la fila más antigua, aunque sea posterior al período', async () => {
+        conHistorial([
+          fila('c1', null, 'ACTIVE', '2026-10-30T15:00:00.000Z'),
+          fila('c1', 'ACTIVE', 'OVERFLOWED', '2026-10-31T15:00:00.000Z'),
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history.trackingSince).toBe('2026-10-30T15:00:00.000Z');
+      });
+
+      it('sin historial trackingSince es null', async () => {
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.containers.history).toEqual({
+          overflowIncidents: 0,
+          damageIncidents: 0,
+          pendingDamage: null,
+          trackingSince: null,
+        });
+      });
+    });
+
+    describe('serie y comparación de los contenedores (#475)', () => {
+      function conHistorial(todas: ReturnType<typeof fila>[]) {
+        prisma.containerStatusHistory.findMany.mockImplementation(({ where }: any) =>
+          todas
+            .filter((f) => f.changedAt < where.changedAt.lt)
+            .sort((a, b) => a.changedAt.getTime() - b.changedAt.getTime()),
+        );
+        const primera = todas.map((f) => f.changedAt).sort((a, b) => a.getTime() - b.getTime())[0];
+        prisma.containerStatusHistory.aggregate.mockResolvedValue({
+          _min: { changedAt: primera ?? null },
+        });
+      }
+
+      /** Historial que empieza el 20/7: julio tiene pendientes, junio no tiene dato. */
+      const HISTORIAL = [
+        fila('c1', null, 'ACTIVE', '2026-07-20T12:00:00.000Z'),
+        fila('c1', 'ACTIVE', 'DAMAGED', '2026-07-25T12:00:00.000Z'), // julio: pendiente
+        fila('c1', 'DAMAGED', 'UNDER_REPAIR', '2026-08-04T12:00:00.000Z'),
+        fila('c1', 'UNDER_REPAIR', 'ACTIVE', '2026-08-20T12:00:00.000Z'), // agosto: resuelto
+        fila('c2', null, 'ACTIVE', '2026-07-20T12:00:00.000Z'),
+        fila('c2', 'ACTIVE', 'OVERFLOWED', '2026-07-28T12:00:00.000Z'),
+        fila('c2', 'OVERFLOWED', 'ACTIVE', '2026-07-29T12:00:00.000Z'),
+        fila('c2', 'ACTIVE', 'OVERFLOWED', '2026-08-10T12:00:00.000Z'),
+        fila('c2', 'OVERFLOWED', 'ACTIVE', '2026-08-11T12:00:00.000Z'),
+        fila('c2', 'ACTIVE', 'OVERFLOWED', '2026-08-25T12:00:00.000Z'),
+        fila('c2', 'OVERFLOWED', 'ACTIVE', '2026-08-26T12:00:00.000Z'),
+        fila('c3', 'ACTIVE', 'DAMAGED', '2026-08-28T12:00:00.000Z'), // agosto: pendiente
+      ];
+
+      it('bucket=month: incidentes por mes, pendientes a fin de mes y null antes del historial', async () => {
+        conHistorial(HISTORIAL);
+
+        const result = await indicators.incidents({
+          from: '2026-06-15',
+          to: '2026-08-31',
+          bucket: 'month',
+        });
+
+        expect(result.series!.map((pt) => [pt.from, pt.to, pt.containers])).toEqual([
+          [
+            '2026-06-15',
+            '2026-06-30',
+            { overflowIncidents: 0, damageIncidents: 0, pendingDamage: null },
+          ],
+          [
+            '2026-07-01',
+            '2026-07-31',
+            { overflowIncidents: 1, damageIncidents: 1, pendingDamage: 1 },
+          ],
+          [
+            '2026-08-01',
+            '2026-08-31',
+            { overflowIncidents: 2, damageIncidents: 1, pendingDamage: 1 },
+          ],
+        ]);
+      });
+
+      it('la suma de los incidentes de la serie coincide con el total del período', async () => {
+        conHistorial(HISTORIAL);
+
+        const result = await indicators.incidents({
+          from: '2026-06-15',
+          to: '2026-08-31',
+          bucket: 'week',
+        });
+
+        const suma = (k: 'overflowIncidents' | 'damageIncidents') =>
+          result.series!.reduce((n, pt) => n + pt.containers[k], 0);
+        expect(suma('overflowIncidents')).toBe(result.containers.history.overflowIncidents);
+        expect(suma('damageIncidents')).toBe(result.containers.history.damageIncidents);
+      });
+
+      it('el último punto de la serie tiene los mismos pendientes que el total', async () => {
+        conHistorial(HISTORIAL);
+
+        const result = await indicators.incidents({
+          from: '2026-08-01',
+          to: '2026-08-31',
+          bucket: 'day',
+        });
+
+        expect(result.series!.at(-1)!.containers.pendingDamage).toBe(
+          result.containers.history.pendingDamage,
+        );
+      });
+
+      it('un incidente cerca de la medianoche cae en su día argentino', async () => {
+        conHistorial([
+          fila('c1', null, 'ACTIVE', '2026-08-01T12:00:00.000Z'),
+          fila('c1', 'ACTIVE', 'OVERFLOWED', '2026-08-05T02:30:00.000Z'), // 23:30 ART del 4
+        ]);
+
+        const result = await indicators.incidents({
+          from: '2026-08-04',
+          to: '2026-08-05',
+          bucket: 'day',
+        });
+
+        expect(result.series!.map((pt) => pt.containers.overflowIncidents)).toEqual([1, 0]);
+      });
+
+      it('el tope de 90 puntos rige también con el historial', async () => {
+        await expect(
+          indicators.incidents({ from: '2026-01-01', to: '2026-12-31', bucket: 'day' }),
+        ).rejects.toThrow(/máximo es 90/);
+      });
+
+      it('compare=previous trae los totales del período anterior y la diferencia en cantidades', async () => {
+        conHistorial(HISTORIAL);
+
+        const result = await indicators.incidents({
+          from: '2026-08-01',
+          to: '2026-08-31',
+          compare: 'previous',
+        });
+
+        expect(result.previous!.period).toEqual({ from: '2026-07-01', to: '2026-07-31' });
+        expect(result.previous!.totals.containers).toEqual({
+          overflowIncidents: 1,
+          damageIncidents: 1,
+          pendingDamage: 1,
+        });
+        expect(result.delta).toMatchObject({ overflowIncidents: 1, pendingDamage: 0 });
+      });
+
+      it('la diferencia puede ser negativa', async () => {
+        conHistorial([
+          fila('c1', null, 'ACTIVE', '2026-06-20T12:00:00.000Z'),
+          fila('c1', 'ACTIVE', 'DAMAGED', '2026-07-05T12:00:00.000Z'),
+          fila('c1', 'DAMAGED', 'UNDER_REPAIR', '2026-07-06T12:00:00.000Z'),
+          fila('c1', 'UNDER_REPAIR', 'ACTIVE', '2026-08-02T12:00:00.000Z'),
+        ]);
+
+        const result = await indicators.incidents({
+          from: '2026-08-01',
+          to: '2026-08-31',
+          compare: 'previous',
+        });
+
+        expect(result.delta).toMatchObject({ pendingDamage: -1, overflowIncidents: 0 });
+      });
+
+      it('sin historial en el período anterior la diferencia es null, no una mejora inventada', async () => {
+        conHistorial([
+          fila('c1', null, 'ACTIVE', '2026-08-01T12:00:00.000Z'),
+          fila('c1', 'ACTIVE', 'OVERFLOWED', '2026-08-05T12:00:00.000Z'),
+        ]);
+
+        const result = await indicators.incidents({
+          from: '2026-08-01',
+          to: '2026-08-31',
+          compare: 'previous',
+        });
+
+        expect(result.previous!.totals.containers.pendingDamage).toBeNull();
+        expect(result.delta).toMatchObject({ pendingDamage: null, overflowIncidents: null });
+      });
+    });
+
+    describe('reclamos dentro del plazo y vencidos (#475)', () => {
+      /** Jueves 20/8/2026, mediodía argentino: el plazo por defecto es de 5 días hábiles. */
+      const AHORA = new Date('2026-08-20T15:00:00.000Z');
+
+      beforeEach(() => jest.useFakeTimers({ now: AHORA }));
+      afterEach(() => jest.useRealTimers());
+
+      function conDenuncias(todas: ReturnType<typeof denuncia>[]) {
+        prisma.environmentalReport.findMany.mockImplementation(({ where }: any) =>
+          todas.filter(
+            (d) => d.createdAt >= where.createdAt.gte && d.createdAt < where.createdAt.lt,
+          ),
+        );
+      }
+
+      const AGOSTO = { from: '2026-08-01', to: '2026-08-31' };
+
+      it('el plazo es de 5 días hábiles por defecto y la respuesta lo informa', async () => {
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.reports.deadlineBusinessDays).toBe(5);
+      });
+
+      it('justo en el plazo cuenta como dentro; un día hábil más, no', async () => {
+        conDenuncias([
+          denuncia('2026-08-07T15:00:00.000Z', '2026-08-14T15:00:00.000Z'), // viernes → viernes: 5
+          denuncia('2026-08-07T15:00:00.000Z', '2026-08-17T15:00:00.000Z'), // viernes → lunes 17: 6
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.reports.withinDeadline).toEqual({ resolved: 2, withinDeadline: 1, pct: 50 });
+      });
+
+      it('el plazo sale de la configuración', async () => {
+        cfg.reportDeadlineBusinessDays = 3;
+        conDenuncias([
+          denuncia('2026-08-10T15:00:00.000Z', '2026-08-13T15:00:00.000Z'), // lun → jue: 3
+          denuncia('2026-08-10T15:00:00.000Z', '2026-08-14T15:00:00.000Z'), // lun → vie: 4
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.reports.deadlineBusinessDays).toBe(3);
+        expect(result.reports.withinDeadline).toMatchObject({ resolved: 2, withinDeadline: 1 });
+      });
+
+      it('sin reclamos resueltos el porcentaje es null, no 0 %', async () => {
+        conDenuncias([
+          denuncia('2026-08-18T15:00:00.000Z', '2026-08-18T16:00:00.000Z', 'UNDER_REVIEW'),
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.reports.withinDeadline).toEqual({
+          resolved: 0,
+          withinDeadline: 0,
+          pct: null,
+        });
+      });
+
+      it('el porcentaje lleva un decimal', async () => {
+        conDenuncias([
+          denuncia('2026-08-10T15:00:00.000Z', '2026-08-11T15:00:00.000Z'),
+          denuncia('2026-08-10T15:00:00.000Z', '2026-08-11T15:00:00.000Z'),
+          denuncia('2026-08-03T15:00:00.000Z', '2026-08-17T15:00:00.000Z'), // 10 hábiles: fuera
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.reports.withinDeadline.pct).toBe(66.7);
+      });
+
+      it('vencido: abierto cuyos días hábiles desde el alta hasta hoy superan el plazo', async () => {
+        conDenuncias([
+          denuncia('2026-08-12T15:00:00.000Z', '2026-08-12T15:00:00.000Z', 'UNDER_REVIEW'), // mié → jue 20: 6, vencido
+          denuncia('2026-08-13T15:00:00.000Z', '2026-08-13T15:00:00.000Z', 'UNDER_REVIEW'), // jue → jue: 5, justo
+          denuncia('2026-08-17T15:00:00.000Z', '2026-08-17T15:00:00.000Z', 'RECEIVED'), // lun: 3
+          denuncia('2026-08-03T15:00:00.000Z', '2026-08-03T15:00:00.000Z', 'INSPECTED'), // vencido
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.reports.overdue).toEqual({ open: 4, overdue: 2, pct: 50 });
+      });
+
+      it('un reclamo cerrado nunca cuenta como abierto ni como vencido', async () => {
+        conDenuncias([
+          denuncia('2026-08-03T15:00:00.000Z', '2026-08-04T15:00:00.000Z', 'CLOSED'),
+          denuncia('2026-08-03T15:00:00.000Z', '2026-08-18T15:00:00.000Z', 'CLOSED'),
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.reports.overdue).toEqual({ open: 0, overdue: 0, pct: null });
+      });
+
+      /**
+       * Solo CLOSED es final: desestimado, sin infracción y derivado todavía pasan a
+       * CLOSED (docs/entidades/environmental-report.md) y se pueden reabrir, así que
+       * siguen abiertos hasta cerrarse. Es la lectura conservadora.
+       */
+      it.each(['DISMISSED', 'NO_VIOLATION', 'FORWARDED', 'SANCTIONED'])(
+        '%s todavía no es final: cuenta como abierto',
+        async (estado) => {
+          conDenuncias([denuncia('2026-08-03T15:00:00.000Z', '2026-08-04T15:00:00.000Z', estado)]);
+
+          const result = await indicators.incidents(AGOSTO);
+
+          expect(result.reports.overdue).toEqual({ open: 1, overdue: 1, pct: 100 });
+        },
+      );
+
+      it('sin reclamos abiertos el porcentaje de vencidos es null, no 0 %', async () => {
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.reports.overdue).toEqual({ open: 0, overdue: 0, pct: null });
+      });
+
+      it('hoy es el día argentino: a las 22:00 ART del jueves todavía es jueves', async () => {
+        jest.setSystemTime(new Date('2026-08-21T01:00:00.000Z')); // viernes en UTC, jueves en ART
+        conDenuncias([
+          denuncia('2026-08-13T15:00:00.000Z', '2026-08-13T15:00:00.000Z', 'UNDER_REVIEW'), // jue 13 → jue 20: 5
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.reports.overdue).toEqual({ open: 1, overdue: 0, pct: 0 });
+      });
+
+      it('el universo son los reclamos creados en el período', async () => {
+        conDenuncias([
+          denuncia('2026-07-03T15:00:00.000Z', '2026-07-03T15:00:00.000Z', 'UNDER_REVIEW'),
+          denuncia('2026-08-03T15:00:00.000Z', '2026-08-03T15:00:00.000Z', 'UNDER_REVIEW'),
+        ]);
+
+        const result = await indicators.incidents(AGOSTO);
+
+        expect(result.reports.overdue.open).toBe(1);
+      });
+
+      it('la serie trae resueltos y dentro del plazo por día argentino de creación', async () => {
+        conDenuncias([
+          denuncia('2026-08-04T02:00:00.000Z', '2026-08-05T15:00:00.000Z'), // lunes 3 ART, dentro
+          denuncia('2026-08-03T15:00:00.000Z', '2026-08-17T15:00:00.000Z'), // lunes 3, fuera
+          denuncia('2026-08-05T15:00:00.000Z', '2026-08-06T15:00:00.000Z'), // miércoles 5, dentro
+        ]);
+
+        const result = await indicators.incidents({
+          from: '2026-08-03',
+          to: '2026-08-05',
+          bucket: 'day',
+        });
+
+        expect(result.series!.map((pt) => pt.withinDeadline)).toEqual([
+          { resolved: 2, withinDeadline: 1, pct: 50 },
+          { resolved: 0, withinDeadline: 0, pct: null },
+          { resolved: 1, withinDeadline: 1, pct: 100 },
+        ]);
+        const dentro = result.series!.reduce((n, pt) => n + pt.withinDeadline.withinDeadline, 0);
+        expect(dentro).toBe(result.reports.withinDeadline.withinDeadline);
+      });
+
+      it('los vencidos no tienen serie, ni previous, ni delta: son una foto de hoy', async () => {
+        const result = await indicators.incidents({
+          ...AGOSTO,
+          bucket: 'week',
+          compare: 'previous',
+        });
+
+        expect(result.series![0]).not.toHaveProperty('overdue');
+        expect(result.previous!.totals).not.toHaveProperty('overdue');
+        expect(result.delta).not.toHaveProperty('overdue');
+      });
+
+      it('compare=previous trae el período anterior y la diferencia en puntos porcentuales', async () => {
+        conDenuncias([
+          denuncia('2026-08-03T15:00:00.000Z', '2026-08-04T15:00:00.000Z'), // anterior: dentro
+          denuncia('2026-08-03T15:00:00.000Z', '2026-08-10T15:00:00.000Z'), // anterior: 5, dentro
+          denuncia('2026-08-04T15:00:00.000Z', '2026-08-17T15:00:00.000Z'), // anterior: 9, fuera
+          denuncia('2026-08-12T15:00:00.000Z', '2026-08-13T15:00:00.000Z'), // actual: dentro
+          denuncia('2026-08-13T15:00:00.000Z', '2026-08-14T15:00:00.000Z'), // actual: dentro
+        ]);
+
+        const result = await indicators.incidents({
+          from: '2026-08-11',
+          to: '2026-08-20',
+          compare: 'previous',
+        });
+
+        expect(result.previous!.totals.withinDeadline).toEqual({
+          resolved: 3,
+          withinDeadline: 2,
+          pct: 66.7,
+        });
+        expect(result.reports.withinDeadline.pct).toBe(100);
+        expect(result.delta!.withinDeadlinePct).toBe(33.3);
+      });
+
+      it('sin resueltos en alguno de los dos períodos, la diferencia es null', async () => {
+        conDenuncias([denuncia('2026-08-12T15:00:00.000Z', '2026-08-13T15:00:00.000Z')]);
+
+        const result = await indicators.incidents({
+          from: '2026-08-11',
+          to: '2026-08-20',
+          compare: 'previous',
+        });
+
+        expect(result.previous!.totals.withinDeadline.pct).toBeNull();
+        expect(result.delta!.withinDeadlinePct).toBeNull();
+      });
+    });
+
     describe('días hábiles, serie, período anterior y meta (#473)', () => {
       /** Prisma devuelve las denuncias creadas en el rango que se le pide. */
       function conDenuncias(todas: ReturnType<typeof denuncia>[]) {
@@ -847,10 +1439,32 @@ describe('IndicatorsService', () => {
         );
       }
 
-      it('trae la meta de resolución en días hábiles, con su sentido', async () => {
+      it('trae las metas de resolución, de plazo y de vencidos, con su sentido', async () => {
         const result = await indicators.incidents({});
 
-        expect(result.targets).toEqual({ resolutionBusinessDays: { value: 5, direction: 'max' } });
+        expect(result.targets).toMatchObject({
+          resolutionBusinessDays: { value: 5, direction: 'max' },
+          reportsWithinDeadlinePct: { value: 85, direction: 'min' },
+          reportsOverduePct: { value: 10, direction: 'max' },
+        });
+      });
+
+      it('las metas de plazo y de vencidos salen de la configuración', async () => {
+        cfg.targets.reportsWithinDeadlinePct = 90;
+        cfg.targets.reportsOverduePct = 5;
+
+        const result = await indicators.incidents({});
+
+        expect(result.targets.reportsWithinDeadlinePct.value).toBe(90);
+        expect(result.targets.reportsOverduePct.value).toBe(5);
+      });
+
+      /** Nadie definió un número: se informa el sentido y el valor queda nulo. */
+      it('desbordados y daños pendientes son de tendencia descendente, sin valor numérico', async () => {
+        const result = await indicators.incidents({});
+
+        expect(result.targets.overflowTrend).toEqual({ value: null, direction: 'down' });
+        expect(result.targets.pendingDamageTrend).toEqual({ value: null, direction: 'down' });
       });
 
       it('la meta sale de la configuración', async () => {
@@ -951,7 +1565,7 @@ describe('IndicatorsService', () => {
           bucket: 'day',
         });
 
-        expect(result.series).toEqual([
+        expect(result.series).toMatchObject([
           {
             from: '2026-08-03',
             to: '2026-08-03',
@@ -977,19 +1591,22 @@ describe('IndicatorsService', () => {
         expect(result.series!.reduce((n, p) => n + p.total, 0)).toBe(result.reports.total);
       });
 
-      it('la serie no incluye contenedores ni árboles: son una foto actual', async () => {
+      it('la serie no incluye la foto actual de contenedores ni el arbolado', async () => {
         const result = await indicators.incidents({
           from: '2026-08-03',
           to: '2026-08-03',
           bucket: 'day',
         });
 
+        // Sí lleva el historial de contenedores (#475); no el byStatus/byZone ni los árboles.
         expect(Object.keys(result.series![0]).sort()).toEqual([
           'avgResolutionBusinessDays',
           'avgResolutionDays',
+          'containers',
           'from',
           'to',
           'total',
+          'withinDeadline',
         ]);
       });
 
@@ -1012,12 +1629,15 @@ describe('IndicatorsService', () => {
           compare: 'previous',
         });
 
-        expect(result.previous).toEqual({
+        expect(result.previous).toMatchObject({
           period: { from: '2026-08-01', to: '2026-08-10' },
           totals: { total: 1, avgResolutionDays: 10, avgResolutionBusinessDays: 8 },
         });
         expect(result.reports.total).toBe(2);
-        expect(result.delta).toEqual({ avgResolutionDays: -8, avgResolutionBusinessDays: -6 });
+        expect(result.delta).toMatchObject({
+          avgResolutionDays: -8,
+          avgResolutionBusinessDays: -6,
+        });
       });
 
       it('sin cerradas en alguno de los dos períodos, la diferencia es nula', async () => {
@@ -1030,7 +1650,10 @@ describe('IndicatorsService', () => {
         });
 
         expect(result.previous!.totals.avgResolutionDays).toBeNull();
-        expect(result.delta).toEqual({ avgResolutionDays: null, avgResolutionBusinessDays: null });
+        expect(result.delta).toMatchObject({
+          avgResolutionDays: null,
+          avgResolutionBusinessDays: null,
+        });
       });
     });
   });

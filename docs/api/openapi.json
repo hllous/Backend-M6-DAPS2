@@ -13586,7 +13586,7 @@
       "get": {
         "operationId": "IndicatorsController_incidents",
         "summary": "Incidencias del inventario y de las denuncias",
-        "description": "Contenedores desbordados y dañados por zona, árboles por nivel de riesgo según su último relevamiento, y denuncias por tipo y estado con el tiempo medio de resolución. Contenedores y arbolado son una foto del estado actual: el período solo filtra las denuncias, y solo ellas tienen serie y comparación. El tiempo de resolución se informa en días corridos y en días hábiles (lunes a viernes, sin feriados); la meta es en días hábiles. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido.",
+        "description": "Contenedores por estado y zona (foto del estado actual), árboles por nivel de riesgo según su último relevamiento, y denuncias por tipo y estado con el tiempo medio de resolución. Desde el historial de estados suma los incidentes de desborde y de daño del período y los daños pendientes al final (`containers.history`, con `trackingSince`: antes de esa fecha no hay datos y los pendientes son null). De las denuncias suma las resueltas dentro del plazo objetivo (`reports.withinDeadline`) y los vencidos (`reports.overdue`, una foto de hoy de lo creado en el período). El plazo objetivo es de M6, único para todos los tipos y en días hábiles (lunes a viernes, sin feriados). El tiempo de resolución se informa en días corridos y en días hábiles; su meta es en días hábiles. Con `bucket` suma `series` (denuncias y contenedores del intervalo; los vencidos no tienen serie); con `compare=previous`, `previous` y `delta` (los vencidos no se comparan). `targets` trae cada meta con su sentido: las de desbordados y daños pendientes son de tendencia descendente (`down`) y no tienen valor numérico.",
         "parameters": [
           {
             "name": "from",
@@ -20301,15 +20301,18 @@
         "properties": {
           "value": {
             "type": "number",
-            "example": 95
+            "description": "El número de la meta. **Null con `direction: down`**: es una meta de tendencia y nadie definió un número",
+            "example": 95,
+            "nullable": true
           },
           "direction": {
             "type": "string",
             "enum": [
               "min",
-              "max"
+              "max",
+              "down"
             ],
-            "description": "`min`: se cumple con un valor mayor o igual. `max`: con uno menor o igual.",
+            "description": "`min`: se cumple con un valor mayor o igual. `max`: con uno menor o igual. `down`: se cumple si baja de un período al otro (tendencia descendente), sin valor numérico.",
             "example": "min"
           }
         },
@@ -20785,6 +20788,39 @@
           "count"
         ]
       },
+      "ContainerHistoryDto": {
+        "type": "object",
+        "properties": {
+          "overflowIncidents": {
+            "type": "number",
+            "description": "Incidentes de desborde del período: una transición a `OVERFLOWED` cuenta una vez, así que un contenedor que se desborda dos veces suma dos. El alta y la fila base de la migración no cuentan",
+            "example": 7
+          },
+          "damageIncidents": {
+            "type": "number",
+            "description": "Incidentes de daño del período: una transición a `DAMAGED` cuenta una vez",
+            "example": 4
+          },
+          "pendingDamage": {
+            "type": "number",
+            "description": "Contenedores cuyo último estado conocido al final del período (o del intervalo) es `DAMAGED` o `UNDER_REPAIR`: daño todavía sin resolver. **Null si ningún contenedor tiene historial hasta ese instante**: es la ausencia de dato, no un cero",
+            "example": 3,
+            "nullable": true
+          },
+          "trackingSince": {
+            "type": "string",
+            "description": "Instante (ISO 8601) de la fila más antigua del historial: desde cuándo existen datos. Null si todavía no hay ninguna. Los períodos anteriores no traen incidentes ni pendientes",
+            "example": "2026-10-30T15:00:00.000Z",
+            "nullable": true
+          }
+        },
+        "required": [
+          "overflowIncidents",
+          "damageIncidents",
+          "pendingDamage",
+          "trackingSince"
+        ]
+      },
       "ContainersByZoneDto": {
         "type": "object",
         "properties": {
@@ -20833,6 +20869,14 @@
               "$ref": "#/components/schemas/StatusCountDto"
             }
           },
+          "history": {
+            "description": "Lo que sí es del período, a partir del historial de estados. `byStatus` y `byZone` siguen siendo la foto del estado actual",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContainerHistoryDto"
+              }
+            ]
+          },
           "byZone": {
             "description": "Ordenado de mayor a menor cantidad de incidencias",
             "type": "array",
@@ -20843,6 +20887,7 @@
         },
         "required": [
           "byStatus",
+          "history",
           "byZone"
         ]
       },
@@ -20882,6 +20927,58 @@
         },
         "required": [
           "byRiskLevel"
+        ]
+      },
+      "WithinDeadlineDto": {
+        "type": "object",
+        "properties": {
+          "resolved": {
+            "type": "number",
+            "description": "Reclamos resueltos (CLOSED) del período o intervalo",
+            "example": 12
+          },
+          "withinDeadline": {
+            "type": "number",
+            "description": "Resueltos cuyos días hábiles entre el alta y el cierre son menores o iguales al plazo objetivo",
+            "example": 10
+          },
+          "pct": {
+            "type": "number",
+            "description": "Dentro del plazo ÷ resueltos, con un decimal. **Null si no hay resueltos**: es la ausencia de dato, no un 0 %",
+            "example": 83.3,
+            "nullable": true
+          }
+        },
+        "required": [
+          "resolved",
+          "withinDeadline",
+          "pct"
+        ]
+      },
+      "OverdueDto": {
+        "type": "object",
+        "properties": {
+          "open": {
+            "type": "number",
+            "description": "Reclamos abiertos (todo estado que no sea CLOSED) creados en el período",
+            "example": 9
+          },
+          "overdue": {
+            "type": "number",
+            "description": "Abiertos cuyos días hábiles desde el alta hasta hoy (día argentino) superan el plazo objetivo",
+            "example": 1
+          },
+          "pct": {
+            "type": "number",
+            "description": "Vencidos ÷ abiertos, con un decimal. **Null si no hay abiertos**: es la ausencia de dato, no un 0 %",
+            "example": 11.1,
+            "nullable": true
+          }
+        },
+        "required": [
+          "open",
+          "overdue",
+          "pct"
         ]
       },
       "ReportTypeCountDto": {
@@ -20959,6 +21056,27 @@
             "example": 3.1,
             "nullable": true
           },
+          "withinDeadline": {
+            "description": "Resolución dentro del plazo objetivo (`deadlineBusinessDays`): se compara con la meta `reportsWithinDeadlinePct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WithinDeadlineDto"
+              }
+            ]
+          },
+          "deadlineBusinessDays": {
+            "type": "number",
+            "description": "Plazo objetivo de resolución en días hábiles (lunes a viernes, sin feriados), el mismo para todos los tipos de reclamo. Es un supuesto de M6 configurable (`INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS`) hasta que M2 acuerde el suyo",
+            "example": 5
+          },
+          "overdue": {
+            "description": "Foto del estado actual de los reclamos creados en el período, sin serie ni comparación: el sistema no guarda el historial de estados de los reclamos",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OverdueDto"
+              }
+            ]
+          },
           "byType": {
             "type": "array",
             "items": {
@@ -20976,6 +21094,9 @@
           "total",
           "avgResolutionDays",
           "avgResolutionBusinessDays",
+          "withinDeadline",
+          "deadlineBusinessDays",
+          "overdue",
           "byType",
           "byStatus"
         ]
@@ -20990,10 +21111,72 @@
                 "$ref": "#/components/schemas/TargetDto"
               }
             ]
+          },
+          "reportsWithinDeadlinePct": {
+            "description": "Meta de `reports.withinDeadline.pct` (mínimo)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          },
+          "reportsOverduePct": {
+            "description": "Meta de `reports.overdue.pct` (máximo)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          },
+          "overflowTrend": {
+            "description": "Meta de `containers.history.overflowIncidents`: tendencia mensual descendente, sin valor numérico (`direction: down`)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          },
+          "pendingDamageTrend": {
+            "description": "Meta de `containers.history.pendingDamage`: reducir los pendientes mes a mes, sin valor numérico (`direction: down`)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
           }
         },
         "required": [
-          "resolutionBusinessDays"
+          "resolutionBusinessDays",
+          "reportsWithinDeadlinePct",
+          "reportsOverduePct",
+          "overflowTrend",
+          "pendingDamageTrend"
+        ]
+      },
+      "ContainerHistoryTotalsDto": {
+        "type": "object",
+        "properties": {
+          "overflowIncidents": {
+            "type": "number",
+            "description": "Incidentes de desborde del período: una transición a `OVERFLOWED` cuenta una vez, así que un contenedor que se desborda dos veces suma dos. El alta y la fila base de la migración no cuentan",
+            "example": 7
+          },
+          "damageIncidents": {
+            "type": "number",
+            "description": "Incidentes de daño del período: una transición a `DAMAGED` cuenta una vez",
+            "example": 4
+          },
+          "pendingDamage": {
+            "type": "number",
+            "description": "Contenedores cuyo último estado conocido al final del período (o del intervalo) es `DAMAGED` o `UNDER_REPAIR`: daño todavía sin resolver. **Null si ningún contenedor tiene historial hasta ese instante**: es la ausencia de dato, no un cero",
+            "example": 3,
+            "nullable": true
+          }
+        },
+        "required": [
+          "overflowIncidents",
+          "damageIncidents",
+          "pendingDamage"
         ]
       },
       "ReportsSeriesPointDto": {
@@ -21016,6 +21199,22 @@
             "example": 3.1,
             "nullable": true
           },
+          "withinDeadline": {
+            "description": "Resolución dentro del plazo objetivo (`deadlineBusinessDays`): se compara con la meta `reportsWithinDeadlinePct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WithinDeadlineDto"
+              }
+            ]
+          },
+          "containers": {
+            "description": "Incidentes y pendientes de contenedores del intervalo o período",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContainerHistoryTotalsDto"
+              }
+            ]
+          },
           "from": {
             "type": "string",
             "description": "Primer día del intervalo (YYYY-MM-DD)",
@@ -21031,11 +21230,13 @@
           "total",
           "avgResolutionDays",
           "avgResolutionBusinessDays",
+          "withinDeadline",
+          "containers",
           "from",
           "to"
         ]
       },
-      "ReportsTotalsDto": {
+      "IncidentsTotalsDto": {
         "type": "object",
         "properties": {
           "total": {
@@ -21054,12 +21255,30 @@
             "description": "Días hábiles (lunes a viernes, sin feriados) promedio entre el alta y el cierre, contados en días argentinos: es lo que se compara con la meta. Null si no se cerró ninguno.",
             "example": 3.1,
             "nullable": true
+          },
+          "withinDeadline": {
+            "description": "Resolución dentro del plazo objetivo (`deadlineBusinessDays`): se compara con la meta `reportsWithinDeadlinePct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WithinDeadlineDto"
+              }
+            ]
+          },
+          "containers": {
+            "description": "Incidentes y pendientes de contenedores del intervalo o período",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContainerHistoryTotalsDto"
+              }
+            ]
           }
         },
         "required": [
           "total",
           "avgResolutionDays",
-          "avgResolutionBusinessDays"
+          "avgResolutionBusinessDays",
+          "withinDeadline",
+          "containers"
         ]
       },
       "ReportsPreviousDto": {
@@ -21069,7 +21288,7 @@
             "$ref": "#/components/schemas/PeriodDto"
           },
           "totals": {
-            "$ref": "#/components/schemas/ReportsTotalsDto"
+            "$ref": "#/components/schemas/IncidentsTotalsDto"
           }
         },
         "required": [
@@ -21080,6 +21299,24 @@
       "ReportsDeltaDto": {
         "type": "object",
         "properties": {
+          "withinDeadlinePct": {
+            "type": "number",
+            "description": "Puntos porcentuales de `withinDeadline.pct` contra el período anterior. Null si alguno de los dos no tiene reclamos resueltos",
+            "nullable": true,
+            "example": 4.2
+          },
+          "overflowIncidents": {
+            "type": "number",
+            "description": "Incidentes de desborde contra el período anterior, en cantidades. Null si alguno de los dos períodos no tiene historial",
+            "nullable": true,
+            "example": -2
+          },
+          "pendingDamage": {
+            "type": "number",
+            "description": "Daños pendientes al fin del período contra los del anterior, en cantidades. Null si alguno de los dos no tiene historial",
+            "nullable": true,
+            "example": -1
+          },
           "avgResolutionDays": {
             "type": "number",
             "description": "Días corridos contra el período anterior. Null si alguno no cerró denuncias",
@@ -21094,6 +21331,9 @@
           }
         },
         "required": [
+          "withinDeadlinePct",
+          "overflowIncidents",
+          "pendingDamage",
           "avgResolutionDays",
           "avgResolutionBusinessDays"
         ]
@@ -21105,7 +21345,7 @@
             "$ref": "#/components/schemas/PeriodDto"
           },
           "containers": {
-            "description": "Foto del estado actual del inventario, no del período: el inventario no guarda historial de estados. El período solo filtra las denuncias.",
+            "description": "Conteos por estado y por zona: foto del estado actual, no del período. `history` es lo que sí se mide por período, desde el historial de estados.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ContainerIncidentsDto"
@@ -21132,14 +21372,14 @@
             "$ref": "#/components/schemas/IncidentsTargetsDto"
           },
           "series": {
-            "description": "Solo con `bucket`. Son las denuncias, por día argentino de creación. Contenedores y arbolado no tienen serie: son una foto del estado actual",
+            "description": "Solo con `bucket`. Las denuncias por día argentino de creación y, en `containers`, los incidentes del intervalo y los daños pendientes a su fin. Los vencidos, los conteos por estado y el arbolado no tienen serie: son una foto de hoy",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ReportsSeriesPointDto"
             }
           },
           "previous": {
-            "description": "Solo con `compare=previous`. Cubre las denuncias, no contenedores ni arbolado",
+            "description": "Solo con `compare=previous`. Cubre las denuncias (sin los vencidos) y el historial de contenedores, no los conteos por estado ni el arbolado",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ReportsPreviousDto"
