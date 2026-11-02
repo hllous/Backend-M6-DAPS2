@@ -275,6 +275,12 @@ enum StreetClosureType {
   PARTIAL
 }
 
+enum StreetDirection {
+  FORWARD
+  REVERSE
+  BOTH
+}
+
 enum DelayType {
   START
   DURATION
@@ -1031,6 +1037,8 @@ model ClosureStreet {
   streetName String @map("street_name")
   fromCross  String @map("from_cross")
   toCross    String @map("to_cross")
+  // Sentido del tramo cortado; M7 lo exige en cada tramo de affectedSections.
+  direction  StreetDirection
 
   request StreetClosureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 

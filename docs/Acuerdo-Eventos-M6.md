@@ -137,7 +137,7 @@ detectedIn:       nuestro serviceId o inspectionId que originó la detección
 
 ```
 closureRequestId, sourceModule, sourceRef,
-reason, affectedSections[], requestedFrom, requestedTo, closureType?, requestedAt
+reason, affectedSections[] ({street, from, to, direction: FORWARD|REVERSE|BOTH}), requestedFrom, requestedTo, closureType? (M6 lo manda siempre), requestedAt
 
 sourceModule: M3 | M6 — nosotros, siempre M6
 sourceRef:    el serviceId o interventionId que origina el corte
