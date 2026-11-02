@@ -50,6 +50,9 @@ describe('OutboundRequestsService', () => {
     closureFrom: new Date('2026-10-05T07:00:00.000Z'),
     closureTo: new Date('2026-10-05T13:00:00.000Z'),
     closureType: StreetClosureType.PARTIAL,
+    approvedFrom: null,
+    approvedTo: null,
+    rejectionReason: null,
     status: StreetClosureRequestStatus.REQUESTED,
     closureId: null,
     createdAt: new Date('2026-09-20T09:00:00.000Z'),
@@ -420,14 +423,39 @@ describe('OutboundRequestsService', () => {
       });
     });
 
-    const closureAt = (status: StreetClosureRequestStatus) =>
-      prisma.streetClosureRequest.findUnique.mockResolvedValue(closureRow({ status }));
+    const closureAt = (status: StreetClosureRequestStatus, over: Record<string, unknown> = {}) =>
+      prisma.streetClosureRequest.findUnique.mockResolvedValue(closureRow({ status, ...over }));
 
     it('rechazar desde REQUESTED pasa a REJECTED', async () => {
       await service.rejectClosure(REQUEST_ID, 'Se superpone con otro corte', ACTOR);
 
       const [[args]] = prisma.streetClosureRequest.update.mock.calls;
       expect(args.data.status).toBe(StreetClosureRequestStatus.REJECTED);
+    });
+
+    it('rechazar guarda el motivo para devolverlo en la respuesta', async () => {
+      await service.rejectClosure(REQUEST_ID, 'Se superpone con otro corte', ACTOR);
+
+      const [[args]] = prisma.streetClosureRequest.update.mock.calls;
+      expect(args.data.rejectionReason).toBe('Se superpone con otro corte');
+    });
+
+    it('la respuesta expone la ventana autorizada y el motivo de rechazo (null si no hay)', async () => {
+      const approvedFrom = new Date('2026-10-05T08:00:00.000Z');
+      const approvedTo = new Date('2026-10-05T12:00:00.000Z');
+      closureAt(StreetClosureRequestStatus.APPROVED, { approvedFrom, approvedTo });
+      await expect(service.findClosureRequest(REQUEST_ID)).resolves.toMatchObject({
+        approvedFrom,
+        approvedTo,
+        rejectionReason: null,
+      });
+
+      closureAt(StreetClosureRequestStatus.REJECTED, { rejectionReason: 'Obra vecina' });
+      await expect(service.findClosureRequest(REQUEST_ID)).resolves.toMatchObject({
+        approvedFrom: null,
+        approvedTo: null,
+        rejectionReason: 'Obra vecina',
+      });
     });
 
     it('finalizar desde APPROVED pasa a ENDED', async () => {

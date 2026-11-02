@@ -327,7 +327,9 @@ export class OutboundRequestsService {
     reason: string,
     actor: AuditActor,
   ): Promise<StreetClosureRequestResponseDto> {
-    const row = await this.updateClosure(actor, 'REJECT', id, StreetClosureRequestStatus.REJECTED);
+    const row = await this.updateClosure(actor, 'REJECT', id, StreetClosureRequestStatus.REJECTED, {
+      rejectionReason: reason,
+    });
     this.logger.log(`Corte ${id}: rechazado por M7 — ${reason}`);
     return row;
   }
@@ -502,6 +504,9 @@ export class OutboundRequestsService {
       closureFrom: r.closureFrom,
       closureTo: r.closureTo,
       closureType: r.closureType,
+      approvedFrom: r.approvedFrom,
+      approvedTo: r.approvedTo,
+      rejectionReason: r.rejectionReason,
       status: r.status,
       closureId: r.closureId,
       createdAt: r.createdAt,

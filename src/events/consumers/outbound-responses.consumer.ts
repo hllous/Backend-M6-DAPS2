@@ -158,7 +158,10 @@ export class OutboundResponsesConsumer implements OnModuleInit {
           id: request.id,
           status: { in: sourcesOf(CLOSURE_TRANSITIONS, StreetClosureRequestStatus.REJECTED) },
         },
-        data: { status: StreetClosureRequestStatus.REJECTED },
+        data: {
+          status: StreetClosureRequestStatus.REJECTED,
+          rejectionReason: motivo ? String(motivo).slice(0, 500) : null,
+        },
       });
       if (rejected === 0) return false;
 
