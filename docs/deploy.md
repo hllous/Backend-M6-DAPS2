@@ -11,9 +11,9 @@
 |---|---|---|---|
 | **Backend** (NestJS) | Render (Web Service, free) | ✅ `/health` 200 y `/health/ready` 200 con `"database":"up"` el 08/10 12:09 UTC | `https://m6-backend-m64k.onrender.com` |
 | **PostgreSQL** | Supabase (Managed, free) | ✅ Available | `db.oscepollzibotvggabfv.supabase.co` (URI directa, puerto `5432`) |
-| **Frontend** (Next.js) | Vercel (free) | ✅ `/api/health` 200 el 04/10 | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` |
+| **Frontend** (Next.js) | Vercel (free) | ✅ `/api/health` 200 el 02/11 | `https://m6-ambiente-higiene.vercel.app` |
 
-El frontend publica su URL en el repo [`hllous/Frontend-M6-DAPS2`](https://github.com/hllous/Frontend-M6-DAPS2) (campo "website"). `https://m6-ambiente-frontend.vercel.app` también respondía el 04/10, pero la vigente es la de arriba.
+El frontend publica su URL en el repo [`hllous/Frontend-M6-DAPS2`](https://github.com/hllous/Frontend-M6-DAPS2) (campo "website"). La URL anterior, `frontend-m6-daps2-grupo4-modulo6.vercel.app`, responde `308` hacia la vigente (verificado el 02/11).
 
 El deploy está **enlazado a la rama `main`** de cada repo: el frontend (Vercel) siempre estuvo en `main` y el backend (Render) pasó de `develop` a `main` el 22/10. Lo que se mergea a `develop` **no** se despliega hasta el release `develop` → `test` → `main`. Al pushear a `main` se actualiza automáticamente — el backend vía GitHub Actions + Deploy Hook de Render, el frontend vía auto-deploy nativo de Vercel (~2-5 min).
 
@@ -23,8 +23,8 @@ El deploy está **enlazado a la rama `main`** de cada repo: el frontend (Vercel)
 
 | Recurso | URL |
 |---|---|
-| Frontend (landing) | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` |
-| Frontend health | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app/api/health` |
+| Frontend (landing) | `https://m6-ambiente-higiene.vercel.app` |
+| Frontend health | `https://m6-ambiente-higiene.vercel.app/api/health` |
 | Backend health | `https://m6-backend-m64k.onrender.com/health` |
 | Backend Swagger UI | `https://m6-backend-m64k.onrender.com/api/docs` |
 
@@ -38,7 +38,7 @@ curl https://m6-backend-m64k.onrender.com/health
 # → {"status":"ok","timestamp":"...","service":"m6-ambiente-backend"}
 
 # Frontend: debe devolver status ok
-curl https://frontend-m6-daps2-grupo4-modulo6.vercel.app/api/health
+curl https://m6-ambiente-higiene.vercel.app/api/health
 # → {"status":"ok","timestamp":"...","service":"m6-ambiente-frontend"}
 ```
 
@@ -96,6 +96,7 @@ No hay que hacer nada manual: el deploy sale con el release a `main`. Un push a 
 | `M6_BOOTSTRAP_ADMIN_USER_IDS` | Ids de M1 (el `sub`, numéricos) de los `M6_ADMIN` iniciales, separados por coma (ej. `1,42`). Cada uno necesita además `RESPONSABLE_AREA` en M1. Al arrancar se loguea solo cuántos hay, no los ids | No, pero **sin ella nadie puede asignar roles** (ver [ADR-008](decisiones/adr-008-roles-m6-adaptados-desde-m1.md)) |
 | `CORS_ORIGINS` | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
 | `BFF_SHARED_KEY` | Secreto compartido con el BFF del frontend (≥ 32 caracteres, ej. `openssl rand -base64 32`). El mismo valor va en Vercel y se manda en el header `X-M6-BFF-Key`; ver [portal](api/endpoints.md#citizen-portal--vista-pública) | No, pero **sin ella todos los vecinos del BFF comparten un solo límite de tasa** |
+| `CORS_ORIGINS` | `https://m6-ambiente-higiene.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
 | `NODE_ENV` | `production` | ✅ Sí |
 | `SANCTION_DEADLINE_DAYS` | `30` | No (default 30 días para cierre de expediente ambiental sin resolución M4) |
 | `R2_ACCOUNT_ID` | Account ID de Cloudflare R2 | Para subida de adjuntos (`/evidence`). Sin esta variable, `POST /evidence` responde 503 |

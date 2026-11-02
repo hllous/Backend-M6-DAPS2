@@ -643,10 +643,3 @@ No hay límite global: también alcanzaría a un operador municipal en su turno,
 **Lo que no sale nunca por acá**, aunque esté en la misma fila: la identidad del inspector, los hallazgos y el checklist, el contenido del acta, la identidad del denunciante, y —en los servicios— la cuadrilla, el vehículo, las notas y el motivo interno de una reprogramación. Hay un test que lo verifica campo por campo.
 
 **El expediente se resume a siete etapas, no a sus once estados.** `EnvironmentalReportStatus` es vocabulario de inspector: distingue cosas que le importan al supervisor, no al vecino. `VIOLATION_FOUND`, `NOTICE_ISSUED` y `SANCTIONED` son la misma etapa para el denunciante — el trámite sancionatorio sigue su curso.
----
-
-## Lo que todavía no existe
-
-| Qué falta                                         | Detalle                                                                                                                                                                                                                                                               |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Autorización por rol en el resto de los endpoints | Solo `role-assignments` exige rol. Cualquier empleado autenticado puede llamar los demás (salvo los `@Public()`). Base hecha en el PR 1 de #161; el corte (`RolesGuard` global, `@Roles` en las escrituras) es el PR 2. Estado en [bloqueantes.md](../bloqueantes.md) |
