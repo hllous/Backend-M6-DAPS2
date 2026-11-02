@@ -39,7 +39,7 @@ describe('Auditoría de dominio (e2e)', () => {
 
     const res = await api.get(`/audit?entityType=CONTAINER&entityId=${contenedor.id}`).expect(200);
 
-    // Del más nuevo al más viejo: el desborde que reportó la cuadrilla y el alta de Operaciones.
+    // Del más nuevo al más viejo: el desborde que reportó la cuadrilla y el alta (Api.porRol prefiere admin donde la ruta lo admite).
     expect(res.body.data).toMatchObject([
       {
         action: 'REPORT_OVERFLOW',
@@ -48,7 +48,7 @@ describe('Auditoría de dominio (e2e)', () => {
         actorUserId: ACTORES.cuadrilla.userId,
         actorRoles: ['M6_CAMPO_CUADRILLA'],
       },
-      { action: 'CREATE', toStatus: 'ACTIVE', actorUserId: ACTORES.operaciones.userId },
+      { action: 'CREATE', toStatus: 'ACTIVE', actorUserId: ACTORES.admin.userId },
     ]);
   });
 
