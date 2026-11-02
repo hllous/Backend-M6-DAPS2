@@ -72,6 +72,14 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Enviado el 02/11 a las 19:35 (M1)
+
+> Redactado y enviado el 02/11 a las 19:35: **reduce el pedido de las 19:30** a 12 cuentas y consulta si hay una forma existente de crear empleados. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — pedido reducido a 12 usuarios de empleado — *enviado el 02/11 a las 19:35*
+
+> Hola M1, achicamos el pedido de usuarios de empleado: con **12 cuentas** nos alcanza para la demo. Las cuadrillas en lote ya no hace falta pedirlas: sus integrantes no inician sesión, y los identificamos por `sub` en nuestra base. Las 12: 2 `RESPONSABLE_AREA` (la que ya tenemos, `user_id` 1, y una más), 5 `ADMINISTRATIVO` de oficina, 2 `AUDITOR`, 2 `ADMINISTRATIVO` de campo (líder e integrante) y 1 `ADMINISTRATIVO` de inspección, todos con `sub_type` `EMPLEADO`. Si pueden, con los `user_id` 1 a 9, 101, 102 y 601; si no, pásennos los reales y adaptamos nuestro seed. Una pregunta: ¿ya tienen una forma de crear empleados (panel o endpoint de administración)? Si la hay y nos dan acceso, las creamos nosotros; si no, no hace falta que construyan nada. Contraseñas por el grupo de POs. — M6 Ambiente
+
 ## Enviado el 02/11 a las 19:30 (M1)
 
 > Redactado y enviado el 02/11 a las 19:30 para pedir los usuarios de empleado del seed ([#488](https://github.com/hllous/Backend-M6-DAPS2/issues/488)). Las contraseñas se piden por privado, no se escriben en el repo. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
