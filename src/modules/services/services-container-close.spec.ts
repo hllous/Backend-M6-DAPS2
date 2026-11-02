@@ -102,6 +102,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
       status: ContainerStatus.ACTIVE,
       damageType: null,
       severity: null,
+      damageNotes: null,
       requiresPublicWorks: null,
     });
   });

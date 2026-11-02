@@ -40,6 +40,7 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 | POST | `/containers/:id/complete-repair` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | POST | `/containers/:id/confirm-relocation` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | POST | `/containers/:id/empty` | `M6_CAMPO_CUADRILLA` |
+| GET | `/containers/:id/history` | cualquier rol de M6 |
 | POST | `/containers/:id/relocate` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | POST | `/containers/:id/remove` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | POST | `/containers/:id/report-damage` | `M6_CAMPO_CUADRILLA` |
@@ -360,10 +361,11 @@ Los nombres (`leaderName`, `organizationName`, `displayName`) son una **copia** 
 | POST   | `/containers`                        | Registrar contenedor. Nace en `ACTIVE`                                                    |
 | GET    | `/containers`                        | Listar. Filtros: `status`, `containerType`, `zoneId`, `search`                            |
 | GET    | `/containers/:id`                    | Detalle                                                                                   |
+| GET    | `/containers/:id/history`            | Historial de estados, paginado, del más reciente al más antiguo. 404 si no existe          |
 | PATCH  | `/containers/:id`                    | Actualizar zona, capacidad y ubicación                                                    |
 | POST   | `/containers/:id/report-overflow`    | `ACTIVE → OVERFLOWED`                                                                     |
 | POST   | `/containers/:id/empty`              | `OVERFLOWED → ACTIVE`                                                                     |
-| POST   | `/containers/:id/report-damage`      | `ACTIVE → DAMAGED`. Registra tipo de daño, severidad y `requiresPublicWorks`              |
+| POST   | `/containers/:id/report-damage`      | `ACTIVE → DAMAGED`. Registra tipo de daño, severidad, `requiresPublicWorks` y `observations` opcional (interna, no viaja a M3) |
 | POST   | `/containers/:id/start-repair`       | `DAMAGED → UNDER_REPAIR`                                                                  |
 | POST   | `/containers/:id/complete-repair`    | `UNDER_REPAIR → ACTIVE`                                                                   |
 | POST   | `/containers/:id/relocate`           | `ACTIVE → RELOCATING`                                                                     |

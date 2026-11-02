@@ -699,6 +699,7 @@ model Container {
   damageType          DamageType?     @map("damage_type") // solo DAMAGED
   severity            Severity? // solo DAMAGED
   requiresPublicWorks Boolean?        @map("requires_public_works") // solo DAMAGED
+  damageNotes         String?         @map("damage_notes") // solo DAMAGED; dato interno, no viaja en containerDamaged
   createdAt           DateTime        @default(now()) @map("created_at")
   updatedAt           DateTime        @updatedAt @map("updated_at")
 

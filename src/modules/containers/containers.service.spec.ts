@@ -30,6 +30,7 @@ describe('ContainersService', () => {
       damageType: null,
       severity: null,
       requiresPublicWorks: null,
+      damageNotes: null,
       createdAt: new Date('2026-08-01T10:00:00.000Z'),
       updatedAt: new Date('2026-08-02T10:00:00.000Z'),
       ...over,
@@ -44,7 +45,11 @@ describe('ContainersService', () => {
         count: jest.fn().mockResolvedValue(1),
         update: jest.fn().mockImplementation(({ data }: any) => Promise.resolve(contenedor(data))),
       },
-      containerStatusHistory: { create: jest.fn().mockResolvedValue(undefined) },
+      containerStatusHistory: {
+        create: jest.fn().mockResolvedValue(undefined),
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
       zoneNeighborhood: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
@@ -114,16 +119,18 @@ describe('ContainersService', () => {
         damageType: null,
         severity: null,
         requiresPublicWorks: null,
+        damageNotes: null,
       });
     });
 
-    it('completeRepair también limpia los datos del daño', async () => {
+    it('completeRepair también limpia los datos del daño y las observaciones', async () => {
       desde(C.UNDER_REPAIR);
       await service.completeRepair(ID);
 
       expect(prisma.container.update.mock.calls[0][0].data).toMatchObject({
         status: C.ACTIVE,
         damageType: null,
+        damageNotes: null,
       });
     });
 
@@ -415,6 +422,28 @@ describe('ContainersService', () => {
       expect(tx).toBe(prisma);
     });
 
+    it('guarda las observaciones y las devuelve, sin sumarlas al evento', async () => {
+      desde(C.ACTIVE);
+      const dto = await service.reportDamage(ID, {
+        damageType: 'LID_BROKEN',
+        severity: 'LOW',
+        requiresPublicWorks: true,
+        observations: 'Bisagra partida',
+      } as any);
+
+      expect(prisma.container.update.mock.calls[0][0].data.damageNotes).toBe('Bisagra partida');
+      expect(dto.damageNotes).toBe('Bisagra partida');
+      const [, entrada] = outbox.enqueue.mock.calls[0];
+      expect(JSON.stringify(entrada.payload)).not.toContain('Bisagra partida');
+    });
+
+    it('sin observaciones guarda null', async () => {
+      desde(C.ACTIVE);
+      await service.reportDamage(ID, { damageType: 'VANDALIZED', severity: 'LOW' } as any);
+
+      expect(prisma.container.update.mock.calls[0][0].data.damageNotes).toBeNull();
+    });
+
     it('las transiciones sin evento no tocan el outbox', async () => {
       desde(C.ACTIVE);
       await service.reportOverflow(ID);
@@ -512,6 +541,64 @@ describe('ContainersService', () => {
       prisma.container.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne(ID)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('desborde vs daño', () => {
+    it('un contenedor desbordado queda OVERFLOWED, nunca DAMAGED', async () => {
+      desde(C.ACTIVE);
+      const dto = await service.reportOverflow(ID);
+
+      expect(dto.status).toBe(C.OVERFLOWED);
+      expect(dto.damageType).toBeNull();
+      expect(prisma.container.update.mock.calls[0][0].data.status).not.toBe(C.DAMAGED);
+      // Desbordado no se puede pasar a dañado sin vaciarlo antes.
+      desde(C.OVERFLOWED);
+      await expect(
+        service.reportDamage(ID, { damageType: 'LID_BROKEN', severity: 'LOW' } as any),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(outbox.enqueue).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findHistory', () => {
+    it('lista paginado y del más reciente al más antiguo', async () => {
+      const fila = {
+        id: 'h1',
+        containerId: ID,
+        fromStatus: C.ACTIVE,
+        toStatus: C.OVERFLOWED,
+        changedAt: new Date('2026-09-01T10:00:00.000Z'),
+      };
+      prisma.containerStatusHistory.findMany.mockResolvedValue([fila]);
+      prisma.containerStatusHistory.count.mockResolvedValue(21);
+
+      const res = await service.findHistory(ID, {
+        page: 2,
+        pageSize: 20,
+        skip: 20,
+        take: 20,
+      } as any);
+
+      expect(prisma.containerStatusHistory.findMany).toHaveBeenCalledWith({
+        where: { containerId: ID },
+        skip: 20,
+        take: 20,
+        orderBy: [{ changedAt: 'desc' }, { id: 'desc' }],
+      });
+      expect(res.data).toEqual([
+        { id: 'h1', fromStatus: C.ACTIVE, toStatus: C.OVERFLOWED, changedAt: fila.changedAt },
+      ]);
+      expect(res.meta.total).toBe(21);
+    });
+
+    it('da 404 si el contenedor no existe', async () => {
+      prisma.container.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.findHistory(ID, { page: 1, pageSize: 20, skip: 0, take: 20 } as any),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.containerStatusHistory.findMany).not.toHaveBeenCalled();
     });
   });
 
