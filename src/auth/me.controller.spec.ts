@@ -13,6 +13,7 @@ describe('MeController', () => {
     userId: id,
     subType: 'EMPLEADO',
     m1Role: 'ADMINISTRATIVO',
+    actorId: null,
     roles,
   });
 
@@ -21,7 +22,10 @@ describe('MeController', () => {
   it('Oficina: identidad y roles, sin cuadrillas ni inspector', async () => {
     findMany.mockResolvedValue([]);
     const u = user('3', [M6Role.M6_OFICINA_OPERACIONES]);
-    expect(await controller.me(u)).toEqual({ ...u, crews: [], isAssignedInspector: false });
+    // actorId es para M2 (updatedBy.id), no se expone en /me.
+    const res = await controller.me({ ...u, actorId: '11111111-1111-4111-8111-111111111111' });
+    expect(res).not.toHaveProperty('actorId');
+    expect(res).toEqual({ ...u, actorId: undefined, crews: [], isAssignedInspector: false });
   });
 
   it('Campo: responsable e integrante según el id, solo con id, nombre y rol', async () => {

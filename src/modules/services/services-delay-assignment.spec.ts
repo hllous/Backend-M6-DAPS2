@@ -569,6 +569,26 @@ describe('ServicesService — demora y doble reserva', () => {
       expect(eventos[0].payload.publicMessage).not.toContain('Corte de calle');
     });
 
+    // #485: updatedBy.id es el actorId UUID de M1; el sub (ACTOR_ID) no viaja.
+    it('updatedBy.id sale del actorId de M1, y es null si no vino', async () => {
+      const uuid = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
+      prisma.service.findUnique.mockResolvedValue(
+        servicio({ ticketId: 'TCK-1', status: ServiceStatus.IN_PROGRESS }),
+      );
+
+      await service.addDelayNotice(
+        SERVICE_ID,
+        aviso({ delayType: DelayType.DURATION }),
+        ACTOR_ID,
+        uuid,
+      );
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR_ID);
+
+      const [[, con], [, sin]] = outbox.enqueueMany.mock.calls;
+      expect(con[0].payload).toMatchObject({ updatedBy: { id: uuid } });
+      expect(sin[0].payload).toMatchObject({ updatedBy: { id: null } });
+    });
+
     /**
      * #146: antes de arrancar, el ticket sigue `ROUTED` en M2 y §8.2 solo
      * acepta `PROGRESS` desde `IN_PROGRESS`. El aviso se registra igual.

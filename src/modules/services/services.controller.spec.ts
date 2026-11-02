@@ -120,7 +120,7 @@ describe('ServicesController', () => {
   it('addDelayNotice delega id, dto y userId opcional', async () => {
     const dto = { delayType: 'START' } as CreateDelayNoticeDto;
     await controller.addDelayNotice(ID, dto, USER);
-    expect(service.addDelayNotice).toHaveBeenCalledWith(ID, dto, USER.userId);
+    expect(service.addDelayNotice).toHaveBeenCalledWith(ID, dto, USER.userId, USER.actorId);
   });
 
   it('findDelayNotices delega el id', async () => {

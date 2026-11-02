@@ -5,7 +5,7 @@
 // Persona de la demo (docs/seed.md): en vez de ROL, el nombre de la persona y sin SUB:
 //   node scripts/generate-demo-jwt.mjs <JWT_SECRET> lider 2026-12-16   (HASTA pasa a ser el 4.º argumento)
 // Personas: admin, operaciones, ambiental, auditoria, lider, integrante, inspector, sinrol, ciudadano.
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 
 const secret = process.argv[2] ?? process.env.JWT_SECRET;
 if (!secret) {
@@ -25,6 +25,11 @@ const PERSONAS = {
 };
 const persona = Object.hasOwn(PERSONAS, process.argv[3]) ? PERSONAS[process.argv[3]] : undefined;
 const rol = persona?.[0] ?? process.argv[3] ?? "ADMINISTRATIVO";
+// actorId determinístico por SUB (UUID v5-like), para que la demo mande updatedBy.id.
+const actorIdDe = (s) => {
+  const h = createHash("sha1").update(`m6-demo-actor:${s}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+};
 const sub = persona?.[1] ?? process.argv[4] ?? "1";
 if (!/^\d{1,19}$/.test(sub)) {
   console.error("El SUB tiene que ser un id numérico de M1 (solo dígitos)");
@@ -47,6 +52,7 @@ const header = { alg: "HS256", typ: "JWT" };
 const payload = {
   iss: process.env.JWT_ISSUER ?? "modulo1-ciudadanos",
   sub,
+  actorId: actorIdDe(sub),
   sub_type: rol === "CIUDADANO" ? "CIUDADANO" : "EMPLEADO",
   rol,
   typ: "access",

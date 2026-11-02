@@ -15,9 +15,13 @@ export interface JwtPayload {
   sub_type?: string;
   /** Un solo rol por usuario (no `roles[]`). */
   rol?: string;
+  /** UUID de la persona en el vocabulario de M2 (M1, 02-11). Opcional. */
+  actorId?: string;
   typ?: string;
   exp?: number;
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const SUB_TYPES = ['CIUDADANO', 'EMPLEADO'] as const;
 export type SubType = (typeof SUB_TYPES)[number];
@@ -28,6 +32,8 @@ export interface AuthenticatedUser {
   subType: SubType;
   /** El rol único de M1, tal cual vino en el token. */
   m1Role: string;
+  /** Para `updatedBy.id` hacia M2; `null` si el token no lo trae o no es UUID. No sirve para pertenencia ni roles (eso es `userId`). */
+  actorId: string | null;
   /** Roles de M6 efectivos (ADR-008), no el rol de M1. */
   roles: M6Role[];
 }
@@ -68,6 +74,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       userId,
       subType,
       m1Role: payload.rol,
+      actorId:
+        typeof payload.actorId === 'string' && UUID.test(payload.actorId) ? payload.actorId : null,
       roles: await this.effectiveRoles(userId, payload.rol),
     };
   }

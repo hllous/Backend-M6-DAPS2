@@ -1395,6 +1395,70 @@ describe('ServicesService', () => {
       expect(prisma.ticketM2State.findUnique).not.toHaveBeenCalled();
     });
 
+    // #485: updatedBy.id es el actorId UUID de M1; el sub (userId, numérico) no viaja nunca.
+    describe('updatedBy.id del aviso a M2', () => {
+      const ACTOR_UUID = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
+      const conUuid = { userId: USER_ID, actorId: ACTOR_UUID, roles: [] };
+      const sinUuid = { userId: USER_ID, roles: [] };
+      const ticketServicio = (over: Record<string, unknown> = {}) =>
+        serviceRow({
+          ticketId: TICKET_ID,
+          crewId: CREW_ID,
+          origin: ServiceOrigin.TICKET,
+          scheduledDate: new Date('2026-10-21T00:00:00.000Z'),
+          ...over,
+        });
+      const accion = (
+        nombre: string,
+        actor: { userId: string; actorId?: string; roles: never[] },
+      ) => {
+        switch (nombre) {
+          case 'create':
+            return service.create(ticketDto, actor);
+          case 'start':
+            prisma.service.findUnique.mockResolvedValue(ticketServicio());
+            return service.start(SERVICE_ID, actor);
+          case 'cancel':
+            prisma.service.findUnique.mockResolvedValue(
+              ticketServicio({ status: ServiceStatus.SCHEDULED }),
+            );
+            return service.cancel(SERVICE_ID, 'Lluvia', actor);
+          default:
+            prisma.service.findUnique.mockResolvedValue(
+              ticketServicio({ status: ServiceStatus.RESCHEDULED }),
+            );
+            return service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' }, actor);
+        }
+      };
+
+      it.each(['create', 'start', 'cancel', 'confirmReschedule'])(
+        '%s manda el actorId como updatedBy.id, no el sub',
+        async (nombre) => {
+          conTicketEn('ROUTED');
+
+          await accion(nombre, conUuid);
+
+          expect(hacia()).toHaveLength(1);
+          expect(hacia()[0]).toMatchObject({
+            updatedBy: { type: 'EXTERNAL_USER', id: ACTOR_UUID },
+          });
+          expect(JSON.stringify(hacia())).not.toContain(USER_ID);
+        },
+      );
+
+      it.each(['create', 'start', 'cancel', 'confirmReschedule'])(
+        '%s sin actorId en el token manda updatedBy.id null',
+        async (nombre) => {
+          conTicketEn('ROUTED');
+
+          await accion(nombre, sinUuid);
+
+          expect(hacia()).toHaveLength(1);
+          expect(hacia()[0]).toMatchObject({ updatedBy: { id: null } });
+        },
+      );
+    });
+
     describe('reprogramar', () => {
       const reprogramado = (over: Record<string, unknown> = {}) =>
         serviceRow({
