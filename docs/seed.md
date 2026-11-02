@@ -159,7 +159,7 @@ DELETE FROM user_role_assignment WHERE user_id IN ('101','102','103','104','111'
 ```
 
 **Riesgos aceptados y limitaciones de las cuadrillas (#455):**
-- **Rango reservado:** los ids `10000`-`14953` son de la demo y no deben cargarse en una base que tenga empleados reales de M1: el seed les asigna roles de Campo.
+- **Rango de Campo:** los ids `10000`-`14953` son los que M1 nos asigna (o va a asignar) a las personas de Campo; el seed les da roles de Campo a esos ids. Si M1 emite en ese rango a alguien que no es de Campo, hay que quitarle el rol de Campo o reubicar el rango. Mientras M1 no los emita, son personas ficticias.
 - **Inspectores de más:** unas 150 personas (las de las 48 cuadrillas generadas de inspección y las dos de `INSP`) tienen `M6_CAMPO_INSPECTOR` y pueden cerrar inspecciones sin asignar. Es un efecto de la demo.
 - **Las generadas no se actualizan en una segunda corrida** (`createMany` con `skipDuplicates`, identificadas por nombre): si cambia `CREWS` o `RUBROS_GENERADOS` hay que resembrar vaciando. Las 16 operativas sí se corrigen (upsert).
 
