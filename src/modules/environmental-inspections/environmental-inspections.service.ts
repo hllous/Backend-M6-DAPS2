@@ -22,6 +22,7 @@ import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
 import { paraLog } from '../../events/log-safe';
 import { leerEstado, scheduleUpdate } from '../../events/ticket-state';
+import { AuditActor, AuditService } from '../../common/audit/audit.service';
 import { EnvironmentalReportsService } from '../environmental-reports/environmental-reports.service';
 import { allowedActionsFor } from './allowed-follow-ups';
 import {
@@ -52,6 +53,7 @@ export class EnvironmentalInspectionsService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly reports: EnvironmentalReportsService,
+    private readonly audit: AuditService,
     private readonly config: ConfigService,
   ) {}
 
@@ -61,7 +63,11 @@ export class EnvironmentalInspectionsService {
    * Ese paso **no se publica**: `environmentalInspectionScheduled` fue uno de
    * los eventos descartados por no tener consumidor.
    */
-  async create(reportId: string, dto: CreateInspectionDto): Promise<InspectionResponseDto> {
+  async create(
+    reportId: string,
+    dto: CreateInspectionDto,
+    actor: AuditActor,
+  ): Promise<InspectionResponseDto> {
     const report = await this.reports.getReport(reportId);
     this.reports.assertTransition(report.status, S.INSPECTION_SCHEDULED);
 
@@ -80,7 +86,13 @@ export class EnvironmentalInspectionsService {
         },
         include: INSPECTION_INCLUDE,
       });
-      await this.reports.applyTransition(tx, report, S.INSPECTION_SCHEDULED);
+      await this.reports.applyTransition(tx, report, S.INSPECTION_SCHEDULED, actor);
+      await this.audit.record(tx, {
+        entityType: 'ENVIRONMENTAL_INSPECTION',
+        entityId: row.id,
+        action: 'SCHEDULE',
+        actor,
+      });
       return row;
     });
 
@@ -101,7 +113,7 @@ export class EnvironmentalInspectionsService {
   async complete(
     id: string,
     dto: CompleteInspectionDto,
-    userId: string,
+    actor: AuditActor,
   ): Promise<InspectionResponseDto> {
     // Margen de 5 minutos por desfase de reloj entre el dispositivo del inspector y el servidor.
     if (new Date(dto.inspectedAt).getTime() > Date.now() + 5 * 60_000) {
@@ -116,9 +128,9 @@ export class EnvironmentalInspectionsService {
     }
     const inspection = await this.getInspection(id);
     // Pertenencia (#365): antes de revelar si ya está cerrada.
-    if (!isInspectionAssignee(inspection.inspectorId, userId)) {
+    if (!isInspectionAssignee(inspection.inspectorId, actor.userId)) {
       this.logger.warn(
-        `Denegado NOT_ASSIGNED: usuario ${paraLog(userId)} sobre la inspección ${id}`,
+        `Denegado NOT_ASSIGNED: usuario ${paraLog(actor.userId)} sobre la inspección ${id}`,
       );
       throw notAssignedException();
     }
@@ -137,7 +149,7 @@ export class EnvironmentalInspectionsService {
         data: {
           inspectedAt: new Date(dto.inspectedAt),
           // Siempre el del token; el inspectorId asignado (si hay) no se pisa.
-          completedByUserId: userId,
+          completedByUserId: actor.userId,
           outcome: dto.outcome,
           nextStep: dto.nextStep ?? null,
           findings: dto.findings ?? null,
@@ -163,14 +175,22 @@ export class EnvironmentalInspectionsService {
         include: INSPECTION_INCLUDE,
       });
 
-      await this.reports.applyTransition(tx, report, S.INSPECTED);
+      await this.reports.applyTransition(tx, report, S.INSPECTED, actor);
 
       // De INSPECTED sale enseguida al resultado, salvo que sea inconcluyente.
       if (dto.outcome !== InspectionOutcome.INCONCLUSIVE) {
         const target =
           dto.outcome === InspectionOutcome.VIOLATION_FOUND ? S.VIOLATION_FOUND : S.NO_VIOLATION;
-        await this.reports.applyTransition(tx, { ...report, status: S.INSPECTED }, target);
+        await this.reports.applyTransition(tx, { ...report, status: S.INSPECTED }, target, actor);
       }
+      // La inspección no tiene máquina de estados: el resultado es el "estado" que deja.
+      await this.audit.record(tx, {
+        entityType: 'ENVIRONMENTAL_INSPECTION',
+        entityId: id,
+        action: 'COMPLETE',
+        toStatus: dto.outcome,
+        actor,
+      });
       return row;
     });
 
@@ -189,7 +209,7 @@ export class EnvironmentalInspectionsService {
   async issueNotice(
     inspectionId: string,
     dto: IssueViolationNoticeDto,
-    actorId: string,
+    actor: AuditActor,
   ): Promise<ViolationNoticeResponseDto> {
     const inspection = await this.getInspection(inspectionId);
 
@@ -235,7 +255,14 @@ export class EnvironmentalInspectionsService {
         },
       });
 
-      await this.reports.applyTransition(tx, report, S.NOTICE_ISSUED, { deadlineAt });
+      await this.reports.applyTransition(tx, report, S.NOTICE_ISSUED, actor, { deadlineAt });
+      await this.audit.record(tx, {
+        entityType: 'VIOLATION_NOTICE',
+        entityId: row.id,
+        action: 'ISSUE',
+        note: dto.establishmentId ? 'Derivada a M4' : 'Sin establecimiento: no se deriva',
+        actor,
+      });
 
       if (dto.establishmentId) {
         // Las fotos que el inspector cargó durante la inspección. Se leen
@@ -274,7 +301,10 @@ export class EnvironmentalInspectionsService {
           'Se constató una infracción y se emitió el acta correspondiente.',
         );
         if (update) {
-          await this.outbox.enqueueMany(tx, this.reports.ticketEvents(report, actorId, update));
+          await this.outbox.enqueueMany(
+            tx,
+            this.reports.ticketEvents(report, actor.userId, update),
+          );
         } else {
           this.logger.warn(
             `Acta ${noticeNumber}: el ticket ${paraLog(report.ticketId)} está en ${paraLog(String(estado))}, no se informa a M2`,

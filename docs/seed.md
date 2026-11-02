@@ -139,11 +139,11 @@ Para **refrescar las fechas** de una base que ya tiene servicios hay que vaciarl
 4. `npm run prisma:seed` con `DATABASE_URL` apuntando a Supabase: **16 min 20 s** con 788 servicios (primera vez) y **16 min 23 s** con 800 (segunda, con el inventario de IDECABA). El seed hace su propio `syncZones`, así que no hace falta correr antes `zones:sync-from-core`.
 5. Verificado con SQL y contra la API desplegada tras la segunda vez: 15 comunas, 48 zonas (ninguna `Z-…`, todas con comuna y barrio UUID), 800 servicios, 1412 `service_zone`, 1366 espacios verdes, 500 contenedores (356 `HOUSEHOLD`, 139 `RECYCLABLE`, 5 de otros tipos; 9 a 13 por barrio, sin códigos repetidos), 28 puntos verdes, 442 árboles, 72 roles, 0 eventos `PENDING`.
 
-Para repetirlo, el vaciado es este bloque (no hay script):
+Para repetirlo, el vaciado es este bloque (no hay script). Desde #460 hay otra tabla de solo agregado, `domain_audit_log`, que también hay que dejar afuera (su trigger bloquea el vaciado):
 ```sql
 DO $$ DECLARE r record; BEGIN
   FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
-           AND tablename NOT IN ('_prisma_migrations', 'role_assignment_audit') LOOP
+           AND tablename NOT IN ('_prisma_migrations', 'role_assignment_audit', 'domain_audit_log') LOOP
     EXECUTE format('TRUNCATE TABLE public.%I RESTART IDENTITY CASCADE', r.tablename);
   END LOOP;
 END $$;

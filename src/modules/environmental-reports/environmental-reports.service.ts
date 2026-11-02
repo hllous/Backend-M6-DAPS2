@@ -14,6 +14,7 @@ import {
   ServiceStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditActor, AuditService } from '../../common/audit/audit.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
@@ -104,32 +105,43 @@ export class EnvironmentalReportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly audit: AuditService,
   ) {}
 
   async create(
     dto: CreateEnvironmentalReportDto,
-    roles: readonly M6Role[],
+    actor: AuditActor,
   ): Promise<EnvironmentalReportResponseDto> {
     // El alta con reclamo de M2 es de Oficina Ambiental. Quien solo tiene Campo
     // (el inspector) abre expedientes de oficio: sin ticketId, que ataría el
     // expediente a un reclamo ajeno y haría salir eventos hacia M2.
-    if (dto.ticketId && !roles.some((r) => CON_RECLAMO.includes(r))) {
+    if (dto.ticketId && !actor.roles.some((r) => CON_RECLAMO.includes(r))) {
       throw new BadRequestException(
         'El alta con reclamo (ticketId) la hace Oficina Ambiental. Un inspector abre expedientes de oficio, sin ticketId',
       );
     }
-    const report = await this.prisma.environmentalReport.create({
-      data: {
-        reportType: dto.reportType,
-        address: dto.address ?? null,
-        description: dto.description || null,
-        lat: dto.lat ?? null,
-        lng: dto.lng ?? null,
-        ticketId: dto.ticketId ?? null,
-        priority: dto.priority ?? null,
-        status: S.RECEIVED,
-      },
-      include: WITH_ASSIGNED_CREW,
+    const report = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.environmentalReport.create({
+        data: {
+          reportType: dto.reportType,
+          address: dto.address ?? null,
+          description: dto.description || null,
+          lat: dto.lat ?? null,
+          lng: dto.lng ?? null,
+          ticketId: dto.ticketId ?? null,
+          priority: dto.priority ?? null,
+          status: S.RECEIVED,
+        },
+        include: WITH_ASSIGNED_CREW,
+      });
+      await this.audit.record(tx, {
+        entityType: 'ENVIRONMENTAL_REPORT',
+        entityId: created.id,
+        action: 'CREATE',
+        toStatus: S.RECEIVED,
+        actor,
+      });
+      return created;
     });
 
     this.logger.log(
@@ -207,7 +219,7 @@ export class EnvironmentalReportsService {
   // ─── Acciones ─────────────────────────────────────
 
   /** RECEIVED → UNDER_REVIEW */
-  async startReview(id: string, actorId: string): Promise<EnvironmentalReportResponseDto> {
+  async startReview(id: string, actor: AuditActor): Promise<EnvironmentalReportResponseDto> {
     const report = await this.getReport(id);
     // Si agendar un servicio ya arrancó el ticket, repetir STARTED no es válido
     // para M2: el mismo aviso viaja como PROGRESS (#303). Desde un estado que no
@@ -215,11 +227,13 @@ export class EnvironmentalReportsService {
     const estadoTicket = report.ticketId ? await leerEstado(this.prisma, report.ticketId) : null;
     const updateType = startUpdate(estadoTicket);
     return this.transition(
+      actor,
+      'START_REVIEW',
       report,
       S.UNDER_REVIEW,
       {},
       updateType
-        ? this.ticketEvents(report, actorId, {
+        ? this.ticketEvents(report, actor.userId, {
             updateType,
             publicMessage: 'Su denuncia ambiental está en análisis.',
           })
@@ -236,11 +250,11 @@ export class EnvironmentalReportsService {
   async forward(
     id: string,
     reason: string,
-    actorId: string,
+    actor: AuditActor,
   ): Promise<EnvironmentalReportResponseDto> {
     const report = this.assertNoPendingRequest(await this.getReport(id));
-    return this.transition(report, S.FORWARDED, {}, [
-      ...this.ticketEvents(report, actorId, {
+    return this.transition(actor, 'FORWARD', report, S.FORWARDED, {}, [
+      ...this.ticketEvents(report, actor.userId, {
         updateType: 'RETURNED',
         internalMessage: reason,
         details: { returnInfo: { reasonCode: 'REQUEST_TYPE_MISMATCH' } },
@@ -252,11 +266,11 @@ export class EnvironmentalReportsService {
   async dismiss(
     id: string,
     reason: string,
-    actorId: string,
+    actor: AuditActor,
   ): Promise<EnvironmentalReportResponseDto> {
     const report = this.assertNoPendingRequest(await this.getReport(id));
-    return this.transition(report, S.DISMISSED, {}, [
-      ...this.ticketEvents(report, actorId, {
+    return this.transition(actor, 'DISMISS', report, S.DISMISSED, {}, [
+      ...this.ticketEvents(report, actor.userId, {
         updateType: 'REJECTED',
         internalMessage: reason,
         details: { cancellation: { reasonCode: 'DOES_NOT_APPLY' } },
@@ -272,16 +286,18 @@ export class EnvironmentalReportsService {
    * `CANCELLED`, y §8.2 solo acepta `RESOLVED` desde `ROUTED` o `IN_PROGRESS`.
    * Además le diría "fue cerrada" al vecino después de "no corresponde" (#146).
    */
-  async close(id: string, actorId: string): Promise<EnvironmentalReportResponseDto> {
+  async close(id: string, actor: AuditActor): Promise<EnvironmentalReportResponseDto> {
     const report = this.assertNoPendingRequest(await this.getReport(id));
     const yaInformado = report.status === S.FORWARDED || report.status === S.DISMISSED;
     return this.transition(
+      actor,
+      'CLOSE',
       report,
       S.CLOSED,
       {},
       yaInformado
         ? []
-        : this.ticketEvents(report, actorId, {
+        : this.ticketEvents(report, actor.userId, {
             updateType: 'RESOLVED',
             publicMessage: 'Su denuncia ambiental fue cerrada.',
             details: { resolution: { type: 'ACTION_COMPLETED' } },
@@ -301,7 +317,7 @@ export class EnvironmentalReportsService {
   async requestInformation(
     id: string,
     dto: RequestInformationDto,
-    actorId: string,
+    actor: AuditActor,
   ): Promise<EnvironmentalReportResponseDto> {
     const report = await this.getReport(id);
     // Error de la entrada: va después del 404 pero antes de los 409 de estado.
@@ -350,7 +366,7 @@ export class EnvironmentalReportsService {
       }
       await this.outbox.enqueueMany(
         tx,
-        this.ticketEvents(report, actorId, {
+        this.ticketEvents(report, actor.userId, {
           updateType: 'INFORMATION_REQUIRED',
           publicMessage: dto.message,
           // M2 exige null o algún carácter no blanco: una nota en blanco no viaja.
@@ -363,6 +379,15 @@ export class EnvironmentalReportsService {
           },
         }),
       );
+      // El estado no cambia: se audita que se pidió, sin el mensaje (es para el vecino).
+      await this.audit.record(tx, {
+        entityType: 'ENVIRONMENTAL_REPORT',
+        entityId: id,
+        action: 'REQUEST_INFORMATION',
+        fromStatus: S.UNDER_REVIEW,
+        toStatus: S.UNDER_REVIEW,
+        actor,
+      });
       return tx.environmentalReport.findUniqueOrThrow({
         where: { id },
         include: WITH_ASSIGNED_CREW,
@@ -408,6 +433,7 @@ export class EnvironmentalReportsService {
     tx: Prisma.TransactionClient,
     report: EnvironmentalReport,
     target: S,
+    actor: AuditActor,
     data: Prisma.EnvironmentalReportUpdateInput = {},
   ): Promise<void> {
     this.assertTransition(report.status, target);
@@ -424,6 +450,15 @@ export class EnvironmentalReportsService {
           : {}),
         ...data,
       },
+    });
+    // Lo disparan la inspección y el acta: la acción es el cambio de estado mismo.
+    await this.audit.record(tx, {
+      entityType: 'ENVIRONMENTAL_REPORT',
+      entityId: report.id,
+      action: 'STATUS_CHANGE',
+      fromStatus: report.status,
+      toStatus: target,
+      actor,
     });
     this.logger.log(`Expediente ${report.id}: ${report.status} → ${target}`);
   }
@@ -450,6 +485,8 @@ export class EnvironmentalReportsService {
   // ─── Helpers ──────────────────────────────────────
 
   private async transition(
+    actor: AuditActor,
+    action: string,
     report: EnvironmentalReport,
     target: S,
     data: Prisma.EnvironmentalReportUpdateInput = {},
@@ -472,6 +509,14 @@ export class EnvironmentalReportsService {
           ...data,
         },
         include: WITH_ASSIGNED_CREW,
+      });
+      await this.audit.record(tx, {
+        entityType: 'ENVIRONMENTAL_REPORT',
+        entityId: report.id,
+        action,
+        fromStatus: report.status,
+        toStatus: target,
+        actor,
       });
       await this.outbox.enqueueMany(tx, events);
       return row;

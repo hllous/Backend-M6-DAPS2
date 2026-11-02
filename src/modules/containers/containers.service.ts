@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { Container, Prisma, ContainerStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditActor, AuditService } from '../../common/audit/audit.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import { containerDamaged } from '../../events/payloads';
@@ -56,11 +57,12 @@ export class ContainersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly audit: AuditService,
   ) {}
 
   // ─── CRUD ──────────────────────────────────────────
 
-  async create(dto: CreateContainerDto): Promise<ContainerResponseDto> {
+  async create(dto: CreateContainerDto, actor: AuditActor): Promise<ContainerResponseDto> {
     try {
       // El alta y su fila inicial del historial (origen nulo, que no cuenta como
       // incidente) van juntas: o quedan las dos o no queda ninguna.
@@ -79,6 +81,13 @@ export class ContainersService {
         });
         await tx.containerStatusHistory.create({
           data: { containerId: created.id, fromStatus: null, toStatus: ContainerStatus.ACTIVE },
+        });
+        await this.audit.record(tx, {
+          entityType: 'CONTAINER',
+          entityId: created.id,
+          action: 'CREATE',
+          toStatus: ContainerStatus.ACTIVE,
+          actor,
         });
         return created;
       });
@@ -204,13 +213,15 @@ export class ContainersService {
   // ─── Transiciones de estado ────────────────────────
 
   /** ACTIVE → OVERFLOWED */
-  async reportOverflow(id: string): Promise<ContainerResponseDto> {
-    return this.transition(id, ContainerStatus.OVERFLOWED);
+  async reportOverflow(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
+    return this.transition(actor, 'REPORT_OVERFLOW', id, ContainerStatus.OVERFLOWED);
   }
 
   /** OVERFLOWED → ACTIVE */
-  async empty(id: string): Promise<ContainerResponseDto> {
+  async empty(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
     return this.transition(
+      actor,
+      'EMPTY',
       id,
       ContainerStatus.ACTIVE,
       // Limpiar campos de daño por si viniera de un flujo anterior
@@ -226,8 +237,14 @@ export class ContainersService {
   }
 
   /** ACTIVE → DAMAGED */
-  async reportDamage(id: string, dto: ReportDamageDto): Promise<ContainerResponseDto> {
+  async reportDamage(
+    id: string,
+    dto: ReportDamageDto,
+    actor: AuditActor,
+  ): Promise<ContainerResponseDto> {
     return this.transition(
+      actor,
+      'REPORT_DAMAGE',
       id,
       ContainerStatus.DAMAGED,
       {
@@ -247,13 +264,15 @@ export class ContainersService {
   }
 
   /** DAMAGED → UNDER_REPAIR */
-  async startRepair(id: string): Promise<ContainerResponseDto> {
-    return this.transition(id, ContainerStatus.UNDER_REPAIR);
+  async startRepair(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
+    return this.transition(actor, 'START_REPAIR', id, ContainerStatus.UNDER_REPAIR);
   }
 
   /** UNDER_REPAIR → ACTIVE */
-  async completeRepair(id: string): Promise<ContainerResponseDto> {
+  async completeRepair(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
     return this.transition(
+      actor,
+      'COMPLETE_REPAIR',
       id,
       ContainerStatus.ACTIVE,
       { damageType: null, severity: null, requiresPublicWorks: null, damageNotes: null },
@@ -263,13 +282,19 @@ export class ContainersService {
   }
 
   /** ACTIVE → RELOCATING */
-  async relocate(id: string): Promise<ContainerResponseDto> {
-    return this.transition(id, ContainerStatus.RELOCATING);
+  async relocate(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
+    return this.transition(actor, 'RELOCATE', id, ContainerStatus.RELOCATING);
   }
 
   /** RELOCATING → ACTIVE (con nueva ubicación) */
-  async confirmRelocation(id: string, dto: ConfirmRelocationDto): Promise<ContainerResponseDto> {
+  async confirmRelocation(
+    id: string,
+    dto: ConfirmRelocationDto,
+    actor: AuditActor,
+  ): Promise<ContainerResponseDto> {
     return this.transition(
+      actor,
+      'CONFIRM_RELOCATION',
       id,
       ContainerStatus.ACTIVE,
       { address: dto.address, lat: dto.lat ?? null, lng: dto.lng ?? null },
@@ -279,8 +304,8 @@ export class ContainersService {
   }
 
   /** DAMAGED → REMOVED (no admite reparación) */
-  async remove(id: string): Promise<ContainerResponseDto> {
-    return this.transition(id, ContainerStatus.REMOVED);
+  async remove(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
+    return this.transition(actor, 'REMOVE', id, ContainerStatus.REMOVED);
   }
 
   // ─── Helpers ──────────────────────────────────────
@@ -290,6 +315,8 @@ export class ContainersService {
    * Lanza ConflictException si la transición no es válida.
    */
   private async transition(
+    actor: AuditActor,
+    action: string,
     id: string,
     targetStatus: ContainerStatus,
     additionalData: Record<string, any> = {},
@@ -330,6 +357,15 @@ export class ContainersService {
         // concurrencia no deja fila, y si el historial falla se deshace el cambio.
         await tx.containerStatusHistory.create({
           data: { containerId: id, fromStatus: container.status, toStatus: targetStatus },
+        });
+        // Quién lo hizo (#460): adicional al historial de estados, que no guarda actor.
+        await this.audit.record(tx, {
+          entityType: 'CONTAINER',
+          entityId: id,
+          action,
+          fromStatus: container.status,
+          toStatus: targetStatus,
+          actor,
         });
         if (event) {
           const neighborhoodId = await zoneNeighborhoodId(tx, row.zoneId);

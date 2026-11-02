@@ -15,6 +15,7 @@ import {
   TreeInterventionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditActor, AuditService } from '../../common/audit/audit.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
@@ -55,11 +56,15 @@ export class OutboundRequestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly audit: AuditService,
   ) {}
 
   // ─── RepairRequest → M3 ───────────────────────────
 
-  async createRepairRequest(dto: CreateRepairRequestDto): Promise<RepairRequestResponseDto> {
+  async createRepairRequest(
+    dto: CreateRepairRequestDto,
+    actor: AuditActor,
+  ): Promise<RepairRequestResponseDto> {
     // Si el daño salió de un servicio nacido de un reclamo, el ticket viaja
     // para que M3 pueda correlacionarlo con lo que el vecino reportó.
     const ticketId = await this.resolveRepairOrigin(dto.detectedInType, dto.detectedInId);
@@ -98,6 +103,13 @@ export class OutboundRequestsService {
         },
       });
 
+      await this.audit.record(tx, {
+        entityType: 'REPAIR_REQUEST',
+        entityId: row.id,
+        action: 'CREATE',
+        toStatus: row.status,
+        actor,
+      });
       await this.outbox.enqueue(tx, {
         eventType: EventType.INFRASTRUCTURE_REPAIR_REQUESTED,
         aggregateType: AggregateType.REPAIR_REQUEST,
@@ -155,15 +167,30 @@ export class OutboundRequestsService {
    * existe para operación manual y para poder demostrar el circuito mientras
    * no haya bus.
    */
-  async startRepair(id: string, dto: StartRepairDto): Promise<RepairRequestResponseDto> {
+  async startRepair(
+    id: string,
+    dto: StartRepairDto,
+    actor: AuditActor,
+  ): Promise<RepairRequestResponseDto> {
     const current = await this.getRepairRequest(id);
     assertTransition(REPAIR_TRANSITIONS, current.status, RepairRequestStatus.IN_PROGRESS);
-    const row = await this.prisma.repairRequest.update({
-      where: { id },
-      data: {
-        status: RepairRequestStatus.IN_PROGRESS,
-        ...(dto.workOrderId !== undefined && { workOrderId: dto.workOrderId }),
-      },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.repairRequest.update({
+        where: { id },
+        data: {
+          status: RepairRequestStatus.IN_PROGRESS,
+          ...(dto.workOrderId !== undefined && { workOrderId: dto.workOrderId }),
+        },
+      });
+      await this.audit.record(tx, {
+        entityType: 'REPAIR_REQUEST',
+        entityId: id,
+        action: 'START',
+        fromStatus: current.status,
+        toStatus: RepairRequestStatus.IN_PROGRESS,
+        actor,
+      });
+      return updated;
     });
     this.logger.log(
       `Reparación ${id}: en curso${dto.workOrderId ? ` (OT ${dto.workOrderId})` : ''}`,
@@ -172,12 +199,23 @@ export class OutboundRequestsService {
   }
 
   /** Cierra la solicitud. Normalmente lo dispara `workOrderCompleted` de M3. */
-  async closeRepair(id: string): Promise<RepairRequestResponseDto> {
+  async closeRepair(id: string, actor: AuditActor): Promise<RepairRequestResponseDto> {
     const current = await this.getRepairRequest(id);
     assertTransition(REPAIR_TRANSITIONS, current.status, RepairRequestStatus.CLOSED);
-    const row = await this.prisma.repairRequest.update({
-      where: { id },
-      data: { status: RepairRequestStatus.CLOSED },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.repairRequest.update({
+        where: { id },
+        data: { status: RepairRequestStatus.CLOSED },
+      });
+      await this.audit.record(tx, {
+        entityType: 'REPAIR_REQUEST',
+        entityId: id,
+        action: 'CLOSE',
+        fromStatus: current.status,
+        toStatus: RepairRequestStatus.CLOSED,
+        actor,
+      });
+      return updated;
     });
     this.logger.log(`Reparación ${id}: cerrada`);
     return this.toRepairDto(row);
@@ -187,6 +225,7 @@ export class OutboundRequestsService {
 
   async createClosureRequest(
     dto: CreateStreetClosureRequestDto,
+    actor: AuditActor,
   ): Promise<StreetClosureRequestResponseDto> {
     if (new Date(dto.requestedTo) < new Date(dto.requestedFrom)) {
       throw new BadRequestException(
@@ -217,6 +256,13 @@ export class OutboundRequestsService {
         include: { streets: true },
       });
 
+      await this.audit.record(tx, {
+        entityType: 'STREET_CLOSURE_REQUEST',
+        entityId: row.id,
+        action: 'CREATE',
+        toStatus: row.status,
+        actor,
+      });
       await this.outbox.enqueue(tx, {
         eventType: EventType.STREET_CLOSURE_REQUESTED,
         aggregateType: AggregateType.STREET_CLOSURE_REQUEST,
@@ -268,22 +314,27 @@ export class OutboundRequestsService {
   async approveClosure(
     id: string,
     dto: ApproveClosureDto,
+    actor: AuditActor,
   ): Promise<StreetClosureRequestResponseDto> {
-    return this.updateClosure(id, StreetClosureRequestStatus.APPROVED, {
+    return this.updateClosure(actor, 'APPROVE', id, StreetClosureRequestStatus.APPROVED, {
       ...(dto.closureId !== undefined && { closureId: dto.closureId }),
     });
   }
 
   /** Normalmente lo dispara `streetClosureRejected` de M7. */
-  async rejectClosure(id: string, reason: string): Promise<StreetClosureRequestResponseDto> {
-    const row = await this.updateClosure(id, StreetClosureRequestStatus.REJECTED);
+  async rejectClosure(
+    id: string,
+    reason: string,
+    actor: AuditActor,
+  ): Promise<StreetClosureRequestResponseDto> {
+    const row = await this.updateClosure(actor, 'REJECT', id, StreetClosureRequestStatus.REJECTED);
     this.logger.log(`Corte ${id}: rechazado por M7 — ${reason}`);
     return row;
   }
 
   /** Normalmente lo dispara `streetClosureEnded` de M7. */
-  async endClosure(id: string): Promise<StreetClosureRequestResponseDto> {
-    return this.updateClosure(id, StreetClosureRequestStatus.ENDED);
+  async endClosure(id: string, actor: AuditActor): Promise<StreetClosureRequestResponseDto> {
+    return this.updateClosure(actor, 'END', id, StreetClosureRequestStatus.ENDED);
   }
 
   // ─── Helpers ──────────────────────────────────────
@@ -371,16 +422,29 @@ export class OutboundRequestsService {
   }
 
   private async updateClosure(
+    actor: AuditActor,
+    action: string,
     id: string,
     status: StreetClosureRequestStatus,
     data: Prisma.StreetClosureRequestUpdateInput = {},
   ): Promise<StreetClosureRequestResponseDto> {
     const current = await this.getClosureRequest(id);
     assertTransition(CLOSURE_TRANSITIONS, current.status, status);
-    const row = await this.prisma.streetClosureRequest.update({
-      where: { id },
-      data: { status, ...data },
-      include: { streets: true },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.streetClosureRequest.update({
+        where: { id },
+        data: { status, ...data },
+        include: { streets: true },
+      });
+      await this.audit.record(tx, {
+        entityType: 'STREET_CLOSURE_REQUEST',
+        entityId: id,
+        action,
+        fromStatus: current.status,
+        toStatus: status,
+        actor,
+      });
+      return updated;
     });
     this.logger.log(`Corte ${id}: ${status}`);
     return this.toClosureDto(row);

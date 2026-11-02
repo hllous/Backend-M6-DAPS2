@@ -6,7 +6,7 @@ El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde e
 
 El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
-> 142 rutas, agrupadas en 27 tags de Swagger (cuenta contrastada contra `openapi.json`).
+> 150 rutas, agrupadas en 29 tags de Swagger (cuenta contrastada contra `openapi.json`).
 
 ## Convenciones
 
@@ -32,6 +32,7 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 
 | Método | Ruta | Rol |
 | --- | --- | --- |
+| GET | `/audit` | `M6_ADMIN`, `M6_AUDITOR` |
 | GET | `/communes` | cualquier rol de M6 |
 | GET | `/containers` | cualquier rol de M6 |
 | POST | `/containers` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
@@ -449,6 +450,16 @@ Contraparte de `POST /events/inbox`: sin entrar a la base se ve qué salió, qu�
 **Auditoría.** Cada reintento escribe una fila en `outbox_retry_audit` (`outboxEventId`, `actorUserId`, `at`, `previousAttempts`, `previousError`) en la misma transacción que el cambio de estado: el reintento borra `attempts` y `lastError`, y ahí queda cómo estaban. El actor sale del token, nunca del body. **Reintentar republica con el mismo `eventId`** (es el id de la fila). Los módulos receptores deduplican por `eventId`, así que no hay doble efecto si el primer envío había llegado a salir. Pero el Core de M9 puede no redistribuir un `eventId` que ya registró, y uno `REJECTED` tampoco se revalida al retransmitirlo (ver [m9.md](../integracion/m9.md)): **si el motivo del `FAILED` fue un payload rechazado, el reintento no lo arregla**; hay que coordinar el reproceso con M9. Sirve sobre todo cuando el fallo fue de transporte (broker caído, red). Con el receptor todavía caído, el evento vuelve a `FAILED` tras 5 intentos. No hay reintento automático de un `FAILED`: es una acción humana auditada.
 
 **`lastError` puede incluir datos de infraestructura** (host y puerto del broker, hasta 500 caracteres) y lo ve también el auditor en el listado; por eso el detalle, que agrega el payload y el `previousError` de cada reintento, es solo para `M6_ADMIN`.
+
+## `audit` — auditoría de dominio
+
+Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas, derivaciones, intervenciones, servicios y catálogos ([#460](https://github.com/hllous/Backend-M6-DAPS2/issues/460)). Modelo y cobertura en [entidades/auditoria.md](../entidades/auditoria.md).
+
+| Método | Ruta     | Roles                    | Qué hace |
+| ------ | -------- | ------------------------ | -------- |
+| GET    | `/audit` | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más reciente al más antiguo. Filtros opcionales `entityType` (valor cerrado: `CONTAINER`, `ENVIRONMENTAL_REPORT`, `ENVIRONMENTAL_INSPECTION`, `VIOLATION_NOTICE`, `REPAIR_REQUEST`, `STREET_CLOSURE_REQUEST`, `TREE_INTERVENTION`, `SERVICE`, `CREW`, `ZONE`, `VEHICLE`, `ROUTE`) y `entityId` (UUID); 400 si alguno es inválido. Cada fila trae `action`, `fromStatus`/`toStatus`, `actorUserId` y `actorRoles` (del token, nunca del body), `note` (solo el motivo que el flujo ya pedía) y `occurredAt` |
+
+La tabla es de solo agregado (un trigger rechaza modificar, borrar y vaciar) y no se purga. No audita lecturas ni las transiciones que hace el sistema (consumidores de eventos y barridos).
 
 ## `repair-requests` — reparaciones derivadas a M3
 

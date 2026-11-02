@@ -1,7 +1,10 @@
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import type { Response } from 'express';
 import { EnvironmentalInspectionsController } from './environmental-inspections.controller';
 import { EnvironmentalInspectionsService } from './environmental-inspections.service';
 import { CompleteInspectionDto, CreateInspectionDto, IssueViolationNoticeDto } from './dto';
+
+const USER = { userId: 'user-7', roles: [] } as unknown as AuthenticatedUser;
 
 const ID = '11111111-1111-1111-1111-111111111111';
 const REPORT_ID = '22222222-2222-2222-2222-222222222222';
@@ -25,8 +28,8 @@ describe('EnvironmentalInspectionsController', () => {
 
   it('create delega reportId y dto', async () => {
     const dto = {} as CreateInspectionDto;
-    await expect(controller.create(REPORT_ID, dto)).resolves.toBe(RESULT);
-    expect(service.create).toHaveBeenCalledWith(REPORT_ID, dto);
+    await expect(controller.create(REPORT_ID, dto, USER)).resolves.toBe(RESULT);
+    expect(service.create).toHaveBeenCalledWith(REPORT_ID, dto, USER);
   });
 
   it('findByReport delega el reportId', async () => {
@@ -41,14 +44,14 @@ describe('EnvironmentalInspectionsController', () => {
 
   it('complete delega id y dto', async () => {
     const dto = {} as CompleteInspectionDto;
-    await controller.complete(ID, dto, 'user-7');
-    expect(service.complete).toHaveBeenCalledWith(ID, dto, 'user-7');
+    await controller.complete(ID, dto, USER);
+    expect(service.complete).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('issueNotice delega id, dto y userId', async () => {
     const dto = {} as IssueViolationNoticeDto;
-    await controller.issueNotice(ID, dto, 'user-1');
-    expect(service.issueNotice).toHaveBeenCalledWith(ID, dto, 'user-1');
+    await controller.issueNotice(ID, dto, USER);
+    expect(service.issueNotice).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('findNotice delega el id', async () => {

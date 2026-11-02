@@ -10,6 +10,7 @@ import { ServicesService } from './services.service';
  */
 describe('ServicesService — pertenencia de la cuadrilla', () => {
   const USER_ID = '4242';
+  const ACTOR = { userId: USER_ID, roles: [] };
   const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
   const CREW_ID = '44444444-4444-4444-4444-444444444444';
 
@@ -44,14 +45,15 @@ describe('ServicesService — pertenencia de la cuadrilla', () => {
       prisma as unknown as PrismaService,
       { enqueue: jest.fn(), enqueueMany: jest.fn() } as never,
       {} as never,
+      { record: jest.fn() } as never,
     );
   });
 
   const acciones: [string, () => Promise<unknown>][] = [
-    ['start', () => service.start(SERVICE_ID, USER_ID)],
-    ['suspend', () => service.suspend(SERVICE_ID, USER_ID, 'lluvia')],
-    ['resume', () => service.resume(SERVICE_ID, USER_ID)],
-    ['complete', () => service.complete(SERVICE_ID, {}, USER_ID)],
+    ['start', () => service.start(SERVICE_ID, ACTOR)],
+    ['suspend', () => service.suspend(SERVICE_ID, ACTOR, 'lluvia')],
+    ['resume', () => service.resume(SERVICE_ID, ACTOR)],
+    ['complete', () => service.complete(SERVICE_ID, {}, ACTOR)],
     [
       'addZoneResult',
       () =>
@@ -95,7 +97,7 @@ describe('ServicesService — pertenencia de la cuadrilla', () => {
     prisma.service.update.mockResolvedValue(serviceRow({ status: ServiceStatus.SUSPENDED }));
     prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(prisma));
 
-    await service.suspend(SERVICE_ID, USER_ID, 'lluvia');
+    await service.suspend(SERVICE_ID, ACTOR, 'lluvia');
 
     expect(prisma.crew.count).toHaveBeenCalledWith({
       where: {

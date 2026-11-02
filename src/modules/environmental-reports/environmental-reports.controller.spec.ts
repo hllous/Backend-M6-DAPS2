@@ -1,4 +1,5 @@
 import { M6Role } from '@prisma/client';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { EnvironmentalReportsController } from './environmental-reports.controller';
@@ -12,6 +13,10 @@ import {
 
 const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
+const USER = {
+  userId: 'user-1',
+  roles: [M6Role.M6_OFICINA_AMBIENTAL],
+} as unknown as AuthenticatedUser;
 
 describe('EnvironmentalReportsController', () => {
   let service: jest.Mocked<EnvironmentalReportsService>;
@@ -31,11 +36,10 @@ describe('EnvironmentalReportsController', () => {
     controller = new EnvironmentalReportsController(service);
   });
 
-  it('create delega el dto y los roles del token', async () => {
+  it('create delega el dto y el actor del token', async () => {
     const dto = {} as CreateEnvironmentalReportDto;
-    const roles = [M6Role.M6_OFICINA_AMBIENTAL];
-    await expect(controller.create(dto, roles)).resolves.toBe(RESULT);
-    expect(service.create).toHaveBeenCalledWith(dto, roles);
+    await expect(controller.create(dto, USER)).resolves.toBe(RESULT);
+    expect(service.create).toHaveBeenCalledWith(dto, USER);
   });
 
   it('findAll delega la query', async () => {
@@ -77,29 +81,29 @@ describe('EnvironmentalReportsController', () => {
   });
 
   it('startReview delega id y userId', async () => {
-    await controller.startReview(ID, 'user-1');
-    expect(service.startReview).toHaveBeenCalledWith(ID, 'user-1');
+    await controller.startReview(ID, USER);
+    expect(service.startReview).toHaveBeenCalledWith(ID, USER);
   });
 
   it('forward delega id, motivo y userId', async () => {
-    await controller.forward(ID, { reason: 'no compete' } as ReportStatusChangeDto, 'user-1');
-    expect(service.forward).toHaveBeenCalledWith(ID, 'no compete', 'user-1');
+    await controller.forward(ID, { reason: 'no compete' } as ReportStatusChangeDto, USER);
+    expect(service.forward).toHaveBeenCalledWith(ID, 'no compete', USER);
   });
 
   it('dismiss delega id, motivo y userId', async () => {
-    await controller.dismiss(ID, { reason: 'sin mérito' } as ReportStatusChangeDto, 'user-1');
-    expect(service.dismiss).toHaveBeenCalledWith(ID, 'sin mérito', 'user-1');
+    await controller.dismiss(ID, { reason: 'sin mérito' } as ReportStatusChangeDto, USER);
+    expect(service.dismiss).toHaveBeenCalledWith(ID, 'sin mérito', USER);
   });
 
   it('close delega id y userId', async () => {
-    await controller.close(ID, 'user-1');
-    expect(service.close).toHaveBeenCalledWith(ID, 'user-1');
+    await controller.close(ID, USER);
+    expect(service.close).toHaveBeenCalledWith(ID, USER);
   });
 
   it('requestInformation delega el id, el dto y el actor', async () => {
     const dto = { message: 'Una foto más' } as RequestInformationDto;
-    await expect(controller.requestInformation(ID, dto, 'user-1')).resolves.toBe(RESULT);
-    expect(service.requestInformation).toHaveBeenCalledWith(ID, dto, 'user-1');
+    await expect(controller.requestInformation(ID, dto, USER)).resolves.toBe(RESULT);
+    expect(service.requestInformation).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   describe('RequestInformationDto', () => {
