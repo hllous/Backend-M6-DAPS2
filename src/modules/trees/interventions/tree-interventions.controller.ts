@@ -21,7 +21,7 @@ import {
 import { ErrorResponseDto } from '../../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../../common/decorators';
 import { ROLES_OPERACIONES } from '../../../auth/role-groups';
-import { M6Role } from '../../../auth/m6-role';
+import { AuthenticatedUser } from '../../../auth/jwt.strategy';
 
 @ApiTags('tree-interventions')
 @ApiBearerAuth('JWT-auth')
@@ -51,9 +51,9 @@ export class TreeInterventionsController {
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async create(
     @Body() dto: CreateTreeInterventionDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.create(dto, userId);
+    return this.treeInterventionsService.create(dto, actor);
   }
 
   @Get()
@@ -119,8 +119,9 @@ export class TreeInterventionsController {
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async submitForAuthorization(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.submitForAuthorization(id);
+    return this.treeInterventionsService.submitForAuthorization(id, actor);
   }
 
   @Post(':id/authorize')
@@ -151,10 +152,9 @@ export class TreeInterventionsController {
   async authorize(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AuthorizeInterventionDto,
-    @CurrentUser('userId') userId: string,
-    @CurrentUser('roles') roles: M6Role[],
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.authorize(id, dto, userId, roles);
+    return this.treeInterventionsService.authorize(id, dto, actor);
   }
 
   @Post(':id/reject')
@@ -184,10 +184,9 @@ export class TreeInterventionsController {
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async reject(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('userId') userId: string,
-    @CurrentUser('roles') roles: M6Role[],
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.reject(id, userId, roles);
+    return this.treeInterventionsService.reject(id, actor);
   }
 
   @Post(':id/assign-service')
@@ -225,7 +224,8 @@ export class TreeInterventionsController {
   async assignService(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssignInterventionServiceDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.assignService(id, dto);
+    return this.treeInterventionsService.assignService(id, dto, actor);
   }
 }

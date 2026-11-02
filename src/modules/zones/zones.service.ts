@@ -8,6 +8,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { isUUID } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditActor, AuditService, activeState } from '../../common/audit/audit.service';
 import {
   CreateZoneDto,
   UpdateZoneDto,
@@ -28,23 +29,34 @@ export class ZonesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly catalog: NeighborhoodsCatalogService,
+    private readonly audit: AuditService,
   ) {}
 
   /**
    * Crea una nueva zona operativa.
    * Falla si el código ya existe (unique constraint).
    */
-  async create(dto: CreateZoneDto): Promise<ZoneResponseDto> {
+  async create(dto: CreateZoneDto, actor: AuditActor): Promise<ZoneResponseDto> {
     if (dto.communeId) await this.ensureCommuneExists(dto.communeId);
     try {
-      const zone = await this.prisma.zone.create({
-        data: {
-          code: dto.code,
-          name: dto.name,
-          active: dto.active ?? true,
-          communeId: dto.communeId,
-        },
-        include: ZONE_INCLUDE,
+      const zone = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.zone.create({
+          data: {
+            code: dto.code,
+            name: dto.name,
+            active: dto.active ?? true,
+            communeId: dto.communeId,
+          },
+          include: ZONE_INCLUDE,
+        });
+        await this.audit.record(tx, {
+          entityType: 'ZONE',
+          entityId: created.id,
+          action: 'CREATE',
+          toStatus: activeState(created.active),
+          actor,
+        });
+        return created;
       });
 
       this.logger.log(`Zona creada: ${zone.code} (${zone.id})`);
@@ -117,19 +129,32 @@ export class ZonesService {
   /**
    * Actualiza campos mutables de una zona (name, active).
    */
-  async update(id: string, dto: UpdateZoneDto): Promise<ZoneResponseDto> {
+  async update(id: string, dto: UpdateZoneDto, actor: AuditActor): Promise<ZoneResponseDto> {
     await this.ensureExists(id);
     // null desasigna la comuna: no hay nada que validar.
     if (dto.communeId) await this.ensureCommuneExists(dto.communeId);
 
-    const zone = await this.prisma.zone.update({
-      where: { id },
-      include: ZONE_INCLUDE,
-      data: {
-        ...(dto.communeId !== undefined && { communeId: dto.communeId }),
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.active !== undefined && { active: dto.active }),
-      },
+    const zone = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.zone.update({
+        where: { id },
+        include: ZONE_INCLUDE,
+        data: {
+          ...(dto.communeId !== undefined && { communeId: dto.communeId }),
+          ...(dto.name !== undefined && { name: dto.name }),
+          ...(dto.active !== undefined && { active: dto.active }),
+        },
+      });
+      // Solo el alta o la baja son auditables acá; el resto de los campos no son estado.
+      if (dto.active !== undefined) {
+        await this.audit.record(tx, {
+          entityType: 'ZONE',
+          entityId: id,
+          action: dto.active ? 'ACTIVATE' : 'DEACTIVATE',
+          toStatus: activeState(dto.active),
+          actor,
+        });
+      }
+      return updated;
     });
 
     this.logger.log(`Zona actualizada: ${zone.code} (${zone.id})`);
@@ -140,12 +165,21 @@ export class ZonesService {
    * Soft-delete: marca la zona como inactiva.
    * No elimina el registro para preservar integridad referencial.
    */
-  async remove(id: string): Promise<void> {
+  async remove(id: string, actor: AuditActor): Promise<void> {
     await this.ensureExists(id);
 
-    await this.prisma.zone.update({
-      where: { id },
-      data: { active: false },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.zone.update({
+        where: { id },
+        data: { active: false },
+      });
+      await this.audit.record(tx, {
+        entityType: 'ZONE',
+        entityId: id,
+        action: 'DEACTIVATE',
+        toStatus: activeState(false),
+        actor,
+      });
     });
 
     this.logger.log(`Zona desactivada: ${id}`);

@@ -15,7 +15,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto, UpdateVehicleDto, VehicleResponseDto, QueryVehiclesDto } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN } from '../../auth/role-groups';
 
 @ApiTags('vehicles')
@@ -56,8 +57,11 @@ export class VehiclesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async create(@Body() dto: CreateVehicleDto): Promise<VehicleResponseDto> {
-    return this.vehiclesService.create(dto);
+  async create(
+    @Body() dto: CreateVehicleDto,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<VehicleResponseDto> {
+    return this.vehiclesService.create(dto, actor);
   }
 
   @Get()
@@ -152,8 +156,9 @@ export class VehiclesController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateVehicleDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<VehicleResponseDto> {
-    return this.vehiclesService.update(id, dto);
+    return this.vehiclesService.update(id, dto, actor);
   }
 
   @Delete(':id')
@@ -184,7 +189,10 @@ export class VehiclesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.vehiclesService.remove(id);
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<void> {
+    return this.vehiclesService.remove(id, actor);
   }
 }

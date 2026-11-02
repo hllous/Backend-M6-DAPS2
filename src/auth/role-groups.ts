@@ -24,6 +24,8 @@ export const ROLES_ACTA_LECTURA = [
 ] as const;
 // Ver el outbox (eventos salientes, sin payload): el admin que lo opera y el auditor, que solo lee.
 export const ROLES_OUTBOX_LECTURA = [...ROLES_ADMIN, M6Role.M6_AUDITOR] as const;
+// Consultar la auditoría de dominio (#460): quien la opera y quien la controla.
+export const ROLES_AUDITORIA = [...ROLES_ADMIN, M6Role.M6_AUDITOR] as const;
 // Abrir expediente: Oficina Ambiental, o el inspector de oficio.
 export const ROLES_EXPEDIENTE_ALTA = [...ROLES_AMBIENTAL, M6Role.M6_CAMPO_INSPECTOR] as const;
 // Leer evidencia: todo M6. Oficina y auditoría ven cualquiera; Campo solo la de lo suyo

@@ -675,6 +675,149 @@
         ]
       }
     },
+    "/audit": {
+      "get": {
+        "operationId": "AuditController_findAll",
+        "summary": "Consultar la auditoría de dominio",
+        "description": "Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas, derivaciones, intervenciones, servicios y catálogos: acción, estado anterior y nuevo, actor (tomado del token) y fecha. Paginado, del más reciente al más antiguo. Filtra por `entityType` y `entityId`. Es de solo agregado: no se edita ni se purga.",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-indexed)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Registros por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "description": "Tipo de entidad auditada",
+            "schema": {
+              "example": "CONTAINER",
+              "enum": [
+                "CONTAINER",
+                "ENVIRONMENTAL_REPORT",
+                "ENVIRONMENTAL_INSPECTION",
+                "VIOLATION_NOTICE",
+                "REPAIR_REQUEST",
+                "STREET_CLOSURE_REQUEST",
+                "TREE_INTERVENTION",
+                "SERVICE",
+                "CREW",
+                "ZONE",
+                "VEHICLE",
+                "ROUTE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityId",
+            "required": false,
+            "in": "query",
+            "description": "Id de la entidad auditada",
+            "schema": {
+              "format": "uuid",
+              "example": "3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado de la auditoría",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AuditLogResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_AUDITOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "audit"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
     "/zones": {
       "post": {
         "operationId": "ZonesController_create",
@@ -14365,6 +14508,10 @@
       "description": "Eventos salientes: consulta y reintento de los fallidos"
     },
     {
+      "name": "audit",
+      "description": "Auditoría de dominio: quién hizo qué y cuándo (solo lectura)"
+    },
+    {
       "name": "indicators",
       "description": "Indicadores de cobertura, cumplimiento, incidencias y residuos"
     },
@@ -15014,6 +15161,103 @@
         "required": [
           "requeued",
           "remainingFailed"
+        ]
+      },
+      "AuditLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "CONTAINER",
+              "ENVIRONMENTAL_REPORT",
+              "ENVIRONMENTAL_INSPECTION",
+              "VIOLATION_NOTICE",
+              "REPAIR_REQUEST",
+              "STREET_CLOSURE_REQUEST",
+              "TREE_INTERVENTION",
+              "SERVICE",
+              "CREW",
+              "ZONE",
+              "VEHICLE",
+              "ROUTE"
+            ],
+            "example": "CONTAINER"
+          },
+          "entityId": {
+            "type": "string",
+            "example": "3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b",
+            "description": "Id de la entidad"
+          },
+          "action": {
+            "type": "string",
+            "example": "REPORT_DAMAGE",
+            "description": "Acción realizada"
+          },
+          "fromStatus": {
+            "type": "string",
+            "nullable": true,
+            "example": "ACTIVE",
+            "description": "Estado anterior"
+          },
+          "toStatus": {
+            "type": "string",
+            "nullable": true,
+            "example": "DAMAGED",
+            "description": "Estado nuevo"
+          },
+          "actorUserId": {
+            "type": "string",
+            "example": "42",
+            "description": "Id en M1 de quien actuó, tomado del token"
+          },
+          "actorRoles": {
+            "type": "array",
+            "example": [
+              "M6_CAMPO_CUADRILLA"
+            ],
+            "description": "Roles de M6 efectivos de quien actuó al momento de la acción",
+            "items": {
+              "type": "string",
+              "enum": [
+                "M6_ADMIN",
+                "M6_OFICINA_OPERACIONES",
+                "M6_OFICINA_AMBIENTAL",
+                "M6_CAMPO_CUADRILLA",
+                "M6_CAMPO_INSPECTOR",
+                "M6_AUDITOR"
+              ]
+            }
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "example": "Reubicación por obra en la vereda",
+            "description": "Motivo que el flujo ya pedía; sin datos personales"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-11-02T14:30:00.000Z",
+            "description": "Cuándo ocurrió"
+          }
+        },
+        "required": [
+          "id",
+          "entityType",
+          "entityId",
+          "action",
+          "fromStatus",
+          "toStatus",
+          "actorUserId",
+          "actorRoles",
+          "note",
+          "occurredAt"
         ]
       },
       "CreateZoneDto": {

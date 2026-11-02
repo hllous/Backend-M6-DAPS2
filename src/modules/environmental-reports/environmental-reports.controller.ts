@@ -19,7 +19,7 @@ import {
   RequestInformationDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { M6Role } from '@prisma/client';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { ROLES_AMBIENTAL, ROLES_EXPEDIENTE_ALTA } from '../../auth/role-groups';
 
@@ -56,9 +56,9 @@ export class EnvironmentalReportsController {
   @ApiResponse(SERVER)
   async create(
     @Body() dto: CreateEnvironmentalReportDto,
-    @CurrentUser('roles') roles: M6Role[],
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.create(dto, roles);
+    return this.reportsService.create(dto, actor);
   }
 
   @Get()
@@ -118,9 +118,9 @@ export class EnvironmentalReportsController {
   @ApiResponse(SERVER)
   async startReview(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.startReview(id, userId);
+    return this.reportsService.startReview(id, actor);
   }
 
   @Post(':id/forward')
@@ -145,9 +145,9 @@ export class EnvironmentalReportsController {
   async forward(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReportStatusChangeDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.forward(id, dto.reason, userId);
+    return this.reportsService.forward(id, dto.reason, actor);
   }
 
   @Post(':id/dismiss')
@@ -171,9 +171,9 @@ export class EnvironmentalReportsController {
   async dismiss(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReportStatusChangeDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.dismiss(id, dto.reason, userId);
+    return this.reportsService.dismiss(id, dto.reason, actor);
   }
 
   @Post(':id/request-information')
@@ -207,9 +207,9 @@ export class EnvironmentalReportsController {
   async requestInformation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RequestInformationDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.requestInformation(id, dto, userId);
+    return this.reportsService.requestInformation(id, dto, actor);
   }
 
   @Post(':id/close')
@@ -232,8 +232,8 @@ export class EnvironmentalReportsController {
   @ApiResponse(SERVER)
   async close(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.close(id, userId);
+    return this.reportsService.close(id, actor);
   }
 }

@@ -6,11 +6,13 @@ import { ServicesService } from './services.service';
 import { ConflictResource } from './dto';
 
 const USER_ID = '4242';
+
 const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
 const OTRO_ID = '22222222-2222-2222-2222-222222222222';
 const CREW = '33333333-3333-3333-3333-333333333333';
 const VEHICLE = '44444444-4444-4444-4444-444444444444';
-const ACTOR = 'planificador-7';
+const ACTOR_ID = 'planificador-7';
+const ACTOR = { userId: ACTOR_ID, roles: [] };
 
 /** `@db.Time` vive sobre la época; `HH:mm` se convierte así. */
 const hora = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
@@ -103,6 +105,7 @@ describe('ServicesService — demora y doble reserva', () => {
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,
       {} as never,
+      { record: jest.fn() } as never,
     );
   });
 
@@ -121,7 +124,7 @@ describe('ServicesService — demora y doble reserva', () => {
         crewRow({ homeZoneId: ZONA_CREW, homeZone: { name: 'Palermo' } }),
       );
 
-      const err = await service.assignCrew(SERVICE_ID, { crewId: CREW }).catch((e) => e);
+      const err = await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR).catch((e) => e);
 
       expect(err).toBeInstanceOf(ConflictException);
       expect(err.message).toContain('Palermo');
@@ -143,7 +146,7 @@ describe('ServicesService — demora y doble reserva', () => {
       const { data } = prisma.service.update.mock.calls[0][0];
       expect(data.crewId).toBe(CREW);
       expect(data.assignmentOverrideNote).toContain('temporal');
-      expect(data.assignmentOverrideBy).toBe(ACTOR);
+      expect(data.assignmentOverrideBy).toBe(ACTOR_ID);
     });
 
     it('la reubicación vigente manda sobre la zona base', async () => {
@@ -155,7 +158,7 @@ describe('ServicesService — demora y doble reserva', () => {
         }),
       );
 
-      await service.assignCrew(SERVICE_ID, { crewId: CREW });
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR);
 
       expect(prisma.service.update).toHaveBeenCalled();
       // Se busca la reubicación vigente en la fecha del servicio, no "hoy".
@@ -169,7 +172,7 @@ describe('ServicesService — demora y doble reserva', () => {
       );
       prisma.crew.findUnique.mockResolvedValue(crewRow({ homeZoneId: ZONA_CREW }));
 
-      await service.assignCrew(SERVICE_ID, { crewId: CREW });
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR);
 
       expect(prisma.service.update).toHaveBeenCalled();
     });
@@ -177,7 +180,7 @@ describe('ServicesService — demora y doble reserva', () => {
     it('especialidad que no corresponde al tipo: avisa', async () => {
       prisma.crew.findUnique.mockResolvedValue(crewRow({ specialty: 'TREES' }));
 
-      const err = await service.assignCrew(SERVICE_ID, { crewId: CREW }).catch((e) => e);
+      const err = await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR).catch((e) => e);
 
       expect(err).toBeInstanceOf(ConflictException);
       expect(err.message).toContain('COLLECTION');
@@ -186,7 +189,7 @@ describe('ServicesService — demora y doble reserva', () => {
     it('especialidad correcta: no avisa', async () => {
       prisma.crew.findUnique.mockResolvedValue(crewRow({ specialty: 'COLLECTION' }));
 
-      await service.assignCrew(SERVICE_ID, { crewId: CREW });
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR);
 
       expect(prisma.service.update).toHaveBeenCalled();
     });
@@ -195,7 +198,7 @@ describe('ServicesService — demora y doble reserva', () => {
       prisma.serviceType.findUnique.mockResolvedValue({ code: 'NUEVO-TIPO' });
       prisma.crew.findUnique.mockResolvedValue(crewRow({ specialty: 'TREES' }));
 
-      await service.assignCrew(SERVICE_ID, { crewId: CREW });
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR);
 
       expect(prisma.service.update).toHaveBeenCalled();
     });
@@ -226,7 +229,7 @@ describe('ServicesService — demora y doble reserva', () => {
 
   describe('solapamiento al asignar', () => {
     it('sin otro servicio ese día no hay conflicto y se asigna', async () => {
-      await service.assignCrew(SERVICE_ID, { crewId: CREW });
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR);
 
       expect(prisma.service.update.mock.calls[0][0].data.crewId).toBe(CREW);
     });
@@ -238,10 +241,10 @@ describe('ServicesService — demora y doble reserva', () => {
     it('con solapamiento y sin nota rebota, y el mensaje dice cómo seguir', async () => {
       prisma.service.findMany.mockResolvedValue([ocupado()]);
 
-      await expect(service.assignCrew(SERVICE_ID, { crewId: CREW })).rejects.toBeInstanceOf(
+      await expect(service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR)).rejects.toBeInstanceOf(
         ConflictException,
       );
-      await service.assignCrew(SERVICE_ID, { crewId: CREW }).catch((e: Error) => {
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR).catch((e: Error) => {
         expect(e.message).toContain('overrideNote');
         expect(e.message).toContain('Cuadrilla Centro 1');
       });
@@ -259,7 +262,7 @@ describe('ServicesService — demora y doble reserva', () => {
 
       const { data } = prisma.service.update.mock.calls[0][0];
       expect(data.assignmentOverrideNote).toContain('jefe de cuadrilla');
-      expect(data.assignmentOverrideBy).toBe(ACTOR);
+      expect(data.assignmentOverrideBy).toBe(ACTOR_ID);
       expect(data.assignmentOverrideAt).toBeInstanceOf(Date);
     });
 
@@ -388,17 +391,17 @@ describe('ServicesService — demora y doble reserva', () => {
 
     /** Es lo que distingue un aviso de un cambio de estado. */
     it('no toca el estado del servicio', async () => {
-      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR_ID);
 
       expect(prisma.service.update).not.toHaveBeenCalled();
     });
 
     it('guarda el estado en el que estaba y quién lo reportó', async () => {
-      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR_ID);
 
       expect(prisma.serviceDelayNotice.create.mock.calls[0][0].data).toMatchObject({
         serviceStatus: ServiceStatus.SCHEDULED,
-        reportedBy: ACTOR,
+        reportedBy: ACTOR_ID,
         delayMinutes: 90,
       });
     });
@@ -406,7 +409,7 @@ describe('ServicesService — demora y doble reserva', () => {
     it('sin detectedAt usa el momento del aviso', async () => {
       const antes = Date.now();
 
-      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR_ID);
 
       const { detectedAt } = prisma.serviceDelayNotice.create.mock.calls[0][0].data;
       expect(detectedAt.getTime()).toBeGreaterThanOrEqual(antes);
@@ -416,7 +419,7 @@ describe('ServicesService — demora y doble reserva', () => {
       await service.addDelayNotice(
         SERVICE_ID,
         aviso({ detectedAt: '2026-09-15T10:00:00.000Z' }),
-        ACTOR,
+        ACTOR_ID,
       );
 
       expect(prisma.serviceDelayNotice.create.mock.calls[0][0].data.detectedAt).toEqual(
@@ -554,7 +557,7 @@ describe('ServicesService — demora y doble reserva', () => {
         servicio({ ticketId: 'TCK-1', status: ServiceStatus.IN_PROGRESS }),
       );
 
-      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR_ID);
 
       const [[, eventos]] = outbox.enqueueMany.mock.calls;
       expect(eventos).toHaveLength(1);
@@ -573,7 +576,7 @@ describe('ServicesService — demora y doble reserva', () => {
     it('una demora antes de arrancar se registra pero no se proyecta a M2', async () => {
       prisma.service.findUnique.mockResolvedValue(servicio({ ticketId: 'TCK-1' }));
 
-      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.START }), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.START }), ACTOR_ID);
 
       expect(prisma.serviceDelayNotice.create).toHaveBeenCalled();
       expect(outbox.enqueueMany).toHaveBeenCalledWith(prisma, []);
@@ -588,7 +591,11 @@ describe('ServicesService — demora y doble reserva', () => {
         );
         prisma.ticketM2State.findUnique.mockResolvedValue({ status });
 
-        await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+        await service.addDelayNotice(
+          SERVICE_ID,
+          aviso({ delayType: DelayType.DURATION }),
+          ACTOR_ID,
+        );
 
         expect(prisma.serviceDelayNotice.create).toHaveBeenCalled();
         expect(outbox.enqueueMany).toHaveBeenCalledWith(prisma, []);
@@ -602,7 +609,7 @@ describe('ServicesService — demora y doble reserva', () => {
       );
       prisma.ticketM2State.findUnique.mockResolvedValue(null);
 
-      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR_ID);
 
       const eventos = outbox.enqueueMany.mock.calls[0][1];
       expect(eventos).toHaveLength(1);
@@ -615,13 +622,13 @@ describe('ServicesService — demora y doble reserva', () => {
       );
       prisma.ticketM2State.findUnique.mockResolvedValue({ status: 'IN_PROGRESS' });
 
-      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR_ID);
 
       expect(outbox.enqueueMany.mock.calls[0][1]).toHaveLength(1);
     });
 
     it('una detección de oficio no avisa a nadie', async () => {
-      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR_ID);
 
       expect(outbox.enqueueMany).toHaveBeenCalledWith(prisma, []);
     });

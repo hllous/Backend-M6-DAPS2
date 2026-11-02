@@ -13,6 +13,7 @@ import { ServiceTargetType } from './dto';
  * `services-container-close.spec.ts` (cierre).
  */
 const USER_ID = '4242';
+const ACTOR = { userId: USER_ID, roles: [] };
 const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
 const TYPE_ID = '22222222-2222-2222-2222-222222222222';
 const ROUTE_ID = '33333333-3333-3333-3333-333333333333';
@@ -109,7 +110,12 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
       ),
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    service = new ServicesService(prisma as unknown as PrismaService, outbox, {} as never);
+    service = new ServicesService(
+      prisma as unknown as PrismaService,
+      outbox,
+      {} as never,
+      { record: jest.fn() } as never,
+    );
   });
 
   // ─── Listado ──────────────────────────────────────
@@ -213,7 +219,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
 
   describe('update', () => {
     it('solo manda los campos presentes en el DTO', async () => {
-      await service.update(SERVICE_ID, { notes: 'Entrar por Rivadavia' });
+      await service.update(SERVICE_ID, { notes: 'Entrar por Rivadavia' }, ACTOR);
 
       expect(prisma.service.update.mock.calls[0][0].data).toEqual({
         notes: 'Entrar por Rivadavia',
@@ -223,9 +229,9 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
     it('valida el vehículo antes de asignarlo', async () => {
       prisma.vehicle.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(SERVICE_ID, { vehicleId: VEHICLE_ID })).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.update(SERVICE_ID, { vehicleId: VEHICLE_ID }, ACTOR),
+      ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.service.update).not.toHaveBeenCalled();
     });
 
@@ -236,9 +242,9 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
         plate: 'AA123BB',
       });
 
-      await expect(service.update(SERVICE_ID, { vehicleId: VEHICLE_ID })).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.update(SERVICE_ID, { vehicleId: VEHICLE_ID }, ACTOR),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     /** La ventana nueva se compara contra la que ya tiene, no contra nada. */
@@ -247,7 +253,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
         serviceRow({ windowFrom: new Date('1970-01-01T14:00:00.000Z') }),
       );
 
-      await expect(service.update(SERVICE_ID, { windowTo: '08:00' })).rejects.toBeInstanceOf(
+      await expect(service.update(SERVICE_ID, { windowTo: '08:00' }, ACTOR)).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
@@ -257,7 +263,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
         serviceRow({ status: ServiceStatus.IN_PROGRESS }),
       );
 
-      await expect(service.update(SERVICE_ID, { notes: 'tarde' })).rejects.toBeInstanceOf(
+      await expect(service.update(SERVICE_ID, { notes: 'tarde' }, ACTOR)).rejects.toBeInstanceOf(
         ConflictException,
       );
     });
@@ -290,7 +296,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
 
       it('ventana que pisa a otro servicio de la cuadrilla da 409 y no escribe', async () => {
         await expect(
-          service.update(SERVICE_ID, { windowFrom: '09:00', windowTo: '11:00' }),
+          service.update(SERVICE_ID, { windowFrom: '09:00', windowTo: '11:00' }, ACTOR),
         ).rejects.toBeInstanceOf(ConflictException);
         expect(prisma.service.update).not.toHaveBeenCalled();
       });
@@ -298,9 +304,9 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
       it('parcial: solo windowTo usa windowFrom y cuadrilla vigentes', async () => {
         prisma.service.findUnique.mockResolvedValue(propio({ windowFrom: t('08:30') }));
 
-        await expect(service.update(SERVICE_ID, { windowTo: '11:00' })).rejects.toBeInstanceOf(
-          ConflictException,
-        );
+        await expect(
+          service.update(SERVICE_ID, { windowTo: '11:00' }, ACTOR),
+        ).rejects.toBeInstanceOf(ConflictException);
         const { where } = prisma.service.findMany.mock.calls[0][0];
         expect(where.id).toEqual({ not: SERVICE_ID });
         expect(where.OR).toEqual([{ crewId: CREW_ID }]);
@@ -315,16 +321,16 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
           }),
         ]);
 
-        await expect(service.update(SERVICE_ID, { vehicleId: VEHICLE_ID })).rejects.toBeInstanceOf(
-          ConflictException,
-        );
+        await expect(
+          service.update(SERVICE_ID, { vehicleId: VEHICLE_ID }, ACTOR),
+        ).rejects.toBeInstanceOf(ConflictException);
         expect(prisma.service.findMany.mock.calls[0][0].where.OR).toEqual([
           { vehicleId: VEHICLE_ID },
         ]);
       });
 
       it('franja contigua no es solapamiento', async () => {
-        await service.update(SERVICE_ID, { windowFrom: '10:00', windowTo: '12:00' });
+        await service.update(SERVICE_ID, { windowFrom: '10:00', windowTo: '12:00' }, ACTOR);
 
         expect(prisma.service.update).toHaveBeenCalledTimes(1);
         expect(prisma.service.update.mock.calls[0][0].data.assignmentOverrideNote).toBeUndefined();
@@ -334,7 +340,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
         await service.update(
           SERVICE_ID,
           { windowFrom: '09:00', windowTo: '11:00', overrideNote: NOTA },
-          'user-1',
+          { userId: 'user-1', roles: [] },
         );
 
         const { data } = prisma.service.update.mock.calls[0][0];
@@ -344,7 +350,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
       });
 
       it('sin solapamiento la overrideNote no se guarda', async () => {
-        await service.update(SERVICE_ID, { windowFrom: '10:00', overrideNote: NOTA });
+        await service.update(SERVICE_ID, { windowFrom: '10:00', overrideNote: NOTA }, ACTOR);
 
         expect(prisma.service.update.mock.calls[0][0].data.assignmentOverrideNote).toBeUndefined();
       });
@@ -355,7 +361,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
           otro('13:00', '15:00', { crewId: null, vehicleId: VEHICLE_ID }),
         ]);
 
-        await service.update(SERVICE_ID, { vehicleId: null } as never);
+        await service.update(SERVICE_ID, { vehicleId: null } as never, ACTOR);
 
         expect(prisma.service.findMany.mock.calls[0]?.[0].where.OR ?? []).not.toContainEqual({
           vehicleId: VEHICLE_ID,
@@ -367,7 +373,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
         prisma.service.findUnique.mockResolvedValue(propio({ vehicleId: VEHICLE_ID }));
 
         await expect(
-          service.update(SERVICE_ID, { windowFrom: '09:00', windowTo: '11:00' }),
+          service.update(SERVICE_ID, { windowFrom: '09:00', windowTo: '11:00' }, ACTOR),
         ).rejects.toBeInstanceOf(ConflictException);
         expect(prisma.service.findMany.mock.calls[0][0].where.OR).toEqual([
           { crewId: CREW_ID },
@@ -383,13 +389,13 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
           otro('08:00', '10:00', { crewId: null, vehicleId: VEHICLE_ID }),
         ]);
 
-        await expect(service.update(SERVICE_ID, { vehicleId: VEHICLE_ID })).rejects.toBeInstanceOf(
-          ConflictException,
-        );
+        await expect(
+          service.update(SERVICE_ID, { vehicleId: VEHICLE_ID }, ACTOR),
+        ).rejects.toBeInstanceOf(ConflictException);
       });
 
       it('un PATCH de solo notas no consulta conflictos', async () => {
-        await service.update(SERVICE_ID, { notes: 'x' });
+        await service.update(SERVICE_ID, { notes: 'x' }, ACTOR);
 
         expect(prisma.service.findMany).not.toHaveBeenCalled();
       });
@@ -505,12 +511,12 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
 
     it('targetType sin targetId se rechaza', async () => {
       await expect(
-        service.create({ ...point, targetType: ServiceTargetType.CONTAINER }),
+        service.create({ ...point, targetType: ServiceTargetType.CONTAINER }, ACTOR),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('targetId sin targetType se rechaza', async () => {
-      await expect(service.create({ ...point, targetId: TARGET_ID })).rejects.toBeInstanceOf(
+      await expect(service.create({ ...point, targetId: TARGET_ID }, ACTOR)).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
@@ -518,13 +524,13 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
     it('sin objetivo, la zona suelta tiene que existir', async () => {
       prisma.zone.findUnique.mockResolvedValue(null);
 
-      await expect(service.create({ ...point, zoneId: ZONE_A })).rejects.toBeInstanceOf(
+      await expect(service.create({ ...point, zoneId: ZONE_A }, ACTOR)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
 
     it('sin objetivo, se ubica por la zona suelta', async () => {
-      await service.create({ ...point, zoneId: ZONE_A });
+      await service.create({ ...point, zoneId: ZONE_A }, ACTOR);
 
       expect(prisma.service.create.mock.calls[0][0].data.zones.createMany.data).toEqual([
         { zoneId: ZONE_A, sequence: 1 },
@@ -537,7 +543,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
       [ServiceTargetType.GREEN_SPACE, 'greenSpace'],
       [ServiceTargetType.GREEN_POINT, 'greenPoint'],
     ])('con objetivo %s, la zona sale del bien', async (targetType, modelo) => {
-      await service.create({ ...point, targetType, targetId: TARGET_ID });
+      await service.create({ ...point, targetType, targetId: TARGET_ID }, ACTOR);
 
       expect(prisma[modelo].findUnique).toHaveBeenCalledWith({
         where: { id: TARGET_ID },
@@ -549,7 +555,10 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
       prisma.tree.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create({ ...point, targetType: ServiceTargetType.TREE, targetId: TARGET_ID }),
+        service.create(
+          { ...point, targetType: ServiceTargetType.TREE, targetId: TARGET_ID },
+          ACTOR,
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
@@ -567,7 +576,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
     it('una cuadrilla inexistente da 404', async () => {
       prisma.crew.findUnique.mockResolvedValue(null);
 
-      await expect(service.create({ ...point, crewId: CREW_ID })).rejects.toBeInstanceOf(
+      await expect(service.create({ ...point, crewId: CREW_ID }, ACTOR)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -575,9 +584,9 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
     it('un vehículo inexistente da 404', async () => {
       prisma.vehicle.findUnique.mockResolvedValue(null);
 
-      await expect(service.create({ ...point, vehicleId: VEHICLE_ID })).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.create({ ...point, vehicleId: VEHICLE_ID }, ACTOR),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('un vehículo dado de baja se rechaza', async () => {
@@ -587,9 +596,9 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
         plate: 'AA123BB',
       });
 
-      await expect(service.create({ ...point, vehicleId: VEHICLE_ID })).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.create({ ...point, vehicleId: VEHICLE_ID }, ACTOR),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 });

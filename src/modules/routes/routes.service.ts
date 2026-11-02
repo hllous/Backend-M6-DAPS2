@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Route, RouteStop, Zone } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditActor, AuditService, activeState } from '../../common/audit/audit.service';
 import {
   CreateRouteDto,
   QueryRoutesDto,
@@ -31,12 +32,25 @@ type RouteWithStops = Route & { stops?: (RouteStop & { zone?: Zone })[] };
 export class RoutesService {
   private readonly logger = new Logger(RoutesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
-  async create(dto: CreateRouteDto): Promise<RouteResponseDto> {
+  async create(dto: CreateRouteDto, actor: AuditActor): Promise<RouteResponseDto> {
     try {
-      const route = await this.prisma.route.create({
-        data: { code: dto.code, name: dto.name, active: dto.active ?? true },
+      const route = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.route.create({
+          data: { code: dto.code, name: dto.name, active: dto.active ?? true },
+        });
+        await this.audit.record(tx, {
+          entityType: 'ROUTE',
+          entityId: created.id,
+          action: 'CREATE',
+          toStatus: activeState(created.active),
+          actor,
+        });
+        return created;
       });
 
       this.logger.log(`Recorrido creado: ${route.code} (${route.id})`);
@@ -94,15 +108,28 @@ export class RoutesService {
     return this.toResponseDto(route);
   }
 
-  async update(id: string, dto: UpdateRouteDto): Promise<RouteResponseDto> {
+  async update(id: string, dto: UpdateRouteDto, actor: AuditActor): Promise<RouteResponseDto> {
     await this.ensureExists(id);
 
-    const route = await this.prisma.route.update({
-      where: { id },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.active !== undefined && { active: dto.active }),
-      },
+    const route = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.route.update({
+        where: { id },
+        data: {
+          ...(dto.name !== undefined && { name: dto.name }),
+          ...(dto.active !== undefined && { active: dto.active }),
+        },
+      });
+      // Solo el alta o la baja son auditables acá; el resto de los campos no son estado.
+      if (dto.active !== undefined) {
+        await this.audit.record(tx, {
+          entityType: 'ROUTE',
+          entityId: id,
+          action: dto.active ? 'ACTIVATE' : 'DEACTIVATE',
+          toStatus: activeState(dto.active),
+          actor,
+        });
+      }
+      return updated;
     });
 
     this.logger.log(`Recorrido actualizado: ${route.code} (${route.id})`);
@@ -113,10 +140,19 @@ export class RoutesService {
    * Soft-delete: los Service ya programados guardan `routeId`, así que el
    * borrado físico rompería el histórico de lo ejecutado.
    */
-  async remove(id: string): Promise<void> {
+  async remove(id: string, actor: AuditActor): Promise<void> {
     await this.ensureExists(id);
 
-    await this.prisma.route.update({ where: { id }, data: { active: false } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.route.update({ where: { id }, data: { active: false } });
+      await this.audit.record(tx, {
+        entityType: 'ROUTE',
+        entityId: id,
+        action: 'DEACTIVATE',
+        toStatus: activeState(false),
+        actor,
+      });
+    });
 
     this.logger.log(`Recorrido desactivado: ${id}`);
   }

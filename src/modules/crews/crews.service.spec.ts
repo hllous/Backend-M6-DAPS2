@@ -1,5 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ACTOR } from '../../common/audit/audit-test-actor';
+import { AuditService } from '../../common/audit/audit.service';
 import { CrewsService } from './crews.service';
 
 const ID = '44444444-4444-4444-4444-444444444444';
@@ -8,6 +10,7 @@ const OTRA_ZONA = '66666666-6666-6666-6666-666666666666';
 
 describe('CrewsService', () => {
   let prisma: any;
+  let audit: { record: jest.Mock };
   let service: CrewsService;
 
   const cuadrilla = (over: Record<string, unknown> = {}) => ({
@@ -66,14 +69,18 @@ describe('CrewsService', () => {
         typeof arg === 'function' ? arg(prisma) : Promise.resolve(arg),
       ),
     };
-    service = new CrewsService(prisma as unknown as PrismaService);
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    service = new CrewsService(
+      prisma as unknown as PrismaService,
+      audit as unknown as AuditService,
+    );
   });
 
   describe('create', () => {
     const base = { name: 'C1', crewType: 'MUNICIPAL', defaultShift: 'MORNING' };
 
     it('nace activa y sin cooperativa si no se la pasan', async () => {
-      await service.create({ ...base, specialty: 'SWEEPING' } as any);
+      await service.create({ ...base, specialty: 'SWEEPING' } as any, ACTOR);
 
       expect(prisma.crew.create.mock.calls[0][0].data).toMatchObject({
         active: true,
@@ -87,19 +94,22 @@ describe('CrewsService', () => {
     });
 
     it('el líder se guarda como id de M1 normalizado (#365)', async () => {
-      await service.create({ ...base, leaderUserId: '0042' } as any);
+      await service.create({ ...base, leaderUserId: '0042' } as any, ACTOR);
 
       expect(prisma.crew.create.mock.calls[0][0].data.leaderUserId).toBe('42');
     });
 
     /** Una cuadrilla de cooperativa se identifica por su organización. */
     it('guarda la organización cuando la cuadrilla es de cooperativa', async () => {
-      await service.create({
-        name: 'Coop Norte',
-        crewType: 'COOPERATIVE',
-        defaultShift: 'AFTERNOON',
-        organizationId: 'org-9',
-      } as any);
+      await service.create(
+        {
+          name: 'Coop Norte',
+          crewType: 'COOPERATIVE',
+          defaultShift: 'AFTERNOON',
+          organizationId: 'org-9',
+        } as any,
+        ACTOR,
+      );
 
       expect(prisma.crew.create.mock.calls[0][0].data).toMatchObject({
         crewType: 'COOPERATIVE',
@@ -108,11 +118,14 @@ describe('CrewsService', () => {
     });
 
     it('guarda los nombres del líder y la organización (#454)', async () => {
-      await service.create({
-        ...base,
-        leaderName: 'Marta Gómez',
-        organizationName: 'Cooperativa Sur',
-      } as any);
+      await service.create(
+        {
+          ...base,
+          leaderName: 'Marta Gómez',
+          organizationName: 'Cooperativa Sur',
+        } as any,
+        ACTOR,
+      );
 
       expect(prisma.crew.create.mock.calls[0][0].data).toMatchObject({
         leaderName: 'Marta Gómez',
@@ -121,7 +134,7 @@ describe('CrewsService', () => {
     });
 
     it('con zona base la valida y la guarda', async () => {
-      await service.create({ ...base, homeZoneId: ZONA } as any);
+      await service.create({ ...base, homeZoneId: ZONA } as any, ACTOR);
 
       expect(prisma.zone.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: ZONA } }),
@@ -132,48 +145,52 @@ describe('CrewsService', () => {
     it('una zona base inexistente da 404 y no crea', async () => {
       prisma.zone.findUnique.mockResolvedValue(null);
 
-      await expect(service.create({ ...base, homeZoneId: ZONA } as any)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.create({ ...base, homeZoneId: ZONA } as any, ACTOR),
+      ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.crew.create).not.toHaveBeenCalled();
     });
 
     it('una zona base dada de baja da 400', async () => {
       prisma.zone.findUnique.mockResolvedValue({ active: false, name: 'Vieja' });
 
-      await expect(service.create({ ...base, homeZoneId: ZONA } as any)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.create({ ...base, homeZoneId: ZONA } as any, ACTOR),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 
   describe('update', () => {
     /** Cambia cómo trabaja la cuadrilla, no qué clase de cuadrilla es. */
     it('el tipo de cuadrilla es inmutable', async () => {
-      await service.update(ID, { crewType: 'COOPERATIVE', name: 'Renombrada' } as any);
+      await service.update(ID, { crewType: 'COOPERATIVE', name: 'Renombrada' } as any, ACTOR);
 
       expect(prisma.crew.update.mock.calls[0][0].data).toEqual({ name: 'Renombrada' });
     });
 
     it('deja desasignar el jefe pasando null', async () => {
-      await service.update(ID, { leaderUserId: null } as any);
+      await service.update(ID, { leaderUserId: null } as any, ACTOR);
 
       expect(prisma.crew.update.mock.calls[0][0].data).toEqual({ leaderUserId: null });
     });
 
     it('cambiar el líder también normaliza el id', async () => {
-      await service.update(ID, { leaderUserId: '007' } as any);
+      await service.update(ID, { leaderUserId: '007' } as any, ACTOR);
 
       expect(prisma.crew.update.mock.calls[0][0].data).toEqual({ leaderUserId: '7' });
     });
 
     it('nombres vacíos o null se guardan como null; especialidad y zona se cambian', async () => {
-      await service.update(ID, {
-        leaderName: '',
-        organizationName: null,
-        specialty: 'TREES',
-        homeZoneId: ZONA,
-      } as any);
+      await service.update(
+        ID,
+        {
+          leaderName: '',
+          organizationName: null,
+          specialty: 'TREES',
+          homeZoneId: ZONA,
+        } as any,
+        ACTOR,
+      );
 
       expect(prisma.crew.update.mock.calls[0][0].data).toEqual({
         leaderName: null,
@@ -184,7 +201,7 @@ describe('CrewsService', () => {
     });
 
     it('homeZoneId null deja la cuadrilla sin zona base, sin consultar zonas', async () => {
-      await service.update(ID, { homeZoneId: null } as any);
+      await service.update(ID, { homeZoneId: null } as any, ACTOR);
 
       expect(prisma.zone.findUnique).not.toHaveBeenCalled();
       expect(prisma.crew.update.mock.calls[0][0].data).toEqual({ homeZoneId: null });
@@ -193,14 +210,14 @@ describe('CrewsService', () => {
     it('una cuadrilla inexistente da 404', async () => {
       prisma.crew.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(ID, {} as any)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.update(ID, {} as any, ACTOR)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
   describe('remove', () => {
     /** Los servicios ya ejecutados apuntan a la cuadrilla que los hizo. */
     it('es baja lógica, no borrado', async () => {
-      await service.remove(ID);
+      await service.remove(ID, ACTOR);
 
       expect(prisma.crew.update).toHaveBeenCalledWith({
         where: { id: ID },
@@ -213,7 +230,7 @@ describe('CrewsService', () => {
     const upserts = () => prisma.crewMember.upsert.mock.calls.map((c: any[]) => c[0]);
 
     it('userIds sigue andando: ids normalizados y sin nombre', async () => {
-      await service.addMembers(ID, { userIds: ['001', '2'] } as any);
+      await service.addMembers(ID, { userIds: ['001', '2'] } as any, ACTOR);
 
       expect(upserts()).toEqual([
         {
@@ -230,9 +247,13 @@ describe('CrewsService', () => {
     });
 
     it('members guarda el nombre y actualiza el de quien ya estaba (#454)', async () => {
-      await service.addMembers(ID, {
-        members: [{ userId: '10', displayName: 'Lucía Fernández' }, { userId: '11' }],
-      } as any);
+      await service.addMembers(
+        ID,
+        {
+          members: [{ userId: '10', displayName: 'Lucía Fernández' }, { userId: '11' }],
+        } as any,
+        ACTOR,
+      );
 
       expect(upserts()[0]).toEqual({
         where: { crewId_userId: { crewId: ID, userId: '10' } },
@@ -244,10 +265,14 @@ describe('CrewsService', () => {
     });
 
     it('un id repetido en userIds y members queda una sola vez, con el nombre', async () => {
-      await service.addMembers(ID, {
-        userIds: ['10', '12'],
-        members: [{ userId: '010', displayName: 'Lucía' }],
-      } as any);
+      await service.addMembers(
+        ID,
+        {
+          userIds: ['10', '12'],
+          members: [{ userId: '010', displayName: 'Lucía' }],
+        } as any,
+        ACTOR,
+      );
 
       expect(upserts().map((u: any) => u.create)).toEqual([
         { crewId: ID, userId: '10', displayName: 'Lucía' },
@@ -266,7 +291,7 @@ describe('CrewsService', () => {
         }),
       );
 
-      const dto = await service.addMembers(ID, { userIds: ['2'] } as any);
+      const dto = await service.addMembers(ID, { userIds: ['2'] } as any, ACTOR);
 
       expect(dto.members).toEqual([
         { userId: '1', displayName: 'Ana' },
@@ -278,7 +303,7 @@ describe('CrewsService', () => {
     it('sumar miembros a una cuadrilla inexistente da 404 sin escribir', async () => {
       prisma.crew.findUnique.mockResolvedValue(null);
 
-      await expect(service.addMembers(ID, { userIds: ['1'] } as any)).rejects.toBeInstanceOf(
+      await expect(service.addMembers(ID, { userIds: ['1'] } as any, ACTOR)).rejects.toBeInstanceOf(
         NotFoundException,
       );
       expect(prisma.crewMember.upsert).not.toHaveBeenCalled();
@@ -287,11 +312,11 @@ describe('CrewsService', () => {
     it('quitar a alguien que no es miembro da 404', async () => {
       prisma.crewMember.deleteMany.mockResolvedValue({ count: 0 });
 
-      await expect(service.removeMember(ID, '9')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.removeMember(ID, '9', ACTOR)).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('quitar a un miembro no devuelve nada', async () => {
-      await expect(service.removeMember(ID, '1')).resolves.toBeUndefined();
+      await expect(service.removeMember(ID, '1', ACTOR)).resolves.toBeUndefined();
     });
   });
 
@@ -379,7 +404,7 @@ describe('CrewsService', () => {
     };
 
     it('guarda la reubicación con el actor del token y fechas sin hora', async () => {
-      const res = await service.createZoneAssignment(ID, dto, '3');
+      const res = await service.createZoneAssignment(ID, dto, ACTOR);
 
       expect(prisma.crewZoneAssignment.create.mock.calls[0][0].data).toEqual({
         crewId: ID,
@@ -387,15 +412,19 @@ describe('CrewsService', () => {
         validFrom: new Date('2026-11-02T00:00:00.000Z'),
         validTo: new Date('2026-11-15T00:00:00.000Z'),
         reason: 'Refuerzo',
+        createdBy: '42',
+      });
+      expect(res).toMatchObject({
+        validFrom: '2026-11-02',
+        validTo: '2026-11-15',
         createdBy: '3',
       });
-      expect(res).toMatchObject({ validFrom: '2026-11-02', validTo: '2026-11-15', createdBy: '3' });
     });
 
     it('sin validTo queda abierta', async () => {
       prisma.crewZoneAssignment.create.mockResolvedValue(reubicacion({ validTo: null }));
 
-      const res = await service.createZoneAssignment(ID, { ...dto, validTo: undefined }, '3');
+      const res = await service.createZoneAssignment(ID, { ...dto, validTo: undefined }, ACTOR);
 
       expect(prisma.crewZoneAssignment.create.mock.calls[0][0].data.validTo).toBeNull();
       expect(res.validTo).toBeNull();
@@ -403,7 +432,7 @@ describe('CrewsService', () => {
 
     it('validTo anterior a validFrom da 400', async () => {
       await expect(
-        service.createZoneAssignment(ID, { ...dto, validTo: '2026-11-01' }, '3'),
+        service.createZoneAssignment(ID, { ...dto, validTo: '2026-11-01' }, ACTOR),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.crewZoneAssignment.create).not.toHaveBeenCalled();
     });
@@ -411,7 +440,7 @@ describe('CrewsService', () => {
     it('un período que se pisa con otro da 409', async () => {
       prisma.crewZoneAssignment.findFirst.mockResolvedValue({ id: 'a-0' });
 
-      await expect(service.createZoneAssignment(ID, dto, '3')).rejects.toBeInstanceOf(
+      await expect(service.createZoneAssignment(ID, dto, ACTOR)).rejects.toBeInstanceOf(
         ConflictException,
       );
       expect(prisma.crewZoneAssignment.create).not.toHaveBeenCalled();
@@ -434,7 +463,7 @@ describe('CrewsService', () => {
         return reubicacion();
       });
 
-      await service.createZoneAssignment(ID, dto, '3');
+      await service.createZoneAssignment(ID, dto, ACTOR);
 
       expect(orden).toEqual([
         `lock:SELECT pg_advisory_xact_lock(hashtext(?)):${ID}`,
@@ -444,14 +473,14 @@ describe('CrewsService', () => {
     });
 
     it('el chequeo de superposición es por rango, y sin validTo no tiene tope', async () => {
-      await service.createZoneAssignment(ID, dto, '3');
+      await service.createZoneAssignment(ID, dto, ACTOR);
       expect(prisma.crewZoneAssignment.findFirst.mock.calls[0][0].where).toEqual({
         crewId: ID,
         validFrom: { lte: new Date('2026-11-15T00:00:00.000Z') },
         OR: [{ validTo: null }, { validTo: { gte: new Date('2026-11-02T00:00:00.000Z') } }],
       });
 
-      await service.createZoneAssignment(ID, { ...dto, validTo: undefined }, '3');
+      await service.createZoneAssignment(ID, { ...dto, validTo: undefined }, ACTOR);
       expect(prisma.crewZoneAssignment.findFirst.mock.calls[1][0].where).not.toHaveProperty(
         'validFrom',
       );
@@ -459,17 +488,17 @@ describe('CrewsService', () => {
 
     it('cuadrilla o zona inexistente da 404; zona dada de baja da 400', async () => {
       prisma.zone.findUnique.mockResolvedValue(null);
-      await expect(service.createZoneAssignment(ID, dto, '3')).rejects.toBeInstanceOf(
+      await expect(service.createZoneAssignment(ID, dto, ACTOR)).rejects.toBeInstanceOf(
         NotFoundException,
       );
 
       prisma.zone.findUnique.mockResolvedValue({ active: false, name: 'Vieja' });
-      await expect(service.createZoneAssignment(ID, dto, '3')).rejects.toBeInstanceOf(
+      await expect(service.createZoneAssignment(ID, dto, ACTOR)).rejects.toBeInstanceOf(
         BadRequestException,
       );
 
       prisma.crew.findUnique.mockResolvedValue(null);
-      await expect(service.createZoneAssignment(ID, dto, '3')).rejects.toBeInstanceOf(
+      await expect(service.createZoneAssignment(ID, dto, ACTOR)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -489,6 +518,50 @@ describe('CrewsService', () => {
       prisma.crew.findUnique.mockResolvedValue(null);
 
       await expect(service.listZoneAssignments(ID)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('auditoría (#460)', () => {
+    it('la baja deja constancia de quién y a qué estado, en la misma transacción', async () => {
+      await service.remove(ID, ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(prisma, {
+        entityType: 'CREW',
+        entityId: ID,
+        action: 'DEACTIVATE',
+        toStatus: 'INACTIVE',
+        actor: ACTOR,
+      });
+    });
+
+    it('el alta audita el estado inicial', async () => {
+      await service.create(
+        { name: 'C1', crewType: 'MUNICIPAL', defaultShift: 'MORNING' } as any,
+        ACTOR,
+      );
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'CREW',
+          action: 'CREATE',
+          toStatus: 'ACTIVE',
+          actor: ACTOR,
+        }),
+      );
+    });
+
+    it('un update que cambia active audita el alta o la baja', async () => {
+      await service.update(ID, { active: false } as any, ACTOR);
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ action: 'DEACTIVATE', toStatus: 'INACTIVE' }),
+      );
+    });
+
+    it('un update que no toca active no audita', async () => {
+      await service.update(ID, { name: 'Otro' } as any, ACTOR);
+      expect(audit.record).not.toHaveBeenCalled();
     });
   });
 });
