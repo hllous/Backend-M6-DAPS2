@@ -488,6 +488,8 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 | POST   | `/street-closure-requests/:id/reject`  | → `REJECTED`. **Normalmente lo dispara `streetClosureRejected`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                                                            |
 | POST   | `/street-closure-requests/:id/end`     | → `ENDED`, desde `REQUESTED`, `APPROVED` o `EXPIRED`. **Normalmente lo dispara `streetClosureEnded`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                       |
 
+La respuesta de un corte trae, además de la ventana pedida (`closureFrom`/`closureTo`), la que autorizó M7 (`approvedFrom`/`approvedTo`, null hasta que aprueban) y el motivo del rechazo (`rejectionReason`, null si no fue rechazado). Son los nombres de nuestro REST; en los eventos de M7 llegan como `startDate`/`endDate`/`rejectionReason`.
+
 `sourceRef` apunta al `Service` o a la `TreeIntervention` que origina el corte: es lo que hace que la respuesta de M7 se pueda aplicar sobre el trabajo correcto.
 
 > Los endpoints de transición existen para **operación manual y para poder demostrar el circuito mientras no haya bus**. Cuando la Fase 6 conecte los consumidores, lo normal va a ser que los muevan los eventos.

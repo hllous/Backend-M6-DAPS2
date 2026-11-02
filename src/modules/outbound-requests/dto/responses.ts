@@ -113,6 +113,32 @@ export class StreetClosureRequestResponseDto {
   @ApiPropertyOptional({ description: 'Tipo de corte', enum: StreetClosureType, nullable: true })
   closureType: StreetClosureType | null;
 
+  @ApiPropertyOptional({
+    description:
+      'Inicio de la ventana que autorizó M7 (streetClosureApproved). Null hasta que aprueban; prevalece sobre closureFrom.',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  approvedFrom: Date | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Fin de la ventana que autorizó M7 (streetClosureApproved). Null hasta que aprueban; prevalece sobre closureTo.',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  approvedTo: Date | null;
+
+  @ApiPropertyOptional({
+    description: 'Motivo del rechazo informado por M7. Null si el corte no fue rechazado.',
+    example: 'Se superpone con otro corte en la misma calle',
+    nullable: true,
+    type: String,
+  })
+  rejectionReason: string | null;
+
   @ApiProperty({
     description:
       'Estado de la solicitud. Lo mueven las tres respuestas de M7 y, para EXPIRED, el barrido que vence los cortes aprobados cuya ventana autorizada ya pasó (M7 no avisa).',
