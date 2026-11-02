@@ -633,9 +633,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Belgrano y Colegiales — Recolección',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '101',
+    leaderUserId: '10000',
     organizationId: null,
-    members: ['101', '102', '103', '104'],
+    members: ['10000', '10001', '10002', '10003'],
     active: true,
     tipos: ['REC-DOM', 'CONT-VAC', 'REC-VOL'],
     zonas: ['belgrano', 'colegiales'],
@@ -645,9 +645,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Palermo — Recolección y Barrido',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '111',
+    leaderUserId: '10010',
     organizationId: null,
-    members: ['111', '112', '113', '114', '115'],
+    members: ['10010', '10011', '10012', '10013', '10014'],
     active: true,
     tipos: ['REC-DOM', 'BAR-MAN', 'CONT-VAC', 'REC-VOL'],
     zonas: ['palermo'],
@@ -657,9 +657,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Arbolado — Poda y Relevamiento de toda la Ciudad',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '401',
+    leaderUserId: '10020',
     organizationId: null,
-    members: ['401', '402', '403'],
+    members: ['10020', '10021', '10022'],
     active: true,
     tipos: ['ARB-POD', 'ARB-CENSO'],
     zonas: TODAS_LAS_ZONAS,
@@ -669,9 +669,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Parques y Plazas — Espacios Verdes',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '501',
+    leaderUserId: '10030',
     organizationId: null,
-    members: ['501', '502', '503', '504'],
+    members: ['10030', '10031', '10032', '10033'],
     active: true,
     tipos: ['EV-MANT', 'EV-RIEGO'],
     zonas: TODAS_LAS_ZONAS,
@@ -682,9 +682,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cooperativa de Recuperadores Palermo — Reciclables',
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '201',
+    leaderUserId: '10040',
     organizationId: '3301',
-    members: ['201', '202', '203', '204'],
+    members: ['10040', '10041', '10042', '10043'],
     active: true,
     tipos: ['REC-REC', 'CONT-VAC'],
     zonas: ['palermo', 'recoleta', 'belgrano', 'colegiales'],
@@ -696,9 +696,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cooperativa de Recuperadores Belgrano y Colegiales — Reciclables',
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '211',
+    leaderUserId: '10050',
     organizationId: '3302',
-    members: ['211', '212', '213'],
+    members: ['10050', '10051', '10052'],
     active: false,
     tipos: ['REC-REC'],
     zonas: ['belgrano', 'colegiales'],
@@ -709,9 +709,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Recoleta — Recolección y Limpieza',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '121',
+    leaderUserId: '10060',
     organizationId: null,
-    members: ['121', '122', '123', '124'],
+    members: ['10060', '10061', '10062', '10063'],
     active: true,
     tipos: ['REC-DOM', 'REC-VOL', 'CONT-VAC', 'CONT-LAV'],
     zonas: ['recoleta'],
@@ -722,9 +722,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Control Ambiental — Inspección',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '601',
+    leaderUserId: '10070',
     organizationId: null,
-    members: ['601', '602'],
+    members: ['10070', '10071'],
     active: true,
     tipos: ['AMB-INSP'],
     zonas: TODAS_LAS_ZONAS,
@@ -735,9 +735,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Centro y Retiro — Recolección Nocturna',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '131',
+    leaderUserId: '10080',
     organizationId: null,
-    members: ['131', '132', '133', '134'],
+    members: ['10080', '10081', '10082', '10083'],
     active: true,
     tipos: ['REC-DOM'],
     zonas: CENTRO,
@@ -747,9 +747,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Microcentro — Barrido Manual y Limpieza',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '141',
+    leaderUserId: '10090',
     organizationId: null,
-    members: ['141', '142', '143', '144', '145'],
+    members: ['10090', '10091', '10092', '10093', '10094'],
     active: true,
     tipos: ['BAR-MAN', 'HIG-LAV', 'CONT-VAC', 'CONT-LAV'],
     zonas: CENTRO,
@@ -759,9 +759,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Avenidas — Barrido Mecánico',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '301',
+    leaderUserId: '10100',
     organizationId: null,
-    members: ['301', '302', '303'],
+    members: ['10100', '10101', '10102'],
     active: true,
     tipos: ['BAR-MEC'],
     zonas: ['san-nicolas', 'montserrat', 'retiro', 'palermo', 'recoleta', 'belgrano', 'colegiales'],
@@ -771,14 +771,47 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cooperativa de Recuperadores Microcentro — Reciclables',
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '221',
+    leaderUserId: '10110',
     organizationId: '3303',
-    members: ['221', '222', '223', '224'],
+    members: ['10110', '10111', '10112', '10113'],
     active: true,
     tipos: ['REC-REC', 'CONT-VAC'],
     zonas: CENTRO,
   },
 ];
+
+/**
+ * Ids de persona que sembraba el seed anterior a #455 (líderes e integrantes de las 16
+ * cuadrillas operativas). Se usan para limpiarlos de una base ya sembrada, nada más.
+ */
+const IDS_LEGADOS = [
+  ...['101', '102', '103', '104', '111', '112', '113', '114', '115', '401', '402', '403'],
+  ...['501', '502', '503', '504', '201', '202', '203', '204', '211', '212', '213'],
+  ...['121', '122', '123', '124', '601', '602', '131', '132', '133', '134'],
+  ...['141', '142', '143', '144', '145', '301', '302', '303', '221', '222', '223', '224'],
+  ...['151', '152', '153', '154', '161', '162', '163', '164', '171', '172', '173', '174'],
+  ...['181', '182', '183', '184'],
+];
+
+/**
+ * El seed escribe en la base de `DATABASE_URL` y, con el `.env` del repo apuntando a la
+ * desplegada, un `npm run prisma:seed` descuidado la pisaría. Solo corre contra una base
+ * local salvo que se confirme con SEED_CONFIRM_REMOTE=1. El host se parsea, no se busca
+ * como subcadena (`localhost.evil.com` o `u:localhost@host` no pasan).
+ */
+export function assertBaseSegura(url: string | undefined, confirmaRemota?: string): void {
+  if (confirmaRemota === '1') return;
+  let host = '';
+  try {
+    host = new URL(url ?? '').hostname;
+  } catch {
+    // sin URL válida: se trata como no local
+  }
+  if (!['localhost', '127.0.0.1', '[::1]', '::1'].includes(host))
+    throw new Error(
+      `seed: DATABASE_URL no apunta a localhost (host: '${host || 'inválido'}'). Para sembrar una base remota hay que exportar SEED_CONFIRM_REMOTE=1.`,
+    );
+}
 
 /**
  * La especialidad de una cuadrilla del seed: la de sus tipos si todos mapean a una
@@ -855,7 +888,7 @@ const PERSONAL_DE_OFICINA: { userId: string; roles: M6Role[] }[] = [
 ];
 
 /** Los roles de M6 de cada usuario de la demo: Oficina fija y Campo según su cuadrilla. */
-function rolesDeLaDemo(): { userId: string; role: M6Role }[] {
+export function rolesDeLaDemo(): { userId: string; role: M6Role }[] {
   const filas = PERSONAL_DE_OFICINA.flatMap((p) =>
     p.roles.map((role) => ({ userId: p.userId, role })),
   );
@@ -863,7 +896,7 @@ function rolesDeLaDemo(): { userId: string; role: M6Role }[] {
     for (const userId of new Set([c.leaderUserId, ...c.members])) {
       filas.push({ userId, role: M6Role.M6_CAMPO_CUADRILLA });
       // La cuadrilla de inspección también cierra las inspecciones ambientales.
-      if (c.clave === 'INSP') filas.push({ userId, role: M6Role.M6_CAMPO_INSPECTOR });
+      if (c.tipos.includes('AMB-INSP')) filas.push({ userId, role: M6Role.M6_CAMPO_INSPECTOR });
     }
   }
   return filas;
@@ -1628,7 +1661,7 @@ const REGIONES = [
   {
     clave: 'SUR-REC',
     name: 'Cuadrilla Municipal Sur — Recolección Comunas 1 (sur), 4 y 8',
-    lider: '151',
+    lider: '10120',
     patente: 'AN123PQ',
     rutas: [
       { code: 'R-REC-C01S', zonas: ['san-telmo', 'constitucion'], dia: 6 },
@@ -1639,7 +1672,7 @@ const REGIONES = [
   {
     clave: 'OESTE-REC',
     name: 'Cuadrilla Municipal Oeste — Recolección Comunas 9, 10 y 11',
-    lider: '161',
+    lider: '10130',
     patente: 'AN246PR',
     rutas: [
       { code: 'R-REC-C09', zonas: deComuna(9), dia: 1 },
@@ -1650,7 +1683,7 @@ const REGIONES = [
   {
     clave: 'CENTRO-REC',
     name: 'Cuadrilla Municipal Centro-Oeste — Recolección Comunas 3, 5, 6 y 7',
-    lider: '171',
+    lider: '10140',
     patente: 'AN369PS',
     rutas: [
       { code: 'R-REC-C03', zonas: deComuna(3), dia: 2 },
@@ -1662,7 +1695,7 @@ const REGIONES = [
   {
     clave: 'NORTE-REC',
     name: 'Cuadrilla Municipal Noroeste — Recolección Comunas 12, 13 (Núñez) y 15',
-    lider: '181',
+    lider: '10150',
     patente: 'AN482PT',
     rutas: [
       { code: 'R-REC-C12', zonas: [...deComuna(12), 'nunez'], dia: 1 },
@@ -1707,6 +1740,74 @@ for (const r of REGIONES) {
       cuadrilla: () => r.clave,
       vehiculo: () => r.patente,
     });
+  }
+}
+
+/**
+ * Cobertura por zona y especialidad (#455): 10 cuadrillas por barrio, 480 en total, además de
+ * las 16 de arriba, que son las que conducen los servicios planificados. Una cuadrilla de
+ * recolección por turno, dos de barrido (mañana y noche), y una de limpieza, de reciclables
+ * (cooperativa), de arbolado, de espacios verdes y de inspección. Cada una tiene una única
+ * zona, que es su `homeZoneId`, así `GET /crews?zoneId=&specialty=` siempre encuentra
+ * candidatas. Sin servicios sembrados: son capacidad disponible para asignar.
+ *
+ * El modelo no ata un vehículo a la cuadrilla (se elige al asignar el servicio, entre los
+ * aptos de `VEHICULOS_APTOS` para su tipo), así que no hace falta uno por cuadrilla.
+ *
+ * Los ids de persona son `10000 + 10 × posición en CREWS` (+ 0..4 por integrante): bloques de
+ * diez, sin choque con Oficina (1–9), la demo (900, 901) ni entre cuadrillas, y estables
+ * mientras no se reordene CREWS.
+ */
+const RUBROS_GENERADOS: {
+  rubro: string;
+  tipos: string[];
+  turnos: Shift[];
+  cooperativa?: boolean;
+}[] = [
+  {
+    rubro: 'Recolección',
+    tipos: ['REC-DOM', 'CONT-VAC', 'REC-VOL'],
+    turnos: [Shift.MORNING, Shift.AFTERNOON, Shift.NIGHT],
+  },
+  { rubro: 'Barrido', tipos: ['BAR-MAN', 'BAR-MEC'], turnos: [Shift.MORNING, Shift.NIGHT] },
+  { rubro: 'Limpieza', tipos: ['HIG-LAV', 'CONT-LAV'], turnos: [Shift.AFTERNOON] },
+  { rubro: 'Reciclables', tipos: ['REC-REC'], turnos: [Shift.AFTERNOON], cooperativa: true },
+  { rubro: 'Arbolado', tipos: ['ARB-POD', 'ARB-CENSO'], turnos: [Shift.MORNING] },
+  { rubro: 'Espacios Verdes', tipos: ['EV-MANT', 'EV-RIEGO'], turnos: [Shift.MORNING] },
+  { rubro: 'Inspección', tipos: ['AMB-INSP'], turnos: [Shift.AFTERNOON] },
+];
+const NOMBRE_TURNO: Record<Shift, string> = {
+  [Shift.MORNING]: 'Mañana',
+  [Shift.AFTERNOON]: 'Tarde',
+  [Shift.NIGHT]: 'Noche',
+};
+
+/** Las claves de las cuadrillas generadas: las que se siembran por createMany. */
+export const CLAVES_GENERADAS = new Set<string>();
+
+for (const b of BARRIOS) {
+  for (const r of RUBROS_GENERADOS) {
+    for (const turno of r.turnos) {
+      const base = 10000 + 10 * CREWS.length;
+      // 2 a 4 personas contando al responsable.
+      const personas = 2 + (CREWS.length % 3);
+      const clave = `${b.codigo}-${r.rubro}-${turno}`;
+      CLAVES_GENERADAS.add(clave);
+      CREWS.push({
+        clave,
+        name: r.cooperativa
+          ? `Cooperativa de Recuperadores de ${b.nombre} — ${r.rubro}`
+          : `Cuadrilla Municipal ${b.nombre} — ${r.rubro}${r.turnos.length > 1 ? ` (${NOMBRE_TURNO[turno]})` : ''}`,
+        crewType: r.cooperativa ? CrewType.COOPERATIVE : CrewType.MUNICIPAL,
+        defaultShift: turno,
+        leaderUserId: String(base),
+        organizationId: r.cooperativa ? String(3400 + BARRIOS.indexOf(b) + 1) : null,
+        members: Array.from({ length: personas }, (_, i) => String(base + i)),
+        active: true,
+        tipos: r.tipos,
+        zonas: [b.codigo],
+      });
+    }
   }
 }
 
@@ -1806,7 +1907,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.SCHEDULED,
           detectado: [0, 5, 40],
           finEstimado: [0, 11, 35],
-          reportadoPor: '101',
+          reportadoPor: '10000',
         },
         {
           tipo: DelayType.DURATION,
@@ -1816,7 +1917,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.IN_PROGRESS,
           detectado: [0, 8, 20],
           finEstimado: [0, 11, 50],
-          reportadoPor: '101',
+          reportadoPor: '10000',
         },
       ],
     },
@@ -1866,7 +1967,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.SCHEDULED,
           detectado: [0, 7, 10],
           finEstimado: [0, 18, 50],
-          reportadoPor: '121',
+          reportadoPor: '10060',
         },
       ],
     },
@@ -1895,7 +1996,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.SCHEDULED,
           detectado: [0, 20, 30],
           finEstimado: [1, 0, 40],
-          reportadoPor: '131',
+          reportadoPor: '10080',
         },
       ],
     },
@@ -1986,7 +2087,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.IN_PROGRESS,
           detectado: [0, 2, 30],
           finEstimado: [0, 5, 0],
-          reportadoPor: '141',
+          reportadoPor: '10090',
         },
       ],
     },
@@ -2267,7 +2368,7 @@ const PUNTOS: Plan[] = [
           estado: ServiceStatus.IN_PROGRESS,
           detectado: [0, 10, 50],
           finEstimado: [0, 13, 10],
-          reportadoPor: '501',
+          reportadoPor: '10030',
         },
       ],
     },
@@ -2490,7 +2591,7 @@ function puntualesRegionales(previos: Plan[]): Plan[] {
         estado: SCHEDULED,
         detectado: [-1, 20, 15],
         finEstimado: [0, 8, 40],
-        reportadoPor: '171',
+        reportadoPor: '10140',
       },
     ],
   });
@@ -2968,6 +3069,7 @@ interface Catalogo {
 }
 
 async function main() {
+  assertBaseSegura(process.env.DATABASE_URL, process.env.SEED_CONFIRM_REMOTE);
   const planes = planificar();
   verificar(planes);
 
@@ -3055,24 +3157,30 @@ async function main() {
   // Crew no tiene clave única natural: se busca por nombre y se actualiza, así
   // una segunda corrida corrige el turno o el estado en vez de ignorarlo.
   const cuadrillas = new Map<string, string>();
-  for (const c of CREWS) {
-    const datos = {
-      name: c.name,
-      crewType: c.crewType,
-      defaultShift: c.defaultShift,
-      leaderUserId: c.leaderUserId,
-      organizationId: c.organizationId,
-      leaderName: nombreDePersona(c.leaderUserId),
-      organizationName: organizacionDe(c),
-      specialty: especialidadDe(c.tipos),
-      homeZoneId: c.zonas.length === 1 ? zoneId(c.zonas[0]) : null,
-      active: c.active,
-    };
+  const datosDe = (c: (typeof CREWS)[number]) => ({
+    name: c.name,
+    crewType: c.crewType,
+    defaultShift: c.defaultShift,
+    leaderUserId: c.leaderUserId,
+    organizationId: c.organizationId,
+    leaderName: nombreDePersona(c.leaderUserId),
+    organizationName: organizacionDe(c),
+    specialty: especialidadDe(c.tipos),
+    homeZoneId: c.zonas.length === 1 ? zoneId(c.zonas[0]) : null,
+    active: c.active,
+  });
+  for (const c of CREWS.filter((x) => !CLAVES_GENERADAS.has(x.clave))) {
+    const datos = datosDe(c);
     const existing = await prisma.crew.findFirst({ where: { name: c.name } });
     const crew = existing
       ? await prisma.crew.update({ where: { id: existing.id }, data: datos })
       : await prisma.crew.create({ data: datos });
     cuadrillas.set(c.clave, crew.id);
+    // Solo los ids que sembraba el seed anterior a #455 (101…): un integrante cargado a mano
+    // en una de estas cuadrillas no se toca.
+    await prisma.crewMember.deleteMany({
+      where: { crewId: crew.id, userId: { in: IDS_LEGADOS, notIn: c.members } },
+    });
     // upsert y no createMany: una segunda corrida tiene que poder corregir el nombre.
     for (const userId of c.members) {
       const displayName = nombreDePersona(userId);
@@ -3083,6 +3191,39 @@ async function main() {
       });
     }
   }
+  // Las ~480 generadas, por createMany: un upsert por cuadrilla y por integrante son más de
+  // 1.500 viajes a la base. Las que ya existen (misma corrida anterior) se saltean.
+  const generadas = CREWS.filter((x) => CLAVES_GENERADAS.has(x.clave));
+  const yaExisten = new Set(
+    (
+      await prisma.crew.findMany({
+        where: { name: { in: generadas.map((c) => c.name) } },
+        select: { name: true },
+      })
+    ).map((c) => c.name),
+  );
+  await prisma.crew.createMany({
+    data: generadas.filter((c) => !yaExisten.has(c.name)).map(datosDe),
+  });
+  const idPorNombre = new Map(
+    (
+      await prisma.crew.findMany({
+        where: { name: { in: generadas.map((c) => c.name) } },
+        select: { id: true, name: true },
+      })
+    ).map((c) => [c.name, c.id]),
+  );
+  for (const c of generadas) cuadrillas.set(c.clave, buscar(idPorNombre, c.name, 'la cuadrilla'));
+  await prisma.crewMember.createMany({
+    data: generadas.flatMap((c) =>
+      c.members.map((userId) => ({
+        crewId: cuadrillas.get(c.clave) as string,
+        userId,
+        displayName: nombreDePersona(userId),
+      })),
+    ),
+    skipDuplicates: true,
+  });
 
   // ── Inventario urbano ──────────────────────────────────
   // Lo escrito a mano va por upsert (corrige datos en una segunda corrida); lo generado, que
@@ -3742,7 +3883,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
         requiresPublicWorks: datos.requiresPublicWorks ?? false,
         treeId: buscar(cat.arboles, codigo, 'el árbol'),
         surveyedAt: momento(d, 10),
-        inspectorId: '402',
+        inspectorId: '10021',
       },
     });
     if (survey.riskLevel === RiskLevel.HIGH || survey.riskLevel === RiskLevel.CRITICAL) {
@@ -3767,7 +3908,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     data: delCenso.map((t) => ({
       treeId: buscar(cat.arboles, t.surveyCode, 'el árbol'),
       surveyedAt: momento(-30, 10),
-      inspectorId: '402',
+      inspectorId: '10021',
       healthStatus: t.healthStatus as TreeHealthStatus,
       // Riesgo inventado (el censo no lo trae), siempre bajo HIGH: HIGH y CRITICAL emiten
       // `treeRiskDetected` al outbox. WEAKENED copa rala -> LOW; DISEASED en seguimiento y
@@ -4206,7 +4347,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   const inspeccion = (
     reportId: string,
     extra: Partial<Prisma.EnvironmentalInspectionUncheckedCreateInput> = {},
-  ) => tx.environmentalInspection.create({ data: { reportId, inspectorId: '601', ...extra } });
+  ) => tx.environmentalInspection.create({ data: { reportId, inspectorId: '10070', ...extra } });
 
   /** Emite el acta como `issueNotice`: número correlativo del año, reincidencia y plazo de M4. */
   const acta = async (
@@ -4363,7 +4504,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     },
   );
   await inspeccion(olorBelgrano.id, {
-    inspectorId: '602',
+    inspectorId: '10071',
     inspectedAt: momento(-8, 15),
     findings: 'Olor atribuible a la red cloacal, no a actividad comercial. Se deriva a AySA.',
     outcome: InspectionOutcome.NO_VIOLATION,
@@ -4452,7 +4593,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     { lat: -34.5741, lng: -58.455, reporterSnapshot: { isAnonymous: false, citizenId: null } },
   );
   await inspeccion(olorColegiales.id, {
-    inspectorId: '602',
+    inspectorId: '10071',
     serviceId: servicio('insp-olor-colegiales').id,
     inspectedAt: momento(-4, 20),
     findings:

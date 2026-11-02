@@ -5,6 +5,7 @@ import { SERVICE_TYPE_SPECIALTY } from '../src/modules/crews/crew-specialty';
 import { CONTAINER_TRANSITIONS } from '../src/modules/containers/containers.service';
 import {
   CONTAINERS,
+  CLAVES_GENERADAS,
   CREWS,
   GREEN_POINTS,
   TREES,
@@ -14,7 +15,9 @@ import {
   historialDeContenedores,
   nombreDePersona,
   organizacionDe,
+  assertBaseSegura,
   planificar,
+  rolesDeLaDemo,
   verificar,
   verificarCobertura,
 } from './seed';
@@ -231,10 +234,116 @@ describe('seed: especialidad y zona base de las cuadrillas (#455)', () => {
   });
 });
 
+describe('seed: 480 cuadrillas por zona y especialidad (#455)', () => {
+  const generadas = CREWS.filter((c) => CLAVES_GENERADAS.has(c.clave));
+
+  it('hay 16 operativas y 480 generadas: 10 por barrio, con todas las especialidades', () => {
+    expect(CREWS).toHaveLength(496);
+    expect(generadas).toHaveLength(480);
+    for (const b of BARRIOS) {
+      const deZona = generadas.filter((c) => c.zonas[0] === b.codigo);
+      expect(deZona).toHaveLength(10);
+      expect(new Set(deZona.map((c) => especialidadDe(c.tipos)))).toEqual(
+        new Set([
+          'COLLECTION',
+          'SWEEPING',
+          'CLEANING',
+          'RECYCLING',
+          'TREES',
+          'GREEN_SPACES',
+          'INSPECTION',
+        ]),
+      );
+    }
+  });
+
+  it('nombres de cuadrilla únicos y ids de persona desde 10000, sin repetir entre cuadrillas', () => {
+    expect(new Set(CREWS.map((c) => c.name)).size).toBe(CREWS.length);
+    const ids = CREWS.flatMap((c) => c.members);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ids) expect(Number(id)).toBeGreaterThanOrEqual(10000);
+    for (const c of generadas) {
+      expect(c.members.length).toBeGreaterThanOrEqual(2);
+      expect(c.members.length).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it('las personas de demostración existen en el seed', () => {
+    const cuadrilla = (id: string) => CREWS.find((c) => c.members.includes(id))!;
+    expect(cuadrilla('10000').clave).toBe('BEL-REC');
+    expect(cuadrilla('10001').leaderUserId).toBe('10000');
+    expect(especialidadDe(cuadrilla('10070').tipos)).toBe('INSPECTION');
+  });
+});
+
+describe('seed: guard de base remota', () => {
+  const remota = 'postgresql://u:p@db.supabase.co:5432/postgres?schema=public';
+  it('acepta localhost, 127.0.0.1 y ::1', () => {
+    for (const h of ['localhost:5433', '127.0.0.1:5432', '[::1]:5432'])
+      expect(() => assertBaseSegura(`postgresql://m6:x@${h}/m6?schema=public`)).not.toThrow();
+  });
+
+  it('rechaza hosts remotos, trucos de subcadena y URL ausente o inválida', () => {
+    for (const u of [
+      remota,
+      'postgresql://u:p@localhost.evil.com:5432/db',
+      'postgresql://localhost:x@db.supabase.co:5432/db',
+      'postgresql://u:p@db.supabase.co/localhost',
+      'no es una url',
+      undefined,
+    ])
+      expect(() => assertBaseSegura(u)).toThrow(/SEED_CONFIRM_REMOTE/);
+  });
+
+  it('SEED_CONFIRM_REMOTE=1 permite una remota; cualquier otro valor no', () => {
+    expect(() => assertBaseSegura(remota, '1')).not.toThrow();
+    expect(() => assertBaseSegura(remota, 'true')).toThrow();
+  });
+});
+
+describe('seed: roles y personas de demostración', () => {
+  const roles = rolesDeLaDemo();
+  const de = (id: string) => roles.filter((r) => r.userId === id).map((r) => r.role);
+  const conInspeccion = (c: (typeof CREWS)[number]) => c.tipos.includes('AMB-INSP');
+
+  it('toda persona de una cuadrilla es de Campo; solo las de inspección son además inspectores', () => {
+    for (const c of CREWS)
+      for (const id of c.members) {
+        expect(de(id)).toContain('M6_CAMPO_CUADRILLA');
+        expect(de(id).includes('M6_CAMPO_INSPECTOR')).toBe(conInspeccion(c));
+      }
+  });
+
+  it('10000 y 10001 son de Campo y 10070 también es inspector', () => {
+    expect(de('10000')).toEqual(['M6_CAMPO_CUADRILLA']);
+    expect(de('10001')).toEqual(['M6_CAMPO_CUADRILLA']);
+    expect(de('10070').sort()).toEqual(['M6_CAMPO_CUADRILLA', 'M6_CAMPO_INSPECTOR']);
+  });
+
+  it('líder, integrante e inspector pertenecen a las cuadrillas que dice docs/seed.md', () => {
+    const bel = CREWS.find((c) => c.clave === 'BEL-REC')!;
+    expect(bel.name).toBe('Cuadrilla Municipal Belgrano y Colegiales — Recolección');
+    expect(bel.leaderUserId).toBe('10000');
+    expect(bel.members).toContain('10001');
+    expect(bel.leaderUserId).not.toBe('10001');
+    const insp = CREWS.find((c) => c.clave === 'INSP')!;
+    expect(insp.leaderUserId).toBe('10070');
+    expect(insp.members).toContain('10070');
+    expect(especialidadDe(insp.tipos)).toBe('INSPECTION');
+  });
+
+  it('los members de las operativas siguen 10000 + 10 × posición', () => {
+    CREWS.filter((c) => !CLAVES_GENERADAS.has(c.clave)).forEach((c, i) => {
+      expect(c.leaderUserId).toBe(String(10000 + 10 * i));
+      c.members.forEach((m, n) => expect(m).toBe(String(10000 + 10 * i + n)));
+    });
+  });
+});
+
 describe('seed: nombres de ejemplo de las cuadrillas (#454)', () => {
   it('el mismo id da siempre el mismo nombre, con nombre y apellido', () => {
-    expect(nombreDePersona('101')).toBe(nombreDePersona('101'));
-    expect(nombreDePersona('101')).toMatch(/^\S+ \S+$/);
+    expect(nombreDePersona('10000')).toBe(nombreDePersona('10000'));
+    expect(nombreDePersona('10000')).toMatch(/^\S+ \S+$/);
   });
 
   it('los integrantes de una misma cuadrilla no repiten nombre', () => {
