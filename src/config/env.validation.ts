@@ -61,6 +61,15 @@ export const envSchema = z
     // `iss` que exigimos en el token.
     JWT_ISSUER: z.string().min(1).default('modulo1-ciudadanos'),
 
+    // Secreto compartido con el BFF del frontend (header `X-M6-BFF-Key`). Con él
+    // el límite de tasa del portal cuenta la IP del vecino que reenvía el BFF en
+    // `X-Forwarded-For`; sin él, o con otro valor, cuenta `req.ip`. Vacía cuenta
+    // como ausente. Mínimo 32 caracteres: es un secreto, no una etiqueta (#470).
+    BFF_SHARED_KEY: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().trim().min(32, 'BFF_SHARED_KEY: mínimo 32 caracteres').optional(),
+    ),
+
     // Ids de M1 (`sub`, numéricos) de los M6_ADMIN iniciales, separados por coma.
     // Sin ellos nadie puede asignar roles (ADR-008). Además necesitan el rol
     // RESPONSABLE_AREA en M1. Vacía cuenta como ausente.

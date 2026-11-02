@@ -331,3 +331,15 @@ describe('configuration — metas de los indicadores (#473, #475)', () => {
     expect(() => config({ [nombre]: valor })).toThrow();
   });
 });
+
+describe('configuration — BFF_SHARED_KEY', () => {
+  it('sin la variable (o vacía) no hay clave: el throttler no confía en el header', () => {
+    expect(config().bffSharedKey).toBeUndefined();
+    expect(config({ BFF_SHARED_KEY: '' }).bffSharedKey).toBeUndefined();
+  });
+
+  it('acepta una clave de 32 caracteres o más y rechaza una más corta', () => {
+    expect(config({ BFF_SHARED_KEY: 'a'.repeat(32) }).bffSharedKey).toBe('a'.repeat(32));
+    expect(() => config({ BFF_SHARED_KEY: 'a'.repeat(31) })).toThrow(/BFF_SHARED_KEY/);
+  });
+});
