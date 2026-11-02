@@ -283,7 +283,7 @@ export class ServicesService {
       // Agendar cuenta como tomar la gestión del reclamo: M2 se entera por acá (#303).
       await this.outbox.enqueueMany(
         tx,
-        await this.scheduleEvents(tx, created, actor.userId, false),
+        await this.scheduleEvents(tx, created, actor.actorId ?? null, false),
       );
 
       return created;
@@ -698,7 +698,7 @@ export class ServicesService {
       ServiceStatus.IN_PROGRESS,
       {},
       updateType
-        ? this.ticketEvents(current, actor.userId, {
+        ? this.ticketEvents(current, actor.actorId ?? null, {
             updateType,
             publicMessage: 'La cuadrilla comenzó a atender su reclamo.',
           })
@@ -777,7 +777,7 @@ export class ServicesService {
     // Las dos escrituras van juntas: si el contenedor no se puede actualizar, el
     // servicio tampoco se cierra. Sin esto el frontend tendria que encadenar dos
     // llamadas y quedarse con el contenedor colgado si la segunda falla.
-    const events = this.ticketEvents(current, actor.userId, {
+    const events = this.ticketEvents(current, actor.actorId ?? null, {
       updateType: 'RESOLVED',
       publicMessage: 'El servicio se completó.',
       details: { resolution: { type: 'ACTION_COMPLETED' } },
@@ -939,7 +939,7 @@ export class ServicesService {
       ServiceStatus.CANCELLED,
       // statusNote: si venía suspendido, su nota ya no describe el estado.
       { statusReason: reason, statusNote: null },
-      this.ticketEvents(current, actor.userId, {
+      this.ticketEvents(current, actor.actorId ?? null, {
         updateType: 'REJECTED',
         internalMessage: reason,
         details: { cancellation: { reasonCode: 'OTHER' } },
@@ -995,7 +995,7 @@ export class ServicesService {
     const events = await this.scheduleEvents(
       this.prisma,
       { id: current.id, ticketId: current.ticketId, scheduledDate, windowFrom, windowTo },
-      actor.userId,
+      actor.actorId ?? null,
       true,
     );
 
@@ -1041,6 +1041,8 @@ export class ServicesService {
     serviceId: string,
     dto: CreateDelayNoticeDto,
     actorId: string,
+    // El `actorId` UUID de M1 para `updatedBy.id`; `actorId` (arriba) es el `sub`.
+    updatedById: string | null = null,
   ): Promise<DelayNoticeResponseDto> {
     const service = await this.assertCrewMember(await this.getService(serviceId), actorId);
 
@@ -1087,7 +1089,7 @@ export class ServicesService {
     }
     const eventos =
       service.status === ServiceStatus.IN_PROGRESS && ticketAdmiteProgress
-        ? this.ticketEvents(service, actorId, {
+        ? this.ticketEvents(service, updatedById, {
             updateType: 'PROGRESS',
             publicMessage: 'El servicio se esta demorando. Estamos trabajando para normalizarlo.',
             internalMessage: dto.reason,
@@ -1456,7 +1458,7 @@ export class ServicesService {
    */
   private ticketEvents(
     service: Pick<Service, 'id' | 'ticketId'>,
-    actorId: string,
+    updatedById: string | null,
     update: {
       updateType: payloads.TicketUpdateType;
       publicMessage?: string;
@@ -1473,7 +1475,7 @@ export class ServicesService {
         aggregateId: service.id,
         payload: payloads.updateTicketStatus({
           ticketId: service.ticketId,
-          updatedById: actorId,
+          updatedById,
           ...update,
         }),
       },
@@ -1490,7 +1492,7 @@ export class ServicesService {
   private async scheduleEvents(
     db: Parameters<typeof leerEstado>[0],
     service: Pick<Service, 'id' | 'ticketId' | 'scheduledDate' | 'windowFrom' | 'windowTo'>,
-    actorId: string,
+    updatedById: string | null,
     reprogramado: boolean,
   ): Promise<OutboxEntry[]> {
     if (!service.ticketId) return [];
@@ -1506,7 +1508,7 @@ export class ServicesService {
       );
       return [];
     }
-    return this.ticketEvents(service, actorId, update);
+    return this.ticketEvents(service, updatedById, update);
   }
 
   private assertTransition(from: ServiceStatus, to: ServiceStatus): void {

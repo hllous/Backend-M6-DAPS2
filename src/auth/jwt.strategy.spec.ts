@@ -69,9 +69,26 @@ describe('JwtStrategy', () => {
       userId: '42',
       subType: 'EMPLEADO',
       m1Role: 'ADMINISTRATIVO',
+      actorId: null,
       roles: [M6Role.M6_CAMPO_CUADRILLA],
     });
   });
+
+  // #485: el actorId UUID de M1 es solo para updatedBy.id; sub sigue siendo userId.
+  it('expone el actorId UUID del token sin tocar userId', async () => {
+    const actorId = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
+    expect((await authenticate(sign({ actorId }))).user).toMatchObject({ userId: '42', actorId });
+  });
+
+  it.each([['no-es-uuid'], [42], ['']])(
+    'un actorId inválido (%j) queda en null sin rechazar',
+    async (actorId) => {
+      expect((await authenticate(sign({ actorId }))).user).toMatchObject({
+        userId: '42',
+        actorId: null,
+      });
+    },
+  );
 
   it('sin filas en la tabla no hay roles efectivos (el rol de M1 solo no autoriza)', async () => {
     expect((await authenticate(sign())).user).toMatchObject({ roles: [] });

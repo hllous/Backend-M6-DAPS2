@@ -16,7 +16,7 @@
 | `npm run prisma:generate` | Regenera el cliente desde el esquema. Hay que correrlo después de cambiar `schema.prisma` o de bajar cambios que lo tocaron; sin eso `tsc` falla con «no exported member» |
 | `npm run prisma:migrate:dev` | Crea y aplica una migración en la base local a partir del esquema (solo desarrollo) |
 | `npm run prisma:migrate:deploy` | Aplica las migraciones pendientes sin generar nada nuevo. En producción lo corre solo el `CMD` del Dockerfile (`prisma migrate deploy && node dist/main.js`) |
-| `npm run prisma:seed` | Corre el seed contra la base de `DATABASE_URL` |
+| `npm run prisma:seed` | Corre el seed contra la base de `DATABASE_URL`. **Se niega si el host no es `localhost`, `127.0.0.1` o `::1`** (se parsea la URL) salvo `SEED_CONFIRM_REMOTE=1` |
 | `npm run prisma:studio` | Explorador web de la base |
 
 Convenciones del esquema:
@@ -43,7 +43,7 @@ Reglas con las que está escrito:
 
 **Catálogos y recursos**
 - Tipos de servicio, sitios de disposición final y **28 recorridos** con sus paradas y frecuencias semanales: 16 escritos a mano (centro y norte) y 12 regionales de recolección domiciliaria, uno por comuna del resto de la Ciudad (Comunas 3 a 12 y 15, más San Telmo y Constitución y Núñez), con sus barrios como paradas.
-- **36 vehículos** (32 originales, con días de baja para los fuera de servicio, más 4 compactadores regionales) y **16 cuadrillas**: las 12 originales y 4 regionales de recolección (Sur, Oeste, Centro-Oeste y Noroeste). Arbolado, Espacios Verdes e Inspección cubren toda la Ciudad; las demás, las zonas de su comuna.
+- **36 vehículos** (32 originales, con días de baja para los fuera de servicio, más 4 compactadores regionales) y **496 cuadrillas**: las 16 operativas (12 originales y 4 regionales de recolección: Sur, Oeste, Centro-Oeste y Noroeste), que conducen los servicios planificados, y **480 generadas por cobertura** (#455), 10 por barrio. Cada generada tiene una única zona (`homeZoneId`) y una especialidad, así `GET /crews?zoneId=&specialty=` encuentra candidatas en los 48 barrios para las 7 especialidades. Composición por barrio, y por qué: recolección ×3 (uno por turno, la recolección es la que más se refuerza), barrido ×2 (mañana y noche), y una de limpieza (tarde), de reciclables (cooperativa, tarde), de arbolado (mañana), de espacios verdes (mañana) y de inspección (tarde): 3+2+1+1+1+1+1 = 10, 480 en total. Cada una tiene un responsable y 1 a 3 integrantes más (2 a 4 personas, ~1.500 `crew_member` en total). Las generadas no tienen servicios: son capacidad para asignar. El modelo no ata un vehículo a la cuadrilla (se elige al asignar el servicio, entre los tipos aptos), por eso los 36 vehículos alcanzan; los servicios planificados siguen usando solo las 16 operativas, que respetan zona, especialidad y turnos sin superposición (`verificar`).
 
 **Inventario urbano** (por barrio)
 - **Espacios verdes**: los 1366 plazas, parques, plazoletas y paseos del dataset de BA Data, cada uno en la zona de su barrio, con nombre, tipo (`PLAZA` y `PLAZOLETA` → `SQUARE`; `PARQUE`, `PARQUE SEMIPÚBLICO` y `JARDÍN BOTÁNICO` → `PARK`; `PASEO` → `PROMENADE`), coordenadas y superficie. **Nombre = el del dataset, o la ubicación (con el tipo adelante) si falta**: 557 llevan el nombre derivado de la ubicación.
@@ -71,8 +71,8 @@ Reglas con las que está escrito:
 | `5`, `6` | `ADMINISTRATIVO` | `M6_OFICINA_AMBIENTAL` |
 | `7` | `ADMINISTRATIVO` | Operaciones y Ambiental |
 | `8`, `9` | `AUDITOR` | `M6_AUDITOR` |
-| 61 líderes e integrantes de las 16 cuadrillas (`101`–`104`, `111`–`115`, `151`–`154`, `161`–`164`, `171`–`174`, `181`–`184`, `201`–`204`, …) | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` |
-| `601`, `602` (cuadrilla de inspección) | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` y `M6_CAMPO_INSPECTOR` |
+| Líderes e integrantes de las 496 cuadrillas: `10000`–`10003` (Belgrano y Colegiales), `10010`–`10014`, …, `10150`–`10153` (las 16 operativas, bloques de diez) y `10160` en adelante (las generadas). El id es `10000 + 10 × posición de la cuadrilla en CREWS + n`; el último es ~`14950` | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` (~1.500 filas con las de Oficina) |
+| Integrantes de toda cuadrilla con especialidad de inspección (`10070`, `10071` y las 48 generadas) | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` y `M6_CAMPO_INSPECTOR` |
 
 **Personas de demostración** (#458). Firma el frontend con `scripts/generate-demo-jwt.mjs <JWT_SECRET> <persona> [AAAA-MM-DD]`, que acepta el nombre de la persona (`admin`, `operaciones`, `ambiental`, `auditoria`, `lider`, `integrante`, `inspector`, `sinrol`, `ciudadano`) en vez del rol y el `sub`. `GET /me` devuelve sus roles y sus cuadrillas (id, nombre y si es `LEADER` o `MEMBER`). Los nombres son los de ejemplo de `nombreDePersona`; el personal de Oficina no tiene nombre en M6.
 
@@ -82,15 +82,15 @@ Reglas con las que está escrito:
 | Operaciones | `3` | `ADMINISTRATIVO` | `M6_OFICINA_OPERACIONES` | no | Planificar servicios, contenedores, intervenciones de arbolado, derivaciones | Autorizar una extracción (403 `ROLE_REQUIRED`), expedientes ambientales, administrar catálogos |
 | Ambiental | `5` | `ADMINISTRATIVO` | `M6_OFICINA_AMBIENTAL` | no | Expedientes, inspecciones (programarlas) y resoluciones ambientales | Planificar servicios o intervenciones de arbolado, administrar catálogos |
 | Auditoría | `8` | `AUDITOR` | `M6_AUDITOR` | no | Leer todo | Cualquier escritura |
-| Líder de cuadrilla | `101` | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` | Cuadrilla Municipal Belgrano y Colegiales — Recolección (`LEADER`); Diego Domínguez | Iniciar, suspender, reanudar y completar los servicios de su cuadrilla, cargar resultados, residuos y demoras | Operar servicios de otra cuadrilla o sin cuadrilla (403 `NOT_ASSIGNED`), escribir en Oficina |
-| Integrante | `102` | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` | La misma (`MEMBER`); Valeria Aguirre | Lo mismo que el líder, sobre su cuadrilla | Lo mismo que el líder |
-| Inspector | `601` | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` y `M6_CAMPO_INSPECTOR` | Cuadrilla Municipal Control Ambiental — Inspección (`LEADER`; también figura como integrante); Lucía López. `isAssignedInspector: true` | Cerrar las inspecciones ambientales que se le asignaron o que no tienen asignado | Cerrar una inspección asignada a otro (403 `NOT_ASSIGNED`), escribir en Oficina |
+| Líder de cuadrilla | `10000` | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` | Cuadrilla Municipal Belgrano y Colegiales — Recolección (`LEADER`); Sofía López | Iniciar, suspender, reanudar y completar los servicios de su cuadrilla, cargar resultados, residuos y demoras | Operar servicios de otra cuadrilla o sin cuadrilla (403 `NOT_ASSIGNED`), escribir en Oficina |
+| Integrante | `10001` | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` | La misma (`MEMBER`); Diego Martínez | Lo mismo que el líder, sobre su cuadrilla | Lo mismo que el líder |
+| Inspector | `10070` | `ADMINISTRATIVO` | `M6_CAMPO_CUADRILLA` y `M6_CAMPO_INSPECTOR` | Cuadrilla Municipal Control Ambiental — Inspección (`LEADER`; también figura como integrante); Carlos Medina. `isAssignedInspector: true` | Cerrar las inspecciones ambientales que se le asignaron o que no tienen asignado | Cerrar una inspección asignada a otro (403 `NOT_ASSIGNED`), escribir en Oficina |
 | Empleado sin rol | `900` | `ADMINISTRATIVO` | ninguno (**sin fila** en `user_role_assignment`) | no | Entrar a `GET /me` y ver que no tiene roles | Cualquier otro endpoint, también de lectura (403 `ROLE_REQUIRED`) |
 | Ciudadano | `901` | `CIUDADANO` (`sub_type`) | no se persiste | no | Solo el portal ciudadano público | Todo lo demás, `GET /me` incluido (403) |
 
-> **Se remapea con #455:** `101`, `102` y `601` (y el nombre de la cuadrilla) dependen de las 16 cuadrillas actuales de `CREWS`. El seed nuevo de #455 (480 cuadrillas, ids desde 10000) las reemplaza: habrá que elegir un líder, un integrante y un inspector del seed nuevo y actualizar esta tabla, el frontend y el script. `2`, `3`, `5`, `8` (Oficina y auditoría) no cambian. `900` y `901` no existen en el seed a propósito.
+> **Remapeo (#455/#458):** las personas de demostración eran `101`, `102` y `601`; ahora son `10000` (líder de la cuadrilla de recolección de Belgrano y Colegiales), `10001` (integrante) y `10070` (líder de la cuadrilla de inspección). `2`, `3`, `5`, `8` (Oficina y auditoría) no cambian. `900` y `901` no existen en el seed a propósito. Una base sembrada antes del remapeo conserva sus filas de `user_role_assignment` con los ids viejos (el seed no las borra; ver la sección de resiembra). De las 16 operativas, el seed solo quita los integrantes con los ids legados que él mismo sembraba (`IDS_LEGADOS`: `101`-`104`, `111`-`115`, ..., `181`-`184`); un integrante cargado a mano no se toca.
 
-Las 16 cuadrillas se persisten con los datos del modelo de #454 y #455: `specialty` (la de sus tipos de servicio si todos pertenecen a una misma; **`null` si la cuadrilla atiende varias especialidades**, para que sus servicios sembrados no disparen avisos de desencaje), `homeZoneId` (**solo las cuadrillas de una única zona**; las que cubren varias quedan sin zona base) y nombres de ejemplo: `leaderName` y `CrewMember.displayName` salen de dos listas cortas según el id (el mismo id da siempre el mismo nombre) y `organizationName` de las cooperativas es el nombre de la cuadrilla antes del " — ". Son datos de demostración, no los de M1.
+Las 496 cuadrillas se persisten con los datos del modelo de #454 y #455: `specialty` (la de sus tipos de servicio si todos pertenecen a una misma; **`null` si la cuadrilla atiende varias especialidades**, para que sus servicios sembrados no disparen avisos de desencaje), `homeZoneId` (**solo las cuadrillas de una única zona**; las que cubren varias quedan sin zona base) y nombres de ejemplo: `leaderName` y `CrewMember.displayName` salen de dos listas cortas según el id (el mismo id da siempre el mismo nombre) y `organizationName` de las cooperativas es el nombre de la cuadrilla antes del " — ". Son datos de demostración, no los de M1.
 
 Los ids son los `sub` numéricos del token de M1 y **no cambian** con el catálogo v3.0 (lo que pasa a UUID es el `citizenId` de los eventos). No existen usuarios reales: M1 no está hosteado, así que los tokens de demo los firma `scripts/generate-demo-jwt.mjs` (ver [deploy.md](deploy.md)). Las filas se insertan directo en `user_role_assignment`, **sin auditoría**: es dato de arranque, no una asignación hecha por un admin. Oficina y Campo no se mezclan (ADR-005), y los ids de cuadrilla coinciden con `crew.leader_user_id` y `crew_member.user_id`, que es lo que exige la pertenencia de Campo (#365).
 
@@ -135,8 +135,8 @@ Para **refrescar las fechas** de una base que ya tiene servicios hay que vaciarl
 **Base desplegada (Supabase): aplicado el 27/10 con confirmación del PO, dos veces:** primero el seed de las zonas por barrio y esa misma noche el de IDECABA (#439), cada vez con copia previa y vaciado. Se hizo así:
 1. `pg_dump` del esquema `public` como copia (fuera del repo). Supabase corre PostgreSQL 17: el `pg_dump` tiene que ser de la misma versión.
 2. `prisma migrate status`: las 23 migraciones ya estaban aplicadas (Render corre `migrate deploy` al arrancar).
-3. Vaciado: `TRUNCATE ... RESTART IDENTITY CASCADE` de las 38 tablas de `public` salvo `_prisma_migrations` y `role_assignment_audit`, en una sola transacción (`psql -1`, `ON_ERROR_STOP`). `role_assignment_audit` es de solo agregado y un trigger bloquea el `TRUNCATE` a propósito: no se saltea; queda como está.
-4. `npm run prisma:seed` con `DATABASE_URL` apuntando a Supabase: **16 min 20 s** con 788 servicios (primera vez) y **16 min 23 s** con 800 (segunda, con el inventario de IDECABA). El seed hace su propio `syncZones`, así que no hace falta correr antes `zones:sync-from-core`.
+3. Vaciado: `TRUNCATE ... RESTART IDENTITY CASCADE` de las 38 tablas de `public` salvo `_prisma_migrations`, `role_assignment_audit` y `domain_audit_log`, en una sola transacción (`psql -1`, `ON_ERROR_STOP`). `role_assignment_audit` y `domain_audit_log` (#460) son de solo agregado y un trigger bloquea el `TRUNCATE` a propósito: no se saltean; quedan como están.
+4. `SEED_CONFIRM_REMOTE=1 npm run prisma:seed` con `DATABASE_URL` apuntando a Supabase (sin esa variable el seed aborta: es la confirmación explícita de que se quiere escribir en una base remota): **16 min 20 s** con 788 servicios (primera vez) y **16 min 23 s** con 800 (segunda, con el inventario de IDECABA). El seed hace su propio `syncZones`, así que no hace falta correr antes `zones:sync-from-core`.
 5. Verificado con SQL y contra la API desplegada tras la segunda vez: 15 comunas, 48 zonas (ninguna `Z-…`, todas con comuna y barrio UUID), 800 servicios, 1412 `service_zone`, 1366 espacios verdes, 500 contenedores (356 `HOUSEHOLD`, 139 `RECYCLABLE`, 5 de otros tipos; 9 a 13 por barrio, sin códigos repetidos), 28 puntos verdes, 442 árboles, 72 roles, 0 eventos `PENDING`.
 
 Para repetirlo, el vaciado es este bloque (no hay script). Desde #460 hay otra tabla de solo agregado, `domain_audit_log`, que también hay que dejar afuera (su trigger bloquea el vaciado):
@@ -152,13 +152,24 @@ Es destructivo: borra también `user_role_assignment` (el seed regenera los role
 
 La transacción de lo operativo vence a la hora; con 800 servicios tardó 16 min 23 s contra Supabase (medido el 27/10; con 788 fueron 16 min 20 s), muy lejos de la hora. `verificarCobertura()` fija un tope de 800: antes de subirlo, medir de nuevo.
 
+Si la base ya tenía el seed anterior a #455 y no se vacía, sus roles de Campo con los ids viejos quedan huérfanos (el vaciado de arriba ya los borra). Ejemplo de limpieza, a mano y con acuerdo:
+```sql
+DELETE FROM user_role_assignment WHERE user_id IN ('101','102','103','104','111','112','113','114','115','121','122','123','124','131','132','133','134','141','142','143','144','145','151','152','153','154','161','162','163','164','171','172','173','174','181','182','183','184','201','202','203','204','211','212','213','221','222','223','224','301','302','303','401','402','403','501','502','503','504','601','602')
+  AND role IN ('M6_CAMPO_CUADRILLA', 'M6_CAMPO_INSPECTOR');
+```
+
+**Riesgos aceptados y limitaciones de las cuadrillas (#455):**
+- **Rango de Campo:** los ids `10000`-`14953` son los que M1 nos asigna (o va a asignar) a las personas de Campo; el seed les da roles de Campo a esos ids. Si M1 emite en ese rango a alguien que no es de Campo, hay que quitarle el rol de Campo o reubicar el rango. Mientras M1 no los emita, son personas ficticias.
+- **Inspectores de más:** unas 150 personas (las de las 48 cuadrillas generadas de inspección y las dos de `INSP`) tienen `M6_CAMPO_INSPECTOR` y pueden cerrar inspecciones sin asignar. Es un efecto de la demo.
+- **Las generadas no se actualizan en una segunda corrida** (`createMany` con `skipDuplicates`, identificadas por nombre): si cambia `CREWS` o `RUBROS_GENERADOS` hay que resembrar vaciando. Las 16 operativas sí se corrigen (upsert).
+
 **Limitaciones conocidas:** dos espacios verdes con el mismo nombre en un barrio se emparejan por orden de creación (no hay desempate real), y las `ServiceFrequency` ya creadas no se actualizan en una segunda corrida (se identifican por tipo, recorrido y turno).
 
 ## 6. Cómo mantenerlo
 
 - Cambiar el esquema → migración nueva + `prisma:generate` + ajustar el seed si el modelo lo usa.
 - Cambió el catálogo de M9 → bajar de nuevo `prisma/data/m9-*.json` (ver sección 7). Cambió el dataset de espacios verdes → `npm run espacios-verdes:build`.
-- Agregar una cuadrilla o un integrante → `CREWS` (o `REGIONES` para las de recolección regional); sus roles de Campo salen solos. Personal de Oficina → `PERSONAL_DE_OFICINA`.
+- Agregar una cuadrilla o un integrante → `CREWS` (o `REGIONES` para las de recolección regional; las 480 por cobertura salen de `RUBROS_GENERADOS`); sus roles de Campo salen solos. Personal de Oficina → `PERSONAL_DE_OFICINA`.
 - Todo id de otro módulo nuevo respeta el formato de la sección 1: `user_id` de M1 numérico; `citizenId` y los ids de M2, M3, M4 y M7 UUID con `uuidDe`.
 - Si cambia la fecha de fin de la cursada, es `FIN_DE_CURSADA`.
 

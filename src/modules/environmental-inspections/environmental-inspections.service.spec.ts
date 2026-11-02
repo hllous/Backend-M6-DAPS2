@@ -317,6 +317,25 @@ describe('EnvironmentalInspectionsService', () => {
         });
       });
 
+      // #485: updatedBy.id es el actorId UUID de M1; el sub (userId) no viaja nunca.
+      it('updatedBy.id sale del actorId del token, no del sub; sin actorId, null', async () => {
+        const ACTOR_UUID = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
+        prisma.environmentalReport.findUnique.mockResolvedValue(report({ ticketId: 'TCK-1' }));
+        prisma.ticketM2State.findUnique.mockResolvedValue({ status: 'ROUTED' });
+
+        await service.issueNotice(INSPECTION_ID, noticeDto, {
+          ...actor('42'),
+          actorId: ACTOR_UUID,
+        });
+        await service.issueNotice(INSPECTION_ID, noticeDto, actor('42'));
+
+        const [conUuid, sinUuid] = outbox.enqueueMany.mock.calls.map(
+          ([, es]: [unknown, { payload: unknown }[]]) => es[0].payload,
+        );
+        expect(conUuid).toMatchObject({ updatedBy: { type: 'EXTERNAL_USER', id: ACTOR_UUID } });
+        expect(sinUuid).toMatchObject({ updatedBy: { id: null } });
+      });
+
       it.each(['ROUTED', null])(
         'con el ticket en %s informa STARTED con el mismo mensaje',
         async (estado) => {

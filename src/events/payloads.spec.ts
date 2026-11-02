@@ -396,8 +396,19 @@ describe('payloads de los eventos publicados', () => {
       expect(p.updatedBy).toEqual({ type: 'EXTERNAL_USER', id: UUID_ACTOR });
     });
 
-    // M2 v1.78 exige UUID o null en updatedBy.id. El sub del JWT provisorio
-    // puede ser un código o un entero (M1 lo documenta como bigint).
+    // M2 v1.78 exige UUID o null en updatedBy.id. El sub de M1 es numérico (bigint):
+    // los servicios pasan el claim actorId (UUID, #485), o null si el token no lo trae.
+    it('sin actor (null) va como EXTERNAL_USER con id null', () => {
+      const p = payloads.updateTicketStatus({
+        ticketId: 'TCK-1',
+        updateType: 'PROGRESS',
+        updatedById: null,
+      });
+
+      expect(p.updatedBy).toEqual({ type: 'EXTERNAL_USER', id: null });
+      expectValido('updateTicketStatus', p);
+    });
+
     it.each(['user-009', '42', ''])(
       'un actor que no es UUID (%j) va como EXTERNAL_USER con id null',
       (sub) => {

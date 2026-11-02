@@ -303,7 +303,7 @@ export class EnvironmentalInspectionsService {
         if (update) {
           await this.outbox.enqueueMany(
             tx,
-            this.reports.ticketEvents(report, actor.userId, update),
+            this.reports.ticketEvents(report, actor.actorId ?? null, update),
           );
         } else {
           this.logger.warn(

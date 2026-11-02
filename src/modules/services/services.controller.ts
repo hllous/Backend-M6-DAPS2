@@ -255,7 +255,7 @@ export class ServicesController {
     @Body() dto: CreateDelayNoticeDto,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<DelayNoticeResponseDto> {
-    return this.servicesService.addDelayNotice(id, dto, actor.userId);
+    return this.servicesService.addDelayNotice(id, dto, actor.userId, actor.actorId);
   }
 
   @Get(':id/delay-notices')

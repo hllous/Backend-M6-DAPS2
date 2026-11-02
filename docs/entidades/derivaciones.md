@@ -35,7 +35,7 @@ El corte de calle que necesita un servicio o una poda. `sourceRef` apunta al [`S
 |---|---|
 | Se crea | Publicamos [`streetClosureRequested`](../eventos/publicados/streetClosureRequested.md), con `sourceModule = M6` |
 | Llega [`streetClosureApproved`](../eventos/consumidos/streetClosureApproved.md) | Se habilita la ejecución del servicio bloqueado y se guarda la ventana autorizada (`approvedFrom`, `approvedTo`) |
-| Llega [`streetClosureRejected`](../eventos/consumidos/streetClosureRejected.md) | Se reprograma o se cancela el servicio dependiente |
+| Llega [`streetClosureRejected`](../eventos/consumidos/streetClosureRejected.md) | Se reprograma o se cancela el servicio dependiente y se guarda el motivo (`rejectionReason`) |
 | Llega [`streetClosureEnded`](../eventos/consumidos/streetClosureEnded.md) | Se libera la dependencia |
 
 Las tres respuestas traen `closureRequestId` y `requestingModule` (nombres de M7, no los que pedimos, pero el mismo dato) — confirmado desde el 25/08, y desde el 30/08 también en `streetClosureEnded`, que antes era la excepción. Para nosotros `requestingModule` viaja como `"ambiente"` (M7, 20/10).

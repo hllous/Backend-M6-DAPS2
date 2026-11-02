@@ -1011,20 +1011,22 @@ model RepairRequest {
 }
 
 model StreetClosureRequest {
-  id           String                     @id @default(uuid()) @db.Uuid
-  reason       String
-  sourceType   String                     @map("source_type") // SERVICE | TREE_INTERVENTION
-  sourceId     String                     @map("source_id") @db.Uuid // polimórfico
-  closureType  StreetClosureType?         @map("closure_type")
-  closureFrom  DateTime?                  @map("closure_from")
-  closureTo    DateTime?                  @map("closure_to")
+  id              String                     @id @default(uuid()) @db.Uuid
+  reason          String
+  sourceType      String                     @map("source_type") // SERVICE | TREE_INTERVENTION
+  sourceId        String                     @map("source_id") @db.Uuid // polimórfico
+  closureType     StreetClosureType?         @map("closure_type")
+  closureFrom     DateTime?                  @map("closure_from")
+  closureTo       DateTime?                  @map("closure_to")
   // Ventana que M7 autorizó (streetClosureApproved); prevalece sobre closureFrom/To.
-  approvedFrom DateTime?                  @map("approved_from")
-  approvedTo   DateTime?                  @map("approved_to")
-  status       StreetClosureRequestStatus @default(REQUESTED)
-  closureId    String?                    @map("closure_id") // EXT M7
-  createdAt    DateTime                   @default(now()) @map("created_at")
-  updatedAt    DateTime                   @updatedAt @map("updated_at")
+  approvedFrom    DateTime?                  @map("approved_from")
+  approvedTo      DateTime?                  @map("approved_to")
+  // Motivo que informó M7 en streetClosureRejected (o el operador al rechazar a mano).
+  rejectionReason String?                    @map("rejection_reason")
+  status          StreetClosureRequestStatus @default(REQUESTED)
+  closureId       String?                    @map("closure_id") // EXT M7
+  createdAt       DateTime                   @default(now()) @map("created_at")
+  updatedAt       DateTime                   @updatedAt @map("updated_at")
 
   streets ClosureStreet[]
 
@@ -1033,11 +1035,11 @@ model StreetClosureRequest {
 }
 
 model ClosureStreet {
-  id         String @id @default(uuid()) @db.Uuid
-  requestId  String @map("request_id") @db.Uuid
-  streetName String @map("street_name")
-  fromCross  String @map("from_cross")
-  toCross    String @map("to_cross")
+  id         String          @id @default(uuid()) @db.Uuid
+  requestId  String          @map("request_id") @db.Uuid
+  streetName String          @map("street_name")
+  fromCross  String          @map("from_cross")
+  toCross    String          @map("to_cross")
   // Sentido del tramo cortado; M7 lo exige en cada tramo de affectedSections.
   direction  StreetDirection
 

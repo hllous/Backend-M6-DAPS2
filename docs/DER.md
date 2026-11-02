@@ -358,6 +358,7 @@ erDiagram
         timestamp closure_to
         timestamp approved_from
         timestamp approved_to
+        varchar rejection_reason
         enum status "StreetClosureRequestStatus"
         varchar closure_id "EXT M7"
     }
