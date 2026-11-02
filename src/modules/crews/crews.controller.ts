@@ -24,6 +24,7 @@ import {
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
 
 @ApiTags('crews')
@@ -66,8 +67,11 @@ export class CrewsController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async create(@Body() dto: CreateCrewDto): Promise<CrewResponseDto> {
-    return this.crewsService.create(dto);
+  async create(
+    @Body() dto: CreateCrewDto,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<CrewResponseDto> {
+    return this.crewsService.create(dto, actor);
   }
 
   @Get()
@@ -164,8 +168,9 @@ export class CrewsController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCrewDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<CrewResponseDto> {
-    return this.crewsService.update(id, dto);
+    return this.crewsService.update(id, dto, actor);
   }
 
   @Delete(':id')
@@ -196,8 +201,11 @@ export class CrewsController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.crewsService.remove(id);
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<void> {
+    return this.crewsService.remove(id, actor);
   }
 
   // ─── Miembros (sub-recurso) ─────────────────────────
@@ -238,8 +246,9 @@ export class CrewsController {
   async addMembers(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AddCrewMembersDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<CrewResponseDto> {
-    return this.crewsService.addMembers(id, dto);
+    return this.crewsService.addMembers(id, dto, actor);
   }
 
   @Delete(':id/members/:userId')
@@ -276,8 +285,9 @@ export class CrewsController {
   async removeMember(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<void> {
-    return this.crewsService.removeMember(id, userId);
+    return this.crewsService.removeMember(id, userId, actor);
   }
 
   // ─── Reubicaciones de zona (sub-recurso) ────────────
@@ -328,9 +338,9 @@ export class CrewsController {
   async createZoneAssignment(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateCrewZoneAssignmentDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<CrewZoneAssignmentResponseDto> {
-    return this.crewsService.createZoneAssignment(id, dto, userId);
+    return this.crewsService.createZoneAssignment(id, dto, actor);
   }
 
   @Get(':id/zone-assignments')

@@ -1,3 +1,4 @@
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ContainersController } from './containers.controller';
 import { ContainersService } from './containers.service';
 import {
@@ -8,6 +9,8 @@ import {
   UpdateContainerDto,
 } from './dto';
 import { PaginationQueryDto } from '../../common/dto';
+
+const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
 const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
@@ -37,8 +40,8 @@ describe('ContainersController', () => {
 
   it('create delega el dto', async () => {
     const dto = {} as CreateContainerDto;
-    await expect(controller.create(dto)).resolves.toBe(RESULT);
-    expect(service.create).toHaveBeenCalledWith(dto);
+    await expect(controller.create(dto, USER)).resolves.toBe(RESULT);
+    expect(service.create).toHaveBeenCalledWith(dto, USER);
   });
 
   it('findAll delega la query', async () => {
@@ -65,44 +68,44 @@ describe('ContainersController', () => {
   });
 
   it('reportOverflow delega el id', async () => {
-    await controller.reportOverflow(ID);
-    expect(service.reportOverflow).toHaveBeenCalledWith(ID);
+    await controller.reportOverflow(ID, USER);
+    expect(service.reportOverflow).toHaveBeenCalledWith(ID, USER);
   });
 
   it('reportDamage delega id y dto', async () => {
     const dto = {} as ReportDamageDto;
-    await controller.reportDamage(ID, dto);
-    expect(service.reportDamage).toHaveBeenCalledWith(ID, dto);
+    await controller.reportDamage(ID, dto, USER);
+    expect(service.reportDamage).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('empty delega el id', async () => {
-    await controller.empty(ID);
-    expect(service.empty).toHaveBeenCalledWith(ID);
+    await controller.empty(ID, USER);
+    expect(service.empty).toHaveBeenCalledWith(ID, USER);
   });
 
   it('startRepair delega el id', async () => {
-    await controller.startRepair(ID);
-    expect(service.startRepair).toHaveBeenCalledWith(ID);
+    await controller.startRepair(ID, USER);
+    expect(service.startRepair).toHaveBeenCalledWith(ID, USER);
   });
 
   it('completeRepair delega el id', async () => {
-    await controller.completeRepair(ID);
-    expect(service.completeRepair).toHaveBeenCalledWith(ID);
+    await controller.completeRepair(ID, USER);
+    expect(service.completeRepair).toHaveBeenCalledWith(ID, USER);
   });
 
   it('relocate delega el id', async () => {
-    await controller.relocate(ID);
-    expect(service.relocate).toHaveBeenCalledWith(ID);
+    await controller.relocate(ID, USER);
+    expect(service.relocate).toHaveBeenCalledWith(ID, USER);
   });
 
   it('confirmRelocation delega id y dto', async () => {
     const dto = {} as ConfirmRelocationDto;
-    await controller.confirmRelocation(ID, dto);
-    expect(service.confirmRelocation).toHaveBeenCalledWith(ID, dto);
+    await controller.confirmRelocation(ID, dto, USER);
+    expect(service.confirmRelocation).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('remove delega el id', async () => {
-    await controller.remove(ID);
-    expect(service.remove).toHaveBeenCalledWith(ID);
+    await controller.remove(ID, USER);
+    expect(service.remove).toHaveBeenCalledWith(ID, USER);
   });
 });

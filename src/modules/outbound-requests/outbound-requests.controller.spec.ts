@@ -1,3 +1,4 @@
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import {
   RepairRequestsController,
   StreetClosureRequestsController,
@@ -12,6 +13,8 @@ import {
   RejectClosureDto,
   StartRepairDto,
 } from './dto';
+
+const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
 const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
@@ -33,8 +36,8 @@ describe('RepairRequestsController', () => {
 
   it('create delega el dto', async () => {
     const dto = {} as CreateRepairRequestDto;
-    await expect(controller.create(dto)).resolves.toBe(RESULT);
-    expect(service.createRepairRequest).toHaveBeenCalledWith(dto);
+    await expect(controller.create(dto, USER)).resolves.toBe(RESULT);
+    expect(service.createRepairRequest).toHaveBeenCalledWith(dto, USER);
   });
 
   it('findAll delega la query', async () => {
@@ -50,13 +53,13 @@ describe('RepairRequestsController', () => {
 
   it('start delega id y dto', async () => {
     const dto = {} as StartRepairDto;
-    await controller.start(ID, dto);
-    expect(service.startRepair).toHaveBeenCalledWith(ID, dto);
+    await controller.start(ID, dto, USER);
+    expect(service.startRepair).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('close delega el id', async () => {
-    await controller.close(ID);
-    expect(service.closeRepair).toHaveBeenCalledWith(ID);
+    await controller.close(ID, USER);
+    expect(service.closeRepair).toHaveBeenCalledWith(ID, USER);
   });
 });
 
@@ -78,8 +81,8 @@ describe('StreetClosureRequestsController', () => {
 
   it('create delega el dto', async () => {
     const dto = {} as CreateStreetClosureRequestDto;
-    await controller.create(dto);
-    expect(service.createClosureRequest).toHaveBeenCalledWith(dto);
+    await controller.create(dto, USER);
+    expect(service.createClosureRequest).toHaveBeenCalledWith(dto, USER);
   });
 
   it('findAll delega la query', async () => {
@@ -95,17 +98,17 @@ describe('StreetClosureRequestsController', () => {
 
   it('approve delega id y dto', async () => {
     const dto = {} as ApproveClosureDto;
-    await controller.approve(ID, dto);
-    expect(service.approveClosure).toHaveBeenCalledWith(ID, dto);
+    await controller.approve(ID, dto, USER);
+    expect(service.approveClosure).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('reject delega id y el motivo del dto', async () => {
-    await controller.reject(ID, { reason: 'no procede' } as RejectClosureDto);
-    expect(service.rejectClosure).toHaveBeenCalledWith(ID, 'no procede');
+    await controller.reject(ID, { reason: 'no procede' } as RejectClosureDto, USER);
+    expect(service.rejectClosure).toHaveBeenCalledWith(ID, 'no procede', USER);
   });
 
   it('end delega el id', async () => {
-    await controller.end(ID);
-    expect(service.endClosure).toHaveBeenCalledWith(ID);
+    await controller.end(ID, USER);
+    expect(service.endClosure).toHaveBeenCalledWith(ID, USER);
   });
 });

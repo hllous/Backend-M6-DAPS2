@@ -9,7 +9,7 @@ import { M6_ROLES, M6Role } from './m6-role';
  * (por metadata, sin levantar la app) para que una escritura nueva sin @Roles,
  * o con un rol inventado, rompa el build en vez de quedar abierta o inservible.
  */
-const RUTAS_ESPERADAS = 149;
+const RUTAS_ESPERADAS = 150;
 
 describe('cobertura de @Roles por ruta', () => {
   const routes = listRoutes(AppModule);
@@ -30,6 +30,7 @@ describe('cobertura de @Roles por ruta', () => {
       .filter((r) => r.method === 'GET' && !r.isPublic && r.roles?.length)
       .map((r) => `${label(r)} -> ${r.roles}`);
     expect(gets).toEqual([
+      'GET /audit -> M6_ADMIN,M6_AUDITOR',
       'GET /environmental-inspections/:id/violation-notice -> M6_ADMIN,M6_OFICINA_AMBIENTAL,M6_CAMPO_INSPECTOR,M6_AUDITOR',
       'GET /events/outbox -> M6_ADMIN,M6_AUDITOR',
       'GET /events/outbox/:id -> M6_ADMIN',

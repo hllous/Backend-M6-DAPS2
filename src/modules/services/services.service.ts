@@ -21,6 +21,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { paraLog } from '../../events/log-safe';
 import { toDateOnly, todayArgentina } from '../../common/utils/date-only';
 import { CONTAINER_TRANSITIONS } from '../containers/containers.service';
+import { AuditActor, AuditService } from '../../common/audit/audit.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
@@ -180,11 +181,12 @@ export class ServicesService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly inspections: EnvironmentalInspectionsService,
+    private readonly audit: AuditService,
   ) {}
 
   // ─── Programación ─────────────────────────────────
 
-  async create(dto: CreateServiceDto, createdBy?: string): Promise<ServiceResponseDto> {
+  async create(dto: CreateServiceDto, actor: AuditActor): Promise<ServiceResponseDto> {
     const serviceType = await this.prisma.serviceType.findUnique({
       where: { id: dto.serviceTypeId },
     });
@@ -251,11 +253,11 @@ export class ServicesService {
           ticketId: dto.ticketId || null,
           weatherAlertId: dto.weatherAlertId || null,
           notes: dto.notes ?? null,
-          createdBy: createdBy ?? null,
+          createdBy: actor.userId,
           ...(conflictos.length + avisos.length > 0 &&
             dto.overrideNote && {
               assignmentOverrideNote: dto.overrideNote,
-              assignmentOverrideBy: createdBy ?? null,
+              assignmentOverrideBy: actor.userId,
               assignmentOverrideAt: new Date(),
             }),
           // Snapshot: se copia al programar y no se recalcula, para que editar un
@@ -270,10 +272,18 @@ export class ServicesService {
         created.inspection = { id: dto.inspectionId };
       }
 
+      await this.audit.record(tx, {
+        entityType: 'SERVICE',
+        entityId: created.id,
+        action: 'CREATE',
+        toStatus: ServiceStatus.SCHEDULED,
+        actor,
+      });
+
       // Agendar cuenta como tomar la gestión del reclamo: M2 se entera por acá (#303).
       await this.outbox.enqueueMany(
         tx,
-        await this.scheduleEvents(tx, created, createdBy ?? 'sistema', false),
+        await this.scheduleEvents(tx, created, actor.userId, false),
       );
 
       return created;
@@ -338,7 +348,7 @@ export class ServicesService {
     return this.toResponseDto(await this.getService(id));
   }
 
-  async update(id: string, dto: UpdateServiceDto, actorId?: string): Promise<ServiceResponseDto> {
+  async update(id: string, dto: UpdateServiceDto, actor: AuditActor): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     this.assertEditable(current);
 
@@ -386,7 +396,7 @@ export class ServicesService {
           ...(conflictos.length > 0 &&
             dto.overrideNote && {
               assignmentOverrideNote: dto.overrideNote,
-              assignmentOverrideBy: actorId ?? null,
+              assignmentOverrideBy: actor.userId,
               assignmentOverrideAt: new Date(),
             }),
           ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
@@ -395,6 +405,14 @@ export class ServicesService {
           ...(dto.notes !== undefined && { notes: dto.notes }),
         },
         include: SERVICE_INCLUDE,
+      });
+      await this.audit.record(tx, {
+        entityType: 'SERVICE',
+        entityId: id,
+        action: 'UPDATE',
+        fromStatus: current.status,
+        toStatus: current.status,
+        actor,
       });
       return row;
     });
@@ -418,7 +436,7 @@ export class ServicesService {
    * El frontend deberia consultar antes `GET /services/:id/assignment-conflicts`
    * para poder avisar; el 409 de aca es la red, no el camino previsto.
    */
-  async assignCrew(id: string, dto: AssignCrewDto, actorId?: string): Promise<ServiceResponseDto> {
+  async assignCrew(id: string, dto: AssignCrewDto, actor: AuditActor): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     this.assertEditable(current);
     await this.assertResourcesExist(dto.crewId, dto.vehicleId);
@@ -438,11 +456,19 @@ export class ServicesService {
           ...(conflictos.length + avisos.length > 0 &&
             dto.overrideNote && {
               assignmentOverrideNote: dto.overrideNote,
-              assignmentOverrideBy: actorId ?? null,
+              assignmentOverrideBy: actor.userId,
               assignmentOverrideAt: new Date(),
             }),
         },
         include: SERVICE_INCLUDE,
+      });
+      await this.audit.record(tx, {
+        entityType: 'SERVICE',
+        entityId: id,
+        action: 'ASSIGN_CREW',
+        fromStatus: current.status,
+        toStatus: current.status,
+        actor,
       });
       return row;
     });
@@ -645,9 +671,9 @@ export class ServicesService {
    * No se puede iniciar sin cuadrilla, ni sin vehículo si el tipo de servicio
    * lo exige: es el caso que el propio estándar Swagger usa como ejemplo de 409.
    */
-  async start(id: string, actorId: string): Promise<ServiceResponseDto> {
+  async start(id: string, actor: AuditActor): Promise<ServiceResponseDto> {
     // Un servicio sin cuadrilla también cae acá (403): nadie es "de su cuadrilla".
-    const current = await this.assertCrewMember(await this.getService(id), actorId);
+    const current = await this.assertCrewMember(await this.getService(id), actor.userId);
 
     const serviceType = await this.prisma.serviceType.findUnique({
       where: { id: current.serviceTypeId },
@@ -666,11 +692,13 @@ export class ServicesService {
     const updateType = startUpdate(estadoTicket);
 
     return this.transition(
+      actor,
+      'START',
       current,
       ServiceStatus.IN_PROGRESS,
       {},
       updateType
-        ? this.ticketEvents(current, actorId, {
+        ? this.ticketEvents(current, actor.userId, {
             updateType,
             publicMessage: 'La cuadrilla comenzó a atender su reclamo.',
           })
@@ -681,20 +709,28 @@ export class ServicesService {
   /** IN_PROGRESS → SUSPENDED */
   async suspend(
     id: string,
-    userId: string,
+    actor: AuditActor,
     reason: string,
     note?: string,
   ): Promise<ServiceResponseDto> {
-    const current = await this.assertCrewMember(await this.getService(id), userId);
-    return this.transition(current, ServiceStatus.SUSPENDED, {
-      statusReason: reason,
-      statusNote: note?.trim() || null,
-    });
+    const current = await this.assertCrewMember(await this.getService(id), actor.userId);
+    return this.transition(
+      actor,
+      'SUSPEND',
+      current,
+      ServiceStatus.SUSPENDED,
+      {
+        statusReason: reason,
+        statusNote: note?.trim() || null,
+      },
+      [],
+      reason,
+    );
   }
 
   /** SUSPENDED → IN_PROGRESS */
-  async resume(id: string, userId: string): Promise<ServiceResponseDto> {
-    const current = await this.assertCrewMember(await this.getService(id), userId);
+  async resume(id: string, actor: AuditActor): Promise<ServiceResponseDto> {
+    const current = await this.assertCrewMember(await this.getService(id), actor.userId);
     // IN_PROGRESS también se alcanza desde SCHEDULED, pero eso es `start` (que
     // exige cuadrilla y vehículo): `resume` solo retoma lo que se suspendió.
     if (current.status !== ServiceStatus.SUSPENDED) {
@@ -702,7 +738,7 @@ export class ServicesService {
         `No se puede pasar de '${current.status}' a '${ServiceStatus.IN_PROGRESS}'. Transiciones válidas desde '${current.status}': [${VALID_TRANSITIONS[current.status].join(', ') || 'ninguna, es un estado final'}]. resume solo aplica desde '${ServiceStatus.SUSPENDED}'`,
       );
     }
-    return this.transition(current, ServiceStatus.IN_PROGRESS, {
+    return this.transition(actor, 'RESUME', current, ServiceStatus.IN_PROGRESS, {
       statusReason: null,
       statusNote: null,
     });
@@ -718,9 +754,9 @@ export class ServicesService {
   async complete(
     id: string,
     dto: CompleteServiceDto,
-    actorId: string,
+    actor: AuditActor,
   ): Promise<ServiceResponseDto> {
-    const current = await this.assertCrewMember(await this.getService(id), actorId);
+    const current = await this.assertCrewMember(await this.getService(id), actor.userId);
 
     const reported = new Set(current.zoneResults.map((r) => r.zoneId));
     const missing = current.zones.filter((z) => !reported.has(z.zoneId));
@@ -741,7 +777,7 @@ export class ServicesService {
     // Las dos escrituras van juntas: si el contenedor no se puede actualizar, el
     // servicio tampoco se cierra. Sin esto el frontend tendria que encadenar dos
     // llamadas y quedarse con el contenedor colgado si la segunda falla.
-    const events = this.ticketEvents(current, actorId, {
+    const events = this.ticketEvents(current, actor.userId, {
       updateType: 'RESOLVED',
       publicMessage: 'El servicio se completó.',
       details: { resolution: { type: 'ACTION_COMPLETED' } },
@@ -768,7 +804,23 @@ export class ServicesService {
               toStatus: ContainerStatus.ACTIVE,
             },
           });
+          await this.audit.record(tx, {
+            entityType: 'CONTAINER',
+            entityId: containerUpdate.containerId,
+            action: 'COMPLETE_SERVICE',
+            fromStatus: containerUpdate.from,
+            toStatus: ContainerStatus.ACTIVE,
+            actor,
+          });
         }
+        await this.audit.record(tx, {
+          entityType: 'SERVICE',
+          entityId: current.id,
+          action: 'COMPLETE',
+          fromStatus: current.status,
+          toStatus: target,
+          actor,
+        });
         await this.outbox.enqueueMany(tx, events);
         return row;
       })
@@ -878,18 +930,21 @@ export class ServicesService {
   }
 
   /** SCHEDULED | RESCHEDULED | SUSPENDED → CANCELLED */
-  async cancel(id: string, reason: string, actorId = 'sistema'): Promise<ServiceResponseDto> {
+  async cancel(id: string, reason: string, actor: AuditActor): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     return this.transition(
+      actor,
+      'CANCEL',
       current,
       ServiceStatus.CANCELLED,
       // statusNote: si venía suspendido, su nota ya no describe el estado.
       { statusReason: reason, statusNote: null },
-      this.ticketEvents(current, actorId, {
+      this.ticketEvents(current, actor.userId, {
         updateType: 'REJECTED',
         internalMessage: reason,
         details: { cancellation: { reasonCode: 'OTHER' } },
       }),
+      reason,
     );
   }
 
@@ -900,9 +955,17 @@ export class ServicesService {
    * estado en el que caen los servicios cuando llega una alerta meteorológica
    * o M7 rechaza un corte de calle. La fecha se pone con confirmReschedule.
    */
-  async reschedule(id: string, reason: string): Promise<ServiceResponseDto> {
+  async reschedule(id: string, reason: string, actor: AuditActor): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
-    return this.transition(current, ServiceStatus.RESCHEDULED, { statusReason: reason });
+    return this.transition(
+      actor,
+      'RESCHEDULE',
+      current,
+      ServiceStatus.RESCHEDULED,
+      { statusReason: reason },
+      [],
+      reason,
+    );
   }
 
   /**
@@ -914,7 +977,7 @@ export class ServicesService {
   async confirmReschedule(
     id: string,
     dto: ConfirmRescheduleDto,
-    actorId = 'sistema',
+    actor: AuditActor,
   ): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     this.assertWindowOrder(dto.windowFrom, dto.windowTo);
@@ -932,11 +995,13 @@ export class ServicesService {
     const events = await this.scheduleEvents(
       this.prisma,
       { id: current.id, ticketId: current.ticketId, scheduledDate, windowFrom, windowTo },
-      actorId,
+      actor.userId,
       true,
     );
 
     return this.transition(
+      actor,
+      'CONFIRM_RESCHEDULE',
       current,
       ServiceStatus.SCHEDULED,
       {
@@ -1333,11 +1398,15 @@ export class ServicesService {
   // ─── Helpers de estado ────────────────────────────
 
   private async transition(
+    actor: AuditActor,
+    action: string,
     current: ServiceWithRelations,
     targetStatus: ServiceStatus,
     additionalData: Prisma.ServiceUpdateInput = {},
     // Los eventos se escriben en la MISMA transaccion que el cambio de estado.
     events: OutboxEntry[] = [],
+    // El motivo que la acción ya pide (suspender, cancelar, reprogramar).
+    note?: string,
   ): Promise<ServiceResponseDto> {
     this.assertTransition(current.status, targetStatus);
 
@@ -1349,6 +1418,15 @@ export class ServicesService {
           where: { id: current.id, status: current.status },
           data: { status: targetStatus, ...additionalData },
           include: SERVICE_INCLUDE,
+        });
+        await this.audit.record(tx, {
+          entityType: 'SERVICE',
+          entityId: current.id,
+          action,
+          fromStatus: current.status,
+          toStatus: targetStatus,
+          actor,
+          note,
         });
         await this.outbox.enqueueMany(tx, events);
         return row;

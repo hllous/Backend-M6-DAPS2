@@ -1176,3 +1176,22 @@ model RoleAssignmentAudit {
   @@index([targetUserId, createdAt])
   @@map("role_assignment_audit")
 }
+
+// Quién hizo qué sobre los datos de dominio (#460). Solo agrega: un trigger de la
+// migración bloquea modificar, borrar y vaciar, igual que role_assignment_audit.
+// Guarda ids, estados y el motivo ya pedido; nunca datos personales ni payloads.
+model DomainAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  action      String
+  fromStatus  String?  @map("from_status")
+  toStatus    String?  @map("to_status")
+  actorUserId String   @map("actor_user_id") // siempre del token, nunca del body
+  actorRoles  M6Role[] @map("actor_roles")
+  note        String?
+  occurredAt  DateTime @default(now()) @map("occurred_at")
+
+  @@index([entityType, entityId, occurredAt])
+  @@map("domain_audit_log")
+}

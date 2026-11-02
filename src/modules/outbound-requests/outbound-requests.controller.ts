@@ -23,7 +23,8 @@ import {
   StreetClosureRequestResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
@@ -66,8 +67,11 @@ export class RepairRequestsController {
   })
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
-  async create(@Body() dto: CreateRepairRequestDto): Promise<RepairRequestResponseDto> {
-    return this.service.createRepairRequest(dto);
+  async create(
+    @Body() dto: CreateRepairRequestDto,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<RepairRequestResponseDto> {
+    return this.service.createRepairRequest(dto, actor);
   }
 
   @Get()
@@ -113,8 +117,9 @@ export class RepairRequestsController {
   async start(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StartRepairDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<RepairRequestResponseDto> {
-    return this.service.startRepair(id, dto);
+    return this.service.startRepair(id, dto, actor);
   }
 
   @Post(':id/close')
@@ -131,8 +136,11 @@ export class RepairRequestsController {
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
-  async close(@Param('id', ParseUUIDPipe) id: string): Promise<RepairRequestResponseDto> {
-    return this.service.closeRepair(id);
+  async close(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<RepairRequestResponseDto> {
+    return this.service.closeRepair(id, actor);
   }
 }
 
@@ -174,8 +182,9 @@ export class StreetClosureRequestsController {
   @ApiResponse(SERVER)
   async create(
     @Body() dto: CreateStreetClosureRequestDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<StreetClosureRequestResponseDto> {
-    return this.service.createClosureRequest(dto);
+    return this.service.createClosureRequest(dto, actor);
   }
 
   @Get()
@@ -230,8 +239,9 @@ export class StreetClosureRequestsController {
   async approve(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ApproveClosureDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<StreetClosureRequestResponseDto> {
-    return this.service.approveClosure(id, dto);
+    return this.service.approveClosure(id, dto, actor);
   }
 
   @Post(':id/reject')
@@ -256,8 +266,9 @@ export class StreetClosureRequestsController {
   async reject(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RejectClosureDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<StreetClosureRequestResponseDto> {
-    return this.service.rejectClosure(id, dto.reason);
+    return this.service.rejectClosure(id, dto.reason, actor);
   }
 
   @Post(':id/end')
@@ -278,7 +289,10 @@ export class StreetClosureRequestsController {
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
-  async end(@Param('id', ParseUUIDPipe) id: string): Promise<StreetClosureRequestResponseDto> {
-    return this.service.endClosure(id);
+  async end(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<StreetClosureRequestResponseDto> {
+    return this.service.endClosure(id, actor);
   }
 }

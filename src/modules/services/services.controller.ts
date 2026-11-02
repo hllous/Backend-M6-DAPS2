@@ -31,6 +31,7 @@ import {
   UpdateServiceDto,
   ZoneResultResponseDto,
 } from './dto';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiNotAssigned, ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
@@ -82,9 +83,9 @@ export class ServicesController {
   @ApiResponse(SERVER)
   async create(
     @Body() dto: CreateServiceDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.create(dto, userId);
+    return this.servicesService.create(dto, actor);
   }
 
   @Get()
@@ -147,9 +148,9 @@ export class ServicesController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateServiceDto,
-    @CurrentUser('userId') userId?: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.update(id, dto, userId);
+    return this.servicesService.update(id, dto, actor);
   }
 
   @Post(':id/assign-crew')
@@ -184,9 +185,9 @@ export class ServicesController {
   async assignCrew(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssignCrewDto,
-    @CurrentUser('userId') userId?: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.assignCrew(id, dto, userId);
+    return this.servicesService.assignCrew(id, dto, actor);
   }
 
   @Get(':id/assignment-conflicts')
@@ -252,9 +253,9 @@ export class ServicesController {
   async addDelayNotice(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateDelayNoticeDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<DelayNoticeResponseDto> {
-    return this.servicesService.addDelayNotice(id, dto, userId);
+    return this.servicesService.addDelayNotice(id, dto, actor.userId);
   }
 
   @Get(':id/delay-notices')
@@ -302,9 +303,9 @@ export class ServicesController {
   @ApiResponse(SERVER)
   async start(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.start(id, userId);
+    return this.servicesService.start(id, actor);
   }
 
   @Post(':id/suspend')
@@ -326,9 +327,9 @@ export class ServicesController {
   async suspend(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SuspendServiceDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.suspend(id, userId, dto.reason, dto.note);
+    return this.servicesService.suspend(id, actor, dto.reason, dto.note);
   }
 
   @Post(':id/resume')
@@ -348,9 +349,9 @@ export class ServicesController {
   @ApiResponse(SERVER)
   async resume(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.resume(id, userId);
+    return this.servicesService.resume(id, actor);
   }
 
   @Post(':id/complete')
@@ -382,9 +383,9 @@ export class ServicesController {
   async complete(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CompleteServiceDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.complete(id, dto, userId);
+    return this.servicesService.complete(id, dto, actor);
   }
 
   @Post(':id/cancel')
@@ -408,9 +409,9 @@ export class ServicesController {
   async cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StatusChangeDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.cancel(id, dto.reason, userId);
+    return this.servicesService.cancel(id, dto.reason, actor);
   }
 
   @Post(':id/reschedule')
@@ -435,8 +436,9 @@ export class ServicesController {
   async reschedule(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StatusChangeDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.reschedule(id, dto.reason);
+    return this.servicesService.reschedule(id, dto.reason, actor);
   }
 
   @Post(':id/confirm-reschedule')
@@ -461,9 +463,9 @@ export class ServicesController {
   async confirmReschedule(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ConfirmRescheduleDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.confirmReschedule(id, dto, userId);
+    return this.servicesService.confirmReschedule(id, dto, actor);
   }
 
   // ─── Resultado por zona ───────────────────────────
@@ -494,9 +496,9 @@ export class ServicesController {
   async addZoneResult(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateZoneResultDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ZoneResultResponseDto> {
-    return this.servicesService.addZoneResult(id, dto, userId);
+    return this.servicesService.addZoneResult(id, dto, actor.userId);
   }
 
   @Get(':id/zone-results')
@@ -554,9 +556,9 @@ export class ServicesController {
   async addCollectionRecord(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateCollectionRecordDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<CollectionRecordResponseDto> {
-    return this.servicesService.addCollectionRecord(id, dto, userId);
+    return this.servicesService.addCollectionRecord(id, dto, actor.userId);
   }
 
   @Get(':id/collection-records')
