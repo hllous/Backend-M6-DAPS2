@@ -72,6 +72,44 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Enviado el 02/11 a las 10:37 (M3)
+
+> Redactado y enviado el 02/11 a las 10:37 como respuesta al aviso de M3 de que su consumo y sus `workOrder*` están desplegados. Al responder M3, mover la respuesta a [`m3.md`](m3.md).
+
+**→ M3 (Obras públicas)** — prueba `requestId` → `sourceRequestId` y schema único de `streetClosureRequested` — *enviado el 02/11 a las 10:37*
+
+> Hola M3, gracias por el aviso. Cruzamos sus schemas nuevos contra lo que consumimos: `workOrderScheduled` y `workOrderCompleted` coinciden, no tenemos nada que cambiar. Sobre sus tres puntos:
+>
+> 1. **Prueba:** de acuerdo. Disparamos un `infrastructureRepairRequested` desde M6 y les pasamos el `requestId` apenas lo generemos; necesitamos que devuelvan `workOrderScheduled` y `workOrderCompleted` con ese valor en `sourceRequestId`. ¿Cuándo les viene bien y en qué cola esperan?
+> 2. **`containerDamaged` y `treeRiskDetected`:** confirmado, siguen siendo avisos sin respuesta. No emitan `workOrder*` hacia M6 para esos casos.
+> 3. **`streetClosureRequested`:** el Core solo puede tener un schema. Proponemos el suyo como base, con tres ajustes:
+>    - `affectedSections` estructurado `{street, from, to, direction}`, con `direction` ∈ `FORWARD`, `REVERSE`, `BOTH`. M7 ya lo exige y nosotros lo adoptamos antes de la E2E (hoy mandamos strings).
+>    - `closureType` obligatorio en el schema (nosotros ya lo mandamos siempre).
+>    - `data.sourceModule` como enum con los valores que lee M7 (hoy `"obras"` de ustedes y `"M6"` de nosotros), no como constante. El `sourceModule` del sobre queda por productor (`obras` / `ambiente`).
+>
+>    ¿Qué valor de `data.sourceModule` recibe M7 hoy de ustedes: `obras` o `M3`? ¿Lo coordinan ustedes con M7 y el Core o lo hacemos entre los tres? — M6 Ambiente
+
+## Enviado el 02/11 a las 10:31 (M1)
+
+> Redactado y enviado el 02/11 a las 10:31 como respuesta a la propuesta de M1 de resolver ciudadano y organización por REST. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — consultas REST de ciudadano y organización, claims del token — *enviado el 02/11 a las 10:31*
+
+> Hola M1, gracias por revisar. Sí, ciudadano por `citizenId` UUID y organización por `organizationId` UUID, con búsqueda adicional por CUIT, nos sirve. Tenemos dos usos concretos:
+>
+> - **Cuadrillas:** cada cuadrilla de M6 apunta a una organización (la empresa contratista), a un líder y a integrantes, todos de M1. Hoy guardamos los nombres a mano y no podemos validar que la organización exista ni que esté activa.
+> - **Reclamos:** necesitamos identificar al denunciante cuando el reclamo no es anónimo.
+>
+> Para cerrar la integración necesitamos que nos confirmen cómo nos pasan esa información:
+>
+> 1. **¿Qué viaja en el token?** ¿Vienen `actorId`, `actorType` y `citizenId` en todos los access tokens, también en los de empleados? ¿Viene algún dato de organización, por ejemplo `organizationId`? ¿Qué más trae (nombre, `rol`, `sub_type`)?
+> 2. **¿Qué se consulta por REST?** URL base, endpoints, parámetros y la respuesta de ciudadano y de organización. ¿Qué campos devuelve cada uno y qué pasa si no existe o está dado de baja?
+> 3. **Autenticación entre módulos:** ¿se usa el module-token RS256 de §3 de la v3.0? ¿Qué permisos o scope necesita M6 para consultar, y qué campos puede ver?
+> 4. **¿Cómo conseguimos el `actorId` de cada empleado de una cuadrilla antes de que haga login?** Las cuadrillas se cargan antes de que la persona se autentique, y hoy las identificamos por `sub` numérico. ¿Hay una consulta de `sub` a `actorId`?
+> 5. **Ambiente:** ¿cuándo van a estar hosteados para probar? Mientras tanto, mándennos los ejemplos sanitizados de token y de respuestas y los validamos.
+>
+> Sobre `actorId`: hoy usamos `sub` como clave interna y no la vamos a cambiar. Queremos leer `actorId` para el `updatedBy.id` de `updateTicketStatus`, porque M2 exige UUID. — M6 Ambiente
+
 ## Borrador del 31/10 (M7) — SIN ENVIAR
 
 > Redactado el 31/10 como respuesta a la aclaración de M7 sobre el contrato de cortes ([#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447)). **No enviado:** cuando el PO lo mande, cambiar el título a «Enviado el DD/MM a las HH:MM» y registrar la hora real. Conviene mandarlo recién cuando `direction` esté implementado, para no prometer una fecha.
