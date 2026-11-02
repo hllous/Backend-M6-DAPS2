@@ -444,6 +444,7 @@ package "Derivaciones salientes" #F7F2E7 {
     * street_name : varchar
       from_cross : varchar
       to_cross : varchar
+    * direction : enum <<StreetDirection>>
   }
 }
 
@@ -572,7 +573,7 @@ note as N_convenciones
   **Convenciones**
   · Toda tabla lleva ""created_at"", ""updated_at"", ""created_by"" (no se dibujan)
   · ""*"" = NOT NULL
-  · Los 33 enums viven en el código, no en tablas de catálogo:
+  · Los 34 enums viven en el código, no en tablas de catálogo:
     son valores cerrados versionados, no configurables por el municipio
   · ""service_zone"" es un **snapshot** copiado al programar:
     editar un ""route"" no altera lo ya ejecutado

@@ -7,6 +7,7 @@ import {
   Severity,
   StreetClosureRequestStatus,
   StreetClosureType,
+  StreetDirection,
   TreeInterventionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -51,8 +52,20 @@ describe('OutboundRequestsService', () => {
     createdAt: new Date('2026-09-20T09:00:00.000Z'),
     updatedAt: new Date(),
     streets: [
-      { id: 's1', streetName: 'Rivadavia', fromCross: 'Mitre', toCross: 'San Martín' },
-      { id: 's2', streetName: 'Boyacá', fromCross: 'Rivadavia', toCross: 'Yerbal' },
+      {
+        id: 's1',
+        streetName: 'Rivadavia',
+        fromCross: 'Mitre',
+        toCross: 'San Martín',
+        direction: 'BOTH',
+      },
+      {
+        id: 's2',
+        streetName: 'Boyacá',
+        fromCross: 'Rivadavia',
+        toCross: 'Yerbal',
+        direction: 'FORWARD',
+      },
     ],
     ...over,
   });
@@ -263,8 +276,18 @@ describe('OutboundRequestsService', () => {
       sourceId: SERVICE_ID,
       reason: 'Extracción con riesgo de caída',
       sections: [
-        { streetName: 'Rivadavia', fromCross: 'Mitre', toCross: 'San Martín' },
-        { streetName: 'Boyacá', fromCross: 'Rivadavia', toCross: 'Yerbal' },
+        {
+          streetName: 'Rivadavia',
+          fromCross: 'Mitre',
+          toCross: 'San Martín',
+          direction: StreetDirection.BOTH,
+        },
+        {
+          streetName: 'Boyacá',
+          fromCross: 'Rivadavia',
+          toCross: 'Yerbal',
+          direction: StreetDirection.FORWARD,
+        },
       ],
       requestedFrom: '2026-10-05T07:00:00.000Z',
       requestedTo: '2026-10-05T13:00:00.000Z',
@@ -352,12 +375,12 @@ describe('OutboundRequestsService', () => {
       expect(enqueued().payload).not.toHaveProperty('requestingModule');
     });
 
-    it('affectedSections se arma de los tramos, como texto', async () => {
+    it('affectedSections se arma de los tramos {street, from, to, direction}', async () => {
       await service.createClosureRequest(dto);
 
       expect(enqueued().payload.affectedSections).toEqual([
-        'Rivadavia entre Mitre y San Martín',
-        'Boyacá entre Rivadavia y Yerbal',
+        { street: 'Rivadavia', from: 'Mitre', to: 'San Martín', direction: 'BOTH' },
+        { street: 'Boyacá', from: 'Rivadavia', to: 'Yerbal', direction: 'FORWARD' },
       ]);
     });
 
@@ -440,13 +463,13 @@ describe('OutboundRequestsService', () => {
       expect(args.data.status).toBe(StreetClosureRequestStatus.ENDED);
     });
 
-    it('sin closureType, se guarda null', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { closureType, ...sinTipo } = dto;
-      await service.createClosureRequest(sinTipo as typeof dto);
+    it('guarda direction en cada tramo', async () => {
+      await service.createClosureRequest(dto);
 
       const [[args]] = prisma.streetClosureRequest.create.mock.calls;
-      expect(args.data.closureType).toBeNull();
+      expect(
+        args.data.streets.createMany.data.map((s: { direction: string }) => s.direction),
+      ).toEqual(['BOTH', 'FORWARD']);
     });
 
     it('aprobar sin closureId no lo pisa en el update', async () => {

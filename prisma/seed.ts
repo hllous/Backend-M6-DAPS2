@@ -31,6 +31,7 @@ import {
   Shift,
   StreetClosureRequestStatus,
   StreetClosureType,
+  StreetDirection,
   SuggestedAction,
   TreeHealthStatus,
   TreeInterventionStatus,
@@ -3950,7 +3951,12 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
         streets: {
           createMany: {
             data: [
-              { streetName: datos.calle[0], fromCross: datos.calle[1], toCross: datos.calle[2] },
+              {
+                streetName: datos.calle[0],
+                fromCross: datos.calle[1],
+                toCross: datos.calle[2],
+                direction: StreetDirection.BOTH,
+              },
             ],
           },
         },

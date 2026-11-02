@@ -70,7 +70,10 @@ describe('Vencimiento de cortes aprobados (e2e)', () => {
         sourceType: 'SERVICE',
         sourceId: servicio.body.id,
         reason: 'Trabajo sobre la calzada',
-        sections: [{ streetName: 'Belgrano', fromCross: 'Mitre', toCross: 'San Martín' }],
+        sections: [
+          { streetName: 'Belgrano', fromCross: 'Mitre', toCross: 'San Martín', direction: 'BOTH' },
+        ],
+        closureType: 'PARTIAL',
         requestedFrom: new Date(endDate.getTime() - DIA_MS).toISOString(),
         requestedTo: endDate.toISOString(),
       })

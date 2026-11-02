@@ -5,6 +5,7 @@ import {
   Severity,
   StreetClosureRequestStatus,
   StreetClosureType,
+  StreetDirection,
 } from '@prisma/client';
 
 export class RepairRequestResponseDto {
@@ -68,6 +69,13 @@ export class ClosureSectionResponseDto {
 
   @ApiProperty({ description: 'Cruce final', example: 'San Martín' })
   toCross: string;
+
+  @ApiProperty({
+    description: 'Sentido del tramo cortado',
+    enum: StreetDirection,
+    example: StreetDirection.BOTH,
+  })
+  direction: StreetDirection;
 }
 
 export class StreetClosureRequestResponseDto {

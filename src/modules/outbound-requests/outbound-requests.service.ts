@@ -202,13 +202,14 @@ export class OutboundRequestsService {
           reason: dto.reason,
           closureFrom: new Date(dto.requestedFrom),
           closureTo: new Date(dto.requestedTo),
-          closureType: dto.closureType ?? null,
+          closureType: dto.closureType,
           streets: {
             createMany: {
               data: dto.sections.map((s) => ({
                 streetName: s.streetName,
                 fromCross: s.fromCross,
                 toCross: s.toCross,
+                direction: s.direction,
               })),
             },
           },
@@ -432,6 +433,7 @@ export class OutboundRequestsService {
         streetName: s.streetName,
         fromCross: s.fromCross,
         toCross: s.toCross,
+        direction: s.direction,
       })),
       closureFrom: r.closureFrom,
       closureTo: r.closureTo,

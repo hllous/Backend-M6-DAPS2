@@ -19689,12 +19689,23 @@
             "description": "Cruce donde termina el tramo",
             "example": "San Martín",
             "maxLength": 100
+          },
+          "direction": {
+            "type": "string",
+            "description": "Sentido del tramo cortado: FORWARD (de fromCross a toCross), REVERSE (al revés) o BOTH (ambos).",
+            "enum": [
+              "FORWARD",
+              "REVERSE",
+              "BOTH"
+            ],
+            "example": "BOTH"
           }
         },
         "required": [
           "streetName",
           "fromCross",
-          "toCross"
+          "toCross",
+          "direction"
         ]
       },
       "CreateStreetClosureRequestDto": {
@@ -19742,7 +19753,7 @@
           },
           "closureType": {
             "type": "string",
-            "description": "Tipo de corte. Opcional en el esquema unificado con M3; nosotros lo mandamos siempre.",
+            "description": "Tipo de corte. M7 lo tolera ausente pero recomienda mandarlo siempre, así que es obligatorio.",
             "enum": [
               "TOTAL",
               "PARTIAL"
@@ -19756,7 +19767,8 @@
           "reason",
           "sections",
           "requestedFrom",
-          "requestedTo"
+          "requestedTo",
+          "closureType"
         ]
       },
       "ClosureSectionResponseDto": {
@@ -19781,13 +19793,24 @@
             "type": "string",
             "description": "Cruce final",
             "example": "San Martín"
+          },
+          "direction": {
+            "type": "string",
+            "description": "Sentido del tramo cortado",
+            "enum": [
+              "FORWARD",
+              "REVERSE",
+              "BOTH"
+            ],
+            "example": "BOTH"
           }
         },
         "required": [
           "id",
           "streetName",
           "fromCross",
-          "toCross"
+          "toCross",
+          "direction"
         ]
       },
       "StreetClosureRequestResponseDto": {

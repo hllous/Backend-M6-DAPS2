@@ -218,6 +218,7 @@ describe('payloads de los eventos publicados', () => {
           streetName: 'Rivadavia',
           fromCross: 'Mitre',
           toCross: 'San Martín',
+          direction: 'BOTH',
         },
       ],
     } as never;
@@ -232,7 +233,9 @@ describe('payloads de los eventos publicados', () => {
     it('affectedSections nunca viaja vacio: el schema exige minItems 1', () => {
       const p = payloads.streetClosureRequested(closure);
 
-      expect(p.affectedSections).toEqual(['Rivadavia entre Mitre y San Martín']);
+      expect(p.affectedSections).toEqual([
+        { street: 'Rivadavia', from: 'Mitre', to: 'San Martín', direction: 'BOTH' },
+      ]);
     });
   });
 

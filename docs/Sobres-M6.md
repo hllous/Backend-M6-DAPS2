@@ -270,7 +270,7 @@ Abre una solicitud con seguimiento: M3 nos devuelve `requestId` como `sourceRequ
     "sourceModule": "M6",
     "sourceRef": "0b1c2d3e-4f5a-4b6c-97d8-f9a0b1c2d3e4",
     "reason": "Poda de seguridad de un fresno con riesgo de caída de ramas",
-    "affectedSections": ["Calle Mitre entre Av. Belgrano y Calle Sarmiento"],
+    "affectedSections": [{"street": "Calle Mitre", "from": "Av. Belgrano", "to": "Calle Sarmiento", "direction": "BOTH"}],
     "requestedFrom": "2026-10-20T08:00:00.000Z",
     "requestedTo": "2026-10-20T12:00:00.000Z",
     "closureType": "PARTIAL",

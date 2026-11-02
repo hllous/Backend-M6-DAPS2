@@ -168,9 +168,9 @@ export function infrastructureRepairRequested(
 
 // ─── streetClosureRequested → M7 ──────────────────
 
-/** Un tramo, como texto plano: `affectedSections` es un array de strings. */
-function seccion(s: ClosureStreet): string {
-  return `${s.streetName} entre ${s.fromCross} y ${s.toCross}`;
+/** Un tramo en la forma de M7: `{street, from, to, direction}`. */
+function seccion(s: ClosureStreet) {
+  return { street: s.streetName, from: s.fromCross, to: s.toCross, direction: s.direction };
 }
 
 /**
