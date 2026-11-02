@@ -72,6 +72,30 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Enviado el 02/11 a las 19:38 (M1)
+
+> Redactado y enviado el 02/11 a las 19:38 para pedir los usuarios de empleado de la demo ([#488](https://github.com/hllous/Backend-M6-DAPS2/issues/488)). Las contraseñas se piden por privado, no se escriben en el repo. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — 12 usuarios de empleado para la demo — *enviado el 02/11 a las 19:38*
+
+> Hola M1, para pasar del login de demo al login real necesitamos **12 cuentas de empleado** (`sub_type` `EMPLEADO`) en su ambiente hosteado. Si pueden, con `user_id` del 10000 al 10011, en este orden: 10000 y 10001 con rol `RESPONSABLE_AREA`; 10002 a 10006 `ADMINISTRATIVO` (personal de oficina); 10007 y 10008 `AUDITOR`; 10009 y 10010 `ADMINISTRATIVO` (líder e integrante de una cuadrilla de campo); 10011 `ADMINISTRATIVO` (inspector). Si no pueden fijar el `user_id`, pásennos los reales y los `actorId` y adaptamos nuestro seed. Las cuadrillas completas no hace falta cargarlas: sus integrantes no inician sesión y los identificamos por `sub` en nuestra base. Una pregunta: ¿ya tienen una forma de crear empleados (panel o endpoint de administración)? Si la hay y nos dan acceso, las creamos nosotros; si no, no hace falta que construyan nada. Las contraseñas, por el grupo de POs y no por acá. — M6 Ambiente
+
+## Enviado el 02/11 a las 19:20 (M1)
+
+> Redactado y enviado el 02/11 a las 19:20 para trasladar la respuesta de M9 sobre el module-token (ver [`m9.md`](m9.md)). Al responder M1, mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — autenticación del REST entre módulos, según M9 — *enviado el 02/11 a las 19:20*
+
+> Hola M1, M9 respondió sobre la autenticación de sus consultas REST. Resumen: el token de `POST /api/v1/auth/module-token` se puede usar tal cual contra ustedes, sin pedir uno por destino. Es RS256 y dura 15 minutos, con `sub` `module:<modulo>` (nosotros `module:ambiente`), `kind` `module`, `iss` `muni-core`, `aud` `muni-platform` y `jti`. **No lleva `scope`**, así que su permiso local `CONSULTA_INTERMODULO`, aplicado tras verificar `kind == "module"`, es el camino correcto. Para validar la firma el Core **no publica JWKS**; hay dos opciones: (A) reenviar el `Authorization` a `GET /api/v1/auth/me` del Core (200 con `{kind, module, …}` o 401) o (B) validar RS256 localmente con la clave pública PEM, que M9 les pasa por privado. ¿Cuál van a usar? Del lado nuestro mandamos ese token como Bearer cuando sus rutas estén desplegadas. — M6 Ambiente
+
+## Enviado el 02/11 a las 19:15 (M1)
+
+> Redactado y enviado el 02/11 a las 19:15 tras probar el login de la cuenta de empleado contra el M1 hosteado. **El secreto no se pide por el chat de los módulos ni se escribe en el repo:** va por el grupo de POs. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — secreto del JWT vigente del ambiente hosteado — *enviado el 02/11 a las 19:15*
+
+> Hola M1, probamos el login de la cuenta de empleado en su ambiente hosteado y funciona: el token es HS256, con `iss` `modulo1-ciudadanos`, `sub` `1`, `sub_type` `EMPLEADO`, `rol` `RESPONSABLE_AREA`, `typ` `access` y `actorId`. Pero nuestro backend desplegado lo rechaza con 401, así que el secreto que nos pasaron el 22/10 ya no coincide con el que firma hoy. ¿Nos pasan el `APP_JWT_SECRET` vigente del ambiente hosteado, por el grupo de POs y no por acá? Confirmen también el largo de la clave en bytes (para saber si el algoritmo seguirá siendo HS256) y si cambia cuando redesplieguen, para no quedar desfasados otra vez. — M6 Ambiente
+
 ## Enviado el 02/11 a las 18:46 (M9)
 
 > Redactado y enviado el 02/11 a las 18:46 por la consulta de M1 sobre la autenticación de su REST entre módulos. Al responder M9, mover la respuesta a [`m9.md`](m9.md).
