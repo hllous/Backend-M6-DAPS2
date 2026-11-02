@@ -12,8 +12,9 @@ import {
   ContainerResponseDto,
   ReportDamageDto,
   ConfirmRelocationDto,
+  ContainerStatusHistoryResponseDto,
 } from './dto';
-import { PaginatedResponseDto } from '../../common/dto';
+import { PaginatedResponseDto, PaginationQueryDto } from '../../common/dto';
 
 /**
  * Transiciones válidas de la máquina de estados de Container.
@@ -141,6 +142,38 @@ export class ContainersService {
     return this.toResponseDto(container);
   }
 
+  /** Historial de estados del contenedor, el más reciente primero. */
+  async findHistory(
+    id: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ContainerStatusHistoryResponseDto>> {
+    await this.ensureExists(id);
+
+    const where = { containerId: id };
+    const [rows, total] = await Promise.all([
+      this.prisma.containerStatusHistory.findMany({
+        where,
+        skip: query.skip,
+        take: query.take,
+        // id desempata las filas del mismo instante (p. ej. alta y primera transición).
+        orderBy: [{ changedAt: 'desc' }, { id: 'desc' }],
+      }),
+      this.prisma.containerStatusHistory.count({ where }),
+    ]);
+
+    return new PaginatedResponseDto(
+      rows.map((r) => ({
+        id: r.id,
+        fromStatus: r.fromStatus,
+        toStatus: r.toStatus,
+        changedAt: r.changedAt,
+      })),
+      total,
+      query.page,
+      query.pageSize,
+    );
+  }
+
   async update(id: string, dto: UpdateContainerDto): Promise<ContainerResponseDto> {
     await this.ensureExists(id);
 
@@ -185,6 +218,7 @@ export class ContainersService {
         damageType: null,
         severity: null,
         requiresPublicWorks: null,
+        damageNotes: null,
       },
       undefined,
       EMPTY_FROM,
@@ -200,6 +234,7 @@ export class ContainersService {
         damageType: dto.damageType,
         severity: dto.severity,
         requiresPublicWorks: dto.requiresPublicWorks ?? false,
+        damageNotes: dto.observations ?? null,
       },
       // requiresPublicWorks = true es lo que hace que a M3 le sirva el evento.
       (container, neighborhoodId) => ({
@@ -221,7 +256,7 @@ export class ContainersService {
     return this.transition(
       id,
       ContainerStatus.ACTIVE,
-      { damageType: null, severity: null, requiresPublicWorks: null },
+      { damageType: null, severity: null, requiresPublicWorks: null, damageNotes: null },
       undefined,
       COMPLETE_REPAIR_FROM,
     );
@@ -339,6 +374,7 @@ export class ContainersService {
       damageType: container.damageType,
       severity: container.severity,
       requiresPublicWorks: container.requiresPublicWorks,
+      damageNotes: container.damageNotes ?? null,
       createdAt: container.createdAt,
       updatedAt: container.updatedAt,
     };

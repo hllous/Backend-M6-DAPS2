@@ -19,8 +19,9 @@ import {
   QueryContainersDto,
   ReportDamageDto,
   ConfirmRelocationDto,
+  ContainerStatusHistoryResponseDto,
 } from './dto';
-import { ErrorResponseDto } from '../../common/dto';
+import { ErrorResponseDto, PaginationQueryDto } from '../../common/dto';
 import { ApiPaginatedResponse, Roles } from '../../common/decorators';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
 
@@ -129,6 +130,37 @@ export class ContainersController {
     return this.containersService.findOne(id);
   }
 
+  @Get(':id/history')
+  @ApiOperation({
+    summary: 'Historial de estados de un contenedor',
+    description:
+      'Retorna, paginado y del más reciente al más antiguo, cada alta y cada cambio de estado del contenedor (origen, destino e instante). El alta tiene origen nulo.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID del contenedor',
+    format: 'uuid',
+  })
+  @ApiPaginatedResponse(ContainerStatusHistoryResponseDto, 'Historial paginado de estados')
+  @ApiResponse({
+    status: 401,
+    description: 'Token JWT inválido o ausente',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Contenedor no encontrado',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  async findHistory(@Param('id', ParseUUIDPipe) id: string, @Query() query: PaginationQueryDto) {
+    return this.containersService.findHistory(id, query);
+  }
+
   @Patch(':id')
   @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
@@ -222,7 +254,7 @@ export class ContainersController {
   @ApiOperation({
     summary: 'Reportar daño en un contenedor',
     description:
-      'Transición ACTIVE → DAMAGED. Registra el tipo de daño, severidad y si requiere derivación a Obras Públicas (M3). Un contenedor con requiresPublicWorks=true genera el evento containerDamaged hacia M3.',
+      'Transición ACTIVE → DAMAGED. Registra el tipo de daño, severidad, observaciones opcionales (dato interno, no viajan a M3) y si requiere derivación a Obras Públicas (M3). Un contenedor con requiresPublicWorks=true genera el evento containerDamaged hacia M3.',
   })
   @ApiParam({
     name: 'id',
@@ -356,7 +388,7 @@ export class ContainersController {
   @ApiOperation({
     summary: 'Completar reparación de un contenedor',
     description:
-      'Transición UNDER_REPAIR → ACTIVE. Indica que la reparación finalizó y el contenedor vuelve a servicio. Limpia los campos de daño.',
+      'Transición UNDER_REPAIR → ACTIVE. Indica que la reparación finalizó y el contenedor vuelve a servicio. Limpia los campos de daño y las observaciones.',
   })
   @ApiParam({
     name: 'id',

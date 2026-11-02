@@ -7,6 +7,7 @@ import {
   ReportDamageDto,
   UpdateContainerDto,
 } from './dto';
+import { PaginationQueryDto } from '../../common/dto';
 
 const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
@@ -20,6 +21,7 @@ describe('ContainersController', () => {
       create: jest.fn().mockResolvedValue(RESULT),
       findAll: jest.fn().mockResolvedValue({ items: [RESULT] }),
       findOne: jest.fn().mockResolvedValue(RESULT),
+      findHistory: jest.fn().mockResolvedValue({ items: [] }),
       update: jest.fn().mockResolvedValue(RESULT),
       reportOverflow: jest.fn().mockResolvedValue(RESULT),
       reportDamage: jest.fn().mockResolvedValue(RESULT),
@@ -48,6 +50,12 @@ describe('ContainersController', () => {
   it('findOne delega el id', async () => {
     await controller.findOne(ID);
     expect(service.findOne).toHaveBeenCalledWith(ID);
+  });
+
+  it('findHistory delega id y query', async () => {
+    const query = {} as PaginationQueryDto;
+    await controller.findHistory(ID, query);
+    expect(service.findHistory).toHaveBeenCalledWith(ID, query);
   });
 
   it('update delega id y dto', async () => {

@@ -853,6 +853,7 @@ export class ServicesService {
           damageType: null,
           severity: null,
           requiresPublicWorks: null,
+          damageNotes: null,
         };
 
       // La reubicacion es la unica que pide un dato que el Service no lleva.

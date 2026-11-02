@@ -5126,6 +5126,114 @@
         ]
       }
     },
+    "/containers/{id}/history": {
+      "get": {
+        "operationId": "ContainersController_findHistory",
+        "summary": "Historial de estados de un contenedor",
+        "description": "Retorna, paginado y del más reciente al más antiguo, cada alta y cada cambio de estado del contenedor (origen, destino e instante). El alta tiene origen nulo.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del contenedor",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-indexed)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Registros por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historial paginado de estados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ContainerStatusHistoryResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Contenedor no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "containers"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
     "/containers/{id}/report-overflow": {
       "post": {
         "operationId": "ContainersController_reportOverflow",
@@ -5219,7 +5327,7 @@
       "post": {
         "operationId": "ContainersController_reportDamage",
         "summary": "Reportar daño en un contenedor",
-        "description": "Transición ACTIVE → DAMAGED. Registra el tipo de daño, severidad y si requiere derivación a Obras Públicas (M3). Un contenedor con requiresPublicWorks=true genera el evento containerDamaged hacia M3.",
+        "description": "Transición ACTIVE → DAMAGED. Registra el tipo de daño, severidad, observaciones opcionales (dato interno, no viajan a M3) y si requiere derivación a Obras Públicas (M3). Un contenedor con requiresPublicWorks=true genera el evento containerDamaged hacia M3.",
         "parameters": [
           {
             "name": "id",
@@ -5506,7 +5614,7 @@
       "post": {
         "operationId": "ContainersController_completeRepair",
         "summary": "Completar reparación de un contenedor",
-        "description": "Transición UNDER_REPAIR → ACTIVE. Indica que la reparación finalizó y el contenedor vuelve a servicio. Limpia los campos de daño.",
+        "description": "Transición UNDER_REPAIR → ACTIVE. Indica que la reparación finalizó y el contenedor vuelve a servicio. Limpia los campos de daño y las observaciones.",
         "parameters": [
           {
             "name": "id",
@@ -16625,6 +16733,12 @@
             "example": false,
             "nullable": true
           },
+          "damageNotes": {
+            "type": "string",
+            "description": "Observaciones del daño (solo cuando status = DAMAGED)",
+            "example": "La tapa quedó desencajada y la bisagra del lado izquierdo está partida",
+            "nullable": true
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string",
@@ -16647,6 +16761,55 @@
           "status",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ContainerStatusHistoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID de la fila del historial",
+            "example": "e5f6a7b8-c9d0-4123-8efa-567890123456",
+            "format": "uuid"
+          },
+          "fromStatus": {
+            "type": "string",
+            "description": "Estado de origen. Null en el alta del contenedor (y en la fila base de la migración)",
+            "enum": [
+              "ACTIVE",
+              "OVERFLOWED",
+              "DAMAGED",
+              "UNDER_REPAIR",
+              "RELOCATING",
+              "REMOVED"
+            ],
+            "example": "ACTIVE",
+            "nullable": true
+          },
+          "toStatus": {
+            "type": "string",
+            "description": "Estado de destino",
+            "enum": [
+              "ACTIVE",
+              "OVERFLOWED",
+              "DAMAGED",
+              "UNDER_REPAIR",
+              "RELOCATING",
+              "REMOVED"
+            ],
+            "example": "OVERFLOWED"
+          },
+          "changedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Instante del cambio",
+            "example": "2026-08-20T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "toStatus",
+          "changedAt"
         ]
       },
       "UpdateContainerDto": {
@@ -16719,6 +16882,12 @@
             "description": "Si el daño involucra infraestructura civil que debe derivarse a M3 (base rota, vereda hundida)",
             "example": false,
             "default": false
+          },
+          "observations": {
+            "type": "string",
+            "description": "Descripción libre del desperfecto (máx. 500 caracteres)",
+            "example": "La tapa quedó desencajada y la bisagra del lado izquierdo está partida",
+            "maxLength": 500
           }
         },
         "required": [
