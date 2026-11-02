@@ -72,6 +72,14 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Enviado el 02/11 a las 19:20 (M1)
+
+> Redactado y enviado el 02/11 a las 19:20 para trasladar la respuesta de M9 sobre el module-token (ver [`m9.md`](m9.md)). Al responder M1, mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — autenticación del REST entre módulos, según M9 — *enviado el 02/11 a las 19:20*
+
+> Hola M1, M9 respondió sobre la autenticación de sus consultas REST. Resumen: el token de `POST /api/v1/auth/module-token` se puede usar tal cual contra ustedes, sin pedir uno por destino. Es RS256 y dura 15 minutos, con `sub` `module:<modulo>` (nosotros `module:ambiente`), `kind` `module`, `iss` `muni-core`, `aud` `muni-platform` y `jti`. **No lleva `scope`**, así que su permiso local `CONSULTA_INTERMODULO`, aplicado tras verificar `kind == "module"`, es el camino correcto. Para validar la firma el Core **no publica JWKS**; hay dos opciones: (A) reenviar el `Authorization` a `GET /api/v1/auth/me` del Core (200 con `{kind, module, …}` o 401) o (B) validar RS256 localmente con la clave pública PEM, que M9 les pasa por privado. ¿Cuál van a usar? Del lado nuestro mandamos ese token como Bearer cuando sus rutas estén desplegadas. — M6 Ambiente
+
 ## Enviado el 02/11 a las 19:15 (M1)
 
 > Redactado y enviado el 02/11 a las 19:15 tras probar el login de la cuenta de empleado contra el M1 hosteado. **El secreto no se pide por el chat de los módulos ni se escribe en el repo:** va por el grupo de POs. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
