@@ -9,6 +9,8 @@ import { AuditLogResponseDto, QueryAuditDto } from './dto';
 /** Quien actuó: sale del token (`req.user`), nunca del body. */
 export interface AuditActor {
   userId: string;
+  /** UUID de M1 para `updatedBy.id` hacia M2 (#485); no se audita. */
+  actorId?: string | null;
   roles: M6Role[];
 }
 

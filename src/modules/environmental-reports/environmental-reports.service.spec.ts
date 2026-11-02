@@ -13,10 +13,12 @@ import { AuditService } from '../../common/audit/audit.service';
 import { EnvironmentalReportsService, REPORT_TRANSITIONS } from './environmental-reports.service';
 
 const ID = '11111111-1111-1111-1111-111111111111';
-// UUID: M2 v1.78 no admite otro id en updatedBy (#314); uno que no lo es viaja como null.
+// M2 v1.78 solo admite UUID en updatedBy.id: sale de `actorId` (#485), nunca del `sub`
+// (`userId`, numérico). Son distintos a propósito para que un cruce rompa los tests.
 const ACTOR_ID = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
-const ACTOR = { userId: ACTOR_ID, roles: [M6Role.M6_ADMIN] };
-const actorCon = (...roles: M6Role[]) => ({ userId: ACTOR_ID, roles });
+const USER_ID = '42';
+const ACTOR = { userId: USER_ID, actorId: ACTOR_ID, roles: [M6Role.M6_ADMIN] };
+const actorCon = (...roles: M6Role[]) => ({ userId: USER_ID, actorId: ACTOR_ID, roles });
 
 /** Todos los estados, para poder recorrer la tabla entera. */
 const ESTADOS = Object.keys(REPORT_TRANSITIONS) as S[];
@@ -540,6 +542,7 @@ describe('EnvironmentalReportsService', () => {
         updateType: 'RETURNED',
         internalMessage: 'Corresponde a Obras Públicas',
         details: { returnInfo: { reasonCode: 'REQUEST_TYPE_MISMATCH' } },
+        updatedBy: { type: 'EXTERNAL_USER', id: ACTOR_ID },
       });
     });
 
@@ -551,7 +554,15 @@ describe('EnvironmentalReportsService', () => {
       expect(encolado[0].payload).toMatchObject({
         updateType: 'REJECTED',
         details: { cancellation: { reasonCode: 'DOES_NOT_APPLY' } },
+        updatedBy: { type: 'EXTERNAL_USER', id: ACTOR_ID },
       });
+    });
+
+    it('sin actorId en el token, updatedBy.id viaja null y no se usa el sub', async () => {
+      const sinActorId = { userId: USER_ID, roles: [M6Role.M6_ADMIN] };
+      const { encolado } = await transicionar(S.RECEIVED, (s) => s.startReview(ID, sinActorId));
+
+      expect(encolado[0].payload).toMatchObject({ updatedBy: { id: null } });
     });
 
     it('close avisa la resolución', async () => {
@@ -561,6 +572,7 @@ describe('EnvironmentalReportsService', () => {
       expect(encolado[0].payload).toMatchObject({
         updateType: 'RESOLVED',
         details: { resolution: { type: 'ACTION_COMPLETED' } },
+        updatedBy: { type: 'EXTERNAL_USER', id: ACTOR_ID },
       });
     });
 
@@ -641,6 +653,14 @@ describe('EnvironmentalReportsService', () => {
         aggregateType: 'ENVIRONMENTAL_REPORT',
         aggregateId: ID,
       });
+    });
+
+    it('updatedBy.id sale del actorId UUID; sin él, null', () => {
+      const con = service.ticketEvents(expediente(), ACTOR_ID, { updateType: 'STARTED' });
+      const sin = service.ticketEvents(expediente(), null, { updateType: 'STARTED' });
+
+      expect(con[0].payload).toMatchObject({ updatedBy: { id: ACTOR_ID } });
+      expect(sin[0].payload).toMatchObject({ updatedBy: { id: null } });
     });
 
     it('una acción sobre un expediente de oficio no encola nada', async () => {

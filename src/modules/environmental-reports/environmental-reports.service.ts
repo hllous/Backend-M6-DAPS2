@@ -233,7 +233,7 @@ export class EnvironmentalReportsService {
       S.UNDER_REVIEW,
       {},
       updateType
-        ? this.ticketEvents(report, actor.userId, {
+        ? this.ticketEvents(report, actor.actorId ?? null, {
             updateType,
             publicMessage: 'Su denuncia ambiental está en análisis.',
           })
@@ -254,7 +254,7 @@ export class EnvironmentalReportsService {
   ): Promise<EnvironmentalReportResponseDto> {
     const report = this.assertNoPendingRequest(await this.getReport(id));
     return this.transition(actor, 'FORWARD', report, S.FORWARDED, {}, [
-      ...this.ticketEvents(report, actor.userId, {
+      ...this.ticketEvents(report, actor.actorId ?? null, {
         updateType: 'RETURNED',
         internalMessage: reason,
         details: { returnInfo: { reasonCode: 'REQUEST_TYPE_MISMATCH' } },
@@ -270,7 +270,7 @@ export class EnvironmentalReportsService {
   ): Promise<EnvironmentalReportResponseDto> {
     const report = this.assertNoPendingRequest(await this.getReport(id));
     return this.transition(actor, 'DISMISS', report, S.DISMISSED, {}, [
-      ...this.ticketEvents(report, actor.userId, {
+      ...this.ticketEvents(report, actor.actorId ?? null, {
         updateType: 'REJECTED',
         internalMessage: reason,
         details: { cancellation: { reasonCode: 'DOES_NOT_APPLY' } },
@@ -297,7 +297,7 @@ export class EnvironmentalReportsService {
       {},
       yaInformado
         ? []
-        : this.ticketEvents(report, actor.userId, {
+        : this.ticketEvents(report, actor.actorId ?? null, {
             updateType: 'RESOLVED',
             publicMessage: 'Su denuncia ambiental fue cerrada.',
             details: { resolution: { type: 'ACTION_COMPLETED' } },
@@ -366,7 +366,7 @@ export class EnvironmentalReportsService {
       }
       await this.outbox.enqueueMany(
         tx,
-        this.ticketEvents(report, actor.userId, {
+        this.ticketEvents(report, actor.actorId ?? null, {
           updateType: 'INFORMATION_REQUIRED',
           publicMessage: dto.message,
           // M2 exige null o algún carácter no blanco: una nota en blanco no viaja.
@@ -534,7 +534,7 @@ export class EnvironmentalReportsService {
    */
   ticketEvents(
     report: EnvironmentalReport,
-    actorId: string,
+    updatedById: string | null,
     update: {
       updateType: payloads.TicketUpdateType;
       publicMessage?: string;
@@ -551,7 +551,7 @@ export class EnvironmentalReportsService {
         aggregateId: report.id,
         payload: payloads.updateTicketStatus({
           ticketId: report.ticketId,
-          updatedById: actorId,
+          updatedById,
           ...update,
         }),
       },
