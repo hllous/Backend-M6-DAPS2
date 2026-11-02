@@ -135,6 +135,10 @@ describe('consumidores de eventos', () => {
       const [[args]] = prisma.service.updateMany.mock.calls;
       expect(args.data.status).toBe(ServiceStatus.RESCHEDULED);
       expect(args.data.statusReason).toContain('se superpone');
+      expect(prisma.streetClosureRequest.updateMany.mock.calls[0][0].data).toMatchObject({
+        status: StreetClosureRequestStatus.REJECTED,
+        rejectionReason: 'se superpone',
+      });
     });
 
     it('el rechazo del corte tolera el nombre viejo `reason`', async () => {
@@ -148,6 +152,26 @@ describe('consumidores de eventos', () => {
 
       const [[args]] = prisma.service.updateMany.mock.calls;
       expect(args.data.statusReason).toContain('fuera de horario');
+      expect(prisma.streetClosureRequest.updateMany.mock.calls[0][0].data.rejectionReason).toBe(
+        'fuera de horario',
+      );
+    });
+
+    it('el rechazo sin motivo deja rejectionReason en null y uno largo se trunca a 500', async () => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({
+        id: ID,
+        sourceType: 'SERVICE',
+        sourceId: 'srv-1',
+      });
+      await h('streetClosureRejected')({ closureRequestId: ID });
+      expect(
+        prisma.streetClosureRequest.updateMany.mock.calls[0][0].data.rejectionReason,
+      ).toBeNull();
+      prisma.streetClosureRequest.updateMany.mockClear();
+      await h('streetClosureRejected')({ closureRequestId: ID, rejectionReason: 'x'.repeat(900) });
+      expect(
+        prisma.streetClosureRequest.updateMany.mock.calls[0][0].data.rejectionReason,
+      ).toHaveLength(500);
     });
 
     it('el corte aprobado persiste la ventana autorizada en approvedFrom/approvedTo', async () => {
