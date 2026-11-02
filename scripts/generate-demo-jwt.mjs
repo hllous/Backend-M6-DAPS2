@@ -17,9 +17,9 @@ const PERSONAS = {
   operaciones: ["ADMINISTRATIVO", "3"],
   ambiental: ["ADMINISTRATIVO", "5"],
   auditoria: ["AUDITOR", "8"],
-  lider: ["ADMINISTRATIVO", "101"],
-  integrante: ["ADMINISTRATIVO", "102"],
-  inspector: ["ADMINISTRATIVO", "601"],
+  lider: ["ADMINISTRATIVO", "10000"],
+  integrante: ["ADMINISTRATIVO", "10001"],
+  inspector: ["ADMINISTRATIVO", "10070"],
   sinrol: ["ADMINISTRATIVO", "900"],
   ciudadano: ["CIUDADANO", "901"],
 };
