@@ -54,7 +54,7 @@ Una misma persona no es Oficina y Campo a la vez.
 
 - Un navegador actualizado (Chrome, Edge, Firefox o Safari) en computadora, tableta o celular.
 - Conexión a internet. La aplicación funciona **en línea**: no guarda una cola de trabajo sin conexión. Ante un corte, los formularios de Campo conservan un borrador local (ver [apartado 7.4](#74-qué-pasa-si-se-corta-la-conexión)).
-- La dirección de la aplicación: `https://frontend-m6-daps2-grupo4-modulo6.vercel.app`.
+- La dirección de la aplicación: `https://m6-ambiente-higiene.vercel.app`.
 
 ### Cómo ingresar
 
@@ -578,7 +578,7 @@ En **Tableros**, familia **Cumplimiento**.
 ## 13. Soporte
 
 - **Ayuda en línea:** este manual.
-- **Estado del sistema:** `https://frontend-m6-daps2-grupo4-modulo6.vercel.app/api/health` debe responder `"status":"ok"`.
+- **Estado del sistema:** `https://m6-ambiente-higiene.vercel.app/api/health` debe responder `"status":"ok"`.
 - **Consultas y fallas:** abra un Issue en el repositorio del equipo ([Frontend](https://github.com/hllous/Frontend-M6-DAPS2) o [Backend](https://github.com/hllous/Backend-M6-DAPS2)), con una captura y los pasos para reproducirlo.
 - **Servicio de consulta pública (sin ingreso):** el backend ofrece consultas abiertas para el ciudadano —seguimiento de una denuncia, cuándo pasa el servicio y dónde están los puntos verdes— que consume el portal de M2.
 
