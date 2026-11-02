@@ -72,6 +72,27 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Enviado el 02/11 a las 18:46 (M9)
+
+> Redactado y enviado el 02/11 a las 18:46 por la consulta de M1 sobre la autenticación de su REST entre módulos. Al responder M9, mover la respuesta a [`m9.md`](m9.md).
+
+**→ M9 (Core)** — module-token para consultas REST entre módulos — *enviado el 02/11 a las 18:46*
+
+> Hola M9, M1 va a exponer consultas REST de ciudadano y organización para otros módulos y todavía no valida ningún token en ellas. Nos pidió cerrar con ustedes si corresponde usar entre módulos el token de `POST /api/v1/auth/module-token` (RS256, `kind="module"`, `sub=module:<modulo>`). Necesitamos saber: (1) si el Core autoriza ese uso, o si M1 debe emitir otro tipo de credencial; (2) dónde publican la clave pública o el JWKS para que M1 valide la firma; (3) qué claims puede verificar M1 (`module`, `iss`, `exp`) y si hay un scope o permiso para consultas intermódulo; (4) si el token de M6 vale tal cual contra M1 o hay que pedir uno por destino. M1 lo tiene preparado como permiso local `CONSULTA_INTERMODULO`, sin scope del Core confirmado. — M6 Ambiente
+
+## Enviado el 02/11 a las 18:42 (M1)
+
+> Redactado y enviado el 02/11 a las 18:42 como respuesta a la contestación de M1 sobre `actorId`, el REST de consulta y las cuadrillas. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — cuadrillas, `actorId` y autenticación del REST — *enviado el 02/11 a las 18:42*
+
+> Hola M1, gracias por la respuesta. Confirmamos:
+>
+> - **Cuadrillas:** todos los integrantes, también los de contratistas y cooperativas, deben estar registrados como `EMPLEADO`. La pertenencia a la empresa y a la cuadrilla la administramos nosotros.
+> - **`actorId`:** conservamos `sub` como clave interna y vamos a leer `actorId` para `updatedBy.id`.
+> - **Consultas REST:** no las integramos hasta que estén desplegadas y cerremos la autenticación. Cuando las migren, avísennos con la URL final. La consulta `actores?actorType=EMPLEADO&sub=…` es la que más nos sirve para cargar las cuadrillas.
+> - **Autenticación entre módulos:** lo consultamos con el Core (M9) y les contamos qué responde sobre el module-token, la clave pública y el scope. Si ustedes lo cierran antes, avísennos. — M6 Ambiente
+
 ## Enviado el 02/11 a las 10:37 (M3)
 
 > Redactado y enviado el 02/11 a las 10:37 como respuesta al aviso de M3 de que su consumo y sus `workOrder*` están desplegados. Al responder M3, mover la respuesta a [`m3.md`](m3.md).
