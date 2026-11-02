@@ -72,6 +72,14 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Enviado el 02/11 a las 19:15 (M1)
+
+> Redactado y enviado el 02/11 a las 19:15 tras probar el login de la cuenta de empleado contra el M1 hosteado. **El secreto no se pide por el chat de los módulos ni se escribe en el repo:** va por el grupo de POs. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — secreto del JWT vigente del ambiente hosteado — *enviado el 02/11 a las 19:15*
+
+> Hola M1, probamos el login de la cuenta de empleado en su ambiente hosteado y funciona: el token es HS256, con `iss` `modulo1-ciudadanos`, `sub` `1`, `sub_type` `EMPLEADO`, `rol` `RESPONSABLE_AREA`, `typ` `access` y `actorId`. Pero nuestro backend desplegado lo rechaza con 401, así que el secreto que nos pasaron el 22/10 ya no coincide con el que firma hoy. ¿Nos pasan el `APP_JWT_SECRET` vigente del ambiente hosteado, por el grupo de POs y no por acá? Confirmen también el largo de la clave en bytes (para saber si el algoritmo seguirá siendo HS256) y si cambia cuando redesplieguen, para no quedar desfasados otra vez. — M6 Ambiente
+
 ## Enviado el 02/11 a las 18:46 (M9)
 
 > Redactado y enviado el 02/11 a las 18:46 por la consulta de M1 sobre la autenticación de su REST entre módulos. Al responder M9, mover la respuesta a [`m9.md`](m9.md).
