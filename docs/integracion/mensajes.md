@@ -72,6 +72,14 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 >
 > Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
 
+## Enviado el 02/11 a las 19:30 (M1)
+
+> Redactado y enviado el 02/11 a las 19:30 para pedir los usuarios de empleado del seed ([#488](https://github.com/hllous/Backend-M6-DAPS2/issues/488)). Las contraseñas se piden por privado, no se escriben en el repo. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
+
+**→ M1 (Ciudadanos)** — usuarios de empleado para la demo y las cuadrillas — *enviado el 02/11 a las 19:30*
+
+> Hola M1, para pasar del login de demo al login real necesitamos usuarios de empleado (`sub_type` `EMPLEADO`) en su ambiente hosteado. Primero el **mínimo para la demo**, 12 cuentas: 2 con rol `RESPONSABLE_AREA` (la que ya tenemos, `user_id` 1, y una más), 5 `ADMINISTRATIVO` de oficina, 2 `AUDITOR`, 2 `ADMINISTRATIVO` de campo (un líder y un integrante de cuadrilla) y 1 `ADMINISTRATIVO` de inspección. Preferimos que los creen con estos `user_id`: 1 a 9 para oficina y auditoría, 101 y 102 para campo, 601 para inspección. Si no pueden fijar el `user_id`, pásennos los reales (y los `actorId`) y adaptamos nuestro seed. Después, **las cuadrillas**: nuestro seed tiene decenas de líderes e integrantes, y la próxima versión llega a cientos (ids desde 10000). Todos son `EMPLEADO`; la pertenencia a la cuadrilla la administramos nosotros. ¿Pueden cargarlos en lote (script o CSV) o hay que hacerlo uno por uno? Con la consulta `actores?actorType=EMPLEADO&sub=…` nosotros obtenemos el `actorId` de cada uno. Las contraseñas, por el grupo de POs y no por acá. — M6 Ambiente
+
 ## Enviado el 02/11 a las 19:20 (M1)
 
 > Redactado y enviado el 02/11 a las 19:20 para trasladar la respuesta de M9 sobre el module-token (ver [`m9.md`](m9.md)). Al responder M1, mover la respuesta a [`m1.md`](m1.md).
