@@ -107,7 +107,7 @@ Alias de Git observados: `Benjamin Martinez` (dos correos), `Nicolas Facundo Llo
 |---|---|
 | Tests triviales o que pasan aunque se borre el código | Cobertura con umbral por archivo; revisión humana; **mutation testing pendiente** (Stryker) como control objetivo |
 | Documentación de apoyo desactualizada que engaña al agente (caso 2.5) | `npm run docs:check` en el CI; revisión periódica de `AGENTS.md`; tablero único de bloqueantes |
-| Secretos copiados a un prompt o a un commit | Regla de `AGENTS.md` («nunca hardcodear secretos»); escaneo con gitleaks o trufflehog **pendiente** (ver `07-informe-seguridad.md`) |
+| Secretos copiados a un prompt o a un commit | Regla de `AGENTS.md` («nunca hardcodear secretos»); escaneo del historial con gitleaks v8.30.1 el 03/11 (0 hallazgos con `.gitleaks.toml`) y job `secrets` en el CI (ver `07-informe-seguridad.md`) |
 | «CUMPLE» dictaminado por IA sin evidencia | Se trata como NO VERIFICABLE hasta tener test ejecutado |
 | Código que el integrante no puede explicar | Firma por integrante (punto 3) y ensayo de defensa previo a la prueba |
 

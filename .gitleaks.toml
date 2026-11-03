@@ -1,0 +1,18 @@
+# Configuración de gitleaks (escaneo de secretos del CI y de la prueba del 10/11).
+# Parte de las reglas por defecto y solo excluye valores que no son secretos.
+# Cada excepción es por VALOR exacto, no por archivo: una credencial real en
+# los mismos archivos se sigue detectando.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Valores públicos de ejemplo y de prueba (verificados el 03/11/2026)"
+regexTarget = "line"
+regexes = [
+  # JWT_SECRET de .env.example y JWT_SECRET_EJEMPLO de src/config/env.validation.ts.
+  # Decodifica a CHANGE_ME_local_dev_secret_m6_32bytes; en producción se rechaza.
+  '''Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==''',
+  # Secreto de juguete de src/core/core.client.spec.ts.
+  '''secreto-de-maquina-m6''',
+]

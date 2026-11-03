@@ -8,15 +8,15 @@
 
 | Entregable de la cátedra | Archivo | Estado al 03/11 |
 |---|---|---|
-| Historias de usuario con Gherkin (Eje A) | `02-historias-y-criterios.md` | En redacción (#494) |
+| Historias de usuario con Gherkin (Eje A) | `02-historias-y-criterios.md` | Borrador completo; a validar por el equipo |
 | 1. Plan y estrategia de pruebas | `01-plan-y-estrategia.md` | Borrador completo |
-| 2. Matriz de trazabilidad | `03-matriz-trazabilidad.md` | En redacción (#494) |
-| 3. Especificación de casos | `04-especificacion-casos.md` | En redacción (#494) |
-| 4. Informe de ejecución | `05-informe-ejecucion.md` | En redacción (#494) |
-| 5. Registro de defectos | `06-registro-defectos.md` | En redacción (#494) |
-| 6. Informe de seguridad | `07-informe-seguridad.md` | En redacción (#494) |
+| 2. Matriz de trazabilidad | `03-matriz-trazabilidad.md` | Borrador completo; a validar por el equipo |
+| 3. Especificación de casos | `04-especificacion-casos.md` | Borrador completo; a validar por el equipo |
+| 4. Informe de ejecución | `05-informe-ejecucion.md` | Borrador completo; a validar por el equipo |
+| 5. Registro de defectos | `06-registro-defectos.md` | Borrador completo; a validar por el equipo |
+| 6. Informe de seguridad | `07-informe-seguridad.md` | Borrador completo; a validar por el equipo |
 | 7. Declaración y plan de IA | `08-declaracion-ia.md` | Borrador completo; faltan datos del equipo (firmas, prompts exactos) |
-| 8. Lecciones aprendidas | `09-lecciones-aprendidas.md` | En redacción (#494) |
+| 8. Lecciones aprendidas | `09-lecciones-aprendidas.md` | Borrador completo; a validar por el equipo |
 | Manual de usuario (prueba «tarea al azar», Eje A) | `manual-de-usuario.md` | Borrador v0.2; textos de UI por verificar (están marcados) |
 
 Los PDF van en `docs/QA/build/` y **no se versionan** (están en `.gitignore`).
