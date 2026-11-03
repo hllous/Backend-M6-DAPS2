@@ -40,7 +40,7 @@ El servidor del backend y el de identidad se «duermen» cuando no se usan. La *
 | **Campo — integrante de cuadrilla** | Consulta el trabajo asignado de su cuadrilla, el mapa y los expedientes. En el detalle de un servicio la pantalla muestra **Solo consulta** y **no ofrece** Iniciar servicio ni los demás botones del responsable | Celular o tableta |
 | **Auditoría** | Solo lectura: ve servicios, expedientes, mapa y tableros, sin botones para modificar | Escritorio |
 
-En la parte superior de la pantalla, junto a **Cerrar sesión**, figura su perfil (**Oficina** o **Responsable de cuadrilla**) y su identificación (*Empleado M1 · número*). El rótulo puede repetirse entre cuentas con permisos distintos: las de Operaciones, Ambiental, auditoría y administración muestran todas **Oficina**; el integrante muestra **Integrante de cuadrilla**.
+En la parte superior de la pantalla, junto a **Cerrar sesión**, figura su perfil (**Oficina** o **Responsable de cuadrilla**) y su identificación (*Empleado M1 · número*). El rótulo puede repetirse entre cuentas con permisos distintos: las de Operaciones, Ambiental, auditoría y administración muestran todas **Oficina**; el integrante muestra **Integrante de cuadrilla**. El rótulo del inspector no se comprobó.
 
 **Cómo abrir un servicio.** En **Servicios** (Oficina), pulse la fila del servicio y luego **Ver detalle**; desde **Mi trabajo**, pulse el nombre del servicio. En **Mi trabajo** de Campo, pulse **Abrir**. Todas las tareas de este manual dicen «abra el servicio» y significan eso.
 
@@ -60,7 +60,7 @@ El perfil de cada cuenta decide qué botones ve (sección 4.5). Para repetir las
 | 10 (reportar desborde, reportar daño, vaciar contenedor) | `sofia.lopez.10009@municipio.gob.ar` | Campo, responsable de cuadrilla |
 | 10 (iniciar y completar reparación, reubicar, confirmar ubicación, retirar contenedor) | `julian.lopez.10002@municipio.gob.ar` (o la de administración) | Oficina de Operaciones |
 | 14 (consultas, contenedores, puntos y espacios verdes, árboles, derivaciones, cortes de calle) | `julian.lopez.10002@municipio.gob.ar` | Oficina de Operaciones |
-| 14 (autorizar la extracción de un árbol; tipos de servicio, recorridos, frecuencias, cuadrillas, vehículos, zonas y sitios de disposición; **Monitor de integración**) | `carlos.rodriguez.10000@municipio.gob.ar` | Administración |
+| 14 (autorizar la extracción de un árbol; tipos de servicio, recorridos, frecuencias, cuadrillas, vehículos, zonas y sitios de disposición; **Monitor de integración**; este último también lo ve la cuenta de auditoría `camila.medina.10007@municipio.gob.ar`) | `carlos.rodriguez.10000@municipio.gob.ar` | Administración |
 | Ver cómo se limita el integrante de cuadrilla | `diego.martinez.10010@municipio.gob.ar` | Campo, integrante |
 | Solo lectura | `camila.medina.10007@municipio.gob.ar` | Auditoría |
 | 11 (consulta del vecino) | ninguna: es pública | — |
@@ -198,7 +198,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
    - **Desestimar expediente** si se descarta sin inspección.
    - **Pedir información al vecino**.
 
-> **Cuenta para esta tarea.** El recuadro **Acciones** y el botón **Iniciar revisión** solo aparecen con una cuenta de **Oficina Ambiental** (`diego.sosa.10004@municipio.gob.ar`, verificada) o de administración. Con una cuenta de Oficina de Operaciones (`…10002`) o de auditoría el detalle se ve sin acciones: es lo esperado, no un error (ver 1.4). En **Mi trabajo** la cuenta Ambiental ve **Expedientes por clasificar**: los dos primeros llevan directo al detalle.
+> **Cuenta para esta tarea.** El recuadro **Acciones** y el botón **Iniciar revisión** solo aparecen con una cuenta de **Oficina Ambiental** (`diego.sosa.10004@municipio.gob.ar`, verificada) o de administración. Con una cuenta de Oficina de Operaciones (`…10002`) o de auditoría el detalle se ve sin acciones: es lo esperado, no un error (ver 1.4). En **Mi trabajo** la cuenta Ambiental ve el grupo **Expedientes por clasificar**.
 
 **Resultado esperado:** con **Programar inspección**, el expediente pasa a **Inspección programada** y se crea el servicio de inspección para la cuadrilla elegida. El sistema avisa si la denuncia podría estar duplicada.
 
@@ -287,7 +287,7 @@ La cuenta de integrante (`…10010`) también ve **Vaciar contenedor**. **Editar
 
 ### Tarea 13 — Leer los indicadores (cualquier perfil)
 
-**Dónde:** menú **Tableros**, que aparece para todos los perfiles (se comprobó con administración, Operaciones, Ambiental, auditoría, responsable e integrante de cuadrilla).
+**Dónde:** menú **Tableros**, que aparece para todos los perfiles (se comprobó con administración, Operaciones, Ambiental, auditoría, responsable e integrante de cuadrilla; el inspector no se comprobó).
 
 1. Elija **Desde**, **Hasta**, **Familia**, **Zona operativa** y **Tipo de servicio**, y pulse **Actualizar**. También hay atajos de período: **Última semana**, **Último mes** y **Último trimestre**.
 2. Cada gráfico puede verse como **Barras** o como **Tabla**. En la vista de tabla, **Exportar CSV** descarga los datos.
@@ -324,7 +324,7 @@ Cuenta de Operaciones (`…10002`) salvo donde se indique.
 | Situación | Qué significa | Qué hacer |
 |---|---|---|
 | **401**, *«Inicie sesión para continuar»* | La sesión venció o no existe | Pulse **Volver a iniciar sesión** (la pantalla de ingreso lo lleva de vuelta a donde estaba) |
-| **403** | Su perfil no puede hacer eso (**ROLE_REQUIRED**), o el servicio o la inspección es de otra cuadrilla (**NOT_ASSIGNED**) | No es un error del sistema: pida a Oficina que lo haga o que lo reasigne. Un botón que falta responde a la misma regla |
+| **403** | Su perfil no puede hacer eso (**ROLE_REQUIRED**), o el servicio o la inspección es de otra cuadrilla (**NOT_ASSIGNED**) | No es un error del sistema: pida a Oficina que lo haga o que lo reasigne. Un botón que falta casi siempre responde a la misma regla |
 | **409** | El paso no corresponde al estado actual (por ejemplo, completar un servicio que ya se completó, o iniciarlo con un corte pendiente); suele pasar si otra persona cambió el registro | Recargue la pantalla y revise qué acciones ofrece ahora |
 | **Sesión expirada en medio de una tarea** | La sesión venció mientras trabajaba | Vuelva a ingresar. Lo que haya quedado como borrador local (Campo) se conserva |
 | **El backend tarda o no responde** (Render dormido) | Primer uso del día | Espere unos 30 segundos, pulse **Reintentar carga** o recargue. Al ingresar, el aviso indica que puede tardar hasta un minuto y medio |
@@ -376,7 +376,7 @@ Activo, Desbordado, Dañado, En reparación, En reubicación, Retirado.
 | Programar, asignar, reprogramar, cancelar servicios | ✔ | — | ✔ | — | — | — | — |
 | Iniciar, suspender, completar servicios | — | — | — | — | ✔ (su cuadrilla) | ✔ (su cuadrilla) | la pantalla no lo ofrece |
 | Completar inspecciones | — | — | — | — | — | ✔ | — |
-| Reportar desborde o daño, vaciar contenedores | — | — | — | — | ✔ | ✔ | ✔ (vaciar) |
+| Reportar desborde o daño, vaciar contenedores | — | — | — | — | ✔ | no comprobado | ✔ (vaciar) |
 | Reparar, reubicar y retirar contenedores | ✔ | — | ✔ | — | — | — | — |
 | Clasificar denuncias y emitir actas | — | ✔ | ✔ | — | — | — | — |
 | Autorizar una poda | ✔ | — | ✔ | — | — | — | — |
@@ -384,7 +384,7 @@ Activo, Desbordado, Dañado, En reparación, En reubicación, Retirado.
 | Administrar tipos de servicio, recorridos, cuadrillas y demás catálogos | — | — | ✔ | — | — | — | — |
 | Ver Monitor de integración | — | — | ✔ | ✔ | — | — | — |
 
-Estas reglas dependen de la cuenta: cada fila se comprobó en la pantalla con la cuenta indicada en 1.4, salvo las de la columna **Inspector** (que solo se vio la lista de servicios). Las acciones que la pantalla no ofrece, el servidor las rechaza con 403 cuando el perfil no tiene el rol; para el integrante de cuadrilla la documentación del servidor le da el mismo rol de Campo que al responsable, de modo que **la pantalla no lo ofrece** pero eso no es una garantía de que el servidor lo impida.
+Estas reglas dependen de la cuenta: cada fila se comprobó en la pantalla con la cuenta indicada en 1.4, salvo las de la columna **Inspector** (que solo se vio la lista de servicios y el botón **Iniciar servicio**). Las acciones que la pantalla no ofrece, el servidor las rechaza con 403 cuando el perfil no tiene el rol; para el integrante de cuadrilla la documentación del servidor le da el mismo rol de Campo que al responsable, de modo que **la pantalla no lo ofrece** pero eso no es una garantía de que el servidor lo impida.
 
 ---
 
@@ -401,7 +401,7 @@ Estas reglas dependen de la cuenta: cada fila se comprobó en la pantalla con la
 ### Qué se verificó y con qué cuenta
 
 - **Verificadas en la pantalla** (3/11/2026): administración `…10000` (expedientes y sus acciones, tableros, Monitor de integración); Operaciones `…10002` (programar, asignar, servicio Programado y A reprogramar, contenedores en todos los estados, intervención de arbolado, catálogo); Ambiental `…10004` (Mi trabajo, acciones de cada estado de expediente); auditoría `…10007` (menú, tableros, expedientes y servicios sin botones de escritura); responsable `…10009` (Mi trabajo, detalle del servicio, reportes de contenedor); integrante `…10010` (detalle **Solo consulta**, tableros, **Vaciar contenedor**).
-- **Vista parcial:** inspector `…10011` (solo su lista de servicios de inspección y el botón **Iniciar servicio**, sin ejecutarlo).
+- **Vista parcial:** inspector `…10011` (solo su lista de servicios de inspección y el botón **Iniciar servicio**, sin ejecutarlo; su rótulo de perfil y sus permisos sobre contenedores no se comprobaron).
 - **No verificado:** todo lo que modifica datos (guardar, confirmar, iniciar, completar, suspender, cancelar, reprogramar, emitir acta, **Confirmar vaciado**, adjuntar evidencia, completar inspección) y sus mensajes de éxito; la tarea 9 completa (no hay expediente **Sancionado** en los datos y no se cerró ninguno); la tarea 12 (trabajo sin conexión); **Accesos** (no apareció en el menú de ninguna cuenta); un código de seguimiento real en la tarea 11 y el aviso del límite de consultas; la cuenta de Operaciones aplicada a expedientes (se comprobó solo que no ve las acciones).
 
 ---
