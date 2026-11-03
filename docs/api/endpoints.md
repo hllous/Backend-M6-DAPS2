@@ -483,7 +483,7 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 | `note` | string o null | Motivo que el flujo ya pedía, hasta 500 caracteres; `null` si no hubo |
 | `occurredAt` | ISO 8601 | Cuándo ocurrió |
 
-**Errores:** 400 (query inválida), 401 (token ausente o inválido), 403 `ROLE_REQUIRED` (sin `M6_ADMIN` ni `M6_AUDITOR`, o el token no es de personal municipal), 500. Un `entityId` inexistente no da 404: devuelve la página vacía.
+**Errores:** 400 (query inválida), 401 (token ausente o inválido), 403 `ROLE_REQUIRED` (sin `M6_ADMIN` ni `M6_AUDITOR`), 500. Un `entityId` inexistente no da 404: devuelve la página vacía.
 
 **Valores de `action` que emite el backend**, por `entityType` (salvedades en [entidades/auditoria.md](../entidades/auditoria.md)):
 
