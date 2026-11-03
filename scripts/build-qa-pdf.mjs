@@ -41,6 +41,19 @@ const DOCS = [
   },
 ];
 
+// Además del integrado, un PDF por cada documento 01..09 (build/individuales/).
+for (const f of INFORME) {
+  const p = join(qaDir, f);
+  if (!existsSync(p)) continue; // el integrado ya avisa o falla si falta
+  const h1 = readFileSync(p, 'utf8').match(/^#\s+(.+)$/m);
+  DOCS.push({
+    out: join('individuales', f.replace(/\.md$/, '')),
+    title: h1 ? h1[1] : f,
+    subtitle: 'Prueba del sistema — Clase 15',
+    files: [f],
+  });
+}
+
 const docsDir = join(root, 'docs');
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
 
@@ -86,7 +99,7 @@ function build({ out, title, subtitle, files }) {
     }
     parts.push(inlineImages(readFileSync(p, 'utf8'), qaDir));
   }
-  mkdirSync(buildDir, { recursive: true });
+  mkdirSync(dirname(join(buildDir, out)), { recursive: true });
   const mdPath = join(buildDir, `${out}.md`);
   const pdfPath = join(buildDir, `${out}.pdf`);
   writeFileSync(mdPath, cover({ title, subtitle }) + parts.join('\n\n'), 'utf8');

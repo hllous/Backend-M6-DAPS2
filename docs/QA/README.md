@@ -35,6 +35,7 @@ Genera, en `docs/QA/build/`:
 |---|---|
 | `Clase15_Grupo04_Ambiente-e-Higiene_Testing.pdf` | Los documentos `01` a `09`, en orden, con portada y numeración de páginas. Es el PDF que pide la cátedra |
 | `Manual-de-usuario-M6.pdf` | Solo el manual de usuario |
+| `individuales/01-….pdf` a `09-….pdf` | Un PDF por cada documento `01` a `09`, cada uno con su portada |
 
 El script falla si falta alguno de los `01` a `09`, para no entregar un PDF incompleto. Para una prueba local con lo que haya: `npm run qa:pdf -- --partial`. El estilo está en `pdf.css` y el script, en `scripts/build-qa-pdf.mjs`.
 
