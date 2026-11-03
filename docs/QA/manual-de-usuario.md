@@ -1,8 +1,8 @@
 # Manual de usuario — Módulo 6: Ambiente e Higiene
 
-> Versión 0.2, revisión del 03/11/2026 para la prueba del TP del 10/11. Parte del manual v0.1 (`docs/manual-de-usuario.md`, 20/10) y lo reorganiza **por tareas**: cada tarea se puede hacer siguiendo solo su sección. Se guarda en el repo de backend y se espeja en el de frontend (Issue FE #818).
+> Versión 0.3, revisión del 03/11/2026 para la prueba del TP del 10/11. Parte del manual v0.1 (`docs/manual-de-usuario.md`, 20/10) y lo reorganiza **por tareas**: cada tarea se puede hacer siguiendo solo su sección. Se guarda en el repo de backend y se espeja en el de frontend (Issue FE #818).
 >
-> **Marcas de verificación.** Los nombres de menús, botones y mensajes se contrastaron con el código del frontend (`src/` y `e2e/`). Donde no se pudo confirmar el texto exacto figura **(verificar en la UI)**. Las capturas son del 03/11/2026, sacadas con Playwright en modo mock (datos de prueba) sobre la rama `develop` del frontend; pueden diferir en detalle del entorno desplegado.
+> **Marcas de verificación.** Los nombres de menús, botones y mensajes se contrastaron el 03/11/2026 con la aplicación **desplegada** (`https://m6-ambiente-higiene.vercel.app`), ingresando con el login real de M1 con cuentas de Oficina, de Campo (responsable de cuadrilla) y de administración. Las acciones que modifican datos (guardar, confirmar, iniciar, cancelar) **no se ejecutaron** durante esa verificación para no alterar los datos compartidos: de ellas se verificaron el botón, el formulario y sus textos, pero no el mensaje de éxito. Donde no se pudo confirmar el texto exacto figura **(verificar en la UI)**. Las capturas son de esa misma sesión (datos de demostración, sin contraseñas).
 
 | | |
 |---|---|
@@ -26,6 +26,7 @@
 El servidor del backend y el de identidad se «duermen» cuando no se usan. La **primera** operación del día puede tardar:
 
 - Al ingresar, aparece el aviso *«El servicio de ingreso está iniciando, puede tardar hasta un minuto y medio.»* No cierre la pantalla ni pulse dos veces: espere.
+- Si pasado ese tiempo aparece *«El servicio de ingreso no respondió dentro de un minuto y medio. Intente nuevamente.»*, el servicio de identidad todavía estaba despertando: vuelva a escribir la **Contraseña** (el campo se vacía) y pulse **Ingresar al sistema** otra vez. El segundo intento suele entrar en segundos.
 - Si el resto de la aplicación muestra un error de carga justo después de abrirla, **espere unos 30 segundos** y pulse **Reintentar carga** (o recargue la página).
 - Para comprobar que está activa: `https://m6-ambiente-higiene.vercel.app/api/health` debe responder `"status":"ok"`.
 
@@ -34,8 +35,10 @@ El servidor del backend y el de identidad se «duermen» cuando no se usan. La *
 | Rol | Qué hace | Dónde trabaja |
 |---|---|---|
 | **Oficina** | Programa servicios, asigna cuadrillas y vehículos, reprograma o cancela, administra los catálogos, clasifica denuncias, autoriza intervenciones sobre árboles y emite actas | Escritorio, con tablas y mapa |
-| **Campo — responsable de cuadrilla** | Inicia, suspende y completa los servicios de su cuadrilla; registra el resultado de cada zona; adjunta evidencia; completa inspecciones | Celular o tableta |
+| **Campo — responsable de cuadrilla** | Inicia, suspende y completa los servicios de su cuadrilla; registra el resultado de cada zona; adjunta evidencia; reporta y vacía contenedores; completa inspecciones | Celular o tableta |
 | **Campo — integrante de cuadrilla** | Consulta el trabajo asignado, el mapa y los expedientes. **No** inicia ni cierra servicios | Celular o tableta |
+
+En la parte superior de la pantalla, junto a **Cerrar sesión**, figura su perfil (**Oficina** o **Responsable de cuadrilla**) y su identificación (*Empleado M1 · número*).
 
 Una persona no es Oficina y Campo a la vez. Cada usuario ve solo las entradas de menú que su perfil permite; un botón que falta casi siempre significa que ese paso no corresponde al estado o al perfil (ver sección 4).
 
@@ -49,12 +52,12 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Quién:** todos los empleados. **Dónde:** pantalla de ingreso.
 
-1. Abra `https://m6-ambiente-higiene.vercel.app`. Si no tiene sesión, se muestra la pantalla de ingreso.
-2. Escriba su **Correo electrónico** y su **Contraseña**.
-3. Pulse **Ingresar al sistema**. Mientras valida, el botón muestra *«Ingresando…»*.
-4. Se abre **Mi trabajo**. El menú de la izquierda muestra solo las secciones de su perfil.
+1. Abra `https://m6-ambiente-higiene.vercel.app`. Si no tiene sesión, se muestra la pantalla **Ingresar**.
+2. Escriba su **Correo electrónico** (el de empleado, con la forma `nombre.apellido.NNNNN@municipio.gob.ar`) y su **Contraseña**.
+3. Pulse **Ingresar al sistema**. Mientras valida, el botón muestra *«Ingresando…»* y los campos se bloquean; la primera vez del día puede tardar (sección 1.2).
+4. Se abre **Mi trabajo**. El menú de la izquierda muestra las secciones de su perfil: **Mi trabajo**, **Servicios**, **Derivaciones**, **Control Ambiental**, **Mapa**, **Catálogo** y **Tableros**. Las cuentas de administración suman **Monitor de integración**.
 
-**Resultado esperado:** entra a **Mi trabajo** y ve el nombre de su perfil. Oficina ve las decisiones pendientes de la jornada (por ejemplo «Expedientes por clasificar», «Servicios sin cuadrilla», «Servicios por reprogramar», «Contenedores desbordados»); Campo ve los servicios de su cuadrilla.
+**Resultado esperado:** entra a **Mi trabajo** y, arriba, ve su perfil (**Oficina** o **Responsable de cuadrilla**) y *Empleado M1 · número*. Oficina ve **Acciones de la jornada**, con los pendientes agrupados (por ejemplo **Servicios sin cuadrilla**, **Servicios por reprogramar**, **Intervenciones de arbolado**, **Contenedores desbordados**, cada uno con un contador y el enlace **Ver todos**); un grupo sin pendientes no se muestra. Campo ve **Servicios asignados**: la lista de servicios de su cuadrilla.
 
 ![Pantalla de ingreso](../manual-de-usuario/img/01-login.png)
 
@@ -64,9 +67,10 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 | Mensaje | Qué hacer |
 |---|---|
-| *El correo o la contraseña no son correctos.* | Revise los datos. El correo se conserva; la contraseña hay que escribirla de nuevo |
+| *El correo o la contraseña no son correctos.* | Revise los datos y escriba la contraseña de nuevo |
 | *Esta cuenta no tiene acceso a M6.* | Es una cuenta de vecino, no de empleado. Use una cuenta de empleado |
 | *La cuenta no puede iniciar sesión. Contacte al soporte de M1.* | La cuenta está inactiva. Avise al equipo |
+| *El servicio de ingreso no respondió dentro de un minuto y medio. Intente nuevamente.* | Identidad estaba dormido. Vuelva a escribir la contraseña e ingrese de nuevo |
 | Pantalla **Sin rol asignado** | Su cuenta es válida pero Oficina no le asignó un rol de M6. Pida la asignación y use **Cerrar sesión** |
 
 **Salir:** pulse **Cerrar sesión**, arriba a la derecha.
@@ -75,18 +79,18 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Dónde:** menú **Servicios**.
 
-1. Entre a **Servicios**: se ven el mapa y la tabla.
-2. Pulse **Programar servicio**.
+1. Entre a **Servicios**: se ven el mapa y la tabla (la tabla pagina de a 25 con **Anterior** y **Siguiente**).
+2. Pulse **Programar servicio** (arriba a la derecha). Se abre una ventana con ese título.
 3. Complete el formulario:
-   - **Tipo de servicio**: por ejemplo *Barrido mecánico*. El tipo define si el servicio es por recorrido o puntual.
+   - **Tipo de servicio**: por ejemplo *Barrido mecánico (Recorrido)*. La lista indica entre paréntesis si el tipo es por *Recorrido* o *Punto* (puntual).
    - **Cuadrilla (opcional)**: puede dejarla en *Sin asignar* y asignarla después (tarea 3).
-   - **Recorrido asignado**, si el tipo es por recorrido: las zonas se cargan solas. Si el tipo es puntual, el **Tipo de objetivo** lo define el tipo de servicio (contenedor, árbol, espacio verde o punto verde): busque y elija el **Elemento**, o indique **Zona operativa** y **Dirección o referencia**.
-   - **Fecha programada**: hoy o posterior.
-   - **Desde** y **Hasta**: la ventana horaria (hora y minutos).
+   - **Recorrido asignado**, si el tipo es por recorrido: aparece al elegir el tipo, con un recorrido ya propuesto; confirme que sea el que quiere (las **Zonas** se muestran debajo). Si el tipo es puntual, el objetivo lo define el tipo de servicio (contenedor, árbol, espacio verde o punto verde): busque y elija el elemento, o indique la zona operativa y la dirección o referencia *(campos de este caso: verificar en la UI)*.
+   - **Fecha programada**: hoy o posterior (viene con la fecha de hoy).
+   - **Desde** y **Hasta**: la ventana horaria (hora y minutos; vienen con 08:00 y 12:00).
    - En **Más datos** (se despliega): **Origen del servicio** (*Registro manual* o *Planificación*, para trabajo recurrente) y **Notas (opcional)**.
-4. Pulse **Programar servicio** en el formulario.
+4. Pulse **Programar servicio** al pie de la ventana (**Cancelar** la cierra sin guardar).
 
-**Resultado esperado:** el servicio aparece en la tabla en estado **Programado**, sin vehículo y, si dejó la cuadrilla en *Sin asignar*, sin cuadrilla.
+**Resultado esperado:** el servicio aparece en la tabla en estado **Programado**, sin vehículo y, si dejó la cuadrilla en *Sin asignar*, sin cuadrilla. *(Pulsar el botón final no se ejecutó en la verificación.)*
 
 ![Formulario para programar un servicio](../manual-de-usuario/img/12-programar-servicio.png)
 
@@ -96,9 +100,9 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Dónde:** detalle del servicio.
 
-1. Abra el servicio (estado **Programado** o **A reprogramar**) y pulse **Asignar cuadrilla** (si ya tenía una, **Reasignar cuadrilla**).
-2. Elija la **Cuadrilla asignada** y, si el tipo de servicio lo exige, el **Vehículo operativo**.
-3. Si aparece el aviso **Revise la asignación** (superposición horaria, cuadrilla de otra zona o de otra especialidad), escriba la **Justificación de la asignación** (de 10 a 500 caracteres). Queda registrada con su nombre y la fecha. El sistema avisa pero no bloquea: a veces la misma cuadrilla hace dos tareas seguidas.
+1. Abra el servicio desde la tabla de **Servicios** (estado **Programado** o **A reprogramar**; también desde **Mi trabajo → Servicios sin cuadrilla**) y pulse **Asignar cuadrilla** (si ya tenía una, **Reasignar cuadrilla**). Se abre **Asignar cuadrilla y vehículo**, que resume el servicio y marca *Vehículo obligatorio* cuando el tipo lo exige.
+2. Elija la **Cuadrilla asignada** y, si el tipo de servicio lo exige, el **Vehículo operativo** (la lista ofrece las patentes y *Sin vehículo asignado*).
+3. Si aparece el recuadro **Revise la asignación** (por ejemplo *«La cuadrilla trabaja en una zona distinta.»*, *«La cuadrilla tiene una especialidad distinta.»* o una superposición horaria), escriba la **Justificación de la asignación** (de 10 a 500 caracteres). Queda registrada con su nombre y la fecha. El sistema avisa pero no bloquea: a veces la misma cuadrilla hace dos tareas seguidas.
 4. Pulse **Confirmar asignación**.
 
 **Resultado esperado:** el detalle muestra la cuadrilla y el vehículo asignados; el servicio sigue **Programado**. Ahora el responsable de esa cuadrilla puede iniciarlo.
@@ -110,7 +114,11 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 **Reprogramar** (dos pasos, para que nunca quede una fecha inventada):
 
 1. En un servicio **Programado**, pulse **Reprogramar** y escriba el **Motivo** (obligatorio). El servicio pasa a **A reprogramar**.
-2. Cuando conozca la nueva fecha, abra el servicio y pulse **Confirmar nueva fecha**; indique fecha y ventana horaria y confirme.
+2. Cuando conozca la nueva fecha, abra el servicio (los **A reprogramar** están en **Mi trabajo → Servicios por reprogramar**) y pulse **Confirmar nueva fecha**; indique fecha y ventana horaria y confirme. En un servicio **A reprogramar** el detalle muestra el **Motivo** y los botones **Reasignar cuadrilla**, **Crear derivación de reparación**, **Confirmar nueva fecha**, **Cancelar servicio** y **Solicitar corte de calle**; **Volver a Servicios** regresa a la lista.
+
+![Detalle de un servicio A reprogramar](../manual-de-usuario/img/14-detalle-servicio.png)
+
+*El botón **Reprogramar** del paso 1 no se vio en la verificación (no había a mano un servicio Programado abierto con ese perfil): verificar en la UI.*
 
 **Resultado esperado:** vuelve a **Programado** con la fecha nueva y el motivo en el historial.
 
@@ -126,9 +134,9 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 **Dónde:** **Mi trabajo** o **Servicios**.
 
 1. Ingrese con un usuario de Campo (responsable). En **Mi trabajo** figuran los servicios de su cuadrilla.
-2. Pulse **Abrir** en el servicio y luego **Iniciar servicio** (el botón también está en la lista). Pasa a **En curso**.
+2. Pulse **Abrir** en el servicio y luego **Iniciar servicio** (arriba a la derecha; el botón también está en la lista de **Mi trabajo**). Pasa a **En curso**. Un servicio fuera de fecha muestra la marca *Fuera del horario*.
    - No se puede iniciar sin cuadrilla asignada, ni sin vehículo si el tipo lo exige, ni con un corte de calle pendiente.
-   - Si lo inicia fuera de la ventana horaria, el sistema lo permite y deja el aviso *«Inicio fuera de ventana horaria»*.
+   - Si lo inicia fuera de la ventana horaria, el sistema lo permite: el detalle antes de iniciar muestra *«Inicio fuera de ventana horaria: el servicio está programado para …»*.
 3. Para cada zona elija **Atendida**, **Parcial** o **No atendida** y guarde con **Guardar zona**.
    - Con **Parcial** o **No atendida** hay que elegir el **Motivo de la excepción** y **adjuntar al menos una evidencia** (tarea 6).
 4. Cuando todas las zonas tengan resultado, pulse **Completar servicio**. Si falta alguna, la pantalla lo indica con *«Complete la … para finalizar.»*.
@@ -136,6 +144,9 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 **Resultado esperado:** el servicio queda **Completado** si todas las zonas se atendieron, o **Parcial** si alguna no. Lo calcula el sistema; no se elige. Oficina lo ve en **Servicios**.
 
 ![Mi trabajo de Campo](../manual-de-usuario/img/04-campo-mi-trabajo.png)
+
+![Servicios de Campo](../manual-de-usuario/img/05-campo-servicios.png)
+
 ![Detalle de un servicio en el celular](../manual-de-usuario/img/19-campo-detalle.png)
 
 **Suspender y reanudar.** Con el servicio **En curso** y un impedimento, **Suspender servicio** (pide un motivo y, opcionalmente, una nota). Con la causa resuelta, **Reanudar servicio**. Un servicio suspendido que no se puede retomar lo cancela Oficina.
@@ -156,17 +167,23 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Dónde:** menú **Control Ambiental**.
 
-1. Abra **Control Ambiental**: la cola de expedientes. Filtre por **Estado**, **Tipo de hallazgo** y **Prioridad**, o busque por ID, dirección o ticket; también puede filtrar por **Última actualización** (Desde y Hasta). El botón **Abrir reporte** carga un expediente nuevo.
-2. Abra un expediente en estado **Recibido** y pulse **Iniciar revisión**. Pasa a **En revisión**.
-3. En **En revisión**, el recuadro **Acciones** ofrece tres caminos:
-   - **Programar inspección**: elija la **zona operativa**, la fecha y la cuadrilla.
+1. Abra **Control Ambiental**: la cola de expedientes (cada fila muestra el código `#xxxxxxxx`, el tipo de hallazgo, la dirección, la última actualización y el estado). Filtre por **Estado**, **Tipo de hallazgo** y **Prioridad**, busque con **Buscar expediente**, o filtre por **Última actualización** (**Desde** y **Hasta**).
+2. Pulse la fila de un expediente en estado **Recibido**. En el detalle, pulse **Iniciar revisión**. Pasa a **En revisión**.
+3. En **En revisión**, el recuadro **Acciones** ofrece cuatro caminos:
+   - **Programar inspección**: se abre una ventana con **Fecha de inspección**, **Inicio** y **Fin**, **Zona operativa** y **Cuadrilla** (la fecha, la zona y la cuadrilla son obligatorias); confirme con **Programar inspección**.
    - **Derivar expediente** si no es de nuestra competencia (vuelve a M2).
    - **Desestimar expediente** si se descarta sin inspección.
+   - **Pedir información al vecino**.
+
+> **Atención con el perfil.** El recuadro **Acciones** y el botón **Iniciar revisión** dependen de la cuenta: con la cuenta de Oficina `…10002` el detalle se vio **sin** acciones, y con la cuenta de administración `…10000` (también rotulada «Oficina») se ven. Si no ve los botones, ingrese con una cuenta de administración. No se sabe todavía si es una regla o una falta de permiso en la cuenta (ver discrepancias).
 
 **Resultado esperado:** con **Programar inspección**, el expediente pasa a **Inspección programada** y se crea el servicio de inspección para la cuadrilla elegida. El sistema avisa si la denuncia podría estar duplicada.
 
 ![Cola de expedientes ambientales](../manual-de-usuario/img/06-office-control-ambiental.png)
-![Detalle de un expediente](../manual-de-usuario/img/17-expediente-detalle.png)
+
+![Detalle de un expediente En revisión con sus acciones](../manual-de-usuario/img/17-expediente-detalle.png)
+
+![Ventana Programar inspección](../manual-de-usuario/img/24-programar-inspeccion.png)
 
 **Si algo falla:** *«Debe seleccionar una zona operativa para programar la inspección»*. Si ve *«No se pudo actualizar el expediente. Recargue la pantalla»*, el expediente cambió de estado: recargue y revise las acciones disponibles.
 
@@ -190,7 +207,9 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Resultado esperado:** el expediente pasa a **Acta emitida** y el acta se envía a M4. La acción sugerida (advertencia, intimación, multa o clausura) **no es vinculante**: decide M4. Si no se encuentra el establecimiento, pulse **Continuar sin establecimiento**: la pantalla avisa *«El acta no se enviará a Faltas. El expediente se cierra.»*
 
-Con resultado inconcluso, Oficina usa **Programar reinspección**: se crea una nueva inspección y un nuevo servicio, y la anterior queda en la historia.
+Con resultado inconcluso, Oficina usa **Programar reinspección**: se crea una nueva inspección y un nuevo servicio, y la anterior queda en la historia. Un expediente en **Inspección programada** ofrece **Reprogramar inspección**. Un expediente en **Infracción constatada** ofrece **Emitir acta** y **Crear derivación de reparación** (a M3).
+
+*La inspección en campo (8.A) y la emisión del acta (8.B) no se recorrieron de punta a punta en la verificación porque inician servicios y generan datos; los nombres de sus campos vienen del código del frontend. En **Mi trabajo** del inspector se ven los servicios **Inspección ambiental** con **Abrir** e **Iniciar servicio**.*
 
 ### Tarea 9 — Registrar la sanción de M4 y cerrar el expediente (Oficina)
 
@@ -198,13 +217,13 @@ Con resultado inconcluso, Oficina usa **Programar reinspección**: se crea una n
 
 1. M4 resuelve el acta y responde por el bus. **La sanción llega sola**: no se carga a mano. El expediente pasa a **Sancionado**.
 2. Si el acta queda sin respuesta de M4 pasado el plazo, el expediente se **cierra solo**.
-3. En los estados **Derivado**, **Desestimado**, **Sin infracción** y **Sancionado**, pulse **Cerrar expediente**.
+3. En los estados **Derivado**, **Desestimado**, **Sin infracción** y **Sancionado**, pulse **Cerrar expediente** (el botón se ve en **Derivado**, **Desestimado** y **Sin infracción** con la cuenta de administración).
 
 **Resultado esperado:** el expediente queda **Cerrado**. Un expediente **Sancionado** no se reabre; si el vecino rechaza la solución en M2, el expediente vuelve a **En revisión** (salvo si fue sancionado). *(La pantalla no tiene una acción para cargar una sanción a mano: no se encontró en el código del frontend.)*
 
 ### Tarea 10 — Gestionar un contenedor (Oficina)
 
-**Dónde:** menú **Catálogo** → **Contenedores**. Abra el contenedor con la flecha de su fila (**Ver detalle**); las acciones se ejecutan desde el detalle. Según la tabla de roles del frontend, reportar desborde o daño y vaciar son acciones de Campo (cuadrilla).
+**Quién:** reportar desborde o daño y vaciar son acciones de **Campo**; Oficina solo ve el contenedor y puede **Editar** sus datos (su detalle dice *«El desborde, el daño y el vaciado los registra la cuadrilla de campo.»*). **Dónde:** menú **Catálogo** → **Contenedores** (con **Buscar contenedor** y los filtros **Estado**, **Tipo de contenedor** y **Zona**; **Registrar contenedor** da de alta uno). Pulse la fila del contenedor: se abre **Detalle del contenedor** con estado, tipo, capacidad, zona, coordenadas y dirección; las acciones están en el bloque **Operación**. Un contenedor **Desbordado** (por ejemplo `CT-almagro-0001`) ofrece **Vaciar contenedor**.
 
 | Situación | Acción | Resultado esperado |
 |---|---|---|
@@ -218,14 +237,22 @@ El vaciado y la reubicación se ejecutan como un servicio puntual: **cerrar ese 
 
 ![Catálogo de contenedores](../manual-de-usuario/img/18-catalogo-contenedores.png)
 
+![Detalle de un contenedor visto por Oficina](../manual-de-usuario/img/20-contenedor-detalle-oficina.png)
+
+![Detalle de un contenedor visto por Campo](../manual-de-usuario/img/23-contenedor-detalle-campo.png)
+
 ### Tarea 11 — Consultar el estado de una denuncia sin ingresar (vecino)
 
-**Dónde:** `https://m6-ambiente-higiene.vercel.app/consulta` (no pide usuario).
+**Dónde:** `https://m6-ambiente-higiene.vercel.app/consulta` (no pide usuario; también se llega con **Consultar una denuncia**, al pie de la pantalla de ingreso).
 
-1. Abra la dirección y elija **Seguir mi denuncia** (también hay consultas de **servicios** y de **puntos verdes**).
-2. Escriba el **código de su comprobante** (el identificador del reclamo que le dio M2) y pulse **Consultar**.
+1. Abra la dirección: se ve **Consulta ciudadana** con tres tarjetas, **Seguir mi denuncia**, **Servicios** y **Puntos verdes**, cada una con su botón **Consultar**. La pantalla avisa *«Entorno de demostración: los datos que ves no son los del servicio municipal real.»*. Pulse **Consultar** en **Seguir mi denuncia**.
+2. Escriba el **Código de seguimiento** (el del comprobante que le dio M2; se puede pegar tal cual) y pulse **Consultar**.
 
-**Resultado esperado:** se muestra la **etapa** de la denuncia, el tipo, la dirección y las fechas. **No** se muestran el inspector, los hallazgos ni el acta. Si el código no corresponde a ninguna denuncia, se muestra siempre el mismo mensaje, *«No encontramos una denuncia con ese código. Revisá que sea el código de seguimiento de tu comprobante.»*: no se revela si existe. Hay un límite de consultas por minuto: si lo supera, espere un momento *(texto del aviso de límite: verificar en la UI)*.
+**Resultado esperado:** se muestra la **etapa** de la denuncia, el tipo, la dirección y las fechas. **No** se muestran el inspector, los hallazgos ni el acta. Si el código no corresponde a ninguna denuncia, se muestra *«No encontramos una denuncia con ese código. Revisá que sea el código de seguimiento de tu comprobante.»*: no se revela si existe. Si el código no tiene formato de identificador, el aviso es *«Ese código no tiene el formato correcto. Copialo tal cual figura en tu comprobante.»*. Hay un límite de consultas por minuto: si lo supera, espere un momento *(texto del aviso de límite: verificar en la UI)*. *(No se probó un código existente: el comprobante lo entrega M2.)*
+
+![Consulta ciudadana](../manual-de-usuario/img/21-consulta-vecino.png)
+
+![Seguir mi denuncia, con un código inexistente](../manual-de-usuario/img/22-seguir-denuncia.png)
 
 ### Tarea 12 — Trabajar sin conexión (Campo)
 
@@ -240,7 +267,7 @@ El vaciado y la reubicación se ejecutan como un servicio puntual: **cerrar ese 
 **Dónde:** menú **Tableros**.
 
 1. Elija **Desde**, **Hasta**, **Familia**, **Zona operativa** y **Tipo de servicio**, y pulse **Actualizar**. También hay atajos de período: **Última semana**, **Último mes** y **Último trimestre**.
-2. Cada gráfico puede verse como **Barras** o como **Tabla**.
+2. Cada gráfico puede verse como **Barras** o como **Tabla**. En la vista de tabla, **Exportar CSV** descarga los datos.
 
 | Familia | Qué mide |
 |---|---|
@@ -255,12 +282,12 @@ El vaciado y la reubicación se ejecutan como un servicio puntual: **cerrar ese 
 
 ### Tarea 14 — Otras consultas y tareas de Oficina
 
-- **Buscar y filtrar servicios:** en **Servicios**, escriba en la búsqueda o use **Período**, **Categorías** y los filtros de columna; **Limpiar todos los filtros aplicados** vuelve a la lista completa. El mapa y la tabla muestran lo mismo.
+- **Buscar y filtrar servicios:** en **Servicios**, escriba en la búsqueda («Buscar servicio, zona o cuadrilla…») o use **Período**, **Estado**, **Zona**, **Categorías** y los filtros de columna; **Limpiar todos los filtros aplicados** vuelve a la lista completa. El mapa y la tabla muestran lo mismo.
 - **Pedir un corte de calle o una reparación:** en el detalle de un servicio **Programado** o **A reprogramar**, **Solicitar corte de calle** (a M7; con el corte pendiente el servicio no puede iniciarse) o crear una derivación de reparación (a M3). Las respuestas se siguen en **Derivaciones**.
 - **Administrar catálogos:** **Catálogo** reúne tipos de servicio, zonas operativas, recorridos, frecuencias, cuadrillas, vehículos, contenedores, puntos verdes, espacios verdes, arbolado y sitios de disposición. La baja es lógica y el código de un contenedor, un tipo de servicio o un relevamiento no se puede cambiar.
 - **Intervenciones sobre arbolado:** en **Catálogo → Arbolado** y **Intervenciones de arbolado**, solicitar la intervención; una extracción exige justificación y autorización de un administrador. Para un relevamiento, abra el árbol y pulse **Registrar relevamiento**.
-- **Consultar el mapa:** **Mapa** muestra zonas, cobertura, puntos verdes, espacios verdes y árboles con riesgo crítico, con capas que se activan o desactivan. Toda la información del mapa también está en una lista.
-- **Accesos y Monitor de integración:** las entradas **Accesos** (asignar roles de M6) y **Monitor de integración** (eventos salientes fallidos) aparecen solo si su perfil las permite.
+- **Consultar el mapa:** **Mapa** (**Mapa operativo**) tiene las vistas **Inventario**, **Zonas**, **Cobertura**, **Recorrido** y **Hoy**, y las capas **Contenedores**, **Puntos verdes**, **Espacios verdes** y **Arbolado**, que se activan o desactivan. Toda la información del mapa también está en la lista **Elementos**.
+- **Accesos y Monitor de integración:** las entradas **Accesos** (asignar roles de M6) y **Monitor de integración** (eventos salientes fallidos) aparecen solo si su perfil las permite: con la cuenta de administración se vio **Monitor de integración** y no **Accesos** (no verificado).
 
 ![Servicios: mapa y tabla](../manual-de-usuario/img/03-office-servicios.png)
 ![Mapa operativo](../manual-de-usuario/img/08-mapa.png)
@@ -336,10 +363,11 @@ Estas reglas **se aplican en el servidor** además de en la pantalla: una acció
 - **Catálogo de barrios:** la lista usada para armar zonas es provisoria hasta conectar el catálogo de M9.
 - **Establecimientos:** la búsqueda al emitir un acta usa una lista local hasta que M4 publique la suya.
 - **Aviso de demora:** el servidor lo soporta, pero la pantalla todavía no lo ofrece.
-- **Exportación:** no hay exportación de registros a archivo; los indicadores son de lectura en pantalla.
+- **Exportación:** solo **Tableros** exporta (**Exportar CSV**); el resto de las pantallas no.
 - **PDF adjuntos:** no se limpian de metadatos ni se analizan en busca de virus.
 - **Campo y el catálogo:** reportar contenedores y registrar relevamientos están permitidos para Campo, pero el menú lateral de Campo incluye **Catálogo**, porque cualquier rol de M6 puede consultarlo.
-- **Capturas:** son del 03/11/2026, sacadas con Playwright en modo mock sobre la rama `develop` del frontend (datos de prueba, no reales).
+- **Capturas:** son del 03/11/2026, sacadas de la aplicación desplegada con el login real (datos de demostración). Los datos y las fechas cambian: lo que vea puede diferir.
+- **Acciones no recorridas en la verificación:** iniciar, completar, suspender y cancelar servicios, adjuntar evidencia, completar inspección, emitir acta y los reportes de contenedores (ver la nota al principio).
 
 ---
 
