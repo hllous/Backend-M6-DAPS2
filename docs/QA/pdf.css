@@ -1,0 +1,28 @@
+/* Hoja de estilo de los PDF de docs/QA (md-to-pdf). */
+body {
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  color: #1a1a1a;
+}
+
+/* Cada documento arranca en página nueva; la portada no cuenta como h1. */
+h1 { page-break-before: always; font-size: 20pt; border-bottom: 2px solid #1f3a5f; padding-bottom: 4px; color: #1f3a5f; }
+h2 { font-size: 14pt; color: #1f3a5f; margin-top: 1.4em; }
+h3 { font-size: 11.5pt; }
+
+table { border-collapse: collapse; width: 100%; font-size: 9pt; margin: 0.6em 0; }
+th, td { border: 1px solid #8a8a8a; padding: 4px 6px; vertical-align: top; }
+th { background: #e8edf3; text-align: left; }
+tr { page-break-inside: avoid; }
+
+pre, code { font-size: 8.5pt; }
+pre { white-space: pre-wrap; word-break: break-word; border: 1px solid #ccc; padding: 6px; }
+blockquote { border-left: 3px solid #1f3a5f; margin-left: 0; padding-left: 10px; color: #333; }
+img { max-width: 100%; max-height: 120mm; }
+
+.cover { page-break-after: always; text-align: center; padding-top: 70mm; }
+.cover-kicker { font-size: 11pt; color: #555; }
+.cover-title { font-size: 28pt; font-weight: 700; color: #1f3a5f; margin: 14mm 0 4mm; line-height: 1.2; }
+.cover-sub { font-size: 14pt; color: #333; }
+.cover-meta { margin-top: 40mm; font-size: 12pt; line-height: 1.8; }

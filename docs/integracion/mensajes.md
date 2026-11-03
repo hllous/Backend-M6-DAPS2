@@ -331,3 +331,7 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 1. **#294:** *resuelto el 20/10:* el filtro de fechas va por `updatedAt` (la columna «Actualizado»).
 2. **#169:** *resuelto el 20/10:* M6 **sí** puede pedirle información al vecino (`INFORMATION_REQUIRED`) durante la revisión del expediente; **implementado** (`POST /environmental-reports/:id/request-information`, ver el [historial](historial.md)).
 3. **M3:** *resuelto el 20/10:* aceptada la propuesta de `workOrderId` UUID y `workOrderNumber`; falta avisarle a M3 (el mensaje a M3 ya está redactado arriba).
+
+**→ M1 (Ciudadanos)** — *enviado el 3 nov 2026 con el CSV de todas las cuentas (1.510); espera respuesta de M1*
+
+> Gracias por las respuestas. Anotamos la opción B (RS256 local, solo en `/integraciones/v1/**`) y esperamos la URL final para probar con un module-token real de Ambiente. Adjuntamos el CSV con las columnas de `cuenta_empleado` (`empleado_id`, `mail`, `nombre_empleado`, `apellido_empleado`, `rol`, `activo`, `uuid`): 1.510 empleados, las 12 cuentas de login (`10000`–`10011`) y los integrantes de las cuadrillas, todos `EMPLEADO`; `uuid` queda vacío para que lo genere M1. `empleado_id` tiene que ser el `sub` que figure en el token. Las contraseñas de las 12 de login van por privado. Sobre el 401 que vimos: nuestro backend desplegado rechaza el token de `admin@municipio.gob.ar`; para descartar un error de firma necesitamos el secreto HS256 vigente y su largo (base64). Si sigue igual, les pasamos header y payload decodificados con la fecha de la prueba.
