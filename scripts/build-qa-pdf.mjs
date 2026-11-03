@@ -3,7 +3,7 @@
 //   npm run qa:pdf -- --partial -> salta los que no existan (solo para pruebas locales)
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
-import { dirname, join, posix, relative, resolve } from 'node:path';
+import { dirname, extname, join, posix, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // Versión fija: npx sin versión bajaría la última y el PDF cambiaría sin tocar el repo.
@@ -41,14 +41,23 @@ const DOCS = [
   },
 ];
 
-// Las imágenes se sirven desde docs/: se reescribe cada ruta relativa de imagen
-// (relativa al .md de origen) a una relativa a docs/.
 const docsDir = join(root, 'docs');
-function rebaseImages(md, fileDir) {
+const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
+
+// Cada imagen local se incrusta como data URI (no depende del servidor de md-to-pdf).
+// Si el archivo no existe, queda un placeholder visible para insertar la captura a mano:
+// el PDF se genera igual.
+function inlineImages(md, fileDir) {
   return md.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (m, alt, src) => {
-    if (/^(https?:|data:|#|\/)/.test(src)) return m;
+    if (/^(https?:|data:|#)/.test(src)) return m;
     const abs = resolve(fileDir, src);
-    return `![${alt}](${relative(docsDir, abs).split('\\').join(posix.sep)})`;
+    const mime = MIME[extname(abs).toLowerCase()];
+    if (!mime || !existsSync(abs)) {
+      const ruta = relative(root, abs).split('\\').join(posix.sep);
+      console.warn(`  (captura pendiente: ${ruta})`);
+      return `> **[CAPTURA PENDIENTE: ${alt || 'sin descripción'}, ruta ${ruta}]**`;
+    }
+    return `![${alt}](data:${mime};base64,${readFileSync(abs).toString('base64')})`;
   });
 }
 
@@ -75,7 +84,7 @@ function build({ out, title, subtitle, files }) {
       }
       throw new Error(`Falta docs/QA/${f}. Usá --partial solo para pruebas locales.`);
     }
-    parts.push(rebaseImages(readFileSync(p, 'utf8'), qaDir));
+    parts.push(inlineImages(readFileSync(p, 'utf8'), qaDir));
   }
   mkdirSync(buildDir, { recursive: true });
   const mdPath = join(buildDir, `${out}.md`);

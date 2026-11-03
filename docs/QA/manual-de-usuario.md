@@ -56,6 +56,8 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Resultado esperado:** entra a **Mi trabajo** y ve el nombre de su perfil. Oficina ve las decisiones pendientes de la jornada (por ejemplo «Expedientes por clasificar», «Servicios sin cuadrilla», «Servicios por reprogramar», «Contenedores desbordados»); Campo ve los servicios de su cuadrilla.
 
+> **[CAPTURA PENDIENTE: pantalla de ingreso con los campos «Correo electrónico» y «Contraseña» y el botón «Ingresar al sistema», ruta docs/manual-de-usuario/img/01-login.png (la captura actual muestra el ingreso anterior por escenario y hay que reemplazarla)]**
+
 ![Mi trabajo de Oficina](../manual-de-usuario/img/02-office-mi-trabajo.png)
 
 **Si algo falla**
@@ -342,21 +344,21 @@ Estas reglas **se aplican en el servidor** además de en la pantalla: una acció
 
 ## 6. Trazabilidad: tarea del manual → historia de usuario
 
-Las HU son las del tablero «M6 - Product Backlog & Story Map» de Trello; sus identificadores `HU-01` a `HU-33` y sus criterios están en `02-historias-y-criterios.md`. La columna «Historia de usuario» cita el título en Trello; la tabla se concilia con los identificadores cuando se cierre `02`.
+Las HU son las del tablero «M6 - Product Backlog & Story Map» de Trello; sus identificadores `HU-01` a `HU-33` y sus criterios están en `02-historias-y-criterios.md`. La columna «Historia de usuario» cita el título en Trello; la tabla ya está conciliada con esos identificadores.
 
 | Tarea del manual | Historia de usuario |
 |---|---|
-| 1 Ingresar y reconocer su rol | Como Oficina y como Campo quiero ver y hacer solo lo que mi rol permite, con el rol que viene de M1; Activar la autenticación real de M1 con sesión sellada en el BFF |
-| 2 Programar un servicio | Como Oficina quiero programar un servicio sobre un recorrido o un punto, con fecha, franja y cuadrilla |
-| 3 Asignar cuadrilla y vehículo | Como Oficina quiero programar un servicio sobre un recorrido o un punto…; Como Oficina quiero administrar tipos de servicio, frecuencias, cuadrillas, vehículos y sitios de disposición |
-| 4 Reprogramar o cancelar | Como Oficina quiero reprogramar o cancelar un servicio con motivo; Como Oficina quiero que al suspender un servicio el motivo y la nota se guarden por separado |
-| 5 Ejecutar un servicio | Como líder de cuadrilla quiero iniciar el servicio, registrar el resultado de cada zona y cerrarlo |
-| 6 Adjuntar evidencia | Como miembro de cuadrilla quiero adjuntar fotos como evidencia, con reintento seguro |
-| 7 Recibir y asignar una denuncia | Como Oficina quiero recibir denuncias ambientales y asignarlas a una cuadrilla para inspeccionarlas; Como Oficina quiero filtrar la cola de denuncias por rango de fechas |
-| 8 Inspección y acta | Como inspector quiero registrar la inspección y emitir el acta de constatación |
-| 9 Sanción de M4 y cierre | Como Oficina quiero registrar la sanción que devuelve M4 y cerrar el expediente |
-| 10 Gestionar un contenedor | Como Oficina quiero gestionar contenedores (desborde, daño, vaciado, reparación y reubicación) |
-| 11 Consulta del vecino sin ingresar | Como vecino quiero consultar sin login el estado de mi denuncia, cuándo pasa el servicio y dónde están los puntos verdes |
-| 12 Trabajar sin conexión | Como miembro de cuadrilla quiero adjuntar fotos como evidencia, con reintento seguro |
-| 13 Leer los indicadores | Como Oficina quiero un tablero de indicadores (cobertura, cumplimiento, incidencias y residuos) |
-| 14 Otras tareas de Oficina | Como Oficina quiero llevar el censo de arbolado…; Como Oficina quiero administrar espacios verdes y puntos verdes; Como cuadrilla quiero derivar una reparación o pedir un corte de calle |
+| 1 Ingresar y reconocer su rol | HU-29, HU-30: Como Oficina y como Campo quiero ver y hacer solo lo que mi rol permite, con el rol que viene de M1; Activar la autenticación real de M1 con sesión sellada en el BFF |
+| 2 Programar un servicio | HU-05: Como Oficina quiero programar un servicio sobre un recorrido o un punto, con fecha, franja y cuadrilla |
+| 3 Asignar cuadrilla y vehículo | HU-05, HU-03: Como Oficina quiero programar un servicio sobre un recorrido o un punto…; Como Oficina quiero administrar tipos de servicio, frecuencias, cuadrillas, vehículos y sitios de disposición |
+| 4 Reprogramar o cancelar | HU-06, HU-04: Como Oficina quiero reprogramar o cancelar un servicio con motivo; Como Oficina quiero que al suspender un servicio el motivo y la nota se guarden por separado |
+| 5 Ejecutar un servicio | HU-07: Como líder de cuadrilla quiero iniciar el servicio, registrar el resultado de cada zona y cerrarlo |
+| 6 Adjuntar evidencia | HU-08: Como miembro de cuadrilla quiero adjuntar fotos como evidencia, con reintento seguro |
+| 7 Recibir y asignar una denuncia | HU-15, HU-14: Como Oficina quiero recibir denuncias ambientales y asignarlas a una cuadrilla para inspeccionarlas; Como Oficina quiero filtrar la cola de denuncias por rango de fechas |
+| 8 Inspección y acta | HU-16: Como inspector quiero registrar la inspección y emitir el acta de constatación |
+| 9 Sanción de M4 y cierre | HU-17: Como Oficina quiero registrar la sanción que devuelve M4 y cerrar el expediente |
+| 10 Gestionar un contenedor | HU-11: Como Oficina quiero gestionar contenedores (desborde, daño, vaciado, reparación y reubicación) |
+| 11 Consulta del vecino sin ingresar | HU-27: Como vecino quiero consultar sin login el estado de mi denuncia, cuándo pasa el servicio y dónde están los puntos verdes |
+| 12 Trabajar sin conexión | HU-08: Como miembro de cuadrilla quiero adjuntar fotos como evidencia, con reintento seguro |
+| 13 Leer los indicadores | HU-28: Como Oficina quiero un tablero de indicadores (cobertura, cumplimiento, incidencias y residuos) |
+| 14 Otras tareas de Oficina | HU-12, HU-13, HU-09: Como Oficina quiero llevar el censo de arbolado…; Como Oficina quiero administrar espacios verdes y puntos verdes; Como cuadrilla quiero derivar una reparación o pedir un corte de calle |
