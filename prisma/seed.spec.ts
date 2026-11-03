@@ -5,6 +5,8 @@ import { SERVICE_TYPE_SPECIALTY } from '../src/modules/crews/crew-specialty';
 import { CONTAINER_TRANSITIONS } from '../src/modules/containers/containers.service';
 import {
   CONTAINERS,
+  BASE_PERSONAS,
+  IDS_LEGADOS,
   CLAVES_GENERADAS,
   CREWS,
   GREEN_POINTS,
@@ -257,11 +259,14 @@ describe('seed: 480 cuadrillas por zona y especialidad (#455)', () => {
     }
   });
 
-  it('nombres de cuadrilla únicos y ids de persona desde 10000, sin repetir entre cuadrillas', () => {
+  it('nombres de cuadrilla únicos y ids de persona sin repetir ni pisar las cuentas de M1 (10000–10011)', () => {
     expect(new Set(CREWS.map((c) => c.name)).size).toBe(CREWS.length);
     const ids = CREWS.flatMap((c) => c.members);
     expect(new Set(ids).size).toBe(ids.length);
-    for (const id of ids) expect(Number(id)).toBeGreaterThanOrEqual(10000);
+    // Solo las tres personas de Campo de M1 (10009–10011) viven por debajo de la base; ninguna pisa 900/901.
+    for (const id of ids)
+      if (Number(id) < BASE_PERSONAS) expect(['10009', '10010', '10011']).toContain(id);
+      else expect(Number(id)).toBeGreaterThanOrEqual(BASE_PERSONAS);
     for (const c of generadas) {
       expect(c.members.length).toBeGreaterThanOrEqual(2);
       expect(c.members.length).toBeLessThanOrEqual(4);
@@ -270,9 +275,9 @@ describe('seed: 480 cuadrillas por zona y especialidad (#455)', () => {
 
   it('las personas de demostración existen en el seed', () => {
     const cuadrilla = (id: string) => CREWS.find((c) => c.members.includes(id))!;
-    expect(cuadrilla('10000').clave).toBe('BEL-REC');
-    expect(cuadrilla('10001').leaderUserId).toBe('10000');
-    expect(especialidadDe(cuadrilla('10070').tipos)).toBe('INSPECTION');
+    expect(cuadrilla('10009').clave).toBe('BEL-REC');
+    expect(cuadrilla('10010').leaderUserId).toBe('10009');
+    expect(especialidadDe(cuadrilla('10011').tipos)).toBe('INSPECTION');
   });
 });
 
@@ -314,29 +319,80 @@ describe('seed: roles y personas de demostración', () => {
       }
   });
 
-  it('10000 y 10001 son de Campo y 10070 también es inspector', () => {
-    expect(de('10000')).toEqual(['M6_CAMPO_CUADRILLA']);
-    expect(de('10001')).toEqual(['M6_CAMPO_CUADRILLA']);
-    expect(de('10070').sort()).toEqual(['M6_CAMPO_CUADRILLA', 'M6_CAMPO_INSPECTOR']);
+  it('las 12 cuentas de M1 (10000–10011) tienen los roles del pedido del 02/11', () => {
+    const esperado: Record<string, string[]> = {
+      10000: ['M6_ADMIN'],
+      10001: ['M6_ADMIN'],
+      10002: ['M6_OFICINA_OPERACIONES'],
+      10003: ['M6_OFICINA_OPERACIONES'],
+      10004: ['M6_OFICINA_AMBIENTAL'],
+      10005: ['M6_OFICINA_AMBIENTAL'],
+      10006: ['M6_OFICINA_AMBIENTAL', 'M6_OFICINA_OPERACIONES'],
+      10007: ['M6_AUDITOR'],
+      10008: ['M6_AUDITOR'],
+      10009: ['M6_CAMPO_CUADRILLA'],
+      10010: ['M6_CAMPO_CUADRILLA'],
+      10011: ['M6_CAMPO_CUADRILLA', 'M6_CAMPO_INSPECTOR'],
+    };
+    for (const [id, rs] of Object.entries(esperado)) expect(de(id).sort()).toEqual(rs);
+    // El id 1 es admin por bootstrap, sin fila; 900/901 tampoco tienen.
+    expect(roles.filter((r) => Number(r.userId) < 10000)).toEqual([]);
   });
 
   it('líder, integrante e inspector pertenecen a las cuadrillas que dice docs/seed.md', () => {
     const bel = CREWS.find((c) => c.clave === 'BEL-REC')!;
     expect(bel.name).toBe('Cuadrilla Municipal Belgrano y Colegiales — Recolección');
-    expect(bel.leaderUserId).toBe('10000');
-    expect(bel.members).toContain('10001');
-    expect(bel.leaderUserId).not.toBe('10001');
+    expect(bel.leaderUserId).toBe('10009');
+    expect(bel.members).toContain('10010');
     const insp = CREWS.find((c) => c.clave === 'INSP')!;
-    expect(insp.leaderUserId).toBe('10070');
-    expect(insp.members).toContain('10070');
+    expect(insp.leaderUserId).toBe('10011');
+    expect(insp.members).toContain('10011');
     expect(especialidadDe(insp.tipos)).toBe('INSPECTION');
   });
 
-  it('los members de las operativas siguen 10000 + 10 × posición', () => {
+  it('los members de las operativas son BASE_PERSONAS + 10 × posición + n; 10009–10011 solo en BEL-REC e INSP', () => {
+    const deM1 = ['10009', '10010', '10011'];
     CREWS.filter((c) => !CLAVES_GENERADAS.has(c.clave)).forEach((c, i) => {
-      expect(c.leaderUserId).toBe(String(10000 + 10 * i));
-      c.members.forEach((m, n) => expect(m).toBe(String(10000 + 10 * i + n)));
+      const propios = [c.leaderUserId, ...c.members].filter((m) => !deM1.includes(m));
+      for (const m of new Set(propios)) {
+        const n = Number(m) - (BASE_PERSONAS + 10 * i);
+        expect(n).toBeGreaterThanOrEqual(0);
+        expect(n).toBeLessThan(5);
+      }
+      if (!['BEL-REC', 'INSP'].includes(c.clave))
+        expect([c.leaderUserId, ...c.members].filter((m) => deM1.includes(m))).toEqual([]);
     });
+    expect(CREWS.find((c) => c.clave === 'BEL-REC')!.members).toEqual(
+      expect.arrayContaining(['10009', '10010']),
+    );
+    expect(CREWS.find((c) => c.clave === 'INSP')!.members).toContain('10011');
+  });
+
+  it('IDS_LEGADOS no contiene ids vigentes ni cuentas de M1, y no incluye 900/901', () => {
+    const vigentes = new Set(CREWS.flatMap((c) => [c.leaderUserId, ...c.members]));
+    for (const id of IDS_LEGADOS) {
+      expect(vigentes.has(id)).toBe(false);
+    }
+    expect(IDS_LEGADOS).toEqual(expect.arrayContaining(['101', '10001', '10070']));
+    for (const id of ['10009', '10010', '10011', '10100', '900', '901'])
+      expect(IDS_LEGADOS).not.toContain(id);
+    // deleteMany usa notIn: c.members, así que BEL-REC e INSP conservan a las cuentas de M1.
+    expect(IDS_LEGADOS.filter((id) => ['10009', '10010', '10011'].includes(id))).toEqual([]);
+  });
+
+  it('ni las personas de cuadrilla ni Oficina usan 900/901', () => {
+    const ids = [
+      ...CREWS.flatMap((c) => [c.leaderUserId, ...c.members]),
+      ...rolesDeLaDemo().map((r) => r.userId),
+    ];
+    expect(ids).not.toContain('900');
+    expect(ids).not.toContain('901');
+  });
+
+  it('los nombres de las 12 cuentas son fijos', () => {
+    expect(nombreDePersona('10000')).toBe('Carlos Rodríguez');
+    expect(nombreDePersona('10009')).toBe('Sofía López');
+    expect(nombreDePersona('10011')).toBe('Carlos Medina');
   });
 });
 
