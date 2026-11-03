@@ -13,13 +13,13 @@ if (!secret) {
   process.exit(1);
 }
 const PERSONAS = {
-  admin: ["RESPONSABLE_AREA", "2"],
-  operaciones: ["ADMINISTRATIVO", "3"],
-  ambiental: ["ADMINISTRATIVO", "5"],
-  auditoria: ["AUDITOR", "8"],
-  lider: ["ADMINISTRATIVO", "10000"],
-  integrante: ["ADMINISTRATIVO", "10001"],
-  inspector: ["ADMINISTRATIVO", "10070"],
+  admin: ["RESPONSABLE_AREA", "10000"],
+  operaciones: ["ADMINISTRATIVO", "10002"],
+  ambiental: ["ADMINISTRATIVO", "10004"],
+  auditoria: ["AUDITOR", "10007"],
+  lider: ["ADMINISTRATIVO", "10009"],
+  integrante: ["ADMINISTRATIVO", "10010"],
+  inspector: ["ADMINISTRATIVO", "10011"],
   sinrol: ["ADMINISTRATIVO", "900"],
   ciudadano: ["CIUDADANO", "901"],
 };

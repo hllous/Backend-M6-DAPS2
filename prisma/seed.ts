@@ -626,6 +626,13 @@ interface CuadrillaSeed {
   bajaDesde?: number;
 }
 
+/**
+ * Primer id de los integrantes de cuadrilla sin login (#488). 10000–10011 son las 12 cuentas de
+ * empleado que M1 creó (pedido del 02/11): Oficina, auditoría y las tres personas de Campo de la
+ * demo (PERSONAS_DE_M1). Todo lo demás arranca acá, sin pisarlas ni a 900/901.
+ */
+export const BASE_PERSONAS = 10100;
+
 export const CREWS: CuadrillaSeed[] = [
   // ── Mañana: recolección, barrido, poda, mantenimiento y riego ──
   {
@@ -633,9 +640,10 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Belgrano y Colegiales — Recolección',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '10000',
+    // Líder e integrante son cuentas de M1 (10009 y 10010, ver PERSONAS_DE_M1); los otros dos son de relleno.
+    leaderUserId: '10009',
     organizationId: null,
-    members: ['10000', '10001', '10002', '10003'],
+    members: ['10009', '10010', '10100', '10101'],
     active: true,
     tipos: ['REC-DOM', 'CONT-VAC', 'REC-VOL'],
     zonas: ['belgrano', 'colegiales'],
@@ -645,9 +653,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Palermo — Recolección y Barrido',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '10010',
+    leaderUserId: '10110',
     organizationId: null,
-    members: ['10010', '10011', '10012', '10013', '10014'],
+    members: ['10110', '10111', '10112', '10113', '10114'],
     active: true,
     tipos: ['REC-DOM', 'BAR-MAN', 'CONT-VAC', 'REC-VOL'],
     zonas: ['palermo'],
@@ -657,9 +665,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Arbolado — Poda y Relevamiento de toda la Ciudad',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '10020',
+    leaderUserId: '10120',
     organizationId: null,
-    members: ['10020', '10021', '10022'],
+    members: ['10120', '10121', '10122'],
     active: true,
     tipos: ['ARB-POD', 'ARB-CENSO'],
     zonas: TODAS_LAS_ZONAS,
@@ -669,9 +677,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Parques y Plazas — Espacios Verdes',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '10030',
+    leaderUserId: '10130',
     organizationId: null,
-    members: ['10030', '10031', '10032', '10033'],
+    members: ['10130', '10131', '10132', '10133'],
     active: true,
     tipos: ['EV-MANT', 'EV-RIEGO'],
     zonas: TODAS_LAS_ZONAS,
@@ -682,9 +690,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cooperativa de Recuperadores Palermo — Reciclables',
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '10040',
+    leaderUserId: '10140',
     organizationId: '3301',
-    members: ['10040', '10041', '10042', '10043'],
+    members: ['10140', '10141', '10142', '10143'],
     active: true,
     tipos: ['REC-REC', 'CONT-VAC'],
     zonas: ['palermo', 'recoleta', 'belgrano', 'colegiales'],
@@ -696,9 +704,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cooperativa de Recuperadores Belgrano y Colegiales — Reciclables',
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '10050',
+    leaderUserId: '10150',
     organizationId: '3302',
-    members: ['10050', '10051', '10052'],
+    members: ['10150', '10151', '10152'],
     active: false,
     tipos: ['REC-REC'],
     zonas: ['belgrano', 'colegiales'],
@@ -709,9 +717,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Recoleta — Recolección y Limpieza',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '10060',
+    leaderUserId: '10160',
     organizationId: null,
-    members: ['10060', '10061', '10062', '10063'],
+    members: ['10160', '10161', '10162', '10163'],
     active: true,
     tipos: ['REC-DOM', 'REC-VOL', 'CONT-VAC', 'CONT-LAV'],
     zonas: ['recoleta'],
@@ -722,9 +730,10 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Control Ambiental — Inspección',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '10070',
+    // El líder es la cuenta de M1 del inspector (10011).
+    leaderUserId: '10011',
     organizationId: null,
-    members: ['10070', '10071'],
+    members: ['10011', '10171'],
     active: true,
     tipos: ['AMB-INSP'],
     zonas: TODAS_LAS_ZONAS,
@@ -735,9 +744,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Centro y Retiro — Recolección Nocturna',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '10080',
+    leaderUserId: '10180',
     organizationId: null,
-    members: ['10080', '10081', '10082', '10083'],
+    members: ['10180', '10181', '10182', '10183'],
     active: true,
     tipos: ['REC-DOM'],
     zonas: CENTRO,
@@ -747,9 +756,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Microcentro — Barrido Manual y Limpieza',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '10090',
+    leaderUserId: '10190',
     organizationId: null,
-    members: ['10090', '10091', '10092', '10093', '10094'],
+    members: ['10190', '10191', '10192', '10193', '10194'],
     active: true,
     tipos: ['BAR-MAN', 'HIG-LAV', 'CONT-VAC', 'CONT-LAV'],
     zonas: CENTRO,
@@ -759,9 +768,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Avenidas — Barrido Mecánico',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '10100',
+    leaderUserId: '10200',
     organizationId: null,
-    members: ['10100', '10101', '10102'],
+    members: ['10200', '10201', '10202'],
     active: true,
     tipos: ['BAR-MEC'],
     zonas: ['san-nicolas', 'montserrat', 'retiro', 'palermo', 'recoleta', 'belgrano', 'colegiales'],
@@ -771,9 +780,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cooperativa de Recuperadores Microcentro — Reciclables',
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '10110',
+    leaderUserId: '10210',
     organizationId: '3303',
-    members: ['10110', '10111', '10112', '10113'],
+    members: ['10210', '10211', '10212', '10213'],
     active: true,
     tipos: ['REC-REC', 'CONT-VAC'],
     zonas: CENTRO,
@@ -781,10 +790,14 @@ export const CREWS: CuadrillaSeed[] = [
 ];
 
 /**
- * Ids de persona que sembraba el seed anterior a #455 (líderes e integrantes de las 16
- * cuadrillas operativas). Se usan para limpiarlos de una base ya sembrada, nada más.
+ * Ids de persona que sembraban versiones anteriores (antes de #455: 101…; #490: 10000 + 10 × i + n)
+ * en las 16 cuadrillas operativas. Son candidatos: IDS_LEGADOS (más abajo) descarta los que hoy
+ * son vigentes, porque 10009–10011 y los bloques desde 10100 se reutilizaron.
  */
-const IDS_LEGADOS = [
+const IDS_LEGADOS_BRUTOS = [
+  ...Array.from({ length: 16 }, (_, i) =>
+    Array.from({ length: 5 }, (_, n) => String(10000 + 10 * i + n)),
+  ).flat(),
   ...['101', '102', '103', '104', '111', '112', '113', '114', '115', '401', '402', '403'],
   ...['501', '502', '503', '504', '201', '202', '203', '204', '211', '212', '213'],
   ...['121', '122', '123', '124', '601', '602', '131', '132', '133', '134'],
@@ -854,6 +867,22 @@ const APELLIDOS = [
   'Silva',
 ];
 
+/** Nombres estables de las 12 cuentas de M1 (los que ya usa el frontend); el resto sale del id. */
+const NOMBRES_FIJOS: Record<string, string> = {
+  '10000': 'Carlos Rodríguez',
+  '10001': 'Marta Gómez',
+  '10002': 'Julián López',
+  '10003': 'Lucía Fernández',
+  '10004': 'Diego Sosa',
+  '10005': 'Valeria Acosta',
+  '10006': 'Mateo Benítez',
+  '10007': 'Camila Medina',
+  '10008': 'Héctor Ríos',
+  '10009': 'Sofía López',
+  '10010': 'Diego Martínez',
+  '10011': 'Carlos Medina',
+};
+
 /**
  * Nombre de ejemplo para un id de M1 del seed: el mismo id da siempre el mismo
  * nombre (sin azar), así una segunda corrida no lo cambia. Los apellidos son 13 y
@@ -861,6 +890,7 @@ const APELLIDOS = [
  * hasta pasadas 156 personas.
  */
 export function nombreDePersona(userId: string): string {
+  if (NOMBRES_FIJOS[userId]) return NOMBRES_FIJOS[userId];
   const n = Number(userId);
   return `${NOMBRES[n % NOMBRES.length]} ${APELLIDOS[n % APELLIDOS.length]}`;
 }
@@ -873,18 +903,21 @@ export function organizacionDe(c: Pick<CuadrillaSeed, 'crewType' | 'name'>): str
 /**
  * Personal de Oficina y auditoría de la demo. Los ids son los `sub` numéricos del
  * token de M1 (no hay usuarios reales: M1 no está hosteado y los tokens de demo los
- * firma scripts/generate-demo-jwt.mjs). El id 1 es el admin inicial y NO lleva fila:
- * es M6_ADMIN por M6_BOOTSTRAP_ADMIN_USER_IDS. Campo sale de las cuadrillas (CREWS).
+ * firma scripts/generate-demo-jwt.mjs). 10000–10008 son las cuentas de M1 del pedido del
+ * 02/11 (#488): 10000–10001 RESPONSABLE_AREA, 10002–10006 ADMINISTRATIVO, 10007–10008 AUDITOR;
+ * 10009–10011 (Campo) salen de las cuadrillas. El id 1 sigue siendo admin sin fila por
+ * M6_BOOTSTRAP_ADMIN_USER_IDS. Campo sale de las cuadrillas (CREWS).
  */
 const PERSONAL_DE_OFICINA: { userId: string; roles: M6Role[] }[] = [
-  { userId: '2', roles: [M6Role.M6_ADMIN] },
-  { userId: '3', roles: [M6Role.M6_OFICINA_OPERACIONES] },
-  { userId: '4', roles: [M6Role.M6_OFICINA_OPERACIONES] },
-  { userId: '5', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
-  { userId: '6', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
-  { userId: '7', roles: [M6Role.M6_OFICINA_OPERACIONES, M6Role.M6_OFICINA_AMBIENTAL] },
-  { userId: '8', roles: [M6Role.M6_AUDITOR] },
-  { userId: '9', roles: [M6Role.M6_AUDITOR] },
+  { userId: '10000', roles: [M6Role.M6_ADMIN] },
+  { userId: '10001', roles: [M6Role.M6_ADMIN] },
+  { userId: '10002', roles: [M6Role.M6_OFICINA_OPERACIONES] },
+  { userId: '10003', roles: [M6Role.M6_OFICINA_OPERACIONES] },
+  { userId: '10004', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '10005', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '10006', roles: [M6Role.M6_OFICINA_OPERACIONES, M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '10007', roles: [M6Role.M6_AUDITOR] },
+  { userId: '10008', roles: [M6Role.M6_AUDITOR] },
 ];
 
 /** Los roles de M6 de cada usuario de la demo: Oficina fija y Campo según su cuadrilla. */
@@ -1661,7 +1694,7 @@ const REGIONES = [
   {
     clave: 'SUR-REC',
     name: 'Cuadrilla Municipal Sur — Recolección Comunas 1 (sur), 4 y 8',
-    lider: '10120',
+    lider: '10220',
     patente: 'AN123PQ',
     rutas: [
       { code: 'R-REC-C01S', zonas: ['san-telmo', 'constitucion'], dia: 6 },
@@ -1672,7 +1705,7 @@ const REGIONES = [
   {
     clave: 'OESTE-REC',
     name: 'Cuadrilla Municipal Oeste — Recolección Comunas 9, 10 y 11',
-    lider: '10130',
+    lider: '10230',
     patente: 'AN246PR',
     rutas: [
       { code: 'R-REC-C09', zonas: deComuna(9), dia: 1 },
@@ -1683,7 +1716,7 @@ const REGIONES = [
   {
     clave: 'CENTRO-REC',
     name: 'Cuadrilla Municipal Centro-Oeste — Recolección Comunas 3, 5, 6 y 7',
-    lider: '10140',
+    lider: '10240',
     patente: 'AN369PS',
     rutas: [
       { code: 'R-REC-C03', zonas: deComuna(3), dia: 2 },
@@ -1695,7 +1728,7 @@ const REGIONES = [
   {
     clave: 'NORTE-REC',
     name: 'Cuadrilla Municipal Noroeste — Recolección Comunas 12, 13 (Núñez) y 15',
-    lider: '10150',
+    lider: '10250',
     patente: 'AN482PT',
     rutas: [
       { code: 'R-REC-C12', zonas: [...deComuna(12), 'nunez'], dia: 1 },
@@ -1754,9 +1787,9 @@ for (const r of REGIONES) {
  * El modelo no ata un vehículo a la cuadrilla (se elige al asignar el servicio, entre los
  * aptos de `VEHICULOS_APTOS` para su tipo), así que no hace falta uno por cuadrilla.
  *
- * Los ids de persona son `10000 + 10 × posición en CREWS` (+ 0..4 por integrante): bloques de
- * diez, sin choque con Oficina (1–9), la demo (900, 901) ni entre cuadrillas, y estables
- * mientras no se reordene CREWS.
+ * Los ids de persona son `BASE_PERSONAS + 10 × posición en CREWS` (+ 0..4 por integrante): bloques
+ * de diez, sin choque con las cuentas de M1 (10000–10011), la demo (900, 901) ni entre cuadrillas,
+ * y estables mientras no se reordene CREWS.
  */
 const RUBROS_GENERADOS: {
   rubro: string;
@@ -1788,7 +1821,7 @@ export const CLAVES_GENERADAS = new Set<string>();
 for (const b of BARRIOS) {
   for (const r of RUBROS_GENERADOS) {
     for (const turno of r.turnos) {
-      const base = 10000 + 10 * CREWS.length;
+      const base = BASE_PERSONAS + 10 * CREWS.length;
       // 2 a 4 personas contando al responsable.
       const personas = 2 + (CREWS.length % 3);
       const clave = `${b.codigo}-${r.rubro}-${turno}`;
@@ -1810,6 +1843,14 @@ for (const b of BARRIOS) {
     }
   }
 }
+
+/**
+ * Ids obsoletos que el seed quita de las 16 operativas en una base ya sembrada: los de
+ * IDS_LEGADOS_BRUTOS menos todo id vigente de CREWS (un integrante actual nunca se borra).
+ * Se calcula acá, con CREWS completo (las generadas recién se agregan arriba).
+ */
+const IDS_VIGENTES = new Set(CREWS.flatMap((c) => [c.leaderUserId, ...c.members]));
+export const IDS_LEGADOS = IDS_LEGADOS_BRUTOS.filter((id) => !IDS_VIGENTES.has(id));
 
 /** La región que atiende una zona, si la atiende alguna. */
 const regionDe = (zona: string) =>
@@ -1907,7 +1948,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.SCHEDULED,
           detectado: [0, 5, 40],
           finEstimado: [0, 11, 35],
-          reportadoPor: '10000',
+          reportadoPor: '10009',
         },
         {
           tipo: DelayType.DURATION,
@@ -1917,7 +1958,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.IN_PROGRESS,
           detectado: [0, 8, 20],
           finEstimado: [0, 11, 50],
-          reportadoPor: '10000',
+          reportadoPor: '10009',
         },
       ],
     },
@@ -4347,7 +4388,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   const inspeccion = (
     reportId: string,
     extra: Partial<Prisma.EnvironmentalInspectionUncheckedCreateInput> = {},
-  ) => tx.environmentalInspection.create({ data: { reportId, inspectorId: '10070', ...extra } });
+  ) => tx.environmentalInspection.create({ data: { reportId, inspectorId: '10011', ...extra } });
 
   /** Emite el acta como `issueNotice`: número correlativo del año, reincidencia y plazo de M4. */
   const acta = async (
