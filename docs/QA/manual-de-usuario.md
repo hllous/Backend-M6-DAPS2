@@ -42,6 +42,24 @@ En la parte superior de la pantalla, junto a **Cerrar sesión**, figura su perfi
 
 Una persona no es Oficina y Campo a la vez. Cada usuario ve solo las entradas de menú que su perfil permite; un botón que falta casi siempre significa que ese paso no corresponde al estado o al perfil (ver sección 4).
 
+### 1.4 Qué cuenta usar en cada tarea
+
+El perfil de cada cuenta decide qué botones ve (sección 4.5). Para repetir las tareas de este manual, ingrese con la cuenta indicada; con otra, es normal que falten botones. La contraseña la entrega el equipo por fuera del manual.
+
+| Tarea | Cuenta | Perfil |
+|---|---|---|
+| 1 (ingresar), 13 (tableros), 14 (consultas) | cualquiera; para el **Monitor de integración**, la de administración | — |
+| 2, 3, 4 (programar, asignar, reprogramar o cancelar servicios), 10 (contenedores, vista de Oficina) | `julian.lopez.10002@municipio.gob.ar` | Oficina de Operaciones |
+| 7 (denuncia ambiental), 8 (programar la inspección y emitir el acta), 9 (sanción y cierre) | `diego.sosa.10004@municipio.gob.ar` | Oficina Ambiental |
+| 8 (hacer la inspección en la calle) | `carlos.medina.10011@municipio.gob.ar` | Campo, inspector |
+| 5, 6, 12 (ejecutar servicios, evidencia, sin conexión), 10 (reportar y vaciar contenedores) | `sofia.lopez.10009@municipio.gob.ar` | Campo, responsable de cuadrilla |
+| Ver cómo se limita el integrante de cuadrilla | `diego.martinez.10010@municipio.gob.ar` | Campo, integrante |
+| Solo lectura | `camila.medina.10007@municipio.gob.ar` | Auditoría |
+| Todo, incluida la administración | `carlos.rodriguez.10000@municipio.gob.ar` | Administración |
+| 11 (consulta del vecino) | ninguna: es pública | — |
+
+Oficina de Operaciones **no** ve las acciones de las denuncias ambientales (**Iniciar revisión**, **Derivar**, **Desestimar**, **Pedir información**, **Programar inspección**): son de Oficina Ambiental y de administración.
+
 ---
 
 ## 2. Tareas
@@ -175,7 +193,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
    - **Desestimar expediente** si se descarta sin inspección.
    - **Pedir información al vecino**.
 
-> **Atención con el perfil.** El recuadro **Acciones** y el botón **Iniciar revisión** dependen de la cuenta: con la cuenta de Oficina `…10002` el detalle se vio **sin** acciones, y con la cuenta de administración `…10000` (también rotulada «Oficina») se ven. Si no ve los botones, ingrese con una cuenta de administración. No se sabe todavía si es una regla o una falta de permiso en la cuenta (ver discrepancias).
+> **Cuenta para esta tarea.** El recuadro **Acciones** y el botón **Iniciar revisión** solo aparecen con una cuenta de **Oficina Ambiental** (`diego.sosa.10004@municipio.gob.ar`) o de administración. Con una cuenta de Oficina de Operaciones (`…10002`) el detalle se ve sin acciones: es lo esperado, no un error (ver 1.4).
 
 **Resultado esperado:** con **Programar inspección**, el expediente pasa a **Inspección programada** y se crea el servicio de inspección para la cuadrilla elegida. El sistema avisa si la denuncia podría estar duplicada.
 
