@@ -8,6 +8,12 @@ export enum ConflictResource {
   VEHICLE = 'VEHICLE',
 }
 
+/** Por qué la cuadrilla elegida no encaja con el servicio, aunque esté libre. */
+export enum AssignmentWarningCode {
+  CREW_ZONE_MISMATCH = 'CREW_ZONE_MISMATCH',
+  CREW_SPECIALTY_MISMATCH = 'CREW_SPECIALTY_MISMATCH',
+}
+
 export class QueryAssignmentConflictsDto {
   @ApiPropertyOptional({ description: 'Cuadrilla a evaluar', format: 'uuid' })
   @IsOptional()
@@ -57,6 +63,22 @@ export class AssignmentConflictDto {
   windowTo: string | null;
 }
 
+export class AssignmentWarningDto {
+  @ApiProperty({
+    enum: AssignmentWarningCode,
+    description:
+      '`CREW_ZONE_MISMATCH`: la zona del servicio no es la zona efectiva de la cuadrilla en la fecha. `CREW_SPECIALTY_MISMATCH`: la especialidad de la cuadrilla no corresponde al tipo de servicio.',
+  })
+  code: AssignmentWarningCode;
+
+  @ApiProperty({
+    description: 'Explicación lista para mostrar al planificador',
+    example:
+      "La cuadrilla 'Cuadrilla Recolección — Palermo' trabaja en Palermo y el servicio es en otra zona",
+  })
+  message: string;
+}
+
 /**
  * Lo que devuelve la consulta de disponibilidad.
  *
@@ -70,11 +92,18 @@ export class AssignmentConflictsResponseDto {
 
   @ApiProperty({
     description:
-      'Si hay algún solapamiento. Con `true`, asignar exige `overrideNote`; la asignación se permite igual.',
+      'Si hay algún solapamiento o aviso de encaje. Con `true`, asignar exige `overrideNote`; la asignación se permite igual.',
     example: true,
   })
   hasConflicts: boolean;
 
   @ApiProperty({ type: [AssignmentConflictDto] })
   conflicts: AssignmentConflictDto[];
+
+  @ApiProperty({
+    type: [AssignmentWarningDto],
+    description:
+      'Avisos de que la cuadrilla no es la esperable para el servicio (zona o especialidad). Vacío si no hay cuadrilla o ella no tiene zona ni especialidad cargadas. Cuentan igual que los solapamientos: exigen `overrideNote`, no bloquean.',
+  })
+  warnings: AssignmentWarningDto[];
 }

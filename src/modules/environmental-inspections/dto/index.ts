@@ -6,6 +6,7 @@ export {
 } from './dtos';
 export {
   InspectionResponseDto,
+  AllowedActionsDto,
   ChecklistItemResponseDto,
   ViolationNoticeResponseDto,
 } from './responses';

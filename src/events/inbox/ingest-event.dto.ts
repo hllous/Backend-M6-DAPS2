@@ -110,6 +110,22 @@ export class IngestEventDto {
   @IsISO8601({ strict: true }, { message: 'occurredAt debe ser una fecha ISO 8601' })
   occurredAt?: string;
 
+  // Typo del catálogo de M1 v3.0 (una sola r). Solo entrada. Sin el alias, por
+  // HTTP (forbidNonWhitelisted) el sobre se rechazaba con 400; por el bus
+  // (RabbitMqConsumer: whitelist sin forbid) el campo se descartaba en silencio y
+  // el evento se procesaba con occurredAt=null, perdiendo el orden "gana el
+  // último". Con el alias ambos caminos lo recuperan. Si vienen los dos, manda
+  // `occurredAt`.
+  @ApiPropertyOptional({
+    description: 'Alias tolerado de occurredAt (typo de M1 v3.0); preferir occurredAt',
+    format: 'date-time',
+    example: '2026-09-29T18:00:00Z',
+    deprecated: true,
+  })
+  @IsOptional()
+  @IsISO8601({ strict: true }, { message: 'occuredAt debe ser una fecha ISO 8601' })
+  occuredAt?: string;
+
   @ApiPropertyOptional({
     maxLength: 60,
     pattern: SOURCE_MODULE.source,
@@ -200,7 +216,7 @@ export function toInboundEnvelope(dto: IngestEventDto): InboundEnvelope {
     eventId: dto.eventId,
     eventType: dto.eventType,
     eventVersion: dto.eventVersion,
-    occurredAt: dto.occurredAt,
+    occurredAt: dto.occurredAt ?? dto.occuredAt,
     sourceModule: dto.sourceModule,
     correlationId: dto.correlationId,
     causationId: dto.causationId,

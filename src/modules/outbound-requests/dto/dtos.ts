@@ -1,6 +1,6 @@
 import { Trim } from '../../../common/decorators';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { RepairDamageType, Severity, StreetClosureType } from '@prisma/client';
+import { RepairDamageType, Severity, StreetClosureType, StreetDirection } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -113,6 +113,15 @@ export class ClosureSectionDto {
   @IsNotEmpty()
   @MaxLength(100)
   toCross: string;
+
+  @ApiProperty({
+    description:
+      'Sentido del tramo cortado: FORWARD (de fromCross a toCross), REVERSE (al revés) o BOTH (ambos).',
+    enum: StreetDirection,
+    example: StreetDirection.BOTH,
+  })
+  @IsEnum(StreetDirection)
+  direction: StreetDirection;
 }
 
 export class CreateStreetClosureRequestDto {
@@ -172,15 +181,14 @@ export class CreateStreetClosureRequestDto {
   @IsDateString()
   requestedTo: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description:
-      'Tipo de corte. Opcional en el esquema unificado con M3; nosotros lo mandamos siempre.',
+      'Tipo de corte. M7 lo tolera ausente pero recomienda mandarlo siempre, así que es obligatorio.',
     enum: StreetClosureType,
     example: StreetClosureType.PARTIAL,
   })
-  @IsOptional()
   @IsEnum(StreetClosureType)
-  closureType?: StreetClosureType;
+  closureType: StreetClosureType;
 }
 
 export class ApproveClosureDto {

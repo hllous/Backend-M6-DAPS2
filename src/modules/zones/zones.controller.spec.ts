@@ -1,6 +1,9 @@
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ZonesController } from './zones.controller';
 import { ZonesService } from './zones.service';
 import { AddNeighborhoodsDto, CreateZoneDto, QueryZonesDto, UpdateZoneDto } from './dto';
+
+const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
 const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
@@ -24,8 +27,8 @@ describe('ZonesController', () => {
 
   it('create delega el dto', async () => {
     const dto = {} as CreateZoneDto;
-    await expect(controller.create(dto)).resolves.toBe(RESULT);
-    expect(service.create).toHaveBeenCalledWith(dto);
+    await expect(controller.create(dto, USER)).resolves.toBe(RESULT);
+    expect(service.create).toHaveBeenCalledWith(dto, USER);
   });
 
   it('findAll delega la query', async () => {
@@ -41,13 +44,13 @@ describe('ZonesController', () => {
 
   it('update delega id y dto', async () => {
     const dto = {} as UpdateZoneDto;
-    await controller.update(ID, dto);
-    expect(service.update).toHaveBeenCalledWith(ID, dto);
+    await controller.update(ID, dto, USER);
+    expect(service.update).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('remove delega el id', async () => {
-    await controller.remove(ID);
-    expect(service.remove).toHaveBeenCalledWith(ID);
+    await controller.remove(ID, USER);
+    expect(service.remove).toHaveBeenCalledWith(ID, USER);
   });
 
   it('addNeighborhoods delega id y dto', async () => {

@@ -16,6 +16,8 @@ export { CreateDelayNoticeDto, DelayNoticeResponseDto } from './delay-notice.dto
 export {
   AssignmentConflictDto,
   AssignmentConflictsResponseDto,
+  AssignmentWarningCode,
+  AssignmentWarningDto,
   ConflictResource,
   QueryAssignmentConflictsDto,
 } from './assignment-conflict.dto';

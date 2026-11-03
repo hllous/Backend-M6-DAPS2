@@ -28,9 +28,11 @@ attachments[]?, updatedBy, updateOccurredAt
 
 🔴 **v1.78 (20/10): `updatedBy.id` es `UUID | null`.** La v1.77 admitía `string | integer | null` (el ejemplo era `"USR-M3-77"`); la v1.78 no admite códigos ni enteros. Para una acción en M2 es el `citizenId` del `ModuleUser`; para `EXTERNAL_USER` es el UUID de la persona en el módulo de origen; es `null` en `SYSTEM` o cuando no hay una persona concreta identificable. El paquete de M2 pasó a 68 casos inválidos (los dos nuevos: `actor.id` no UUID y numérico).
 
+**2/11 (#485):** `updatedBy.id` sale del claim `actorId` (UUID) del access token de M1; si el token no lo trae o no es UUID va `null` y el request no se rechaza. El `sub` numérico nunca viaja acá.
+
 **21/10:** M1 confirmó que sus ids de usuario son numéricos (el `user_id` del login es el `citizenId`) y que M2 tendrá que adaptar su exigencia de UUID; hasta que M2 confirme qué acepta, seguimos con `id: null`. Abierto en [`bloqueantes.md`](../../bloqueantes.md#tablero).
 
-**Resuelto en #314:** `updateTicketStatus()` de `src/events/payloads.ts` manda `{ type: 'EXTERNAL_USER', id: <sub del JWT> }` solo si el `sub` tiene forma de UUID (8-4-4-4-12 hex, laxo como el Core); si no (el JWT es provisorio, [ADR-002](../../decisiones/adr-002-auth-provisoria.md), y M1 documenta `user_id` como `bigint`), manda `id: null` con el mismo `type`. El [schema local](updateTicketStatus.schema.json) ya exige UUID o `null`, y un spec valida los payloads reales contra el paquete de M2 v1.78 cuando está presente.
+**Resuelto en #314:** `updateTicketStatus()` de `src/events/payloads.ts` manda `{ type: 'EXTERNAL_USER', id }` solo si el id recibido tiene forma de UUID (8-4-4-4-12 hex, laxo como el Core); si no, manda `id: null` con el mismo `type`. Lo que se pasaba como `id` era el `sub` del JWT (provisorio, [ADR-002](../../decisiones/adr-002-auth-provisoria.md); M1 documenta `user_id` como `bigint`, así que casi siempre salía `null`); desde #485 ese `sub` quedó reemplazado por el claim `actorId` (ver arriba). El [schema local](updateTicketStatus.schema.json) ya exige UUID o `null`, y un spec valida los payloads reales contra el paquete de M2 v1.78 cuando está presente.
 
 Lo que **no** cambió: `progress` sigue siendo un `Int` de porcentaje y `STARTED`/`PROGRESS` siguen sin estructura de `details`. La fecha agendada ya no es un bloqueante: M2 confirmó el 20/10 que va como texto en `publicMessage` (ver más abajo).
 

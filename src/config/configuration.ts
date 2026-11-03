@@ -12,11 +12,25 @@ export default () => {
       secret: parsed.JWT_SECRET,
       issuer: parsed.JWT_ISSUER,
     },
+    bffSharedKey: parsed.BFF_SHARED_KEY,
     // Ids como string, sin ceros a la izquierda ('007' y '7' son el mismo `sub` de M1).
     bootstrapAdminUserIds: (parsed.M6_BOOTSTRAP_ADMIN_USER_IDS?.split(',') ?? []).map((id) =>
       BigInt(id.trim()).toString(),
     ),
     sanctionDeadlineDays: parsed.SANCTION_DEADLINE_DAYS,
+    indicators: {
+      minSample: parsed.INDICATORS_MIN_SAMPLE,
+      reportDeadlineBusinessDays: parsed.INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS,
+      targets: {
+        coveragePct: parsed.INDICATORS_TARGET_COVERAGE_PCT,
+        compliancePct: parsed.INDICATORS_TARGET_COMPLIANCE_PCT,
+        resolutionBusinessDays: parsed.INDICATORS_TARGET_RESOLUTION_BUSINESS_DAYS,
+        schedulingDeviationPct: parsed.INDICATORS_TARGET_SCHEDULING_DEVIATION_PCT,
+        landfillDiversionPct: parsed.INDICATORS_TARGET_LANDFILL_DIVERSION_PCT ?? null,
+        reportsWithinDeadlinePct: parsed.INDICATORS_TARGET_REPORTS_WITHIN_DEADLINE_PCT,
+        reportsOverduePct: parsed.INDICATORS_TARGET_REPORTS_OVERDUE_PCT,
+      },
+    },
     rabbitmq: {
       url: parsed.RABBITMQ_URL,
       exchange: parsed.RABBITMQ_EXCHANGE,

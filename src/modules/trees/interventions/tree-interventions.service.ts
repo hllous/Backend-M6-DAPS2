@@ -5,8 +5,15 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { Prisma, ServiceMode, TreeInterventionStatus, TreeInterventionType } from '@prisma/client';
+import {
+  M6Role,
+  Prisma,
+  ServiceMode,
+  TreeInterventionStatus,
+  TreeInterventionType,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { AuditActor, AuditService } from '../../../common/audit/audit.service';
 import {
   AssignInterventionServiceDto,
   CreateTreeInterventionDto,
@@ -15,6 +22,7 @@ import {
   AuthorizeInterventionDto,
 } from './dto';
 import { PaginatedResponseDto } from '../../../common/dto';
+import { roleRequiredException } from '../../../common/decorators';
 
 /**
  * Transiciones válidas de TreeIntervention:
@@ -35,9 +43,15 @@ const VALID_TRANSITIONS: Record<TreeInterventionStatus, TreeInterventionStatus[]
 export class TreeInterventionsService {
   private readonly logger = new Logger(TreeInterventionsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
-  async create(dto: CreateTreeInterventionDto): Promise<TreeInterventionResponseDto> {
+  async create(
+    dto: CreateTreeInterventionDto,
+    actor: AuditActor,
+  ): Promise<TreeInterventionResponseDto> {
     // Verificar que todos los árboles existen
     const trees = await this.prisma.tree.findMany({
       where: { id: { in: dto.treeIds } },
@@ -50,21 +64,33 @@ export class TreeInterventionsService {
       throw new NotFoundException(`Árboles no encontrados: ${missing.join(', ')}`);
     }
 
-    const intervention = await this.prisma.treeIntervention.create({
-      data: {
-        interventionType: dto.interventionType,
-        address: dto.address ?? null,
-        requiresStreetClosure: dto.requiresStreetClosure ?? false,
-        status: TreeInterventionStatus.REQUESTED,
-        priority: dto.priority ?? null,
-        justification: dto.justification ?? null,
-        trees: {
-          createMany: {
-            data: dto.treeIds.map((treeId) => ({ treeId })),
+    const intervention = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.treeIntervention.create({
+        data: {
+          interventionType: dto.interventionType,
+          address: dto.address ?? null,
+          requiresStreetClosure: dto.requiresStreetClosure ?? false,
+          status: TreeInterventionStatus.REQUESTED,
+          // Quién solicita lo dice el token: sin esto no se puede auditar la separación de funciones.
+          requestedByUserId: actor.userId,
+          priority: dto.priority ?? null,
+          justification: dto.justification ?? null,
+          trees: {
+            createMany: {
+              data: dto.treeIds.map((treeId) => ({ treeId })),
+            },
           },
         },
-      },
-      include: { trees: true },
+        include: { trees: true },
+      });
+      await this.audit.record(tx, {
+        entityType: 'TREE_INTERVENTION',
+        entityId: created.id,
+        action: 'CREATE',
+        toStatus: TreeInterventionStatus.REQUESTED,
+        actor,
+      });
+      return created;
     });
 
     this.logger.log(
@@ -126,7 +152,10 @@ export class TreeInterventionsService {
   /**
    * REQUESTED → PENDING_AUTHORIZATION (para REMOVAL).
    */
-  async submitForAuthorization(id: string): Promise<TreeInterventionResponseDto> {
+  async submitForAuthorization(
+    id: string,
+    actor: AuditActor,
+  ): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
 
     if (intervention.interventionType !== TreeInterventionType.REMOVAL) {
@@ -135,7 +164,12 @@ export class TreeInterventionsService {
       );
     }
 
-    return this.transition(intervention, TreeInterventionStatus.PENDING_AUTHORIZATION);
+    return this.transition(
+      actor,
+      'SUBMIT_FOR_AUTHORIZATION',
+      intervention,
+      TreeInterventionStatus.PENDING_AUTHORIZATION,
+    );
   }
 
   /**
@@ -144,9 +178,10 @@ export class TreeInterventionsService {
   async authorize(
     id: string,
     dto: AuthorizeInterventionDto,
-    userId: string,
+    actor: AuditActor,
   ): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
+    this.assertCanDecideRemoval(intervention, actor.userId, actor.roles);
 
     // Sin esto una extracción se autoriza directo desde REQUESTED y el control
     // de autorización queda salteado: la tabla de transiciones habilita
@@ -160,9 +195,9 @@ export class TreeInterventionsService {
       );
     }
 
-    return this.transition(intervention, TreeInterventionStatus.AUTHORIZED, {
+    return this.transition(actor, 'AUTHORIZE', intervention, TreeInterventionStatus.AUTHORIZED, {
       // Quién autoriza lo dice el token, nunca el body (dto.authorizedByUserId está deprecado e ignorado).
-      authorizedByUserId: userId,
+      authorizedByUserId: actor.userId,
       authorizedAt: new Date(),
       ...(dto.justification && { justification: dto.justification }),
     });
@@ -171,9 +206,10 @@ export class TreeInterventionsService {
   /**
    * PENDING_AUTHORIZATION → REJECTED.
    */
-  async reject(id: string): Promise<TreeInterventionResponseDto> {
+  async reject(id: string, actor: AuditActor): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
-    return this.transition(intervention, TreeInterventionStatus.REJECTED);
+    this.assertCanDecideRemoval(intervention, actor.userId, actor.roles);
+    return this.transition(actor, 'REJECT', intervention, TreeInterventionStatus.REJECTED);
   }
 
   /**
@@ -187,6 +223,7 @@ export class TreeInterventionsService {
   async assignService(
     id: string,
     dto: AssignInterventionServiceDto,
+    actor: AuditActor,
   ): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
 
@@ -213,10 +250,21 @@ export class TreeInterventionsService {
 
     try {
       // Sin evento hacia M7: solo consume streetClosureRequested (#345).
-      const updated = await this.prisma.treeIntervention.update({
-        where: { id },
-        data: { serviceId: dto.serviceId },
-        include: { trees: true },
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const row = await tx.treeIntervention.update({
+          where: { id },
+          data: { serviceId: dto.serviceId },
+          include: { trees: true },
+        });
+        await this.audit.record(tx, {
+          entityType: 'TREE_INTERVENTION',
+          entityId: id,
+          action: 'ASSIGN_SERVICE',
+          fromStatus: intervention.status,
+          toStatus: intervention.status,
+          actor,
+        });
+        return row;
       });
 
       this.logger.log(`Intervención ${id}: asociada al servicio ${dto.serviceId}`);
@@ -244,7 +292,32 @@ export class TreeInterventionsService {
     return intervention;
   }
 
+  /**
+   * Autorizar o rechazar una extracción es decisión del responsable de área
+   * (M6_ADMIN), no de quien la solicita. Se chequea acá y no solo en @Roles porque
+   * la misma ruta sirve a las podas, que no requieren autorización. Un admin puede
+   * decidir sobre lo que él mismo solicitó: queda registrado en requestedByUserId.
+   */
+  private assertCanDecideRemoval(
+    intervention: { id: string; interventionType: TreeInterventionType },
+    userId: string,
+    roles: readonly M6Role[],
+  ): void {
+    if (
+      intervention.interventionType === TreeInterventionType.REMOVAL &&
+      !roles.includes(M6Role.M6_ADMIN)
+    ) {
+      // Para detectar quién intenta decidir una extracción sin ser responsable de área.
+      this.logger.warn(
+        `Decisión sobre extracción denegada: usuario=${userId} intervención=${intervention.id} (requiere M6_ADMIN)`,
+      );
+      throw roleRequiredException();
+    }
+  }
+
   private async transition(
+    actor: AuditActor,
+    action: string,
     intervention: any,
     targetStatus: TreeInterventionStatus,
     additionalData: Record<string, any> = {},
@@ -257,13 +330,26 @@ export class TreeInterventionsService {
       );
     }
 
-    const updated = await this.prisma.treeIntervention.update({
-      where: { id: intervention.id },
-      data: { status: targetStatus, ...additionalData },
-      include: { trees: true },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.treeIntervention.update({
+        where: { id: intervention.id },
+        data: { status: targetStatus, ...additionalData },
+        include: { trees: true },
+      });
+      await this.audit.record(tx, {
+        entityType: 'TREE_INTERVENTION',
+        entityId: intervention.id,
+        action,
+        fromStatus: currentStatus,
+        toStatus: targetStatus,
+        actor,
+      });
+      return row;
     });
 
-    this.logger.log(`Intervención ${intervention.id}: ${intervention.status} → ${targetStatus}`);
+    this.logger.log(
+      `Intervención ${intervention.id}: ${intervention.status} → ${targetStatus} (usuario ${actor.userId})`,
+    );
     return this.toResponseDto(updated);
   }
 
@@ -276,6 +362,7 @@ export class TreeInterventionsService {
       address: intervention.address,
       requiresStreetClosure: intervention.requiresStreetClosure,
       priority: intervention.priority,
+      requestedByUserId: intervention.requestedByUserId,
       authorizedByUserId: intervention.authorizedByUserId,
       authorizedAt: intervention.authorizedAt,
       justification: intervention.justification,

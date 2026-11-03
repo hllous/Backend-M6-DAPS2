@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { M6Role, Prisma } from '@prisma/client';
 import { notAssignedException, roleRequiredException } from '../../common/decorators';
+import { ROLES_CAMPO } from '../../auth/role-groups';
 import { belongsToCrew, isInspectionAssignee } from '../../common/ownership';
 import { paraLog } from '../../events/log-safe';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -135,7 +136,15 @@ export class AttachmentsService {
     }
   }
 
-  async findByOwner(query: QueryEvidenceDto): Promise<EvidenceResponseDto[]> {
+  async findByOwner(
+    query: QueryEvidenceDto,
+    roles: readonly M6Role[],
+    userId: string,
+  ): Promise<EvidenceResponseDto[]> {
+    // Campo ve solo lo suyo; cualquier otro rol de lectura (Oficina, Auditoría) ve todo.
+    if (roles.every((r) => (ROLES_CAMPO as readonly M6Role[]).includes(r))) {
+      await this.assertOwnerAccess(query.ownerType, query.ownerId, userId);
+    }
     const attachments = await this.prisma.attachment.findMany({
       where: { ownerType: query.ownerType, ownerId: query.ownerId },
       orderBy: { uploadedAt: 'asc' },

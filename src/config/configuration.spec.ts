@@ -258,3 +258,88 @@ describe('configuration — Core', () => {
     );
   });
 });
+
+describe('configuration — metas de los indicadores (#473, #475)', () => {
+  it('por defecto son las que definió el equipo el 29/10', () => {
+    expect(config().indicators).toEqual({
+      minSample: 5,
+      reportDeadlineBusinessDays: 5,
+      targets: {
+        coveragePct: 95,
+        compliancePct: 90,
+        resolutionBusinessDays: 5,
+        schedulingDeviationPct: 10,
+        landfillDiversionPct: null,
+        reportsWithinDeadlinePct: 85,
+        reportsOverduePct: 10,
+      },
+    });
+  });
+
+  it('se pueden cambiar por variable de entorno', () => {
+    const { indicators } = config({
+      INDICATORS_TARGET_COVERAGE_PCT: '97.5',
+      INDICATORS_TARGET_COMPLIANCE_PCT: '92',
+      INDICATORS_TARGET_RESOLUTION_BUSINESS_DAYS: '4',
+      INDICATORS_TARGET_SCHEDULING_DEVIATION_PCT: '8',
+      INDICATORS_TARGET_LANDFILL_DIVERSION_PCT: '30',
+      INDICATORS_MIN_SAMPLE: '10',
+      INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS: '3',
+      INDICATORS_TARGET_REPORTS_WITHIN_DEADLINE_PCT: '90',
+      INDICATORS_TARGET_REPORTS_OVERDUE_PCT: '5',
+    });
+
+    expect(indicators).toEqual({
+      minSample: 10,
+      reportDeadlineBusinessDays: 3,
+      targets: {
+        coveragePct: 97.5,
+        compliancePct: 92,
+        resolutionBusinessDays: 4,
+        schedulingDeviationPct: 8,
+        landfillDiversionPct: 30,
+        reportsWithinDeadlinePct: 90,
+        reportsOverduePct: 5,
+      },
+    });
+  });
+
+  it('la meta del relleno vacía cuenta como no definida', () => {
+    expect(
+      config({ INDICATORS_TARGET_LANDFILL_DIVERSION_PCT: '' }).indicators.targets
+        .landfillDiversionPct,
+    ).toBeNull();
+  });
+
+  it.each([
+    ['INDICATORS_TARGET_COVERAGE_PCT', '101'],
+    ['INDICATORS_TARGET_COVERAGE_PCT', '-1'],
+    ['INDICATORS_TARGET_COMPLIANCE_PCT', 'abc'],
+    ['INDICATORS_TARGET_SCHEDULING_DEVIATION_PCT', '150'],
+    ['INDICATORS_TARGET_LANDFILL_DIVERSION_PCT', '120'],
+    ['INDICATORS_TARGET_RESOLUTION_BUSINESS_DAYS', '0'],
+    ['INDICATORS_MIN_SAMPLE', '0'],
+    ['INDICATORS_MIN_SAMPLE', '2.5'],
+    ['INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS', '0'],
+    ['INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS', '-3'],
+    ['INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS', 'cinco'],
+    ['INDICATORS_TARGET_REPORTS_WITHIN_DEADLINE_PCT', '101'],
+    ['INDICATORS_TARGET_REPORTS_WITHIN_DEADLINE_PCT', '-1'],
+    ['INDICATORS_TARGET_REPORTS_OVERDUE_PCT', '150'],
+    ['INDICATORS_TARGET_REPORTS_OVERDUE_PCT', 'abc'],
+  ])('rechaza %s=%p', (nombre, valor) => {
+    expect(() => config({ [nombre]: valor })).toThrow();
+  });
+});
+
+describe('configuration — BFF_SHARED_KEY', () => {
+  it('sin la variable (o vacía) no hay clave: el throttler no confía en el header', () => {
+    expect(config().bffSharedKey).toBeUndefined();
+    expect(config({ BFF_SHARED_KEY: '' }).bffSharedKey).toBeUndefined();
+  });
+
+  it('acepta una clave de 32 caracteres o más y rechaza una más corta', () => {
+    expect(config({ BFF_SHARED_KEY: 'a'.repeat(32) }).bffSharedKey).toBe('a'.repeat(32));
+    expect(() => config({ BFF_SHARED_KEY: 'a'.repeat(31) })).toThrow(/BFF_SHARED_KEY/);
+  });
+});

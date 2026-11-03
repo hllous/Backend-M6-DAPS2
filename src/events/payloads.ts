@@ -168,9 +168,9 @@ export function infrastructureRepairRequested(
 
 // ─── streetClosureRequested → M7 ──────────────────
 
-/** Un tramo, como texto plano: `affectedSections` es un array de strings. */
-function seccion(s: ClosureStreet): string {
-  return `${s.streetName} entre ${s.fromCross} y ${s.toCross}`;
+/** Un tramo en la forma de M7: `{street, from, to, direction}`. */
+function seccion(s: ClosureStreet) {
+  return { street: s.streetName, from: s.fromCross, to: s.toCross, direction: s.direction };
 }
 
 /**
@@ -214,9 +214,9 @@ export type TicketUpdateType =
 const ACTOR_SISTEMA = 'sistema';
 
 /**
- * M2 v1.78 exige que `updatedBy.id` sea UUID o null. El `sub` del JWT provisorio
- * puede ser un código o un entero, y ahí mandamos null (la persona sigue siendo
- * EXTERNAL_USER). Laxo como el Core: 8-4-4-4-12 hex, sin mirar versión.
+ * M2 v1.78 exige que `updatedBy.id` sea UUID o null. Viene del claim `actorId` del
+ * token de M1 (#485); el `sub` es un entero y nunca va acá. Sin `actorId` válido
+ * mandamos null (la persona sigue siendo EXTERNAL_USER). Laxo como el Core: 8-4-4-4-12 hex, sin mirar versión.
  */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -230,7 +230,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function updateTicketStatus(params: {
   ticketId: string;
   updateType: TicketUpdateType;
-  updatedById: string;
+  updatedById: string | null;
   publicMessage?: string;
   internalMessage?: string;
   details?: Record<string, unknown>;
@@ -247,7 +247,7 @@ export function updateTicketStatus(params: {
       ? { type: 'SYSTEM' as const, id: null }
       : {
           type: 'EXTERNAL_USER' as const,
-          id: UUID.test(params.updatedById) ? params.updatedById : null,
+          id: params.updatedById && UUID.test(params.updatedById) ? params.updatedById : null,
         },
     // Antes `statusChangedAt` en la v1.5. Renombrado en la v1.6 (§8.1).
     updateOccurredAt: new Date().toISOString(),

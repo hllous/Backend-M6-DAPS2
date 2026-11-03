@@ -47,7 +47,7 @@ export const envSchema = z
     // cierra un CSRF: es higiene, no un limite de seguridad.
     CORS_ORIGINS: z.string().optional(),
 
-    // JWT de M1: HS256 con la clave simétrica compartida (`APP_JWT_SECRET` de M1),
+    // JWT de M1: HMAC (HS256, HS384 o HS512) con la clave simétrica compartida (`APP_JWT_SECRET` de M1),
     // en BASE64 y de al menos 256 bits. Nunca en el repo.
     JWT_SECRET: z
       .string()
@@ -60,6 +60,15 @@ export const envSchema = z
       ),
     // `iss` que exigimos en el token.
     JWT_ISSUER: z.string().min(1).default('modulo1-ciudadanos'),
+
+    // Secreto compartido con el BFF del frontend (header `X-M6-BFF-Key`). Con él
+    // el límite de tasa del portal cuenta la IP del vecino que reenvía el BFF en
+    // `X-Forwarded-For`; sin él, o con otro valor, cuenta `req.ip`. Vacía cuenta
+    // como ausente. Mínimo 32 caracteres: es un secreto, no una etiqueta (#470).
+    BFF_SHARED_KEY: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().trim().min(32, 'BFF_SHARED_KEY: mínimo 32 caracteres').optional(),
+    ),
 
     // Ids de M1 (`sub`, numéricos) de los M6_ADMIN iniciales, separados por coma.
     // Sin ellos nadie puede asignar roles (ADR-008). Además necesitan el rol
@@ -78,6 +87,30 @@ export const envSchema = z
     // Plazo que le damos a M4 para resolver un acta antes de cerrar el
     // expediente por vencimiento. Ver ReportDeadlineSweeper.
     SANCTION_DEADLINE_DAYS: z.coerce.number().int().positive().default(30),
+
+    // Metas del tablero de indicadores (docs/api/endpoints.md, sección indicators).
+    // Los valores por defecto son los que definió el equipo el 29/10 (#461).
+    INDICATORS_TARGET_COVERAGE_PCT: z.coerce.number().min(0).max(100).default(95),
+    INDICATORS_TARGET_COMPLIANCE_PCT: z.coerce.number().min(0).max(100).default(90),
+    // Días hábiles (lunes a viernes) entre el alta y el cierre de la denuncia.
+    INDICATORS_TARGET_RESOLUTION_BUSINESS_DAYS: z.coerce.number().positive().default(5),
+    INDICATORS_TARGET_SCHEDULING_DEVIATION_PCT: z.coerce.number().min(0).max(100).default(10),
+    // Sin meta acordada todavía: vacía o ausente = no hay meta (el tablero no la dibuja).
+    INDICATORS_TARGET_LANDFILL_DIVERSION_PCT: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.coerce.number().min(0).max(100).optional(),
+    ),
+    // Plazo objetivo de resolución de una denuncia, en días hábiles (#475). Es un
+    // plazo único para todos los tipos: supuesto de M6 hasta que M2 acuerde el
+    // suyo. Lo comparten "resueltos dentro del plazo" y "pendientes vencidos".
+    INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS: z.coerce.number().positive().default(5),
+    // Resueltos dentro del plazo ÷ resueltos: se cumple con ≥ 85 %.
+    INDICATORS_TARGET_REPORTS_WITHIN_DEADLINE_PCT: z.coerce.number().min(0).max(100).default(85),
+    // Abiertos que superaron el plazo ÷ abiertos: se cumple con ≤ 10 %.
+    INDICATORS_TARGET_REPORTS_OVERDUE_PCT: z.coerce.number().min(0).max(100).default(10),
+    // Debajo de esta cantidad de programados el porcentaje de una zona o tipo de
+    // servicio se marca `lowSample`: 2 de 2 no es un 100 % que merezca festejo.
+    INDICATORS_MIN_SAMPLE: z.coerce.number().int().positive().default(5),
 
     // RabbitMQ — el bus del Core (M9). Sin RABBITMQ_URL los eventos se encolan
     // en el outbox y se registran en el log, no hay consumidor, y la app arranca

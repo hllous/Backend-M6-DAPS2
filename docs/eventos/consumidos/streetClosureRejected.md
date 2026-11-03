@@ -27,7 +27,7 @@ streetClosureRejected
 
 `rejectionReason` es lo que separa "esta calle no se puede cortar" de "no en ese horario". Del primero no se reintenta; del segundo sí, con otra ventana.
 
-M6 copia `rejectionReason` al `statusReason` del servicio marcado para reprogramar, así el operador ve el motivo. Si llega un sobre con el nombre viejo `reason` también se toma.
+M6 copia `rejectionReason` al `statusReason` del servicio marcado para reprogramar, así el operador ve el motivo. Si llega un sobre con el nombre viejo `reason` también se toma. Además se guarda en `StreetClosureRequest.rejectionReason` (máx. 500 caracteres) y se expone por REST; el rechazo manual (`POST /street-closure-requests/:id/reject`) guarda el `reason` del body.
 
 Los campos de origen llegaron con otro nombre del que pedimos (`closureRequestId`/`requestingModule`), pero el dato está — igual que en [`streetClosureEnded`](streetClosureEnded.md) desde el 30/08.
 

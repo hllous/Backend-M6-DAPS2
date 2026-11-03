@@ -72,12 +72,26 @@ erDiagram
         enum crew_type "CrewType"
         varchar leader_user_id "EXT M1"
         varchar organization_id "EXT M1"
+        varchar leader_name "copia de M1"
+        varchar organization_name "copia de M1"
+        enum specialty "CrewSpecialty, nullable"
+        uuid home_zone_id FK "zona base, nullable"
         enum default_shift "Shift"
         boolean active
     }
     CREW_MEMBER {
         uuid crew_id PK
         varchar user_id PK "EXT M1"
+        varchar display_name "copia de M1"
+    }
+    CREW_ZONE_ASSIGNMENT {
+        uuid id PK
+        uuid crew_id FK
+        uuid zone_id FK
+        date valid_from
+        date valid_to "null = hasta nuevo aviso"
+        varchar reason
+        varchar created_by "EXT M1"
     }
     VEHICLE {
         uuid id PK
@@ -106,7 +120,7 @@ erDiagram
         varchar ticket_id "EXT M2"
         varchar weather_alert_id "alerta simulada, sin tabla ni FK"
         text notes
-        text assignment_override_note "solo si se asigno o programo sobre un solapamiento"
+        text assignment_override_note "solo si se asigno o programo sobre un solapamiento o un aviso de zona o especialidad"
         varchar assignment_override_by "EXT M1"
         timestamp assignment_override_at
     }
@@ -180,6 +194,13 @@ erDiagram
         enum severity "solo DAMAGED"
         boolean requires_public_works "solo DAMAGED"
     }
+    CONTAINER_STATUS_HISTORY {
+        uuid id PK
+        uuid container_id FK
+        enum from_status "ContainerStatus, null en el alta"
+        enum to_status "ContainerStatus"
+        timestamp changed_at
+    }
     GREEN_POINT {
         uuid id PK
         varchar code UK
@@ -227,8 +248,9 @@ erDiagram
         boolean requires_street_closure
         enum status "TreeInterventionStatus"
         enum priority "Severity"
-        varchar authorized_by_user_id "solo REMOVAL"
-        timestamp authorized_at "solo REMOVAL"
+        varchar requested_by_user_id "quien la solicitó (token)"
+        varchar authorized_by_user_id "al autorizar (REMOVAL y podas)"
+        timestamp authorized_at "al autorizar (REMOVAL y podas)"
         text justification "solo REMOVAL"
         timestamp pruning_scheduled_at "columna sin uso: antes marca de treePruningScheduled emitido"
     }
@@ -336,6 +358,7 @@ erDiagram
         timestamp closure_to
         timestamp approved_from
         timestamp approved_to
+        varchar rejection_reason
         enum status "StreetClosureRequestStatus"
         varchar closure_id "EXT M7"
     }
@@ -392,6 +415,9 @@ erDiagram
     SERVICE_FREQUENCY ||--|{ FREQUENCY_WEEKDAY : "corre los"
 
     CREW              ||--o{ CREW_MEMBER : integra
+    ZONE              ||--o{ CREW : "zona base de"
+    CREW              ||--o{ CREW_ZONE_ASSIGNMENT : "se reubica por"
+    ZONE              ||--o{ CREW_ZONE_ASSIGNMENT : "recibe"
     SERVICE_TYPE      ||--o{ SERVICE : tipifica
     ROUTE             ||--o{ SERVICE : "recorre en ROUTE"
     CREW              ||--o{ SERVICE : ejecuta
@@ -408,6 +434,7 @@ erDiagram
     SERVICE_DELAY_NOTICE ||--o| SERVICE_DELAY_NOTICE : reemplaza
 
     ZONE              ||--o{ CONTAINER : ubica
+    CONTAINER         ||--o{ CONTAINER_STATUS_HISTORY : "tiene historial de"
     ZONE              ||--o{ GREEN_POINT : ubica
     ZONE              ||--o{ TREE : ubica
     ZONE              ||--o{ GREEN_SPACE : ubica
@@ -436,7 +463,7 @@ erDiagram
 | 4 | `VIOLATION_NOTICE` 1:1 con la inspección y sin `UPDATE` | Acta inmutable: si hay error se emite otra. En la práctica: sin endpoint de edición, y con trigger o permiso que bloquee `UPDATE`/`DELETE` |
 | 5 | `SANCTION_OUTCOME` separado del acta | Es espejo de solo lectura de lo que decide M4. Separarlo deja explícito que ese registro no lo escribe nuestro dominio sino el consumidor de eventos |
 | 6 | `ENVIRONMENTAL_REPORT.deadline_at` (campo agregado) | El paso `NOTICE_ISSUED → CLOSED` por vencimiento de plazo es diseño explícito, no atajo. Necesita una fecha materializada para que un job la barra; no está en el doc porque el doc modela el *qué*, no el *cómo* |
-| 7 | `damage_type`, `severity`, `requires_public_works` como columnas nullables en `CONTAINER` | Solo se llenan en `DAMAGED`. La alternativa (tabla `CONTAINER_DAMAGE` con historial) es mejor si se quiere saber cuántas veces se rompió un contenedor: hoy el doc no lo pide |
+| 7 | `damage_type`, `severity`, `requires_public_works` como columnas nullables en `CONTAINER` | Solo se llenan en `DAMAGED`. La alternativa (tabla `CONTAINER_DAMAGE` con historial) es mejor si se quiere saber cuántas veces se rompió un contenedor: hoy el doc no lo pide. El historial de **estados** sí existe desde #475 (`CONTAINER_STATUS_HISTORY`), pero no guarda el detalle del daño |
 | 8 | `OUTBOX_EVENT` / `INBOX_EVENT` | No son dominio, pero el módulo publica 6 eventos y consume 10. Sin outbox transaccional, un commit que falla al publicar deja el estado y el bus desincronizados; sin inbox con `message_id` único, un evento reentregado por M4 duplica el `SANCTION_OUTCOME` |
 | 8b | `TICKET_M2_STATE` | M2 no avisa el `IN_PROGRESS`: el estado del ticket lo llevamos nosotros (deducido de lo que publicamos, corregido con el `currentStatus` que M2 informa) para elegir entre `STARTED` y `PROGRESS` al informar la programación (#303). Sin FK: el `ticket_id` es de M2 y puede no tener expediente ni servicio |
 | 9 | Los enums viven en el código, no en tablas de catálogo | Son valores cerrados versionados con el código (33 en total). `SERVICE_TYPE` y `ZONE` sí son tablas: esos los configura el municipio |

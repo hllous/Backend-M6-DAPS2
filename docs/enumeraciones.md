@@ -37,14 +37,16 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 | `SuggestedAction` | `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE` |
 | `SanctionDecision` | `FINE_ISSUED`, `CLOSURE_ORDERED`, `FORMAL_NOTICE_ISSUED`, `DISMISSED` |
 | `CrewType` | `MUNICIPAL`, `COOPERATIVE`, `CONTRACTOR` |
+| `CrewSpecialty` | `COLLECTION`, `SWEEPING`, `CLEANING`, `RECYCLING`, `TREES`, `GREEN_SPACES`, `INSPECTION` |
 | `VehicleType` | `COMPACTOR_TRUCK`, `DUMP_TRUCK`, `SWEEPER`, `WATER_TANKER`, `CRANE_TRUCK`, `VAN` |
 | `Shift` | `MORNING`, `AFTERNOON`, `NIGHT` |
 | `RepairDamageType` | `BROKEN_PAVEMENT`, `BROKEN_SIDEWALK`, `BROKEN_STREETLIGHT`, `BLOCKED_DRAIN`, `DAMAGED_STRUCTURE` |
 | `RepairRequestStatus` | `REQUESTED`, `IN_PROGRESS`, `CLOSED` |
 | `StreetClosureType` | `TOTAL`, `PARTIAL` |
+| `StreetDirection` | `FORWARD`, `REVERSE`, `BOTH` |
 | `StreetClosureRequestStatus` | `REQUESTED`, `APPROVED`, `REJECTED`, `ENDED`, `EXPIRED` |
 
-Son 33 enums de dominio (`prisma/schema.prisma` tiene 35: faltan `OutboxEventStatus` —`PENDING`, `SENT`, `FAILED`— y `TicketStateSource` —`DEDUCED`, `RECEIVED`, de dónde salió el estado del ticket en M2 (#303)—, ambos de infraestructura). `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
+Son 34 enums de dominio (`prisma/schema.prisma` tiene 36: faltan `OutboxEventStatus` —`PENDING`, `SENT`, `FAILED`— y `TicketStateSource` —`DEDUCED`, `RECEIVED`, de dónde salió el estado del ticket en M2 (#303)—, ambos de infraestructura). `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
 
 ## Divergencias con el acuerdo publicado — resueltas
 

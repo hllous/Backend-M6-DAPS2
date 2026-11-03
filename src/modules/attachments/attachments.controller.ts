@@ -25,7 +25,7 @@ import { MAX_EVIDENCE_SIZE_BYTES } from './evidence-mime';
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiNotAssigned, CurrentUser, Roles } from '../../common/decorators';
 import { M6Role } from '@prisma/client';
-import { ROLES_CAMPO } from '../../auth/role-groups';
+import { ROLES_CAMPO, ROLES_EVIDENCIA_LECTURA } from '../../auth/role-groups';
 
 @ApiTags('evidence')
 @ApiBearerAuth('JWT-auth')
@@ -104,9 +104,15 @@ export class AttachmentsController {
   }
 
   @Get()
+  @ApiNotAssigned(
+    'la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION)',
+  )
+  @Roles(...ROLES_EVIDENCIA_LECTURA)
   @ApiOperation({
     summary: 'Listar evidencia de un recurso',
-    description: 'Retorna toda la evidencia asociada a un ownerType/ownerId, ordenada por fecha.',
+    description:
+      'Retorna toda la evidencia asociada a un ownerType/ownerId, ordenada por fecha. ' +
+      'Campo solo ve la de lo suyo (cuadrilla del servicio, inspector asignado); Oficina, Admin y Auditoría ven cualquiera.',
   })
   @ApiResponse({
     status: 200,
@@ -115,8 +121,17 @@ export class AttachmentsController {
     isArray: true,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 404,
+    description: 'Campo consulta un recurso que no existe',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async findByOwner(@Query() query: QueryEvidenceDto): Promise<EvidenceResponseDto[]> {
-    return this.attachmentsService.findByOwner(query);
+  async findByOwner(
+    @Query() query: QueryEvidenceDto,
+    @CurrentUser('roles') roles: M6Role[],
+    @CurrentUser('userId') userId: string,
+  ): Promise<EvidenceResponseDto[]> {
+    return this.attachmentsService.findByOwner(query, roles, userId);
   }
 }

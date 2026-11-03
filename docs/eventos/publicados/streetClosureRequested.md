@@ -15,7 +15,7 @@ Al crear una [`StreetClosureRequest`](../../entidades/derivaciones.md#streetclos
 ```
 closureRequestId, sourceModule, sourceRef,
 reason, affectedSections[], requestedFrom, requestedTo,
-closureType?, requestedAt
+closureType, requestedAt
 ```
 
 | Campo | Nota |
@@ -23,11 +23,11 @@ closureType?, requestedAt
 | `closureRequestId` | Nuestro. Antes se llamaba `requestId` — renombrado para compartir esquema con la solicitud que manda M3 |
 | `sourceModule` | `M3` \| `M6`. Para nosotros, siempre `M6`. M7 confirmó el 20/10 que lee este campo (el `sourceModule: "ambiente"` del sobre es solo el productor ante el Core) |
 | `sourceRef` | El `serviceId` (`sourceType = SERVICE`) o el `interventionId` de la poda (`sourceType = TREE_INTERVENTION`) que origina el corte; el tipo no viaja, M7 lo ubica por el id. En la solicitud de M3 cumple el mismo rol que su `workOrderId` |
-| `affectedSections[]` | Antes `streets[]` |
+| `affectedSections[]` | Antes `streets[]`. Tramos `{street, from, to, direction}`; `direction` es `StreetDirection` (`FORWARD` \| `REVERSE` \| `BOTH`). M7 los exige estructurados (31/10). En el REST de M6 los campos son `streetName`/`fromCross`/`toCross`. `previousClosureRequestId` (prórroga) no se manda |
 | `requestedFrom`, `requestedTo` | Antes `from` / `to` |
-| `closureType` | Opcional en el esquema unificado (antes requerido). Nosotros lo seguimos mandando siempre |
+| `closureType` | Opcional en el esquema unificado; nosotros lo mandamos siempre (obligatorio en el alta) |
 
-Enums: `closureType` es `StreetClosureType` — ver [enumeraciones.md](../../enumeraciones.md).
+Enums: `closureType` es `StreetClosureType` y `direction`, `StreetDirection` — ver [enumeraciones.md](../../enumeraciones.md).
 
 ## Qué le pedimos al consumidor
 

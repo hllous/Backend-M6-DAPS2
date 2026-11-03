@@ -1,5 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsOptional, IsUUID } from 'class-validator';
+import { IsDateString, IsIn, IsOptional, IsUUID } from 'class-validator';
+
+export const BUCKETS = ['day', 'week', 'month'] as const;
+export type Bucket = (typeof BUCKETS)[number];
 
 /**
  * El período que filtra todos los indicadores.
@@ -23,6 +26,24 @@ export class PeriodQueryDto {
   @IsOptional()
   @IsDateString()
   to?: string;
+
+  @ApiPropertyOptional({
+    enum: BUCKETS,
+    description:
+      'Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)',
+  })
+  @IsOptional()
+  @IsIn(BUCKETS)
+  bucket?: Bucket;
+
+  @ApiPropertyOptional({
+    enum: ['previous'],
+    description:
+      'Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia',
+  })
+  @IsOptional()
+  @IsIn(['previous'])
+  compare?: 'previous';
 }
 
 export class ServicePeriodQueryDto extends PeriodQueryDto {

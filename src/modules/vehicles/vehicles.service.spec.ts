@@ -1,6 +1,8 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ACTOR } from '../../common/audit/audit-test-actor';
+import { AuditService } from '../../common/audit/audit.service';
 import { VehiclesService } from './vehicles.service';
 
 const ID = '77777777-7777-7777-7777-777777777777';
@@ -11,6 +13,7 @@ function prismaError(code: string) {
 
 describe('VehiclesService', () => {
   let prisma: any;
+  let audit: { record: jest.Mock };
   let service: VehiclesService;
 
   const vehiculo = (over: Record<string, unknown> = {}) => ({
@@ -26,6 +29,7 @@ describe('VehiclesService', () => {
 
   beforeEach(() => {
     prisma = {
+      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
       vehicle: {
         create: jest.fn().mockResolvedValue(vehiculo()),
         findUnique: jest.fn().mockResolvedValue(vehiculo()),
@@ -34,12 +38,16 @@ describe('VehiclesService', () => {
         update: jest.fn().mockResolvedValue(vehiculo()),
       },
     };
-    service = new VehiclesService(prisma as unknown as PrismaService);
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    service = new VehiclesService(
+      prisma as unknown as PrismaService,
+      audit as unknown as AuditService,
+    );
   });
 
   describe('create', () => {
     it('nace activo y sin capacidad si no se la pasan', async () => {
-      await service.create({ plate: 'XX999YY', vehicleType: 'TRUCK' } as any);
+      await service.create({ plate: 'XX999YY', vehicleType: 'TRUCK' } as any, ACTOR);
 
       expect(prisma.vehicle.create.mock.calls[0][0].data).toMatchObject({
         active: true,
@@ -50,7 +58,7 @@ describe('VehiclesService', () => {
     it('una patente repetida da 409', async () => {
       prisma.vehicle.create.mockRejectedValue(prismaError('P2002'));
 
-      await expect(service.create({ plate: 'AB123CD' } as any)).rejects.toBeInstanceOf(
+      await expect(service.create({ plate: 'AB123CD' } as any, ACTOR)).rejects.toBeInstanceOf(
         ConflictException,
       );
     });
@@ -58,20 +66,20 @@ describe('VehiclesService', () => {
     it('un error ajeno a Prisma se propaga', async () => {
       prisma.vehicle.create.mockRejectedValue(new Error('la base se cayó'));
 
-      await expect(service.create({} as any)).rejects.toThrow('la base se cayó');
+      await expect(service.create({} as any, ACTOR)).rejects.toThrow('la base se cayó');
     });
   });
 
   describe('update', () => {
     /** Un camión no se convierte en barredora: eso es dar de alta otro vehículo. */
     it('el tipo de vehículo es inmutable', async () => {
-      await service.update(ID, { vehicleType: 'SWEEPER', capacity: 9 } as any);
+      await service.update(ID, { vehicleType: 'SWEEPER', capacity: 9 } as any, ACTOR);
 
       expect(prisma.vehicle.update.mock.calls[0][0].data).toEqual({ capacity: 9 });
     });
 
     it('la patente sí se puede corregir', async () => {
-      await service.update(ID, { plate: 'ZZ000ZZ' } as any);
+      await service.update(ID, { plate: 'ZZ000ZZ' } as any, ACTOR);
 
       expect(prisma.vehicle.update.mock.calls[0][0].data).toEqual({ plate: 'ZZ000ZZ' });
     });
@@ -79,7 +87,7 @@ describe('VehiclesService', () => {
     it('cambiar a una patente que ya existe da 409', async () => {
       prisma.vehicle.update.mockRejectedValue(prismaError('P2002'));
 
-      await expect(service.update(ID, { plate: 'AB123CD' } as any)).rejects.toBeInstanceOf(
+      await expect(service.update(ID, { plate: 'AB123CD' } as any, ACTOR)).rejects.toBeInstanceOf(
         ConflictException,
       );
     });
@@ -87,14 +95,14 @@ describe('VehiclesService', () => {
     it('un vehículo inexistente da 404', async () => {
       prisma.vehicle.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(ID, {} as any)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.update(ID, {} as any, ACTOR)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
   describe('remove', () => {
     /** Los servicios ya ejecutados apuntan al vehículo que los hizo. */
     it('es baja lógica, no borrado', async () => {
-      await service.remove(ID);
+      await service.remove(ID, ACTOR);
 
       expect(prisma.vehicle.update).toHaveBeenCalledWith({
         where: { id: ID },
@@ -105,7 +113,7 @@ describe('VehiclesService', () => {
     it('un vehículo inexistente da 404', async () => {
       prisma.vehicle.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove(ID)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.remove(ID, ACTOR)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -143,6 +151,47 @@ describe('VehiclesService', () => {
       prisma.vehicle.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne(ID)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('auditoría (#460)', () => {
+    it('la baja deja constancia de quién y a qué estado, en la misma transacción', async () => {
+      await service.remove(ID, ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(prisma, {
+        entityType: 'VEHICLE',
+        entityId: ID,
+        action: 'DEACTIVATE',
+        toStatus: 'INACTIVE',
+        actor: ACTOR,
+      });
+    });
+
+    it('el alta audita el estado inicial', async () => {
+      await service.create({ plate: 'XX999YY', vehicleType: 'TRUCK' } as any, ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'VEHICLE',
+          action: 'CREATE',
+          toStatus: 'ACTIVE',
+          actor: ACTOR,
+        }),
+      );
+    });
+
+    it('un update que cambia active audita el alta o la baja', async () => {
+      await service.update(ID, { active: false } as any, ACTOR);
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ action: 'DEACTIVATE', toStatus: 'INACTIVE' }),
+      );
+    });
+
+    it('un update que no toca active no audita', async () => {
+      await service.update(ID, { name: 'Otro' } as any, ACTOR);
+      expect(audit.record).not.toHaveBeenCalled();
     });
   });
 });

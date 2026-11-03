@@ -1,6 +1,8 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Container, ContainerStatus as C, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ACTOR } from '../../common/audit/audit-test-actor';
+import { AuditService } from '../../common/audit/audit.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
 import { CONTAINER_TRANSITIONS, ContainersService } from './containers.service';
 
@@ -14,6 +16,7 @@ function prismaError(code: string) {
 describe('ContainersService', () => {
   let prisma: any;
   let outbox: any;
+  let audit: any;
   let service: ContainersService;
 
   const contenedor = (over: Partial<Container> = {}): Container =>
@@ -30,6 +33,7 @@ describe('ContainersService', () => {
       damageType: null,
       severity: null,
       requiresPublicWorks: null,
+      damageNotes: null,
       createdAt: new Date('2026-08-01T10:00:00.000Z'),
       updatedAt: new Date('2026-08-02T10:00:00.000Z'),
       ...over,
@@ -44,13 +48,20 @@ describe('ContainersService', () => {
         count: jest.fn().mockResolvedValue(1),
         update: jest.fn().mockImplementation(({ data }: any) => Promise.resolve(contenedor(data))),
       },
+      containerStatusHistory: {
+        create: jest.fn().mockResolvedValue(undefined),
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
       zoneNeighborhood: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
     service = new ContainersService(
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,
+      audit as unknown as AuditService,
     );
   });
 
@@ -100,35 +111,61 @@ describe('ContainersService', () => {
   describe('transiciones', () => {
     it('reportOverflow lleva de ACTIVE a OVERFLOWED', async () => {
       desde(C.ACTIVE);
-      const dto = await service.reportOverflow(ID);
+      const dto = await service.reportOverflow(ID, ACTOR);
       expect(dto.status).toBe(C.OVERFLOWED);
+    });
+
+    it('cada transición audita acción, estados y actor en la misma transacción', async () => {
+      desde(C.ACTIVE);
+      await service.reportOverflow(ID, ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(prisma, {
+        entityType: 'CONTAINER',
+        entityId: ID,
+        action: 'REPORT_OVERFLOW',
+        fromStatus: C.ACTIVE,
+        toStatus: C.OVERFLOWED,
+        actor: ACTOR,
+      });
+    });
+
+    it('una transición rechazada no audita', async () => {
+      desde(C.REMOVED);
+      await expect(service.reportOverflow(ID, ACTOR)).rejects.toBeInstanceOf(ConflictException);
+      expect(audit.record).not.toHaveBeenCalled();
     });
 
     it('empty vuelve a ACTIVE y limpia los datos del daño', async () => {
       desde(C.OVERFLOWED);
-      await service.empty(ID);
+      await service.empty(ID, ACTOR);
 
       expect(prisma.container.update.mock.calls[0][0].data).toEqual({
         status: C.ACTIVE,
         damageType: null,
         severity: null,
         requiresPublicWorks: null,
+        damageNotes: null,
       });
     });
 
-    it('completeRepair también limpia los datos del daño', async () => {
+    it('completeRepair también limpia los datos del daño y las observaciones', async () => {
       desde(C.UNDER_REPAIR);
-      await service.completeRepair(ID);
+      await service.completeRepair(ID, ACTOR);
 
       expect(prisma.container.update.mock.calls[0][0].data).toMatchObject({
         status: C.ACTIVE,
         damageType: null,
+        damageNotes: null,
       });
     });
 
     it('confirmRelocation guarda la ubicación nueva', async () => {
       desde(C.RELOCATING);
-      await service.confirmRelocation(ID, { address: 'Belgrano 900', lat: -34.6, lng: -58.4 });
+      await service.confirmRelocation(
+        ID,
+        { address: 'Belgrano 900', lat: -34.6, lng: -58.4 },
+        ACTOR,
+      );
 
       expect(prisma.container.update.mock.calls[0][0].data).toEqual({
         status: C.ACTIVE,
@@ -140,7 +177,7 @@ describe('ContainersService', () => {
 
     it('una reubicación sin coordenadas las deja nulas, no undefined', async () => {
       desde(C.RELOCATING);
-      await service.confirmRelocation(ID, { address: 'Belgrano 900' } as any);
+      await service.confirmRelocation(ID, { address: 'Belgrano 900' } as any, ACTOR);
 
       expect(prisma.container.update.mock.calls[0][0].data).toMatchObject({
         lat: null,
@@ -159,8 +196,8 @@ describe('ContainersService', () => {
           desde(estado);
           const run = () =>
             accion === 'confirmRelocation'
-              ? service.confirmRelocation(ID, { address: 'X 1' } as any)
-              : service[accion](ID);
+              ? service.confirmRelocation(ID, { address: 'X 1' } as any, ACTOR)
+              : service[accion](ID, ACTOR);
           await expect(run()).rejects.toBeInstanceOf(ConflictException);
         }
         expect(prisma.container.update).not.toHaveBeenCalled();
@@ -172,7 +209,7 @@ describe('ContainersService', () => {
       ['completeRepair', C.UNDER_REPAIR],
     ] as const)('%s escribe condicionado al estado leído', async (accion, estado) => {
       desde(estado);
-      await service[accion](ID);
+      await service[accion](ID, ACTOR);
 
       expect(prisma.container.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: ID, status: estado } }),
@@ -181,7 +218,7 @@ describe('ContainersService', () => {
 
     it('confirmRelocation escribe condicionado al estado leído', async () => {
       desde(C.RELOCATING);
-      await service.confirmRelocation(ID, { address: 'X 1' } as any);
+      await service.confirmRelocation(ID, { address: 'X 1' } as any, ACTOR);
 
       expect(prisma.container.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: ID, status: C.RELOCATING } }),
@@ -192,22 +229,24 @@ describe('ContainersService', () => {
       desde(C.OVERFLOWED);
       prisma.container.update.mockRejectedValue(prismaError('P2025'));
 
-      await expect(service.empty(ID)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.empty(ID, ACTOR)).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('startRepair y remove salen los dos de DAMAGED', async () => {
       desde(C.DAMAGED);
-      await expect(service.startRepair(ID)).resolves.toMatchObject({ status: C.UNDER_REPAIR });
+      await expect(service.startRepair(ID, ACTOR)).resolves.toMatchObject({
+        status: C.UNDER_REPAIR,
+      });
 
       desde(C.DAMAGED);
-      await expect(service.remove(ID)).resolves.toMatchObject({ status: C.REMOVED });
+      await expect(service.remove(ID, ACTOR)).resolves.toMatchObject({ status: C.REMOVED });
     });
 
     it('el 409 nombra las transiciones válidas desde donde está', async () => {
       desde(C.ACTIVE);
 
-      await expect(service.startRepair(ID)).rejects.toBeInstanceOf(ConflictException);
-      await service.startRepair(ID).catch((error: Error) => {
+      await expect(service.startRepair(ID, ACTOR)).rejects.toBeInstanceOf(ConflictException);
+      await service.startRepair(ID, ACTOR).catch((error: Error) => {
         expect(error.message).toContain('OVERFLOWED');
         expect(error.message).toContain('DAMAGED');
       });
@@ -216,26 +255,26 @@ describe('ContainersService', () => {
     it('un contenedor retirado no se mueve más', async () => {
       desde(C.REMOVED);
 
-      await expect(service.reportOverflow(ID)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.reportOverflow(ID, ACTOR)).rejects.toBeInstanceOf(ConflictException);
       expect(prisma.container.update).not.toHaveBeenCalled();
     });
 
     it('una transición sobre un contenedor inexistente da 404', async () => {
       prisma.container.findUnique.mockResolvedValue(null);
 
-      await expect(service.reportOverflow(ID)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.reportOverflow(ID, ACTOR)).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it.each(ESTADOS)('desde %s, el guard respeta la tabla', async (estado) => {
       const acciones: [C, (s: ContainersService) => Promise<unknown>][] = [
-        [C.OVERFLOWED, (s) => s.reportOverflow(ID)],
+        [C.OVERFLOWED, (s) => s.reportOverflow(ID, ACTOR)],
         [
           C.DAMAGED,
-          (s) => s.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any),
+          (s) => s.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any, ACTOR),
         ],
-        [C.UNDER_REPAIR, (s) => s.startRepair(ID)],
-        [C.RELOCATING, (s) => s.relocate(ID)],
-        [C.REMOVED, (s) => s.remove(ID)],
+        [C.UNDER_REPAIR, (s) => s.startRepair(ID, ACTOR)],
+        [C.RELOCATING, (s) => s.relocate(ID, ACTOR)],
+        [C.REMOVED, (s) => s.remove(ID, ACTOR)],
       ];
 
       for (const [destino, accion] of acciones) {
@@ -251,16 +290,135 @@ describe('ContainersService', () => {
     });
   });
 
+  // ─── El historial de estados (#475) ─────────────────
+
+  describe('historial de estados', () => {
+    /** Lo que quedó escrito en el historial, como pares origen → destino. */
+    const filas = () =>
+      prisma.containerStatusHistory.create.mock.calls.map(
+        ([arg]: any) => arg.data as { containerId: string; fromStatus: C | null; toStatus: C },
+      );
+
+    it('reportOverflow deja una fila ACTIVE → OVERFLOWED', async () => {
+      desde(C.ACTIVE);
+      await service.reportOverflow(ID, ACTOR);
+
+      expect(filas()).toEqual([{ containerId: ID, fromStatus: C.ACTIVE, toStatus: C.OVERFLOWED }]);
+    });
+
+    it.each([
+      ['empty', C.OVERFLOWED, C.ACTIVE, (s: ContainersService) => s.empty(ID, ACTOR)],
+      [
+        'reportDamage',
+        C.ACTIVE,
+        C.DAMAGED,
+        (s: ContainersService) =>
+          s.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any, ACTOR),
+      ],
+      [
+        'startRepair',
+        C.DAMAGED,
+        C.UNDER_REPAIR,
+        (s: ContainersService) => s.startRepair(ID, ACTOR),
+      ],
+      [
+        'completeRepair',
+        C.UNDER_REPAIR,
+        C.ACTIVE,
+        (s: ContainersService) => s.completeRepair(ID, ACTOR),
+      ],
+      ['relocate', C.ACTIVE, C.RELOCATING, (s: ContainersService) => s.relocate(ID, ACTOR)],
+      [
+        'confirmRelocation',
+        C.RELOCATING,
+        C.ACTIVE,
+        (s: ContainersService) => s.confirmRelocation(ID, { address: 'X 1' } as any, ACTOR),
+      ],
+      ['remove', C.DAMAGED, C.REMOVED, (s: ContainersService) => s.remove(ID, ACTOR)],
+    ] as const)('%s deja una fila %s → %s', async (_accion, origen, destino, correr) => {
+      desde(origen);
+      await correr(service);
+
+      expect(filas()).toEqual([{ containerId: ID, fromStatus: origen, toStatus: destino }]);
+    });
+
+    it('la fila se escribe en la misma transacción que el cambio de estado', async () => {
+      desde(C.ACTIVE);
+      await service.reportOverflow(ID, ACTOR);
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('un conflicto de concurrencia (409) no deja fila', async () => {
+      desde(C.OVERFLOWED);
+      prisma.container.update.mockRejectedValue(prismaError('P2025'));
+
+      await expect(service.empty(ID, ACTOR)).rejects.toBeInstanceOf(ConflictException);
+      expect(filas()).toEqual([]);
+    });
+
+    it('una transición inválida (409) no deja fila', async () => {
+      desde(C.REMOVED);
+
+      await expect(service.reportOverflow(ID, ACTOR)).rejects.toBeInstanceOf(ConflictException);
+      expect(filas()).toEqual([]);
+    });
+
+    it('si falla el historial la acción entera falla y no se publica el evento', async () => {
+      desde(C.ACTIVE);
+      prisma.containerStatusHistory.create.mockRejectedValue(new Error('la base se cayó'));
+
+      await expect(
+        service.reportDamage(ID, { damageType: 'BURNT', severity: 'LOW' } as any, ACTOR),
+      ).rejects.toThrow('la base se cayó');
+      expect(outbox.enqueue).not.toHaveBeenCalled();
+    });
+
+    it('el alta deja la fila inicial (origen nulo, destino ACTIVE) en la misma transacción', async () => {
+      await service.create(
+        {
+          code: 'CT-9',
+          containerType: 'HOUSEHOLD',
+          zoneId: 'z',
+          capacityLiters: 1100,
+        } as any,
+        ACTOR,
+      );
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(filas()).toEqual([{ containerId: ID, fromStatus: null, toStatus: C.ACTIVE }]);
+      expect(audit.record).toHaveBeenCalledWith(prisma, {
+        entityType: 'CONTAINER',
+        entityId: ID,
+        action: 'CREATE',
+        toStatus: C.ACTIVE,
+        actor: ACTOR,
+      });
+    });
+
+    it('si falla la fila inicial el alta falla entera', async () => {
+      prisma.containerStatusHistory.create.mockRejectedValue(new Error('la base se cayó'));
+
+      await expect(service.create({ code: 'CT-9' } as any, ACTOR)).rejects.toThrow(
+        'la base se cayó',
+      );
+    });
+  });
+
   // ─── El evento hacia M3 ─────────────────────────────
 
   describe('reportDamage', () => {
     it('guarda el daño y publica containerDamaged', async () => {
       desde(C.ACTIVE);
-      await service.reportDamage(ID, {
-        damageType: 'STRUCTURAL',
-        severity: 'HIGH',
-        requiresPublicWorks: true,
-      } as any);
+      await service.reportDamage(
+        ID,
+        {
+          damageType: 'STRUCTURAL',
+          severity: 'HIGH',
+          requiresPublicWorks: true,
+        } as any,
+        ACTOR,
+      );
 
       expect(prisma.container.update.mock.calls[0][0].data).toMatchObject({
         status: C.DAMAGED,
@@ -282,7 +440,7 @@ describe('ContainersService', () => {
       prisma.zoneNeighborhood.findMany.mockResolvedValue([
         { neighborhoodId: '7c9e6679-7425-40de-944b-e07fc1f90ae7' },
       ]);
-      await service.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any);
+      await service.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any, ACTOR);
 
       const [, entrada] = outbox.enqueue.mock.calls[0];
       expect(entrada.payload.location.neighborhoodId).toBe('7c9e6679-7425-40de-944b-e07fc1f90ae7');
@@ -294,7 +452,7 @@ describe('ContainersService', () => {
         { neighborhoodId: '7c9e6679-7425-40de-944b-e07fc1f90ae7' },
         { neighborhoodId: '0b8f1a52-3c4d-4e6f-9a1b-2c3d4e5f6a7b' },
       ]);
-      await service.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any);
+      await service.reportDamage(ID, { damageType: 'STRUCTURAL', severity: 'HIGH' } as any, ACTOR);
 
       const [, entrada] = outbox.enqueue.mock.calls[0];
       expect(entrada.payload.location).not.toHaveProperty('neighborhoodId');
@@ -302,7 +460,7 @@ describe('ContainersService', () => {
 
     it('sin requiresPublicWorks explícito asume false, no null', async () => {
       desde(C.ACTIVE);
-      await service.reportDamage(ID, { damageType: 'VANDALIZED', severity: 'LOW' } as any);
+      await service.reportDamage(ID, { damageType: 'VANDALIZED', severity: 'LOW' } as any, ACTOR);
 
       expect(prisma.container.update.mock.calls[0][0].data.requiresPublicWorks).toBe(false);
     });
@@ -314,16 +472,42 @@ describe('ContainersService', () => {
      */
     it('el evento se encola en la misma transacción que el cambio de estado', async () => {
       desde(C.ACTIVE);
-      await service.reportDamage(ID, { damageType: 'BURNT', severity: 'CRITICAL' } as any);
+      await service.reportDamage(ID, { damageType: 'BURNT', severity: 'CRITICAL' } as any, ACTOR);
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       const [tx] = outbox.enqueue.mock.calls[0];
       expect(tx).toBe(prisma);
     });
 
+    it('guarda las observaciones y las devuelve, sin sumarlas al evento', async () => {
+      desde(C.ACTIVE);
+      const dto = await service.reportDamage(
+        ID,
+        {
+          damageType: 'LID_BROKEN',
+          severity: 'LOW',
+          requiresPublicWorks: true,
+          observations: 'Bisagra partida',
+        } as any,
+        ACTOR,
+      );
+
+      expect(prisma.container.update.mock.calls[0][0].data.damageNotes).toBe('Bisagra partida');
+      expect(dto.damageNotes).toBe('Bisagra partida');
+      const [, entrada] = outbox.enqueue.mock.calls[0];
+      expect(JSON.stringify(entrada.payload)).not.toContain('Bisagra partida');
+    });
+
+    it('sin observaciones guarda null', async () => {
+      desde(C.ACTIVE);
+      await service.reportDamage(ID, { damageType: 'VANDALIZED', severity: 'LOW' } as any, ACTOR);
+
+      expect(prisma.container.update.mock.calls[0][0].data.damageNotes).toBeNull();
+    });
+
     it('las transiciones sin evento no tocan el outbox', async () => {
       desde(C.ACTIVE);
-      await service.reportOverflow(ID);
+      await service.reportOverflow(ID, ACTOR);
 
       expect(outbox.enqueue).not.toHaveBeenCalled();
     });
@@ -333,12 +517,15 @@ describe('ContainersService', () => {
 
   describe('create', () => {
     it('nace ACTIVE', async () => {
-      await service.create({
-        code: 'CT-9',
-        containerType: 'HOUSEHOLD',
-        zoneId: 'z',
-        capacityLiters: 1100,
-      } as any);
+      await service.create(
+        {
+          code: 'CT-9',
+          containerType: 'HOUSEHOLD',
+          zoneId: 'z',
+          capacityLiters: 1100,
+        } as any,
+        ACTOR,
+      );
 
       expect(prisma.container.create.mock.calls[0][0].data.status).toBe(C.ACTIVE);
     });
@@ -346,7 +533,7 @@ describe('ContainersService', () => {
     it('un código repetido da 409, no un error de Prisma', async () => {
       prisma.container.create.mockRejectedValue(prismaError('P2002'));
 
-      await expect(service.create({ code: 'CT-0001' } as any)).rejects.toBeInstanceOf(
+      await expect(service.create({ code: 'CT-0001' } as any, ACTOR)).rejects.toBeInstanceOf(
         ConflictException,
       );
     });
@@ -355,7 +542,7 @@ describe('ContainersService', () => {
     it('una zona inexistente da 404', async () => {
       prisma.container.create.mockRejectedValue(prismaError('P2003'));
 
-      await expect(service.create({ zoneId: 'no-existe' } as any)).rejects.toBeInstanceOf(
+      await expect(service.create({ zoneId: 'no-existe' } as any, ACTOR)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -363,7 +550,7 @@ describe('ContainersService', () => {
     it('un error que no es de Prisma se propaga tal cual', async () => {
       prisma.container.create.mockRejectedValue(new Error('la base se cayó'));
 
-      await expect(service.create({} as any)).rejects.toThrow('la base se cayó');
+      await expect(service.create({} as any, ACTOR)).rejects.toThrow('la base se cayó');
     });
   });
 
@@ -418,6 +605,64 @@ describe('ContainersService', () => {
       prisma.container.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne(ID)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('desborde vs daño', () => {
+    it('un contenedor desbordado queda OVERFLOWED, nunca DAMAGED', async () => {
+      desde(C.ACTIVE);
+      const dto = await service.reportOverflow(ID, ACTOR);
+
+      expect(dto.status).toBe(C.OVERFLOWED);
+      expect(dto.damageType).toBeNull();
+      expect(prisma.container.update.mock.calls[0][0].data.status).not.toBe(C.DAMAGED);
+      // Desbordado no se puede pasar a dañado sin vaciarlo antes.
+      desde(C.OVERFLOWED);
+      await expect(
+        service.reportDamage(ID, { damageType: 'LID_BROKEN', severity: 'LOW' } as any, ACTOR),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(outbox.enqueue).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findHistory', () => {
+    it('lista paginado y del más reciente al más antiguo', async () => {
+      const fila = {
+        id: 'h1',
+        containerId: ID,
+        fromStatus: C.ACTIVE,
+        toStatus: C.OVERFLOWED,
+        changedAt: new Date('2026-09-01T10:00:00.000Z'),
+      };
+      prisma.containerStatusHistory.findMany.mockResolvedValue([fila]);
+      prisma.containerStatusHistory.count.mockResolvedValue(21);
+
+      const res = await service.findHistory(ID, {
+        page: 2,
+        pageSize: 20,
+        skip: 20,
+        take: 20,
+      } as any);
+
+      expect(prisma.containerStatusHistory.findMany).toHaveBeenCalledWith({
+        where: { containerId: ID },
+        skip: 20,
+        take: 20,
+        orderBy: [{ changedAt: 'desc' }, { id: 'desc' }],
+      });
+      expect(res.data).toEqual([
+        { id: 'h1', fromStatus: C.ACTIVE, toStatus: C.OVERFLOWED, changedAt: fila.changedAt },
+      ]);
+      expect(res.meta.total).toBe(21);
+    });
+
+    it('da 404 si el contenedor no existe', async () => {
+      prisma.container.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.findHistory(ID, { page: 1, pageSize: 20, skip: 0, take: 20 } as any),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.containerStatusHistory.findMany).not.toHaveBeenCalled();
     });
   });
 

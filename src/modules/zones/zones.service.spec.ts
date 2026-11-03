@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ACTOR } from '../../common/audit/audit-test-actor';
+import { AuditService } from '../../common/audit/audit.service';
 import { ZonesService } from './zones.service';
 import { NeighborhoodsCatalogService } from '../../core/neighborhoods-catalog.service';
 
@@ -11,6 +13,7 @@ const B2 = 'ffffffff-7425-40de-944b-e07fc1f90ae7';
 
 describe('ZonesService', () => {
   let prisma: any;
+  let audit: { record: jest.Mock };
   let service: ZonesService;
   let catalog: { disponible: boolean; existe: jest.Mock; list: jest.Mock };
 
@@ -28,6 +31,7 @@ describe('ZonesService', () => {
 
   beforeEach(() => {
     prisma = {
+      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
       zone: {
         create: jest.fn().mockResolvedValue(zona()),
         findUnique: jest.fn().mockResolvedValue(zona({ neighborhoods: [] })),
@@ -47,32 +51,34 @@ describe('ZonesService', () => {
       existe: jest.fn((id: string) => id.startsWith('b-')),
       list: jest.fn().mockReturnValue([]),
     };
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
     service = new ZonesService(
       prisma as unknown as PrismaService,
       catalog as unknown as NeighborhoodsCatalogService,
+      audit as unknown as AuditService,
     );
   });
 
   describe('create', () => {
     it('nace activa si el DTO no dice lo contrario', async () => {
-      await service.create({ code: 'Z-SUR', name: 'Zona Sur' } as any);
+      await service.create({ code: 'Z-SUR', name: 'Zona Sur' } as any, ACTOR);
 
       expect(prisma.zone.create.mock.calls[0][0].data.active).toBe(true);
     });
 
     it('respeta un active explícito en false', async () => {
-      await service.create({ code: 'Z-SUR', name: 'Zona Sur', active: false } as any);
+      await service.create({ code: 'Z-SUR', name: 'Zona Sur', active: false } as any, ACTOR);
 
       expect(prisma.zone.create.mock.calls[0][0].data.active).toBe(false);
     });
 
     it('crea con comuna existente; con una inexistente da 400', async () => {
-      await service.create({ code: 'palermo', name: 'Palermo', communeId: COMUNA } as any);
+      await service.create({ code: 'palermo', name: 'Palermo', communeId: COMUNA } as any, ACTOR);
       expect(prisma.zone.create.mock.calls[0][0].data.communeId).toBe(COMUNA);
 
       prisma.commune.findUnique.mockResolvedValue(null);
       await expect(
-        service.create({ code: 'x', name: 'X', communeId: COMUNA } as any),
+        service.create({ code: 'x', name: 'X', communeId: COMUNA } as any, ACTOR),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -84,7 +90,7 @@ describe('ZonesService', () => {
         }),
       );
 
-      await expect(service.create({ code: 'Z-CENTRO' } as any)).rejects.toBeInstanceOf(
+      await expect(service.create({ code: 'Z-CENTRO' } as any, ACTOR)).rejects.toBeInstanceOf(
         ConflictException,
       );
     });
@@ -92,32 +98,32 @@ describe('ZonesService', () => {
     it('un error que no es P2002 se propaga', async () => {
       prisma.zone.create.mockRejectedValue(new Error('la base se cayó'));
 
-      await expect(service.create({} as any)).rejects.toThrow('la base se cayó');
+      await expect(service.create({} as any, ACTOR)).rejects.toThrow('la base se cayó');
     });
   });
 
   describe('update', () => {
     /** El código identifica la zona en los recorridos y servicios ya cargados. */
     it('el código es inmutable', async () => {
-      await service.update(ID, { code: 'OTRO', name: 'Renombrada' } as any);
+      await service.update(ID, { code: 'OTRO', name: 'Renombrada' } as any, ACTOR);
 
       expect(prisma.zone.update.mock.calls[0][0].data).toEqual({ name: 'Renombrada' });
     });
 
     it('un DTO vacío no escribe nada', async () => {
-      await service.update(ID, {} as any);
+      await service.update(ID, {} as any, ACTOR);
 
       expect(prisma.zone.update.mock.calls[0][0].data).toEqual({});
     });
 
     it('asigna la comuna si existe', async () => {
-      await service.update(ID, { communeId: COMUNA } as any);
+      await service.update(ID, { communeId: COMUNA } as any, ACTOR);
 
       expect(prisma.zone.update.mock.calls[0][0].data).toEqual({ communeId: COMUNA });
     });
 
     it('communeId null desasigna la comuna sin consultar', async () => {
-      await service.update(ID, { communeId: null } as any);
+      await service.update(ID, { communeId: null } as any, ACTOR);
 
       expect(prisma.zone.update.mock.calls[0][0].data).toEqual({ communeId: null });
       expect(prisma.commune.findUnique).not.toHaveBeenCalled();
@@ -126,7 +132,7 @@ describe('ZonesService', () => {
     it('una comuna inexistente da 400 y no escribe', async () => {
       prisma.commune.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(ID, { communeId: COMUNA } as any)).rejects.toBeInstanceOf(
+      await expect(service.update(ID, { communeId: COMUNA } as any, ACTOR)).rejects.toBeInstanceOf(
         BadRequestException,
       );
       expect(prisma.zone.update).not.toHaveBeenCalled();
@@ -135,14 +141,14 @@ describe('ZonesService', () => {
     it('una zona inexistente da 404', async () => {
       prisma.zone.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(ID, {} as any)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.update(ID, {} as any, ACTOR)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
   describe('remove', () => {
     /** Los recorridos y servicios apuntan a la zona: el borrado físico los rompería. */
     it('es baja lógica, no borrado', async () => {
-      await service.remove(ID);
+      await service.remove(ID, ACTOR);
 
       expect(prisma.zone.update).toHaveBeenCalledWith({
         where: { id: ID },
@@ -153,7 +159,7 @@ describe('ZonesService', () => {
     it('una zona inexistente da 404', async () => {
       prisma.zone.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove(ID)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.remove(ID, ACTOR)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -256,6 +262,16 @@ describe('ZonesService', () => {
       expect(detalle.neighborhoods).toEqual([{ neighborhoodId: 'b-1' }]);
     });
 
+    it('ordena por número de comuna, luego por nombre, con id de desempate', async () => {
+      await service.findAll({ page: 1, pageSize: 20 } as any);
+
+      expect(prisma.zone.findMany.mock.calls[0][0].orderBy).toEqual([
+        { commune: { number: 'asc' } },
+        { name: 'asc' },
+        { id: 'asc' },
+      ]);
+    });
+
     it('filtra por comuna', async () => {
       await service.findAll({ page: 1, pageSize: 20, communeId: COMUNA } as any);
 
@@ -266,14 +282,19 @@ describe('ZonesService', () => {
       catalog.list.mockReturnValue([{ id: B1, codigo: 'palermo', nombre: 'Palermo' }]);
       prisma.zone.findMany.mockResolvedValue([
         zona({
-          commune: { id: COMUNA, code: 'comuna-14', name: 'Comuna 14', active: true },
+          commune: { id: COMUNA, code: 'comuna-14', number: 14, name: 'Comuna 14', active: true },
           neighborhoods: [{ neighborhoodId: B1 }],
         }),
       ]);
 
       const { data } = await service.findAll({ page: 1, pageSize: 20 } as any);
 
-      expect(data[0].commune).toEqual({ id: COMUNA, code: 'comuna-14', name: 'Comuna 14' });
+      expect(data[0].commune).toEqual({
+        id: COMUNA,
+        code: 'comuna-14',
+        number: 14,
+        name: 'Comuna 14',
+      });
       expect(data[0].neighborhood).toEqual({ id: B1, codigo: 'palermo', nombre: 'Palermo' });
     });
 
@@ -328,6 +349,47 @@ describe('ZonesService', () => {
       prisma.zone.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne(ID)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('auditoría (#460)', () => {
+    it('la baja deja constancia de quién y a qué estado, en la misma transacción', async () => {
+      await service.remove(ID, ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(prisma, {
+        entityType: 'ZONE',
+        entityId: ID,
+        action: 'DEACTIVATE',
+        toStatus: 'INACTIVE',
+        actor: ACTOR,
+      });
+    });
+
+    it('el alta audita el estado inicial', async () => {
+      await service.create({ code: 'Z-9', name: 'Nueva' } as any, ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'ZONE',
+          action: 'CREATE',
+          toStatus: 'ACTIVE',
+          actor: ACTOR,
+        }),
+      );
+    });
+
+    it('un update que cambia active audita el alta o la baja', async () => {
+      await service.update(ID, { active: false } as any, ACTOR);
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ action: 'DEACTIVATE', toStatus: 'INACTIVE' }),
+      );
+    });
+
+    it('un update que no toca active no audita', async () => {
+      await service.update(ID, { name: 'Otro' } as any, ACTOR);
+      expect(audit.record).not.toHaveBeenCalled();
     });
   });
 });

@@ -6,7 +6,7 @@ El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde e
 
 El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
-> 142 rutas, agrupadas en 27 tags de Swagger (cuenta contrastada contra `openapi.json`).
+> 150 rutas, agrupadas en 29 tags de Swagger (cuenta contrastada contra `openapi.json`).
 
 ## Convenciones
 
@@ -32,6 +32,7 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 
 | Método | Ruta | Rol |
 | --- | --- | --- |
+| GET | `/audit` | `M6_ADMIN`, `M6_AUDITOR` |
 | GET | `/communes` | cualquier rol de M6 |
 | GET | `/containers` | cualquier rol de M6 |
 | POST | `/containers` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
@@ -40,6 +41,7 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 | POST | `/containers/:id/complete-repair` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | POST | `/containers/:id/confirm-relocation` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | POST | `/containers/:id/empty` | `M6_CAMPO_CUADRILLA` |
+| GET | `/containers/:id/history` | cualquier rol de M6 |
 | POST | `/containers/:id/relocate` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | POST | `/containers/:id/remove` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | POST | `/containers/:id/report-damage` | `M6_CAMPO_CUADRILLA` |
@@ -52,6 +54,8 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 | PATCH | `/crews/:id` | `M6_ADMIN` |
 | POST | `/crews/:id/members` | `M6_ADMIN` |
 | DELETE | `/crews/:id/members/:userId` | `M6_ADMIN` |
+| GET | `/crews/:id/zone-assignments` | cualquier rol de M6 |
+| POST | `/crews/:id/zone-assignments` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
 | GET | `/disposal-sites` | cualquier rol de M6 |
 | POST | `/disposal-sites` | `M6_ADMIN` |
 | DELETE | `/disposal-sites/:id` | `M6_ADMIN` |
@@ -73,7 +77,11 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 | POST | `/environmental-reports/:reportId/inspections` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
 | GET | `/events/handlers` | cualquier rol de M6 |
 | POST | `/events/inbox` | `M6_ADMIN` |
-| GET | `/evidence` | cualquier rol de M6 |
+| GET | `/events/outbox` | `M6_ADMIN`, `M6_AUDITOR` |
+| GET | `/events/outbox/:id` | `M6_ADMIN` |
+| POST | `/events/outbox/:id/retry` | `M6_ADMIN` |
+| POST | `/events/outbox/retry-failed` | `M6_ADMIN` |
+| GET | `/evidence` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES`, `M6_OFICINA_AMBIENTAL`, `M6_AUDITOR`, `M6_CAMPO_CUADRILLA`, `M6_CAMPO_INSPECTOR` |
 | POST | `/evidence` | `M6_CAMPO_CUADRILLA`, `M6_CAMPO_INSPECTOR` |
 | GET | `/green-points` | cualquier rol de M6 |
 | POST | `/green-points` | `M6_ADMIN`, `M6_OFICINA_OPERACIONES` |
@@ -186,8 +194,9 @@ Tener el rol de Campo no alcanza: además hay que ser parte del objeto. Si no, `
 | `M6_CAMPO_CUADRILLA` | `POST /services/:id/{start,suspend,resume,complete}`, `/zone-results`, `/collection-records`, `/delay-notices` | el usuario del token es **líder o integrante** de la cuadrilla del servicio. Sin cuadrilla asignada, nadie pertenece |
 | `M6_CAMPO_INSPECTOR` | `POST /environmental-inspections/:id/complete` | es el `inspectorId` asignado; **sin inspector asignado, cualquier inspector** |
 | Campo | `POST /evidence` | según `ownerType`: `SERVICE` y `ZONE_RESULT`, la cuadrilla del servicio; `INSPECTION`, el inspector asignado (o cualquiera si no hay); `CONTAINER` no tiene dueño de Campo |
+| Campo | `GET /evidence` | Campo solo lee evidencia de dueños que le pertenecen: `SERVICE` y `ZONE_RESULT`, la cuadrilla del servicio; `INSPECTION`, el inspector asignado (o cualquiera si no hay); `CONTAINER`, cualquier contenedor existente. 404 si el dueño no existe, 403 `NOT_ASSIGNED` si es ajeno. No exige el rol propio del `ownerType` que sí pide el alta. Oficina, Admin y Auditoría leen cualquiera |
 
-No filtra los listados: Campo sigue viendo todo en los `GET`; la pertenencia es solo de ejecución. Los ids de `leaderUserId` y de integrantes (`POST /crews`, `PATCH /crews/:id`, `POST /crews/:id/members`) son ids numéricos de M1 (solo dígitos, hasta 19) y se normalizan sin ceros a la izquierda (`007` = `7`); `DELETE /crews/:id/members/:userId` **no** valida el formato, para poder quitar filas heredadas `usr-…`. Las cuadrillas con ids `usr-…` se migran con `npm run crews:migrate-user-ids` antes de activar la regla ([deploy.md](../deploy.md#migrar-las-cuadrillas-de-usr-a-ids-de-m1-365)).
+No filtra los listados: Campo sigue viendo todo en los `GET`; la pertenencia es solo de ejecución. Los nombres de personas (`leaderName`, `organizationName`, `displayName`) siguen esa regla: son una copia cargada a mano y los ve cualquier rol de M6, incluido Campo, así que no deben cargarse datos más allá del nombre. Igual el `reason` de las reubicaciones de zona (`/crews/:id/zone-assignments`): texto libre que lee cualquier rol de M6, sin datos sensibles. Los ids de `leaderUserId` y de integrantes (`POST /crews`, `PATCH /crews/:id`, `POST /crews/:id/members`) son ids numéricos de M1 (solo dígitos, hasta 19) y se normalizan sin ceros a la izquierda (`007` = `7`); `DELETE /crews/:id/members/:userId` **no** valida el formato, para poder quitar filas heredadas `usr-…`. Las cuadrillas con ids `usr-…` se migran con `npm run crews:migrate-user-ids` antes de activar la regla ([deploy.md](../deploy.md#migrar-las-cuadrillas-de-usr-a-ids-de-m1-365)).
 
 ---
 
@@ -202,7 +211,7 @@ No filtra los listados: Campo sigue viendo todo en los `GET`; la pertenencia es 
 
 | Método | Ruta                        | Rol        | Qué hace                                                                                                                                                                 |
 | ------ | --------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| GET    | `/me`                       | cualquiera | `userId`, `subType`, `m1Role` (rol de M1 del token) y `roles` de M6 efectivos. El frontend usa esto en vez de deducir permisos del token                                 |
+| GET    | `/me`                       | cualquiera | `userId`, `subType`, `m1Role` (rol de M1 del token) y `roles` de M6 efectivos, más `crews` (`[{ id, name, role: LEADER \| MEMBER }]`: las cuadrillas propias, con la pertenencia de Campo; vacío para Oficina y auditoría) e `isAssignedInspector` (tiene el rol efectivo `M6_CAMPO_INSPECTOR`). Solo datos propios. El frontend usa esto en vez de deducir permisos del token |
 | GET    | `/role-assignments`         | `M6_ADMIN` | Listado paginado de usuarios con roles asignados                                                                                                                         |
 | GET    | `/role-assignments/:userId` | `M6_ADMIN` | Roles asignados al usuario (`[]` si no tiene). `:userId` es el id numérico de M1                                                                                         |
 | PUT    | `/role-assignments/:userId` | `M6_ADMIN` | Reemplaza el conjunto de roles. 400: rol inexistente/repetido o mezcla Oficina (`M6_ADMIN`, `M6_OFICINA_*`) con Campo (`M6_CAMPO_*`). 409: quitaría el último `M6_ADMIN` |
@@ -220,14 +229,14 @@ Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append
 
 | Método | Ruta       | Descripción |
 | ------ | ---------- | ----------- |
-| GET    | `/communes` | Comunas con sus zonas y los barrios de cada zona (`codigo`/`nombre` de la caché de M9; sin catálogo solo el `id`). Filtro: `active`. Ordenadas por número de comuna. Sin paginar. Cualquier rol de M6 |
+| GET    | `/communes` | Comunas con sus zonas y los barrios de cada zona (`codigo`/`nombre` de la caché de M9; sin catálogo solo el `id`). Filtro: `active`. Ordenadas por `number` (el N de `comuna-N`, entero). Sin paginar. Cualquier rol de M6 |
 
 ## `zones` — zonas operativas
 
 | Método | Ruta                                       | Qué hace                                            |
 | ------ | ------------------------------------------ | --------------------------------------------------- |
 | POST   | `/zones`                                   | Crear zona operativa. `communeId` opcional (400 si la comuna no existe) |
-| GET    | `/zones`                                   | Listar, con `commune` y `neighborhood` (uno solo, el primero por id con UUID, aunque la zona tenga varios; el detalle trae todos en `neighborhoods[]`). Filtros: `active`, `search` (nombre), `communeId` |
+| GET    | `/zones`                                   | Listar ordenado por número de comuna (1 a 15), luego por nombre; las zonas sin comuna al final. Con `commune {id, code, number, name}` y `neighborhood` (uno solo, el primero por id con UUID, aunque la zona tenga varios; el detalle trae todos en `neighborhoods[]`). Filtros: `active`, `search` (nombre), `communeId` |
 | GET    | `/zones/:id`                               | Detalle, con los barrios asignados                  |
 | PATCH  | `/zones/:id`                               | Actualizar nombre, estado y `communeId` (400 si la comuna no existe; `null` la desasigna). El código es inmutable |
 | DELETE | `/zones/:id`                               | Baja lógica                                         |
@@ -281,13 +290,17 @@ Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append
 
 | Método | Ruta                         | Qué hace                                              |
 | ------ | ---------------------------- | ----------------------------------------------------- |
-| POST   | `/crews`                     | Crear cuadrilla                                       |
-| GET    | `/crews`                     | Listar. Filtros: `active`, `crewType`, `defaultShift` |
-| GET    | `/crews/:id`                 | Detalle, con los integrantes                          |
-| PATCH  | `/crews/:id`                 | Actualizar                                            |
+| POST   | `/crews`                     | Crear cuadrilla. `specialty` es obligatoria (`COLLECTION`, `SWEEPING`, `CLEANING`, `RECYCLING`, `TREES`, `GREEN_SPACES`, `INSPECTION`); `homeZoneId` (zona base, una sola), `leaderName` y `organizationName` son opcionales |
+| GET    | `/crews`                     | Listar, con `membersCount` y `effectiveZoneId`. Filtros: `active`, `crewType`, `defaultShift`, `specialty`, `zoneId` (zona **efectiva hoy**: la reubicación vigente y, si no hay, la base) |
+| GET    | `/crews/:id`                 | Detalle, con los integrantes y sus nombres            |
+| PATCH  | `/crews/:id`                 | Actualizar (también `specialty`, `homeZoneId` y los nombres; `null` los borra) |
 | DELETE | `/crews/:id`                 | Baja lógica                                           |
-| POST   | `/crews/:id/members`         | Agregar integrantes                                   |
+| POST   | `/crews/:id/members`         | Agregar integrantes: `members: [{ userId, displayName? }]` o, por compatibilidad, `userIds`. Un integrante que ya estaba solo se toca si trae nombre |
 | DELETE | `/crews/:id/members/:userId` | Quitar un integrante                                  |
+| POST   | `/crews/:id/zone-assignments` | Reubicar la cuadrilla en otra zona entre `validFrom` y `validTo` (inclusive; sin `validTo`, hasta nuevo aviso). El actor sale del token. 409 si el período se pisa con otra reubicación; 400 si `validTo < validFrom` o la zona está de baja |
+| GET    | `/crews/:id/zone-assignments` | Historial de reubicaciones, la más reciente primero   |
+
+Los nombres (`leaderName`, `organizationName`, `displayName`) son una **copia** de lo que M1 sabe: M6 no consulta a M1 para mostrarlos, y un id sin nombre sigue funcionando (el campo viene `null`). La especialidad de una cuadrilla anterior a #455 puede ser `null`.
 
 ## `vehicles` — vehículos
 
@@ -305,12 +318,12 @@ Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append
 
 | Método | Ruta                                 | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/services`                          | Programar. El **modo se copia del `ServiceType`**, no se elige. Un `ROUTE` exige recorrido y copia sus zonas como snapshot; un `POINT` se ubica por el bien del inventario (`targetType` + `targetId`) o por una `zoneId` suelta. `origin = TICKET` exige `ticketId`, y ningún otro origen lo admite. `inspectionId` solo con `origin = INSPECTION` (el vínculo se escribe en la inspección; 404 si no existe, 409 si ya tiene servicio o ya fue cerrada, 400 si el tipo no es `POINT`) y `weatherAlertId` solo con `origin = WEATHER_ALERT`; ninguno es obligatorio. Si trae `crewId`/`vehicleId` ya tomados ese día en una franja que se pisa, **409** salvo que venga `overrideNote` (mismo criterio que `assign-crew`). Nace en `SCHEDULED` |
+| POST   | `/services`                          | Programar. El **modo se copia del `ServiceType`**, no se elige. Un `ROUTE` exige recorrido y copia sus zonas como snapshot; un `POINT` se ubica por el bien del inventario (`targetType` + `targetId`) o por una `zoneId` suelta. `origin = TICKET` exige `ticketId`, y ningún otro origen lo admite. `inspectionId` solo con `origin = INSPECTION` (el vínculo se escribe en la inspección; 404 si no existe, 409 si ya tiene servicio o ya fue cerrada, 400 si el tipo no es `POINT`) y `weatherAlertId` solo con `origin = WEATHER_ALERT`; ninguno es obligatorio. Si trae `crewId`/`vehicleId` ya tomados ese día en una franja que se pisa, o una `crewId` que no trabaja en la zona del servicio ese día o cuya especialidad no corresponde al tipo, **409** salvo que venga `overrideNote` (mismo criterio que `assign-crew`). Nace en `SCHEDULED` |
 | GET    | `/services`                          | Listar. Filtros: `status`, `serviceTypeId`, `mode`, `origin`, `crewId`, `vehicleId`, `zoneId`, `targetType`, `targetId` (combinables o `targetId` solo), `ticketId`, `scheduledFrom`, `scheduledTo` (400 si `scheduledFrom` es posterior)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | GET    | `/services/:id`                      | Detalle con zonas, resultados por zona y registros de recolección                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | PATCH  | `/services/:id`                      | Corregir vehículo, ventana horaria y notas, **solo antes de iniciar**. Si el vehículo o la ventana nuevos se solapan con otro servicio de la misma cuadrilla o vehículo ese día, devuelve 409; con `overrideNote` (10-500 caracteres) se acepta y queda guardada con quién y cuándo (mismo criterio que `assign-crew`). El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar                                                                                                                                                                                                                                                                                                                                       |
-| POST   | `/services/:id/assign-crew`          | Asignar cuadrilla, y vehículo en la misma operación. **El solapamiento avisa, no bloquea**: si la cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, devuelve 409 nombrando los servicios; con `overrideNote` (10-500 caracteres) la asignación se hace igual y la nota queda guardada con quién y cuándo                                                                                                                                                                                                                                                                                                                                                                                                              |
-| GET    | `/services/:id/assignment-conflicts` | Con qué se solapa asignar `crewId` / `vehicleId`, **antes** de enviar. Sin parámetros evalúa los que el servicio ya tiene. Existe para que el planificador se entere por un aviso y no por un 409                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| POST   | `/services/:id/assign-crew`          | Asignar cuadrilla, y vehículo en la misma operación. **El solapamiento avisa, no bloquea**: si la cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, devuelve 409 nombrando los servicios; con `overrideNote` (10-500 caracteres) la asignación se hace igual y la nota queda guardada con quién y cuándo. **Lo mismo si la cuadrilla no trabaja en la zona del servicio ese día (zona efectiva en la fecha del servicio) o su especialidad no corresponde al tipo** (mapa en `src/modules/crews/crew-specialty.ts`); sin zona o especialidad cargadas no avisa                                                                                                                                                                                                                                                                                                                                                                                                              |
+| GET    | `/services/:id/assignment-conflicts` | Con qué se solapa asignar `crewId` / `vehicleId`, **antes** de enviar. Sin parámetros evalúa los que el servicio ya tiene. Devuelve `conflicts` (solapamientos) y `warnings` (`CREW_ZONE_MISMATCH`, `CREW_SPECIALTY_MISMATCH`); con cualquiera de los dos `hasConflicts` es `true` y asignar exige `overrideNote`. Existe para que el planificador se entere por un aviso y no por un 409                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 **Máquina de estados.** Una transición inválida devuelve 409 nombrando las válidas desde el estado actual.
 
@@ -349,10 +362,11 @@ Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append
 | POST   | `/containers`                        | Registrar contenedor. Nace en `ACTIVE`                                                    |
 | GET    | `/containers`                        | Listar. Filtros: `status`, `containerType`, `zoneId`, `search`                            |
 | GET    | `/containers/:id`                    | Detalle                                                                                   |
+| GET    | `/containers/:id/history`            | Historial de estados, paginado, del más reciente al más antiguo. 404 si no existe          |
 | PATCH  | `/containers/:id`                    | Actualizar zona, capacidad y ubicación                                                    |
 | POST   | `/containers/:id/report-overflow`    | `ACTIVE → OVERFLOWED`                                                                     |
 | POST   | `/containers/:id/empty`              | `OVERFLOWED → ACTIVE`                                                                     |
-| POST   | `/containers/:id/report-damage`      | `ACTIVE → DAMAGED`. Registra tipo de daño, severidad y `requiresPublicWorks`              |
+| POST   | `/containers/:id/report-damage`      | `ACTIVE → DAMAGED`. Registra tipo de daño, severidad, `requiresPublicWorks` y `observations` opcional (interna, no viaja a M3) |
 | POST   | `/containers/:id/start-repair`       | `DAMAGED → UNDER_REPAIR`                                                                  |
 | POST   | `/containers/:id/complete-repair`    | `UNDER_REPAIR → ACTIVE`                                                                   |
 | POST   | `/containers/:id/relocate`           | `ACTIVE → RELOCATING`                                                                     |
@@ -397,19 +411,19 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 
 | Método | Ruta                                               | Qué hace                                                                                                                                                                                                                                            |
 | ------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/tree-interventions`                              | Crear intervención sobre uno o más árboles                                                                                                                                                                                                          |
+| POST   | `/tree-interventions`                              | Crear intervención sobre uno o más árboles; registra `requestedByUserId` (el usuario del token)                                                                                                                                                                                                          |
 | GET    | `/tree-interventions`                              | Listar. Filtros: `interventionType`, `status`, `priority` (`LOW`/`MEDIUM`/`HIGH`/`CRITICAL`), `treeId` (las que incluyen ese árbol)                                                                                                                 |
 | GET    | `/tree-interventions/:id`                          | Detalle                                                                                                                                                                                                                                             |
 | POST   | `/tree-interventions/:id/submit-for-authorization` | `REQUESTED → PENDING_AUTHORIZATION`. Solo para `REMOVAL`                                                                                                                                                                                            |
-| POST   | `/tree-interventions/:id/authorize`                | `→ AUTHORIZED`. Una `REMOVAL` en `REQUESTED` da 409: tiene que pasar por `PENDING_AUTHORIZATION`                                                                                                                                                    |
-| POST   | `/tree-interventions/:id/reject`                   | `PENDING_AUTHORIZATION → REJECTED`                                                                                                                                                                                                                  |
+| POST   | `/tree-interventions/:id/authorize`                | `→ AUTHORIZED`. Una `REMOVAL` en `REQUESTED` da 409: tiene que pasar por `PENDING_AUTHORIZATION`. Autorizar una `REMOVAL` exige `M6_ADMIN` (403 `ROLE_REQUIRED` para `M6_OFICINA_OPERACIONES`); un admin puede autorizar lo que él mismo solicitó y `requestedByUserId` y `authorizedByUserId` quedan en la respuesta                                                                                                                                                    |
+| POST   | `/tree-interventions/:id/reject`                   | `PENDING_AUTHORIZATION → REJECTED`. Rechazar una `REMOVAL` también exige `M6_ADMIN`                                                                                                                                                                                                                  |
 | POST   | `/tree-interventions/:id/assign-service`           | Asociar la intervención al `Service` que la ejecuta. La intervención guarda **qué** hay que hacer; el servicio, **cuándo, con qué cuadrilla y cómo terminó**. Solo una intervención `AUTHORIZED`, contra un servicio `POINT` que no ejecute ya otra |
 
 ## `events` — ingesta de eventos entrantes
 
 | Método | Ruta               | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/events/inbox`    | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. 400 si `occurredAt` no es ISO 8601, si `correlationId` o `causationId` (este puede ir `null`) no son UUID, si `eventId`, `eventType`, `sourceModule` o `eventVersion` pasan su tope, si `sourceModule` trae algo que no sea letras, números, `-` o `_`, o si el `data` de un evento con handler no trae sus campos obligatorios (no se guarda; ver [consumidos](../eventos/consumidos/README.md)) |
+| POST   | `/events/inbox`    | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. Acepta `occuredAt` (typo de M1 v3.0) como alias deprecado de `occurredAt`: si vienen los dos manda `occurredAt`, y el alias también debe ser ISO 8601. 400 si `occurredAt` no es ISO 8601 (o `occuredAt`), si `correlationId` o `causationId` (este puede ir `null`) no son UUID, si `eventId`, `eventType`, `sourceModule` o `eventVersion` pasan su tope, si `sourceModule` trae algo que no sea letras, números, `-` o `_`, o si el `data` de un evento con handler no trae sus campos obligatorios (no se guarda; ver [consumidos](../eventos/consumidos/README.md)) |
 | GET    | `/events/handlers` | Los tipos de evento con handler registrado                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 **La idempotencia es por `eventId`** y vive en el inbox, no en cada handler: un mensaje ya procesado (o en curso) se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. La decide el `@unique` de `InboxEvent.messageId`, no una consulta previa que podría correr en paralelo con otra igual.
@@ -422,13 +436,38 @@ El sobre es el del Core (`sourceModule`, `correlationId`, `causationId`). El de 
 
 > Este endpoint es la vía manual: sirve para ejercitar los consumidores sin broker o mientras el Core no registra nuestras suscripciones. El consumidor de RabbitMQ (`q.ambiente`) llama al mismo `ingest()`.
 
+## `outbox` — eventos salientes: consulta y reintento
+
+Contraparte de `POST /events/inbox`: sin entrar a la base se ve qué salió, qué falló y por qué, y se reencola lo `FAILED`. El dispatcher deja una fila en `FAILED` a los 5 intentos y deja de barrerla (ver [eventos publicados](../eventos/publicados/README.md)).
+
+| Método | Ruta                          | Roles                | Qué hace |
+| ------ | ----------------------------- | -------------------- | -------- |
+| GET    | `/events/outbox`              | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más nuevo al más viejo. Filtros: `status` (`PENDING`/`SENT`/`FAILED`), `eventType`, `from`/`to` (días argentinos inclusivos sobre `occurredAt`; 400 si `from` > `to`). **No trae el `payload`**: puede incluir datos del vecino |
+| GET    | `/events/outbox/:id`          | `M6_ADMIN`           | Detalle con el `payload` y los reintentos manuales que se le hicieron. 404 si no existe |
+| POST   | `/events/outbox/:id/retry`    | `M6_ADMIN`           | `FAILED` → `PENDING` con `attempts = 0`; el dispatcher lo reenvía en la próxima barrida (cada 10 s). 409 si no está en `FAILED` (un `SENT` no se reenvía; un `PENDING` ya está en cola) |
+| POST   | `/events/outbox/retry-failed` | `M6_ADMIN`           | Lo mismo en lote. Body `{ "confirm": true, "limit": 20 }`: `confirm` obligatorio (solo el booleano `true` o la cadena `"true"`; cualquier otra cosa da 400), `limit` opcional (1 a 100, por omisión 100), los más viejos primero. Devuelve `{ requeued, remainingFailed }`; 409 si otro reintento concurrente tocó eventos de la tanda (no se reencola ni audita nada: repetir el pedido) |
+
+**Auditoría.** Cada reintento escribe una fila en `outbox_retry_audit` (`outboxEventId`, `actorUserId`, `at`, `previousAttempts`, `previousError`) en la misma transacción que el cambio de estado: el reintento borra `attempts` y `lastError`, y ahí queda cómo estaban. El actor sale del token, nunca del body. **Reintentar republica con el mismo `eventId`** (es el id de la fila). Los módulos receptores deduplican por `eventId`, así que no hay doble efecto si el primer envío había llegado a salir. Pero el Core de M9 puede no redistribuir un `eventId` que ya registró, y uno `REJECTED` tampoco se revalida al retransmitirlo (ver [m9.md](../integracion/m9.md)): **si el motivo del `FAILED` fue un payload rechazado, el reintento no lo arregla**; hay que coordinar el reproceso con M9. Sirve sobre todo cuando el fallo fue de transporte (broker caído, red). Con el receptor todavía caído, el evento vuelve a `FAILED` tras 5 intentos. No hay reintento automático de un `FAILED`: es una acción humana auditada.
+
+**`lastError` puede incluir datos de infraestructura** (host y puerto del broker, hasta 500 caracteres) y lo ve también el auditor en el listado; por eso el detalle, que agrega el payload y el `previousError` de cada reintento, es solo para `M6_ADMIN`.
+
+## `audit` — auditoría de dominio
+
+Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas, derivaciones, intervenciones, servicios y catálogos ([#460](https://github.com/hllous/Backend-M6-DAPS2/issues/460)). Modelo y cobertura en [entidades/auditoria.md](../entidades/auditoria.md).
+
+| Método | Ruta     | Roles                    | Qué hace |
+| ------ | -------- | ------------------------ | -------- |
+| GET    | `/audit` | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más reciente al más antiguo. Filtros opcionales `entityType` (valor cerrado: `CONTAINER`, `ENVIRONMENTAL_REPORT`, `ENVIRONMENTAL_INSPECTION`, `VIOLATION_NOTICE`, `REPAIR_REQUEST`, `STREET_CLOSURE_REQUEST`, `TREE_INTERVENTION`, `SERVICE`, `CREW`, `ZONE`, `VEHICLE`, `ROUTE`) y `entityId` (UUID); 400 si alguno es inválido. Cada fila trae `action`, `fromStatus`/`toStatus`, `actorUserId` y `actorRoles` (del token, nunca del body), `note` (solo el motivo que el flujo ya pedía) y `occurredAt` |
+
+La tabla es de solo agregado (un trigger rechaza modificar, borrar y vaciar) y no se purga. No audita lecturas ni las transiciones que hace el sistema (consumidores de eventos y barridos).
+
 ## `repair-requests` — reparaciones derivadas a M3
 
 El daño de infraestructura que detectamos pero que no nos corresponde arreglar. La solicitud existe para **poder seguir el pedido**: publicar el evento no alcanza, porque la respuesta de M3 vuelve asincrónica.
 
 | Método | Ruta                         | Qué hace                                                                                                                                                                                              |
 | ------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/repair-requests`           | Crear y publicar `infrastructureRepairRequested` → M3. Si el daño salió de un servicio nacido de un reclamo, el `ticketId` viaja en el evento. 404 si el servicio o la inspección de origen no existe |
+| POST   | `/repair-requests`           | Crear y publicar `infrastructureRepairRequested` → M3. Si el daño salió de un servicio nacido de un reclamo —o de una inspección, vía el `ticketId` de su expediente— el `ticketId` viaja en el evento. 404 si el servicio o la inspección de origen no existe. **409** si el origen es una inspección sin cerrar, `NO_VIOLATION` o de un expediente `NOISE`/`ODOR`/`PEST_INFESTATION`/`AIR_EMISSION` (ver `ALLOWED_FOLLOW_UPS`), o si ya hay una solicitud no cerrada para el mismo origen y `damageType` |
 | GET    | `/repair-requests`           | Listar. Filtros: `status`, `damageType`, `severity`, `detectedInId`                                                                                                                                   |
 | GET    | `/repair-requests/:id`       | Detalle, con la orden de trabajo de M3 si la informaron                                                                                                                                               |
 | POST   | `/repair-requests/:id/start` | → `IN_PROGRESS`. **Normalmente lo dispara `workOrderScheduled`** (Fase 6). **409** si la transición no es válida desde el estado actual                                                               |
@@ -442,12 +481,14 @@ El daño de infraestructura que detectamos pero que no nos corresponde arreglar.
 
 | Método | Ruta                                   | Qué hace                                                                                                                                                                                                                                                                                                                  |
 | ------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/street-closure-requests`             | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo: `affectedSections` no puede viajar vacío. 400 si `requestedTo` es anterior a `requestedFrom`. 404 si el servicio o la intervención de origen no existe. **409** si la intervención de origen no está `AUTHORIZED` |
+| POST   | `/street-closure-requests`             | Crear y publicar `streetClosureRequested` → M7, con **`sourceModule = "M6"`**. Exige al menos un tramo (`sections`, cada uno con `streetName`, `fromCross`, `toCross` y `direction`: `FORWARD`/`REVERSE`/`BOTH`) y `closureType` (`TOTAL`/`PARTIAL`); al evento viajan como `affectedSections` `{street, from, to, direction}`. 400 si `requestedTo` es anterior a `requestedFrom`. 404 si el servicio o la intervención de origen no existe. **409** si la intervención de origen no está `AUTHORIZED` |
 | GET    | `/street-closure-requests`             | Listar. Filtros: `status`, `sourceId`                                                                                                                                                                                                                                                                                     |
 | GET    | `/street-closure-requests/:id`         | Detalle con sus tramos                                                                                                                                                                                                                                                                                                    |
 | POST   | `/street-closure-requests/:id/approve` | → `APPROVED`, guarda el `closureId` de M7. **Normalmente lo dispara `streetClosureApproved`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                               |
 | POST   | `/street-closure-requests/:id/reject`  | → `REJECTED`. **Normalmente lo dispara `streetClosureRejected`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                                                            |
 | POST   | `/street-closure-requests/:id/end`     | → `ENDED`, desde `REQUESTED`, `APPROVED` o `EXPIRED`. **Normalmente lo dispara `streetClosureEnded`**. **409** si la transición no es válida desde el estado actual                                                                                                                                                       |
+
+La respuesta de un corte trae, además de la ventana pedida (`closureFrom`/`closureTo`), la que autorizó M7 (`approvedFrom`/`approvedTo`, null hasta que aprueban) y el motivo del rechazo (`rejectionReason`, null si no fue rechazado). Son los nombres de nuestro REST; en los eventos de M7 llegan como `startDate`/`endDate`/`rejectionReason`.
 
 `sourceRef` apunta al `Service` o a la `TreeIntervention` que origina el corte: es lo que hace que la respuesta de M7 se pueda aplicar sobre el trabajo correcto.
 
@@ -476,7 +517,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | POST   | `/environmental-reports/:reportId/inspections`    | Programar. Lleva el expediente a `INSPECTION_SCHEDULED`. Se ejecuta como un `Service` de modo `POINT`                                                                                                                                                        |
 | GET    | `/environmental-reports/:reportId/inspections`    | Inspecciones del expediente                                                                                                                                                                                                                                  |
-| GET    | `/environmental-inspections/:id`                  | Detalle con checklist y hallazgos                                                                                                                                                                                                                            |
+| GET    | `/environmental-inspections/:id`                  | Detalle con checklist y hallazgos, más `reportType`, `address`, `lat` y `lng` del expediente (solo lectura) y `allowedActions` (`repair`, `notice`, `suggestedViolationType`: la matriz por tipo de expediente cruzada con el resultado; también en el listado por expediente)                                                                                                                                                                                                                            |
 | POST   | `/environmental-inspections/:id/complete`         | Cierra con su `outcome`. Lleva el expediente a `INSPECTED` y de ahí, en la misma operación, a `NO_VIOLATION` o `VIOLATION_FOUND`. Un `INCONCLUSIVE` lo deja en `INSPECTED`. 400 si `inspectedAt` está en el futuro o si `VIOLATION_FOUND` no trae `nextStep` |
 | POST   | `/environmental-inspections/:id/violation-notice` | **Emitir el acta.** Solo sobre una inspección `VIOLATION_FOUND`                                                                                                                                                                                              |
 | GET    | `/environmental-inspections/:id/violation-notice` | El acta emitida; `200` con `null` (JSON literal) si la inspección no tiene acta, `404` solo si no existe                                                                                                                                                     |
@@ -494,7 +535,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | Método | Ruta        | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | POST   | `/evidence` | Sube un archivo (multipart, uno por llamada) y lo asocia a un `ownerType`/`ownerId` que ya debe existir (`CONTAINER`, `SERVICE`, `ZONE_RESULT`, `INSPECTION`). Requiere el header `Idempotency-Key`. Un archivo mayor a `MAX_EVIDENCE_SIZE_BYTES` (10 MB) da **413**: multer lo corta antes de llegar al service. Sin `R2_BUCKET` / `R2_PUBLIC_URL_BASE` configurados, el camino válido responde **503** (no 500) y no persiste nada **Rol por `ownerType`:** `INSPECTION` solo `M6_CAMPO_INSPECTOR`; `SERVICE`, `ZONE_RESULT` y `CONTAINER` solo `M6_CAMPO_CUADRILLA`; otro rol recibe 403 `ROLE_REQUIRED` (un `M6_ADMIN` no tiene Campo). |
-| GET    | `/evidence` | Lista la evidencia de un `ownerType`/`ownerId`, por query params                                                                                                                                                                                                                                                                                                                                                                     |
+| GET    | `/evidence` | Lista la evidencia de un `ownerType`/`ownerId`, por query params. Campo solo la de dueños que le pertenecen (403 `NOT_ASSIGNED`, 404 si no existe)                                                                                                                                                                                                                                                                                                                                                                     |
 
 **Genérico por diseño (Issue #64).** Un solo módulo sirve a los cuatro tipos de recurso en vez de reimplementar la subida por cada uno — el modelo `Attachment` ya era polimórfico en el schema, esto le agrega el endpoint que faltaba.
 
@@ -528,11 +569,20 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 
 Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran por período con `from` y `to`; sin ellos, los últimos 30 días.
 
+**Parámetros comunes (opcionales, en los cuatro):**
+
+| Parámetro          | Qué hace                                                                                                                                                                                                                                                                                                        |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bucket`           | `day`, `week` o `month`. Suma `series`: un punto por intervalo (`from` y `to` inclusive, días argentinos UTC-3). `week` va de lunes a domingo y `month` es mes calendario; el primero y el último intervalo se recortan al período, así que **la suma de la serie es igual a `totals`**. Los intervalos vacíos van en cero. Más de **90 puntos** da 400, antes de leer la base |
+| `compare=previous` | Suma `previous` (`period` y `totals` del período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales, en días o en cantidades, con un decimal; `null` si alguno de los dos lados no tiene base). Sin él, la respuesta no cambia                                                       |
+
+Cada respuesta trae `targets`: la meta de sus indicadores como `{ value, direction }`, con `direction` `min` (se cumple con un valor mayor o igual), `max` (menor o igual) o `down` (tendencia descendente: se cumple si baja de un período al otro; su `value` es `null` porque nadie definió un número). Salen de variables de entorno (`INDICATORS_TARGET_*`, ver `.env.example`) con los valores que definió el equipo el 29/10.
+
 | Método | Ruta                     | Qué hace                                                                                                                                                                                |
 | ------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/indicators/coverage`   | Objetivos atendidos sobre programados, con desglose por zona y por tipo de servicio. Filtros extra: `zoneId`, `serviceTypeId`. En todos los indicadores, `from` posterior a `to` da 400 |
 | GET    | `/indicators/compliance` | Finalizados en término contra demorados, y ranking de zonas no atendidas con sus motivos. Filtros extra: `zoneId`, `serviceTypeId`                                                      |
-| GET    | `/indicators/incidents`  | Contenedores desbordados y dañados por zona, árboles por nivel de riesgo, y denuncias por tipo y estado con el tiempo medio de resolución                                               |
+| GET    | `/indicators/incidents`  | Contenedores por estado y zona (foto actual) y sus desbordes, daños y daños pendientes por período (historial), árboles por nivel de riesgo, y denuncias por tipo y estado con el tiempo medio de resolución, las resueltas dentro del plazo y las vencidas |
 | GET    | `/indicators/waste`      | Kg y m³ por tipo de residuo y por destino, y porcentaje desviado del relleno                                                                                                            |
 
 **La unidad de cobertura es el par (servicio, zona), no el servicio.** Un recorrido que pasa por cuatro zonas y atiende tres no es "un servicio a medias": son tres objetivos cumplidos y uno no. `ServiceZone` ya es ese par y `ZoneResult` es su resultado, así que el desglose por zona sale del mismo dato que el total.
@@ -541,9 +591,50 @@ Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran p
 
 **"En término" se mide con el último `ZoneResult.recordedAt` contra `Service.scheduledDate`.** `Service` no tiene columna de cierre, y `updatedAt` se mueve con cualquier edición posterior: no sirve para medir puntualidad. El resultado de campo sí es la marca de cuándo se terminó el trabajo.
 
-**Contenedores y arbolado son una foto del estado actual, no del período.** El inventario no tiene historial de estados, así que el período solo filtra las denuncias. El nivel de riesgo de cada árbol sale de su último relevamiento, uno por árbol.
+### Definición de cada indicador
 
-**El tiempo medio de resolución cuenta solo los expedientes `CLOSED`**, que es el único estado del que no se sale, medido de `createdAt` a `updatedAt`.
+Tabla de metas del equipo (29/10). Se calculan todos menos zonas no atendidas, que sigue pendiente de definición (ver [#461](https://github.com/hllous/Backend-M6-DAPS2/issues/461); etapa 1 en #473, etapa 2 en #475).
+
+| Indicador | Campo | Cómo se mide | Meta |
+| --------- | ----- | ------------ | ---- |
+| Cobertura de servicios | `coverage.totals.coveragePct` | Pares (servicio, zona) atendidos ÷ pares programados con fecha vencida × 100 | ≥ 95 % |
+| Cumplimiento de servicios | `compliance.finished.onTimePct` | Servicios finalizados en término ÷ servicios finalizados × 100 | ≥ 90 % |
+| Días de resolución | `incidents.reports.avgResolutionBusinessDays` | Promedio de días hábiles entre el alta y el cierre de la denuncia (solo cerradas) | ≤ 5 días hábiles |
+| Desvío de programación | `compliance.schedulingDeviation.deviatedPct` | Servicios reprogramados o con aviso de demora ÷ servicios del período × 100 | ≤ 10 % |
+| Desvío del relleno sanitario | `waste.totals.divertedPct` | Kg a planta de reciclado o de compostaje ÷ kg recolectados × 100 | sin meta acordada (`null`) |
+| Zonas no atendidas | — | Pendiente: hay que definir si cuenta solo "sin resultado" o también `NOT_SERVICED` | ≤ 5 % |
+| Contenedores desbordados | `incidents.containers.history.overflowIncidents` | Incidentes de desborde del período: transiciones a `OVERFLOWED` con origen no nulo en el historial de estados (un contenedor que se desborda dos veces suma dos) | tendencia mensual descendente (`targets.overflowTrend`: `down`, sin valor) |
+| Contenedores dañados pendientes | `incidents.containers.history.pendingDamage` | Contenedores cuyo último estado conocido al final del período es `DAMAGED` o `UNDER_REPAIR`; `null` sin historial | reducir pendientes mes a mes (`targets.pendingDamageTrend`: `down`, sin valor) |
+| Resolución de reclamos dentro del plazo | `incidents.reports.withinDeadline.pct` | Reclamos `CLOSED` con días hábiles entre el alta y el cierre ≤ plazo objetivo ÷ reclamos `CLOSED` × 100; `null` sin cerrados | ≥ 85 % |
+| Reclamos pendientes vencidos | `incidents.reports.overdue.pct` | Reclamos abiertos con días hábiles desde el alta hasta hoy > plazo objetivo ÷ reclamos abiertos × 100; `null` sin abiertos | ≤ 10 % |
+
+**La cobertura solo cuenta lo vencido.** `scheduled` y `coveragePct` se calculan sobre los pares cuyo servicio tiene fecha programada de hoy o anterior (hoy es el día argentino). Lo programado a futuro va aparte en `upcoming`: todavía no es un incumplimiento. `pending` es "vencido y sin resultado cargado".
+
+**`lowSample`.** Cada fila de `byZone` y `byServiceType` trae `lowSample: true` cuando tiene menos programados que `INDICATORS_MIN_SAMPLE` (5 por defecto): 2 de 2 es un 100 % que no dice nada. El `coveragePct` no cambia; la marca es informativa.
+
+**Días hábiles.** Lunes a viernes, contados sobre los días argentinos del alta y del cierre: cuenta cada día hábil en `(alta, cierre]`, así que el mismo día es 0 y de viernes a lunes es 1. Los feriados no se consideran. `avgResolutionDays` sigue en días corridos; la meta se compara con `avgResolutionBusinessDays`.
+
+**Desvío de programación.** Se mide en servicios, no en pares servicio/zona. Cuenta un servicio una sola vez si está `RESCHEDULED` o tiene al menos un aviso de demora (`ServiceDelayNotice`, vigente o reemplazado). Los `CANCELLED` no entran. No es el desvío del relleno sanitario: son indicadores distintos, con campos y metas propios.
+
+**Qué tiene serie y comparación.** Cobertura, cumplimiento y residuos agrupan por la fecha programada del servicio. Incidencias agrupa las **denuncias** por día argentino de creación y suma, en cada punto, el historial de contenedores del intervalo (`containers`: `overflowIncidents`, `damageIncidents` y `pendingDamage` al fin del intervalo). Los **vencidos**, los conteos por estado y zona de contenedores y el arbolado no tienen serie ni `previous`.
+
+**Contenedores: dos cosas distintas.** `containers.byStatus` y `containers.byZone` son una **foto del estado actual**: no dependen del período. `containers.history` sí es del período y sale del historial de estados (`container_status_history`, ver [entidades/container.md](../entidades/container.md#historial-de-estados-475)). El nivel de riesgo de cada árbol sale de su último relevamiento, uno por árbol.
+
+**Historial de contenedores (#475).** `containers.history` trae `overflowIncidents`, `damageIncidents`, `pendingDamage` y `trackingSince`.
+
+- *Incidente* = una fila del historial con destino `OVERFLOWED` (o `DAMAGED`) y **origen no nulo**, dentro del período (días argentinos). Cuenta por transición, no por contenedor. El alta y la fila base que siembra la migración (origen nulo) nunca cuentan, así que el despliegue no genera un pico falso.
+- *Daño pendiente en T* = contenedores cuyo último estado conocido hasta T es `DAMAGED` o `UNDER_REPAIR` (T = último instante del último día argentino del período o intervalo). `ACTIVE`, `OVERFLOWED`, `RELOCATING` y `REMOVED` no son pendientes. Un contenedor sin filas hasta T no cuenta.
+- **Sin dato no es cero:** si ningún contenedor tiene historial hasta T, `pendingDamage` es `null`. `trackingSince` es el instante de la fila más antigua (`null` si no hay ninguna): antes de esa fecha no hay datos. **No se reconstruye el pasado** anterior a la migración.
+- `delta.overflowIncidents` y `delta.pendingDamage` son diferencias en **cantidades** (no porcentajes), `null` si alguno de los dos períodos no tiene historial.
+
+**Reclamos dentro del plazo y vencidos (#475).** El **plazo objetivo** lo informa la respuesta (`reports.deadlineBusinessDays`) y sale de `INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS` (5 por defecto, el mismo número que la meta del promedio de resolución). **Es un supuesto de M6, único para todos los tipos de reclamo, hasta que M2 acuerde el suyo**; no es un dato de M2. Se mide en días hábiles con la misma regla que `avgResolutionBusinessDays` (lunes a viernes, días argentinos, sin feriados, cuenta cada día hábil en `(alta, cierre]`).
+
+- `reports.withinDeadline` = `{ resolved, withinDeadline, pct }`: resueltos (`CLOSED`) cuyo cierre (la última modificación, como en el promedio) cae dentro del plazo; justo el plazo cuenta como dentro. `pct` es `null` sin resueltos. Tiene serie (por día argentino de creación) y `previous`/`delta` (`withinDeadlinePct`, en puntos porcentuales).
+- `reports.overdue` = `{ open, overdue, pct }`: **foto de hoy** de los reclamos creados en el período. *Abierto* = cualquier estado que no sea `CLOSED`; *vencido* = abierto cuyos días hábiles desde el alta hasta hoy (día argentino) superan el plazo. `pct` es `null` sin abiertos. Un reclamo cerrado nunca cuenta como abierto ni como vencido. **No tiene serie ni comparación**: el sistema no guarda el historial de estados de los reclamos.
+- **Estados finales:** solo `CLOSED` es final. `DISMISSED` (desestimado), `NO_VIOLATION` (sin infracción) y `FORWARDED` (derivado) todavía pasan a `CLOSED` y se pueden reabrir (ver [`EnvironmentalReport`](../entidades/environmental-report.md#estados)), así que cuentan como abiertos. Es la lectura conservadora: no se da por resuelto lo que el modelo de estados no cerró.
+- Variables nuevas, validadas al arrancar (plazo > 0; metas de 0 a 100): `INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS` (5), `INDICATORS_TARGET_REPORTS_WITHIN_DEADLINE_PCT` (85, `min`) e `INDICATORS_TARGET_REPORTS_OVERDUE_PCT` (10, `max`).
+
+**El tiempo medio de resolución cuenta solo los expedientes `CLOSED`**, medido de `createdAt` a `updatedAt`. Un expediente cerrado puede reabrirse (`CLOSED → UNDER_REVIEW`), pero mientras queda cerrado no se toca, así que `updatedAt` es una marca de cierre aceptable.
 
 ## `citizen-portal` — vista pública
 
@@ -558,6 +649,8 @@ Las cuatro familias que define [`docs/README.md`](../README.md). Todos filtran p
 
 **Límite de tasa, y solo acá.** Al no exigir token, esta es la única superficie que cualquiera en internet puede pegar: **60 consultas por minuto por dirección**, y **20 en `/public/reports/:ticketId`**, que es más estricto porque deja probar números de reclamo de a uno para averiguar cuáles tienen expediente ambiental. Devolver el mismo 404 exista o no el ticket evita confirmar uno puntual; el límite evita insistir. Pasado el límite, 429.
 
+**Quién es "la dirección" cuando llama el BFF.** El frontend llama desde su servidor, así que por defecto el contador ve siempre la IP del BFF. Para contar por vecino, el BFF manda dos headers: `X-M6-BFF-Key: <BFF_SHARED_KEY>` (el secreto compartido, variable del backend en [deploy](../deploy.md)) y `X-Forwarded-For: <IP del vecino>` (se toma la primera IP de la lista, que debe ser una IP válida; si no, cuenta `req.ip`). **El BFF tiene que sobrescribir** este header con la IP que le entrega Vercel, nunca reenviar el que trae el navegador: si lo reenviara, la primera entrada la elegiría el vecino y podría saltearse el límite. El backend solo cree el `X-Forwarded-For` si la clave coincide (comparación en tiempo constante); sin clave, con una incorrecta, o con `BFF_SHARED_KEY` sin configurar, lo ignora y cuenta `req.ip`, de modo que un pedido directo con un `X-Forwarded-For` inventado no evita el límite. La clave nunca debe llegar al navegador.
+
 No hay límite global: también alcanzaría a un operador municipal en su turno, y un 429 a mitad de una carga de resultados de zona es peor que el riesgo que evita.
 
 **Cada respuesta es una proyección explícita, no la fila de la base.** La diferencia importa: si mañana alguien agrega una columna al expediente, una proyección no la publica sola.
@@ -565,10 +658,3 @@ No hay límite global: también alcanzaría a un operador municipal en su turno,
 **Lo que no sale nunca por acá**, aunque esté en la misma fila: la identidad del inspector, los hallazgos y el checklist, el contenido del acta, la identidad del denunciante, y —en los servicios— la cuadrilla, el vehículo, las notas y el motivo interno de una reprogramación. Hay un test que lo verifica campo por campo.
 
 **El expediente se resume a siete etapas, no a sus once estados.** `EnvironmentalReportStatus` es vocabulario de inspector: distingue cosas que le importan al supervisor, no al vecino. `VIOLATION_FOUND`, `NOTICE_ISSUED` y `SANCTIONED` son la misma etapa para el denunciante — el trámite sancionatorio sigue su curso.
----
-
-## Lo que todavía no existe
-
-| Qué falta                                         | Detalle                                                                                                                                                                                                                                                               |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Autorización por rol en el resto de los endpoints | Solo `role-assignments` exige rol. Cualquier empleado autenticado puede llamar los demás (salvo los `@Public()`). Base hecha en el PR 1 de #161; el corte (`RolesGuard` global, `@Roles` en las escrituras) es el PR 2. Estado en [bloqueantes.md](../bloqueantes.md) |

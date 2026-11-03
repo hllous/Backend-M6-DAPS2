@@ -19,9 +19,11 @@ import {
   QueryContainersDto,
   ReportDamageDto,
   ConfirmRelocationDto,
+  ContainerStatusHistoryResponseDto,
 } from './dto';
-import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ErrorResponseDto, PaginationQueryDto } from '../../common/dto';
+import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
 
 @ApiTags('containers')
@@ -69,8 +71,11 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async create(@Body() dto: CreateContainerDto): Promise<ContainerResponseDto> {
-    return this.containersService.create(dto);
+  async create(
+    @Body() dto: CreateContainerDto,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<ContainerResponseDto> {
+    return this.containersService.create(dto, actor);
   }
 
   @Get()
@@ -127,6 +132,37 @@ export class ContainersController {
   })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
     return this.containersService.findOne(id);
+  }
+
+  @Get(':id/history')
+  @ApiOperation({
+    summary: 'Historial de estados de un contenedor',
+    description:
+      'Retorna, paginado y del más reciente al más antiguo, cada alta y cada cambio de estado del contenedor (origen, destino e instante). El alta tiene origen nulo.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID del contenedor',
+    format: 'uuid',
+  })
+  @ApiPaginatedResponse(ContainerStatusHistoryResponseDto, 'Historial paginado de estados')
+  @ApiResponse({
+    status: 401,
+    description: 'Token JWT inválido o ausente',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Contenedor no encontrado',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  async findHistory(@Param('id', ParseUUIDPipe) id: string, @Query() query: PaginationQueryDto) {
+    return this.containersService.findHistory(id, query);
   }
 
   @Patch(':id')
@@ -212,8 +248,11 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async reportOverflow(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
-    return this.containersService.reportOverflow(id);
+  async reportOverflow(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<ContainerResponseDto> {
+    return this.containersService.reportOverflow(id, actor);
   }
 
   @Post(':id/report-damage')
@@ -222,7 +261,7 @@ export class ContainersController {
   @ApiOperation({
     summary: 'Reportar daño en un contenedor',
     description:
-      'Transición ACTIVE → DAMAGED. Registra el tipo de daño, severidad y si requiere derivación a Obras Públicas (M3). Un contenedor con requiresPublicWorks=true genera el evento containerDamaged hacia M3.',
+      'Transición ACTIVE → DAMAGED. Registra el tipo de daño, severidad, observaciones opcionales (dato interno, no viajan a M3) y si requiere derivación a Obras Públicas (M3). Un contenedor con requiresPublicWorks=true genera el evento containerDamaged hacia M3.',
   })
   @ApiParam({
     name: 'id',
@@ -262,8 +301,9 @@ export class ContainersController {
   async reportDamage(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReportDamageDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.reportDamage(id, dto);
+    return this.containersService.reportDamage(id, dto, actor);
   }
 
   @Post(':id/empty')
@@ -304,8 +344,11 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async empty(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
-    return this.containersService.empty(id);
+  async empty(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<ContainerResponseDto> {
+    return this.containersService.empty(id, actor);
   }
 
   @Post(':id/start-repair')
@@ -346,8 +389,11 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async startRepair(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
-    return this.containersService.startRepair(id);
+  async startRepair(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<ContainerResponseDto> {
+    return this.containersService.startRepair(id, actor);
   }
 
   @Post(':id/complete-repair')
@@ -356,7 +402,7 @@ export class ContainersController {
   @ApiOperation({
     summary: 'Completar reparación de un contenedor',
     description:
-      'Transición UNDER_REPAIR → ACTIVE. Indica que la reparación finalizó y el contenedor vuelve a servicio. Limpia los campos de daño.',
+      'Transición UNDER_REPAIR → ACTIVE. Indica que la reparación finalizó y el contenedor vuelve a servicio. Limpia los campos de daño y las observaciones.',
   })
   @ApiParam({
     name: 'id',
@@ -388,8 +434,11 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async completeRepair(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
-    return this.containersService.completeRepair(id);
+  async completeRepair(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<ContainerResponseDto> {
+    return this.containersService.completeRepair(id, actor);
   }
 
   @Post(':id/relocate')
@@ -430,8 +479,11 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async relocate(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
-    return this.containersService.relocate(id);
+  async relocate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<ContainerResponseDto> {
+    return this.containersService.relocate(id, actor);
   }
 
   @Post(':id/confirm-relocation')
@@ -480,8 +532,9 @@ export class ContainersController {
   async confirmRelocation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ConfirmRelocationDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.confirmRelocation(id, dto);
+    return this.containersService.confirmRelocation(id, dto, actor);
   }
 
   @Post(':id/remove')
@@ -523,7 +576,10 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
-    return this.containersService.remove(id);
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<ContainerResponseDto> {
+    return this.containersService.remove(id, actor);
   }
 }

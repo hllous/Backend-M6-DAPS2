@@ -61,7 +61,7 @@
       "get": {
         "operationId": "MeController_me",
         "summary": "Quién soy y qué puedo hacer",
-        "description": "Devuelve la identidad del token y los roles de M6 efectivos (asignaciones locales ∩ lo que permite el rol de M1). Se calcula en cada request: un cambio de asignación rige en la próxima llamada. El frontend usa esto en vez de deducir permisos del token.",
+        "description": "Devuelve la identidad del token, los roles de M6 efectivos (asignaciones locales ∩ lo que permite el rol de M1), las cuadrillas de la persona (id, nombre y si es responsable o integrante) y si es inspector. Se calcula en cada request: un cambio de asignación rige en la próxima llamada. El frontend usa esto en vez de deducir permisos del token.",
         "parameters": [],
         "responses": {
           "200": {
@@ -233,6 +233,583 @@
         },
         "tags": [
           "events"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/events/outbox": {
+      "get": {
+        "operationId": "OutboxController_findAll",
+        "summary": "Listar los eventos salientes del outbox",
+        "description": "Listado paginado, del más nuevo al más viejo, con estado, intentos y último error. Filtra por `status`, `eventType` y rango de `occurredAt` (días argentinos, inclusivos). No incluye el payload, que puede traer datos del vecino: está en el detalle, solo para admin.",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-indexed)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Registros por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por estado del envío",
+            "schema": {
+              "example": "FAILED",
+              "enum": [
+                "PENDING",
+                "SENT",
+                "FAILED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por tipo de evento (exacto, camelCase)",
+            "schema": {
+              "maxLength": 100,
+              "example": "containerDamaged",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Ocurridos desde este día, inclusive (YYYY-MM-DD, día argentino UTC-3). Filtra por `occurredAt`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Ocurridos hasta este día, inclusive: hasta las 23:59:59 ART (YYYY-MM-DD). No puede ser anterior a `from`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado de eventos salientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutboxEventResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros inválidos (estado desconocido, fecha mal formada, `from` > `to`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_AUDITOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "outbox"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/events/outbox/{id}": {
+      "get": {
+        "operationId": "OutboxController_findOne",
+        "summary": "Detalle de un evento saliente, con su payload",
+        "description": "Devuelve el evento completo: el payload tal como se publica y los reintentos manuales que se le hicieron (quién, cuándo y cómo estaba antes). Solo admin, porque el payload puede incluir datos personales.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del evento del outbox",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evento con payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEventDetailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El id no es un UUID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe ese evento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "outbox"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/events/outbox/retry-failed": {
+      "post": {
+        "operationId": "OutboxController_retryFailed",
+        "summary": "Reencolar en lote los eventos FAILED",
+        "description": "Pasa a PENDING (attempts = 0) los FAILED más viejos, hasta `limit` (tope 100 por pedido), y audita cada uno con el usuario del token. Exige `confirm: true` (solo el booleano `true` o la cadena \"true\"). Mismas salvedades que el reintento individual sobre el `eventId`. 409 si otro reintento concurrente tocó eventos de la tanda (no se reencola nada). Devuelve cuántos reencoló y cuántos FAILED quedan; repetir el pedido sigue con la tanda siguiente. Con el receptor todavía caído los eventos vuelven a FAILED tras 5 intentos.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryFailedOutboxDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado del lote",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetryFailedOutboxResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta `confirm: true` o `limit` fuera de 1..100",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Otro reintento concurrente tocó eventos de la tanda; no se reencoló nada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "outbox"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/events/outbox/{id}/retry": {
+      "post": {
+        "operationId": "OutboxController_retry",
+        "summary": "Reintentar un evento FAILED",
+        "description": "Pasa un evento FAILED a PENDING con attempts = 0 para que el dispatcher lo reenvíe en la próxima barrida (cada 10 s). Queda auditado quién lo reencoló, cuándo y con qué intentos y error previos. Republica con el mismo `eventId`: los módulos receptores deduplican por él, pero el Core de M9 puede no redistribuir un `eventId` ya registrado, así que si el motivo del FAILED fue un payload rechazado el reintento no lo arregla. Un evento PENDING o SENT no se reenvía: 409.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del evento del outbox",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evento reencolado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEventResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El id no es un UUID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe ese evento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El evento no está en FAILED (ya salió o está en cola)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "outbox"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/audit": {
+      "get": {
+        "operationId": "AuditController_findAll",
+        "summary": "Consultar la auditoría de dominio",
+        "description": "Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas, derivaciones, intervenciones, servicios y catálogos: acción, estado anterior y nuevo, actor (tomado del token) y fecha. Paginado, del más reciente al más antiguo. Filtra por `entityType` y `entityId`. Es de solo agregado: no se edita ni se purga.",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-indexed)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Registros por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "description": "Tipo de entidad auditada",
+            "schema": {
+              "example": "CONTAINER",
+              "enum": [
+                "CONTAINER",
+                "ENVIRONMENTAL_REPORT",
+                "ENVIRONMENTAL_INSPECTION",
+                "VIOLATION_NOTICE",
+                "REPAIR_REQUEST",
+                "STREET_CLOSURE_REQUEST",
+                "TREE_INTERVENTION",
+                "SERVICE",
+                "CREW",
+                "ZONE",
+                "VEHICLE",
+                "ROUTE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityId",
+            "required": false,
+            "in": "query",
+            "description": "Id de la entidad auditada",
+            "schema": {
+              "format": "uuid",
+              "example": "3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado de la auditoría",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AuditLogResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_AUDITOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "audit"
         ],
         "security": [
           {
@@ -2993,7 +3570,7 @@
       "post": {
         "operationId": "CrewsController_create",
         "summary": "Crear una cuadrilla",
-        "description": "Registra una nueva cuadrilla con su tipo, turno por defecto y opcionalmente un líder y organización. Se crea activa por defecto.",
+        "description": "Registra una nueva cuadrilla con su tipo, especialidad y turno por defecto, y opcionalmente zona base, líder y organización (con sus nombres, que se guardan como copia de M1). Se crea activa por defecto.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3017,7 +3594,7 @@
             }
           },
           "400": {
-            "description": "Datos de entrada inválidos (validación fallida)",
+            "description": "Datos de entrada inválidos (validación fallida) o zona base dada de baja",
             "content": {
               "application/json": {
                 "schema": {
@@ -3038,6 +3615,16 @@
           },
           "403": {
             "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La zona base no existe",
             "content": {
               "application/json": {
                 "schema": {
@@ -3069,7 +3656,7 @@
       "get": {
         "operationId": "CrewsController_findAll",
         "summary": "Listar cuadrillas",
-        "description": "Retorna un listado paginado de cuadrillas. Se puede filtrar por estado activo/inactivo, tipo de cuadrilla y turno.",
+        "description": "Retorna un listado paginado de cuadrillas con su cantidad de integrantes y su zona efectiva hoy. Se puede filtrar por estado activo/inactivo, tipo, turno, especialidad y zona efectiva hoy (`zoneId`: la reubicación vigente o, si no hay, la zona base).",
         "parameters": [
           {
             "name": "page",
@@ -3134,6 +3721,36 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "specialty",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por especialidad",
+            "schema": {
+              "example": "COLLECTION",
+              "enum": [
+                "COLLECTION",
+                "SWEEPING",
+                "CLEANING",
+                "RECYCLING",
+                "TREES",
+                "GREEN_SPACES",
+                "INSPECTION"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "zoneId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por la zona **efectiva hoy**: la de la reubicación vigente si hay una; si no, la zona base",
+            "schema": {
+              "format": "uuid",
+              "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3158,6 +3775,16 @@
                       "$ref": "#/components/schemas/PaginationMeta"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos (por ejemplo `specialty` fuera del enum o `zoneId` que no es UUID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -3197,7 +3824,7 @@
       "get": {
         "operationId": "CrewsController_findOne",
         "summary": "Obtener una cuadrilla por ID",
-        "description": "Retorna el detalle de una cuadrilla incluyendo la lista de miembros asignados.",
+        "description": "Retorna el detalle de una cuadrilla incluyendo la lista de miembros asignados, con sus nombres.",
         "parameters": [
           {
             "name": "id",
@@ -3264,7 +3891,7 @@
       "patch": {
         "operationId": "CrewsController_update",
         "summary": "Actualizar una cuadrilla",
-        "description": "Actualiza los campos mutables de una cuadrilla (nombre, turno, líder, organización, estado). El tipo de cuadrilla no se puede cambiar después de la creación.",
+        "description": "Actualiza los campos mutables de una cuadrilla (nombre, turno, especialidad, zona base, líder, organización, sus nombres y estado). El tipo de cuadrilla no se puede cambiar después de la creación.",
         "parameters": [
           {
             "name": "id",
@@ -3299,7 +3926,7 @@
             }
           },
           "400": {
-            "description": "Datos de entrada inválidos",
+            "description": "Datos de entrada inválidos o zona base dada de baja",
             "content": {
               "application/json": {
                 "schema": {
@@ -3329,7 +3956,7 @@
             }
           },
           "404": {
-            "description": "Cuadrilla no encontrada",
+            "description": "Cuadrilla o zona base no encontrada",
             "content": {
               "application/json": {
                 "schema": {
@@ -3433,7 +4060,7 @@
       "post": {
         "operationId": "CrewsController_addMembers",
         "summary": "Agregar miembros a una cuadrilla",
-        "description": "Asigna uno o más usuarios internos de M6 como miembros de la cuadrilla. Los duplicados se ignoran silenciosamente. Retorna la cuadrilla actualizada con todos sus miembros.",
+        "description": "Asigna uno o más usuarios internos de M6 como miembros de la cuadrilla. Se envían en `members` (id de M1 y nombre opcional) o, por compatibilidad, en `userIds` (solo ids). Si un integrante ya estaba, se lo ignora salvo que traiga nombre: ahí se actualiza. Retorna la cuadrilla actualizada con todos sus miembros.",
         "parameters": [
           {
             "name": "id",
@@ -3580,6 +4207,185 @@
           },
           "404": {
             "description": "Cuadrilla o miembro no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "crews"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/crews/{id}/zone-assignments": {
+      "post": {
+        "operationId": "CrewsController_createZoneAssignment",
+        "summary": "Reubicar una cuadrilla en otra zona por un período",
+        "description": "Registra que la cuadrilla trabaja en otra zona entre `validFrom` y `validTo` (inclusive; sin `validTo`, hasta nuevo aviso). No cambia la zona base: al vencer, la cuadrilla vuelve a ella. Una cuadrilla no puede tener dos reubicaciones que se superpongan. Quien la carga queda registrado a partir del token.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la cuadrilla",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCrewZoneAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reubicación registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewZoneAssignmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos: `validTo` anterior a `validFrom` o zona dada de baja",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cuadrilla o zona no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El período se superpone con otra reubicación de la cuadrilla",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "crews"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "CrewsController_listZoneAssignments",
+        "summary": "Listar las reubicaciones de una cuadrilla",
+        "description": "Historial de reubicaciones de zona de la cuadrilla, la más reciente primero: vigentes, futuras y vencidas.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la cuadrilla",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reubicaciones de la cuadrilla",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrewZoneAssignmentResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cuadrilla no encontrada",
             "content": {
               "application/json": {
                 "schema": {
@@ -4463,6 +5269,114 @@
         ]
       }
     },
+    "/containers/{id}/history": {
+      "get": {
+        "operationId": "ContainersController_findHistory",
+        "summary": "Historial de estados de un contenedor",
+        "description": "Retorna, paginado y del más reciente al más antiguo, cada alta y cada cambio de estado del contenedor (origen, destino e instante). El alta tiene origen nulo.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del contenedor",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-indexed)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Registros por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historial paginado de estados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ContainerStatusHistoryResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Contenedor no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "containers"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
     "/containers/{id}/report-overflow": {
       "post": {
         "operationId": "ContainersController_reportOverflow",
@@ -4556,7 +5470,7 @@
       "post": {
         "operationId": "ContainersController_reportDamage",
         "summary": "Reportar daño en un contenedor",
-        "description": "Transición ACTIVE → DAMAGED. Registra el tipo de daño, severidad y si requiere derivación a Obras Públicas (M3). Un contenedor con requiresPublicWorks=true genera el evento containerDamaged hacia M3.",
+        "description": "Transición ACTIVE → DAMAGED. Registra el tipo de daño, severidad, observaciones opcionales (dato interno, no viajan a M3) y si requiere derivación a Obras Públicas (M3). Un contenedor con requiresPublicWorks=true genera el evento containerDamaged hacia M3.",
         "parameters": [
           {
             "name": "id",
@@ -4843,7 +5757,7 @@
       "post": {
         "operationId": "ContainersController_completeRepair",
         "summary": "Completar reparación de un contenedor",
-        "description": "Transición UNDER_REPAIR → ACTIVE. Indica que la reparación finalizó y el contenedor vuelve a servicio. Limpia los campos de daño.",
+        "description": "Transición UNDER_REPAIR → ACTIVE. Indica que la reparación finalizó y el contenedor vuelve a servicio. Limpia los campos de daño y las observaciones.",
         "parameters": [
           {
             "name": "id",
@@ -5985,7 +6899,7 @@
       "post": {
         "operationId": "TreeInterventionsController_create",
         "summary": "Solicitar una intervención sobre árboles",
-        "description": "Crea una solicitud de intervención (poda, extracción, plantación o tratamiento) sobre uno o más árboles. Se crea en estado REQUESTED. Las extracciones (REMOVAL) requieren autorización adicional vía el endpoint submit-for-authorization.",
+        "description": "Crea una solicitud de intervención (poda, extracción, plantación o tratamiento) sobre uno o más árboles. Se crea en estado REQUESTED y registra quién la solicitó (el usuario del token). Las extracciones (REMOVAL) requieren autorización adicional vía el endpoint submit-for-authorization.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -6397,7 +7311,7 @@
       "post": {
         "operationId": "TreeInterventionsController_authorize",
         "summary": "Autorizar una intervención",
-        "description": "Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó (el usuario del token) y cuándo.",
+        "description": "Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó (el usuario del token) y cuándo. Autorizar una extracción (REMOVAL) exige M6_ADMIN, aunque la solicite otro; un M6_ADMIN puede autorizar lo que él mismo solicitó y ambos ids quedan registrados. Las podas no requieren autorización.",
         "parameters": [
           {
             "name": "id",
@@ -6442,7 +7356,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "Falta el rol de M6 (code ROLE_REQUIRED). Una extracción (REMOVAL) requiere M6_ADMIN; las podas, cualquiera de los roles de operaciones",
             "content": {
               "application/json": {
                 "schema": {
@@ -6496,7 +7410,7 @@
       "post": {
         "operationId": "TreeInterventionsController_reject",
         "summary": "Rechazar una intervención",
-        "description": "Transición PENDING_AUTHORIZATION → REJECTED. Estado terminal.",
+        "description": "Transición PENDING_AUTHORIZATION → REJECTED. Estado terminal. Rechazar una extracción (REMOVAL) exige M6_ADMIN, igual que autorizarla.",
         "parameters": [
           {
             "name": "id",
@@ -6531,7 +7445,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "description": "Falta el rol de M6 (code ROLE_REQUIRED). Una extracción (REMOVAL) requiere M6_ADMIN; las podas, cualquiera de los roles de operaciones",
             "content": {
               "application/json": {
                 "schema": {
@@ -7685,7 +8599,7 @@
             }
           },
           "409": {
-            "description": "La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada",
+            "description": "La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, o la cuadrilla no es de la zona o la especialidad del servicio, y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada",
             "content": {
               "application/json": {
                 "schema": {
@@ -8141,7 +9055,7 @@
       "post": {
         "operationId": "ServicesController_assignCrew",
         "summary": "Asignar cuadrilla a un servicio",
-        "description": "La cuadrilla es opcional al programar y obligatoria para iniciar. Permite asignar el vehículo en la misma operación.",
+        "description": "La cuadrilla es opcional al programar y obligatoria para iniciar. Permite asignar el vehículo en la misma operación. Avisa, sin bloquear, si la cuadrilla no es la de la zona del servicio o su especialidad no corresponde al tipo de servicio: igual que un solapamiento, exige `overrideNote`.",
         "parameters": [
           {
             "name": "id",
@@ -8216,7 +9130,7 @@
             }
           },
           "409": {
-            "description": "El servicio ya arrancó o cerró, o hay solapamiento y falta `overrideNote`. El solapamiento no bloquea: con la nota, la asignación se hace igual.",
+            "description": "El servicio ya arrancó o cerró, o hay solapamiento (o la cuadrilla no es de la zona o la especialidad del servicio) y falta `overrideNote`. Nada de eso bloquea: con la nota, la asignación se hace igual.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8250,7 +9164,7 @@
       "get": {
         "operationId": "ServicesController_assignmentConflicts",
         "summary": "Con qué se solapa asignar estos recursos",
-        "description": "Los servicios del mismo día cuya franja horaria se pisa con la de este y que ya tienen tomada la cuadrilla o el vehículo. Existe para poder **avisar antes de enviar**: sin esta consulta, el planificador se enteraría por un 409. Sin `crewId` ni `vehicleId` evalúa los que el servicio ya tiene asignados. Una franja horaria ausente se trata como todo el día.",
+        "description": "Los servicios del mismo día cuya franja horaria se pisa con la de este y que ya tienen tomada la cuadrilla o el vehículo. Existe para poder **avisar antes de enviar**: sin esta consulta, el planificador se enteraría por un 409. Sin `crewId` ni `vehicleId` evalúa los que el servicio ya tiene asignados. Una franja horaria ausente se trata como todo el día. Además informa en `warnings` si la cuadrilla no trabaja en la zona del servicio ese día o su especialidad no corresponde al tipo de servicio; esos avisos también exigen `overrideNote`.",
         "parameters": [
           {
             "name": "id",
@@ -11036,7 +11950,7 @@
       "post": {
         "operationId": "RepairRequestsController_create",
         "summary": "Solicitar una reparación a Obras Públicas",
-        "description": "Registra un daño de infraestructura que detectamos pero que no nos corresponde arreglar —pavimento roto, vereda hundida, luminaria caída, sumidero tapado— y publica infrastructureRepairRequested hacia M3. La solicitud existe para poder seguir el pedido: la respuesta de M3 vuelve asincrónica y hay que saber a qué solicitud contesta. Si el daño salió de un servicio nacido de un reclamo, el ticketId viaja en el evento.",
+        "description": "Registra un daño de infraestructura que detectamos pero que no nos corresponde arreglar —pavimento roto, vereda hundida, luminaria caída, sumidero tapado— y publica infrastructureRepairRequested hacia M3. La solicitud existe para poder seguir el pedido: la respuesta de M3 vuelve asincrónica y hay que saber a qué solicitud contesta. Si el daño salió de un servicio nacido de un reclamo, el ticketId viaja en el evento. Lo mismo si salió de una inspección: viaja el ticketId de su expediente. Una inspección solo origina una reparación si cerró con un resultado distinto de NO_VIOLATION y el tipo de expediente admite daño de infraestructura (no ruidos, olores, plagas ni emisiones); no admite un segundo pedido abierto para el mismo origen y tipo de daño.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -11091,6 +12005,16 @@
           },
           "404": {
             "description": "El servicio o la inspección de origen no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Origen INSPECTION que no justifica una reparación (sin cerrar, NO_VIOLATION, o expediente de tipo NOISE, ODOR, PEST_INFESTATION o AIR_EMISSION), o ya hay una solicitud no cerrada para el mismo origen y tipo de daño",
             "content": {
               "application/json": {
                 "schema": {
@@ -12564,7 +13488,7 @@
       "get": {
         "operationId": "AttachmentsController_findByOwner",
         "summary": "Listar evidencia de un recurso",
-        "description": "Retorna toda la evidencia asociada a un ownerType/ownerId, ordenada por fecha.",
+        "description": "Retorna toda la evidencia asociada a un ownerType/ownerId, ordenada por fecha. Campo solo ve la de lo suyo (cuadrilla del servicio, inspector asignado); Oficina, Admin y Auditoría ven cualquiera.",
         "parameters": [
           {
             "name": "ownerType",
@@ -12618,6 +13542,26 @@
               }
             }
           },
+          "403": {
+            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION) (no se revela de quién es)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Campo consulta un recurso que no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -12643,7 +13587,7 @@
       "get": {
         "operationId": "IndicatorsController_coverage",
         "summary": "Cobertura del servicio",
-        "description": "Objetivos atendidos sobre programados, con desglose por zona operativa y por tipo de servicio. La unidad es el par servicio/zona: un recorrido que pasa por cuatro zonas y atiende tres cuenta como tres objetivos cumplidos y uno no. Los servicios cancelados no cuentan: dejaron de ser un objetivo.",
+        "description": "Objetivos atendidos sobre programados, con desglose por zona operativa y por tipo de servicio. La unidad es el par servicio/zona: un recorrido que pasa por cuatro zonas y atiende tres cuenta como tres objetivos cumplidos y uno no. Los servicios cancelados no cuentan: dejaron de ser un objetivo. Solo cuentan los objetivos con fecha vencida (hoy o antes): lo programado a futuro va aparte en `upcoming`. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido.",
         "parameters": [
           {
             "name": "from",
@@ -12662,6 +13606,32 @@
             "description": "Hasta (YYYY-MM-DD). Por defecto, hoy",
             "schema": {
               "example": "2026-08-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "required": false,
+            "in": "query",
+            "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "required": false,
+            "in": "query",
+            "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
+            "schema": {
+              "enum": [
+                "previous"
+              ],
               "type": "string"
             }
           },
@@ -12698,7 +13668,7 @@
             }
           },
           "400": {
-            "description": "Período inválido: from posterior a to",
+            "description": "Período inválido (from posterior a to), bucket o compare fuera de los valores permitidos, o un bucket que da más de 90 puntos en el rango pedido",
             "content": {
               "application/json": {
                 "schema": {
@@ -12742,7 +13712,7 @@
       "get": {
         "operationId": "IndicatorsController_compliance",
         "summary": "Cumplimiento y zonas no atendidas",
-        "description": "Servicios finalizados en término contra demorados, y el ranking de zonas que quedaron sin atender con los motivos que reportó la cuadrilla. \"En término\" se mide con el último resultado de campo cargado contra la fecha programada.",
+        "description": "Servicios finalizados en término contra demorados, y el ranking de zonas que quedaron sin atender con los motivos que reportó la cuadrilla. \"En término\" se mide con el último resultado de campo cargado contra la fecha programada. El desvío de programación son los servicios reprogramados o con aviso de demora sobre los del período. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido.",
         "parameters": [
           {
             "name": "from",
@@ -12761,6 +13731,32 @@
             "description": "Hasta (YYYY-MM-DD). Por defecto, hoy",
             "schema": {
               "example": "2026-08-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "required": false,
+            "in": "query",
+            "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "required": false,
+            "in": "query",
+            "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
+            "schema": {
+              "enum": [
+                "previous"
+              ],
               "type": "string"
             }
           },
@@ -12797,7 +13793,7 @@
             }
           },
           "400": {
-            "description": "Período inválido: from posterior a to",
+            "description": "Período inválido (from posterior a to), bucket o compare fuera de los valores permitidos, o un bucket que da más de 90 puntos en el rango pedido",
             "content": {
               "application/json": {
                 "schema": {
@@ -12841,7 +13837,7 @@
       "get": {
         "operationId": "IndicatorsController_incidents",
         "summary": "Incidencias del inventario y de las denuncias",
-        "description": "Contenedores desbordados y dañados por zona, árboles por nivel de riesgo según su último relevamiento, y denuncias por tipo y estado con el tiempo medio de resolución. Contenedores y arbolado son una foto del estado actual: el período solo filtra las denuncias.",
+        "description": "Contenedores por estado y zona (foto del estado actual), árboles por nivel de riesgo según su último relevamiento, y denuncias por tipo y estado con el tiempo medio de resolución. Desde el historial de estados suma los incidentes de desborde y de daño del período y los daños pendientes al final (`containers.history`, con `trackingSince`: antes de esa fecha no hay datos y los pendientes son null). De las denuncias suma las resueltas dentro del plazo objetivo (`reports.withinDeadline`) y los vencidos (`reports.overdue`, una foto de hoy de lo creado en el período). El plazo objetivo es de M6, único para todos los tipos y en días hábiles (lunes a viernes, sin feriados). El tiempo de resolución se informa en días corridos y en días hábiles; su meta es en días hábiles. Con `bucket` suma `series` (denuncias y contenedores del intervalo; los vencidos no tienen serie); con `compare=previous`, `previous` y `delta` (los vencidos no se comparan). `targets` trae cada meta con su sentido: las de desbordados y daños pendientes son de tendencia descendente (`down`) y no tienen valor numérico.",
         "parameters": [
           {
             "name": "from",
@@ -12862,6 +13858,32 @@
               "example": "2026-08-31",
               "type": "string"
             }
+          },
+          {
+            "name": "bucket",
+            "required": false,
+            "in": "query",
+            "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "required": false,
+            "in": "query",
+            "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
+            "schema": {
+              "enum": [
+                "previous"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -12876,7 +13898,7 @@
             }
           },
           "400": {
-            "description": "Período inválido: from posterior a to",
+            "description": "Período inválido (from posterior a to), bucket o compare fuera de los valores permitidos, o un bucket que da más de 90 puntos en el rango pedido",
             "content": {
               "application/json": {
                 "schema": {
@@ -12920,7 +13942,7 @@
       "get": {
         "operationId": "IndicatorsController_waste",
         "summary": "Residuos recolectados y destino final",
-        "description": "Kilos y metros cúbicos por tipo de residuo y por sitio de disposición, y el porcentaje desviado del relleno hacia planta de reciclado o de compostaje. La fecha del residuo es la del servicio que lo recolectó.",
+        "description": "Kilos y metros cúbicos por tipo de residuo y por sitio de disposición, y el porcentaje desviado del relleno hacia planta de reciclado o de compostaje. La fecha del residuo es la del servicio que lo recolectó. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido. La meta del desvío del relleno es null mientras el equipo no la defina.",
         "parameters": [
           {
             "name": "from",
@@ -12941,6 +13963,32 @@
               "example": "2026-08-31",
               "type": "string"
             }
+          },
+          {
+            "name": "bucket",
+            "required": false,
+            "in": "query",
+            "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "required": false,
+            "in": "query",
+            "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
+            "schema": {
+              "enum": [
+                "previous"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -12955,7 +14003,7 @@
             }
           },
           "400": {
-            "description": "Período inválido: from posterior a to",
+            "description": "Período inválido (from posterior a to), bucket o compare fuera de los valores permitidos, o un bucket que da más de 90 puntos en el rango pedido",
             "content": {
               "application/json": {
                 "schema": {
@@ -13456,6 +14504,14 @@
       "description": "Ingesta de eventos entrantes y estado de los handlers"
     },
     {
+      "name": "outbox",
+      "description": "Eventos salientes: consulta y reintento de los fallidos"
+    },
+    {
+      "name": "audit",
+      "description": "Auditoría de dominio: quién hizo qué y cuándo (solo lectura)"
+    },
+    {
       "name": "indicators",
       "description": "Indicadores de cobertura, cumplimiento, incidencias y residuos"
     },
@@ -13580,6 +14636,34 @@
           "path"
         ]
       },
+      "MeCrewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "0b0e3b52-5c1a-4a3e-9d57-3c1f2a8f9c11",
+            "description": "Id de la cuadrilla"
+          },
+          "name": {
+            "type": "string",
+            "example": "Cuadrilla Municipal Belgrano y Colegiales — Recolección"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "LEADER",
+              "MEMBER"
+            ],
+            "example": "LEADER",
+            "description": "Rol de la persona dentro de la cuadrilla: responsable o integrante"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role"
+        ]
+      },
       "MeResponseDto": {
         "type": "object",
         "properties": {
@@ -13619,13 +14703,27 @@
                 "M6_AUDITOR"
               ]
             }
+          },
+          "crews": {
+            "description": "Cuadrillas a las que pertenece la persona (como responsable o integrante), según la misma pertenencia que exige Campo para operar. Solo propias: sin datos de otras personas. Vacío para Oficina y auditoría",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeCrewDto"
+            }
+          },
+          "isAssignedInspector": {
+            "type": "boolean",
+            "example": false,
+            "description": "true si tiene el rol efectivo M6_CAMPO_INSPECTOR: puede cerrar las inspecciones ambientales sin asignado o asignadas a su id"
           }
         },
         "required": [
           "userId",
           "subType",
           "m1Role",
-          "roles"
+          "roles",
+          "crews",
+          "isAssignedInspector"
         ]
       },
       "IngestEventDto": {
@@ -13663,6 +14761,13 @@
             "description": "Cuándo ocurrió el hecho, ISO 8601 con zona horaria",
             "format": "date-time",
             "example": "2026-09-29T18:00:00Z"
+          },
+          "occuredAt": {
+            "type": "string",
+            "description": "Alias tolerado de occurredAt (typo de M1 v3.0); preferir occurredAt",
+            "format": "date-time",
+            "example": "2026-09-29T18:00:00Z",
+            "deprecated": true
           },
           "sourceModule": {
             "type": "string",
@@ -13776,6 +14881,385 @@
           "eventTypes"
         ]
       },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 142,
+            "description": "Total de registros"
+          },
+          "page": {
+            "type": "number",
+            "example": 1,
+            "description": "Página actual (1-indexed)"
+          },
+          "pageSize": {
+            "type": "number",
+            "example": 20,
+            "description": "Registros por página"
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 8,
+            "description": "Total de páginas"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "pageSize",
+          "totalPages"
+        ]
+      },
+      "OutboxEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a1b2c3d4-e5f6-4a78-9b01-234567890abc",
+            "description": "Id de la fila; es también el `eventId` del sobre que ve el receptor"
+          },
+          "eventType": {
+            "type": "string",
+            "example": "containerDamaged",
+            "description": "Tipo de evento (camelCase)"
+          },
+          "aggregateType": {
+            "type": "string",
+            "example": "CONTAINER",
+            "description": "Agregado de dominio que lo originó"
+          },
+          "aggregateId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "b2c3d4e5-f6a7-4b89-8c12-34567890abcd"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "SENT",
+              "FAILED"
+            ],
+            "example": "FAILED"
+          },
+          "attempts": {
+            "type": "number",
+            "example": 5,
+            "description": "Intentos de envío hechos (se reinicia al reintentar)"
+          },
+          "lastError": {
+            "type": "string",
+            "nullable": true,
+            "example": "connect ECONNREFUSED 127.0.0.1:5672",
+            "description": "Error del último intento fallido"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-28T14:30:00.000Z"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuándo se publicó al bus; null si no salió"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c3d4e5f6-a7b8-4c90-9d23-4567890abcde"
+          },
+          "causationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "eventId del evento consumido que lo causó; null si nació de una acción directa"
+          }
+        },
+        "required": [
+          "id",
+          "eventType",
+          "aggregateType",
+          "aggregateId",
+          "status",
+          "attempts",
+          "occurredAt",
+          "correlationId"
+        ]
+      },
+      "OutboxRetryAuditResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "d4e5f6a7-b8c9-4d01-8e34-567890abcdef"
+          },
+          "actorUserId": {
+            "type": "string",
+            "example": "usr-001",
+            "description": "Usuario de M1 que reintentó (sale del token)"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-28T15:00:00.000Z"
+          },
+          "previousAttempts": {
+            "type": "number",
+            "example": 5,
+            "description": "Intentos que tenía antes del reintento"
+          },
+          "previousError": {
+            "type": "string",
+            "nullable": true,
+            "example": "connect ECONNREFUSED 127.0.0.1:5672",
+            "description": "Error que tenía antes del reintento"
+          }
+        },
+        "required": [
+          "id",
+          "actorUserId",
+          "at",
+          "previousAttempts"
+        ]
+      },
+      "OutboxEventDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a1b2c3d4-e5f6-4a78-9b01-234567890abc",
+            "description": "Id de la fila; es también el `eventId` del sobre que ve el receptor"
+          },
+          "eventType": {
+            "type": "string",
+            "example": "containerDamaged",
+            "description": "Tipo de evento (camelCase)"
+          },
+          "aggregateType": {
+            "type": "string",
+            "example": "CONTAINER",
+            "description": "Agregado de dominio que lo originó"
+          },
+          "aggregateId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "b2c3d4e5-f6a7-4b89-8c12-34567890abcd"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "SENT",
+              "FAILED"
+            ],
+            "example": "FAILED"
+          },
+          "attempts": {
+            "type": "number",
+            "example": 5,
+            "description": "Intentos de envío hechos (se reinicia al reintentar)"
+          },
+          "lastError": {
+            "type": "string",
+            "nullable": true,
+            "example": "connect ECONNREFUSED 127.0.0.1:5672",
+            "description": "Error del último intento fallido"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-28T14:30:00.000Z"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuándo se publicó al bus; null si no salió"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c3d4e5f6-a7b8-4c90-9d23-4567890abcde"
+          },
+          "causationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "eventId del evento consumido que lo causó; null si nació de una acción directa"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "containerId": "b2c3d4e5-f6a7-4b89-8c12-34567890abcd",
+              "severity": "HIGH"
+            },
+            "description": "Payload tal como se publica. Puede incluir datos personales"
+          },
+          "retries": {
+            "description": "Reintentos manuales que se le hicieron, del más viejo al más nuevo",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutboxRetryAuditResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "eventType",
+          "aggregateType",
+          "aggregateId",
+          "status",
+          "attempts",
+          "occurredAt",
+          "correlationId",
+          "payload",
+          "retries"
+        ]
+      },
+      "RetryFailedOutboxDto": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "description": "Confirmación explícita: tiene que ser `true`. Reencola eventos que el receptor ya rechazó, así que no se hace por omisión",
+            "example": true
+          },
+          "limit": {
+            "type": "number",
+            "description": "Cuántos FAILED reencolar como máximo, los más viejos primero (tope 100)",
+            "default": 100,
+            "minimum": 1,
+            "maximum": 100,
+            "example": 20
+          }
+        },
+        "required": [
+          "confirm"
+        ]
+      },
+      "RetryFailedOutboxResponseDto": {
+        "type": "object",
+        "properties": {
+          "requeued": {
+            "type": "number",
+            "example": 12,
+            "description": "Eventos FAILED que se pasaron a PENDING"
+          },
+          "remainingFailed": {
+            "type": "number",
+            "example": 3,
+            "description": "FAILED que siguen sin reencolar (por el tope)"
+          }
+        },
+        "required": [
+          "requeued",
+          "remainingFailed"
+        ]
+      },
+      "AuditLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "CONTAINER",
+              "ENVIRONMENTAL_REPORT",
+              "ENVIRONMENTAL_INSPECTION",
+              "VIOLATION_NOTICE",
+              "REPAIR_REQUEST",
+              "STREET_CLOSURE_REQUEST",
+              "TREE_INTERVENTION",
+              "SERVICE",
+              "CREW",
+              "ZONE",
+              "VEHICLE",
+              "ROUTE"
+            ],
+            "example": "CONTAINER"
+          },
+          "entityId": {
+            "type": "string",
+            "example": "3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b",
+            "description": "Id de la entidad"
+          },
+          "action": {
+            "type": "string",
+            "example": "REPORT_DAMAGE",
+            "description": "Acción realizada"
+          },
+          "fromStatus": {
+            "type": "string",
+            "nullable": true,
+            "example": "ACTIVE",
+            "description": "Estado anterior"
+          },
+          "toStatus": {
+            "type": "string",
+            "nullable": true,
+            "example": "DAMAGED",
+            "description": "Estado nuevo"
+          },
+          "actorUserId": {
+            "type": "string",
+            "example": "42",
+            "description": "Id en M1 de quien actuó, tomado del token"
+          },
+          "actorRoles": {
+            "type": "array",
+            "example": [
+              "M6_CAMPO_CUADRILLA"
+            ],
+            "description": "Roles de M6 efectivos de quien actuó al momento de la acción",
+            "items": {
+              "type": "string",
+              "enum": [
+                "M6_ADMIN",
+                "M6_OFICINA_OPERACIONES",
+                "M6_OFICINA_AMBIENTAL",
+                "M6_CAMPO_CUADRILLA",
+                "M6_CAMPO_INSPECTOR",
+                "M6_AUDITOR"
+              ]
+            }
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "example": "Reubicación por obra en la vereda",
+            "description": "Motivo que el flujo ya pedía; sin datos personales"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-11-02T14:30:00.000Z",
+            "description": "Cuándo ocurrió"
+          }
+        },
+        "required": [
+          "id",
+          "entityType",
+          "entityId",
+          "action",
+          "fromStatus",
+          "toStatus",
+          "actorUserId",
+          "actorRoles",
+          "note",
+          "occurredAt"
+        ]
+      },
       "CreateZoneDto": {
         "type": "object",
         "properties": {
@@ -13823,6 +15307,11 @@
             "description": "Código de M9 de la comuna",
             "example": "comuna-14"
           },
+          "number": {
+            "type": "integer",
+            "description": "Número de la comuna (1 a 15): el orden de los listados",
+            "example": 14
+          },
           "name": {
             "type": "string",
             "description": "Nombre de la comuna",
@@ -13832,6 +15321,7 @@
         "required": [
           "id",
           "code",
+          "number",
           "name"
         ]
       },
@@ -13942,37 +15432,6 @@
           "neighborhood",
           "createdAt",
           "updatedAt"
-        ]
-      },
-      "PaginationMeta": {
-        "type": "object",
-        "properties": {
-          "total": {
-            "type": "number",
-            "example": 142,
-            "description": "Total de registros"
-          },
-          "page": {
-            "type": "number",
-            "example": 1,
-            "description": "Página actual (1-indexed)"
-          },
-          "pageSize": {
-            "type": "number",
-            "example": 20,
-            "description": "Registros por página"
-          },
-          "totalPages": {
-            "type": "number",
-            "example": 8,
-            "description": "Total de páginas"
-          }
-        },
-        "required": [
-          "total",
-          "page",
-          "pageSize",
-          "totalPages"
         ]
       },
       "UpdateZoneDto": {
@@ -14116,6 +15575,11 @@
             "description": "Código de M9 de la comuna",
             "example": "comuna-14"
           },
+          "number": {
+            "type": "integer",
+            "description": "Número de la comuna (1 a 15): el orden del listado",
+            "example": 14
+          },
           "name": {
             "type": "string",
             "description": "Nombre de la comuna",
@@ -14137,6 +15601,7 @@
         "required": [
           "id",
           "code",
+          "number",
           "name",
           "active",
           "zones"
@@ -14817,6 +16282,38 @@
             "description": "ID de la organización (para cuadrillas de cooperativa o contratista)",
             "example": "org-coop-recicladores"
           },
+          "leaderName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Nombre del líder, tal como figura en M1. Se guarda como copia para poder mostrarlo: M6 no consulta a M1",
+            "example": "Marta Gómez"
+          },
+          "organizationName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Nombre de la organización (cooperativa o contratista), copia del dato de M1",
+            "example": "Cooperativa Recicladores del Sur"
+          },
+          "specialty": {
+            "type": "string",
+            "description": "Especialidad de la cuadrilla: con qué tipos de servicio se la espera ver",
+            "enum": [
+              "COLLECTION",
+              "SWEEPING",
+              "CLEANING",
+              "RECYCLING",
+              "TREES",
+              "GREEN_SPACES",
+              "INSPECTION"
+            ],
+            "example": "COLLECTION"
+          },
+          "homeZoneId": {
+            "type": "string",
+            "description": "Zona base de la cuadrilla (UUID). Una sola; las reubicaciones van aparte",
+            "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+            "format": "uuid"
+          },
           "active": {
             "type": "boolean",
             "description": "Si la cuadrilla está activa y disponible para asignación",
@@ -14827,7 +16324,8 @@
         "required": [
           "name",
           "crewType",
-          "defaultShift"
+          "defaultShift",
+          "specialty"
         ]
       },
       "CrewMemberResponseDto": {
@@ -14837,10 +16335,17 @@
             "type": "string",
             "description": "ID del usuario miembro (usuario interno de M6)",
             "example": "10"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Nombre del integrante (copia del dato de M1). `null` si no se informó",
+            "example": "Lucía Fernández",
+            "nullable": true
           }
         },
         "required": [
-          "userId"
+          "userId",
+          "displayName"
         ]
       },
       "CrewResponseDto": {
@@ -14866,6 +16371,52 @@
               "CONTRACTOR"
             ],
             "example": "MUNICIPAL"
+          },
+          "leaderName": {
+            "type": "string",
+            "description": "Nombre del líder (copia del dato de M1). `null` si no se informó",
+            "example": "Marta Gómez",
+            "nullable": true
+          },
+          "organizationName": {
+            "type": "string",
+            "description": "Nombre de la organización (copia del dato de M1). `null` si no se informó",
+            "example": "Cooperativa Recicladores del Sur",
+            "nullable": true
+          },
+          "specialty": {
+            "type": "string",
+            "description": "Especialidad. `null` en cuadrillas anteriores a que existiera el campo",
+            "enum": [
+              "COLLECTION",
+              "SWEEPING",
+              "CLEANING",
+              "RECYCLING",
+              "TREES",
+              "GREEN_SPACES",
+              "INSPECTION"
+            ],
+            "example": "COLLECTION",
+            "nullable": true
+          },
+          "homeZoneId": {
+            "type": "string",
+            "description": "UUID de la zona base. `null` si la cuadrilla no tiene una",
+            "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+            "format": "uuid",
+            "nullable": true
+          },
+          "effectiveZoneId": {
+            "type": "string",
+            "description": "UUID de la zona donde trabaja hoy: la de la reubicación vigente o, si no hay, la zona base. `null` si no tiene ninguna",
+            "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+            "format": "uuid",
+            "nullable": true
+          },
+          "membersCount": {
+            "type": "number",
+            "description": "Cantidad de integrantes (el líder no se cuenta aparte)",
+            "example": 4
           },
           "defaultShift": {
             "type": "string",
@@ -14895,7 +16446,7 @@
             "example": true
           },
           "members": {
-            "description": "Miembros de la cuadrilla. Incluido solo en GET por ID",
+            "description": "Miembros de la cuadrilla. Se incluye en el detalle (GET por ID) y al agregar integrantes (POST /crews/:id/members); el listado trae solo `membersCount`",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CrewMemberResponseDto"
@@ -14918,6 +16469,12 @@
           "id",
           "name",
           "crewType",
+          "leaderName",
+          "organizationName",
+          "specialty",
+          "homeZoneId",
+          "effectiveZoneId",
+          "membersCount",
           "defaultShift",
           "active",
           "createdAt",
@@ -14955,6 +16512,41 @@
             "description": "ID de la organización",
             "example": "org-coop-recicladores"
           },
+          "leaderName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Nombre del líder (copia del dato de M1). Vacío o `null` lo borra",
+            "example": "Marta Gómez",
+            "nullable": true
+          },
+          "organizationName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Nombre de la organización (copia del dato de M1). Vacío o `null` lo borra",
+            "example": "Cooperativa Recicladores del Sur",
+            "nullable": true
+          },
+          "specialty": {
+            "type": "string",
+            "description": "Especialidad de la cuadrilla",
+            "enum": [
+              "COLLECTION",
+              "SWEEPING",
+              "CLEANING",
+              "RECYCLING",
+              "TREES",
+              "GREEN_SPACES",
+              "INSPECTION"
+            ],
+            "example": "SWEEPING"
+          },
+          "homeZoneId": {
+            "type": "string",
+            "description": "Zona base de la cuadrilla (UUID). `null` la deja sin zona base",
+            "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+            "format": "uuid",
+            "nullable": true
+          },
           "active": {
             "type": "boolean",
             "description": "Si la cuadrilla está activa",
@@ -14962,12 +16554,40 @@
           }
         }
       },
+      "CrewMemberInputDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Id de M1 (numérico, solo dígitos) del integrante",
+            "example": "10",
+            "maxLength": 100
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Nombre del integrante, tal como figura en M1. Se guarda como copia para poder mostrarlo: M6 no consulta a M1",
+            "example": "Lucía Fernández",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
       "AddCrewMembersDto": {
         "type": "object",
         "properties": {
+          "members": {
+            "description": "Integrantes con su nombre opcional. Hace falta al menos uno de `members` o `userIds`. Si el integrante ya estaba, se le actualiza el nombre cuando viene. Forma recomendada; `userIds` se mantiene por compatibilidad",
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CrewMemberInputDto"
+            }
+          },
           "userIds": {
             "type": "array",
-            "description": "Ids de M1 (numéricos, solo dígitos) de los usuarios a agregar como integrantes de la cuadrilla. Es lo que habilita a cada uno a ejecutar los servicios de la cuadrilla",
+            "description": "Ids de M1 (numéricos, solo dígitos) de los usuarios a agregar como integrantes de la cuadrilla, sin nombre. Hace falta al menos uno de `members` o `userIds`. Es lo que habilita a cada uno a ejecutar los servicios de la cuadrilla",
             "example": [
               "10",
               "11",
@@ -14979,9 +16599,98 @@
             },
             "maxItems": 100
           }
+        }
+      },
+      "CreateCrewZoneAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "description": "Zona donde se reubica la cuadrilla (UUID)",
+            "example": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+            "format": "uuid"
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Primer día de la reubicación (YYYY-MM-DD). Puede ser futuro",
+            "example": "2026-11-02"
+          },
+          "validTo": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Último día de la reubicación (YYYY-MM-DD), inclusive. Sin fecha queda vigente hasta nuevo aviso",
+            "example": "2026-11-15"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo de la reubicación",
+            "example": "Refuerzo por acumulación de residuos tras el temporal",
+            "maxLength": 500
+          }
         },
         "required": [
-          "userIds"
+          "zoneId",
+          "reason"
+        ]
+      },
+      "CrewZoneAssignmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID de la reubicación",
+            "format": "uuid"
+          },
+          "crewId": {
+            "type": "string",
+            "description": "UUID de la cuadrilla",
+            "format": "uuid"
+          },
+          "zoneId": {
+            "type": "string",
+            "description": "UUID de la zona donde se reubica",
+            "format": "uuid"
+          },
+          "validFrom": {
+            "type": "string",
+            "description": "Primer día de vigencia",
+            "example": "2026-11-02",
+            "format": "date"
+          },
+          "validTo": {
+            "type": "string",
+            "description": "Último día de vigencia. `null`: hasta nuevo aviso",
+            "example": "2026-11-15",
+            "format": "date",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo de la reubicación"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "Id de M1 de quien la cargó",
+            "example": "3"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fecha de carga"
+          }
+        },
+        "required": [
+          "id",
+          "crewId",
+          "zoneId",
+          "validFrom",
+          "validTo",
+          "reason",
+          "createdBy",
+          "createdAt"
         ]
       },
       "CreateVehicleDto": {
@@ -15268,6 +16977,12 @@
             "example": false,
             "nullable": true
           },
+          "damageNotes": {
+            "type": "string",
+            "description": "Observaciones del daño (solo cuando status = DAMAGED)",
+            "example": "La tapa quedó desencajada y la bisagra del lado izquierdo está partida",
+            "nullable": true
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string",
@@ -15290,6 +17005,55 @@
           "status",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ContainerStatusHistoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID de la fila del historial",
+            "example": "e5f6a7b8-c9d0-4123-8efa-567890123456",
+            "format": "uuid"
+          },
+          "fromStatus": {
+            "type": "string",
+            "description": "Estado de origen. Null en el alta del contenedor (y en la fila base de la migración)",
+            "enum": [
+              "ACTIVE",
+              "OVERFLOWED",
+              "DAMAGED",
+              "UNDER_REPAIR",
+              "RELOCATING",
+              "REMOVED"
+            ],
+            "example": "ACTIVE",
+            "nullable": true
+          },
+          "toStatus": {
+            "type": "string",
+            "description": "Estado de destino",
+            "enum": [
+              "ACTIVE",
+              "OVERFLOWED",
+              "DAMAGED",
+              "UNDER_REPAIR",
+              "RELOCATING",
+              "REMOVED"
+            ],
+            "example": "OVERFLOWED"
+          },
+          "changedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Instante del cambio",
+            "example": "2026-08-20T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "toStatus",
+          "changedAt"
         ]
       },
       "UpdateContainerDto": {
@@ -15362,6 +17126,12 @@
             "description": "Si el daño involucra infraestructura civil que debe derivarse a M3 (base rota, vereda hundida)",
             "example": false,
             "default": false
+          },
+          "observations": {
+            "type": "string",
+            "description": "Descripción libre del desperfecto (máx. 500 caracteres)",
+            "example": "La tapa quedó desencajada y la bisagra del lado izquierdo está partida",
+            "maxLength": 500
           }
         },
         "required": [
@@ -15971,14 +17741,20 @@
             ],
             "nullable": true
           },
+          "requestedByUserId": {
+            "type": "string",
+            "description": "ID del usuario que solicitó la intervención (el del token al crearla). Null en las anteriores a este campo",
+            "example": "usr-00002",
+            "nullable": true
+          },
           "authorizedByUserId": {
             "type": "string",
-            "description": "ID del usuario que autorizó (solo REMOVAL)",
+            "description": "ID del usuario que autorizó (el del token en authorize; también en las podas). Null mientras no se autorice",
             "nullable": true
           },
           "authorizedAt": {
             "type": "string",
-            "description": "Fecha de autorización (solo REMOVAL)",
+            "description": "Fecha de autorización (también en las podas). Null mientras no se autorice",
             "format": "date-time",
             "nullable": true
           },
@@ -16553,7 +18329,7 @@
           },
           "overrideNote": {
             "type": "string",
-            "description": "Por qué se programa igual con una cuadrilla o vehículo ya tomado ese día en una franja que se pisa. **Obligatorio si hay solapamiento**, igual que en `assign-crew`; sin solapamiento se ignora.",
+            "description": "Por qué se programa igual con una cuadrilla o vehículo ya tomado ese día en una franja que se pisa. **Obligatorio si hay solapamiento o la cuadrilla no encaja con la zona o el tipo del servicio**, igual que en `assign-crew`; sin nada que justificar se ignora.",
             "minLength": 10,
             "maxLength": 500,
             "example": "La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla."
@@ -16923,7 +18699,7 @@
           },
           "overrideNote": {
             "type": "string",
-            "description": "Por qué se asigna igual un recurso que ya está tomado ese día. **Obligatorio si hay solapamiento**: la asignación avisa y deja pasar, pero no en silencio. Consultar antes con `GET /services/:id/assignment-conflicts`.",
+            "description": "Por qué se asigna igual un recurso que ya está tomado ese día, o una cuadrilla de otra zona o especialidad. **Obligatorio si hay solapamiento o la cuadrilla no encaja con la zona o el tipo del servicio**: la asignación avisa y deja pasar, pero no en silencio. Consultar antes con `GET /services/:id/assignment-conflicts`.",
             "minLength": 10,
             "maxLength": 500,
             "example": "La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla."
@@ -17004,6 +18780,28 @@
           "windowTo"
         ]
       },
+      "AssignmentWarningDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "CREW_ZONE_MISMATCH",
+              "CREW_SPECIALTY_MISMATCH"
+            ],
+            "description": "`CREW_ZONE_MISMATCH`: la zona del servicio no es la zona efectiva de la cuadrilla en la fecha. `CREW_SPECIALTY_MISMATCH`: la especialidad de la cuadrilla no corresponde al tipo de servicio."
+          },
+          "message": {
+            "type": "string",
+            "description": "Explicación lista para mostrar al planificador",
+            "example": "La cuadrilla 'Cuadrilla Recolección — Palermo' trabaja en Palermo y el servicio es en otra zona"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
       "AssignmentConflictsResponseDto": {
         "type": "object",
         "properties": {
@@ -17014,7 +18812,7 @@
           },
           "hasConflicts": {
             "type": "boolean",
-            "description": "Si hay algún solapamiento. Con `true`, asignar exige `overrideNote`; la asignación se permite igual.",
+            "description": "Si hay algún solapamiento o aviso de encaje. Con `true`, asignar exige `overrideNote`; la asignación se permite igual.",
             "example": true
           },
           "conflicts": {
@@ -17022,12 +18820,20 @@
             "items": {
               "$ref": "#/components/schemas/AssignmentConflictDto"
             }
+          },
+          "warnings": {
+            "description": "Avisos de que la cuadrilla no es la esperable para el servicio (zona o especialidad). Vacío si no hay cuadrilla o ella no tiene zona ni especialidad cargadas. Cuentan igual que los solapamientos: exigen `overrideNote`, no bloquean.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignmentWarningDto"
+            }
           }
         },
         "required": [
           "serviceId",
           "hasConflicts",
-          "conflicts"
+          "conflicts",
+          "warnings"
         ]
       },
       "CreateDelayNoticeDto": {
@@ -17364,6 +19170,40 @@
           }
         }
       },
+      "AllowedActionsDto": {
+        "type": "object",
+        "properties": {
+          "repair": {
+            "type": "boolean",
+            "description": "Se puede derivar una reparación a Obras Públicas (M3): el tipo de expediente admite daño de infraestructura y la inspección está cerrada con un resultado distinto de NO_VIOLATION. Aun así, `POST /repair-requests` rechaza con 409 un duplicado abierto.",
+            "example": false
+          },
+          "notice": {
+            "type": "boolean",
+            "description": "Se puede emitir el acta (POST /environmental-inspections/:id/violation-notice): el tipo de expediente admite acta, el resultado es VIOLATION_FOUND y todavía no se emitió una (el acta es inmutable: una segunda da 409).",
+            "example": true
+          },
+          "suggestedViolationType": {
+            "type": "string",
+            "description": "Tipo de infracción que corresponde al tipo de expediente. Null si no hay uno canónico.",
+            "enum": [
+              "NOISE_LIMIT",
+              "ILLEGAL_DUMPING",
+              "UNTREATED_DISCHARGE",
+              "HAZARDOUS_WASTE",
+              "AIR_EMISSION",
+              "NO_WASTE_MANAGEMENT",
+              "INSPECTION_OBSTRUCTION"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "repair",
+          "notice",
+          "suggestedViolationType"
+        ]
+      },
       "ChecklistItemResponseDto": {
         "type": "object",
         "properties": {
@@ -17410,6 +19250,46 @@
             "type": "string",
             "description": "Expediente al que pertenece",
             "format": "uuid"
+          },
+          "reportType": {
+            "type": "string",
+            "description": "Tipo del expediente (solo lectura, copiado del expediente)",
+            "enum": [
+              "NOISE",
+              "DUMPING",
+              "ILLEGAL_DUMPSITE",
+              "WATER_DISCHARGE",
+              "AIR_EMISSION",
+              "ODOR",
+              "PEST_INFESTATION",
+              "OTHER"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "description": "Dirección del expediente de origen (solo lectura)",
+            "nullable": true,
+            "example": "Frente a Almte. Guillermo Brown"
+          },
+          "lat": {
+            "type": "number",
+            "description": "Latitud del expediente de origen (solo lectura)",
+            "nullable": true,
+            "example": -34.6037
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitud del expediente de origen (solo lectura)",
+            "nullable": true,
+            "example": -58.3816
+          },
+          "allowedActions": {
+            "description": "Qué se puede derivar a partir de esta inspección hoy, según el tipo de expediente, el resultado y si ya tiene acta. No cubre los duplicados de reparación: eso lo rechaza `POST /repair-requests` con 409.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AllowedActionsDto"
+              }
+            ]
           },
           "serviceId": {
             "type": "string",
@@ -17520,6 +19400,11 @@
         "required": [
           "id",
           "reportId",
+          "reportType",
+          "address",
+          "lat",
+          "lng",
+          "allowedActions",
           "createdAt",
           "updatedAt"
         ]
@@ -18217,12 +20102,23 @@
             "description": "Cruce donde termina el tramo",
             "example": "San Martín",
             "maxLength": 100
+          },
+          "direction": {
+            "type": "string",
+            "description": "Sentido del tramo cortado: FORWARD (de fromCross a toCross), REVERSE (al revés) o BOTH (ambos).",
+            "enum": [
+              "FORWARD",
+              "REVERSE",
+              "BOTH"
+            ],
+            "example": "BOTH"
           }
         },
         "required": [
           "streetName",
           "fromCross",
-          "toCross"
+          "toCross",
+          "direction"
         ]
       },
       "CreateStreetClosureRequestDto": {
@@ -18270,7 +20166,7 @@
           },
           "closureType": {
             "type": "string",
-            "description": "Tipo de corte. Opcional en el esquema unificado con M3; nosotros lo mandamos siempre.",
+            "description": "Tipo de corte. M7 lo tolera ausente pero recomienda mandarlo siempre, así que es obligatorio.",
             "enum": [
               "TOTAL",
               "PARTIAL"
@@ -18284,7 +20180,8 @@
           "reason",
           "sections",
           "requestedFrom",
-          "requestedTo"
+          "requestedTo",
+          "closureType"
         ]
       },
       "ClosureSectionResponseDto": {
@@ -18309,13 +20206,24 @@
             "type": "string",
             "description": "Cruce final",
             "example": "San Martín"
+          },
+          "direction": {
+            "type": "string",
+            "description": "Sentido del tramo cortado",
+            "enum": [
+              "FORWARD",
+              "REVERSE",
+              "BOTH"
+            ],
+            "example": "BOTH"
           }
         },
         "required": [
           "id",
           "streetName",
           "fromCross",
-          "toCross"
+          "toCross",
+          "direction"
         ]
       },
       "StreetClosureRequestResponseDto": {
@@ -18365,6 +20273,24 @@
               "TOTAL",
               "PARTIAL"
             ],
+            "nullable": true
+          },
+          "approvedFrom": {
+            "type": "string",
+            "description": "Inicio de la ventana que autorizó M7 (streetClosureApproved). Null hasta que aprueban; prevalece sobre closureFrom.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "approvedTo": {
+            "type": "string",
+            "description": "Fin de la ventana que autorizó M7 (streetClosureApproved). Null hasta que aprueban; prevalece sobre closureTo.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rejectionReason": {
+            "type": "string",
+            "description": "Motivo del rechazo informado por M7. Null si el corte no fue rechazado.",
+            "example": "Se superpone con otro corte en la misma calle",
             "nullable": true
           },
           "status": {
@@ -18710,7 +20636,7 @@
         "properties": {
           "scheduled": {
             "type": "number",
-            "description": "Objetivos programados en el período",
+            "description": "Objetivos programados en el período cuya fecha ya venció (hoy o antes)",
             "example": 240
           },
           "served": {
@@ -18730,8 +20656,13 @@
           },
           "pending": {
             "type": "number",
-            "description": "Todavía sin resultado cargado",
+            "description": "Vencidos (fecha programada de hoy o anterior) y todavía sin resultado cargado",
             "example": 9
+          },
+          "upcoming": {
+            "type": "number",
+            "description": "Programados para una fecha futura. No cuentan en `scheduled` ni en `coveragePct`: todavía no son un incumplimiento",
+            "example": 14
           },
           "coveragePct": {
             "type": "number",
@@ -18745,6 +20676,7 @@
           "partial",
           "notServiced",
           "pending",
+          "upcoming",
           "coveragePct"
         ]
       },
@@ -18753,7 +20685,7 @@
         "properties": {
           "scheduled": {
             "type": "number",
-            "description": "Objetivos programados en el período",
+            "description": "Objetivos programados en el período cuya fecha ya venció (hoy o antes)",
             "example": 240
           },
           "served": {
@@ -18773,8 +20705,13 @@
           },
           "pending": {
             "type": "number",
-            "description": "Todavía sin resultado cargado",
+            "description": "Vencidos (fecha programada de hoy o anterior) y todavía sin resultado cargado",
             "example": 9
+          },
+          "upcoming": {
+            "type": "number",
+            "description": "Programados para una fecha futura. No cuentan en `scheduled` ni en `coveragePct`: todavía no son un incumplimiento",
+            "example": 14
           },
           "coveragePct": {
             "type": "number",
@@ -18792,6 +20729,11 @@
           "name": {
             "type": "string",
             "example": "Centro"
+          },
+          "lowSample": {
+            "type": "boolean",
+            "description": "Hay menos programados que el umbral configurado: el porcentaje no es confiable (2 de 2 es 100 %)",
+            "example": false
           }
         },
         "required": [
@@ -18800,10 +20742,143 @@
           "partial",
           "notServiced",
           "pending",
+          "upcoming",
           "coveragePct",
           "id",
           "code",
-          "name"
+          "name",
+          "lowSample"
+        ]
+      },
+      "TargetDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "description": "El número de la meta. **Null con `direction: down`**: es una meta de tendencia y nadie definió un número",
+            "example": 95,
+            "nullable": true
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "min",
+              "max",
+              "down"
+            ],
+            "description": "`min`: se cumple con un valor mayor o igual. `max`: con uno menor o igual. `down`: se cumple si baja de un período al otro (tendencia descendente), sin valor numérico.",
+            "example": "min"
+          }
+        },
+        "required": [
+          "value",
+          "direction"
+        ]
+      },
+      "CoverageTargetsDto": {
+        "type": "object",
+        "properties": {
+          "coveragePct": {
+            "description": "Meta de `totals.coveragePct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "coveragePct"
+        ]
+      },
+      "CoverageSeriesPointDto": {
+        "type": "object",
+        "properties": {
+          "scheduled": {
+            "type": "number",
+            "description": "Objetivos programados en el período cuya fecha ya venció (hoy o antes)",
+            "example": 240
+          },
+          "served": {
+            "type": "number",
+            "description": "Atendidos por completo",
+            "example": 198
+          },
+          "partial": {
+            "type": "number",
+            "description": "Atendidos parcialmente",
+            "example": 21
+          },
+          "notServiced": {
+            "type": "number",
+            "description": "No atendidos",
+            "example": 12
+          },
+          "pending": {
+            "type": "number",
+            "description": "Vencidos (fecha programada de hoy o anterior) y todavía sin resultado cargado",
+            "example": 9
+          },
+          "upcoming": {
+            "type": "number",
+            "description": "Programados para una fecha futura. No cuentan en `scheduled` ni en `coveragePct`: todavía no son un incumplimiento",
+            "example": 14
+          },
+          "coveragePct": {
+            "type": "number",
+            "description": "Atendidos por completo sobre programados",
+            "example": 82.5
+          },
+          "from": {
+            "type": "string",
+            "description": "Primer día del intervalo (YYYY-MM-DD)",
+            "example": "2026-08-03"
+          },
+          "to": {
+            "type": "string",
+            "description": "Último día del intervalo, inclusive",
+            "example": "2026-08-09"
+          }
+        },
+        "required": [
+          "scheduled",
+          "served",
+          "partial",
+          "notServiced",
+          "pending",
+          "upcoming",
+          "coveragePct",
+          "from",
+          "to"
+        ]
+      },
+      "CoveragePreviousDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/PeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/CoverageTotalsDto"
+          }
+        },
+        "required": [
+          "period",
+          "totals"
+        ]
+      },
+      "CoverageDeltaDto": {
+        "type": "object",
+        "properties": {
+          "coveragePct": {
+            "type": "number",
+            "description": "Puntos porcentuales de `coveragePct` contra el período anterior. Null si alguno de los dos no tiene programados",
+            "nullable": true,
+            "example": 16.7
+          }
+        },
+        "required": [
+          "coveragePct"
         ]
       },
       "CoverageIndicatorDto": {
@@ -18828,13 +20903,40 @@
             "items": {
               "$ref": "#/components/schemas/CoverageBreakdownDto"
             }
+          },
+          "targets": {
+            "$ref": "#/components/schemas/CoverageTargetsDto"
+          },
+          "series": {
+            "description": "Solo con `bucket`. La suma de los puntos coincide con `totals`",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoverageSeriesPointDto"
+            }
+          },
+          "previous": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CoveragePreviousDto"
+              }
+            ]
+          },
+          "delta": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CoverageDeltaDto"
+              }
+            ]
           }
         },
         "required": [
           "period",
           "totals",
           "byZone",
-          "byServiceType"
+          "byServiceType",
+          "targets"
         ]
       },
       "ComplianceFinishedDto": {
@@ -18865,6 +20967,31 @@
           "onTime",
           "late",
           "onTimePct"
+        ]
+      },
+      "SchedulingDeviationDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Servicios del período, sin los cancelados",
+            "example": 240
+          },
+          "deviated": {
+            "type": "number",
+            "description": "Reprogramados (`RESCHEDULED`) o con al menos un aviso de demora. Cada servicio cuenta una sola vez",
+            "example": 18
+          },
+          "deviatedPct": {
+            "type": "number",
+            "description": "Desviados sobre servicios del período. No es el desvío del relleno sanitario (`divertedPct`)",
+            "example": 7.5
+          }
+        },
+        "required": [
+          "total",
+          "deviated",
+          "deviatedPct"
         ]
       },
       "ReasonCountDto": {
@@ -18929,6 +21056,109 @@
           "reasons"
         ]
       },
+      "ComplianceTargetsDto": {
+        "type": "object",
+        "properties": {
+          "compliancePct": {
+            "description": "Meta de `finished.onTimePct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          },
+          "schedulingDeviationPct": {
+            "description": "Meta de `schedulingDeviation.deviatedPct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "compliancePct",
+          "schedulingDeviationPct"
+        ]
+      },
+      "ComplianceSeriesPointDto": {
+        "type": "object",
+        "properties": {
+          "finished": {
+            "$ref": "#/components/schemas/ComplianceFinishedDto"
+          },
+          "schedulingDeviation": {
+            "$ref": "#/components/schemas/SchedulingDeviationDto"
+          },
+          "from": {
+            "type": "string",
+            "description": "Primer día del intervalo (YYYY-MM-DD)",
+            "example": "2026-08-03"
+          },
+          "to": {
+            "type": "string",
+            "description": "Último día del intervalo, inclusive",
+            "example": "2026-08-09"
+          }
+        },
+        "required": [
+          "finished",
+          "schedulingDeviation",
+          "from",
+          "to"
+        ]
+      },
+      "ComplianceTotalsDto": {
+        "type": "object",
+        "properties": {
+          "finished": {
+            "$ref": "#/components/schemas/ComplianceFinishedDto"
+          },
+          "schedulingDeviation": {
+            "$ref": "#/components/schemas/SchedulingDeviationDto"
+          }
+        },
+        "required": [
+          "finished",
+          "schedulingDeviation"
+        ]
+      },
+      "CompliancePreviousDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/PeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/ComplianceTotalsDto"
+          }
+        },
+        "required": [
+          "period",
+          "totals"
+        ]
+      },
+      "ComplianceDeltaDto": {
+        "type": "object",
+        "properties": {
+          "onTimePct": {
+            "type": "number",
+            "description": "Puntos porcentuales de `finished.onTimePct`. Null si alguno de los dos períodos no cerró servicios",
+            "nullable": true,
+            "example": -4.2
+          },
+          "deviatedPct": {
+            "type": "number",
+            "description": "Puntos porcentuales de `schedulingDeviation.deviatedPct`. Null si alguno de los dos períodos no tiene servicios",
+            "nullable": true,
+            "example": 1.5
+          }
+        },
+        "required": [
+          "onTimePct",
+          "deviatedPct"
+        ]
+      },
       "ComplianceIndicatorDto": {
         "type": "object",
         "properties": {
@@ -18938,18 +21168,54 @@
           "finished": {
             "$ref": "#/components/schemas/ComplianceFinishedDto"
           },
+          "schedulingDeviation": {
+            "description": "Servicios demorados o reprogramados sobre los del período",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SchedulingDeviationDto"
+              }
+            ]
+          },
           "notServicedRanking": {
             "description": "Ranking de zonas no atendidas, de mayor a menor",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/NotServicedZoneDto"
             }
+          },
+          "targets": {
+            "$ref": "#/components/schemas/ComplianceTargetsDto"
+          },
+          "series": {
+            "description": "Solo con `bucket`. Cada servicio cae en el intervalo de su fecha programada, como en el total",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplianceSeriesPointDto"
+            }
+          },
+          "previous": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CompliancePreviousDto"
+              }
+            ]
+          },
+          "delta": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ComplianceDeltaDto"
+              }
+            ]
           }
         },
         "required": [
           "period",
           "finished",
-          "notServicedRanking"
+          "schedulingDeviation",
+          "notServicedRanking",
+          "targets"
         ]
       },
       "StatusCountDto": {
@@ -18974,6 +21240,39 @@
         "required": [
           "status",
           "count"
+        ]
+      },
+      "ContainerHistoryDto": {
+        "type": "object",
+        "properties": {
+          "overflowIncidents": {
+            "type": "number",
+            "description": "Incidentes de desborde del período: una transición a `OVERFLOWED` cuenta una vez, así que un contenedor que se desborda dos veces suma dos. El alta y la fila base de la migración no cuentan",
+            "example": 7
+          },
+          "damageIncidents": {
+            "type": "number",
+            "description": "Incidentes de daño del período: una transición a `DAMAGED` cuenta una vez",
+            "example": 4
+          },
+          "pendingDamage": {
+            "type": "number",
+            "description": "Contenedores cuyo último estado conocido al final del período (o del intervalo) es `DAMAGED` o `UNDER_REPAIR`: daño todavía sin resolver. **Null si ningún contenedor tiene historial hasta ese instante**: es la ausencia de dato, no un cero",
+            "example": 3,
+            "nullable": true
+          },
+          "trackingSince": {
+            "type": "string",
+            "description": "Instante (ISO 8601) de la fila más antigua del historial: desde cuándo existen datos. Null si todavía no hay ninguna. Los períodos anteriores no traen incidentes ni pendientes",
+            "example": "2026-10-30T15:00:00.000Z",
+            "nullable": true
+          }
+        },
+        "required": [
+          "overflowIncidents",
+          "damageIncidents",
+          "pendingDamage",
+          "trackingSince"
         ]
       },
       "ContainersByZoneDto": {
@@ -19024,6 +21323,14 @@
               "$ref": "#/components/schemas/StatusCountDto"
             }
           },
+          "history": {
+            "description": "Lo que sí es del período, a partir del historial de estados. `byStatus` y `byZone` siguen siendo la foto del estado actual",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContainerHistoryDto"
+              }
+            ]
+          },
           "byZone": {
             "description": "Ordenado de mayor a menor cantidad de incidencias",
             "type": "array",
@@ -19034,6 +21341,7 @@
         },
         "required": [
           "byStatus",
+          "history",
           "byZone"
         ]
       },
@@ -19073,6 +21381,58 @@
         },
         "required": [
           "byRiskLevel"
+        ]
+      },
+      "WithinDeadlineDto": {
+        "type": "object",
+        "properties": {
+          "resolved": {
+            "type": "number",
+            "description": "Reclamos resueltos (CLOSED) del período o intervalo",
+            "example": 12
+          },
+          "withinDeadline": {
+            "type": "number",
+            "description": "Resueltos cuyos días hábiles entre el alta y el cierre son menores o iguales al plazo objetivo",
+            "example": 10
+          },
+          "pct": {
+            "type": "number",
+            "description": "Dentro del plazo ÷ resueltos, con un decimal. **Null si no hay resueltos**: es la ausencia de dato, no un 0 %",
+            "example": 83.3,
+            "nullable": true
+          }
+        },
+        "required": [
+          "resolved",
+          "withinDeadline",
+          "pct"
+        ]
+      },
+      "OverdueDto": {
+        "type": "object",
+        "properties": {
+          "open": {
+            "type": "number",
+            "description": "Reclamos abiertos (todo estado que no sea CLOSED) creados en el período",
+            "example": 9
+          },
+          "overdue": {
+            "type": "number",
+            "description": "Abiertos cuyos días hábiles desde el alta hasta hoy (día argentino) superan el plazo objetivo",
+            "example": 1
+          },
+          "pct": {
+            "type": "number",
+            "description": "Vencidos ÷ abiertos, con un decimal. **Null si no hay abiertos**: es la ausencia de dato, no un 0 %",
+            "example": 11.1,
+            "nullable": true
+          }
+        },
+        "required": [
+          "open",
+          "overdue",
+          "pct"
         ]
       },
       "ReportTypeCountDto": {
@@ -19138,6 +21498,39 @@
             "description": "Denuncias abiertas en el período",
             "example": 18
           },
+          "avgResolutionDays": {
+            "type": "number",
+            "description": "Días corridos promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. **Null si no se cerró ninguno**: es la ausencia de dato, no un cero.",
+            "example": 4.3,
+            "nullable": true
+          },
+          "avgResolutionBusinessDays": {
+            "type": "number",
+            "description": "Días hábiles (lunes a viernes, sin feriados) promedio entre el alta y el cierre, contados en días argentinos: es lo que se compara con la meta. Null si no se cerró ninguno.",
+            "example": 3.1,
+            "nullable": true
+          },
+          "withinDeadline": {
+            "description": "Resolución dentro del plazo objetivo (`deadlineBusinessDays`): se compara con la meta `reportsWithinDeadlinePct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WithinDeadlineDto"
+              }
+            ]
+          },
+          "deadlineBusinessDays": {
+            "type": "number",
+            "description": "Plazo objetivo de resolución en días hábiles (lunes a viernes, sin feriados), el mismo para todos los tipos de reclamo. Es un supuesto de M6 configurable (`INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS`) hasta que M2 acuerde el suyo",
+            "example": 5
+          },
+          "overdue": {
+            "description": "Foto del estado actual de los reclamos creados en el período, sin serie ni comparación: el sistema no guarda el historial de estados de los reclamos",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OverdueDto"
+              }
+            ]
+          },
           "byType": {
             "type": "array",
             "items": {
@@ -19149,19 +21542,254 @@
             "items": {
               "$ref": "#/components/schemas/ReportStatusCountDto"
             }
-          },
-          "avgResolutionDays": {
-            "type": "number",
-            "description": "Días promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. **Null si no se cerró ninguno**: es la ausencia de dato, no un cero.",
-            "example": 4.3,
-            "nullable": true
           }
         },
         "required": [
           "total",
+          "avgResolutionDays",
+          "avgResolutionBusinessDays",
+          "withinDeadline",
+          "deadlineBusinessDays",
+          "overdue",
           "byType",
-          "byStatus",
-          "avgResolutionDays"
+          "byStatus"
+        ]
+      },
+      "IncidentsTargetsDto": {
+        "type": "object",
+        "properties": {
+          "resolutionBusinessDays": {
+            "description": "Meta de `reports.avgResolutionBusinessDays`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          },
+          "reportsWithinDeadlinePct": {
+            "description": "Meta de `reports.withinDeadline.pct` (mínimo)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          },
+          "reportsOverduePct": {
+            "description": "Meta de `reports.overdue.pct` (máximo)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          },
+          "overflowTrend": {
+            "description": "Meta de `containers.history.overflowIncidents`: tendencia mensual descendente, sin valor numérico (`direction: down`)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          },
+          "pendingDamageTrend": {
+            "description": "Meta de `containers.history.pendingDamage`: reducir los pendientes mes a mes, sin valor numérico (`direction: down`)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "resolutionBusinessDays",
+          "reportsWithinDeadlinePct",
+          "reportsOverduePct",
+          "overflowTrend",
+          "pendingDamageTrend"
+        ]
+      },
+      "ContainerHistoryTotalsDto": {
+        "type": "object",
+        "properties": {
+          "overflowIncidents": {
+            "type": "number",
+            "description": "Incidentes de desborde del período: una transición a `OVERFLOWED` cuenta una vez, así que un contenedor que se desborda dos veces suma dos. El alta y la fila base de la migración no cuentan",
+            "example": 7
+          },
+          "damageIncidents": {
+            "type": "number",
+            "description": "Incidentes de daño del período: una transición a `DAMAGED` cuenta una vez",
+            "example": 4
+          },
+          "pendingDamage": {
+            "type": "number",
+            "description": "Contenedores cuyo último estado conocido al final del período (o del intervalo) es `DAMAGED` o `UNDER_REPAIR`: daño todavía sin resolver. **Null si ningún contenedor tiene historial hasta ese instante**: es la ausencia de dato, no un cero",
+            "example": 3,
+            "nullable": true
+          }
+        },
+        "required": [
+          "overflowIncidents",
+          "damageIncidents",
+          "pendingDamage"
+        ]
+      },
+      "ReportsSeriesPointDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Denuncias abiertas en el período",
+            "example": 18
+          },
+          "avgResolutionDays": {
+            "type": "number",
+            "description": "Días corridos promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. **Null si no se cerró ninguno**: es la ausencia de dato, no un cero.",
+            "example": 4.3,
+            "nullable": true
+          },
+          "avgResolutionBusinessDays": {
+            "type": "number",
+            "description": "Días hábiles (lunes a viernes, sin feriados) promedio entre el alta y el cierre, contados en días argentinos: es lo que se compara con la meta. Null si no se cerró ninguno.",
+            "example": 3.1,
+            "nullable": true
+          },
+          "withinDeadline": {
+            "description": "Resolución dentro del plazo objetivo (`deadlineBusinessDays`): se compara con la meta `reportsWithinDeadlinePct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WithinDeadlineDto"
+              }
+            ]
+          },
+          "containers": {
+            "description": "Incidentes y pendientes de contenedores del intervalo o período",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContainerHistoryTotalsDto"
+              }
+            ]
+          },
+          "from": {
+            "type": "string",
+            "description": "Primer día del intervalo (YYYY-MM-DD)",
+            "example": "2026-08-03"
+          },
+          "to": {
+            "type": "string",
+            "description": "Último día del intervalo, inclusive",
+            "example": "2026-08-09"
+          }
+        },
+        "required": [
+          "total",
+          "avgResolutionDays",
+          "avgResolutionBusinessDays",
+          "withinDeadline",
+          "containers",
+          "from",
+          "to"
+        ]
+      },
+      "IncidentsTotalsDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Denuncias abiertas en el período",
+            "example": 18
+          },
+          "avgResolutionDays": {
+            "type": "number",
+            "description": "Días corridos promedio de `createdAt` a `updatedAt` en los expedientes CLOSED del período. **Null si no se cerró ninguno**: es la ausencia de dato, no un cero.",
+            "example": 4.3,
+            "nullable": true
+          },
+          "avgResolutionBusinessDays": {
+            "type": "number",
+            "description": "Días hábiles (lunes a viernes, sin feriados) promedio entre el alta y el cierre, contados en días argentinos: es lo que se compara con la meta. Null si no se cerró ninguno.",
+            "example": 3.1,
+            "nullable": true
+          },
+          "withinDeadline": {
+            "description": "Resolución dentro del plazo objetivo (`deadlineBusinessDays`): se compara con la meta `reportsWithinDeadlinePct`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WithinDeadlineDto"
+              }
+            ]
+          },
+          "containers": {
+            "description": "Incidentes y pendientes de contenedores del intervalo o período",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContainerHistoryTotalsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "total",
+          "avgResolutionDays",
+          "avgResolutionBusinessDays",
+          "withinDeadline",
+          "containers"
+        ]
+      },
+      "ReportsPreviousDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/PeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/IncidentsTotalsDto"
+          }
+        },
+        "required": [
+          "period",
+          "totals"
+        ]
+      },
+      "ReportsDeltaDto": {
+        "type": "object",
+        "properties": {
+          "withinDeadlinePct": {
+            "type": "number",
+            "description": "Puntos porcentuales de `withinDeadline.pct` contra el período anterior. Null si alguno de los dos no tiene reclamos resueltos",
+            "nullable": true,
+            "example": 4.2
+          },
+          "overflowIncidents": {
+            "type": "number",
+            "description": "Incidentes de desborde contra el período anterior, en cantidades. Null si alguno de los dos períodos no tiene historial",
+            "nullable": true,
+            "example": -2
+          },
+          "pendingDamage": {
+            "type": "number",
+            "description": "Daños pendientes al fin del período contra los del anterior, en cantidades. Null si alguno de los dos no tiene historial",
+            "nullable": true,
+            "example": -1
+          },
+          "avgResolutionDays": {
+            "type": "number",
+            "description": "Días corridos contra el período anterior. Null si alguno no cerró denuncias",
+            "nullable": true,
+            "example": -1.2
+          },
+          "avgResolutionBusinessDays": {
+            "type": "number",
+            "description": "Días hábiles contra el período anterior. Null si alguno no cerró denuncias",
+            "nullable": true,
+            "example": -0.8
+          }
+        },
+        "required": [
+          "withinDeadlinePct",
+          "overflowIncidents",
+          "pendingDamage",
+          "avgResolutionDays",
+          "avgResolutionBusinessDays"
         ]
       },
       "IncidentsIndicatorDto": {
@@ -19171,7 +21799,7 @@
             "$ref": "#/components/schemas/PeriodDto"
           },
           "containers": {
-            "description": "Foto del estado actual del inventario, no del período: el inventario no guarda historial de estados. El período solo filtra las denuncias.",
+            "description": "Conteos por estado y por zona: foto del estado actual, no del período. `history` es lo que sí se mide por período, desde el historial de estados.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ContainerIncidentsDto"
@@ -19193,13 +21821,40 @@
                 "$ref": "#/components/schemas/ReportIncidentsDto"
               }
             ]
+          },
+          "targets": {
+            "$ref": "#/components/schemas/IncidentsTargetsDto"
+          },
+          "series": {
+            "description": "Solo con `bucket`. Las denuncias por día argentino de creación y, en `containers`, los incidentes del intervalo y los daños pendientes a su fin. Los vencidos, los conteos por estado y el arbolado no tienen serie: son una foto de hoy",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportsSeriesPointDto"
+            }
+          },
+          "previous": {
+            "description": "Solo con `compare=previous`. Cubre las denuncias (sin los vencidos) y el historial de contenedores, no los conteos por estado ni el arbolado",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReportsPreviousDto"
+              }
+            ]
+          },
+          "delta": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReportsDeltaDto"
+              }
+            ]
           }
         },
         "required": [
           "period",
           "containers",
           "trees",
-          "reports"
+          "reports",
+          "targets"
         ]
       },
       "WasteTotalsDto": {
@@ -19301,6 +21956,93 @@
           "volumeM3"
         ]
       },
+      "WasteTargetsDto": {
+        "type": "object",
+        "properties": {
+          "landfillDiversionPct": {
+            "nullable": true,
+            "description": "Meta de `totals.divertedPct`. **Null mientras el equipo no la defina**: no hay meta acordada para el desvío del relleno",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "landfillDiversionPct"
+        ]
+      },
+      "WasteSeriesPointDto": {
+        "type": "object",
+        "properties": {
+          "weightKg": {
+            "type": "number",
+            "example": 128400.5
+          },
+          "volumeM3": {
+            "type": "number",
+            "example": 640.25
+          },
+          "divertedKg": {
+            "type": "number",
+            "description": "Peso que fue a planta de reciclado o de compostaje, no a relleno",
+            "example": 30400.5
+          },
+          "divertedPct": {
+            "type": "number",
+            "description": "Porcentaje desviado del relleno",
+            "example": 23.7
+          },
+          "from": {
+            "type": "string",
+            "description": "Primer día del intervalo (YYYY-MM-DD)",
+            "example": "2026-08-03"
+          },
+          "to": {
+            "type": "string",
+            "description": "Último día del intervalo, inclusive",
+            "example": "2026-08-09"
+          }
+        },
+        "required": [
+          "weightKg",
+          "volumeM3",
+          "divertedKg",
+          "divertedPct",
+          "from",
+          "to"
+        ]
+      },
+      "WastePreviousDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/PeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/WasteTotalsDto"
+          }
+        },
+        "required": [
+          "period",
+          "totals"
+        ]
+      },
+      "WasteDeltaDto": {
+        "type": "object",
+        "properties": {
+          "divertedPct": {
+            "type": "number",
+            "description": "Puntos porcentuales de `totals.divertedPct` contra el período anterior. Null si alguno de los dos no recolectó kilos",
+            "nullable": true,
+            "example": 2.4
+          }
+        },
+        "required": [
+          "divertedPct"
+        ]
+      },
       "WasteIndicatorDto": {
         "type": "object",
         "properties": {
@@ -19326,13 +22068,40 @@
             "type": "number",
             "description": "Cuántos registros de recolección sustentan las cifras",
             "example": 312
+          },
+          "targets": {
+            "$ref": "#/components/schemas/WasteTargetsDto"
+          },
+          "series": {
+            "description": "Solo con `bucket`. Cada registro cae en el intervalo de la fecha del servicio que lo recolectó, como en el total",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WasteSeriesPointDto"
+            }
+          },
+          "previous": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WastePreviousDto"
+              }
+            ]
+          },
+          "delta": {
+            "description": "Solo con `compare=previous`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WasteDeltaDto"
+              }
+            ]
           }
         },
         "required": [
           "period",
           "totals",
           "byWasteType",
-          "byDisposalSite"
+          "byDisposalSite",
+          "targets"
         ]
       },
       "RoleAssignmentResponseDto": {

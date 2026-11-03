@@ -21,9 +21,19 @@
     "reason": { "type": "string" },
     "affectedSections": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "object",
+        "properties": {
+          "street": { "type": "string" },
+          "from": { "type": "string", "description": "Cruce donde empieza el tramo." },
+          "to": { "type": "string", "description": "Cruce donde termina el tramo." },
+          "direction": { "type": "string", "enum": ["FORWARD", "REVERSE", "BOTH"] }
+        },
+        "required": ["street", "from", "to", "direction"],
+        "additionalProperties": false
+      },
       "minItems": 1,
-      "description": "Antes 'streets'."
+      "description": "Antes 'streets'. Tramos estructurados (M7, 31/10)."
     },
     "requestedFrom": { "$ref": "_shared.schema.json#/$defs/timestamp", "description": "Antes 'from'." },
     "requestedTo": { "$ref": "_shared.schema.json#/$defs/timestamp", "description": "Antes 'to'." },

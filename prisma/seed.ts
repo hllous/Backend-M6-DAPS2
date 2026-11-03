@@ -1,6 +1,7 @@
 import {
   ContainerStatus,
   ContainerType,
+  CrewSpecialty,
   CrewType,
   DamageType,
   DelayType,
@@ -30,6 +31,7 @@ import {
   Shift,
   StreetClosureRequestStatus,
   StreetClosureType,
+  StreetDirection,
   SuggestedAction,
   TreeHealthStatus,
   TreeInterventionStatus,
@@ -44,6 +46,7 @@ import { cargarSnapshot, syncZones } from '../src/core/zones-sync';
 import { AggregateType, EventType } from '../src/events/event-types';
 import * as payloads from '../src/events/payloads';
 import { puntoEnGeometria, semillaDe } from '../src/common/utils/geo';
+import { SERVICE_TYPE_SPECIALTY } from '../src/modules/crews/crew-specialty';
 import {
   ArbolSeed,
   BARRIOS,
@@ -54,7 +57,7 @@ import {
   cargarPoligonos,
   MIN_ARBOLES,
   MIN_CONTENEDORES,
-  generarInventario,
+  cargarInventario,
 } from './seed-lugares';
 
 const prisma = new PrismaClient();
@@ -151,6 +154,112 @@ function uuidDe(semilla: string): string {
   }
   const variante = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-${variante}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+// ════════════════════════════════════════════════════════════
+// HISTORIAL DE ESTADOS DE LOS CONTENEDORES (#475)
+// ════════════════════════════════════════════════════════════
+
+/** Una fila de `container_status_history`, con el contenedor por código. */
+export interface FilaHistorialSeed {
+  code: string;
+  from: ContainerStatus | null;
+  to: ContainerStatus;
+  at: Date;
+}
+
+/** Hash FNV-1a: el mismo texto da siempre el mismo número, sin `Math.random`. */
+function hashDe(texto: string): number {
+  let h = 0x811c9dc5;
+  for (const c of texto) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193);
+  return h >>> 0;
+}
+
+/**
+ * Historial de demostración: cada contenedor nace hace 180 días y, durante los
+ * últimos 5 meses, algunos se desbordan (y se vacían) o se dañan (y se reparan),
+ * con más actividad en los meses viejos que en los recientes, para que el tablero
+ * muestre una tendencia descendente. Lo que **no** se puede es contradecir el
+ * estado de hoy: los contenedores que hoy no están `ACTIVE` terminan con su
+ * transición abierta hace 2 a 7 días, y todo ciclo anterior se cierra antes.
+ *
+ * Es una función pura y determinística (hash del código, sin azar) y respeta la
+ * máquina de estados de `CONTAINER_TRANSITIONS`; el spec lo verifica.
+ */
+export function historialDeContenedores(
+  contenedores: { code: string; status?: ContainerStatus }[],
+): FilaHistorialSeed[] {
+  const filas: FilaHistorialSeed[] = [];
+
+  for (const c of contenedores) {
+    const estado = c.status ?? ContainerStatus.ACTIVE;
+    const paso = (n: number, to: ContainerStatus, from: ContainerStatus | null) =>
+      filas.push({
+        code: c.code,
+        from,
+        to,
+        at: momento(n, 8 + (hashDe(`${c.code}:h:${n}`) % 9)),
+      });
+
+    // Cola abierta: lo que explica el estado de hoy. `t` = hace cuántos días empezó.
+    const t = 2 + (hashDe(`${c.code}:t`) % 6);
+    const cola: { n: number; to: ContainerStatus }[] =
+      estado === ContainerStatus.ACTIVE
+        ? []
+        : estado === ContainerStatus.UNDER_REPAIR
+          ? [
+              { n: -(t + 3), to: ContainerStatus.DAMAGED },
+              { n: -t, to: ContainerStatus.UNDER_REPAIR },
+            ]
+          : estado === ContainerStatus.REMOVED
+            ? [
+                { n: -(t + 2), to: ContainerStatus.DAMAGED },
+                { n: -t, to: ContainerStatus.REMOVED },
+              ]
+            : [{ n: -t, to: estado }];
+    // Los ciclos terminan antes de que empiece la cola (o antes de ayer, sin cola).
+    const limite = cola.length ? cola[0].n - 1 : -2;
+
+    paso(-180, ContainerStatus.ACTIVE, null);
+    let actual: ContainerStatus = ContainerStatus.ACTIVE;
+    let libreDesde = -180;
+
+    // De los meses viejos a los recientes: cada ciclo arranca después de que terminó el anterior.
+    for (let mes = 5; mes >= 1; mes--) {
+      const ventana = -mes * 30;
+      // Más desbordes y daños en los meses viejos: la tendencia baja hacia hoy.
+      const sorteo = (clave: string) => hashDe(`${c.code}:${clave}:${mes}`);
+
+      if (sorteo('o') % 100 < 6 + 3 * (mes - 1)) {
+        const inicio = ventana + (sorteo('od') % 24);
+        const fin = inicio + 1 + (sorteo('of') % 3);
+        if (inicio > libreDesde && fin <= limite) {
+          paso(inicio, ContainerStatus.OVERFLOWED, actual);
+          paso(fin, ContainerStatus.ACTIVE, ContainerStatus.OVERFLOWED);
+          libreDesde = fin;
+        }
+      }
+
+      if (sorteo('d') % 100 < 3 + 2 * (mes - 1)) {
+        const inicio = ventana + (sorteo('dd') % 24);
+        const taller = inicio + 1 + (sorteo('dt') % 3);
+        // Reparaciones de 4 a 29 días: algunas cruzan el fin de mes y quedan pendientes.
+        const fin = taller + 4 + (sorteo('df') % 26);
+        if (inicio > libreDesde && fin <= limite) {
+          paso(inicio, ContainerStatus.DAMAGED, ContainerStatus.ACTIVE);
+          paso(taller, ContainerStatus.UNDER_REPAIR, ContainerStatus.DAMAGED);
+          paso(fin, ContainerStatus.ACTIVE, ContainerStatus.UNDER_REPAIR);
+          libreDesde = fin;
+        }
+      }
+    }
+
+    for (const siguiente of cola) {
+      paso(siguiente.n, siguiente.to, actual);
+      actual = siguiente.to;
+    }
+  }
+  return filas;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -492,9 +601,11 @@ const VEHICULOS_APTOS: Record<string, VehicleType[]> = {
 /**
  * Doce cuadrillas, cuatro por turno.
  *
- * El modelo no guarda zona ni especialidad de una cuadrilla: `tipos` y `zonas`
- * no se persisten, son el contrato que el seed se obliga a cumplir al
- * asignarle servicios (ver `verificar`). `bajaDesde` es el día desde el que no
+ * `tipos` y `zonas` son el contrato que el seed se obliga a cumplir al
+ * asignarle servicios (ver `verificar`). Del modelo (#455) solo se persiste lo
+ * que cabe: la especialidad solo existe si todos sus tipos pertenecen a una misma
+ * (ver `especialidadDe`) y la zona base solo si cubre una única zona (`homeZoneId`
+ * es una sola; las que cubren varias quedan sin zona base). `bajaDesde` es el día desde el que no
  * está disponible.
  *
  * Las cooperativas son de recuperadores urbanos: en la Ciudad la fracción
@@ -515,6 +626,13 @@ interface CuadrillaSeed {
   bajaDesde?: number;
 }
 
+/**
+ * Primer id de los integrantes de cuadrilla sin login (#488). 10000–10011 son las 12 cuentas de
+ * empleado que M1 creó (pedido del 02/11): Oficina, auditoría y las tres personas de Campo de la
+ * demo (PERSONAS_DE_M1). Todo lo demás arranca acá, sin pisarlas ni a 900/901.
+ */
+export const BASE_PERSONAS = 10100;
+
 export const CREWS: CuadrillaSeed[] = [
   // ── Mañana: recolección, barrido, poda, mantenimiento y riego ──
   {
@@ -522,9 +640,10 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Belgrano y Colegiales — Recolección',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '101',
+    // Líder e integrante son cuentas de M1 (10009 y 10010, ver PERSONAS_DE_M1); los otros dos son de relleno.
+    leaderUserId: '10009',
     organizationId: null,
-    members: ['101', '102', '103', '104'],
+    members: ['10009', '10010', '10100', '10101'],
     active: true,
     tipos: ['REC-DOM', 'CONT-VAC', 'REC-VOL'],
     zonas: ['belgrano', 'colegiales'],
@@ -534,9 +653,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Palermo — Recolección y Barrido',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '111',
+    leaderUserId: '10110',
     organizationId: null,
-    members: ['111', '112', '113', '114', '115'],
+    members: ['10110', '10111', '10112', '10113', '10114'],
     active: true,
     tipos: ['REC-DOM', 'BAR-MAN', 'CONT-VAC', 'REC-VOL'],
     zonas: ['palermo'],
@@ -546,9 +665,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Arbolado — Poda y Relevamiento de toda la Ciudad',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '401',
+    leaderUserId: '10120',
     organizationId: null,
-    members: ['401', '402', '403'],
+    members: ['10120', '10121', '10122'],
     active: true,
     tipos: ['ARB-POD', 'ARB-CENSO'],
     zonas: TODAS_LAS_ZONAS,
@@ -558,9 +677,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Parques y Plazas — Espacios Verdes',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.MORNING,
-    leaderUserId: '501',
+    leaderUserId: '10130',
     organizationId: null,
-    members: ['501', '502', '503', '504'],
+    members: ['10130', '10131', '10132', '10133'],
     active: true,
     tipos: ['EV-MANT', 'EV-RIEGO'],
     zonas: TODAS_LAS_ZONAS,
@@ -571,9 +690,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cooperativa de Recuperadores Palermo — Reciclables',
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '201',
+    leaderUserId: '10140',
     organizationId: '3301',
-    members: ['201', '202', '203', '204'],
+    members: ['10140', '10141', '10142', '10143'],
     active: true,
     tipos: ['REC-REC', 'CONT-VAC'],
     zonas: ['palermo', 'recoleta', 'belgrano', 'colegiales'],
@@ -585,9 +704,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cooperativa de Recuperadores Belgrano y Colegiales — Reciclables',
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '211',
+    leaderUserId: '10150',
     organizationId: '3302',
-    members: ['211', '212', '213'],
+    members: ['10150', '10151', '10152'],
     active: false,
     tipos: ['REC-REC'],
     zonas: ['belgrano', 'colegiales'],
@@ -598,9 +717,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Recoleta — Recolección y Limpieza',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '121',
+    leaderUserId: '10160',
     organizationId: null,
-    members: ['121', '122', '123', '124'],
+    members: ['10160', '10161', '10162', '10163'],
     active: true,
     tipos: ['REC-DOM', 'REC-VOL', 'CONT-VAC', 'CONT-LAV'],
     zonas: ['recoleta'],
@@ -611,9 +730,10 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Control Ambiental — Inspección',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.AFTERNOON,
-    leaderUserId: '601',
+    // El líder es la cuenta de M1 del inspector (10011).
+    leaderUserId: '10011',
     organizationId: null,
-    members: ['601', '602'],
+    members: ['10011', '10171'],
     active: true,
     tipos: ['AMB-INSP'],
     zonas: TODAS_LAS_ZONAS,
@@ -624,9 +744,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Centro y Retiro — Recolección Nocturna',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '131',
+    leaderUserId: '10180',
     organizationId: null,
-    members: ['131', '132', '133', '134'],
+    members: ['10180', '10181', '10182', '10183'],
     active: true,
     tipos: ['REC-DOM'],
     zonas: CENTRO,
@@ -636,9 +756,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Microcentro — Barrido Manual y Limpieza',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '141',
+    leaderUserId: '10190',
     organizationId: null,
-    members: ['141', '142', '143', '144', '145'],
+    members: ['10190', '10191', '10192', '10193', '10194'],
     active: true,
     tipos: ['BAR-MAN', 'HIG-LAV', 'CONT-VAC', 'CONT-LAV'],
     zonas: CENTRO,
@@ -648,9 +768,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cuadrilla Municipal Avenidas — Barrido Mecánico',
     crewType: CrewType.MUNICIPAL,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '301',
+    leaderUserId: '10200',
     organizationId: null,
-    members: ['301', '302', '303'],
+    members: ['10200', '10201', '10202'],
     active: true,
     tipos: ['BAR-MEC'],
     zonas: ['san-nicolas', 'montserrat', 'retiro', 'palermo', 'recoleta', 'belgrano', 'colegiales'],
@@ -660,9 +780,9 @@ export const CREWS: CuadrillaSeed[] = [
     name: 'Cooperativa de Recuperadores Microcentro — Reciclables',
     crewType: CrewType.COOPERATIVE,
     defaultShift: Shift.NIGHT,
-    leaderUserId: '221',
+    leaderUserId: '10210',
     organizationId: '3303',
-    members: ['221', '222', '223', '224'],
+    members: ['10210', '10211', '10212', '10213'],
     active: true,
     tipos: ['REC-REC', 'CONT-VAC'],
     zonas: CENTRO,
@@ -670,24 +790,138 @@ export const CREWS: CuadrillaSeed[] = [
 ];
 
 /**
+ * Ids de persona que sembraban versiones anteriores (antes de #455: 101…; #490: 10000 + 10 × i + n)
+ * en las 16 cuadrillas operativas. Son candidatos: IDS_LEGADOS (más abajo) descarta los que hoy
+ * son vigentes, porque 10009–10011 y los bloques desde 10100 se reutilizaron.
+ */
+const IDS_LEGADOS_BRUTOS = [
+  ...Array.from({ length: 16 }, (_, i) =>
+    Array.from({ length: 5 }, (_, n) => String(10000 + 10 * i + n)),
+  ).flat(),
+  ...['101', '102', '103', '104', '111', '112', '113', '114', '115', '401', '402', '403'],
+  ...['501', '502', '503', '504', '201', '202', '203', '204', '211', '212', '213'],
+  ...['121', '122', '123', '124', '601', '602', '131', '132', '133', '134'],
+  ...['141', '142', '143', '144', '145', '301', '302', '303', '221', '222', '223', '224'],
+  ...['151', '152', '153', '154', '161', '162', '163', '164', '171', '172', '173', '174'],
+  ...['181', '182', '183', '184'],
+];
+
+/**
+ * El seed escribe en la base de `DATABASE_URL` y, con el `.env` del repo apuntando a la
+ * desplegada, un `npm run prisma:seed` descuidado la pisaría. Solo corre contra una base
+ * local salvo que se confirme con SEED_CONFIRM_REMOTE=1. El host se parsea, no se busca
+ * como subcadena (`localhost.evil.com` o `u:localhost@host` no pasan).
+ */
+export function assertBaseSegura(url: string | undefined, confirmaRemota?: string): void {
+  if (confirmaRemota === '1') return;
+  let host = '';
+  try {
+    host = new URL(url ?? '').hostname;
+  } catch {
+    // sin URL válida: se trata como no local
+  }
+  if (!['localhost', '127.0.0.1', '[::1]', '::1'].includes(host))
+    throw new Error(
+      `seed: DATABASE_URL no apunta a localhost (host: '${host || 'inválido'}'). Para sembrar una base remota hay que exportar SEED_CONFIRM_REMOTE=1.`,
+    );
+}
+
+/**
+ * La especialidad de una cuadrilla del seed: la de sus tipos si todos mapean a una
+ * sola; `null` si mezclan especialidades. Con `null` el backend no avisa de
+ * desencaje al asignarle servicios, que es lo honesto para una cuadrilla mixta
+ * (elegir una haría saltar avisos en servicios que sí le corresponden).
+ */
+export function especialidadDe(tipos: string[]): CrewSpecialty | null {
+  const especialidades = new Set(tipos.map((t) => SERVICE_TYPE_SPECIALTY[t]));
+  return especialidades.size === 1 ? [...especialidades][0] : null;
+}
+
+const NOMBRES = [
+  'Marta',
+  'Lucía',
+  'Carlos',
+  'Julián',
+  'Sofía',
+  'Diego',
+  'Valeria',
+  'Mateo',
+  'Camila',
+  'Ramón',
+  'Florencia',
+  'Héctor',
+];
+const APELLIDOS = [
+  'Gómez',
+  'Fernández',
+  'Rodríguez',
+  'López',
+  'Martínez',
+  'Sosa',
+  'Acosta',
+  'Benítez',
+  'Medina',
+  'Ríos',
+  'Domínguez',
+  'Aguirre',
+  'Silva',
+];
+
+/** Nombres estables de las 12 cuentas de M1 (los que ya usa el frontend); el resto sale del id. */
+const NOMBRES_FIJOS: Record<string, string> = {
+  '10000': 'Carlos Rodríguez',
+  '10001': 'Marta Gómez',
+  '10002': 'Julián López',
+  '10003': 'Lucía Fernández',
+  '10004': 'Diego Sosa',
+  '10005': 'Valeria Acosta',
+  '10006': 'Mateo Benítez',
+  '10007': 'Camila Medina',
+  '10008': 'Héctor Ríos',
+  '10009': 'Sofía López',
+  '10010': 'Diego Martínez',
+  '10011': 'Carlos Medina',
+};
+
+/**
+ * Nombre de ejemplo para un id de M1 del seed: el mismo id da siempre el mismo
+ * nombre (sin azar), así una segunda corrida no lo cambia. Los apellidos son 13 y
+ * los nombres 12, coprimos, para que ids consecutivos no repitan la combinación
+ * hasta pasadas 156 personas.
+ */
+export function nombreDePersona(userId: string): string {
+  if (NOMBRES_FIJOS[userId]) return NOMBRES_FIJOS[userId];
+  const n = Number(userId);
+  return `${NOMBRES[n % NOMBRES.length]} ${APELLIDOS[n % APELLIDOS.length]}`;
+}
+
+/** Las cooperativas y contratistas se nombran por la organización: lo que va antes del " — ". */
+export function organizacionDe(c: Pick<CuadrillaSeed, 'crewType' | 'name'>): string | null {
+  return c.crewType === CrewType.MUNICIPAL ? null : c.name.split(' — ')[0];
+}
+
+/**
  * Personal de Oficina y auditoría de la demo. Los ids son los `sub` numéricos del
  * token de M1 (no hay usuarios reales: M1 no está hosteado y los tokens de demo los
- * firma scripts/generate-demo-jwt.mjs). El id 1 es el admin inicial y NO lleva fila:
- * es M6_ADMIN por M6_BOOTSTRAP_ADMIN_USER_IDS. Campo sale de las cuadrillas (CREWS).
+ * firma scripts/generate-demo-jwt.mjs). 10000–10008 son las cuentas de M1 del pedido del
+ * 02/11 (#488): 10000–10001 RESPONSABLE_AREA, 10002–10006 ADMINISTRATIVO, 10007–10008 AUDITOR;
+ * 10009–10011 (Campo) salen de las cuadrillas. El id 1 sigue siendo admin sin fila por
+ * M6_BOOTSTRAP_ADMIN_USER_IDS. Campo sale de las cuadrillas (CREWS).
  */
 const PERSONAL_DE_OFICINA: { userId: string; roles: M6Role[] }[] = [
-  { userId: '2', roles: [M6Role.M6_ADMIN] },
-  { userId: '3', roles: [M6Role.M6_OFICINA_OPERACIONES] },
-  { userId: '4', roles: [M6Role.M6_OFICINA_OPERACIONES] },
-  { userId: '5', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
-  { userId: '6', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
-  { userId: '7', roles: [M6Role.M6_OFICINA_OPERACIONES, M6Role.M6_OFICINA_AMBIENTAL] },
-  { userId: '8', roles: [M6Role.M6_AUDITOR] },
-  { userId: '9', roles: [M6Role.M6_AUDITOR] },
+  { userId: '10000', roles: [M6Role.M6_ADMIN] },
+  { userId: '10001', roles: [M6Role.M6_ADMIN] },
+  { userId: '10002', roles: [M6Role.M6_OFICINA_OPERACIONES] },
+  { userId: '10003', roles: [M6Role.M6_OFICINA_OPERACIONES] },
+  { userId: '10004', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '10005', roles: [M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '10006', roles: [M6Role.M6_OFICINA_OPERACIONES, M6Role.M6_OFICINA_AMBIENTAL] },
+  { userId: '10007', roles: [M6Role.M6_AUDITOR] },
+  { userId: '10008', roles: [M6Role.M6_AUDITOR] },
 ];
 
 /** Los roles de M6 de cada usuario de la demo: Oficina fija y Campo según su cuadrilla. */
-function rolesDeLaDemo(): { userId: string; role: M6Role }[] {
+export function rolesDeLaDemo(): { userId: string; role: M6Role }[] {
   const filas = PERSONAL_DE_OFICINA.flatMap((p) =>
     p.roles.map((role) => ({ userId: p.userId, role })),
   );
@@ -695,7 +929,7 @@ function rolesDeLaDemo(): { userId: string; role: M6Role }[] {
     for (const userId of new Set([c.leaderUserId, ...c.members])) {
       filas.push({ userId, role: M6Role.M6_CAMPO_CUADRILLA });
       // La cuadrilla de inspección también cierra las inspecciones ambientales.
-      if (c.clave === 'INSP') filas.push({ userId, role: M6Role.M6_CAMPO_INSPECTOR });
+      if (c.tipos.includes('AMB-INSP')) filas.push({ userId, role: M6Role.M6_CAMPO_INSPECTOR });
     }
   }
   return filas;
@@ -1140,22 +1374,13 @@ const TREES_BASE: ArbolSeed[] = [
 ];
 
 /**
- * Inventario completo: lo escrito a mano para los ocho barrios originales y, en todos los
- * barrios, lo que falta hasta el mínimo, generado dentro del polígono oficial del barrio.
+ * Inventario completo: lo escrito a mano para los ocho barrios originales (los escenarios del
+ * resto del seed lo referencian por código) más la muestra real de IDECABA en los 48 barrios
+ * (`prisma/data/*-ciudad.json`, #439). Nada se genera al azar.
  */
 const POLIGONOS = cargarPoligonos();
 
-function contarPorZona(items: { zone: string }[]): Map<string, number> {
-  const n = new Map<string, number>();
-  for (const i of items) n.set(i.zone, (n.get(i.zone) ?? 0) + 1);
-  return n;
-}
-
-const INVENTARIO = generarInventario(POLIGONOS, {
-  contenedores: contarPorZona(CONTAINERS_BASE),
-  puntosVerdes: contarPorZona(GREEN_POINTS_BASE),
-  arboles: contarPorZona(TREES_BASE),
-});
+const INVENTARIO = cargarInventario();
 
 export const CONTAINERS: ContenedorSeed[] = [...CONTAINERS_BASE, ...INVENTARIO.contenedores];
 export const GREEN_POINTS: PuntoVerdeSeed[] = [...GREEN_POINTS_BASE, ...INVENTARIO.puntosVerdes];
@@ -1469,7 +1694,7 @@ const REGIONES = [
   {
     clave: 'SUR-REC',
     name: 'Cuadrilla Municipal Sur — Recolección Comunas 1 (sur), 4 y 8',
-    lider: '151',
+    lider: '10220',
     patente: 'AN123PQ',
     rutas: [
       { code: 'R-REC-C01S', zonas: ['san-telmo', 'constitucion'], dia: 6 },
@@ -1480,7 +1705,7 @@ const REGIONES = [
   {
     clave: 'OESTE-REC',
     name: 'Cuadrilla Municipal Oeste — Recolección Comunas 9, 10 y 11',
-    lider: '161',
+    lider: '10230',
     patente: 'AN246PR',
     rutas: [
       { code: 'R-REC-C09', zonas: deComuna(9), dia: 1 },
@@ -1491,7 +1716,7 @@ const REGIONES = [
   {
     clave: 'CENTRO-REC',
     name: 'Cuadrilla Municipal Centro-Oeste — Recolección Comunas 3, 5, 6 y 7',
-    lider: '171',
+    lider: '10240',
     patente: 'AN369PS',
     rutas: [
       { code: 'R-REC-C03', zonas: deComuna(3), dia: 2 },
@@ -1503,7 +1728,7 @@ const REGIONES = [
   {
     clave: 'NORTE-REC',
     name: 'Cuadrilla Municipal Noroeste — Recolección Comunas 12, 13 (Núñez) y 15',
-    lider: '181',
+    lider: '10250',
     patente: 'AN482PT',
     rutas: [
       { code: 'R-REC-C12', zonas: [...deComuna(12), 'nunez'], dia: 1 },
@@ -1550,6 +1775,82 @@ for (const r of REGIONES) {
     });
   }
 }
+
+/**
+ * Cobertura por zona y especialidad (#455): 10 cuadrillas por barrio, 480 en total, además de
+ * las 16 de arriba, que son las que conducen los servicios planificados. Una cuadrilla de
+ * recolección por turno, dos de barrido (mañana y noche), y una de limpieza, de reciclables
+ * (cooperativa), de arbolado, de espacios verdes y de inspección. Cada una tiene una única
+ * zona, que es su `homeZoneId`, así `GET /crews?zoneId=&specialty=` siempre encuentra
+ * candidatas. Sin servicios sembrados: son capacidad disponible para asignar.
+ *
+ * El modelo no ata un vehículo a la cuadrilla (se elige al asignar el servicio, entre los
+ * aptos de `VEHICULOS_APTOS` para su tipo), así que no hace falta uno por cuadrilla.
+ *
+ * Los ids de persona son `BASE_PERSONAS + 10 × posición en CREWS` (+ 0..4 por integrante): bloques
+ * de diez, sin choque con las cuentas de M1 (10000–10011), la demo (900, 901) ni entre cuadrillas,
+ * y estables mientras no se reordene CREWS.
+ */
+const RUBROS_GENERADOS: {
+  rubro: string;
+  tipos: string[];
+  turnos: Shift[];
+  cooperativa?: boolean;
+}[] = [
+  {
+    rubro: 'Recolección',
+    tipos: ['REC-DOM', 'CONT-VAC', 'REC-VOL'],
+    turnos: [Shift.MORNING, Shift.AFTERNOON, Shift.NIGHT],
+  },
+  { rubro: 'Barrido', tipos: ['BAR-MAN', 'BAR-MEC'], turnos: [Shift.MORNING, Shift.NIGHT] },
+  { rubro: 'Limpieza', tipos: ['HIG-LAV', 'CONT-LAV'], turnos: [Shift.AFTERNOON] },
+  { rubro: 'Reciclables', tipos: ['REC-REC'], turnos: [Shift.AFTERNOON], cooperativa: true },
+  { rubro: 'Arbolado', tipos: ['ARB-POD', 'ARB-CENSO'], turnos: [Shift.MORNING] },
+  { rubro: 'Espacios Verdes', tipos: ['EV-MANT', 'EV-RIEGO'], turnos: [Shift.MORNING] },
+  { rubro: 'Inspección', tipos: ['AMB-INSP'], turnos: [Shift.AFTERNOON] },
+];
+const NOMBRE_TURNO: Record<Shift, string> = {
+  [Shift.MORNING]: 'Mañana',
+  [Shift.AFTERNOON]: 'Tarde',
+  [Shift.NIGHT]: 'Noche',
+};
+
+/** Las claves de las cuadrillas generadas: las que se siembran por createMany. */
+export const CLAVES_GENERADAS = new Set<string>();
+
+for (const b of BARRIOS) {
+  for (const r of RUBROS_GENERADOS) {
+    for (const turno of r.turnos) {
+      const base = BASE_PERSONAS + 10 * CREWS.length;
+      // 2 a 4 personas contando al responsable.
+      const personas = 2 + (CREWS.length % 3);
+      const clave = `${b.codigo}-${r.rubro}-${turno}`;
+      CLAVES_GENERADAS.add(clave);
+      CREWS.push({
+        clave,
+        name: r.cooperativa
+          ? `Cooperativa de Recuperadores de ${b.nombre} — ${r.rubro}`
+          : `Cuadrilla Municipal ${b.nombre} — ${r.rubro}${r.turnos.length > 1 ? ` (${NOMBRE_TURNO[turno]})` : ''}`,
+        crewType: r.cooperativa ? CrewType.COOPERATIVE : CrewType.MUNICIPAL,
+        defaultShift: turno,
+        leaderUserId: String(base),
+        organizationId: r.cooperativa ? String(3400 + BARRIOS.indexOf(b) + 1) : null,
+        members: Array.from({ length: personas }, (_, i) => String(base + i)),
+        active: true,
+        tipos: r.tipos,
+        zonas: [b.codigo],
+      });
+    }
+  }
+}
+
+/**
+ * Ids obsoletos que el seed quita de las 16 operativas en una base ya sembrada: los de
+ * IDS_LEGADOS_BRUTOS menos todo id vigente de CREWS (un integrante actual nunca se borra).
+ * Se calcula acá, con CREWS completo (las generadas recién se agregan arriba).
+ */
+const IDS_VIGENTES = new Set(CREWS.flatMap((c) => [c.leaderUserId, ...c.members]));
+export const IDS_LEGADOS = IDS_LEGADOS_BRUTOS.filter((id) => !IDS_VIGENTES.has(id));
 
 /** La región que atiende una zona, si la atiende alguna. */
 const regionDe = (zona: string) =>
@@ -1647,7 +1948,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.SCHEDULED,
           detectado: [0, 5, 40],
           finEstimado: [0, 11, 35],
-          reportadoPor: '101',
+          reportadoPor: '10009',
         },
         {
           tipo: DelayType.DURATION,
@@ -1657,7 +1958,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.IN_PROGRESS,
           detectado: [0, 8, 20],
           finEstimado: [0, 11, 50],
-          reportadoPor: '101',
+          reportadoPor: '10009',
         },
       ],
     },
@@ -1707,7 +2008,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.SCHEDULED,
           detectado: [0, 7, 10],
           finEstimado: [0, 18, 50],
-          reportadoPor: '121',
+          reportadoPor: '10060',
         },
       ],
     },
@@ -1736,7 +2037,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.SCHEDULED,
           detectado: [0, 20, 30],
           finEstimado: [1, 0, 40],
-          reportadoPor: '131',
+          reportadoPor: '10080',
         },
       ],
     },
@@ -1827,7 +2128,7 @@ const INCIDENCIAS: {
           estado: ServiceStatus.IN_PROGRESS,
           detectado: [0, 2, 30],
           finEstimado: [0, 5, 0],
-          reportadoPor: '141',
+          reportadoPor: '10090',
         },
       ],
     },
@@ -1921,7 +2222,9 @@ const PUNTOS: Plan[] = [
   punto('CONT-VAC', -12, 'BEL-REC', 'AB456CE', COMPLETED, cont('CT-BEL-0009'), MANUAL, {
     notas: 'Último vaciado antes del retiro: la cuadra pasa a ser peatonal.',
   }),
-  punto('CONT-VAC', -8, 'BEL-REC', 'AB456CE', COMPLETED, cont('CT-BEL-0003'), TICKET),
+  punto('CONT-VAC', -8, 'BEL-REC', 'AB456CE', COMPLETED, cont('CT-BEL-0003'), TICKET, {
+    notas: 'Vaciado por reclamo; el contenedor volvió a desbordar y tiene otro vaciado pendiente.',
+  }),
   punto('CONT-VAC', -5, 'BEL-REC', 'AB456CE', COMPLETED, cont('CT-COL-0001'), PLANNED),
   punto('CONT-VAC', -2, 'BEL-REC', 'AB456CE', COMPLETED, cont('CT-BEL-0001'), PLANNED),
   punto('CONT-VAC', -9, 'PAL-REC', 'AC012DG', COMPLETED, cont('CT-PAL-0001'), PLANNED),
@@ -2106,7 +2409,7 @@ const PUNTOS: Plan[] = [
           estado: ServiceStatus.IN_PROGRESS,
           detectado: [0, 10, 50],
           finEstimado: [0, 13, 10],
-          reportadoPor: '501',
+          reportadoPor: '10030',
         },
       ],
     },
@@ -2256,6 +2559,106 @@ function puntualesRegionales(previos: Plan[]): Plan[] {
         ['AH789JR', 'AL775MH'],
       );
     }
+  });
+  // ── Contenedores reales en distintos estados (#439) ─────
+  //
+  // Un servicio de vaciado por cada situación de los contenedores de `CONTENEDORES_DEMO`, en
+  // comunas que no son las ocho originales: los desbordados se vacían (los de hoy en adelante,
+  // por reclamo de vecinos), a los dañados o en reubicación se les cancela el vaciado y los
+  // que están en el taller tuvieron su último vaciado antes de llevarlos. Los daños ya salen
+  // como `containerDamaged` hacia M3. Lavado (`CONT-LAV`) no: solo lo hace la cuadrilla de Recoleta.
+  // Los cancelados nacen PLANNED, con cuadrilla y vehículo asignados: la máquina de estados lo
+  // permite (se cancela un servicio ya asignado). Un contenedor que sigue desbordado tiene su
+  // vaciado pendiente; uno COMPLETED sobre un contenedor fuera de uso lleva una nota que lo explica.
+  // Los avisos de demora se escriben con `detectado` relativo a HOY: el día real del servicio
+  // lo decide el choque de cuadrillas, y un aviso no puede estar en el futuro.
+  const sobreContenedor = (
+    codigo: string,
+    estado: ServiceStatus,
+    preferido: number,
+    extra: Partial<Plan> = {},
+  ): void => {
+    const c = CONTAINERS.find((x) => x.code === codigo);
+    const region = c && regionDe(c.zone);
+    if (!c || !region) throw new Error(`seed: escenario con un contenedor inexistente '${codigo}'`);
+    // Lo agendado busca hacia adelante; lo ya hecho o cancelado, hacia atrás (sin salir del pasado).
+    const dias = Array.from({ length: 12 }, (_, i) =>
+      estado === SCHEDULED ? preferido + i : preferido - i,
+    );
+    for (const franja of [fr('06:30', '08:00'), fr('08:15', '09:45'), fr('11:15', '12:45')]) {
+      for (const d of dias) {
+        if (d > HASTA || d < DESDE) continue;
+        const q = {
+          tipo: 'CONT-VAC',
+          franja,
+          cuadrilla: region.clave,
+          vehiculo: region.patente,
+          objetivo: { tipo: 'CONTAINER' as const, codigo },
+          dia: d,
+        };
+        if (!libre(todos(), q)) continue;
+        const ticket =
+          extra.origen === TICKET ? `CONT-VAC-${d}-${region.clave}-${codigo}` : undefined;
+        const demoras = extra.demoras?.map((x) => ({
+          ...x,
+          detectado: [x.detectado[0] - d, x.detectado[1], x.detectado[2]] as [
+            number,
+            number,
+            number,
+          ],
+        }));
+        salida.push({
+          ...q,
+          estado,
+          origen: PLANNED,
+          ...extra,
+          ...(demoras && { demoras }),
+          ...(ticket && { ticket }),
+        });
+        return;
+      }
+    }
+    throw new Error(`seed: no hay un día libre para vaciar ${codigo}`);
+  };
+  const reclamo = { origen: TICKET };
+  sobreContenedor('CT-balvanera-0001', SCHEDULED, 1, {
+    ...reclamo,
+    notas: 'Desborde reportado por vecinos frente a un local gastronómico.',
+    demoras: [
+      {
+        tipo: DelayType.START,
+        minutos: 40,
+        motivo: 'El camión compactador sale tarde de la base por una falla de arranque.',
+        estado: SCHEDULED,
+        detectado: [-1, 20, 15],
+        finEstimado: [0, 8, 40],
+        reportadoPor: '10140',
+      },
+    ],
+  });
+  sobreContenedor('CT-flores-0001', SCHEDULED, 2, reclamo);
+  sobreContenedor('CT-villa-crespo-0001', SCHEDULED, 1, reclamo);
+  // Siguen desbordados, con el vaciado pendiente; el completado va sobre otro contenedor activo.
+  sobreContenedor('CT-almagro-0001', SCHEDULED, 1, reclamo);
+  sobreContenedor('CT-caballito-0001', SCHEDULED, 1, reclamo);
+  sobreContenedor('CT-almagro-0002', COMPLETED, -2);
+  sobreContenedor('CT-monte-castro-0001', COMPLETED, -6, {
+    notas: 'Último vaciado antes de llevarlo al taller.',
+  });
+  sobreContenedor('CT-villa-urquiza-0001', COMPLETED, -5, {
+    notas: 'Último vaciado antes de llevarlo al taller.',
+  });
+  sobreContenedor('CT-barracas-0001', CANCELLED, -4, {
+    motivo: 'Contenedor con la tapa rota: se pidió la reparación y se lo retira del vaciado.',
+  });
+  sobreContenedor('CT-villa-lugano-0001', CANCELLED, -3, {
+    motivo: 'Daño estructural: la reparación requiere obra pública y el contenedor no se vacía.',
+  });
+  sobreContenedor('CT-liniers-0001', CANCELLED, -2, {
+    motivo: 'Contenedor vandalizado: se pidió la reparación antes de volver a vaciarlo.',
+  });
+  sobreContenedor('CT-villa-devoto-0001', CANCELLED, -1, {
+    motivo: 'Contenedor en reubicación: el vaciado se retoma cuando quede en su lugar nuevo.',
   });
   return salida;
 }
@@ -2444,9 +2847,24 @@ export function verificar(planes: Plan[]): void {
       if (d.tipo !== esperado)
         errores.push(`${id}: demora ${d.tipo} con el servicio en ${d.estado}`);
     }
+    // Un aviso se levanta cuando ya ocurrió: no puede estar en el futuro.
+    for (const d of p.demoras ?? []) {
+      if (p.dia + d.detectado[0] > 0)
+        errores.push(`${id}: aviso de demora con detectedAt en el futuro`);
+    }
     const vigente = p.demoras?.at(-1);
     if (vigente && entre(p.estado, [SCHEDULED, IN_PROGRESS]) && vigente.estado !== p.estado)
       errores.push(`${id}: el aviso vigente no corresponde al estado actual`);
+
+    // Un contenedor que sigue fuera de servicio (o desbordado) no puede figurar vaciado
+    // hace días sin una nota que lo explique (p. ej. «último vaciado antes de...»).
+    if (p.objetivo?.tipo === 'CONTAINER' && p.tipo === 'CONT-VAC' && p.estado === COMPLETED) {
+      const c = CONTAINERS.find((x) => x.code === p.objetivo?.codigo);
+      if (c && (c.status ?? ContainerStatus.ACTIVE) !== ContainerStatus.ACTIVE && !p.notas)
+        errores.push(
+          `${id}: vaciado completado de un contenedor ${c.status} sin nota que lo explique`,
+        );
+    }
 
     // Un contenedor fuera de uso no se vacía ni se lava.
     if (p.objetivo?.tipo === 'CONTAINER' && p.dia >= 0) {
@@ -2499,7 +2917,10 @@ export function verificar(planes: Plan[]): void {
  */
 export const TOPE_SERVICIOS = 800;
 
-/** Reparto por comuna y por barrio: nada de la Ciudad queda sin recorridos, servicios ni inventario. */
+/**
+ * Reparto por comuna y por barrio: nada de la Ciudad queda sin recorridos, servicios ni
+ * inventario. Los puntos verdes no se exigen por barrio: la Ciudad publica solo 19 (#439).
+ */
 export function verificarCobertura(planes: Plan[]): string[] {
   const errores: string[] = [];
   const comunaDe = new Map(BARRIOS.map((b) => [b.codigo, b.comuna]));
@@ -2522,7 +2943,6 @@ export function verificarCobertura(planes: Plan[]): string[] {
     if (cuenta(CONTAINERS, b.codigo) < MIN_CONTENEDORES)
       errores.push(`${b.codigo}: pocos contenedores`);
     if (cuenta(TREES, b.codigo) < MIN_ARBOLES) errores.push(`${b.codigo}: poco arbolado`);
-    if (!cuenta(GREEN_POINTS, b.codigo)) errores.push(`${b.codigo}: sin punto verde`);
     if (!espacios.has(b.codigo)) errores.push(`${b.codigo}: sin espacios verdes`);
   }
 
@@ -2690,6 +3110,7 @@ interface Catalogo {
 }
 
 async function main() {
+  assertBaseSegura(process.env.DATABASE_URL, process.env.SEED_CONFIRM_REMOTE);
   const planes = planificar();
   verificar(planes);
 
@@ -2777,25 +3198,73 @@ async function main() {
   // Crew no tiene clave única natural: se busca por nombre y se actualiza, así
   // una segunda corrida corrige el turno o el estado en vez de ignorarlo.
   const cuadrillas = new Map<string, string>();
-  for (const c of CREWS) {
-    const datos = {
-      name: c.name,
-      crewType: c.crewType,
-      defaultShift: c.defaultShift,
-      leaderUserId: c.leaderUserId,
-      organizationId: c.organizationId,
-      active: c.active,
-    };
+  const datosDe = (c: (typeof CREWS)[number]) => ({
+    name: c.name,
+    crewType: c.crewType,
+    defaultShift: c.defaultShift,
+    leaderUserId: c.leaderUserId,
+    organizationId: c.organizationId,
+    leaderName: nombreDePersona(c.leaderUserId),
+    organizationName: organizacionDe(c),
+    specialty: especialidadDe(c.tipos),
+    homeZoneId: c.zonas.length === 1 ? zoneId(c.zonas[0]) : null,
+    active: c.active,
+  });
+  for (const c of CREWS.filter((x) => !CLAVES_GENERADAS.has(x.clave))) {
+    const datos = datosDe(c);
     const existing = await prisma.crew.findFirst({ where: { name: c.name } });
     const crew = existing
       ? await prisma.crew.update({ where: { id: existing.id }, data: datos })
       : await prisma.crew.create({ data: datos });
     cuadrillas.set(c.clave, crew.id);
-    await prisma.crewMember.createMany({
-      data: c.members.map((userId) => ({ crewId: crew.id, userId })),
-      skipDuplicates: true,
+    // Solo los ids que sembraba el seed anterior a #455 (101…): un integrante cargado a mano
+    // en una de estas cuadrillas no se toca.
+    await prisma.crewMember.deleteMany({
+      where: { crewId: crew.id, userId: { in: IDS_LEGADOS, notIn: c.members } },
     });
+    // upsert y no createMany: una segunda corrida tiene que poder corregir el nombre.
+    for (const userId of c.members) {
+      const displayName = nombreDePersona(userId);
+      await prisma.crewMember.upsert({
+        where: { crewId_userId: { crewId: crew.id, userId } },
+        update: { displayName },
+        create: { crewId: crew.id, userId, displayName },
+      });
+    }
   }
+  // Las ~480 generadas, por createMany: un upsert por cuadrilla y por integrante son más de
+  // 1.500 viajes a la base. Las que ya existen (misma corrida anterior) se saltean.
+  const generadas = CREWS.filter((x) => CLAVES_GENERADAS.has(x.clave));
+  const yaExisten = new Set(
+    (
+      await prisma.crew.findMany({
+        where: { name: { in: generadas.map((c) => c.name) } },
+        select: { name: true },
+      })
+    ).map((c) => c.name),
+  );
+  await prisma.crew.createMany({
+    data: generadas.filter((c) => !yaExisten.has(c.name)).map(datosDe),
+  });
+  const idPorNombre = new Map(
+    (
+      await prisma.crew.findMany({
+        where: { name: { in: generadas.map((c) => c.name) } },
+        select: { id: true, name: true },
+      })
+    ).map((c) => [c.name, c.id]),
+  );
+  for (const c of generadas) cuadrillas.set(c.clave, buscar(idPorNombre, c.name, 'la cuadrilla'));
+  await prisma.crewMember.createMany({
+    data: generadas.flatMap((c) =>
+      c.members.map((userId) => ({
+        crewId: cuadrillas.get(c.clave) as string,
+        userId,
+        displayName: nombreDePersona(userId),
+      })),
+    ),
+    skipDuplicates: true,
+  });
 
   // ── Inventario urbano ──────────────────────────────────
   // Lo escrito a mano va por upsert (corrige datos en una segunda corrida); lo generado, que
@@ -2856,7 +3325,17 @@ async function main() {
     });
   }
   await prisma.tree.createMany({
-    data: INVENTARIO.arboles.map(({ zone, ...datos }) => ({ ...datos, zoneId: zoneId(zone) })),
+    // `healthStatus` es del relevamiento, no del árbol: se siembra más abajo.
+    data: INVENTARIO.arboles.map((t) => ({
+      surveyCode: t.surveyCode,
+      species: t.species,
+      address: t.address,
+      lat: t.lat,
+      lng: t.lng,
+      heightM: t.heightM,
+      diameterCm: t.diameterCm,
+      zoneId: zoneId(t.zone),
+    })),
     skipDuplicates: true,
   });
   const arboles = new Map(
@@ -2977,6 +3456,18 @@ interface Evento {
 
 async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<void> {
   const zoneId = (code: string) => buscar(cat.zonas, code, 'la zona');
+
+  // Historial de estados de los contenedores (#475): va con lo operativo porque es
+  // actividad de varios meses, no catálogo. Un contenedor sin historial no se
+  // puede medir en el tablero.
+  await tx.containerStatusHistory.createMany({
+    data: historialDeContenedores(CONTAINERS).map((f) => ({
+      containerId: buscar(cat.contenedores, f.code, 'el contenedor'),
+      fromStatus: f.from,
+      toStatus: f.to,
+      changedAt: f.at,
+    })),
+  });
   const eventos: Evento[] = [];
 
   // Lo que llegó de afuera y explica el estado de lo sembrado. Todo procesado:
@@ -3415,6 +3906,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
       notes: 'Cochinilla en ramas secundarias.',
     },
   ];
+  const conPatron = new Set(muestraArboles.map((t) => t.surveyCode));
   muestraArboles.forEach((t, j) =>
     relevamientos.push({
       arbol: t.surveyCode,
@@ -3432,7 +3924,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
         requiresPublicWorks: datos.requiresPublicWorks ?? false,
         treeId: buscar(cat.arboles, codigo, 'el árbol'),
         surveyedAt: momento(d, 10),
-        inspectorId: '402',
+        inspectorId: '10021',
       },
     });
     if (survey.riskLevel === RiskLevel.HIGH || survey.riskLevel === RiskLevel.CRITICAL) {
@@ -3446,6 +3938,26 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
       });
     }
   }
+
+  // La vitalidad real del censo de IDECABA: lo que no está sano queda relevado (los
+  // ejemplares con relevamiento de demo arriba ya tienen el suyo).
+  const delCenso = INVENTARIO.arboles.filter(
+    (t) =>
+      t.healthStatus && t.healthStatus !== TreeHealthStatus.HEALTHY && !conPatron.has(t.surveyCode),
+  );
+  await tx.treeSurvey.createMany({
+    data: delCenso.map((t) => ({
+      treeId: buscar(cat.arboles, t.surveyCode, 'el árbol'),
+      surveyedAt: momento(-30, 10),
+      inspectorId: '10021',
+      healthStatus: t.healthStatus as TreeHealthStatus,
+      // Riesgo inventado (el censo no lo trae), siempre bajo HIGH: HIGH y CRITICAL emiten
+      // `treeRiskDetected` al outbox. WEAKENED copa rala -> LOW; DISEASED en seguimiento y
+      // DEAD (tocón o cepa, sin copa que caiga) -> MEDIUM.
+      riskLevel: t.healthStatus === TreeHealthStatus.WEAKENED ? RiskLevel.LOW : RiskLevel.MEDIUM,
+      notes: `Vitalidad según el censo de arbolado público de IDECABA (${t.healthStatus}).`,
+    })),
+  });
 
   // ── Intervenciones de arbolado ─────────────────────────
   //
@@ -3621,7 +4133,12 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
         streets: {
           createMany: {
             data: [
-              { streetName: datos.calle[0], fromCross: datos.calle[1], toCross: datos.calle[2] },
+              {
+                streetName: datos.calle[0],
+                fromCross: datos.calle[1],
+                toCross: datos.calle[2],
+                direction: StreetDirection.BOTH,
+              },
             ],
           },
         },
@@ -3871,7 +4388,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
   const inspeccion = (
     reportId: string,
     extra: Partial<Prisma.EnvironmentalInspectionUncheckedCreateInput> = {},
-  ) => tx.environmentalInspection.create({ data: { reportId, inspectorId: '601', ...extra } });
+  ) => tx.environmentalInspection.create({ data: { reportId, inspectorId: '10011', ...extra } });
 
   /** Emite el acta como `issueNotice`: número correlativo del año, reincidencia y plazo de M4. */
   const acta = async (
@@ -4028,7 +4545,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     },
   );
   await inspeccion(olorBelgrano.id, {
-    inspectorId: '602',
+    inspectorId: '10071',
     inspectedAt: momento(-8, 15),
     findings: 'Olor atribuible a la red cloacal, no a actividad comercial. Se deriva a AySA.',
     outcome: InspectionOutcome.NO_VIOLATION,
@@ -4117,7 +4634,7 @@ async function sembrarOperacion(tx: Tx, planes: Plan[], cat: Catalogo): Promise<
     { lat: -34.5741, lng: -58.455, reporterSnapshot: { isAnonymous: false, citizenId: null } },
   );
   await inspeccion(olorColegiales.id, {
-    inspectorId: '602',
+    inspectorId: '10071',
     serviceId: servicio('insp-olor-colegiales').id,
     inspectedAt: momento(-4, 20),
     findings:
@@ -4369,6 +4886,7 @@ async function resumen() {
     vehicles: await prisma.vehicle.count(),
     crews: await prisma.crew.count(),
     containers: await prisma.container.count(),
+    containerStatusHistory: await prisma.containerStatusHistory.count(),
     greenPoints: await prisma.greenPoint.count(),
     trees: await prisma.tree.count(),
     greenSpaces: await prisma.greenSpace.count(),

@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../auth/jwt.strategy';
+import { M6Role } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { TreeInterventionsController } from './tree-interventions.controller';
@@ -8,6 +10,8 @@ import {
   CreateTreeInterventionDto,
   QueryTreeInterventionsDto,
 } from './dto';
+
+const USER = { userId: 'user-7', roles: [M6Role.M6_ADMIN] } as unknown as AuthenticatedUser;
 
 const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
@@ -29,10 +33,10 @@ describe('TreeInterventionsController', () => {
     controller = new TreeInterventionsController(service);
   });
 
-  it('create delega el dto', async () => {
+  it('create delega el dto y el usuario del token', async () => {
     const dto = {} as CreateTreeInterventionDto;
-    await expect(controller.create(dto)).resolves.toBe(RESULT);
-    expect(service.create).toHaveBeenCalledWith(dto);
+    await expect(controller.create(dto, USER)).resolves.toBe(RESULT);
+    expect(service.create).toHaveBeenCalledWith(dto, USER);
   });
 
   it('findAll delega la query', async () => {
@@ -62,24 +66,24 @@ describe('TreeInterventionsController', () => {
   });
 
   it('submitForAuthorization delega el id', async () => {
-    await controller.submitForAuthorization(ID);
-    expect(service.submitForAuthorization).toHaveBeenCalledWith(ID);
+    await controller.submitForAuthorization(ID, USER);
+    expect(service.submitForAuthorization).toHaveBeenCalledWith(ID, USER);
   });
 
-  it('authorize delega id, dto y el usuario del token', async () => {
+  it('authorize delega id, dto, el usuario y sus roles del token', async () => {
     const dto = {} as AuthorizeInterventionDto;
-    await controller.authorize(ID, dto, 'user-7');
-    expect(service.authorize).toHaveBeenCalledWith(ID, dto, 'user-7');
+    await controller.authorize(ID, dto, USER);
+    expect(service.authorize).toHaveBeenCalledWith(ID, dto, USER);
   });
 
-  it('reject delega el id', async () => {
-    await controller.reject(ID);
-    expect(service.reject).toHaveBeenCalledWith(ID);
+  it('reject delega el id y los roles del token', async () => {
+    await controller.reject(ID, USER);
+    expect(service.reject).toHaveBeenCalledWith(ID, USER);
   });
 
   it('assignService delega id y dto', async () => {
     const dto = {} as AssignInterventionServiceDto;
-    await controller.assignService(ID, dto);
-    expect(service.assignService).toHaveBeenCalledWith(ID, dto);
+    await controller.assignService(ID, dto, USER);
+    expect(service.assignService).toHaveBeenCalledWith(ID, dto, USER);
   });
 });
