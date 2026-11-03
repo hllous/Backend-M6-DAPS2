@@ -220,7 +220,7 @@ La severidad queda en Mayor hasta confirmar si alguna es explotable en M6; si lo
 | HU | HU-31 |
 | Pasos | Revisar `.github/workflows/ci.yml` |
 | Esperado | Escaneo de dependencias, de secretos y análisis dinámico |
-| Obtenido | El CI hace build, lint, `test:cov`, OpenAPI al día y e2e. No hay `npm audit`, Dependabot, CodeQL, gitleaks ni ZAP |
+| Obtenido | El CI hace build, lint, `test:cov`, OpenAPI al día y e2e. No hay `npm audit`, Dependabot, CodeQL ni ZAP. El escaneo de secretos con gitleaks se sumó al CI (job `secrets`, #494) |
 | Evidencia | `.github/workflows/ci.yml` y `.github/` (solo `workflows/`, `CODEOWNERS`, `scripts/`, `branch-protection-rules.json`) |
 | Estado | Abierto |
 
@@ -284,7 +284,7 @@ La regla G9 pide no omitir nada conocido. Estas pruebas **no se hicieron** y no 
 | Prueba de carga con 50 usuarios (k6) | No hay script ni reporte |
 | Quality Gate de SonarCloud | No hay configuración ni cuenta |
 | OWASP ZAP baseline y activo autenticado | No se corrió |
-| Escaneo de secretos con gitleaks o trufflehog | No están instalados; solo se usó una búsqueda por expresiones regulares en el historial (ver `07-informe-seguridad.md`) |
+| Escaneo de secretos con trufflehog | No se corrió. gitleaks v8.30.1 sí se corrió el 03/11/2026 sobre 270 commits: 0 hallazgos con `.gitleaks.toml` (ver `07-informe-seguridad.md`) |
 | Caída real del broker durante la demo | Todos los tests de mensajería usan mocks; falta un ensayo manual |
 | Suite corrida 3 veces seguidas para detectar tests inestables | Solo hay una corrida local del 03/11; Jest avisó de un worker que no termina (handles abiertos) |
 

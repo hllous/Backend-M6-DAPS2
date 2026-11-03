@@ -112,7 +112,7 @@ Escala: probabilidad (P) y impacto (I) de 1 a 3 (1 baja, 3 alta); prioridad = P 
 | R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | **Sin cobertura.** Jest avisó de un worker que no sale; no se corrió la suite tres veces ni Stryker |
 | R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | **Parcial.** `pnpm audit` en el CI del frontend; el backend no tiene SCA en CI |
 | R15 | Degradación bajo carga | 1 | 2 | 2 | **Sin cobertura.** Sin script de carga |
-| R16 | Secreto o clave en el historial de Git | 1 | 3 | 3 | **Parcial.** Revisión con expresiones regulares el 03/11; falta gitleaks o trufflehog sobre el historial completo |
+| R16 | Secreto o clave en el historial de Git | 1 | 3 | 3 | **Cubierto.** gitleaks v8.30.1 sobre 270 commits el 03/11: 0 hallazgos con `.gitleaks.toml`; el job `secrets` del CI lo repite en cada PR y push |
 
 Los riesgos R3 y R7 son los de mayor prioridad y se mitigan principalmente con ensayo previo, no con pruebas automáticas.
 
@@ -142,7 +142,7 @@ La cátedra puede interrogar a cualquier integrante sobre cualquier test o defec
 | Contrato de eventos | ajv contra `.schema.json` | En uso |
 | Mutation testing | Stryker | Pendiente |
 | Carga | k6 | Pendiente |
-| Seguridad | `npm audit`, ZAP baseline, gitleaks | Pendiente |
+| Seguridad | `npm audit`, ZAP baseline, gitleaks | gitleaks realizado y en el CI; `npm audit` y ZAP pendientes en el CI |
 | Gestión de casos y defectos | GitHub Issues y tablero de Trello | En uso (G5: ver `README.md`) |
 | Generación de documentos | Markdown + `md-to-pdf` (`npm run qa:pdf`) | En uso |
 

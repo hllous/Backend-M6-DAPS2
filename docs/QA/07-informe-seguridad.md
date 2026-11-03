@@ -115,21 +115,31 @@ Una corrida previa con `--offline` dio 0 vulnerabilidades; ese resultado venía 
 
 ### 5.3 Escaneo de secretos
 
-**gitleaks y trufflehog no están instalados**, así que no hubo escaneo con herramienta. Se hizo una búsqueda por expresiones regulares en el historial completo (todas las ramas, 252 commits) y en los archivos versionados. Es una revisión parcial.
+**Realizado el 03/11/2026 con gitleaks v8.30.1** (imagen `zricethezav/gitleaks:v8.30.1`) sobre todas las ramas: 270 commits, 78 MB.
 
-| Búsqueda | Resultado |
+```bash
+docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 git /repo --redact --no-banner --log-opts="--all"
+```
+
+| Corrida | Resultado |
 |---|---|
-| Claves privadas, claves de AWS (`AKIA…`), tokens de GitHub o Slack en el historial | Sin coincidencias |
-| `.env` | Ignorado (`.gitignore:33`) y nunca versionado (`git log --all -- .env` vacío). Solo está versionado `.env.example`. No hay archivos `.pem`, `.key`, `.p12` ni `.pfx` versionados |
-| Asignaciones de `JWT_SECRET`, `BFF_SHARED_KEY`, `DATABASE_URL` y similares con valor | Solo marcadores de posición: `JWT_SECRET=CHANGE_ME_local_dev_secret_m6`, `DATABASE_URL=postgresql://user:password@localhost…` y `JWT_SECRET=12345678` en una nota de infraestructura vieja (commit `c24908a`, ya reemplazada por `$(openssl rand -base64 32)`) |
-| URLs de RabbitMQ con credenciales | Solo valores de prueba en specs (`m6:clave`, `usuario:secreto`) y el marcador `<clave-percent-encoded>` en la documentación |
+| Sin configuración propia | **9 hallazgos**, todos reglas `generic-api-key`, que se reducen a **2 valores** (ver abajo) |
+| Con [`.gitleaks.toml`](../../.gitleaks.toml) | **0 hallazgos** (`no leaks found`) |
 
-**Dos puntos a confirmar a mano** (no son hallazgos graves, pero un docente puede preguntar):
+Los 2 valores marcados, ambos verificados a mano:
 
-1. **`JWT_SECRET` de `.env.example`** (`.env.example:51`): `Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==`. Se decodificó y es el marcador `CHANGE_ME_local_dev_secret_m6_32bytes`, **no un secreto real**. En producción la validación de arranque lo rechaza (`src/config/env.validation.ts:178-186`), así que si Render arranca con `NODE_ENV=production` no lo está usando. Falta confirmar en el panel de Render que el valor cargado es el de M1.
-2. **Usuario y host del broker publicados**: `.env.example:92` y `docs/deploy.md` (líneas 107, 132 y 166) muestran el usuario `module_ambiente` y el host `core-uade-2026.duckdns.org:5671/core`. La clave figura como marcador y no se vio ninguna. Confirmar con M9 si es aceptable que el usuario y el host sean públicos; si la clave alguna vez se pegó en un commit, hay que **rotarla** en vez de reescribir el historial.
+| Valor | Dónde | Por qué no es un secreto |
+|---|---|---|
+| `JWT_SECRET` de ejemplo (base64) | `.env.example`, `src/config/env.validation.ts:33` (`JWT_SECRET_EJEMPLO`), commits b9511a7, c8eb299 y fb60b7e | Decodifica a `CHANGE_ME_local_dev_secret_m6_32bytes`. **El equipo confirmó el 03/11 que nunca fue un secreto real.** En producción la validación de arranque lo rechaza |
+| `SECRET = secreto-de-maquina-m6` | `src/core/core.client.spec.ts:4`, commits 3ca3625, 96087d7 y 6d2c732 | Valor de prueba de un test unitario |
 
-Quedó sin revisar: `docs/integracion/` y `devops/*.md` con un escáner de credenciales. **Pendiente: correr gitleaks (`docker run zricethezav/gitleaks detect`) sobre el clon completo antes del 10/11 y pegar la salida como evidencia.**
+El `.gitleaks.toml` excluye esos dos valores **por valor exacto**, no por archivo, así que una credencial real en esos mismos archivos se sigue detectando. El job `secrets` del CI (`.github/workflows/ci.yml`) repite el escaneo del historial completo en cada PR y push.
+
+Revisión complementaria previa por expresiones regulares (todas las ramas, 252 commits): sin claves privadas, claves de AWS ni tokens de GitHub o Slack; `.env` ignorado y nunca versionado (`git log --all -- .env` vacío); sin `.pem`, `.key`, `.p12` ni `.pfx` versionados; el resto de los `JWT_SECRET`, `DATABASE_URL` y URLs de RabbitMQ con credenciales son marcadores de posición o valores de prueba de specs.
+
+**Un punto sigue abierto:** `.env.example:92` y `docs/deploy.md` publican el usuario `module_ambiente` y el host del broker (`core-uade-2026.duckdns.org:5671/core`). La clave figura como marcador y gitleaks no encontró ninguna. Confirmar con M9 si es aceptable que usuario y host sean públicos; si la clave alguna vez se pegó en un commit, hay que **rotarla** en vez de reescribir el historial.
+
+Limitaciones: gitleaks no analiza el contenido de los PDF ni de los binarios, y trufflehog no se corrió.
 
 ## 6. Hallazgos y tratamiento
 
@@ -138,7 +148,7 @@ Quedó sin revisar: `docs/integracion/` y `devops/*.md` con un escáner de crede
 | 1 | 1 crítica y 6 altas en dependencias de producción | Mayor (sube a Crítica si hay explotabilidad) | `npm audit fix`, documentar mitigaciones y sumar `npm audit` al CI | DEF-08 |
 | 2 | Sin rate limiting fuera del portal público | Mayor | Throttler global y un e2e de 429 | DEF-07 |
 | 3 | Sin auditoría de lecturas Tier 2 (SEC-D02) | Mayor | Interceptor de lectura sobre los `GET` de denuncias y actas | DEF-09 |
-| 4 | Sin ZAP ni escaneo de secretos con herramienta | Mayor | `zap-baseline` manual y gitleaks en el CI | DEF-13 |
+| 4 | Sin ZAP (el escaneo de secretos con gitleaks ya se hizo y corre en el CI) | Mayor | `zap-baseline` manual | DEF-13 |
 | 5 | Errores sin id de correlación ni formato RFC 9457 (SEC-W05) | Mayor | Migrar el filtro y avisar al frontend | DEF-10 |
 | 6 | CORS abierto si falta `CORS_ORIGINS` | Menor | Confirmar la variable en Render | DEF-18 |
 | 7 | Sin CSP, helmet ni `Permissions-Policy`; Swagger UI público en producción | Menor | Decisión documentada por Swagger UI; ocultarlo o aceptarlo | DEF-19 |
