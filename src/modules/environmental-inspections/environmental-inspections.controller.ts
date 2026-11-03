@@ -27,6 +27,7 @@ import {
   IssueViolationNoticeDto,
   ViolationNoticeResponseDto,
 } from './dto';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiNotAssigned, CurrentUser, Roles } from '../../common/decorators';
 import { ROLES_ACTA_LECTURA, ROLES_AMBIENTAL, ROLES_INSPECTOR } from '../../auth/role-groups';
@@ -70,8 +71,9 @@ export class EnvironmentalInspectionsController {
   async create(
     @Param('reportId', ParseUUIDPipe) reportId: string,
     @Body() dto: CreateInspectionDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<InspectionResponseDto> {
-    return this.inspectionsService.create(reportId, dto);
+    return this.inspectionsService.create(reportId, dto, actor);
   }
 
   @Get('environmental-reports/:reportId/inspections')
@@ -137,9 +139,9 @@ export class EnvironmentalInspectionsController {
   async complete(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CompleteInspectionDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<InspectionResponseDto> {
-    return this.inspectionsService.complete(id, dto, userId);
+    return this.inspectionsService.complete(id, dto, actor);
   }
 
   @Post('environmental-inspections/:id/violation-notice')
@@ -167,9 +169,9 @@ export class EnvironmentalInspectionsController {
   async issueNotice(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: IssueViolationNoticeDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ViolationNoticeResponseDto> {
-    return this.inspectionsService.issueNotice(id, dto, userId);
+    return this.inspectionsService.issueNotice(id, dto, actor);
   }
 
   @Get('environmental-inspections/:id/violation-notice')

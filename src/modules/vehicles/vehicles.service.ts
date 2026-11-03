@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditActor, AuditService, activeState } from '../../common/audit/audit.service';
 import { CreateVehicleDto, UpdateVehicleDto, QueryVehiclesDto, VehicleResponseDto } from './dto';
 import { PaginatedResponseDto } from '../../common/dto';
 
@@ -8,21 +9,34 @@ import { PaginatedResponseDto } from '../../common/dto';
 export class VehiclesService {
   private readonly logger = new Logger(VehiclesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   /**
    * Registra un nuevo vehículo.
    * Falla si la patente ya existe (unique constraint).
    */
-  async create(dto: CreateVehicleDto): Promise<VehicleResponseDto> {
+  async create(dto: CreateVehicleDto, actor: AuditActor): Promise<VehicleResponseDto> {
     try {
-      const vehicle = await this.prisma.vehicle.create({
-        data: {
-          plate: dto.plate,
-          vehicleType: dto.vehicleType,
-          capacity: dto.capacity ?? null,
-          active: dto.active ?? true,
-        },
+      const vehicle = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.vehicle.create({
+          data: {
+            plate: dto.plate,
+            vehicleType: dto.vehicleType,
+            capacity: dto.capacity ?? null,
+            active: dto.active ?? true,
+          },
+        });
+        await this.audit.record(tx, {
+          entityType: 'VEHICLE',
+          entityId: created.id,
+          action: 'CREATE',
+          toStatus: activeState(created.active),
+          actor,
+        });
+        return created;
       });
 
       this.logger.log(`Vehículo registrado: ${vehicle.plate} (${vehicle.id})`);
@@ -86,17 +100,30 @@ export class VehiclesService {
    * Actualiza campos mutables de un vehículo (plate, capacity, active).
    * vehicleType no se puede cambiar después de la creación.
    */
-  async update(id: string, dto: UpdateVehicleDto): Promise<VehicleResponseDto> {
+  async update(id: string, dto: UpdateVehicleDto, actor: AuditActor): Promise<VehicleResponseDto> {
     await this.ensureExists(id);
 
     try {
-      const vehicle = await this.prisma.vehicle.update({
-        where: { id },
-        data: {
-          ...(dto.plate !== undefined && { plate: dto.plate }),
-          ...(dto.capacity !== undefined && { capacity: dto.capacity }),
-          ...(dto.active !== undefined && { active: dto.active }),
-        },
+      const vehicle = await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.vehicle.update({
+          where: { id },
+          data: {
+            ...(dto.plate !== undefined && { plate: dto.plate }),
+            ...(dto.capacity !== undefined && { capacity: dto.capacity }),
+            ...(dto.active !== undefined && { active: dto.active }),
+          },
+        });
+        // Solo el alta o la baja son auditables acá; el resto de los campos no son estado.
+        if (dto.active !== undefined) {
+          await this.audit.record(tx, {
+            entityType: 'VEHICLE',
+            entityId: id,
+            action: dto.active ? 'ACTIVATE' : 'DEACTIVATE',
+            toStatus: activeState(dto.active),
+            actor,
+          });
+        }
+        return updated;
       });
 
       this.logger.log(`Vehículo actualizado: ${vehicle.plate} (${vehicle.id})`);
@@ -112,12 +139,21 @@ export class VehiclesService {
   /**
    * Soft-delete: marca el vehículo como inactivo.
    */
-  async remove(id: string): Promise<void> {
+  async remove(id: string, actor: AuditActor): Promise<void> {
     await this.ensureExists(id);
 
-    await this.prisma.vehicle.update({
-      where: { id },
-      data: { active: false },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.vehicle.update({
+        where: { id },
+        data: { active: false },
+      });
+      await this.audit.record(tx, {
+        entityType: 'VEHICLE',
+        entityId: id,
+        action: 'DEACTIVATE',
+        toStatus: activeState(false),
+        actor,
+      });
     });
 
     this.logger.log(`Vehículo desactivado: ${id}`);

@@ -23,7 +23,8 @@ import {
   StreetClosureRequestResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
@@ -45,7 +46,7 @@ export class RepairRequestsController {
   @ApiOperation({
     summary: 'Solicitar una reparación a Obras Públicas',
     description:
-      'Registra un daño de infraestructura que detectamos pero que no nos corresponde arreglar —pavimento roto, vereda hundida, luminaria caída, sumidero tapado— y publica infrastructureRepairRequested hacia M3. La solicitud existe para poder seguir el pedido: la respuesta de M3 vuelve asincrónica y hay que saber a qué solicitud contesta. Si el daño salió de un servicio nacido de un reclamo, el ticketId viaja en el evento.',
+      'Registra un daño de infraestructura que detectamos pero que no nos corresponde arreglar —pavimento roto, vereda hundida, luminaria caída, sumidero tapado— y publica infrastructureRepairRequested hacia M3. La solicitud existe para poder seguir el pedido: la respuesta de M3 vuelve asincrónica y hay que saber a qué solicitud contesta. Si el daño salió de un servicio nacido de un reclamo, el ticketId viaja en el evento. Lo mismo si salió de una inspección: viaja el ticketId de su expediente. Una inspección solo origina una reparación si cerró con un resultado distinto de NO_VIOLATION y el tipo de expediente admite daño de infraestructura (no ruidos, olores, plagas ni emisiones); no admite un segundo pedido abierto para el mismo origen y tipo de daño.',
   })
   @ApiResponse({
     status: 201,
@@ -58,10 +59,19 @@ export class RepairRequestsController {
     description: 'El servicio o la inspección de origen no existe',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Origen INSPECTION que no justifica una reparación (sin cerrar, NO_VIOLATION, o expediente de tipo NOISE, ODOR, PEST_INFESTATION o AIR_EMISSION), o ya hay una solicitud no cerrada para el mismo origen y tipo de daño',
+    type: ErrorResponseDto,
+  })
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
-  async create(@Body() dto: CreateRepairRequestDto): Promise<RepairRequestResponseDto> {
-    return this.service.createRepairRequest(dto);
+  async create(
+    @Body() dto: CreateRepairRequestDto,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<RepairRequestResponseDto> {
+    return this.service.createRepairRequest(dto, actor);
   }
 
   @Get()
@@ -107,8 +117,9 @@ export class RepairRequestsController {
   async start(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StartRepairDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<RepairRequestResponseDto> {
-    return this.service.startRepair(id, dto);
+    return this.service.startRepair(id, dto, actor);
   }
 
   @Post(':id/close')
@@ -125,8 +136,11 @@ export class RepairRequestsController {
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
-  async close(@Param('id', ParseUUIDPipe) id: string): Promise<RepairRequestResponseDto> {
-    return this.service.closeRepair(id);
+  async close(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<RepairRequestResponseDto> {
+    return this.service.closeRepair(id, actor);
   }
 }
 
@@ -168,8 +182,9 @@ export class StreetClosureRequestsController {
   @ApiResponse(SERVER)
   async create(
     @Body() dto: CreateStreetClosureRequestDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<StreetClosureRequestResponseDto> {
-    return this.service.createClosureRequest(dto);
+    return this.service.createClosureRequest(dto, actor);
   }
 
   @Get()
@@ -224,8 +239,9 @@ export class StreetClosureRequestsController {
   async approve(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ApproveClosureDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<StreetClosureRequestResponseDto> {
-    return this.service.approveClosure(id, dto);
+    return this.service.approveClosure(id, dto, actor);
   }
 
   @Post(':id/reject')
@@ -250,8 +266,9 @@ export class StreetClosureRequestsController {
   async reject(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RejectClosureDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<StreetClosureRequestResponseDto> {
-    return this.service.rejectClosure(id, dto.reason);
+    return this.service.rejectClosure(id, dto.reason, actor);
   }
 
   @Post(':id/end')
@@ -272,7 +289,10 @@ export class StreetClosureRequestsController {
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(CONFLICT)
   @ApiResponse(SERVER)
-  async end(@Param('id', ParseUUIDPipe) id: string): Promise<StreetClosureRequestResponseDto> {
-    return this.service.endClosure(id);
+  async end(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<StreetClosureRequestResponseDto> {
+    return this.service.endClosure(id, actor);
   }
 }

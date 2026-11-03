@@ -33,6 +33,17 @@ export interface PlanRegistro extends RegistroResultado {
   publicacionesInactivas: string[];
 }
 
+export interface BajaResultado {
+  eventType: string;
+  estado: 'simulacro' | 'baja' | 'no-suscripto' | 'error';
+  /** Suscripciones propias de ese tipo (puede haber más de una). */
+  cantidad?: number;
+  detalle?: string;
+}
+
+/** El id va al path del DELETE: solo formas inocuas. */
+const ID_CORE = /^[A-Za-z0-9_-]{1,64}$/;
+
 interface Listado {
   activos: Set<string>;
   inactivos: Set<string>;
@@ -98,6 +109,73 @@ export class CoreRegistryService implements OnApplicationBootstrap, OnModuleDest
    */
   async simular(): Promise<PlanRegistro> {
     return (await this.planificar()).plan;
+  }
+
+  /**
+   * Baja de suscripciones sobrantes, solo las pedidas por nombre (nunca "todos los
+   * sobrantes"). Rechaza, antes de tocar el Core, un nombre inválido o uno que M6
+   * declara hoy. Sin `apply` solo hace GET. Un tipo que no está suscripto se
+   * informa y se sigue; un error HTTP queda en su resultado y no frena al resto.
+   */
+  async darDeBaja(tipos: string[], apply: boolean): Promise<BajaResultado[]> {
+    const vigentes: string[] = [...Object.values(ConsumedEvent), ...Object.values(EventType)];
+    for (const t of tipos) {
+      if (!EVENT_TYPE.test(t)) {
+        throw new Error('Tipo de evento inválido (letras y dígitos, hasta 60, empieza con letra)');
+      }
+      if (vigentes.includes(t))
+        throw new Error(`${t} está declarado por M6: no se da de baja lo vigente`);
+    }
+    const modulo = this.config.get<string>('core.moduleId', 'ambiente');
+    const res = await this.core.request('/api/v1/subscriptions');
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      throw new Error(`GET /api/v1/subscriptions respondió HTTP ${res.status}`);
+    }
+    const body = (await res.json().catch(() => undefined)) as
+      { data?: unknown; items?: unknown } | unknown[] | undefined;
+    const lista = Array.isArray(body) ? body : (body?.data ?? body?.items);
+    if (!Array.isArray(lista)) {
+      throw new Error('GET /api/v1/subscriptions devolvió algo que no es una lista');
+    }
+
+    const entradas = lista as { eventType?: unknown; moduleName?: unknown; id?: unknown }[];
+    const out: BajaResultado[] = [];
+    for (const eventType of [...new Set(tipos)]) {
+      // moduleName estricto: una entrada sin dueño claro no se toca. `active` no
+      // se mira: una suscripción inactiva también se baja.
+      const propias = entradas.filter((x) => x?.eventType === eventType && x.moduleName === modulo);
+      if (!propias.length) {
+        out.push({ eventType, estado: 'no-suscripto' });
+        continue;
+      }
+      const errores: string[] = [];
+      for (const e of propias) {
+        const id = typeof e.id === 'number' ? String(e.id) : e.id;
+        if (typeof id !== 'string' || !ID_CORE.test(id)) {
+          errores.push('la suscripción no trae un id utilizable');
+          continue;
+        }
+        if (!apply) continue;
+        try {
+          const del = await this.core.request(`/api/v1/subscriptions/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+          });
+          await del.body?.cancel().catch(() => undefined);
+          if (!del.ok) errores.push(`DELETE respondió HTTP ${del.status}`);
+        } catch (err) {
+          // Solo el name (como CoreClient): el message de fetch puede citar la URL.
+          errores.push(`DELETE falló (${(err as Error).name})`);
+        }
+      }
+      out.push({
+        eventType,
+        cantidad: propias.length,
+        estado: errores.length ? 'error' : apply ? 'baja' : 'simulacro',
+        ...(errores.length ? { detalle: errores.join('; ') } : {}),
+      });
+    }
+    return out;
   }
 
   private async planificar(): Promise<{ maxAttempts: number; plan: PlanRegistro }> {

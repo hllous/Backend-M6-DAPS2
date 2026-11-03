@@ -156,6 +156,34 @@ describe('Flujo del expediente ambiental (e2e)', () => {
     expect(expediente.status).toBe('VIOLATION_FOUND');
   });
 
+  it('deriva la reparación desde la inspección con el ticket del expediente; un duplicado abierto da 409 (#451)', async () => {
+    const detalle = await api.get(`/environmental-inspections/${inspectionId}`).expect(200);
+    expect(detalle.body).toMatchObject({
+      reportType: 'WATER_DISCHARGE',
+      address: 'Camino de Cintura 4500',
+      allowedActions: { repair: true, notice: true },
+    });
+
+    const pedido = {
+      damageType: 'BLOCKED_DRAIN',
+      severity: 'HIGH',
+      publicSafetyRisk: true,
+      detectedInType: 'INSPECTION',
+      detectedInId: inspectionId,
+    };
+    await api.post('/repair-requests', pedido).expect(201);
+    await api.post('/repair-requests', pedido).expect(409);
+
+    const eventos = await prisma.outboxEvent.findMany({
+      where: { eventType: 'infrastructureRepairRequested' },
+    });
+    expect(eventos).toHaveLength(1);
+    expect(eventos[0].payload).toMatchObject({
+      detectedIn: inspectionId,
+      ticketId: 'TCK-E2E-ACTA',
+    });
+  });
+
   it('el GET del acta sin acta emitida responde 200 con el literal null; inspección inexistente, 404', async () => {
     const res = await api
       .get(`/environmental-inspections/${inspectionId}/violation-notice`)
@@ -343,6 +371,67 @@ describe('Flujo del expediente ambiental (e2e)', () => {
       const ganador = res.find((r) => r.status === 201)!;
       const inspeccion = await prisma.environmentalInspection.findUniqueOrThrow({ where: { id } });
       expect(inspeccion.serviceId).toBe(ganador.body.id);
+    });
+  });
+
+  describe('reparación desde una inspección que no la justifica (#451)', () => {
+    const inspeccion = async (reportType: string): Promise<string> => {
+      const r = await api.post('/environmental-reports', { reportType }).expect(201);
+      await api.post(`/environmental-reports/${r.body.id}/start-review`).expect(200);
+      const insp = await api.post(`/environmental-reports/${r.body.id}/inspections`).expect(201);
+      return insp.body.id;
+    };
+
+    const pedido = (detectedInId: string) => ({
+      damageType: 'BLOCKED_DRAIN',
+      severity: 'HIGH',
+      publicSafetyRisk: false,
+      detectedInType: 'INSPECTION',
+      detectedInId,
+    });
+
+    const cerrar = (id: string, outcome: string) =>
+      api
+        .post(`/environmental-inspections/${id}/complete`, {
+          inspectedAt: new Date().toISOString(),
+          outcome,
+          ...(outcome === 'VIOLATION_FOUND' && { nextStep: 'CASE_CLOSED' }),
+        })
+        .expect(200);
+
+    const reparaciones = (id: string) =>
+      prisma.repairRequest.count({ where: { detectedInId: id } });
+
+    it('sin cerrar: 409 y no se crea la solicitud', async () => {
+      const id = await inspeccion('WATER_DISCHARGE');
+
+      await api.post('/repair-requests', pedido(id)).expect(409);
+
+      expect(await reparaciones(id)).toBe(0);
+    });
+
+    it('cerrada con NO_VIOLATION: 409 y no se crea la solicitud', async () => {
+      const id = await inspeccion('WATER_DISCHARGE');
+      await cerrar(id, 'NO_VIOLATION');
+
+      await api.post('/repair-requests', pedido(id)).expect(409);
+
+      expect(await reparaciones(id)).toBe(0);
+    });
+
+    it('expediente NOISE con infracción: 409 y allowedActions.repair en false', async () => {
+      const id = await inspeccion('NOISE');
+      await cerrar(id, 'VIOLATION_FOUND');
+
+      await api.post('/repair-requests', pedido(id)).expect(409);
+
+      expect(await reparaciones(id)).toBe(0);
+      const detalle = await api.get(`/environmental-inspections/${id}`).expect(200);
+      expect(detalle.body.allowedActions).toMatchObject({
+        repair: false,
+        notice: true,
+        suggestedViolationType: 'NOISE_LIMIT',
+      });
     });
   });
 });

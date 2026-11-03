@@ -9,6 +9,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
 import { CoreModule } from './core/core.module';
+import { AuditModule } from './common/audit/audit.module';
 import { JwtAuthGuard, RolesGuard } from './common/guards';
 
 // Módulos de dominio
@@ -49,6 +50,7 @@ import { RoleAssignmentsModule } from './modules/role-assignments/role-assignmen
     AuthModule,
     EventsModule,
     CoreModule,
+    AuditModule,
 
     // ─── Dominios de negocio ────────────────────────
     ZonesModule,

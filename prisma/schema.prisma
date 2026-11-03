@@ -235,6 +235,18 @@ enum CrewType {
   CONTRACTOR
 }
 
+/// Rubro de trabajo de una cuadrilla. Se contrasta con el tipo de servicio al asignarla
+/// (mapa en src/modules/crews/crew-specialty.ts).
+enum CrewSpecialty {
+  COLLECTION
+  SWEEPING
+  CLEANING
+  RECYCLING
+  TREES
+  GREEN_SPACES
+  INSPECTION
+}
+
 enum VehicleType {
   COMPACTOR_TRUCK
   DUMP_TRUCK
@@ -261,6 +273,12 @@ enum RepairDamageType {
 enum StreetClosureType {
   TOTAL
   PARTIAL
+}
+
+enum StreetDirection {
+  FORWARD
+  REVERSE
+  BOTH
 }
 
 enum DelayType {
@@ -319,6 +337,7 @@ model ServiceType {
 model Commune {
   id        String   @id @default(uuid()) @db.Uuid
   code      String   @unique // `comuna-N` de M9
+  number    Int // N de `comuna-N`: ordena 1..15 (el code como string da 1, 10, 11...)
   name      String
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
@@ -338,15 +357,17 @@ model Zone {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  commune       Commune?           @relation(fields: [communeId], references: [id], onDelete: Restrict)
-  neighborhoods ZoneNeighborhood[]
-  routeStops    RouteStop[]
-  serviceZones  ServiceZone[]
-  zoneResults   ZoneResult[]
-  containers    Container[]
-  greenPoints   GreenPoint[]
-  trees         Tree[]
-  greenSpaces   GreenSpace[]
+  commune         Commune?             @relation(fields: [communeId], references: [id], onDelete: Restrict)
+  neighborhoods   ZoneNeighborhood[]
+  routeStops      RouteStop[]
+  serviceZones    ServiceZone[]
+  zoneResults     ZoneResult[]
+  containers      Container[]
+  greenPoints     GreenPoint[]
+  trees           Tree[]
+  greenSpaces     GreenSpace[]
+  homeCrews       Crew[]               @relation("CrewHomeZone")
+  crewAssignments CrewZoneAssignment[]
 
   @@index([communeId])
   @@map("zone")
@@ -424,30 +445,61 @@ model FrequencyWeekday {
 // ════════════════════════════════════════════════════════════════
 
 model Crew {
-  id             String   @id @default(uuid()) @db.Uuid
-  name           String
-  crewType       CrewType @map("crew_type")
-  leaderUserId   String?  @map("leader_user_id") // EXT M1
-  organizationId String?  @map("organization_id") // EXT M1
-  defaultShift   Shift    @map("default_shift")
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id               String         @id @default(uuid()) @db.Uuid
+  name             String
+  crewType         CrewType       @map("crew_type")
+  leaderUserId     String?        @map("leader_user_id") // EXT M1
+  organizationId   String?        @map("organization_id") // EXT M1
+  // Snapshot de los nombres de M1 (#454): M6 no puede consultar a M1 para mostrarlos.
+  leaderName       String?        @map("leader_name")
+  organizationName String?        @map("organization_name")
+  defaultShift     Shift          @map("default_shift")
+  // Nullable solo para no romper filas anteriores a #455; el alta la exige.
+  specialty        CrewSpecialty?
+  homeZoneId       String?        @map("home_zone_id") @db.Uuid
+  active           Boolean        @default(true)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
 
-  members  CrewMember[]
-  services Service[]
+  homeZone        Zone?                @relation("CrewHomeZone", fields: [homeZoneId], references: [id], onDelete: Restrict)
+  members         CrewMember[]
+  services        Service[]
+  zoneAssignments CrewZoneAssignment[]
 
+  @@index([homeZoneId])
   @@map("crew")
 }
 
 model CrewMember {
-  crewId String @map("crew_id") @db.Uuid
-  userId String @map("user_id") // EXT M1
+  crewId      String  @map("crew_id") @db.Uuid
+  userId      String  @map("user_id") // EXT M1
+  // Snapshot del nombre en M1 (#454); null si quien lo cargó no lo informó.
+  displayName String? @map("display_name")
 
   crew Crew @relation(fields: [crewId], references: [id], onDelete: Cascade)
 
   @@id([crewId, userId])
   @@map("crew_member")
+}
+
+/// Reubicación transitoria de una cuadrilla en otra zona (#455). Sin `validTo` queda
+/// vigente hasta nuevo aviso. Para una misma cuadrilla los rangos no se pisan.
+model CrewZoneAssignment {
+  id        String    @id @default(uuid()) @db.Uuid
+  crewId    String    @map("crew_id") @db.Uuid
+  zoneId    String    @map("zone_id") @db.Uuid
+  validFrom DateTime  @map("valid_from") @db.Date
+  validTo   DateTime? @map("valid_to") @db.Date
+  reason    String
+  createdBy String    @map("created_by") // EXT M1
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  crew Crew @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+
+  @@index([crewId, validFrom])
+  @@index([zoneId])
+  @@map("crew_zone_assignment")
 }
 
 model Vehicle {
@@ -489,8 +541,9 @@ model Service {
   // simulada y no se persiste), asi que es una referencia externa sin FK.
   weatherAlertId         String?       @map("weather_alert_id")
   notes                  String?       @db.Text
-  // Por que se asigno una cuadrilla o un vehiculo que ya estaba tomado. Se
-  // exige cuando hay solapamiento: la asignacion avisa y deja pasar, pero no
+  // Por que se asigno una cuadrilla o un vehiculo que ya estaba tomado, o una
+  // cuadrilla de otra zona o especialidad (#455). Se exige cuando hay
+  // solapamiento o aviso de encaje: la asignacion avisa y deja pasar, pero no
   // en silencio (Issue #123).
   assignmentOverrideNote String?       @map("assignment_override_note") @db.Text
   assignmentOverrideBy   String?       @map("assignment_override_by")
@@ -646,13 +699,37 @@ model Container {
   damageType          DamageType?     @map("damage_type") // solo DAMAGED
   severity            Severity? // solo DAMAGED
   requiresPublicWorks Boolean?        @map("requires_public_works") // solo DAMAGED
+  damageNotes         String?         @map("damage_notes") // solo DAMAGED; dato interno, no viaja en containerDamaged
   createdAt           DateTime        @default(now()) @map("created_at")
   updatedAt           DateTime        @updatedAt @map("updated_at")
 
-  zone Zone @relation(fields: [zoneId], references: [id])
+  zone    Zone                     @relation(fields: [zoneId], references: [id])
+  history ContainerStatusHistory[]
 
   @@index([status])
   @@map("container")
+}
+
+// Una fila por alta o transición de estado de un contenedor, escrita en la misma
+// transacción que el cambio. `Container` solo guarda el estado actual; esto es lo
+// que permite contar incidentes por período y reconstruir los daños pendientes en
+// un instante (indicadores, #475).
+//
+// `fromStatus` es null en el alta y en la fila base que siembra la migración: esas
+// filas sirven para reconstruir el estado y NUNCA cuentan como incidente.
+// Sin actor en esta etapa: quién hizo el cambio es el alcance de #460.
+model ContainerStatusHistory {
+  id          String           @id @default(uuid()) @db.Uuid
+  containerId String           @map("container_id") @db.Uuid
+  fromStatus  ContainerStatus? @map("from_status")
+  toStatus    ContainerStatus  @map("to_status")
+  changedAt   DateTime         @default(now()) @map("changed_at")
+
+  container Container @relation(fields: [containerId], references: [id])
+
+  @@index([containerId, changedAt])
+  @@index([toStatus, changedAt])
+  @@map("container_status_history")
 }
 
 model GreenPoint {
@@ -731,8 +808,10 @@ model TreeIntervention {
   requiresStreetClosure Boolean                @default(false) @map("requires_street_closure")
   status                TreeInterventionStatus
   priority              Severity?
-  authorizedByUserId    String?                @map("authorized_by_user_id") // solo REMOVAL
-  authorizedAt          DateTime?              @map("authorized_at") // solo REMOVAL
+  // Quién la solicitó (token del POST). Null en las anteriores a #456.
+  requestedByUserId     String?                @map("requested_by_user_id")
+  authorizedByUserId    String?                @map("authorized_by_user_id") // quien llamó a authorize (REMOVAL: M6_ADMIN; las podas también lo registran)
+  authorizedAt          DateTime?              @map("authorized_at") // al pasar a AUTHORIZED (extracciones y podas)
   justification         String?                @db.Text // solo REMOVAL
   // Sin uso desde #345: treePruningScheduled dejó de emitirse (M7 solo consume
   // streetClosureRequested). La columna queda sin migrar.
@@ -932,20 +1011,22 @@ model RepairRequest {
 }
 
 model StreetClosureRequest {
-  id           String                     @id @default(uuid()) @db.Uuid
-  reason       String
-  sourceType   String                     @map("source_type") // SERVICE | TREE_INTERVENTION
-  sourceId     String                     @map("source_id") @db.Uuid // polimórfico
-  closureType  StreetClosureType?         @map("closure_type")
-  closureFrom  DateTime?                  @map("closure_from")
-  closureTo    DateTime?                  @map("closure_to")
+  id              String                     @id @default(uuid()) @db.Uuid
+  reason          String
+  sourceType      String                     @map("source_type") // SERVICE | TREE_INTERVENTION
+  sourceId        String                     @map("source_id") @db.Uuid // polimórfico
+  closureType     StreetClosureType?         @map("closure_type")
+  closureFrom     DateTime?                  @map("closure_from")
+  closureTo       DateTime?                  @map("closure_to")
   // Ventana que M7 autorizó (streetClosureApproved); prevalece sobre closureFrom/To.
-  approvedFrom DateTime?                  @map("approved_from")
-  approvedTo   DateTime?                  @map("approved_to")
-  status       StreetClosureRequestStatus @default(REQUESTED)
-  closureId    String?                    @map("closure_id") // EXT M7
-  createdAt    DateTime                   @default(now()) @map("created_at")
-  updatedAt    DateTime                   @updatedAt @map("updated_at")
+  approvedFrom    DateTime?                  @map("approved_from")
+  approvedTo      DateTime?                  @map("approved_to")
+  // Motivo que informó M7 en streetClosureRejected (o el operador al rechazar a mano).
+  rejectionReason String?                    @map("rejection_reason")
+  status          StreetClosureRequestStatus @default(REQUESTED)
+  closureId       String?                    @map("closure_id") // EXT M7
+  createdAt       DateTime                   @default(now()) @map("created_at")
+  updatedAt       DateTime                   @updatedAt @map("updated_at")
 
   streets ClosureStreet[]
 
@@ -954,11 +1035,13 @@ model StreetClosureRequest {
 }
 
 model ClosureStreet {
-  id         String @id @default(uuid()) @db.Uuid
-  requestId  String @map("request_id") @db.Uuid
-  streetName String @map("street_name")
-  fromCross  String @map("from_cross")
-  toCross    String @map("to_cross")
+  id         String          @id @default(uuid()) @db.Uuid
+  requestId  String          @map("request_id") @db.Uuid
+  streetName String          @map("street_name")
+  fromCross  String          @map("from_cross")
+  toCross    String          @map("to_cross")
+  // Sentido del tramo cortado; M7 lo exige en cada tramo de affectedSections.
+  direction  StreetDirection
 
   request StreetClosureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
@@ -987,9 +1070,26 @@ model OutboxEvent {
   // directa en M6 (un endpoint, un barrido).
   causationId   String?           @map("causation_id") @db.Uuid
 
+  retries OutboxRetryAudit[]
+
   // El dispatcher barre PENDING en orden de ocurrencia.
   @@index([status, occurredAt])
   @@map("outbox_event")
+}
+
+// Quién reencoló a mano un evento FAILED, y cómo estaba antes: el reintento
+// resetea attempts y lastError, así que sin esto el rastro del fallo se perdería.
+model OutboxRetryAudit {
+  id               String      @id @default(uuid()) @db.Uuid
+  outboxEventId    String      @map("outbox_event_id") @db.Uuid
+  actorUserId      String      @map("actor_user_id") // quién reintentó (M1, del token)
+  at               DateTime    @default(now())
+  previousAttempts Int         @map("previous_attempts")
+  previousError    String?     @map("previous_error")
+  outboxEvent      OutboxEvent @relation(fields: [outboxEventId], references: [id])
+
+  @@index([outboxEventId, at])
+  @@map("outbox_retry_audit")
 }
 
 model InboxEvent {
@@ -1077,4 +1177,23 @@ model RoleAssignmentAudit {
 
   @@index([targetUserId, createdAt])
   @@map("role_assignment_audit")
+}
+
+// Quién hizo qué sobre los datos de dominio (#460). Solo agrega: un trigger de la
+// migración bloquea modificar, borrar y vaciar, igual que role_assignment_audit.
+// Guarda ids, estados y el motivo ya pedido; nunca datos personales ni payloads.
+model DomainAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  action      String
+  fromStatus  String?  @map("from_status")
+  toStatus    String?  @map("to_status")
+  actorUserId String   @map("actor_user_id") // siempre del token, nunca del body
+  actorRoles  M6Role[] @map("actor_roles")
+  note        String?
+  occurredAt  DateTime @default(now()) @map("occurred_at")
+
+  @@index([entityType, entityId, occurredAt])
+  @@map("domain_audit_log")
 }

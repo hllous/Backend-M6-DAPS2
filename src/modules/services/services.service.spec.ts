@@ -20,6 +20,8 @@ import { ServiceTargetType } from './dto';
 import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from '../../events/m2-contract.testing';
 
 const USER_ID = '4242';
+
+const ACTOR = { userId: USER_ID, roles: [] };
 const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
 const TYPE_ID = '22222222-2222-2222-2222-222222222222';
 const ROUTE_ID = '33333333-3333-3333-3333-333333333333';
@@ -34,6 +36,7 @@ const INSPECTION_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 describe('ServicesService', () => {
   let prisma: any;
   let outbox: any;
+  let audit: any;
   let service: ServicesService;
 
   const serviceRow = (over: Record<string, unknown> = {}) => ({
@@ -94,12 +97,21 @@ describe('ServicesService', () => {
         findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_B }),
         update: jest.fn(async (args: unknown) => args),
       },
+      containerStatusHistory: { create: jest.fn().mockResolvedValue(undefined) },
       tree: { findUnique: jest.fn() },
       greenSpace: { findUnique: jest.fn() },
       greenPoint: { findUnique: jest.fn() },
       crew: {
         count: jest.fn().mockResolvedValue(1),
-        findUnique: jest.fn().mockResolvedValue({ id: CREW_ID, active: true, name: 'Norte' }),
+        // Sin zona ni especialidad cargadas: no hay avisos de encaje (#455).
+        findUnique: jest.fn().mockResolvedValue({
+          id: CREW_ID,
+          active: true,
+          name: 'Norte',
+          specialty: null,
+          homeZoneId: null,
+          zoneAssignments: [],
+        }),
       },
       vehicle: {
         findUnique: jest.fn().mockResolvedValue({ id: VEHICLE_ID, active: true, plate: 'AA123BB' }),
@@ -147,8 +159,15 @@ describe('ServicesService', () => {
       outbox as never,
       {} as never,
       {} as never,
+      {} as never,
     );
-    service = new ServicesService(prisma as unknown as PrismaService, outbox, inspections);
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    service = new ServicesService(
+      prisma as unknown as PrismaService,
+      outbox,
+      inspections,
+      audit as never,
+    );
   });
 
   const baseDto = {
@@ -170,12 +189,15 @@ describe('ServicesService', () => {
         active: true,
       });
 
-      await service.create({
-        ...baseDto,
-        routeId: undefined,
-        targetType: ServiceTargetType.CONTAINER,
-        targetId: CONTAINER_ID,
-      });
+      await service.create(
+        {
+          ...baseDto,
+          routeId: undefined,
+          targetType: ServiceTargetType.CONTAINER,
+          targetId: CONTAINER_ID,
+        },
+        ACTOR,
+      );
 
       expect(prisma.service.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -185,7 +207,7 @@ describe('ServicesService', () => {
     });
 
     it('copia las zonas del recorrido como snapshot, con su sequence', async () => {
-      await service.create(baseDto);
+      await service.create(baseDto, ACTOR);
 
       const { data } = prisma.service.create.mock.calls[0][0];
       expect(data.zones).toEqual({
@@ -207,12 +229,15 @@ describe('ServicesService', () => {
         active: true,
       });
 
-      await service.create({
-        ...baseDto,
-        routeId: undefined,
-        targetType: ServiceTargetType.CONTAINER,
-        targetId: CONTAINER_ID,
-      });
+      await service.create(
+        {
+          ...baseDto,
+          routeId: undefined,
+          targetType: ServiceTargetType.CONTAINER,
+          targetId: CONTAINER_ID,
+        },
+        ACTOR,
+      );
 
       expect(prisma.container.findUnique).toHaveBeenCalledWith({
         where: { id: CONTAINER_ID },
@@ -223,7 +248,7 @@ describe('ServicesService', () => {
     });
 
     it('rechaza un ROUTE sin routeId', async () => {
-      await expect(service.create({ ...baseDto, routeId: undefined })).rejects.toThrow(
+      await expect(service.create({ ...baseDto, routeId: undefined }, ACTOR)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -236,7 +261,7 @@ describe('ServicesService', () => {
         stops: [],
       });
 
-      await expect(service.create(baseDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create(baseDto, ACTOR)).rejects.toThrow(BadRequestException);
     });
 
     it('rechaza un POINT sin objetivo ni zona', async () => {
@@ -248,20 +273,20 @@ describe('ServicesService', () => {
         active: true,
       });
 
-      await expect(service.create({ ...baseDto, routeId: undefined })).rejects.toThrow(
+      await expect(service.create({ ...baseDto, routeId: undefined }, ACTOR)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('exige ticketId cuando el origen es TICKET', async () => {
-      await expect(service.create({ ...baseDto, origin: ServiceOrigin.TICKET })).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.create({ ...baseDto, origin: ServiceOrigin.TICKET }, ACTOR),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('rechaza ticketId con cualquier otro origen', async () => {
       await expect(
-        service.create({ ...baseDto, origin: ServiceOrigin.PLANNED, ticketId: 'TCK-1' }),
+        service.create({ ...baseDto, origin: ServiceOrigin.PLANNED, ticketId: 'TCK-1' }, ACTOR),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -286,13 +311,15 @@ describe('ServicesService', () => {
         ['inspectionId', { inspectionId: INSPECTION_ID }],
         ['weatherAlertId', { weatherAlertId: 'ALERTA-1' }],
       ])('rechaza %s con un origen que no le corresponde', async (_campo, extra) => {
-        await expect(service.create({ ...baseDto, ...extra })).rejects.toThrow(BadRequestException);
+        await expect(service.create({ ...baseDto, ...extra }, ACTOR)).rejects.toThrow(
+          BadRequestException,
+        );
         expect(prisma.service.create).not.toHaveBeenCalled();
       });
 
       it('con origin = INSPECTION o WEATHER_ALERT el id no es obligatorio', async () => {
-        await service.create({ ...baseDto, origin: ServiceOrigin.WEATHER_ALERT });
-        await service.create({ ...baseDto, origin: ServiceOrigin.INSPECTION });
+        await service.create({ ...baseDto, origin: ServiceOrigin.WEATHER_ALERT }, ACTOR);
+        await service.create({ ...baseDto, origin: ServiceOrigin.INSPECTION }, ACTOR);
         expect(prisma.service.create).toHaveBeenCalledTimes(2);
         expect(prisma.environmentalInspection.updateMany).not.toHaveBeenCalled();
       });
@@ -302,11 +329,14 @@ describe('ServicesService', () => {
           serviceRow({ origin: ServiceOrigin.WEATHER_ALERT, weatherAlertId: 'ALERTA-1' }),
         );
 
-        const res = await service.create({
-          ...baseDto,
-          origin: ServiceOrigin.WEATHER_ALERT,
-          weatherAlertId: 'ALERTA-1',
-        });
+        const res = await service.create(
+          {
+            ...baseDto,
+            origin: ServiceOrigin.WEATHER_ALERT,
+            weatherAlertId: 'ALERTA-1',
+          },
+          ACTOR,
+        );
 
         expect(prisma.service.create.mock.calls[0][0].data.weatherAlertId).toBe('ALERTA-1');
         expect(res.weatherAlertId).toBe('ALERTA-1');
@@ -316,7 +346,7 @@ describe('ServicesService', () => {
       it('fija el vínculo en la inspección, en la misma transacción, y lo devuelve', async () => {
         pointType();
 
-        const res = await service.create(inspeccionDto);
+        const res = await service.create(inspeccionDto, ACTOR);
 
         expect(prisma.environmentalInspection.updateMany).toHaveBeenCalledWith({
           where: { id: INSPECTION_ID, serviceId: null, outcome: null },
@@ -330,7 +360,7 @@ describe('ServicesService', () => {
         pointType();
         prisma.environmentalInspection.findUnique.mockResolvedValue(null);
 
-        await expect(service.create(inspeccionDto)).rejects.toThrow(NotFoundException);
+        await expect(service.create(inspeccionDto, ACTOR)).rejects.toThrow(NotFoundException);
         expect(prisma.service.create).not.toHaveBeenCalled();
       });
 
@@ -341,7 +371,7 @@ describe('ServicesService', () => {
           outcome: null,
         });
 
-        await expect(service.create(inspeccionDto)).rejects.toThrow(ConflictException);
+        await expect(service.create(inspeccionDto, ACTOR)).rejects.toThrow(ConflictException);
         expect(prisma.service.create).not.toHaveBeenCalled();
       });
 
@@ -352,17 +382,20 @@ describe('ServicesService', () => {
           outcome: 'NO_VIOLATION',
         });
 
-        await expect(service.create(inspeccionDto)).rejects.toThrow(/ya fue cerrada/);
+        await expect(service.create(inspeccionDto, ACTOR)).rejects.toThrow(/ya fue cerrada/);
         expect(prisma.service.create).not.toHaveBeenCalled();
       });
 
       it('guarda un weatherAlertId o ticketId vacío como null', async () => {
-        await service.create({
-          ...baseDto,
-          origin: ServiceOrigin.WEATHER_ALERT,
-          weatherAlertId: '',
-        });
-        await service.create({ ...baseDto, origin: ServiceOrigin.PLANNED, ticketId: '' });
+        await service.create(
+          {
+            ...baseDto,
+            origin: ServiceOrigin.WEATHER_ALERT,
+            weatherAlertId: '',
+          },
+          ACTOR,
+        );
+        await service.create({ ...baseDto, origin: ServiceOrigin.PLANNED, ticketId: '' }, ACTOR);
 
         expect(prisma.service.create.mock.calls[0][0].data.weatherAlertId).toBeNull();
         expect(prisma.service.create.mock.calls[1][0].data.ticketId).toBeNull();
@@ -372,17 +405,20 @@ describe('ServicesService', () => {
         pointType();
         prisma.environmentalInspection.updateMany.mockResolvedValue({ count: 0 });
 
-        await expect(service.create(inspeccionDto)).rejects.toThrow(ConflictException);
+        await expect(service.create(inspeccionDto, ACTOR)).rejects.toThrow(ConflictException);
         expect(outbox.enqueue).not.toHaveBeenCalled();
       });
 
       it('400 si el tipo de servicio es ROUTE', async () => {
         await expect(
-          service.create({
-            ...baseDto,
-            origin: ServiceOrigin.INSPECTION,
-            inspectionId: INSPECTION_ID,
-          }),
+          service.create(
+            {
+              ...baseDto,
+              origin: ServiceOrigin.INSPECTION,
+              inspectionId: INSPECTION_ID,
+            },
+            ACTOR,
+          ),
         ).rejects.toThrow(BadRequestException);
         expect(prisma.service.create).not.toHaveBeenCalled();
       });
@@ -398,7 +434,7 @@ describe('ServicesService', () => {
 
     it('rechaza una ventana horaria invertida', async () => {
       await expect(
-        service.create({ ...baseDto, windowFrom: '14:00', windowTo: '08:00' }),
+        service.create({ ...baseDto, windowFrom: '14:00', windowTo: '08:00' }, ACTOR),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -411,13 +447,13 @@ describe('ServicesService', () => {
         active: false,
       });
 
-      await expect(service.create(baseDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create(baseDto, ACTOR)).rejects.toThrow(BadRequestException);
     });
 
     it('rechaza una cuadrilla dada de baja', async () => {
       prisma.crew.findUnique.mockResolvedValue({ id: CREW_ID, active: false, name: 'Norte' });
 
-      await expect(service.create({ ...baseDto, crewId: CREW_ID })).rejects.toThrow(
+      await expect(service.create({ ...baseDto, crewId: CREW_ID }, ACTOR)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -448,17 +484,75 @@ describe('ServicesService', () => {
     });
 
     it('sin solapamiento crea el servicio', async () => {
-      await service.create(dtoConRecursos);
+      await service.create(dtoConRecursos, ACTOR);
 
       expect(prisma.service.findMany).toHaveBeenCalledTimes(1);
       expect(prisma.service.create).toHaveBeenCalled();
     });
 
+    describe('encaje de la cuadrilla (#455)', () => {
+      const crewDe = (over: Record<string, unknown>) => ({
+        id: CREW_ID,
+        active: true,
+        name: 'Norte',
+        specialty: null,
+        homeZoneId: null,
+        homeZone: null,
+        zoneAssignments: [],
+        ...over,
+      });
+
+      it('cuadrilla de una zona que el recorrido no toca: pide nota y no crea', async () => {
+        prisma.crew.findUnique.mockResolvedValue(
+          crewDe({ homeZoneId: 'zona-ajena', homeZone: { name: 'Palermo' } }),
+        );
+
+        await expect(service.create(dtoConRecursos, ACTOR)).rejects.toThrow(
+          /Palermo.*overrideNote/,
+        );
+        expect(prisma.service.create).not.toHaveBeenCalled();
+      });
+
+      it('con nota crea igual y la deja guardada', async () => {
+        prisma.crew.findUnique.mockResolvedValue(
+          crewDe({ homeZoneId: 'zona-ajena', homeZone: { name: 'Palermo' } }),
+        );
+
+        await service.create(
+          { ...dtoConRecursos, overrideNote: 'Refuerzo coordinado con la zona' },
+          { userId: 'planificador-1', roles: [] },
+        );
+
+        expect(prisma.service.create.mock.calls[0][0].data).toMatchObject({
+          assignmentOverrideNote: 'Refuerzo coordinado con la zona',
+          assignmentOverrideBy: 'planificador-1',
+        });
+      });
+
+      it('cuadrilla de la zona del recorrido y especialidad correcta: crea sin nota', async () => {
+        prisma.crew.findUnique.mockResolvedValue(
+          crewDe({ homeZoneId: ZONE_B, specialty: 'COLLECTION' }),
+        );
+
+        await service.create(dtoConRecursos, ACTOR);
+
+        expect(prisma.service.create).toHaveBeenCalled();
+      });
+
+      it('especialidad que no corresponde al tipo REC-DOM: pide nota', async () => {
+        prisma.crew.findUnique.mockResolvedValue(crewDe({ specialty: 'SWEEPING' }));
+
+        await expect(service.create(dtoConRecursos, ACTOR)).rejects.toThrow(ConflictException);
+      });
+    });
+
     it('rechaza con 409 si la cuadrilla se solapa, sin crear ni encolar', async () => {
       prisma.service.findMany.mockResolvedValue([otro()]);
 
-      await expect(service.create(dtoConRecursos)).rejects.toThrow(ConflictException);
-      await expect(service.create(dtoConRecursos)).rejects.toThrow(/se solapa con 1 servicio/);
+      await expect(service.create(dtoConRecursos, ACTOR)).rejects.toThrow(ConflictException);
+      await expect(service.create(dtoConRecursos, ACTOR)).rejects.toThrow(
+        /se solapa con 1 servicio/,
+      );
       expect(prisma.service.create).not.toHaveBeenCalled();
       expect(outbox.enqueue).not.toHaveBeenCalled();
     });
@@ -466,7 +560,7 @@ describe('ServicesService', () => {
     it('rechaza con 409 si el vehículo se solapa', async () => {
       prisma.service.findMany.mockResolvedValue([otro({ crewId: null, vehicleId: VEHICLE_ID })]);
 
-      await expect(service.create({ ...dtoConRecursos, crewId: undefined })).rejects.toThrow(
+      await expect(service.create({ ...dtoConRecursos, crewId: undefined }, ACTOR)).rejects.toThrow(
         ConflictException,
       );
       expect(prisma.service.create).not.toHaveBeenCalled();
@@ -477,13 +571,13 @@ describe('ServicesService', () => {
         otro({ windowFrom: at('12:00'), windowTo: at('14:00') }),
       ]);
 
-      await service.create(dtoConRecursos);
+      await service.create(dtoConRecursos, ACTOR);
 
       expect(prisma.service.create).toHaveBeenCalled();
     });
 
     it('solo consulta servicios que ocupan recursos (no cancelados ni completados)', async () => {
-      await service.create(dtoConRecursos);
+      await service.create(dtoConRecursos, ACTOR);
 
       const { where } = prisma.service.findMany.mock.calls[0][0];
       expect([...where.status.in].sort()).toEqual(
@@ -502,7 +596,7 @@ describe('ServicesService', () => {
     ])('una franja contigua %s no es solapamiento', async (_n, from, to) => {
       prisma.service.findMany.mockResolvedValue([otro({ windowFrom: at(from), windowTo: at(to) })]);
 
-      await service.create(dtoConRecursos);
+      await service.create(dtoConRecursos, ACTOR);
 
       expect(prisma.service.create).toHaveBeenCalled();
     });
@@ -511,7 +605,7 @@ describe('ServicesService', () => {
       prisma.service.findMany.mockResolvedValue([otro()]);
 
       await expect(
-        service.create({ ...dtoConRecursos, windowFrom: undefined, windowTo: undefined }),
+        service.create({ ...dtoConRecursos, windowFrom: undefined, windowTo: undefined }, ACTOR),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -521,11 +615,11 @@ describe('ServicesService', () => {
     ])('un servicio existente sin %s se asume todo el día', async (_n, over) => {
       prisma.service.findMany.mockResolvedValue([otro(over)]);
 
-      await expect(service.create(dtoConRecursos)).rejects.toThrow(ConflictException);
+      await expect(service.create(dtoConRecursos, ACTOR)).rejects.toThrow(ConflictException);
     });
 
     it('filtra por la fecha del dto y al crear no excluye ningún id', async () => {
-      await service.create(dtoConRecursos);
+      await service.create(dtoConRecursos, ACTOR);
 
       const { where } = prisma.service.findMany.mock.calls[0][0];
       expect(where.scheduledDate).toEqual(new Date('2026-09-30T00:00:00.000Z'));
@@ -533,7 +627,7 @@ describe('ServicesService', () => {
     });
 
     it('assignCrew sí excluye el propio servicio', async () => {
-      await service.assignCrew(SERVICE_ID, { crewId: CREW_ID });
+      await service.assignCrew(SERVICE_ID, { crewId: CREW_ID }, ACTOR);
 
       const { where } = prisma.service.findMany.mock.calls[0][0];
       expect(where.id).toEqual({ not: SERVICE_ID });
@@ -544,7 +638,7 @@ describe('ServicesService', () => {
 
       await service.create(
         { ...dtoConRecursos, overrideNote: 'Lo coordiné con el jefe de cuadrilla' },
-        'user-1',
+        { userId: 'user-1', roles: [] },
       );
 
       const { data } = prisma.service.create.mock.calls[0][0];
@@ -554,14 +648,14 @@ describe('ServicesService', () => {
     });
 
     it('overrideNote sin solapamiento no deja rastro', async () => {
-      await service.create({ ...dtoConRecursos, overrideNote: 'por las dudas, nota' });
+      await service.create({ ...dtoConRecursos, overrideNote: 'por las dudas, nota' }, ACTOR);
 
       const { data } = prisma.service.create.mock.calls[0][0];
       expect(data.assignmentOverrideNote).toBeUndefined();
     });
 
     it('sin crewId ni vehicleId no consulta conflictos', async () => {
-      await service.create(baseDto);
+      await service.create(baseDto, ACTOR);
 
       expect(prisma.service.findMany).not.toHaveBeenCalled();
     });
@@ -573,7 +667,7 @@ describe('ServicesService', () => {
     it('no deja iniciar sin cuadrilla asignada: nadie es de su cuadrilla (403 NOT_ASSIGNED)', async () => {
       prisma.service.findUnique.mockResolvedValue(serviceRow({ crewId: null }));
 
-      const error = await service.start(SERVICE_ID, USER_ID).catch((e) => e);
+      const error = await service.start(SERVICE_ID, ACTOR).catch((e) => e);
 
       expect(error).toBeInstanceOf(ForbiddenException);
       expect(error.getResponse()).toMatchObject({ code: 'NOT_ASSIGNED' });
@@ -587,13 +681,13 @@ describe('ServicesService', () => {
         requiresVehicle: true,
       });
 
-      await expect(service.start(SERVICE_ID, USER_ID)).rejects.toThrow(ConflictException);
+      await expect(service.start(SERVICE_ID, ACTOR)).rejects.toThrow(ConflictException);
     });
 
     it('inicia cuando hay cuadrilla y el tipo no exige vehiculo', async () => {
       prisma.service.findUnique.mockResolvedValue(serviceRow({ crewId: CREW_ID }));
 
-      await service.start(SERVICE_ID, USER_ID);
+      await service.start(SERVICE_ID, ACTOR);
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -605,7 +699,7 @@ describe('ServicesService', () => {
     it('rechaza una transicion invalida nombrando las validas', async () => {
       prisma.service.findUnique.mockResolvedValue(serviceRow({ status: ServiceStatus.COMPLETED }));
 
-      await expect(service.cancel(SERVICE_ID, 'x')).rejects.toThrow(/es un estado final/);
+      await expect(service.cancel(SERVICE_ID, 'x', ACTOR)).rejects.toThrow(/es un estado final/);
     });
 
     it('suspender guarda el motivo', async () => {
@@ -613,7 +707,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.IN_PROGRESS }),
       );
 
-      await service.suspend(SERVICE_ID, USER_ID, 'Rotura del camión');
+      await service.suspend(SERVICE_ID, ACTOR, 'Rotura del camión');
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -631,7 +725,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.IN_PROGRESS }),
       );
 
-      await service.suspend(SERVICE_ID, USER_ID, 'Rotura', '   ');
+      await service.suspend(SERVICE_ID, ACTOR, 'Rotura', '   ');
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ statusNote: null }) }),
@@ -643,8 +737,8 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.SUSPENDED, statusNote: 'x' }),
       );
 
-      await service.resume(SERVICE_ID, USER_ID);
-      await service.cancel(SERVICE_ID, 'motivo');
+      await service.resume(SERVICE_ID, ACTOR);
+      await service.cancel(SERVICE_ID, 'motivo', ACTOR);
 
       for (const [arg] of prisma.service.update.mock.calls) {
         expect(arg.data.statusNote).toBeNull();
@@ -657,7 +751,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.IN_PROGRESS }),
       );
 
-      await service.suspend(SERVICE_ID, USER_ID, 'Rotura', 'Sin frenos');
+      await service.suspend(SERVICE_ID, ACTOR, 'Rotura', 'Sin frenos');
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -675,14 +769,14 @@ describe('ServicesService', () => {
     ])('reanudar desde %s da 409 y no escribe (no saltea el chequeo de start)', async (status) => {
       prisma.service.findUnique.mockResolvedValue(serviceRow({ status }));
 
-      await expect(service.resume(SERVICE_ID, USER_ID)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.resume(SERVICE_ID, ACTOR)).rejects.toBeInstanceOf(ConflictException);
       expect(prisma.service.update).not.toHaveBeenCalled();
     });
 
     it('reanudar escribe condicionado al estado leído', async () => {
       prisma.service.findUnique.mockResolvedValue(serviceRow({ status: ServiceStatus.SUSPENDED }));
 
-      await service.resume(SERVICE_ID, USER_ID);
+      await service.resume(SERVICE_ID, ACTOR);
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: SERVICE_ID, status: ServiceStatus.SUSPENDED } }),
@@ -695,7 +789,7 @@ describe('ServicesService', () => {
         new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5.22.0' }),
       );
 
-      await expect(service.resume(SERVICE_ID, USER_ID)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.resume(SERVICE_ID, ACTOR)).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('reanudar limpia el motivo de la suspension', async () => {
@@ -703,7 +797,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.SUSPENDED, statusReason: 'Rotura' }),
       );
 
-      await service.resume(SERVICE_ID, USER_ID);
+      await service.resume(SERVICE_ID, ACTOR);
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -720,7 +814,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.RESCHEDULED }),
       );
 
-      await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' });
+      await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' }, ACTOR);
 
       const { data } = prisma.service.update.mock.calls[0][0];
       expect(data.status).toBe(ServiceStatus.SCHEDULED);
@@ -733,7 +827,7 @@ describe('ServicesService', () => {
       );
 
       await expect(
-        service.confirmReschedule(SERVICE_ID, { scheduledDate: '2020-01-01' }),
+        service.confirmReschedule(SERVICE_ID, { scheduledDate: '2020-01-01' }, ACTOR),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.service.update).not.toHaveBeenCalled();
     });
@@ -744,7 +838,7 @@ describe('ServicesService', () => {
       );
       const hoy = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10);
 
-      await service.confirmReschedule(SERVICE_ID, { scheduledDate: hoy });
+      await service.confirmReschedule(SERVICE_ID, { scheduledDate: hoy }, ACTOR);
 
       expect(prisma.service.update).toHaveBeenCalled();
     });
@@ -761,7 +855,7 @@ describe('ServicesService', () => {
         serviceRow({ status: ServiceStatus.RESCHEDULED }),
       );
 
-      await service.cancel(SERVICE_ID, 'M7 rechazó el corte: hay obra por dos meses');
+      await service.cancel(SERVICE_ID, 'M7 rechazó el corte: hay obra por dos meses', ACTOR);
 
       const { data } = prisma.service.update.mock.calls[0][0];
       expect(data.status).toBe(ServiceStatus.CANCELLED);
@@ -778,7 +872,7 @@ describe('ServicesService', () => {
       async (desde) => {
         prisma.service.findUnique.mockResolvedValue(serviceRow({ status: desde }));
 
-        await expect(service.cancel(SERVICE_ID, 'motivo')).resolves.toBeDefined();
+        await expect(service.cancel(SERVICE_ID, 'motivo', ACTOR)).resolves.toBeDefined();
       },
     );
 
@@ -790,7 +884,9 @@ describe('ServicesService', () => {
     ])('no se puede cancelar desde %s', async (desde) => {
       prisma.service.findUnique.mockResolvedValue(serviceRow({ status: desde }));
 
-      await expect(service.cancel(SERVICE_ID, 'motivo')).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.cancel(SERVICE_ID, 'motivo', ACTOR)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
     });
   });
 
@@ -808,7 +904,7 @@ describe('ServicesService', () => {
         }),
       );
 
-      await service.complete(SERVICE_ID, {}, USER_ID);
+      await service.complete(SERVICE_ID, {}, ACTOR);
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -828,7 +924,7 @@ describe('ServicesService', () => {
         }),
       );
 
-      await service.complete(SERVICE_ID, {}, USER_ID);
+      await service.complete(SERVICE_ID, {}, ACTOR);
 
       expect(prisma.service.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -845,7 +941,7 @@ describe('ServicesService', () => {
         }),
       );
 
-      await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(ConflictException);
+      await expect(service.complete(SERVICE_ID, {}, ACTOR)).rejects.toThrow(ConflictException);
       expect(prisma.service.update).not.toHaveBeenCalled();
     });
 
@@ -872,7 +968,7 @@ describe('ServicesService', () => {
           prisma.service.findUnique.mockResolvedValue(closable());
           prisma.container.findUnique.mockResolvedValue(containerIn(status));
 
-          await service.complete(SERVICE_ID, {}, USER_ID);
+          await service.complete(SERVICE_ID, {}, ACTOR);
 
           expect(prisma.container.update).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -890,7 +986,7 @@ describe('ServicesService', () => {
         await service.complete(
           SERVICE_ID,
           { containerLocation: { address: 'Av. Nueva 100' } },
-          USER_ID,
+          ACTOR,
         );
 
         expect(prisma.container.update).toHaveBeenCalledWith(
@@ -907,7 +1003,7 @@ describe('ServicesService', () => {
           new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5.22.0' }),
         );
 
-        await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(ConflictException);
+        await expect(service.complete(SERVICE_ID, {}, ACTOR)).rejects.toThrow(ConflictException);
         expect(outbox.enqueueMany).not.toHaveBeenCalled();
       });
 
@@ -915,7 +1011,7 @@ describe('ServicesService', () => {
         prisma.service.findUnique.mockResolvedValue(closable());
         prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
 
-        await service.complete(SERVICE_ID, {}, USER_ID);
+        await service.complete(SERVICE_ID, {}, ACTOR);
 
         expect(prisma.service.update).toHaveBeenCalledWith(
           expect.objectContaining({ where: { id: SERVICE_ID, status: ServiceStatus.IN_PROGRESS } }),
@@ -929,9 +1025,75 @@ describe('ServicesService', () => {
           new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5.22.0' }),
         );
 
-        await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(ConflictException);
+        await expect(service.complete(SERVICE_ID, {}, ACTOR)).rejects.toThrow(ConflictException);
         expect(prisma.container.update).not.toHaveBeenCalled();
         expect(outbox.enqueueMany).not.toHaveBeenCalled();
+      });
+
+      describe('historial de estados del contenedor (#475)', () => {
+        it.each([
+          [ContainerStatus.OVERFLOWED, {}],
+          [ContainerStatus.UNDER_REPAIR, {}],
+          [ContainerStatus.RELOCATING, { containerLocation: { address: 'Av. Nueva 100' } }],
+        ])('cerrar desde %s deja una fila hacia ACTIVE', async (origen, dto) => {
+          prisma.service.findUnique.mockResolvedValue(closable());
+          prisma.container.findUnique.mockResolvedValue(containerIn(origen));
+
+          await service.complete(SERVICE_ID, dto, ACTOR);
+
+          expect(prisma.containerStatusHistory.create).toHaveBeenCalledTimes(1);
+          expect(prisma.containerStatusHistory.create).toHaveBeenCalledWith({
+            data: {
+              containerId: CONTAINER_ID,
+              fromStatus: origen,
+              toStatus: ContainerStatus.ACTIVE,
+            },
+          });
+        });
+
+        it('si el contenedor no transiciona (ACTIVE) no deja fila', async () => {
+          prisma.service.findUnique.mockResolvedValue(closable());
+          prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.ACTIVE));
+
+          await service.complete(SERVICE_ID, {}, ACTOR);
+
+          expect(prisma.containerStatusHistory.create).not.toHaveBeenCalled();
+        });
+
+        it('un cierre parcial no transiciona el contenedor ni deja fila', async () => {
+          prisma.service.findUnique.mockResolvedValue({
+            ...closable(),
+            zoneResults: [{ id: 'r1', zoneId: ZONE_A, status: ZoneResultStatus.NOT_SERVICED }],
+          });
+          prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
+
+          await service.complete(SERVICE_ID, {}, ACTOR);
+
+          expect(prisma.containerStatusHistory.create).not.toHaveBeenCalled();
+        });
+
+        it('un conflicto de concurrencia en el contenedor (409) no deja fila', async () => {
+          prisma.service.findUnique.mockResolvedValue(closable());
+          prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
+          prisma.container.update.mockRejectedValue(
+            new Prisma.PrismaClientKnownRequestError('x', {
+              code: 'P2025',
+              clientVersion: '5.22.0',
+            }),
+          );
+
+          await expect(service.complete(SERVICE_ID, {}, ACTOR)).rejects.toThrow(ConflictException);
+          expect(prisma.containerStatusHistory.create).not.toHaveBeenCalled();
+        });
+
+        it('si falla la fila del historial el cierre entero falla', async () => {
+          prisma.service.findUnique.mockResolvedValue(closable());
+          prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
+          prisma.containerStatusHistory.create.mockRejectedValue(new Error('db caída'));
+
+          await expect(service.complete(SERVICE_ID, {}, ACTOR)).rejects.toThrow('db caída');
+          expect(outbox.enqueueMany).not.toHaveBeenCalled();
+        });
       });
 
       it('no traduce a 409 los errores que no son P2025', async () => {
@@ -939,7 +1101,7 @@ describe('ServicesService', () => {
         prisma.container.findUnique.mockResolvedValue(containerIn(ContainerStatus.OVERFLOWED));
         prisma.container.update.mockRejectedValue(new Error('db caída'));
 
-        await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow('db caída');
+        await expect(service.complete(SERVICE_ID, {}, ACTOR)).rejects.toThrow('db caída');
       });
     });
   });
@@ -1135,7 +1297,7 @@ describe('ServicesService', () => {
 
     /** M7 solo consume streetClosureRequested: el alta no emite urbanServiceScheduled (#345). */
     it('el alta solo encola el aviso a M2, nunca urbanServiceScheduled', async () => {
-      await service.create(ticketDto);
+      await service.create(ticketDto, ACTOR);
 
       expect(outbox.enqueue).not.toHaveBeenCalled();
       const encolados = outbox.enqueueMany.mock.calls.flatMap(([, es]: [unknown, unknown[]]) => es);
@@ -1147,7 +1309,7 @@ describe('ServicesService', () => {
     it('un servicio sin ticketId no publica nada hacia M2', async () => {
       prisma.service.create.mockResolvedValue(serviceRow());
 
-      await service.create(baseDto);
+      await service.create(baseDto, ACTOR);
 
       expect(hacia()).toEqual([]);
       expect(prisma.ticketM2State.findUnique).not.toHaveBeenCalled();
@@ -1158,7 +1320,7 @@ describe('ServicesService', () => {
       async (estado) => {
         conTicketEn(estado);
 
-        await service.create(ticketDto, 'user-1');
+        await service.create(ticketDto, { userId: 'user-1', roles: [] });
 
         const [p] = hacia();
         expect(hacia()).toHaveLength(1);
@@ -1174,7 +1336,7 @@ describe('ServicesService', () => {
     it('agendar con el ticket IN_PROGRESS manda PROGRESS', async () => {
       conTicketEn('IN_PROGRESS');
 
-      await service.create(ticketDto);
+      await service.create(ticketDto, ACTOR);
 
       expect(hacia()).toEqual([expect.objectContaining({ updateType: 'PROGRESS' })]);
     });
@@ -1184,7 +1346,7 @@ describe('ServicesService', () => {
       async (estado) => {
         conTicketEn(estado);
 
-        await service.create(ticketDto);
+        await service.create(ticketDto, ACTOR);
 
         expect(hacia()).toEqual([]);
       },
@@ -1201,7 +1363,7 @@ describe('ServicesService', () => {
         }),
       );
 
-      await service.create(ticketDto);
+      await service.create(ticketDto, ACTOR);
 
       const texto = JSON.stringify(hacia());
       expect(texto).not.toContain(CREW_ID);
@@ -1216,7 +1378,7 @@ describe('ServicesService', () => {
       async (estado) => {
         conTicketEn(estado);
 
-        await service.create(ticketDto, '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f');
+        await service.create(ticketDto, ACTOR);
 
         expect(erroresM2UpdateTicketStatus(hacia()[0])).toEqual([]);
       },
@@ -1227,10 +1389,74 @@ describe('ServicesService', () => {
       const tx = { ...prisma, ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) } };
       prisma.$transaction.mockImplementationOnce((fn: (t: unknown) => unknown) => fn(tx));
 
-      await service.create(ticketDto);
+      await service.create(ticketDto, ACTOR);
 
       expect(tx.ticketM2State.findUnique).toHaveBeenCalled();
       expect(prisma.ticketM2State.findUnique).not.toHaveBeenCalled();
+    });
+
+    // #485: updatedBy.id es el actorId UUID de M1; el sub (userId, numérico) no viaja nunca.
+    describe('updatedBy.id del aviso a M2', () => {
+      const ACTOR_UUID = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
+      const conUuid = { userId: USER_ID, actorId: ACTOR_UUID, roles: [] };
+      const sinUuid = { userId: USER_ID, roles: [] };
+      const ticketServicio = (over: Record<string, unknown> = {}) =>
+        serviceRow({
+          ticketId: TICKET_ID,
+          crewId: CREW_ID,
+          origin: ServiceOrigin.TICKET,
+          scheduledDate: new Date('2026-10-21T00:00:00.000Z'),
+          ...over,
+        });
+      const accion = (
+        nombre: string,
+        actor: { userId: string; actorId?: string; roles: never[] },
+      ) => {
+        switch (nombre) {
+          case 'create':
+            return service.create(ticketDto, actor);
+          case 'start':
+            prisma.service.findUnique.mockResolvedValue(ticketServicio());
+            return service.start(SERVICE_ID, actor);
+          case 'cancel':
+            prisma.service.findUnique.mockResolvedValue(
+              ticketServicio({ status: ServiceStatus.SCHEDULED }),
+            );
+            return service.cancel(SERVICE_ID, 'Lluvia', actor);
+          default:
+            prisma.service.findUnique.mockResolvedValue(
+              ticketServicio({ status: ServiceStatus.RESCHEDULED }),
+            );
+            return service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' }, actor);
+        }
+      };
+
+      it.each(['create', 'start', 'cancel', 'confirmReschedule'])(
+        '%s manda el actorId como updatedBy.id, no el sub',
+        async (nombre) => {
+          conTicketEn('ROUTED');
+
+          await accion(nombre, conUuid);
+
+          expect(hacia()).toHaveLength(1);
+          expect(hacia()[0]).toMatchObject({
+            updatedBy: { type: 'EXTERNAL_USER', id: ACTOR_UUID },
+          });
+          expect(JSON.stringify(hacia())).not.toContain(USER_ID);
+        },
+      );
+
+      it.each(['create', 'start', 'cancel', 'confirmReschedule'])(
+        '%s sin actorId en el token manda updatedBy.id null',
+        async (nombre) => {
+          conTicketEn('ROUTED');
+
+          await accion(nombre, sinUuid);
+
+          expect(hacia()).toHaveLength(1);
+          expect(hacia()[0]).toMatchObject({ updatedBy: { id: null } });
+        },
+      );
     });
 
     describe('reprogramar', () => {
@@ -1249,7 +1475,7 @@ describe('ServicesService', () => {
         );
         conTicketEn('IN_PROGRESS');
 
-        await service.reschedule(SERVICE_ID, 'lluvia');
+        await service.reschedule(SERVICE_ID, 'lluvia', ACTOR);
 
         expect(hacia()).toEqual([]);
       });
@@ -1261,7 +1487,7 @@ describe('ServicesService', () => {
         await service.confirmReschedule(
           SERVICE_ID,
           { scheduledDate: '2099-09-22', windowFrom: '09:00', windowTo: '11:00' },
-          'user-1',
+          { userId: 'user-1', roles: [] },
         );
 
         expect(hacia()).toEqual([
@@ -1277,7 +1503,7 @@ describe('ServicesService', () => {
         prisma.service.findUnique.mockResolvedValue(reprogramado());
         conTicketEn('ROUTED');
 
-        await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' });
+        await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' }, ACTOR);
 
         expect(hacia()[0]).toMatchObject({
           updateType: 'STARTED',
@@ -1289,7 +1515,7 @@ describe('ServicesService', () => {
         prisma.service.findUnique.mockResolvedValue(reprogramado());
         conTicketEn('PENDING_INFORMATION');
 
-        await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' });
+        await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' }, ACTOR);
 
         expect(hacia()).toEqual([]);
         expect(prisma.service.update).toHaveBeenCalled();
@@ -1298,7 +1524,7 @@ describe('ServicesService', () => {
       it('sin ticketId no publica', async () => {
         prisma.service.findUnique.mockResolvedValue(reprogramado({ ticketId: null }));
 
-        await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' });
+        await service.confirmReschedule(SERVICE_ID, { scheduledDate: '2099-09-22' }, ACTOR);
 
         expect(hacia()).toEqual([]);
       });
@@ -1312,7 +1538,7 @@ describe('ServicesService', () => {
         prisma.service.findUnique.mockResolvedValue(iniciable());
         conTicketEn('IN_PROGRESS');
 
-        await service.start(SERVICE_ID, USER_ID);
+        await service.start(SERVICE_ID, ACTOR);
 
         expect(hacia()).toEqual([
           expect.objectContaining({
@@ -1326,7 +1552,7 @@ describe('ServicesService', () => {
         prisma.service.findUnique.mockResolvedValue(iniciable());
         conTicketEn(e);
 
-        await service.start(SERVICE_ID, USER_ID);
+        await service.start(SERVICE_ID, ACTOR);
 
         expect(hacia()).toEqual([expect.objectContaining({ updateType: 'STARTED' })]);
       });
@@ -1338,7 +1564,7 @@ describe('ServicesService', () => {
           prisma.service.findUnique.mockResolvedValue(iniciable());
           conTicketEn(e);
 
-          await service.start(SERVICE_ID, USER_ID);
+          await service.start(SERVICE_ID, ACTOR);
 
           expect(prisma.service.update).toHaveBeenCalled();
           expect(hacia()).toEqual([]);
@@ -1352,6 +1578,47 @@ describe('ServicesService', () => {
   it('no deja editar un servicio ya iniciado', async () => {
     prisma.service.findUnique.mockResolvedValue(serviceRow({ status: ServiceStatus.IN_PROGRESS }));
 
-    await expect(service.update(SERVICE_ID, { notes: 'x' })).rejects.toThrow(ConflictException);
+    await expect(service.update(SERVICE_ID, { notes: 'x' }, ACTOR)).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
+  describe('auditoría (#460)', () => {
+    it('programar audita el alta con el actor del token', async () => {
+      await service.create(baseDto, ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(prisma, {
+        entityType: 'SERVICE',
+        entityId: expect.any(String),
+        action: 'CREATE',
+        toStatus: ServiceStatus.SCHEDULED,
+        actor: ACTOR,
+      });
+    });
+
+    it('cada transición audita estados, actor y el motivo que ya se pide', async () => {
+      prisma.service.findUnique.mockResolvedValue(serviceRow({ status: ServiceStatus.SCHEDULED }));
+
+      await service.cancel(SERVICE_ID, 'Lluvia', ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(prisma, {
+        entityType: 'SERVICE',
+        entityId: SERVICE_ID,
+        action: 'CANCEL',
+        fromStatus: ServiceStatus.SCHEDULED,
+        toStatus: ServiceStatus.CANCELLED,
+        actor: ACTOR,
+        note: 'Lluvia',
+      });
+    });
+
+    it('una transición inválida no deja constancia', async () => {
+      prisma.service.findUnique.mockResolvedValue(serviceRow({ status: ServiceStatus.COMPLETED }));
+
+      await expect(service.cancel(SERVICE_ID, 'x', ACTOR)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(audit.record).not.toHaveBeenCalled();
+    });
   });
 });

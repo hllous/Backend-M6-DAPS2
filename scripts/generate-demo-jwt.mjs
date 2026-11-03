@@ -1,16 +1,36 @@
-// Firma un access token con el contrato de M1 (HS256, clave en base64, iss, typ, rol).
+// Firma un access token con el contrato de M1 (HMAC, firmamos HS256; clave en base64, iss, typ, rol).
 // Uso: node scripts/generate-demo-jwt.mjs <JWT_SECRET en base64> [ROL] [SUB] [HASTA AAAA-MM-DD]
 // Para el token de demo del administrador inicial: ROL = RESPONSABLE_AREA y SUB = el
 // user_id de M1 cargado en M6_BOOTSTRAP_ADMIN_USER_IDS.
-import { createHmac } from "node:crypto";
+// Persona de la demo (docs/seed.md): en vez de ROL, el nombre de la persona y sin SUB:
+//   node scripts/generate-demo-jwt.mjs <JWT_SECRET> lider 2026-12-16   (HASTA pasa a ser el 4.º argumento)
+// Personas: admin, operaciones, ambiental, auditoria, lider, integrante, inspector, sinrol, ciudadano.
+import { createHash, createHmac } from "node:crypto";
 
 const secret = process.argv[2] ?? process.env.JWT_SECRET;
 if (!secret) {
   console.error("Uso: node scripts/generate-demo-jwt.mjs <JWT_SECRET base64> [ROL] [SUB numérico]");
   process.exit(1);
 }
-const rol = process.argv[3] ?? "ADMINISTRATIVO";
-const sub = process.argv[4] ?? "1";
+const PERSONAS = {
+  admin: ["RESPONSABLE_AREA", "10000"],
+  operaciones: ["ADMINISTRATIVO", "10002"],
+  ambiental: ["ADMINISTRATIVO", "10004"],
+  auditoria: ["AUDITOR", "10007"],
+  lider: ["ADMINISTRATIVO", "10009"],
+  integrante: ["ADMINISTRATIVO", "10010"],
+  inspector: ["ADMINISTRATIVO", "10011"],
+  sinrol: ["ADMINISTRATIVO", "900"],
+  ciudadano: ["CIUDADANO", "901"],
+};
+const persona = Object.hasOwn(PERSONAS, process.argv[3]) ? PERSONAS[process.argv[3]] : undefined;
+const rol = persona?.[0] ?? process.argv[3] ?? "ADMINISTRATIVO";
+// actorId determinístico por SUB (UUID v5-like), para que la demo mande updatedBy.id.
+const actorIdDe = (s) => {
+  const h = createHash("sha1").update(`m6-demo-actor:${s}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+};
+const sub = persona?.[1] ?? process.argv[4] ?? "1";
 if (!/^\d{1,19}$/.test(sub)) {
   console.error("El SUB tiene que ser un id numérico de M1 (solo dígitos)");
   process.exit(1);
@@ -18,7 +38,7 @@ if (!/^\d{1,19}$/.test(sub)) {
 
 // Como M1: 15 min, salvo que se pase una fecha límite (AAAA-MM-DD, fin de ese día UTC).
 const now = Math.floor(Date.now() / 1000);
-const hasta = process.argv[5];
+const hasta = process.argv[persona ? 4 : 5];
 const exp = hasta ? Math.floor(Date.parse(`${hasta}T23:59:59Z`) / 1000) : now + 900;
 if (!Number.isFinite(exp) || exp <= now) {
   console.error("La fecha límite tiene que ser AAAA-MM-DD y estar en el futuro");
@@ -32,6 +52,7 @@ const header = { alg: "HS256", typ: "JWT" };
 const payload = {
   iss: process.env.JWT_ISSUER ?? "modulo1-ciudadanos",
   sub,
+  actorId: actorIdDe(sub),
   sub_type: rol === "CIUDADANO" ? "CIUDADANO" : "EMPLEADO",
   rol,
   typ: "access",

@@ -61,3 +61,6 @@ Thumbs.db
 
 # Capturas y traces del MCP de Playwright: pueden contener cabeceras Authorization.
 .playwright-mcp/
+
+# Planes y specs de trabajo de las sesiones con IA (no se versionan).
+docs/superpowers/

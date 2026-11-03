@@ -11,6 +11,13 @@ export class CommuneRefDto {
   @ApiProperty({ description: 'Código de M9 de la comuna', example: 'comuna-14' })
   code: string;
 
+  @ApiProperty({
+    description: 'Número de la comuna (1 a 15): el orden de los listados',
+    example: 14,
+    type: 'integer',
+  })
+  number: number;
+
   @ApiProperty({ description: 'Nombre de la comuna', example: 'Comuna 14' })
   name: string;
 }

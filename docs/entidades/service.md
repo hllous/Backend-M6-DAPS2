@@ -17,7 +17,7 @@ Las podas y las inspecciones ambientales también son servicios: [`TreeIntervent
 
 | Entidad | Campos principales |
 |---|---|
-| `Service` | `serviceTypeId`, `mode`, `zoneIds[]`, `routeId` \| `targetRef`, `scheduledDate`, `timeWindow`, `crewId`, `vehicleId`, `status`, `statusReason`, `statusNote`, `origin`, `ticketId`, `weatherAlertId`, `attachments[]`, `notes`. `crewId` es opcional hasta que se asigna la cuadrilla. `assignmentOverrideNote` / `By` / `At` solo se llenan si la asignación o la programación se hizo **sobre un solapamiento** |
+| `Service` | `serviceTypeId`, `mode`, `zoneIds[]`, `routeId` \| `targetRef`, `scheduledDate`, `timeWindow`, `crewId`, `vehicleId`, `status`, `statusReason`, `statusNote`, `origin`, `ticketId`, `weatherAlertId`, `attachments[]`, `notes`. `crewId` es opcional hasta que se asigna la cuadrilla. `assignmentOverrideNote` / `By` / `At` solo se llenan si la asignación o la programación se hizo **sobre un solapamiento o un aviso de encaje** (la cuadrilla no trabaja en la zona del servicio o su especialidad no corresponde al tipo) |
 | `ServiceDelayNotice` | Hijo de un `Service`, uno por aviso de demora. `delayType`, `delayMinutes`, `reason`, `newEstimatedEnd`, `serviceStatus`, `reportedBy`, `detectedAt`, `supersededById`. El vigente es el que no fue reemplazado |
 | `ZoneResult` | Hijo de un `Service` con `mode = ROUTE`, uno por zona. `zoneId`, `status`, `reason`, `proposedDate`, `notes`, `attachments[]`, `recordedAt` |
 | `CollectionRecord` | `wasteType`, `volumeM3`, `weightKg`, `disposalSiteId` |
@@ -63,7 +63,7 @@ El tipo tiene que coincidir con el momento: `START` es empezar tarde y solo apli
 
 Los avisos se acumulan. Uno nuevo **reemplaza** al vigente (`supersededById`) en vez de pisarlo, y el reemplazado queda en el historial: un aviso emitido no se corrige, se emite otro — el mismo criterio que el acta.
 
-## Asignar sobre un solapamiento
+## Asignar sobre un solapamiento o un aviso de encaje
 
 El mismo criterio rige al programar con `crewId`/`vehicleId` en `POST /services` (acepta `overrideNote`) y al cambiar el vehículo o la ventana con `PATCH /services/:id`, que evalúa los valores vigentes mezclados con los nuevos y no consulta nada si solo cambian las notas.
 
@@ -71,7 +71,9 @@ Que la cuadrilla esté tomada ese día en una franja que se pisa **avisa, no blo
 
 En `PATCH /services/:id`: un PATCH de solo `vehicleId` **no** revisa la cuadrilla vigente (a propósito, para que un solapamiento previo de la cuadrilla no trabe una corrección de vehículo); un PATCH que cambia la ventana revisa la cuadrilla y el vehículo vigentes; `vehicleId: null` quita el vehículo sin chequeo. El chequeo va antes de escribir y sin lock: dos operaciones concurrentes podrían pasar las dos.
 
-La nota se guarda **solo si hubo solapamiento**. Guardarla siempre dejaría rastro de un override que nunca ocurrió.
+La nota se guarda **solo si hubo solapamiento o aviso de encaje** (#455). Guardarla siempre dejaría rastro de un override que nunca ocurrió.
+
+**Aviso de encaje (#455).** Además del solapamiento, asignar una cuadrilla avisa, con el mismo mecanismo (409 sin `overrideNote`, se asigna igual con ella), si su **zona efectiva en la fecha del servicio** no está entre las zonas del servicio, o si su `specialty` no corresponde al tipo de servicio (mapa `SERVICE_TYPE_SPECIALTY`). Una cuadrilla sin zona o sin especialidad cargada no genera aviso. `GET /services/:id/assignment-conflicts` los devuelve en `warnings`.
 
 `assignmentOverrideNote` / `By` / `At` son campos de auditoría: se guardan en la base pero **no se exponen** en `ServiceResponseDto` (por ahora).
 

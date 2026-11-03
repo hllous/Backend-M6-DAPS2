@@ -8,6 +8,8 @@ import { IsString, MaxLength } from 'class-validator';
 export const MAX_SEARCH_LENGTH = 100;
 export const MAX_EXTERNAL_ID_LENGTH = 100;
 export const MAX_REASON_LENGTH = 500;
+// Nombres de personas u organizaciones copiados de M1 (#454).
+export const MAX_PERSON_NAME_LENGTH = 120;
 // Notas libres: las columnas son Text, se alinea con `justification`.
 export const MAX_NOTES_LENGTH = 2000;
 // Listas de ids/enums que terminan en createMany: mas de esto no es un caso real.

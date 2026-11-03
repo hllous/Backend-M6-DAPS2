@@ -11,9 +11,9 @@
 |---|---|---|---|
 | **Backend** (NestJS) | Render (Web Service, free) | ✅ `/health` 200 y `/health/ready` 200 con `"database":"up"` el 08/10 12:09 UTC | `https://m6-backend-m64k.onrender.com` |
 | **PostgreSQL** | Supabase (Managed, free) | ✅ Available | `db.oscepollzibotvggabfv.supabase.co` (URI directa, puerto `5432`) |
-| **Frontend** (Next.js) | Vercel (free) | ✅ `/api/health` 200 el 04/10 | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` |
+| **Frontend** (Next.js) | Vercel (free) | ✅ `/api/health` 200 el 02/11 | `https://m6-ambiente-higiene.vercel.app` |
 
-El frontend publica su URL en el repo [`hllous/Frontend-M6-DAPS2`](https://github.com/hllous/Frontend-M6-DAPS2) (campo "website"). `https://m6-ambiente-frontend.vercel.app` también respondía el 04/10, pero la vigente es la de arriba.
+El frontend publica su URL en el repo [`hllous/Frontend-M6-DAPS2`](https://github.com/hllous/Frontend-M6-DAPS2) (campo "website"). La URL anterior, `frontend-m6-daps2-grupo4-modulo6.vercel.app`, responde `308` hacia la vigente (verificado el 02/11).
 
 El deploy está **enlazado a la rama `main`** de cada repo: el frontend (Vercel) siempre estuvo en `main` y el backend (Render) pasó de `develop` a `main` el 22/10. Lo que se mergea a `develop` **no** se despliega hasta el release `develop` → `test` → `main`. Al pushear a `main` se actualiza automáticamente — el backend vía GitHub Actions + Deploy Hook de Render, el frontend vía auto-deploy nativo de Vercel (~2-5 min).
 
@@ -23,8 +23,8 @@ El deploy está **enlazado a la rama `main`** de cada repo: el frontend (Vercel)
 
 | Recurso | URL |
 |---|---|
-| Frontend (landing) | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` |
-| Frontend health | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app/api/health` |
+| Frontend (landing) | `https://m6-ambiente-higiene.vercel.app` |
+| Frontend health | `https://m6-ambiente-higiene.vercel.app/api/health` |
 | Backend health | `https://m6-backend-m64k.onrender.com/health` |
 | Backend Swagger UI | `https://m6-backend-m64k.onrender.com/api/docs` |
 
@@ -38,7 +38,7 @@ curl https://m6-backend-m64k.onrender.com/health
 # → {"status":"ok","timestamp":"...","service":"m6-ambiente-backend"}
 
 # Frontend: debe devolver status ok
-curl https://frontend-m6-daps2-grupo4-modulo6.vercel.app/api/health
+curl https://m6-ambiente-higiene.vercel.app/api/health
 # → {"status":"ok","timestamp":"...","service":"m6-ambiente-frontend"}
 ```
 
@@ -95,6 +95,8 @@ No hay que hacer nada manual: el deploy sale con el release a `main`. Un push a 
 | `JWT_ISSUER` | `modulo1-ciudadanos` (`iss` exigido en el token) | No (default `modulo1-ciudadanos`) |
 | `M6_BOOTSTRAP_ADMIN_USER_IDS` | Ids de M1 (el `sub`, numéricos) de los `M6_ADMIN` iniciales, separados por coma (ej. `1,42`). Cada uno necesita además `RESPONSABLE_AREA` en M1. Al arrancar se loguea solo cuántos hay, no los ids | No, pero **sin ella nadie puede asignar roles** (ver [ADR-008](decisiones/adr-008-roles-m6-adaptados-desde-m1.md)) |
 | `CORS_ORIGINS` | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
+| `BFF_SHARED_KEY` | Secreto compartido con el BFF del frontend (≥ 32 caracteres, ej. `openssl rand -base64 32`). El mismo valor va en Vercel y se manda en el header `X-M6-BFF-Key`; ver [portal](api/endpoints.md#citizen-portal--vista-pública) | No, pero **sin ella todos los vecinos del BFF comparten un solo límite de tasa** |
+| `CORS_ORIGINS` | `https://m6-ambiente-higiene.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
 | `NODE_ENV` | `production` | ✅ Sí |
 | `SANCTION_DEADLINE_DAYS` | `30` | No (default 30 días para cierre de expediente ambiental sin resolución M4) |
 | `R2_ACCOUNT_ID` | Account ID de Cloudflare R2 | Para subida de adjuntos (`/evidence`). Sin esta variable, `POST /evidence` responde 503 |
@@ -117,6 +119,7 @@ No hay que hacer nada manual: el deploy sale con el release a `main`. Un push a 
 > - **Verificar:** `GET /api/v1/event-types/map` (con el token de módulo) debe mostrar a `ambiente` suscripto a los 8 y publicando los 6; confirmar además que `q.ambiente` existe (el 201 del POST no lo prueba).
 > - **A mano:** `npm run core:register` (lee `.env`; imprime lo creado y lo sobrante).
 > - **Simulacro, de solo lectura:** `npm run core:register -- --dry-run` pide el token de módulo (`POST /api/v1/auth/module-token`) y después hace solo `GET` (`/subscriptions`, `/publications`); no hace ningún `POST` al catálogo: imprime el plan en JSON (`suscripcionesCreadas`/`publicacionesCreadas` = lo que crearía el modo real, `...YaActivas`, `...Inactivas` = registradas pero inactivas, que el `POST` reactivaría, y `sobrantes`). No imprime token, secret ni configuración. Sale con código 0 si el Core respondió y distinto de 0 si no. Sirve para probar contra el Core real sin crear nada.
+> - **Dar de baja sobrantes (#414):** `npm run core:unregister -- --type zoneNotServiced` es un **simulacro** (solo `GET`, lista qué borraría); con `--apply` hace `DELETE /api/v1/subscriptions/{id}` con el token de módulo. `--type` se repite y es obligatorio: solo baja lo que se nombra, nunca "todos los sobrantes". Rechaza (sin tocar el Core) los tipos que M6 declara hoy como suscripción o publicación; un tipo que M6 no tiene suscripto se informa como `no-suscripto` y no es error; un error HTTP queda en el resultado (`estado: error`) y el script sale con código 1. El script cubre **solo SUSCRIPCIONES** (`GET`/`DELETE /subscriptions`) y filtra por `moduleName` exacto de M6: una entrada sin `moduleName` no se toca. Si hay varias del mismo tipo las baja todas, también las inactivas, e informa `cantidad`. Los argumentos son estrictos: un flag desconocido (`--dry-run`, `--aply`, `--apply=true`) falla con código 1 en vez de ignorarse. **Estado (27/10):** verificado contra el Core real que `GET /subscriptions` trae `id` y `moduleName`, y que `DELETE /subscriptions/{id}` y `DELETE /publications/{id}` funcionan. `zoneNotServiced` era una **publicación** de `ambiente`, así que este script no la cubría; los 15 registros sobrantes de `ambiente` (5 suscripciones y 10 publicaciones, de nombres de versiones anteriores del contrato) se dieron de baja ese día con un script temporal que no está en el repo. Quedó `core:register --dry-run` con `sobrantes: []`, 8 suscripciones y 6 publicaciones. `core:register` solo da de alta y nunca baja: si el contrato cambia otra vez y vuelven a sobrar registros, hay que repetir la baja (este script para suscripciones; para publicaciones, `DELETE /api/v1/publications/{id}`). `streetClousureEnded` (typo) no es nuestro: es una publicación de `transito` y no tenemos suscripción con ese nombre.
 > - **`maxAttempts` solo rige al crear:** cambiar `CORE_SUBSCRIPTION_MAX_ATTEMPTS` después no actualiza las suscripciones ya registradas.
 > - **Varias réplicas:** cada una sincroniza al arrancar y pueden pisarse; conviene `CORE_REGISTER_ON_BOOT=false` y correr `npm run core:register` como paso del deploy.
 > - **Formato de los `GET` (confirmado por M9 el 22/10):** array JSON sin paginar. `/subscriptions` trae las suscripciones del módulo; `/publications` trae las de **todos** los módulos, así que se filtra por `moduleName` y `active`. Ya corregido en el código ([#381](https://github.com/hllous/Backend-M6-DAPS2/issues/381)).
@@ -131,7 +134,7 @@ No hay que hacer nada manual: el deploy sale con el release a `main`. Un push a 
 > | `CORE_MODULE_ID` | `ambiente` (default) |
 > | `CORE_MODULE_SECRET` | **lo entrega M9 por privado** |
 >
-> El vhost `core` va en la **ruta** de la URL del broker y la clave va **percent-encoded** (`/ ? # @ : %`). La validación de env rechaza `amqp://` y el usuario `guest` con `NODE_ENV=production`. Readiness del Core: `https://core-uade-2026.duckdns.org/health/ready`. La **contraseña de RabbitMQ, el `CORE_MODULE_SECRET`, el acceso al dashboard y la ficha se piden a M9 por privado**: nunca van al repo, a capturas, a logs ni a variables públicas del frontend. Además, el puerto 5671 solo abre para la IP pública de salida de Render que M9 haya dado de alta; si Render la cambia, avisar antes de volver a probar.
+> El vhost `core` va en la **ruta** de la URL del broker y la clave va **percent-encoded** (`/ ? # @ : %`). La validación de env rechaza `amqp://` y el usuario `guest` con `NODE_ENV=production`. Readiness del Core: `https://core-uade-2026.duckdns.org/health/ready`. La **contraseña de RabbitMQ, el `CORE_MODULE_SECRET`, el acceso al dashboard y la ficha se piden a M9 por privado**: nunca van al repo, a capturas, a logs ni a variables públicas del frontend. Además, el puerto 5671 solo abre para las IP de salida dadas de alta en M9 (los rangos de Render están habilitados desde el 28/10); si Render las cambia, avisar antes de volver a probar.
 
 > **IP de salida de Render (para el alta del puerto 5671 en el Core):** `74.220.48.0/24` y `74.220.56.0/24` (rangos que muestra el panel de Render para el servicio). Son públicos, por eso van versionados. **Son compartidos por todos los servicios de Render de la región**: al habilitarlos, M9 abre el 5671 a cualquier servicio alojado ahí, y lo que protege la conexión es la autenticación del usuario `module_ambiente`, no el origen. Si Render cambia los rangos, hay que avisarle a M9 antes de volver a probar.
 >
@@ -176,7 +179,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 | Vercel | `M6_SESSION_SECRET` | Valor aleatorio propio | Sella la cookie de sesión del BFF | Lo genera DevOps | Si no existe | Sí |
 | Vercel | `M6_AUTH_MODE`, `M6_BACKEND_ORIGIN` | `backend-development` y `https://m6-backend-m64k.onrender.com` | Modo demo contra el backend real | – | Solo verificar | No |
 
-**Del lado de M9** (lo coordina el PO): que hayan dado de alta los rangos de salida de Render, `74.220.48.0/24` y `74.220.56.0/24`. Sin eso el puerto 5671 no abre.
+**Del lado de M9** (lo coordina el PO): los rangos de salida de Render, `74.220.48.0/24` y `74.220.56.0/24`, están habilitados desde el 28/10 (dato de M9; falta probar desde Render). Si Render cambia sus IPs, avisar.
 
 **Orden sugerido**
 
@@ -195,9 +198,12 @@ Carga las 15 comunas (`Commune`) y una `Zone` por barrio activo con su `ZoneNeig
 3. El reporte lista creadas, actualizadas, desactivadas y sin cambios, además de `conflictos` (zona existente con el `code` de un barrio pero con otros barrios: no se toca), `sinComuna` y las zonas/filas **legacy**. No imprime token ni secret.
 4. **Legacy.** Las zonas del seed viejo (`Z-PAL`…) y las filas de `zone_neighborhood` con ids que no están en el catálogo (`caba-…`) solo se **reportan**. `--clean-legacy` es **destructivo**: borra solo las filas cuyo id **no es un UUID** (`caba-…`, `barrio-…`) y no está en el catálogo (nunca zonas; un UUID ausente del catálogo se reporta pero no se borra), y no se combina con `--from-snapshot`, salvo las de zonas con servicios, recorridos, contenedores, árboles u otros datos asociados (marcadas `retenida`). Correr antes con `--dry-run --clean-legacy` y revisar `legacyRows`.
 5. **M9 manda.** El sync pisa `name`, `communeId` y `active` de las zonas de M9 y `name`/`active` de las comunas: una edición manual de esos campos se revierte y una zona o comuna desactivada a mano se reactiva si M9 la tiene activa.
-6. Un barrio con `activo:false` en M9 desactiva su zona (`active=false`); nunca se borra; si esa zona tiene datos asociados se cuenta aparte en `desactivadasConDatos`. No se crean zonas para barrios inactivos.
+6. **Comuna sin formato `comuna-N`.** Cada comuna activa de M9 necesita un `code` `comuna-N` para deducir `Commune.number` (ordena `GET /zones` y `GET /communes`). Si M9 activa una zona que no tiene ese formato, el sync **aborta** con error antes de escribir. Antes de desplegar la migración `commune_number`, verificar en la base con `SELECT code FROM commune`: si hay un `code` que no es `comuna-N`, la migración falla con un mensaje que lo lista.
+7. Un barrio con `activo:false` en M9 desactiva su zona (`active=false`); nunca se borra; si esa zona tiene datos asociados se cuenta aparte en `desactivadasConDatos`. No se crean zonas para barrios inactivos.
 
 ### Migrar las cuadrillas de usr-… a ids de M1 (#365)
+
+> **Nota (27/10):** en la base desplegada ya no hace falta. Los integrantes de cuadrilla y las asignaciones de rol son numéricos desde el seed nuevo (#422, aplicado el 27/10; verificado en solo lectura), y el mapeo ya no se pide a M1 (decisión del PO). El procedimiento queda como referencia para una base con ids `usr-…`.
 
 **Bloquea el despliegue de la pertenencia de Campo (#365/#394).** La regla compara el `sub` numérico del token de M1 con el líder y los integrantes de la cuadrilla; las filas sembradas con ids `usr-…` nunca coinciden, así que activar la regla sin migrar deja a esas cuadrillas sin poder ejecutar servicios. Correr el script **antes** de promover (el código nuevo y la migración no se pisan: el código viejo no mira estos ids).
 

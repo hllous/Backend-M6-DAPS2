@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ACTOR } from '../../common/audit/audit-test-actor';
+import { AuditService } from '../../common/audit/audit.service';
 import { RoutesService } from './routes.service';
 
 describe('RoutesService — secuencia de paradas', () => {
@@ -14,6 +16,7 @@ describe('RoutesService — secuencia de paradas', () => {
     routeStop: { deleteMany: jest.Mock; createMany: jest.Mock };
     $transaction: jest.Mock;
   };
+  let audit: { record: jest.Mock };
   let service: RoutesService;
 
   beforeEach(() => {
@@ -40,7 +43,11 @@ describe('RoutesService — secuencia de paradas', () => {
       },
       $transaction: jest.fn().mockResolvedValue([]),
     };
-    service = new RoutesService(prisma as unknown as PrismaService);
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    service = new RoutesService(
+      prisma as unknown as PrismaService,
+      audit as unknown as AuditService,
+    );
   });
 
   it('asigna sequence por el orden del array, 1-indexed', async () => {
@@ -119,6 +126,7 @@ describe('RoutesService — CRUD', () => {
   const ID = '33333333-3333-3333-3333-333333333333';
 
   let prisma: any;
+  let audit: { record: jest.Mock };
   let service: RoutesService;
 
   const recorrido = (over: Record<string, unknown> = {}) => ({
@@ -133,6 +141,7 @@ describe('RoutesService — CRUD', () => {
 
   beforeEach(() => {
     prisma = {
+      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
       route: {
         create: jest.fn().mockResolvedValue(recorrido()),
         findUnique: jest.fn().mockResolvedValue(recorrido({ stops: [] })),
@@ -141,11 +150,15 @@ describe('RoutesService — CRUD', () => {
         update: jest.fn().mockResolvedValue(recorrido()),
       },
     };
-    service = new RoutesService(prisma as unknown as PrismaService);
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    service = new RoutesService(
+      prisma as unknown as PrismaService,
+      audit as unknown as AuditService,
+    );
   });
 
   it('nace activo y sin paradas', async () => {
-    await service.create({ code: 'R-09', name: 'Nuevo' } as any);
+    await service.create({ code: 'R-09', name: 'Nuevo' } as any, ACTOR);
 
     expect(prisma.route.create.mock.calls[0][0].data).toEqual({
       code: 'R-09',
@@ -159,18 +172,20 @@ describe('RoutesService — CRUD', () => {
       new Prisma.PrismaClientKnownRequestError('dup', { code: 'P2002', clientVersion: '5.22.0' }),
     );
 
-    await expect(service.create({ code: 'R-03' } as any)).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.create({ code: 'R-03' } as any, ACTOR)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 
   it('un error ajeno a Prisma se propaga', async () => {
     prisma.route.create.mockRejectedValue(new Error('la base se cayó'));
 
-    await expect(service.create({} as any)).rejects.toThrow('la base se cayó');
+    await expect(service.create({} as any, ACTOR)).rejects.toThrow('la base se cayó');
   });
 
   /** El código identifica al recorrido en los servicios ya programados. */
   it('el código es inmutable', async () => {
-    await service.update(ID, { code: 'OTRO', name: 'Renombrado' } as any);
+    await service.update(ID, { code: 'OTRO', name: 'Renombrado' } as any, ACTOR);
 
     expect(prisma.route.update.mock.calls[0][0].data).toEqual({ name: 'Renombrado' });
   });
@@ -178,12 +193,12 @@ describe('RoutesService — CRUD', () => {
   it('actualizar un recorrido inexistente da 404', async () => {
     prisma.route.findUnique.mockResolvedValue(null);
 
-    await expect(service.update(ID, {} as any)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.update(ID, {} as any, ACTOR)).rejects.toBeInstanceOf(NotFoundException);
   });
 
   /** Los Service ya programados guardan routeId: el borrado físico los rompería. */
   it('la baja es lógica', async () => {
-    await service.remove(ID);
+    await service.remove(ID, ACTOR);
 
     expect(prisma.route.update).toHaveBeenCalledWith({
       where: { id: ID },
@@ -301,5 +316,46 @@ describe('RoutesService — CRUD', () => {
     prisma.route.findUnique.mockResolvedValue(null);
 
     await expect(service.findOne(ID)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  describe('auditoría (#460)', () => {
+    it('la baja deja constancia de quién y a qué estado, en la misma transacción', async () => {
+      await service.remove(ID, ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(prisma, {
+        entityType: 'ROUTE',
+        entityId: ID,
+        action: 'DEACTIVATE',
+        toStatus: 'INACTIVE',
+        actor: ACTOR,
+      });
+    });
+
+    it('el alta audita el estado inicial', async () => {
+      await service.create({ code: 'R-09', name: 'Nuevo' } as any, ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'ROUTE',
+          action: 'CREATE',
+          toStatus: 'ACTIVE',
+          actor: ACTOR,
+        }),
+      );
+    });
+
+    it('un update que cambia active audita el alta o la baja', async () => {
+      await service.update(ID, { active: false } as any, ACTOR);
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ action: 'DEACTIVATE', toStatus: 'INACTIVE' }),
+      );
+    });
+
+    it('un update que no toca active no audita', async () => {
+      await service.update(ID, { name: 'Otro' } as any, ACTOR);
+      expect(audit.record).not.toHaveBeenCalled();
+    });
   });
 });

@@ -23,7 +23,9 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "core:register": "ts-node -P tsconfig.json scripts/core-register.ts",
+    "core:unregister": "ts-node -P tsconfig.json scripts/core-unregister.ts",
     "espacios-verdes:build": "ts-node -P tsconfig.json scripts/build-espacios-verdes.ts",
+    "datos-ciudad:build": "ts-node -P tsconfig.json scripts/build-datos-ciudad.ts",
     "zones:sync-from-core": "ts-node -P tsconfig.json scripts/zones-sync-from-core.ts",
     "crews:migrate-user-ids": "ts-node -P tsconfig.json scripts/migrate-crew-user-ids.ts",
     "openapi:generate": "ts-node -P tsconfig.json scripts/generate-openapi.ts",
@@ -114,6 +116,24 @@
     ],
     "coverageThreshold": {
       "global": {
+        "statements": 85,
+        "branches": 85,
+        "functions": 85,
+        "lines": 85
+      },
+      "**/indicators/indicators.service.ts": {
+        "statements": 85,
+        "branches": 85,
+        "functions": 85,
+        "lines": 85
+      },
+      "**/indicators/indicators.intervals.ts": {
+        "statements": 85,
+        "branches": 85,
+        "functions": 85,
+        "lines": 85
+      },
+      "**/containers/containers.service.ts": {
         "statements": 85,
         "branches": 85,
         "functions": 85,

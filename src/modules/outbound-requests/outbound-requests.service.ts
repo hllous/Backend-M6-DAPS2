@@ -15,9 +15,14 @@ import {
   TreeInterventionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditActor, AuditService } from '../../common/audit/audit.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
 import { AggregateType, EventType } from '../../events/event-types';
 import * as payloads from '../../events/payloads';
+import {
+  ALLOWED_FOLLOW_UPS,
+  repairJustifiedBy,
+} from '../environmental-inspections/allowed-follow-ups';
 import {
   ApproveClosureDto,
   ClosureSourceType,
@@ -51,16 +56,42 @@ export class OutboundRequestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly audit: AuditService,
   ) {}
 
   // ─── RepairRequest → M3 ───────────────────────────
 
-  async createRepairRequest(dto: CreateRepairRequestDto): Promise<RepairRequestResponseDto> {
+  async createRepairRequest(
+    dto: CreateRepairRequestDto,
+    actor: AuditActor,
+  ): Promise<RepairRequestResponseDto> {
     // Si el daño salió de un servicio nacido de un reclamo, el ticket viaja
     // para que M3 pueda correlacionarlo con lo que el vecino reportó.
     const ticketId = await this.resolveRepairOrigin(dto.detectedInType, dto.detectedInId);
 
     const request = await this.prisma.$transaction(async (tx) => {
+      // Un pedido abierto para el mismo daño en el mismo origen ya está en
+      // manos de M3: otro publicaría un segundo evento y una segunda orden de
+      // obra. Sin índice único (evita una migración para este fix), el chequeo es
+      // de service.
+      // ponytail: dos POST simultáneos pueden pasar ambos; si hace falta
+      // garantía real, unique parcial sobre (detected_in_type, detected_in_id,
+      // damage_type) WHERE status <> 'CLOSED'.
+      const open = await tx.repairRequest.findFirst({
+        where: {
+          detectedInType: dto.detectedInType,
+          detectedInId: dto.detectedInId,
+          damageType: dto.damageType,
+          status: { not: RepairRequestStatus.CLOSED },
+        },
+        select: { id: true },
+      });
+      if (open) {
+        throw new ConflictException(
+          `Ya hay una solicitud de reparación abierta (${open.id}) por ${dto.damageType} para este origen`,
+        );
+      }
+
       const row = await tx.repairRequest.create({
         data: {
           damageType: dto.damageType,
@@ -72,6 +103,13 @@ export class OutboundRequestsService {
         },
       });
 
+      await this.audit.record(tx, {
+        entityType: 'REPAIR_REQUEST',
+        entityId: row.id,
+        action: 'CREATE',
+        toStatus: row.status,
+        actor,
+      });
       await this.outbox.enqueue(tx, {
         eventType: EventType.INFRASTRUCTURE_REPAIR_REQUESTED,
         aggregateType: AggregateType.REPAIR_REQUEST,
@@ -129,15 +167,30 @@ export class OutboundRequestsService {
    * existe para operación manual y para poder demostrar el circuito mientras
    * no haya bus.
    */
-  async startRepair(id: string, dto: StartRepairDto): Promise<RepairRequestResponseDto> {
+  async startRepair(
+    id: string,
+    dto: StartRepairDto,
+    actor: AuditActor,
+  ): Promise<RepairRequestResponseDto> {
     const current = await this.getRepairRequest(id);
     assertTransition(REPAIR_TRANSITIONS, current.status, RepairRequestStatus.IN_PROGRESS);
-    const row = await this.prisma.repairRequest.update({
-      where: { id },
-      data: {
-        status: RepairRequestStatus.IN_PROGRESS,
-        ...(dto.workOrderId !== undefined && { workOrderId: dto.workOrderId }),
-      },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.repairRequest.update({
+        where: { id },
+        data: {
+          status: RepairRequestStatus.IN_PROGRESS,
+          ...(dto.workOrderId !== undefined && { workOrderId: dto.workOrderId }),
+        },
+      });
+      await this.audit.record(tx, {
+        entityType: 'REPAIR_REQUEST',
+        entityId: id,
+        action: 'START',
+        fromStatus: current.status,
+        toStatus: RepairRequestStatus.IN_PROGRESS,
+        actor,
+      });
+      return updated;
     });
     this.logger.log(
       `Reparación ${id}: en curso${dto.workOrderId ? ` (OT ${dto.workOrderId})` : ''}`,
@@ -146,12 +199,23 @@ export class OutboundRequestsService {
   }
 
   /** Cierra la solicitud. Normalmente lo dispara `workOrderCompleted` de M3. */
-  async closeRepair(id: string): Promise<RepairRequestResponseDto> {
+  async closeRepair(id: string, actor: AuditActor): Promise<RepairRequestResponseDto> {
     const current = await this.getRepairRequest(id);
     assertTransition(REPAIR_TRANSITIONS, current.status, RepairRequestStatus.CLOSED);
-    const row = await this.prisma.repairRequest.update({
-      where: { id },
-      data: { status: RepairRequestStatus.CLOSED },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.repairRequest.update({
+        where: { id },
+        data: { status: RepairRequestStatus.CLOSED },
+      });
+      await this.audit.record(tx, {
+        entityType: 'REPAIR_REQUEST',
+        entityId: id,
+        action: 'CLOSE',
+        fromStatus: current.status,
+        toStatus: RepairRequestStatus.CLOSED,
+        actor,
+      });
+      return updated;
     });
     this.logger.log(`Reparación ${id}: cerrada`);
     return this.toRepairDto(row);
@@ -161,6 +225,7 @@ export class OutboundRequestsService {
 
   async createClosureRequest(
     dto: CreateStreetClosureRequestDto,
+    actor: AuditActor,
   ): Promise<StreetClosureRequestResponseDto> {
     if (new Date(dto.requestedTo) < new Date(dto.requestedFrom)) {
       throw new BadRequestException(
@@ -176,13 +241,14 @@ export class OutboundRequestsService {
           reason: dto.reason,
           closureFrom: new Date(dto.requestedFrom),
           closureTo: new Date(dto.requestedTo),
-          closureType: dto.closureType ?? null,
+          closureType: dto.closureType,
           streets: {
             createMany: {
               data: dto.sections.map((s) => ({
                 streetName: s.streetName,
                 fromCross: s.fromCross,
                 toCross: s.toCross,
+                direction: s.direction,
               })),
             },
           },
@@ -190,6 +256,13 @@ export class OutboundRequestsService {
         include: { streets: true },
       });
 
+      await this.audit.record(tx, {
+        entityType: 'STREET_CLOSURE_REQUEST',
+        entityId: row.id,
+        action: 'CREATE',
+        toStatus: row.status,
+        actor,
+      });
       await this.outbox.enqueue(tx, {
         eventType: EventType.STREET_CLOSURE_REQUESTED,
         aggregateType: AggregateType.STREET_CLOSURE_REQUEST,
@@ -241,22 +314,29 @@ export class OutboundRequestsService {
   async approveClosure(
     id: string,
     dto: ApproveClosureDto,
+    actor: AuditActor,
   ): Promise<StreetClosureRequestResponseDto> {
-    return this.updateClosure(id, StreetClosureRequestStatus.APPROVED, {
+    return this.updateClosure(actor, 'APPROVE', id, StreetClosureRequestStatus.APPROVED, {
       ...(dto.closureId !== undefined && { closureId: dto.closureId }),
     });
   }
 
   /** Normalmente lo dispara `streetClosureRejected` de M7. */
-  async rejectClosure(id: string, reason: string): Promise<StreetClosureRequestResponseDto> {
-    const row = await this.updateClosure(id, StreetClosureRequestStatus.REJECTED);
+  async rejectClosure(
+    id: string,
+    reason: string,
+    actor: AuditActor,
+  ): Promise<StreetClosureRequestResponseDto> {
+    const row = await this.updateClosure(actor, 'REJECT', id, StreetClosureRequestStatus.REJECTED, {
+      rejectionReason: reason,
+    });
     this.logger.log(`Corte ${id}: rechazado por M7 — ${reason}`);
     return row;
   }
 
   /** Normalmente lo dispara `streetClosureEnded` de M7. */
-  async endClosure(id: string): Promise<StreetClosureRequestResponseDto> {
-    return this.updateClosure(id, StreetClosureRequestStatus.ENDED);
+  async endClosure(id: string, actor: AuditActor): Promise<StreetClosureRequestResponseDto> {
+    return this.updateClosure(actor, 'END', id, StreetClosureRequestStatus.ENDED);
   }
 
   // ─── Helpers ──────────────────────────────────────
@@ -266,9 +346,11 @@ export class OutboundRequestsService {
    * detrás de él, si lo hay. Es una sola consulta por tipo: el ticket sale de la
    * misma lectura que prueba la existencia.
    *
-   * Solo un `Service` puede traer ticket: una inspección ambiental cuelga de un
-   * expediente. El chequeo es previo a escribir; no hay FK polimórfica ni lock,
-   * así que la carrera con un borrado concurrente queda aceptada.
+   * El ticket sale del `Service` o, para una inspección, de su expediente. Una
+   * inspección solo justifica una reparación si está cerrada con algo constatado
+   * y si el tipo de expediente admite daño de infraestructura (409 si no). El
+   * chequeo es previo a escribir; no hay FK polimórfica ni lock, así que la
+   * carrera con un borrado concurrente queda aceptada.
    */
   private async resolveRepairOrigin(type: DetectedInType, id: string): Promise<string | undefined> {
     switch (type) {
@@ -283,10 +365,22 @@ export class OutboundRequestsService {
       case DetectedInType.INSPECTION: {
         const inspection = await this.prisma.environmentalInspection.findUnique({
           where: { id },
-          select: { id: true },
+          select: { outcome: true, report: { select: { reportType: true, ticketId: true } } },
         });
         if (!inspection) throw new NotFoundException(`Inspección con id '${id}' no encontrada`);
-        return undefined;
+        if (!ALLOWED_FOLLOW_UPS[inspection.report.reportType].repair) {
+          throw new ConflictException(
+            `Un expediente de tipo ${inspection.report.reportType} no admite reparación: no deja daño de infraestructura`,
+          );
+        }
+        if (!repairJustifiedBy(inspection.outcome)) {
+          throw new ConflictException(
+            inspection.outcome
+              ? `La inspección '${id}' cerró con ${inspection.outcome}: no hay nada que reparar`
+              : `La inspección '${id}' todavía no se cerró: una reparación se deriva con el resultado en mano`,
+          );
+        }
+        return inspection.report.ticketId ?? undefined;
       }
       default:
         return assertNever(type);
@@ -330,16 +424,29 @@ export class OutboundRequestsService {
   }
 
   private async updateClosure(
+    actor: AuditActor,
+    action: string,
     id: string,
     status: StreetClosureRequestStatus,
     data: Prisma.StreetClosureRequestUpdateInput = {},
   ): Promise<StreetClosureRequestResponseDto> {
     const current = await this.getClosureRequest(id);
     assertTransition(CLOSURE_TRANSITIONS, current.status, status);
-    const row = await this.prisma.streetClosureRequest.update({
-      where: { id },
-      data: { status, ...data },
-      include: { streets: true },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.streetClosureRequest.update({
+        where: { id },
+        data: { status, ...data },
+        include: { streets: true },
+      });
+      await this.audit.record(tx, {
+        entityType: 'STREET_CLOSURE_REQUEST',
+        entityId: id,
+        action,
+        fromStatus: current.status,
+        toStatus: status,
+        actor,
+      });
+      return updated;
     });
     this.logger.log(`Corte ${id}: ${status}`);
     return this.toClosureDto(row);
@@ -392,10 +499,14 @@ export class OutboundRequestsService {
         streetName: s.streetName,
         fromCross: s.fromCross,
         toCross: s.toCross,
+        direction: s.direction,
       })),
       closureFrom: r.closureFrom,
       closureTo: r.closureTo,
       closureType: r.closureType,
+      approvedFrom: r.approvedFrom,
+      approvedTo: r.approvedTo,
+      rejectionReason: r.rejectionReason,
       status: r.status,
       closureId: r.closureId,
       createdAt: r.createdAt,

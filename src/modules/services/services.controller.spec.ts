@@ -1,3 +1,4 @@
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { ServicesController } from './services.controller';
@@ -24,6 +25,7 @@ describe('ServicesController', () => {
 
   const RESULT = { id: 'svc-1' };
   const USER_ID = '4242';
+  const USER = { userId: USER_ID, roles: [] } as unknown as AuthenticatedUser;
   const ID = '11111111-1111-1111-1111-111111111111';
 
   beforeEach(() => {
@@ -53,8 +55,8 @@ describe('ServicesController', () => {
 
   it('create delega en el service con el dto y el userId', async () => {
     const dto = { serviceTypeId: 'x' } as CreateServiceDto;
-    await expect(controller.create(dto, 'user-1')).resolves.toBe(RESULT);
-    expect(service.create).toHaveBeenCalledWith(dto, 'user-1');
+    await expect(controller.create(dto, USER)).resolves.toBe(RESULT);
+    expect(service.create).toHaveBeenCalledWith(dto, USER);
   });
 
   it('findAll delega la query', async () => {
@@ -99,14 +101,14 @@ describe('ServicesController', () => {
 
   it('update delega id y dto', async () => {
     const dto = { notes: 'x' } as UpdateServiceDto;
-    await controller.update(ID, dto, 'user-1');
-    expect(service.update).toHaveBeenCalledWith(ID, dto, 'user-1');
+    await controller.update(ID, dto, USER);
+    expect(service.update).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('assignCrew delega id, dto y userId opcional', async () => {
     const dto = { crewId: 'c1' } as AssignCrewDto;
-    await controller.assignCrew(ID, dto, 'user-1');
-    expect(service.assignCrew).toHaveBeenCalledWith(ID, dto, 'user-1');
+    await controller.assignCrew(ID, dto, USER);
+    expect(service.assignCrew).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('assignmentConflicts delega id y query', async () => {
@@ -117,8 +119,8 @@ describe('ServicesController', () => {
 
   it('addDelayNotice delega id, dto y userId opcional', async () => {
     const dto = { delayType: 'START' } as CreateDelayNoticeDto;
-    await controller.addDelayNotice(ID, dto, 'user-1');
-    expect(service.addDelayNotice).toHaveBeenCalledWith(ID, dto, 'user-1');
+    await controller.addDelayNotice(ID, dto, USER);
+    expect(service.addDelayNotice).toHaveBeenCalledWith(ID, dto, USER.userId, USER.actorId);
   });
 
   it('findDelayNotices delega el id', async () => {
@@ -127,50 +129,46 @@ describe('ServicesController', () => {
   });
 
   it('start delega id y userId', async () => {
-    await controller.start(ID, 'user-1');
-    expect(service.start).toHaveBeenCalledWith(ID, 'user-1');
+    await controller.start(ID, USER);
+    expect(service.start).toHaveBeenCalledWith(ID, USER);
   });
 
   it('suspend delega id y motivo y nota del dto', async () => {
-    await controller.suspend(
-      ID,
-      { reason: 'lluvia', note: 'detalle' } as SuspendServiceDto,
-      USER_ID,
-    );
-    expect(service.suspend).toHaveBeenCalledWith(ID, USER_ID, 'lluvia', 'detalle');
+    await controller.suspend(ID, { reason: 'lluvia', note: 'detalle' } as SuspendServiceDto, USER);
+    expect(service.suspend).toHaveBeenCalledWith(ID, USER, 'lluvia', 'detalle');
   });
 
   it('resume delega el id', async () => {
-    await controller.resume(ID, USER_ID);
-    expect(service.resume).toHaveBeenCalledWith(ID, USER_ID);
+    await controller.resume(ID, USER);
+    expect(service.resume).toHaveBeenCalledWith(ID, USER);
   });
 
   it('complete delega id, dto y userId', async () => {
     const dto = {} as CompleteServiceDto;
-    await controller.complete(ID, dto, 'user-1');
-    expect(service.complete).toHaveBeenCalledWith(ID, dto, 'user-1');
+    await controller.complete(ID, dto, USER);
+    expect(service.complete).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('cancel delega id, motivo y userId', async () => {
-    await controller.cancel(ID, { reason: 'x' } as StatusChangeDto, 'user-1');
-    expect(service.cancel).toHaveBeenCalledWith(ID, 'x', 'user-1');
+    await controller.cancel(ID, { reason: 'x' } as StatusChangeDto, USER);
+    expect(service.cancel).toHaveBeenCalledWith(ID, 'x', USER);
   });
 
   it('reschedule delega id y motivo', async () => {
-    await controller.reschedule(ID, { reason: 'x' } as StatusChangeDto);
-    expect(service.reschedule).toHaveBeenCalledWith(ID, 'x');
+    await controller.reschedule(ID, { reason: 'x' } as StatusChangeDto, USER);
+    expect(service.reschedule).toHaveBeenCalledWith(ID, 'x', USER);
   });
 
   it('confirmReschedule delega id, dto y quién actuó', async () => {
     const dto = {} as ConfirmRescheduleDto;
-    await controller.confirmReschedule(ID, dto, 'user-1');
-    expect(service.confirmReschedule).toHaveBeenCalledWith(ID, dto, 'user-1');
+    await controller.confirmReschedule(ID, dto, USER);
+    expect(service.confirmReschedule).toHaveBeenCalledWith(ID, dto, USER);
   });
 
   it('addZoneResult delega id y dto', async () => {
     const dto = {} as CreateZoneResultDto;
-    await controller.addZoneResult(ID, dto, USER_ID);
-    expect(service.addZoneResult).toHaveBeenCalledWith(ID, dto, USER_ID);
+    await controller.addZoneResult(ID, dto, USER);
+    expect(service.addZoneResult).toHaveBeenCalledWith(ID, dto, USER.userId);
   });
 
   it('findZoneResults delega el id', async () => {
@@ -180,8 +178,8 @@ describe('ServicesController', () => {
 
   it('addCollectionRecord delega id y dto', async () => {
     const dto = {} as CreateCollectionRecordDto;
-    await controller.addCollectionRecord(ID, dto, USER_ID);
-    expect(service.addCollectionRecord).toHaveBeenCalledWith(ID, dto, USER_ID);
+    await controller.addCollectionRecord(ID, dto, USER);
+    expect(service.addCollectionRecord).toHaveBeenCalledWith(ID, dto, USER.userId);
   });
 
   it('findCollectionRecords delega el id', async () => {

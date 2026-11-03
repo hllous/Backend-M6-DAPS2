@@ -69,9 +69,26 @@ describe('JwtStrategy', () => {
       userId: '42',
       subType: 'EMPLEADO',
       m1Role: 'ADMINISTRATIVO',
+      actorId: null,
       roles: [M6Role.M6_CAMPO_CUADRILLA],
     });
   });
+
+  // #485: el actorId UUID de M1 es solo para updatedBy.id; sub sigue siendo userId.
+  it('expone el actorId UUID del token sin tocar userId', async () => {
+    const actorId = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
+    expect((await authenticate(sign({ actorId }))).user).toMatchObject({ userId: '42', actorId });
+  });
+
+  it.each([['no-es-uuid'], [42], ['']])(
+    'un actorId inválido (%j) queda en null sin rechazar',
+    async (actorId) => {
+      expect((await authenticate(sign({ actorId }))).user).toMatchObject({
+        userId: '42',
+        actorId: null,
+      });
+    },
+  );
 
   it('sin filas en la tabla no hay roles efectivos (el rol de M1 solo no autoriza)', async () => {
     expect((await authenticate(sign())).user).toMatchObject({ roles: [] });
@@ -129,6 +146,19 @@ describe('JwtStrategy', () => {
     expect(findMany).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    ['HS384', 'sha384'],
+    ['HS512', 'sha512'],
+  ])('acepta firmado con %s (JJWT elige según el largo de la clave de M1)', async (alg, hmac) => {
+    const r = await authenticate(sign({}, { alg, hmac }));
+    expect(r.user).toMatchObject({ userId: '42' });
+  });
+
+  it('acepta un ciudadano con rol PERSONA, el claim que emite M1 v3.1', async () => {
+    const r = await authenticate(sign({ sub_type: 'CIUDADANO', rol: 'PERSONA' }));
+    expect(r.user).toMatchObject({ roles: [], m1Role: 'PERSONA', subType: 'CIUDADANO' });
+  });
+
   it('acepta un ciudadano, sin roles de M6', async () => {
     const r = await authenticate(sign({ sub_type: 'CIUDADANO', rol: 'CIUDADANO' }));
     expect(r.user).toMatchObject({ roles: [], m1Role: 'CIUDADANO', subType: 'CIUDADANO' });
@@ -143,7 +173,7 @@ describe('JwtStrategy', () => {
     ['sin exp', sign({ exp: undefined })],
     ['vencido', sign({ exp: Math.floor(Date.now() / 1000) - 10 })],
     ['alg none', sign({}, { alg: 'none' })],
-    ['alg HS512', sign({}, { alg: 'HS512', hmac: 'sha512' })],
+    ['alg RS256', sign({}, { alg: 'RS256' })],
     ['sin rol', sign({ rol: undefined })],
     ['rol vacío', sign({ rol: '' })],
     ['rol como array', sign({ rol: ['ADMINISTRATIVO'] })],

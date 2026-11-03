@@ -16,12 +16,14 @@ import { ServiceTargetType } from './dto';
  */
 describe('ServicesService — cierre encadenado del contenedor', () => {
   const USER_ID = '4242';
+  const ACTOR = { userId: USER_ID, roles: [] };
   const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
   const CONTAINER_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
   const ZONE = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
   let prisma: any;
   let outbox: any;
+  let audit: any;
   let service: ServicesService;
 
   const serviceRow = (over: Record<string, unknown> = {}) => ({
@@ -69,6 +71,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
         findUnique: jest.fn().mockResolvedValue(container(ContainerStatus.OVERFLOWED)),
         update: jest.fn(async (args: unknown) => args),
       },
+      containerStatusHistory: { create: jest.fn().mockResolvedValue(undefined) },
       outboxEvent: { create: jest.fn(), createMany: jest.fn() },
       // complete() usa la forma de callback; otros metodos, la de array.
       $transaction: jest.fn((arg: unknown) =>
@@ -78,14 +81,20 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
       ),
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    service = new ServicesService(prisma as unknown as PrismaService, outbox, {} as never);
+    audit = { record: jest.fn() };
+    service = new ServicesService(
+      prisma as unknown as PrismaService,
+      outbox,
+      {} as never,
+      audit as never,
+    );
   });
 
   /** Los argumentos con los que se actualizo el contenedor. */
   const containerOp = () => prisma.container.update.mock.calls[0][0];
 
   it('un contenedor OVERFLOWED vuelve a ACTIVE al cerrar (vaciado)', async () => {
-    await service.complete(SERVICE_ID, {}, USER_ID);
+    await service.complete(SERVICE_ID, {}, ACTOR);
 
     expect(prisma.container.update).toHaveBeenCalledTimes(1);
     expect(containerOp().data).toMatchObject({ status: ContainerStatus.ACTIVE });
@@ -95,12 +104,13 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
   it('un contenedor UNDER_REPAIR vuelve a ACTIVE y limpia los campos de daño', async () => {
     prisma.container.findUnique.mockResolvedValue(container(ContainerStatus.UNDER_REPAIR));
 
-    await service.complete(SERVICE_ID, {}, USER_ID);
+    await service.complete(SERVICE_ID, {}, ACTOR);
 
     expect(containerOp().data).toEqual({
       status: ContainerStatus.ACTIVE,
       damageType: null,
       severity: null,
+      damageNotes: null,
       requiresPublicWorks: null,
     });
   });
@@ -108,7 +118,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
   it('un contenedor RELOCATING exige la ubicacion nueva', async () => {
     prisma.container.findUnique.mockResolvedValue(container(ContainerStatus.RELOCATING));
 
-    await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(BadRequestException);
+    await expect(service.complete(SERVICE_ID, {}, ACTOR)).rejects.toThrow(BadRequestException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
@@ -120,7 +130,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
       {
         containerLocation: { address: 'Av. Santa Fe 2800', lat: -34.5955, lng: -58.4016 },
       },
-      USER_ID,
+      ACTOR,
     );
 
     expect(containerOp().data).toEqual({
@@ -138,7 +148,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
       }),
     );
 
-    await service.complete(SERVICE_ID, {}, USER_ID);
+    await service.complete(SERVICE_ID, {}, ACTOR);
 
     expect(prisma.container.update).not.toHaveBeenCalled();
     expect(prisma.container.findUnique).not.toHaveBeenCalled();
@@ -147,7 +157,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
   it('un contenedor ACTIVE no transiciona: no habia trabajo pendiente', async () => {
     prisma.container.findUnique.mockResolvedValue(container(ContainerStatus.ACTIVE));
 
-    await service.complete(SERVICE_ID, {}, USER_ID);
+    await service.complete(SERVICE_ID, {}, ACTOR);
 
     expect(prisma.container.update).not.toHaveBeenCalled();
   });
@@ -155,7 +165,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
   it('un contenedor DAMAGED no transiciona: falta pasar por start-repair', async () => {
     prisma.container.findUnique.mockResolvedValue(container(ContainerStatus.DAMAGED));
 
-    await service.complete(SERVICE_ID, {}, USER_ID);
+    await service.complete(SERVICE_ID, {}, ACTOR);
 
     expect(prisma.container.update).not.toHaveBeenCalled();
   });
@@ -165,7 +175,7 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
       serviceRow({ mode: ServiceMode.ROUTE, targetType: null, targetId: null }),
     );
 
-    await service.complete(SERVICE_ID, {}, USER_ID);
+    await service.complete(SERVICE_ID, {}, ACTOR);
 
     expect(prisma.container.findUnique).not.toHaveBeenCalled();
     expect(prisma.container.update).not.toHaveBeenCalled();
@@ -174,13 +184,32 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
   it('404 si el contenedor que el servicio dice atender no existe', async () => {
     prisma.container.findUnique.mockResolvedValue(null);
 
-    await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(NotFoundException);
+    await expect(service.complete(SERVICE_ID, {}, ACTOR)).rejects.toThrow(NotFoundException);
   });
 
   it('sigue rechazando el cierre si falta el resultado de una zona', async () => {
     prisma.service.findUnique.mockResolvedValue(serviceRow({ zoneResults: [] }));
 
-    await expect(service.complete(SERVICE_ID, {}, USER_ID)).rejects.toThrow(ConflictException);
+    await expect(service.complete(SERVICE_ID, {}, ACTOR)).rejects.toThrow(ConflictException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  // Este camino mueve el contenedor sin pasar por ContainersService: la auditoría (#460)
+  // tiene que dejar las dos filas, la del servicio y la del contenedor, con el mismo actor.
+  it('audita el cierre del servicio y la transición del contenedor (#460)', async () => {
+    await service.complete(SERVICE_ID, {}, ACTOR);
+
+    expect(audit.record).toHaveBeenCalledWith(prisma, {
+      entityType: 'CONTAINER',
+      entityId: CONTAINER_ID,
+      action: 'COMPLETE_SERVICE',
+      fromStatus: ContainerStatus.OVERFLOWED,
+      toStatus: ContainerStatus.ACTIVE,
+      actor: ACTOR,
+    });
+    expect(audit.record).toHaveBeenCalledWith(
+      prisma,
+      expect.objectContaining({ entityType: 'SERVICE', action: 'COMPLETE', actor: ACTOR }),
+    );
   });
 });

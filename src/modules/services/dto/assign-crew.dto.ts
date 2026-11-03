@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { Trim } from '../../../common/decorators';
 
 export class AssignCrewDto {
   @ApiProperty({
@@ -21,12 +22,13 @@ export class AssignCrewDto {
 
   @ApiPropertyOptional({
     description:
-      'Por qué se asigna igual un recurso que ya está tomado ese día. **Obligatorio si hay solapamiento**: la asignación avisa y deja pasar, pero no en silencio. Consultar antes con `GET /services/:id/assignment-conflicts`.',
+      'Por qué se asigna igual un recurso que ya está tomado ese día, o una cuadrilla de otra zona o especialidad. **Obligatorio si hay solapamiento o la cuadrilla no encaja con la zona o el tipo del servicio**: la asignación avisa y deja pasar, pero no en silencio. Consultar antes con `GET /services/:id/assignment-conflicts`.',
     minLength: 10,
     maxLength: 500,
     example: 'La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla.',
   })
   @IsOptional()
+  @Trim()
   @IsString()
   @MinLength(10)
   @MaxLength(500)

@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, MaxLength, Matches, MinLength } from 'class-validator';
-import { MAX_NOTES_LENGTH } from '../../../common/decorators';
+import { MAX_NOTES_LENGTH, Trim } from '../../../common/decorators';
 
 const TIME_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -49,6 +49,7 @@ export class UpdateServiceDto {
     example: 'La otra parada termina antes en la práctica; lo coordiné con el jefe de cuadrilla.',
   })
   @IsOptional()
+  @Trim()
   @IsString()
   @MinLength(10)
   @MaxLength(500)

@@ -21,7 +21,7 @@ publicSafetyRisk, requestedAt
 | `requestId` | Nuestro, uuid (`format: "uuid"` en el schema). **Es el que le pedimos a M3 que devuelva** |
 | `detectedIn` | El `serviceId` o `inspectionId` nuestro que originó la detección |
 | `publicSafetyRisk` | Booleano: marca lo que no puede esperar |
-| `ticketId?` | Solo si el daño lo reportó un vecino |
+| `ticketId?` | Solo si el daño lo reportó un vecino: el del servicio de origen o, si salió de una inspección, el de su expediente |
 
 Enums: `damageType` es `RepairDamageType`, `severity` es `Severity` — ver [enumeraciones.md](../../enumeraciones.md).
 

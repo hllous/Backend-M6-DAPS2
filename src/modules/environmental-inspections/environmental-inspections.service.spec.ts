@@ -8,15 +8,22 @@ import {
   EnvironmentalReportStatus as S,
   InspectionNextStep,
   InspectionOutcome,
+  Prisma,
   ServiceMode,
+  M6Role,
   Severity,
   SuggestedAction,
   ViolationType,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ACTOR } from '../../common/audit/audit-test-actor';
+import { AuditService } from '../../common/audit/audit.service';
 import { EnvironmentalReportsService } from '../environmental-reports/environmental-reports.service';
 import { EnvironmentalInspectionsService } from './environmental-inspections.service';
 import { CompleteInspectionDto, CreateInspectionDto } from './dto';
+import { ALLOWED_FOLLOW_UPS } from './allowed-follow-ups';
+
+const actor = (userId: string) => ({ userId, roles: [M6Role.M6_CAMPO_INSPECTOR] });
 
 describe('EnvironmentalInspectionsService', () => {
   const INSPECTION_ID = '11111111-1111-1111-1111-111111111111';
@@ -25,6 +32,7 @@ describe('EnvironmentalInspectionsService', () => {
 
   let prisma: any;
   let outbox: any;
+  let audit: any;
   let reports: EnvironmentalReportsService;
   let service: EnvironmentalInspectionsService;
 
@@ -59,6 +67,13 @@ describe('EnvironmentalInspectionsService', () => {
     severity: null,
     suggestedAction: null,
     checklistItems: [],
+    violationNotice: null,
+    report: {
+      reportType: 'ILLEGAL_DUMPSITE',
+      address: 'Camino de Cintura 4500',
+      lat: new Prisma.Decimal('-34.6037000'),
+      lng: new Prisma.Decimal('-58.3816000'),
+    },
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -96,11 +111,17 @@ describe('EnvironmentalInspectionsService', () => {
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    reports = new EnvironmentalReportsService(prisma as unknown as PrismaService, outbox);
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    reports = new EnvironmentalReportsService(
+      prisma as unknown as PrismaService,
+      outbox,
+      audit as unknown as AuditService,
+    );
     service = new EnvironmentalInspectionsService(
       prisma as unknown as PrismaService,
       outbox,
       reports,
+      audit as unknown as AuditService,
       { get: () => 30 } as never,
     );
   });
@@ -110,7 +131,7 @@ describe('EnvironmentalInspectionsService', () => {
       const result = await service.issueNotice(
         INSPECTION_ID,
         { ...noticeDto, establishmentId: ESTABLISHMENT },
-        'user-1',
+        actor('user-1'),
       );
 
       expect(prisma.violationNotice.count).toHaveBeenCalledWith({
@@ -123,7 +144,7 @@ describe('EnvironmentalInspectionsService', () => {
       await service.issueNotice(
         INSPECTION_ID,
         { ...noticeDto, establishmentId: ESTABLISHMENT },
-        'user-1',
+        actor('user-1'),
       );
 
       const [[, entry]] = outbox.enqueue.mock.calls;
@@ -132,8 +153,31 @@ describe('EnvironmentalInspectionsService', () => {
       expect(entry.payload.priorNoticeCount).toBe(2);
     });
 
+    it('audita el acta con el actor del token y si se derivó (#460)', async () => {
+      await service.issueNotice(INSPECTION_ID, noticeDto, actor('user-1'));
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'VIOLATION_NOTICE',
+          action: 'ISSUE',
+          note: 'Sin establecimiento: no se deriva',
+          actor: actor('user-1'),
+        }),
+      );
+      // Además del acta, el expediente pasa a NOTICE_ISSUED y eso también queda.
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'ENVIRONMENTAL_REPORT',
+          toStatus: S.NOTICE_ISSUED,
+          actor: actor('user-1'),
+        }),
+      );
+    });
+
     it('SIN establecimiento el acta se registra pero NO se deriva a M4', async () => {
-      const result = await service.issueNotice(INSPECTION_ID, noticeDto, 'user-1');
+      const result = await service.issueNotice(INSPECTION_ID, noticeDto, actor('user-1'));
 
       expect(result.establishmentId).toBeNull();
       expect(outbox.enqueue).not.toHaveBeenCalled();
@@ -141,7 +185,7 @@ describe('EnvironmentalInspectionsService', () => {
     });
 
     it('sin establecimiento no se consulta la reincidencia', async () => {
-      await service.issueNotice(INSPECTION_ID, noticeDto, 'user-1');
+      await service.issueNotice(INSPECTION_ID, noticeDto, actor('user-1'));
 
       // count() se sigue llamando para el numero correlativo, pero nunca
       // filtrando por establishmentId.
@@ -154,7 +198,7 @@ describe('EnvironmentalInspectionsService', () => {
     it('el acta es inmutable: no se emite una segunda sobre la misma inspeccion', async () => {
       prisma.violationNotice.findUnique.mockResolvedValue({ id: 'ya-existe' });
 
-      await expect(service.issueNotice(INSPECTION_ID, noticeDto, 'user-1')).rejects.toThrow(
+      await expect(service.issueNotice(INSPECTION_ID, noticeDto, actor('user-1'))).rejects.toThrow(
         ConflictException,
       );
       expect(prisma.violationNotice.create).not.toHaveBeenCalled();
@@ -165,7 +209,7 @@ describe('EnvironmentalInspectionsService', () => {
         inspection({ outcome: InspectionOutcome.NO_VIOLATION }),
       );
 
-      await expect(service.issueNotice(INSPECTION_ID, noticeDto, 'user-1')).rejects.toThrow(
+      await expect(service.issueNotice(INSPECTION_ID, noticeDto, actor('user-1'))).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -173,7 +217,7 @@ describe('EnvironmentalInspectionsService', () => {
     it('no se emite acta sobre una inspeccion sin cerrar', async () => {
       prisma.environmentalInspection.findUnique.mockResolvedValue(inspection({ outcome: null }));
 
-      await expect(service.issueNotice(INSPECTION_ID, noticeDto, 'user-1')).rejects.toThrow(
+      await expect(service.issueNotice(INSPECTION_ID, noticeDto, actor('user-1'))).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -189,7 +233,7 @@ describe('EnvironmentalInspectionsService', () => {
         },
       ]);
 
-      await service.issueNotice(INSPECTION_ID, conEstablecimiento, 'user-1');
+      await service.issueNotice(INSPECTION_ID, conEstablecimiento, actor('user-1'));
 
       const [[, entrada]] = outbox.enqueue.mock.calls;
       expect(entrada.payload.evidence).toEqual([
@@ -203,14 +247,14 @@ describe('EnvironmentalInspectionsService', () => {
      * encontro, no aporta adjuntos propios.
      */
     it('busca la evidencia de la inspeccion, no la del acta', async () => {
-      await service.issueNotice(INSPECTION_ID, conEstablecimiento, 'user-1');
+      await service.issueNotice(INSPECTION_ID, conEstablecimiento, actor('user-1'));
 
       const [[args]] = prisma.attachment.findMany.mock.calls;
       expect(args.where).toEqual({ ownerType: 'INSPECTION', ownerId: INSPECTION_ID });
     });
 
     it('sin evidencia el acta viaja igual, con la lista vacia', async () => {
-      await service.issueNotice(INSPECTION_ID, conEstablecimiento, 'user-1');
+      await service.issueNotice(INSPECTION_ID, conEstablecimiento, actor('user-1'));
 
       const [[, entrada]] = outbox.enqueue.mock.calls;
       expect(entrada.payload.evidence).toEqual([]);
@@ -218,7 +262,7 @@ describe('EnvironmentalInspectionsService', () => {
 
     /** Sin establecimiento no se deriva nada, asi que no hay que ir a buscarla. */
     it('un acta que no se deriva no consulta la evidencia', async () => {
-      await service.issueNotice(INSPECTION_ID, noticeDto, 'user-1');
+      await service.issueNotice(INSPECTION_ID, noticeDto, actor('user-1'));
 
       expect(prisma.attachment.findMany).not.toHaveBeenCalled();
     });
@@ -227,7 +271,7 @@ describe('EnvironmentalInspectionsService', () => {
       await service.issueNotice(
         INSPECTION_ID,
         { ...noticeDto, establishmentId: ESTABLISHMENT },
-        'user-1',
+        actor('user-1'),
       );
 
       const [[args]] = prisma.environmentalReport.update.mock.calls;
@@ -243,7 +287,7 @@ describe('EnvironmentalInspectionsService', () => {
       const result = await service.issueNotice(
         INSPECTION_ID,
         { ...noticeDto, establishmentId: ESTABLISHMENT },
-        'user-1',
+        actor('user-1'),
       );
 
       expect(result.noticeNumber).toMatch(/^ACTA-\d{4}-000012$/);
@@ -261,7 +305,7 @@ describe('EnvironmentalInspectionsService', () => {
       const emitir = async (estado: string | null, ticketId: string | null = 'TCK-1') => {
         prisma.environmentalReport.findUnique.mockResolvedValue(report({ ticketId }));
         prisma.ticketM2State.findUnique.mockResolvedValue(estado ? { status: estado } : null);
-        await service.issueNotice(INSPECTION_ID, noticeDto, 'user-1');
+        await service.issueNotice(INSPECTION_ID, noticeDto, actor('user-1'));
       };
 
       it('con el ticket IN_PROGRESS informa PROGRESS', async () => {
@@ -271,6 +315,25 @@ describe('EnvironmentalInspectionsService', () => {
           updateType: 'PROGRESS',
           publicMessage: MENSAJE,
         });
+      });
+
+      // #485: updatedBy.id es el actorId UUID de M1; el sub (userId) no viaja nunca.
+      it('updatedBy.id sale del actorId del token, no del sub; sin actorId, null', async () => {
+        const ACTOR_UUID = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
+        prisma.environmentalReport.findUnique.mockResolvedValue(report({ ticketId: 'TCK-1' }));
+        prisma.ticketM2State.findUnique.mockResolvedValue({ status: 'ROUTED' });
+
+        await service.issueNotice(INSPECTION_ID, noticeDto, {
+          ...actor('42'),
+          actorId: ACTOR_UUID,
+        });
+        await service.issueNotice(INSPECTION_ID, noticeDto, actor('42'));
+
+        const [conUuid, sinUuid] = outbox.enqueueMany.mock.calls.map(
+          ([, es]: [unknown, { payload: unknown }[]]) => es[0].payload,
+        );
+        expect(conUuid).toMatchObject({ updatedBy: { type: 'EXTERNAL_USER', id: ACTOR_UUID } });
+        expect(sinUuid).toMatchObject({ updatedBy: { id: null } });
       });
 
       it.each(['ROUTED', null])(
@@ -320,7 +383,7 @@ describe('EnvironmentalInspectionsService', () => {
       } as CompleteInspectionDto;
 
       it('otro inspector que el asignado recibe 403 NOT_ASSIGNED y no escribe', async () => {
-        const error = await service.complete(INSPECTION_ID, dto, 'user-8').catch((e) => e);
+        const error = await service.complete(INSPECTION_ID, dto, actor('user-8')).catch((e) => e);
 
         expect(error).toBeInstanceOf(ForbiddenException);
         expect(error.getResponse()).toMatchObject({ code: 'NOT_ASSIGNED' });
@@ -328,12 +391,28 @@ describe('EnvironmentalInspectionsService', () => {
         expect(prisma.environmentalInspection.update).not.toHaveBeenCalled();
       });
 
+      it('audita el cierre con el resultado como estado y el actor del token (#460)', async () => {
+        prisma.environmentalInspection.findUnique.mockResolvedValue(
+          inspection({ outcome: null, inspectorId: null }),
+        );
+
+        await service.complete(INSPECTION_ID, dto, actor('user-8'));
+
+        expect(audit.record).toHaveBeenCalledWith(prisma, {
+          entityType: 'ENVIRONMENTAL_INSPECTION',
+          entityId: INSPECTION_ID,
+          action: 'COMPLETE',
+          toStatus: dto.outcome,
+          actor: actor('user-8'),
+        });
+      });
+
       it('sin inspector asignado la cierra cualquiera y queda el del token', async () => {
         prisma.environmentalInspection.findUnique.mockResolvedValue(
           inspection({ outcome: null, inspectorId: null }),
         );
 
-        await service.complete(INSPECTION_ID, dto, 'user-8');
+        await service.complete(INSPECTION_ID, dto, actor('user-8'));
 
         const [[args]] = prisma.environmentalInspection.update.mock.calls;
         expect(args.data.completedByUserId).toBe('user-8');
@@ -344,7 +423,7 @@ describe('EnvironmentalInspectionsService', () => {
           inspection({ inspectorId: 'user-7' }),
         );
 
-        await expect(service.complete(INSPECTION_ID, dto, 'user-8')).rejects.toBeInstanceOf(
+        await expect(service.complete(INSPECTION_ID, dto, actor('user-8'))).rejects.toBeInstanceOf(
           ForbiddenException,
         );
       });
@@ -358,7 +437,7 @@ describe('EnvironmentalInspectionsService', () => {
           outcome: InspectionOutcome.NO_VIOLATION,
           inspectorId: 'otro',
         } as CompleteInspectionDto,
-        'user-7',
+        actor('user-7'),
       );
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
@@ -374,7 +453,7 @@ describe('EnvironmentalInspectionsService', () => {
           outcome: InspectionOutcome.VIOLATION_FOUND,
           nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
         },
-        'user-7',
+        actor('user-7'),
       );
 
       const estados = prisma.environmentalReport.update.mock.calls.map(
@@ -391,7 +470,7 @@ describe('EnvironmentalInspectionsService', () => {
             inspectedAt: '2030-01-01T00:00:00.000Z',
             outcome: InspectionOutcome.NO_VIOLATION,
           },
-          'user-7',
+          actor('user-7'),
         ),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.environmentalInspection.update).not.toHaveBeenCalled();
@@ -405,7 +484,7 @@ describe('EnvironmentalInspectionsService', () => {
             inspectedAt: '2026-09-10T11:30:00.000Z',
             outcome: InspectionOutcome.VIOLATION_FOUND,
           },
-          'user-7',
+          actor('user-7'),
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -417,7 +496,7 @@ describe('EnvironmentalInspectionsService', () => {
           inspectedAt: '2026-09-10T11:30:00.000Z',
           outcome: InspectionOutcome.NO_VIOLATION,
         },
-        'user-7',
+        actor('user-7'),
       );
 
       const estados = prisma.environmentalReport.update.mock.calls.map(
@@ -433,7 +512,7 @@ describe('EnvironmentalInspectionsService', () => {
           inspectedAt: '2026-09-10T11:30:00.000Z',
           outcome: InspectionOutcome.INCONCLUSIVE,
         },
-        'user-7',
+        actor('user-7'),
       );
 
       const estados = prisma.environmentalReport.update.mock.calls.map(
@@ -454,7 +533,7 @@ describe('EnvironmentalInspectionsService', () => {
             inspectedAt: '2026-09-10T11:30:00.000Z',
             outcome: InspectionOutcome.NO_VIOLATION,
           },
-          'user-7',
+          actor('user-7'),
         ),
       ).rejects.toThrow(ConflictException);
     });
@@ -467,7 +546,7 @@ describe('EnvironmentalInspectionsService', () => {
           outcome: InspectionOutcome.NO_VIOLATION,
           checklist: [{ itemCode: 'C1', label: 'Ventilación', result: true }],
         } as CompleteInspectionDto,
-        'user-7',
+        actor('user-7'),
       );
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
@@ -484,7 +563,7 @@ describe('EnvironmentalInspectionsService', () => {
           inspectedAt: '2026-09-10T11:30:00.000Z',
           outcome: InspectionOutcome.NO_VIOLATION,
         },
-        'user-7',
+        actor('user-7'),
       );
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
@@ -509,7 +588,7 @@ describe('EnvironmentalInspectionsService', () => {
           nextStep: InspectionNextStep.NOTICE_TO_BE_ISSUED,
           ...cierre,
         },
-        'user-7',
+        actor('user-7'),
       );
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
@@ -524,7 +603,7 @@ describe('EnvironmentalInspectionsService', () => {
           inspectedAt: '2026-09-10T11:30:00.000Z',
           outcome: InspectionOutcome.INCONCLUSIVE,
         },
-        'user-7',
+        actor('user-7'),
       );
 
       const [[args]] = prisma.environmentalInspection.update.mock.calls;
@@ -543,8 +622,29 @@ describe('EnvironmentalInspectionsService', () => {
       prisma.environmentalInspection.create.mockResolvedValue(inspection({ outcome: null }));
     });
 
+    it('audita la programación y el cambio del expediente con el mismo actor (#460)', async () => {
+      await service.create(REPORT_ID, {}, ACTOR);
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'ENVIRONMENTAL_INSPECTION',
+          action: 'SCHEDULE',
+          actor: ACTOR,
+        }),
+      );
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'ENVIRONMENTAL_REPORT',
+          fromStatus: S.UNDER_REVIEW,
+          toStatus: S.INSPECTION_SCHEDULED,
+        }),
+      );
+    });
+
     it('programa la inspección y lleva el expediente a INSPECTION_SCHEDULED', async () => {
-      const result = await service.create(REPORT_ID, {});
+      const result = await service.create(REPORT_ID, {}, ACTOR);
 
       expect(result.id).toBe(INSPECTION_ID);
       const [[args]] = prisma.environmentalReport.update.mock.calls;
@@ -555,7 +655,7 @@ describe('EnvironmentalInspectionsService', () => {
     });
 
     it('con serviceId, valida que el servicio sea de modo POINT', async () => {
-      await service.create(REPORT_ID, { serviceId: 'svc-1' } as CreateInspectionDto);
+      await service.create(REPORT_ID, { serviceId: 'svc-1' } as CreateInspectionDto, ACTOR);
 
       expect(prisma.service.findUnique).toHaveBeenCalledWith({
         where: { id: 'svc-1' },
@@ -569,7 +669,7 @@ describe('EnvironmentalInspectionsService', () => {
       prisma.service.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create(REPORT_ID, { serviceId: 'svc-x' } as CreateInspectionDto),
+        service.create(REPORT_ID, { serviceId: 'svc-x' } as CreateInspectionDto, ACTOR),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -577,12 +677,12 @@ describe('EnvironmentalInspectionsService', () => {
       prisma.service.findUnique.mockResolvedValue({ id: 'svc-1', mode: ServiceMode.ROUTE });
 
       await expect(
-        service.create(REPORT_ID, { serviceId: 'svc-1' } as CreateInspectionDto),
+        service.create(REPORT_ID, { serviceId: 'svc-1' } as CreateInspectionDto, ACTOR),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('guarda el inspector asignado si tiene fila M6_CAMPO_INSPECTOR (id normalizado)', async () => {
-      await service.create(REPORT_ID, { inspectorId: '0042' } as CreateInspectionDto);
+      await service.create(REPORT_ID, { inspectorId: '0042' } as CreateInspectionDto, ACTOR);
 
       expect(prisma.userRoleAssignment.findFirst).toHaveBeenCalledWith({
         where: { userId: '42', role: 'M6_CAMPO_INSPECTOR' },
@@ -596,13 +696,13 @@ describe('EnvironmentalInspectionsService', () => {
       prisma.userRoleAssignment.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.create(REPORT_ID, { inspectorId: '42' } as CreateInspectionDto),
+        service.create(REPORT_ID, { inspectorId: '42' } as CreateInspectionDto, ACTOR),
       ).rejects.toThrow(/no tiene el rol de inspector/);
       expect(prisma.environmentalInspection.create).not.toHaveBeenCalled();
     });
 
     it('sin inspectorId no consulta roles y queda null', async () => {
-      await service.create(REPORT_ID, {});
+      await service.create(REPORT_ID, {}, ACTOR);
 
       expect(prisma.userRoleAssignment.findFirst).not.toHaveBeenCalled();
       const [[args]] = prisma.environmentalInspection.create.mock.calls;
@@ -610,7 +710,7 @@ describe('EnvironmentalInspectionsService', () => {
     });
 
     it('sin serviceId no consulta el servicio', async () => {
-      await service.create(REPORT_ID, {});
+      await service.create(REPORT_ID, {}, ACTOR);
       expect(prisma.service.findUnique).not.toHaveBeenCalled();
     });
   });
@@ -637,6 +737,86 @@ describe('EnvironmentalInspectionsService', () => {
     it('findOne devuelve la inspección', async () => {
       const result = await service.findOne(INSPECTION_ID);
       expect(result.id).toBe(INSPECTION_ID);
+    });
+
+    it('findOne expone tipo, dirección y coordenadas del expediente (Decimal a number)', async () => {
+      const result = await service.findOne(INSPECTION_ID);
+
+      expect(result).toMatchObject({
+        reportType: 'ILLEGAL_DUMPSITE',
+        address: 'Camino de Cintura 4500',
+        lat: -34.6037,
+        lng: -58.3816,
+      });
+    });
+
+    it('findOne devuelve lat y lng null si el expediente no tiene coordenadas', async () => {
+      prisma.environmentalInspection.findUnique.mockResolvedValue(
+        inspection({ report: { reportType: 'NOISE', address: null, lat: null, lng: null } }),
+      );
+
+      const result = await service.findOne(INSPECTION_ID);
+
+      expect(result).toMatchObject({ address: null, lat: null, lng: null });
+    });
+
+    it.each([
+      ['NOISE', InspectionOutcome.VIOLATION_FOUND, false, true, ViolationType.NOISE_LIMIT],
+      ['ODOR', InspectionOutcome.INCONCLUSIVE, false, false, null],
+      [
+        'WATER_DISCHARGE',
+        InspectionOutcome.VIOLATION_FOUND,
+        true,
+        true,
+        ViolationType.UNTREATED_DISCHARGE,
+      ],
+      ['DUMPING', InspectionOutcome.NO_VIOLATION, false, false, ViolationType.ILLEGAL_DUMPING],
+      ['OTHER', InspectionOutcome.INCONCLUSIVE, true, false, null],
+      ['OTHER', null, false, false, null],
+    ] as const)(
+      'findOne: allowedActions de %s con resultado %s',
+      async (reportType, outcome, repair, notice, suggestedViolationType) => {
+        prisma.environmentalInspection.findUnique.mockResolvedValue(
+          inspection({
+            outcome,
+            report: { reportType, address: null, lat: null, lng: null },
+          }),
+        );
+
+        const result = await service.findOne(INSPECTION_ID);
+
+        expect(result.allowedActions).toEqual({ repair, notice, suggestedViolationType });
+      },
+    );
+
+    it.each(Object.entries(ALLOWED_FOLLOW_UPS))(
+      'findOne: matriz completa, %s con VIOLATION_FOUND',
+      async (reportType, fila) => {
+        prisma.environmentalInspection.findUnique.mockResolvedValue(
+          inspection({
+            outcome: InspectionOutcome.VIOLATION_FOUND,
+            report: { reportType, address: null, lat: null, lng: null },
+          }),
+        );
+
+        const { allowedActions } = await service.findOne(INSPECTION_ID);
+
+        expect(allowedActions).toEqual({
+          repair: fila.repair,
+          notice: fila.notice,
+          suggestedViolationType: fila.suggestedViolationType,
+        });
+      },
+    );
+
+    it('findOne: con acta ya emitida, allowedActions.notice es false', async () => {
+      prisma.environmentalInspection.findUnique.mockResolvedValue(
+        inspection({ violationNotice: { id: 'acta-1' } }),
+      );
+
+      const { allowedActions } = await service.findOne(INSPECTION_ID);
+
+      expect(allowedActions.notice).toBe(false);
     });
 
     it('findOne lanza 404 si no existe', async () => {

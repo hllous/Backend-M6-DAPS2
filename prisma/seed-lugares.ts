@@ -1,21 +1,26 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ContainerStatus, ContainerType, DamageType, Severity, WasteType } from '@prisma/client';
 import {
-  GeometriaPoligonal,
-  Position,
-  prng,
-  puntoEnGeometria,
-  puntosEnGeometria,
-  semillaDe,
-} from '../src/common/utils/geo';
+  ContainerStatus,
+  ContainerType,
+  DamageType,
+  Severity,
+  TreeHealthStatus,
+  WasteType,
+} from '@prisma/client';
+import { GeometriaPoligonal } from '../src/common/utils/geo';
 import { EspacioVerde, slugBarrio } from '../scripts/build-espacios-verdes';
+import type {
+  ArbolCiudad,
+  ContenedorCiudad,
+  PuntoVerdeCiudad,
+} from '../scripts/build-datos-ciudad';
 
 /**
  * Lugares del seed: los 48 barrios de M9 con sus polígonos oficiales, los espacios
- * verdes del dataset de BA Data y el inventario (contenedores, puntos verdes, arbolado)
- * que se genera dentro de cada barrio. Todo determinístico: el azar sale de un PRNG
- * sembrado con el código del barrio.
+ * verdes del dataset de BA Data y el inventario (contenedores, puntos verdes, arbolado),
+ * que sale de la muestra de IDECABA versionada en `prisma/data/*-ciudad.json` (#439; la
+ * genera `npm run datos-ciudad:build`). El seed no usa la red.
  */
 
 const RAIZ = join(__dirname, '..');
@@ -89,6 +94,8 @@ export interface ArbolSeed {
   lng: number;
   heightM: number;
   diameterCm: number;
+  /** Vitalidad del censo (IDECABA) ya mapeada; el árbol escrito a mano no la trae. */
+  healthStatus?: TreeHealthStatus;
 }
 
 export interface Inventario {
@@ -97,141 +104,129 @@ export interface Inventario {
   arboles: ArbolSeed[];
 }
 
-/** Mínimos por barrio: lo que haya escrito a mano cuenta, el resto se completa. */
+/** Mínimos por barrio: el script de la muestra falla si no los cumple. */
 export const MIN_CONTENEDORES = 4;
 export const MIN_ARBOLES = 3;
 
-const ESPECIES = [
-  'Tipuana tipu',
-  'Platanus x acerifolia',
-  'Fraxinus pennsylvanica',
-  'Jacaranda mimosifolia',
-  'Ligustrum lucidum',
-  'Melia azedarach',
-  'Acer negundo',
-  'Handroanthus impetiginosus',
-];
+/**
+ * Estados de demostración de contenedores reales (IDECABA no trae estado): uno por barrio, en
+ * comunas que no son las ocho originales, para que el mapa y la operación tengan desbordes,
+ * daños, reparaciones y reubicaciones fuera de Belgrano/Palermo/Centro. El `0001` de cada
+ * barrio es el negro de menor `id` de IDECABA. Los daños llevan tipo y severidad; los
+ * eventos `containerDamaged` de los DAMAGED los siembra el seed.
+ */
+export const CONTENEDORES_DEMO: Readonly<
+  Record<string, Pick<ContenedorSeed, 'status' | 'damageType' | 'severity' | 'requiresPublicWorks'>>
+> = {
+  // Desbordados: comunas 3, 5, 6, 7 y 15.
+  'CT-balvanera-0001': { status: ContainerStatus.OVERFLOWED },
+  'CT-almagro-0001': { status: ContainerStatus.OVERFLOWED },
+  'CT-caballito-0001': { status: ContainerStatus.OVERFLOWED },
+  'CT-flores-0001': { status: ContainerStatus.OVERFLOWED },
+  'CT-villa-crespo-0001': { status: ContainerStatus.OVERFLOWED },
+  // Dañados: comunas 4, 8 y 9.
+  'CT-barracas-0001': {
+    status: ContainerStatus.DAMAGED,
+    damageType: DamageType.LID_BROKEN,
+    severity: Severity.MEDIUM,
+    requiresPublicWorks: false,
+  },
+  'CT-villa-lugano-0001': {
+    status: ContainerStatus.DAMAGED,
+    damageType: DamageType.STRUCTURAL,
+    severity: Severity.HIGH,
+    requiresPublicWorks: true,
+  },
+  'CT-liniers-0001': {
+    status: ContainerStatus.DAMAGED,
+    damageType: DamageType.VANDALIZED,
+    severity: Severity.MEDIUM,
+    requiresPublicWorks: false,
+  },
+  // En el taller: comunas 10 y 12. En reubicación: comuna 11.
+  'CT-monte-castro-0001': { status: ContainerStatus.UNDER_REPAIR },
+  'CT-villa-urquiza-0001': { status: ContainerStatus.UNDER_REPAIR },
+  'CT-villa-devoto-0001': { status: ContainerStatus.RELOCATING },
+};
 
-const r5 = (n: number): number => Math.round(n * 1e5) / 1e5;
-const r1 = (n: number): number => Math.round(n * 10) / 10;
+const delArchivo = <T>(ruta: string): T[] => leer<{ datos: T[] }>(ruta).datos;
 
-/** Un punto a `metros` de otro, en una dirección dada (aproximación plana: alcanza a esta escala). */
-function desplazar([lng, lat]: Position, metros: number, ang: number): Position {
-  return [
-    lng + (metros * Math.cos(ang)) / (111_320 * Math.cos((lat * Math.PI) / 180)),
-    lat + (metros * Math.sin(ang)) / 110_540,
-  ];
+const nnnn = (n: number, ancho: number): string => String(n).padStart(ancho, '0');
+
+/** Orden estable: por barrio y, adentro, por tipo (negros antes que verdes) e `id` de IDECABA. */
+const porBarrio = <T extends { barrio: string }>(items: T[], orden: (a: T, b: T) => number): T[] =>
+  [...items].sort((a, b) => a.barrio.localeCompare(b.barrio) || orden(a, b));
+
+/** Numera dentro de cada barrio: 1, 2, 3… en el orden recibido. */
+function numerar<T extends { barrio: string }, R>(
+  items: T[],
+  armar: (item: T, n: number) => R,
+): R[] {
+  const cuenta = new Map<string, number>();
+  return items.map((i) => {
+    const n = (cuenta.get(i.barrio) ?? 0) + 1;
+    cuenta.set(i.barrio, n);
+    return armar(i, n);
+  });
 }
 
 /**
- * Inventario de los barrios que no lo tienen escrito a mano. `existentes` cuenta lo ya
- * cargado por zona. Todo punto cae dentro del polígono de su barrio y, cuando se puede,
- * a unas decenas de metros de una plaza o parque real del barrio.
+ * Inventario real de IDECABA: contenedores negros (`HOUSEHOLD`) y verdes (`RECYCLABLE`),
+ * los puntos verdes de la Ciudad y una muestra del censo de arbolado. Los códigos
+ * (`CT-<barrio>-NNNN`, `GP-<barrio>-NN`, `ARB-<barrio>-9NNNN`) los arma el seed por barrio y en
+ * orden estable. La capacidad no existe en IDECABA: se alterna 2400/3200 L como antes.
  */
-export function generarInventario(
-  poligonos: ReadonlyMap<string, GeometriaPoligonal>,
-  existentes: {
-    contenedores: ReadonlyMap<string, number>;
-    puntosVerdes: ReadonlyMap<string, number>;
-    arboles: ReadonlyMap<string, number>;
-  },
-): Inventario {
-  const inv: Inventario = { contenedores: [], puntosVerdes: [], arboles: [] };
-  const tipos = [
-    ContainerType.HOUSEHOLD,
-    ContainerType.HOUSEHOLD,
-    ContainerType.RECYCLABLE,
-    ContainerType.HOUSEHOLD,
-    ContainerType.RECYCLABLE,
-    ContainerType.GREEN,
-  ];
+export function cargarInventario(): Inventario {
+  const tipoOrden = (t: string): number => (t === ContainerType.HOUSEHOLD ? 0 : 1);
+  const contenedores = numerar(
+    porBarrio(
+      delArchivo<ContenedorCiudad>('prisma/data/contenedores-ciudad.json'),
+      (a, b) => tipoOrden(a.containerType) - tipoOrden(b.containerType) || a.id - b.id,
+    ),
+    (c, n): ContenedorSeed => ({
+      code: `CT-${c.barrio}-${nnnn(n, 4)}`,
+      zone: c.barrio,
+      containerType: c.containerType as ContainerType,
+      address: c.address,
+      lat: c.lat,
+      lng: c.lng,
+      capacityLiters: n % 2 ? 3200 : 2400,
+    }),
+  );
 
-  BARRIOS.forEach((b, i) => {
-    const poligono = poligonos.get(b.codigo) as GeometriaPoligonal;
-    const azar = prng(semillaDe(`inventario-${b.codigo}`));
-    // Anclas reales: plazas y parques con nombre propio, los más grandes primero.
-    const anclas = ESPACIOS.filter(
-      (e) => e.barrio === b.codigo && !e.nombreDerivado && e.clasificacion !== 'PLAZOLETA',
-    )
-      .sort((x, y) => y.areaM2 - x.areaM2)
-      .slice(0, 8);
-    const pool = anclas.length ? anclas : ESPACIOS.filter((e) => e.barrio === b.codigo).slice(0, 8);
+  const puntosVerdes = numerar(
+    porBarrio(delArchivo<PuntoVerdeCiudad>('prisma/data/puntos-verdes-ciudad.json'), (a, b) =>
+      a.name.localeCompare(b.name),
+    ),
+    (g, n): PuntoVerdeSeed => ({
+      code: `GP-${g.barrio}-${nnnn(n, 2)}`,
+      name: g.name,
+      zone: g.barrio,
+      address: g.address,
+      lat: g.lat,
+      lng: g.lng,
+      wasteTypes: g.wasteTypes,
+    }),
+  );
 
-    /** Un punto cerca de un ancla; si el desplazamiento sale del barrio, se reintenta. */
-    const cerca = (
-      k: number,
-      minM: number,
-      maxM: number,
-    ): { p: Position; ancla?: EspacioVerde } => {
-      const ancla = pool[k % Math.max(pool.length, 1)];
-      if (ancla) {
-        for (let t = 0; t < 30; t++) {
-          const p = desplazar(
-            [ancla.lng, ancla.lat],
-            minM + azar() * (maxM - minM),
-            azar() * 2 * Math.PI,
-          );
-          if (puntoEnGeometria(p, poligono)) return { p, ancla };
-        }
-      }
-      return { p: puntosEnGeometria(poligono, 1, azar)[0] };
-    };
-
-    const nCont = Math.max(
-      0,
-      MIN_CONTENEDORES + (i % 3) - (existentes.contenedores.get(b.codigo) ?? 0),
-    );
-    for (let n = 0; n < nCont; n++) {
-      const { p, ancla } = cerca(n, 25, 90);
-      const tipo = tipos[(n + i) % tipos.length];
-      const dañado = n === 0 && i % 7 === 3;
-      inv.contenedores.push({
-        code: `CT-${b.codigo}-${String(n + 1).padStart(4, '0')}`,
-        zone: b.codigo,
-        containerType: tipo,
-        address: ancla ? `Frente a ${ancla.nombre}` : `${b.nombre}, vereda`,
-        lat: r5(p[1]),
-        lng: r5(p[0]),
-        capacityLiters: tipo === ContainerType.GREEN ? 1100 : n % 2 ? 2400 : 3200,
-        ...(dañado && {
-          status: ContainerStatus.DAMAGED,
-          damageType: DamageType.LID_BROKEN,
-          severity: Severity.MEDIUM,
-          requiresPublicWorks: false,
-        }),
-        ...(n === 1 && i % 9 === 4 && { status: ContainerStatus.OVERFLOWED }),
-      });
-    }
-
-    // Punto verde: en la plaza más grande del barrio, si no hay uno cargado a mano.
-    if (!existentes.puntosVerdes.get(b.codigo)) {
-      const sede = anclas.find((e) => puntoEnGeometria([e.lng, e.lat], poligono));
-      const p: Position = sede ? [sede.lng, sede.lat] : cerca(0, 0, 0).p;
-      inv.puntosVerdes.push({
-        code: `GP-${b.codigo}-01`,
-        name: sede ? `Punto Verde ${sede.nombre}` : `Punto Verde ${b.nombre}`,
-        zone: b.codigo,
-        address: sede ? sede.nombre : b.nombre,
-        lat: r5(p[1]),
-        lng: r5(p[0]),
-        wasteTypes: i % 3 === 0 ? [WasteType.RECYCLABLE, WasteType.GREEN] : [WasteType.RECYCLABLE],
-      });
-    }
-
-    const nArb = Math.max(0, MIN_ARBOLES + (i % 2) - (existentes.arboles.get(b.codigo) ?? 0));
-    for (let n = 0; n < nArb; n++) {
-      const { p, ancla } = cerca(n + 3, 15, 60);
-      inv.arboles.push({
-        surveyCode: `ARB-${b.codigo}-9${String(n + 1).padStart(4, '0')}`,
-        zone: b.codigo,
-        species: ESPECIES[Math.floor(azar() * ESPECIES.length)],
-        address: ancla ? `Vereda de ${ancla.nombre}` : `${b.nombre}, vereda`,
-        lat: r5(p[1]),
-        lng: r5(p[0]),
-        heightM: r1(5 + azar() * 15),
-        diameterCm: r1(20 + azar() * 70),
-      });
-    }
-  });
-  return inv;
+  const arboles = numerar(
+    porBarrio(delArchivo<ArbolCiudad>('prisma/data/arbolado-ciudad.json'), (a, b) => a.id - b.id),
+    (t, n): ArbolSeed => ({
+      surveyCode: `ARB-${t.barrio}-9${nnnn(n, 4)}`,
+      zone: t.barrio,
+      species: t.species,
+      address: t.address,
+      lat: t.lat,
+      lng: t.lng,
+      heightM: t.heightM,
+      diameterCm: t.diameterCm,
+      healthStatus: t.healthStatus as TreeHealthStatus,
+    }),
+  );
+  const sinCodigo = Object.keys(CONTENEDORES_DEMO).filter(
+    (c) => !contenedores.some((x) => x.code === c),
+  );
+  if (sinCodigo.length) throw new Error(`seed: contenedores de demo inexistentes: ${sinCodigo}`);
+  for (const c of contenedores) Object.assign(c, CONTENEDORES_DEMO[c.code]);
+  return { contenedores, puntosVerdes, arboles };
 }

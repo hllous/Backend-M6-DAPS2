@@ -14,6 +14,7 @@ describe('CommunesService / Controller', () => {
   const comuna = {
     id: 'c-1',
     code: 'comuna-14',
+    number: 14,
     name: 'Comuna 14',
     active: true,
     zones: [
@@ -33,6 +34,7 @@ describe('CommunesService / Controller', () => {
       {
         id: 'c-1',
         code: 'comuna-14',
+        number: 14,
         name: 'Comuna 14',
         active: true,
         zones: [
@@ -48,15 +50,16 @@ describe('CommunesService / Controller', () => {
     expect(prisma.commune.findMany.mock.calls[0][0].where).toEqual({});
   });
 
-  it('ordena por número de comuna y admite comunas sin zonas', async () => {
-    prisma.commune.findMany.mockResolvedValue([
-      { ...comuna, id: 'c-10', code: 'comuna-10', zones: [] },
-      { ...comuna, id: 'c-2', code: 'comuna-2', zones: [] },
-    ]);
+  it('ordena en la base por número entero de comuna (no por el code) y admite comunas sin zonas', async () => {
+    prisma.commune.findMany.mockResolvedValue([{ ...comuna, id: 'c-2', number: 2, zones: [] }]);
 
     const res = await service.findAll({});
 
-    expect(res.map((c) => c.code)).toEqual(['comuna-2', 'comuna-10']);
+    expect(prisma.commune.findMany.mock.calls[0][0].orderBy).toEqual([
+      { number: 'asc' },
+      { code: 'asc' },
+    ]);
+    expect(res[0].number).toBe(2);
     expect(res[0].zones).toEqual([]);
   });
 

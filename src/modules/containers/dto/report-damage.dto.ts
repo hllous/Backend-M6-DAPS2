@@ -1,6 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsOptional } from 'class-validator';
-import { ToBoolean } from '../../../common/decorators';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ToBoolean, Trim } from '../../../common/decorators';
 import { DamageType, Severity } from '@prisma/client';
 
 /**
@@ -35,4 +35,17 @@ export class ReportDamageDto {
   @IsOptional()
   @ToBoolean()
   requiresPublicWorks?: boolean;
+
+  // Dato interno del módulo: no viaja en el evento containerDamaged.
+  @ApiPropertyOptional({
+    description: 'Descripción libre del desperfecto (máx. 500 caracteres)',
+    example: 'La tapa quedó desencajada y la bisagra del lado izquierdo está partida',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  observations?: string;
 }

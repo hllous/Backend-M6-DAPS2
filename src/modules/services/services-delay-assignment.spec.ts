@@ -6,11 +6,13 @@ import { ServicesService } from './services.service';
 import { ConflictResource } from './dto';
 
 const USER_ID = '4242';
+
 const SERVICE_ID = '11111111-1111-1111-1111-111111111111';
 const OTRO_ID = '22222222-2222-2222-2222-222222222222';
 const CREW = '33333333-3333-3333-3333-333333333333';
 const VEHICLE = '44444444-4444-4444-4444-444444444444';
-const ACTOR = 'planificador-7';
+const ACTOR_ID = 'planificador-7';
+const ACTOR = { userId: ACTOR_ID, roles: [] };
 
 /** `@db.Time` vive sobre la época; `HH:mm` se convierte así. */
 const hora = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
@@ -53,6 +55,17 @@ describe('ServicesService — demora y doble reserva', () => {
     ...over,
   });
 
+  const crewRow = (over: Record<string, unknown> = {}) => ({
+    id: CREW,
+    active: true,
+    name: 'Cuadrilla Centro 1',
+    specialty: null,
+    homeZoneId: null,
+    homeZone: null,
+    zoneAssignments: [],
+    ...over,
+  });
+
   beforeEach(() => {
     prisma = {
       service: {
@@ -62,10 +75,10 @@ describe('ServicesService — demora y doble reserva', () => {
       },
       crew: {
         count: jest.fn().mockResolvedValue(1),
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ id: CREW, active: true, name: 'Cuadrilla Centro 1' }),
+        // Sin zona ni especialidad cargadas: no hay avisos de encaje (#455).
+        findUnique: jest.fn().mockResolvedValue(crewRow()),
       },
+      serviceType: { findUnique: jest.fn().mockResolvedValue({ code: 'REC-DOM' }) },
       vehicle: {
         findUnique: jest.fn().mockResolvedValue({ id: VEHICLE, active: true, plate: 'AB123CD' }),
       },
@@ -92,14 +105,131 @@ describe('ServicesService — demora y doble reserva', () => {
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,
       {} as never,
+      { record: jest.fn() } as never,
     );
+  });
+
+  // ─── #455: encaje de la cuadrilla con la zona y el tipo ────────────
+
+  describe('encaje de la cuadrilla (#455)', () => {
+    const ZONA_SERVICIO = '55555555-5555-5555-5555-555555555555';
+    const ZONA_CREW = '66666666-6666-6666-6666-666666666666';
+
+    beforeEach(() => {
+      prisma.service.findUnique.mockResolvedValue(servicio({ zones: [{ zoneId: ZONA_SERVICIO }] }));
+    });
+
+    it('cuadrilla de otra zona: rebota pidiendo nota y no escribe', async () => {
+      prisma.crew.findUnique.mockResolvedValue(
+        crewRow({ homeZoneId: ZONA_CREW, homeZone: { name: 'Palermo' } }),
+      );
+
+      const err = await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR).catch((e) => e);
+
+      expect(err).toBeInstanceOf(ConflictException);
+      expect(err.message).toContain('Palermo');
+      expect(err.message).toContain('overrideNote');
+      expect(prisma.service.update).not.toHaveBeenCalled();
+    });
+
+    it('con nota se asigna igual y la nota queda guardada', async () => {
+      prisma.crew.findUnique.mockResolvedValue(
+        crewRow({ homeZoneId: ZONA_CREW, homeZone: { name: 'Palermo' } }),
+      );
+
+      await service.assignCrew(
+        SERVICE_ID,
+        { crewId: CREW, overrideNote: 'Refuerzo por el temporal en la zona' },
+        ACTOR,
+      );
+
+      const { data } = prisma.service.update.mock.calls[0][0];
+      expect(data.crewId).toBe(CREW);
+      expect(data.assignmentOverrideNote).toContain('temporal');
+      expect(data.assignmentOverrideBy).toBe(ACTOR_ID);
+    });
+
+    it('la reubicación vigente manda sobre la zona base', async () => {
+      // Base en otra zona, pero reubicada justo en la del servicio: no hay aviso.
+      prisma.crew.findUnique.mockResolvedValue(
+        crewRow({
+          homeZoneId: ZONA_CREW,
+          zoneAssignments: [{ zoneId: ZONA_SERVICIO, zone: { name: 'Belgrano' } }],
+        }),
+      );
+
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR);
+
+      expect(prisma.service.update).toHaveBeenCalled();
+      // Se busca la reubicación vigente en la fecha del servicio, no "hoy".
+      const where = prisma.crew.findUnique.mock.calls[1][0].select.zoneAssignments.where;
+      expect(where.validFrom).toEqual({ lte: new Date('2026-09-15T00:00:00.000Z') });
+    });
+
+    it('un servicio con varias zonas encaja si una es la de la cuadrilla', async () => {
+      prisma.service.findUnique.mockResolvedValue(
+        servicio({ zones: [{ zoneId: ZONA_CREW }, { zoneId: ZONA_SERVICIO }] }),
+      );
+      prisma.crew.findUnique.mockResolvedValue(crewRow({ homeZoneId: ZONA_CREW }));
+
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR);
+
+      expect(prisma.service.update).toHaveBeenCalled();
+    });
+
+    it('especialidad que no corresponde al tipo: avisa', async () => {
+      prisma.crew.findUnique.mockResolvedValue(crewRow({ specialty: 'TREES' }));
+
+      const err = await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR).catch((e) => e);
+
+      expect(err).toBeInstanceOf(ConflictException);
+      expect(err.message).toContain('COLLECTION');
+    });
+
+    it('especialidad correcta: no avisa', async () => {
+      prisma.crew.findUnique.mockResolvedValue(crewRow({ specialty: 'COLLECTION' }));
+
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR);
+
+      expect(prisma.service.update).toHaveBeenCalled();
+    });
+
+    it('un tipo de servicio sin mapear no genera aviso', async () => {
+      prisma.serviceType.findUnique.mockResolvedValue({ code: 'NUEVO-TIPO' });
+      prisma.crew.findUnique.mockResolvedValue(crewRow({ specialty: 'TREES' }));
+
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR);
+
+      expect(prisma.service.update).toHaveBeenCalled();
+    });
+
+    it('zona y especialidad a la vez: dos avisos, una sola nota alcanza', async () => {
+      prisma.crew.findUnique.mockResolvedValue(
+        crewRow({ specialty: 'TREES', homeZoneId: ZONA_CREW }),
+      );
+
+      const res = await service.getAssignmentConflicts(SERVICE_ID, { crewId: CREW });
+
+      expect(res.hasConflicts).toBe(true);
+      expect(res.conflicts).toEqual([]);
+      expect(res.warnings.map((w) => w.code)).toEqual([
+        'CREW_ZONE_MISMATCH',
+        'CREW_SPECIALTY_MISMATCH',
+      ]);
+    });
+
+    it('sin avisos ni solapamientos, la consulta no marca conflicto', async () => {
+      const res = await service.getAssignmentConflicts(SERVICE_ID, { crewId: CREW });
+
+      expect(res).toMatchObject({ hasConflicts: false, conflicts: [], warnings: [] });
+    });
   });
 
   // ─── #123: doble reserva ────────────────────────────
 
   describe('solapamiento al asignar', () => {
     it('sin otro servicio ese día no hay conflicto y se asigna', async () => {
-      await service.assignCrew(SERVICE_ID, { crewId: CREW });
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR);
 
       expect(prisma.service.update.mock.calls[0][0].data.crewId).toBe(CREW);
     });
@@ -111,10 +241,10 @@ describe('ServicesService — demora y doble reserva', () => {
     it('con solapamiento y sin nota rebota, y el mensaje dice cómo seguir', async () => {
       prisma.service.findMany.mockResolvedValue([ocupado()]);
 
-      await expect(service.assignCrew(SERVICE_ID, { crewId: CREW })).rejects.toBeInstanceOf(
+      await expect(service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR)).rejects.toBeInstanceOf(
         ConflictException,
       );
-      await service.assignCrew(SERVICE_ID, { crewId: CREW }).catch((e: Error) => {
+      await service.assignCrew(SERVICE_ID, { crewId: CREW }, ACTOR).catch((e: Error) => {
         expect(e.message).toContain('overrideNote');
         expect(e.message).toContain('Cuadrilla Centro 1');
       });
@@ -132,7 +262,7 @@ describe('ServicesService — demora y doble reserva', () => {
 
       const { data } = prisma.service.update.mock.calls[0][0];
       expect(data.assignmentOverrideNote).toContain('jefe de cuadrilla');
-      expect(data.assignmentOverrideBy).toBe(ACTOR);
+      expect(data.assignmentOverrideBy).toBe(ACTOR_ID);
       expect(data.assignmentOverrideAt).toBeInstanceOf(Date);
     });
 
@@ -261,17 +391,17 @@ describe('ServicesService — demora y doble reserva', () => {
 
     /** Es lo que distingue un aviso de un cambio de estado. */
     it('no toca el estado del servicio', async () => {
-      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR_ID);
 
       expect(prisma.service.update).not.toHaveBeenCalled();
     });
 
     it('guarda el estado en el que estaba y quién lo reportó', async () => {
-      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR_ID);
 
       expect(prisma.serviceDelayNotice.create.mock.calls[0][0].data).toMatchObject({
         serviceStatus: ServiceStatus.SCHEDULED,
-        reportedBy: ACTOR,
+        reportedBy: ACTOR_ID,
         delayMinutes: 90,
       });
     });
@@ -279,7 +409,7 @@ describe('ServicesService — demora y doble reserva', () => {
     it('sin detectedAt usa el momento del aviso', async () => {
       const antes = Date.now();
 
-      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR_ID);
 
       const { detectedAt } = prisma.serviceDelayNotice.create.mock.calls[0][0].data;
       expect(detectedAt.getTime()).toBeGreaterThanOrEqual(antes);
@@ -289,7 +419,7 @@ describe('ServicesService — demora y doble reserva', () => {
       await service.addDelayNotice(
         SERVICE_ID,
         aviso({ detectedAt: '2026-09-15T10:00:00.000Z' }),
-        ACTOR,
+        ACTOR_ID,
       );
 
       expect(prisma.serviceDelayNotice.create.mock.calls[0][0].data.detectedAt).toEqual(
@@ -427,7 +557,7 @@ describe('ServicesService — demora y doble reserva', () => {
         servicio({ ticketId: 'TCK-1', status: ServiceStatus.IN_PROGRESS }),
       );
 
-      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR_ID);
 
       const [[, eventos]] = outbox.enqueueMany.mock.calls;
       expect(eventos).toHaveLength(1);
@@ -439,6 +569,26 @@ describe('ServicesService — demora y doble reserva', () => {
       expect(eventos[0].payload.publicMessage).not.toContain('Corte de calle');
     });
 
+    // #485: updatedBy.id es el actorId UUID de M1; el sub (ACTOR_ID) no viaja.
+    it('updatedBy.id sale del actorId de M1, y es null si no vino', async () => {
+      const uuid = '3f2b8c1e-9a4d-4e6b-8c7d-1a2b3c4d5e6f';
+      prisma.service.findUnique.mockResolvedValue(
+        servicio({ ticketId: 'TCK-1', status: ServiceStatus.IN_PROGRESS }),
+      );
+
+      await service.addDelayNotice(
+        SERVICE_ID,
+        aviso({ delayType: DelayType.DURATION }),
+        ACTOR_ID,
+        uuid,
+      );
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR_ID);
+
+      const [[, con], [, sin]] = outbox.enqueueMany.mock.calls;
+      expect(con[0].payload).toMatchObject({ updatedBy: { id: uuid } });
+      expect(sin[0].payload).toMatchObject({ updatedBy: { id: null } });
+    });
+
     /**
      * #146: antes de arrancar, el ticket sigue `ROUTED` en M2 y §8.2 solo
      * acepta `PROGRESS` desde `IN_PROGRESS`. El aviso se registra igual.
@@ -446,7 +596,7 @@ describe('ServicesService — demora y doble reserva', () => {
     it('una demora antes de arrancar se registra pero no se proyecta a M2', async () => {
       prisma.service.findUnique.mockResolvedValue(servicio({ ticketId: 'TCK-1' }));
 
-      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.START }), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.START }), ACTOR_ID);
 
       expect(prisma.serviceDelayNotice.create).toHaveBeenCalled();
       expect(outbox.enqueueMany).toHaveBeenCalledWith(prisma, []);
@@ -461,7 +611,11 @@ describe('ServicesService — demora y doble reserva', () => {
         );
         prisma.ticketM2State.findUnique.mockResolvedValue({ status });
 
-        await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+        await service.addDelayNotice(
+          SERVICE_ID,
+          aviso({ delayType: DelayType.DURATION }),
+          ACTOR_ID,
+        );
 
         expect(prisma.serviceDelayNotice.create).toHaveBeenCalled();
         expect(outbox.enqueueMany).toHaveBeenCalledWith(prisma, []);
@@ -475,7 +629,7 @@ describe('ServicesService — demora y doble reserva', () => {
       );
       prisma.ticketM2State.findUnique.mockResolvedValue(null);
 
-      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR_ID);
 
       const eventos = outbox.enqueueMany.mock.calls[0][1];
       expect(eventos).toHaveLength(1);
@@ -488,13 +642,13 @@ describe('ServicesService — demora y doble reserva', () => {
       );
       prisma.ticketM2State.findUnique.mockResolvedValue({ status: 'IN_PROGRESS' });
 
-      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso({ delayType: DelayType.DURATION }), ACTOR_ID);
 
       expect(outbox.enqueueMany.mock.calls[0][1]).toHaveLength(1);
     });
 
     it('una detección de oficio no avisa a nadie', async () => {
-      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR);
+      await service.addDelayNotice(SERVICE_ID, aviso(), ACTOR_ID);
 
       expect(outbox.enqueueMany).toHaveBeenCalledWith(prisma, []);
     });

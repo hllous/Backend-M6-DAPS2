@@ -528,14 +528,82 @@ describe('AttachmentsService', () => {
         },
       ]);
 
-      const result = await service.findByOwner({
-        ownerType: AttachmentOwnerType.CONTAINER,
-        ownerId: CONTAINER_ID,
-      });
+      const result = await service.findByOwner(
+        { ownerType: AttachmentOwnerType.CONTAINER, ownerId: CONTAINER_ID },
+        [M6Role.M6_OFICINA_AMBIENTAL],
+        USER_ID,
+      );
 
       expect(result).toEqual([
         expect.objectContaining({ id: ATTACHMENT_ID, contentType: 'image/jpeg' }),
       ]);
+    });
+
+    // #466: Campo solo lee la evidencia de lo suyo; el resto de los roles de lectura, todo.
+    it('Campo sobre un servicio de otra cuadrilla: 403 NOT_ASSIGNED y no consulta evidencia', async () => {
+      prisma.service.findUnique.mockResolvedValue({ crewId: 'crew-1' });
+      prisma.crew.count.mockResolvedValue(0);
+
+      const error = await service
+        .findByOwner(
+          { ownerType: AttachmentOwnerType.SERVICE, ownerId: CONTAINER_ID },
+          [M6Role.M6_CAMPO_CUADRILLA],
+          USER_ID,
+        )
+        .catch((e) => e);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect(error.getResponse()).toMatchObject({ code: 'NOT_ASSIGNED' });
+      expect(prisma.attachment.findMany).not.toHaveBeenCalled();
+    });
+
+    it('Campo sobre lo propio lee', async () => {
+      prisma.service.findUnique.mockResolvedValue({ crewId: 'crew-1' });
+      prisma.crew.count.mockResolvedValue(1);
+      prisma.attachment.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.findByOwner(
+          { ownerType: AttachmentOwnerType.SERVICE, ownerId: CONTAINER_ID },
+          [M6Role.M6_CAMPO_CUADRILLA],
+          USER_ID,
+        ),
+      ).resolves.toEqual([]);
+    });
+
+    it.each([M6Role.M6_ADMIN, M6Role.M6_OFICINA_OPERACIONES, M6Role.M6_AUDITOR])(
+      '%s lee la evidencia de un servicio ajeno sin chequear pertenencia',
+      async (rol) => {
+        prisma.attachment.findMany.mockResolvedValue([]);
+
+        await expect(
+          service.findByOwner(
+            { ownerType: AttachmentOwnerType.SERVICE, ownerId: CONTAINER_ID },
+            [rol],
+            USER_ID,
+          ),
+        ).resolves.toEqual([]);
+        expect(prisma.service.findUnique).not.toHaveBeenCalled();
+      },
+    );
+
+    // #466
+    describe('Campo: dueño inexistente y Oficina', () => {
+      const leer = (ownerType: AttachmentOwnerType, rol: M6Role) =>
+        service.findByOwner({ ownerType, ownerId: CONTAINER_ID }, [rol], USER_ID);
+
+      it('dueño inexistente: 404', async () => {
+        await expect(
+          leer(AttachmentOwnerType.SERVICE, M6Role.M6_CAMPO_CUADRILLA),
+        ).rejects.toBeInstanceOf(NotFoundException);
+      });
+
+      it('Oficina Ambiental lee sin chequear rol ni pertenencia', async () => {
+        await expect(
+          leer(AttachmentOwnerType.INSPECTION, M6Role.M6_OFICINA_AMBIENTAL),
+        ).resolves.toEqual([]);
+        expect(prisma.environmentalInspection.findUnique).not.toHaveBeenCalled();
+      });
     });
   });
 });

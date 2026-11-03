@@ -21,6 +21,7 @@ import {
 import { ErrorResponseDto } from '../../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../../common/decorators';
 import { ROLES_OPERACIONES } from '../../../auth/role-groups';
+import { AuthenticatedUser } from '../../../auth/jwt.strategy';
 
 @ApiTags('tree-interventions')
 @ApiBearerAuth('JWT-auth')
@@ -33,7 +34,7 @@ export class TreeInterventionsController {
   @ApiOperation({
     summary: 'Solicitar una intervención sobre árboles',
     description:
-      'Crea una solicitud de intervención (poda, extracción, plantación o tratamiento) sobre uno o más árboles. Se crea en estado REQUESTED. Las extracciones (REMOVAL) requieren autorización adicional vía el endpoint submit-for-authorization.',
+      'Crea una solicitud de intervención (poda, extracción, plantación o tratamiento) sobre uno o más árboles. Se crea en estado REQUESTED y registra quién la solicitó (el usuario del token). Las extracciones (REMOVAL) requieren autorización adicional vía el endpoint submit-for-authorization.',
   })
   @ApiResponse({
     status: 201,
@@ -48,8 +49,11 @@ export class TreeInterventionsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async create(@Body() dto: CreateTreeInterventionDto): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.create(dto);
+  async create(
+    @Body() dto: CreateTreeInterventionDto,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<TreeInterventionResponseDto> {
+    return this.treeInterventionsService.create(dto, actor);
   }
 
   @Get()
@@ -115,17 +119,25 @@ export class TreeInterventionsController {
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async submitForAuthorization(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.submitForAuthorization(id);
+    return this.treeInterventionsService.submitForAuthorization(id, actor);
   }
 
   @Post(':id/authorize')
+  // Arriba de @Roles: Swagger se queda con el último decorador aplicado por status.
+  @ApiResponse({
+    status: 403,
+    description:
+      'Falta el rol de M6 (code ROLE_REQUIRED). Una extracción (REMOVAL) requiere M6_ADMIN; las podas, cualquiera de los roles de operaciones',
+    type: ErrorResponseDto,
+  })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Autorizar una intervención',
     description:
-      'Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó (el usuario del token) y cuándo.',
+      'Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó (el usuario del token) y cuándo. Autorizar una extracción (REMOVAL) exige M6_ADMIN, aunque la solicite otro; un M6_ADMIN puede autorizar lo que él mismo solicitó y ambos ids quedan registrados. Las podas no requieren autorización.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la intervención', format: 'uuid' })
   @ApiResponse({
@@ -140,17 +152,25 @@ export class TreeInterventionsController {
   async authorize(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AuthorizeInterventionDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.authorize(id, dto, userId);
+    return this.treeInterventionsService.authorize(id, dto, actor);
   }
 
   @Post(':id/reject')
+  // Arriba de @Roles: Swagger se queda con el último decorador aplicado por status.
+  @ApiResponse({
+    status: 403,
+    description:
+      'Falta el rol de M6 (code ROLE_REQUIRED). Una extracción (REMOVAL) requiere M6_ADMIN; las podas, cualquiera de los roles de operaciones',
+    type: ErrorResponseDto,
+  })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Rechazar una intervención',
-    description: 'Transición PENDING_AUTHORIZATION → REJECTED. Estado terminal.',
+    description:
+      'Transición PENDING_AUTHORIZATION → REJECTED. Estado terminal. Rechazar una extracción (REMOVAL) exige M6_ADMIN, igual que autorizarla.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la intervención', format: 'uuid' })
   @ApiResponse({
@@ -162,8 +182,11 @@ export class TreeInterventionsController {
   @ApiResponse({ status: 404, description: 'Intervención no encontrada', type: ErrorResponseDto })
   @ApiResponse({ status: 409, description: 'Transición inválida', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async reject(@Param('id', ParseUUIDPipe) id: string): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.reject(id);
+  async reject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<TreeInterventionResponseDto> {
+    return this.treeInterventionsService.reject(id, actor);
   }
 
   @Post(':id/assign-service')
@@ -201,7 +224,8 @@ export class TreeInterventionsController {
   async assignService(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssignInterventionServiceDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.assignService(id, dto);
+    return this.treeInterventionsService.assignService(id, dto, actor);
   }
 }

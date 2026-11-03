@@ -59,6 +59,7 @@ async function bootstrap() {
     .addTag('environmental-inspections', 'Inspecciones ambientales')
     // Integración
     .addTag('events', 'Ingesta de eventos entrantes y estado de los handlers')
+    .addTag('outbox', 'Eventos salientes: consulta y reintento de los fallidos')
     // Otros
     .addTag('citizen-portal', 'Endpoints públicos del portal del ciudadano')
     .addTag('health', 'Health check y estado del servicio')
@@ -108,6 +109,7 @@ Un endpoint pertenece a **un solo tag**. Los tags deben coincidir exactamente co
 | | `environmental-inspections` | Inspecciones programadas y realizadas |
 | Evidencia | `evidence` | Adjuntos de evidencia (foto/PDF) para `Container`, `Service`, `ZoneResult` e `Inspection` |
 | Integración | `events` | Ingesta de eventos entrantes y estado de los handlers |
+| | `outbox` | Eventos salientes: consulta y reintento de los fallidos |
 | Tablero | `indicators` | Indicadores de cobertura, cumplimiento, incidencias y residuos |
 | Otros | `citizen-portal` | Endpoints expuestos al ciudadano (portal público) |
 | | `health` | `/health` y `/health/ready` |

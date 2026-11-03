@@ -20,7 +20,7 @@
       "type": "string",
       "description": "El serviceId o inspectionId de M6 que originó la detección."
     },
-    "ticketId": { "type": "string", "description": "De M2. Solo si el daño lo reportó un vecino." },
+    "ticketId": { "type": "string", "description": "De M2. Solo si el daño lo reportó un vecino: el del servicio de origen o, si salió de una inspección, el de su expediente." },
     "publicSafetyRisk": { "type": "boolean" },
     "requestedAt": { "$ref": "_shared.schema.json#/$defs/timestamp" }
   },

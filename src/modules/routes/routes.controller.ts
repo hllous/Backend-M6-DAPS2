@@ -22,7 +22,8 @@ import {
   UpdateRouteDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN } from '../../auth/role-groups';
 
 @ApiTags('routes')
@@ -51,8 +52,11 @@ export class RoutesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async create(@Body() dto: CreateRouteDto): Promise<RouteResponseDto> {
-    return this.routesService.create(dto);
+  async create(
+    @Body() dto: CreateRouteDto,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<RouteResponseDto> {
+    return this.routesService.create(dto, actor);
   }
 
   @Get()
@@ -102,8 +106,9 @@ export class RoutesController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateRouteDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<RouteResponseDto> {
-    return this.routesService.update(id, dto);
+    return this.routesService.update(id, dto, actor);
   }
 
   @Delete(':id')
@@ -119,8 +124,11 @@ export class RoutesController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Recorrido no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.routesService.remove(id);
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<void> {
+    return this.routesService.remove(id, actor);
   }
 
   // ─── Paradas ──────────────────────────────────────

@@ -90,6 +90,14 @@ export class ContainerResponseDto {
   })
   requiresPublicWorks: boolean | null;
 
+  @ApiPropertyOptional({
+    description: 'Observaciones del daño (solo cuando status = DAMAGED)',
+    example: 'La tapa quedó desencajada y la bisagra del lado izquierdo está partida',
+    type: String,
+    nullable: true,
+  })
+  damageNotes: string | null;
+
   @ApiProperty({
     description: 'Fecha de creación',
     example: '2026-08-20T10:00:00.000Z',
