@@ -51,3 +51,7 @@ M1 entregó el contrato real del JWT ([#353](https://github.com/hllous/Backend-M
 
 - [`../bloqueantes.md`](../bloqueantes.md)
 - Catálogo M1 v2 compartido el 2026-09-01.
+
+## Actualización 2026-11-03: excepción de demo retirada
+
+M1 está hosteado y el login real funciona de punta a punta: `POST /auth/usuario/login` en M1 y `GET /me` en el backend desplegado dan 200 con las cuentas `10000`, `10007`, `10011` y `admin@municipio.gob.ar` (HS256, secreto en base64 de 48 bytes). Se retira la excepción por la que el frontend firmaba un JWT de demo (`M6_AUTH_MODE=backend-development` y `M6_DEV_JWT`): en el backend se borró `scripts/generate-demo-jwt.mjs` y el frontend quita el modo en Frontend #800. M6 sigue sin emitir JWT propios: valida los de M1 ([#488](https://github.com/hllous/Backend-M6-DAPS2/issues/488); Frontend #800).

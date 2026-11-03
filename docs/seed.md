@@ -94,7 +94,7 @@ Reglas con las que está escrito:
 
 Los dos `RESPONSABLE_AREA` son `M6_ADMIN` (es el único rol de M6 que ese rol de M1 habilita de más: ADR-008) y quedan dos admins con fila. Los nombres de Oficina y auditoría son solo documentación: M6 no los guarda.
 
-**Personas de demostración** (#458). Firma el frontend con `scripts/generate-demo-jwt.mjs <JWT_SECRET> <persona> [AAAA-MM-DD]`, que acepta el nombre de la persona (`admin`, `operaciones`, `ambiental`, `auditoria`, `lider`, `integrante`, `inspector`, `sinrol`, `ciudadano`) en vez del rol y el `sub`. `GET /me` devuelve sus roles y sus cuadrillas (id, nombre y si es `LEADER` o `MEMBER`).
+**Personas de demostración** (#458). Se entra con el login real de M1 (cuentas `10000`–`10011`, correos en [`cuentas-empleado-m1.csv`](integracion/cuentas-empleado-m1.csv); contraseña inicial por privado). `GET /me` devuelve sus roles y sus cuadrillas (id, nombre y si es `LEADER` o `MEMBER`).
 
 | Persona | `sub` | Rol de M1 | Roles de M6 | Cuadrilla | Puede | No puede |
 |---|---|---|---|---|---|---|
@@ -112,7 +112,7 @@ Los dos `RESPONSABLE_AREA` son `M6_ADMIN` (es el único rol de M6 que ese rol de
 
 Las 496 cuadrillas se persisten con los datos del modelo de #454 y #455: `specialty` (la de sus tipos de servicio si todos pertenecen a una misma; **`null` si la cuadrilla atiende varias especialidades**, para que sus servicios sembrados no disparen avisos de desencaje), `homeZoneId` (**solo las cuadrillas de una única zona**; las que cubren varias quedan sin zona base) y nombres de ejemplo: `leaderName` y `CrewMember.displayName` salen de dos listas cortas según el id (el mismo id da siempre el mismo nombre) y `organizationName` de las cooperativas es el nombre de la cuadrilla antes del " — ". Son datos de demostración, no los de M1.
 
-Los ids son los `sub` numéricos del token de M1 (las 12 cuentas `10000`–`10011` las creó M1 a pedido nuestro; el resto son ficticios) y **no cambian** con el catálogo v3.0 (lo que pasa a UUID es el `citizenId` de los eventos). No existen usuarios reales: M1 no está hosteado, así que los tokens de demo los firma `scripts/generate-demo-jwt.mjs` (ver [deploy.md](deploy.md)). Las filas se insertan directo en `user_role_assignment`, **sin auditoría**: es dato de arranque, no una asignación hecha por un admin. Oficina y Campo no se mezclan (ADR-005), y los ids de cuadrilla coinciden con `crew.leader_user_id` y `crew_member.user_id`, que es lo que exige la pertenencia de Campo (#365).
+Los ids son los `sub` numéricos del token de M1 (las 12 cuentas `10000`–`10011` las creó M1 a pedido nuestro; el resto son ficticios) y **no cambian** con el catálogo v3.0 (lo que pasa a UUID es el `citizenId` de los eventos). Las 12 cuentas existen en M1 (hosteado) desde el 3/11 y se verificó el login real y `GET /me` con `10000`, `10007` y `10011`; el script de tokens de demo se retiró (#488). Las filas se insertan directo en `user_role_assignment`, **sin auditoría**: es dato de arranque, no una asignación hecha por un admin. Oficina y Campo no se mezclan (ADR-005), y los ids de cuadrilla coinciden con `crew.leader_user_id` y `crew_member.user_id`, que es lo que exige la pertenencia de Campo (#365).
 
 ## 4. Qué es auténtico y qué no
 

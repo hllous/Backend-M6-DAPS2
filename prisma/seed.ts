@@ -902,8 +902,7 @@ export function organizacionDe(c: Pick<CuadrillaSeed, 'crewType' | 'name'>): str
 
 /**
  * Personal de Oficina y auditoría de la demo. Los ids son los `sub` numéricos del
- * token de M1 (no hay usuarios reales: M1 no está hosteado y los tokens de demo los
- * firma scripts/generate-demo-jwt.mjs). 10000–10008 son las cuentas de M1 del pedido del
+ * token de M1 (las 12 cuentas de login existen en M1 desde el 3/11). 10000–10008 son las cuentas de M1 del pedido del
  * 02/11 (#488): 10000–10001 RESPONSABLE_AREA, 10002–10006 ADMINISTRATIVO, 10007–10008 AUDITOR;
  * 10009–10011 (Campo) salen de las cuadrillas. El id 1 sigue siendo admin sin fila por
  * M6_BOOTSTRAP_ADMIN_USER_IDS. Campo sale de las cuadrillas (CREWS).
