@@ -418,7 +418,7 @@ Cambios entre el volcado de Trello (20/10) y el 03/11/2026 que afectan a esta HU
 
 - **Como** Oficina y Campo **quiero** iniciar sesión con mi cuenta real de M1 **para** operar con mi identidad y mis roles reales.
 - **Prioridad:** Must — fuente: Trello (R2 MUST). **Release:** R2.
-- **Estado:** En curso: pendiente BE #488 (secreto vigente de M1 en Render) y FE #800 (retirar el modo backend-development).
+- **Estado:** Backend hecho el 3/11 (#488: secreto vigente en Render, login real + `GET /me` en 200); el frontend retira el modo backend-development en FE #800.
 
 - **CA-HU30-1** (Feliz; propuesto, a validar por el PO): **DADO** la cuenta de un empleado en M1 y el secreto vigente de M1 cargado en el backend (JWT_SECRET, JWT_ISSUER), **CUANDO** inicio sesión por el BFF (POST {M1}/auth/usuario/login) y consulto GET /me, **ENTONCES** recibo 200 con mis roles de M6; el JWT de M1 va en una cookie sellada httpOnly y nunca llega al navegador.
 - **CA-HU30-2** (Error; propuesto, a validar por el PO): **DADO** un JWT firmado con un secreto distinto del cargado en el backend, **CUANDO** llamo a un endpoint protegido, **ENTONCES** recibo 401 (hoy sucede en Render hasta que se cargue el secreto vigente de M1).

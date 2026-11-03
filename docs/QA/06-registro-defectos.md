@@ -48,9 +48,9 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 | Esperado | 200 con los roles de M6 |
 | Obtenido | 401: el `JWT_SECRET` cargado en Render (el del 22/10) no coincide con el que firma M1 hoy (según el issue, probado el 02/11) |
 | Evidencia | Texto del issue #488. Comentarios del 02/11 y 03/11 con el pedido del secreto y de 12 cuentas de empleado a M1. Los claims del token pasan `jwt.strategy.ts`; falla solo la firma |
-| Estado | **Abierto, esperando a M1.** La demo usa la excepción `M6_AUTH_MODE=backend-development` con un JWT de demo (ADR-004) |
+| Estado | **Resuelto el 3/11.** M1 mandó el secreto vigente, DevOps lo cargó en Render (informado por el PO) y el login real + `GET /me` dan 200 con `10000`, `10007`, `10011` y `admin@municipio.gob.ar`. La excepción de demo (ADR-004) se retira: backend hecho, frontend en FE #800 |
 | Causa raíz | Dependencia externa: M1 rotó el secreto y no lo comunicó a M6 |
-| Workaround | JWT de demo firmado con `scripts/generate-demo-jwt.mjs` |
+| Workaround | Ya no se usa: el JWT de demo se retiró junto con `scripts/generate-demo-jwt.mjs` |
 
 #### DEF-02 · Contrato definitivo de M9 sin cerrar
 
