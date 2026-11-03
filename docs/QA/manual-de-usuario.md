@@ -2,7 +2,7 @@
 
 > Versión 0.2, revisión del 03/11/2026 para la prueba del TP del 10/11. Parte del manual v0.1 (`docs/manual-de-usuario.md`, 20/10) y lo reorganiza **por tareas**: cada tarea se puede hacer siguiendo solo su sección. Se guarda en el repo de backend y se espeja en el de frontend (Issue FE #818).
 >
-> **Marcas de verificación.** Los nombres de menús, botones y mensajes se contrastaron con el código del frontend (`src/` y `e2e/`). Donde no se pudo confirmar el texto exacto figura **(verificar en la UI)**. Las capturas son del 20/10 y pueden diferir en detalle de la pantalla actual.
+> **Marcas de verificación.** Los nombres de menús, botones y mensajes se contrastaron con el código del frontend (`src/` y `e2e/`). Donde no se pudo confirmar el texto exacto figura **(verificar en la UI)**. Las capturas son del 03/11/2026, sacadas con Playwright en modo mock (datos de prueba) sobre la rama `develop` del frontend; pueden diferir en detalle del entorno desplegado.
 
 | | |
 |---|---|
@@ -56,7 +56,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Resultado esperado:** entra a **Mi trabajo** y ve el nombre de su perfil. Oficina ve las decisiones pendientes de la jornada (por ejemplo «Expedientes por clasificar», «Servicios sin cuadrilla», «Servicios por reprogramar», «Contenedores desbordados»); Campo ve los servicios de su cuadrilla.
 
-> **[CAPTURA PENDIENTE: pantalla de ingreso con los campos «Correo electrónico» y «Contraseña» y el botón «Ingresar al sistema», ruta docs/manual-de-usuario/img/01-login.png (la captura actual muestra el ingreso anterior por escenario y hay que reemplazarla)]**
+![Pantalla de ingreso](../manual-de-usuario/img/01-login.png)
 
 ![Mi trabajo de Oficina](../manual-de-usuario/img/02-office-mi-trabajo.png)
 
@@ -78,18 +78,19 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 1. Entre a **Servicios**: se ven el mapa y la tabla.
 2. Pulse **Programar servicio**.
 3. Complete el formulario:
-   - **Origen del servicio**: *Planificación* para trabajo recurrente (otros orígenes: Registro manual, Denuncia ciudadana, Inspección ambiental, Alerta meteorológica).
-   - **Tipo de servicio**: por ejemplo *Barrido mecánico*.
-   - **Recorrido asignado**, si el tipo es por recorrido: las zonas se cargan solas. Si el tipo es puntual, elija el **Tipo de objetivo** (contenedor, árbol, espacio verde o punto verde) y el bien.
+   - **Tipo de servicio**: por ejemplo *Barrido mecánico*. El tipo define si el servicio es por recorrido o puntual.
+   - **Cuadrilla (opcional)**: puede dejarla en *Sin asignar* y asignarla después (tarea 3).
+   - **Recorrido asignado**, si el tipo es por recorrido: las zonas se cargan solas. Si el tipo es puntual, el **Tipo de objetivo** lo define el tipo de servicio (contenedor, árbol, espacio verde o punto verde): busque y elija el **Elemento**, o indique **Zona operativa** y **Dirección o referencia**.
    - **Fecha programada**: hoy o posterior.
-   - **Desde** y **Hasta**: la ventana horaria.
+   - **Desde** y **Hasta**: la ventana horaria (hora y minutos).
+   - En **Más datos** (se despliega): **Origen del servicio** (*Registro manual* o *Planificación*, para trabajo recurrente) y **Notas (opcional)**.
 4. Pulse **Programar servicio** en el formulario.
 
-**Resultado esperado:** el servicio aparece en la tabla en estado **Programado**, sin cuadrilla ni vehículo.
+**Resultado esperado:** el servicio aparece en la tabla en estado **Programado**, sin vehículo y, si dejó la cuadrilla en *Sin asignar*, sin cuadrilla.
 
 ![Formulario para programar un servicio](../manual-de-usuario/img/12-programar-servicio.png)
 
-**Notas.** Si el origen es *Denuncia ciudadana*, pegue el **UUID técnico** del ticket de M2: el código corto `TK-…` no sirve (*«El ticketId debe ser un UUID válido»*). Una fecha pasada se rechaza (*«La fecha programada debe ser hoy o una fecha posterior en Argentina»*).
+**Notas.** Si se entra desde una denuncia, el formulario muestra *«Origen: Denuncia ciudadana»* y, si hace falta, el campo **Nº de reclamo**: pegue el **UUID técnico** del ticket de M2: el código corto `TK-…` no sirve (*«El ticketId debe ser un UUID válido»*). Una fecha pasada se rechaza (*«La fecha programada debe ser hoy o una fecha posterior en Argentina»*).
 
 ### Tarea 3 — Asignar una cuadrilla y un vehículo (Oficina)
 
@@ -97,7 +98,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 1. Abra el servicio (estado **Programado** o **A reprogramar**) y pulse **Asignar cuadrilla** (si ya tenía una, **Reasignar cuadrilla**).
 2. Elija la **Cuadrilla asignada** y, si el tipo de servicio lo exige, el **Vehículo operativo**.
-3. Si aparece un aviso de superposición horaria, escriba la **Justificación del solapamiento** (de 10 a 500 caracteres). Queda registrada con su nombre y la fecha. El sistema avisa pero no bloquea: a veces la misma cuadrilla hace dos tareas seguidas.
+3. Si aparece el aviso **Revise la asignación** (superposición horaria, cuadrilla de otra zona o de otra especialidad), escriba la **Justificación de la asignación** (de 10 a 500 caracteres). Queda registrada con su nombre y la fecha. El sistema avisa pero no bloquea: a veces la misma cuadrilla hace dos tareas seguidas.
 4. Pulse **Confirmar asignación**.
 
 **Resultado esperado:** el detalle muestra la cuadrilla y el vehículo asignados; el servicio sigue **Programado**. Ahora el responsable de esa cuadrilla puede iniciarlo.
@@ -116,7 +117,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 **Cancelar:**
 
 1. Abra el servicio. Se puede cancelar si está **Programado**, **A reprogramar** o **Suspendido**.
-2. Pulse el botón de cancelar *(verificar en la UI: «Cancelar servicio»)*, escriba el **Motivo** (obligatorio) y pulse **Confirmar cancelación**.
+2. Pulse **Cancelar servicio**, escriba el **Motivo** (obligatorio) y pulse **Confirmar cancelación**.
 
 **Resultado esperado:** el servicio queda **Cancelado** y no se puede deshacer. Un servicio **En curso** no se cancela: Campo debe suspenderlo o completarlo primero.
 
@@ -125,12 +126,12 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 **Dónde:** **Mi trabajo** o **Servicios**.
 
 1. Ingrese con un usuario de Campo (responsable). En **Mi trabajo** figuran los servicios de su cuadrilla.
-2. Abra el servicio y pulse **Iniciar servicio**. Pasa a **En curso**.
+2. Pulse **Abrir** en el servicio y luego **Iniciar servicio** (el botón también está en la lista). Pasa a **En curso**.
    - No se puede iniciar sin cuadrilla asignada, ni sin vehículo si el tipo lo exige, ni con un corte de calle pendiente.
    - Si lo inicia fuera de la ventana horaria, el sistema lo permite y deja el aviso *«Inicio fuera de ventana horaria»*.
 3. Para cada zona elija **Atendida**, **Parcial** o **No atendida** y guarde con **Guardar zona**.
    - Con **Parcial** o **No atendida** hay que elegir el **Motivo de la excepción** y **adjuntar al menos una evidencia** (tarea 6).
-4. Cuando todas las zonas tengan resultado aparece *«Todas las zonas registradas. Listo para finalizar.»* *(verificar en la UI)*. Pulse **Completar servicio**.
+4. Cuando todas las zonas tengan resultado, pulse **Completar servicio**. Si falta alguna, la pantalla lo indica con *«Complete la … para finalizar.»*.
 
 **Resultado esperado:** el servicio queda **Completado** si todas las zonas se atendieron, o **Parcial** si alguna no. Lo calcula el sistema; no se elige. Oficina lo ve en **Servicios**.
 
@@ -155,9 +156,9 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Dónde:** menú **Control Ambiental**.
 
-1. Abra **Control Ambiental**: la cola de expedientes. Filtre por **Estado**, **Tipo de hallazgo** y **Prioridad**, o busque por ID, dirección o ticket.
+1. Abra **Control Ambiental**: la cola de expedientes. Filtre por **Estado**, **Tipo de hallazgo** y **Prioridad**, o busque por ID, dirección o ticket; también puede filtrar por **Última actualización** (Desde y Hasta). El botón **Abrir reporte** carga un expediente nuevo.
 2. Abra un expediente en estado **Recibido** y pulse **Iniciar revisión**. Pasa a **En revisión**.
-3. En **En revisión**, el recuadro **Siguiente decisión de Oficina** ofrece tres caminos:
+3. En **En revisión**, el recuadro **Acciones** ofrece tres caminos:
    - **Programar inspección**: elija la **zona operativa**, la fecha y la cuadrilla.
    - **Derivar expediente** si no es de nuestra competencia (vuelve a M2).
    - **Desestimar expediente** si se descarta sin inspección.
@@ -187,7 +188,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 2. Verifique la inspección y elija el **establecimiento**. **El acta no se puede modificar**: si hay un error se emite otra.
 3. Confirme.
 
-**Resultado esperado:** el expediente pasa a **Acta emitida** y el acta se envía a M4. La acción sugerida (advertencia, intimación, multa o clausura) **no es vinculante**: decide M4. Si no se puede identificar el establecimiento, el acta se registra sin enviarse a M4 *(verificar en la UI: «Registrar aviso no derivado»)*.
+**Resultado esperado:** el expediente pasa a **Acta emitida** y el acta se envía a M4. La acción sugerida (advertencia, intimación, multa o clausura) **no es vinculante**: decide M4. Si no se encuentra el establecimiento, pulse **Continuar sin establecimiento**: la pantalla avisa *«El acta no se enviará a Faltas. El expediente se cierra.»*
 
 Con resultado inconcluso, Oficina usa **Programar reinspección**: se crea una nueva inspección y un nuevo servicio, y la anterior queda en la historia.
 
@@ -199,11 +200,11 @@ Con resultado inconcluso, Oficina usa **Programar reinspección**: se crea una n
 2. Si el acta queda sin respuesta de M4 pasado el plazo, el expediente se **cierra solo**.
 3. En los estados **Derivado**, **Desestimado**, **Sin infracción** y **Sancionado**, pulse **Cerrar expediente**.
 
-**Resultado esperado:** el expediente queda **Cerrado**. Un expediente **Sancionado** no se reabre; si el vecino rechaza la solución en M2, el expediente vuelve a **En revisión** (salvo si fue sancionado). *(Si necesita registrar una sanción a mano: verificar en la UI si existe esa acción.)*
+**Resultado esperado:** el expediente queda **Cerrado**. Un expediente **Sancionado** no se reabre; si el vecino rechaza la solución en M2, el expediente vuelve a **En revisión** (salvo si fue sancionado). *(La pantalla no tiene una acción para cargar una sanción a mano: no se encontró en el código del frontend.)*
 
 ### Tarea 10 — Gestionar un contenedor (Oficina)
 
-**Dónde:** menú **Catálogo** → **Contenedores**, desde la fila del contenedor.
+**Dónde:** menú **Catálogo** → **Contenedores**. Abra el contenedor con la flecha de su fila (**Ver detalle**); las acciones se ejecutan desde el detalle. Según la tabla de roles del frontend, reportar desborde o daño y vaciar son acciones de Campo (cuadrilla).
 
 | Situación | Acción | Resultado esperado |
 |---|---|---|
@@ -224,13 +225,13 @@ El vaciado y la reubicación se ejecutan como un servicio puntual: **cerrar ese 
 1. Abra la dirección y elija **Seguir mi denuncia** (también hay consultas de **servicios** y de **puntos verdes**).
 2. Escriba el **código de su comprobante** (el identificador del reclamo que le dio M2) y pulse **Consultar**.
 
-**Resultado esperado:** se muestra la **etapa** de la denuncia, el tipo, la dirección y las fechas. **No** se muestran el inspector, los hallazgos ni el acta. Si el código no corresponde a ninguna denuncia, se muestra siempre el mismo mensaje: no se revela si existe. Hay un límite de consultas por minuto: si lo supera, espere un momento. *(El texto exacto de los mensajes de esta pantalla: verificar en la UI.)*
+**Resultado esperado:** se muestra la **etapa** de la denuncia, el tipo, la dirección y las fechas. **No** se muestran el inspector, los hallazgos ni el acta. Si el código no corresponde a ninguna denuncia, se muestra siempre el mismo mensaje, *«No encontramos una denuncia con ese código. Revisá que sea el código de seguimiento de tu comprobante.»*: no se revela si existe. Hay un límite de consultas por minuto: si lo supera, espere un momento *(texto del aviso de límite: verificar en la UI)*.
 
 ### Tarea 12 — Trabajar sin conexión (Campo)
 
-1. Si una acción de Campo falla por falta de conexión, el formulario queda como **borrador local** en ese dispositivo, con el aviso *«Borrador local pendiente de envío (sin conexión)»* *(verificar en la UI)*.
-2. Cuando vuelva la señal, pulse **Reintentar envío** *(verificar en la UI)*. Nada se envía sin que usted lo confirme.
-3. Si mientras tanto Oficina cambió el servicio, aparece **Conflicto de sincronización** con su borrador y la versión actual: usted decide si lo conserva o lo descarta.
+1. Si una acción de Campo falla por falta de conexión, el formulario queda como **borrador local** en ese dispositivo, con el aviso *«Sin conexión. Se guardó en este dispositivo; reenvíe cuando vuelva la conexión.»* y la marca **Borrador local pendiente**.
+2. Cuando vuelva la señal, pulse **Reenviar**. Nada se envía sin que usted lo confirme.
+3. Si el reenvío es rechazado (por ejemplo, porque Oficina cambió el servicio mientras tanto), la pantalla muestra el motivo: revise el estado actual del servicio antes de volver a intentarlo.
 
 **Resultado esperado:** no se pierde nada; el borrador pertenece al usuario que lo escribió.
 
@@ -238,7 +239,7 @@ El vaciado y la reubicación se ejecutan como un servicio puntual: **cerrar ese 
 
 **Dónde:** menú **Tableros**.
 
-1. Elija **Desde**, **Hasta**, **Familia**, **Zona operativa** y **Tipo de servicio**, y pulse **Actualizar** *(verificar en la UI)*.
+1. Elija **Desde**, **Hasta**, **Familia**, **Zona operativa** y **Tipo de servicio**, y pulse **Actualizar**. También hay atajos de período: **Última semana**, **Último mes** y **Último trimestre**.
 2. Cada gráfico puede verse como **Barras** o como **Tabla**.
 
 | Familia | Qué mide |
@@ -248,7 +249,7 @@ El vaciado y la reubicación se ejecutan como un servicio puntual: **cerrar ese 
 | Incidencias | Contenedores desbordados y dañados, árboles por riesgo, tiempo medio de resolución de denuncias |
 | Residuos | Kilos y metros cúbicos por tipo y destino; porcentaje desviado del relleno |
 
-**Resultado esperado:** los gráficos reflejan el período y los filtros elegidos. La unidad de análisis es **servicio + zona**: un recorrido que pasa por cuatro zonas y atiende tres cuenta como tres objetivos atendidos y uno pendiente. Los servicios cancelados no cuentan como incumplimiento.
+**Resultado esperado:** los gráficos reflejan el período y los filtros elegidos. Cada tarjeta compara con el período anterior y con la meta, cuando existe (*Cumple la meta* o *Bajo la meta*). La unidad de análisis es **servicio + zona**: un recorrido que pasa por cuatro zonas y atiende tres cuenta como tres objetivos atendidos y uno pendiente. Los servicios cancelados no cuentan como incumplimiento.
 
 ![Tablero de indicadores](../manual-de-usuario/img/10-tableros.png)
 
@@ -337,8 +338,8 @@ Estas reglas **se aplican en el servidor** además de en la pantalla: una acció
 - **Aviso de demora:** el servidor lo soporta, pero la pantalla todavía no lo ofrece.
 - **Exportación:** no hay exportación de registros a archivo; los indicadores son de lectura en pantalla.
 - **PDF adjuntos:** no se limpian de metadatos ni se analizan en busca de virus.
-- **Campo y el catálogo:** reportar contenedores y registrar relevamientos están permitidos para Campo, pero el menú de Campo no incluye **Catálogo** *(verificar en la UI)*; hoy lo hace Oficina.
-- **Capturas:** son del 20/10 y la pantalla de ingreso cambió (ahora es correo y contraseña de M1); falta actualizar esa captura.
+- **Campo y el catálogo:** reportar contenedores y registrar relevamientos están permitidos para Campo, pero el menú lateral de Campo incluye **Catálogo**, porque cualquier rol de M6 puede consultarlo.
+- **Capturas:** son del 03/11/2026, sacadas con Playwright en modo mock sobre la rama `develop` del frontend (datos de prueba, no reales).
 
 ---
 
