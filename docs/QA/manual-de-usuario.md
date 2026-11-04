@@ -161,7 +161,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
    - No se puede iniciar sin cuadrilla asignada, ni sin vehículo si el tipo lo exige, ni con un corte de calle pendiente.
    - Si lo inicia fuera de la ventana horaria, el sistema lo permite: el detalle antes de iniciar muestra *«Inicio fuera de ventana horaria: el servicio está programado para …»*.
 3. Para cada zona elija **Atendida**, **Parcial** o **No atendida** y guarde con **Guardar zona**.
-   - Con **Parcial** o **No atendida** hay que elegir el **Motivo de la excepción** y **adjuntar al menos una evidencia** (tarea 6).
+   - Con **Parcial** o **No atendida** hay que elegir el **Motivo** (selector «Seleccione un motivo») y **adjuntar al menos una evidencia** (tarea 6).
 4. Cuando todas las zonas tengan resultado, pulse **Completar servicio**. Si falta alguna, la pantalla lo indica con *«Complete la … para finalizar.»*.
 
 **Resultado esperado:** el servicio queda **Completado** si todas las zonas se atendieron, o **Parcial** si alguna no. Lo calcula el sistema; no se elige. Oficina lo ve en **Servicios**.
@@ -307,7 +307,7 @@ La cuenta de integrante (`…10010`) también ve **Vaciar contenedor**. **Editar
 
 Cuenta de Operaciones (`…10002`) salvo donde se indique.
 
-- **Buscar y filtrar servicios:** en **Servicios**, escriba en la búsqueda («Buscar servicio, zona o cuadrilla…») o use **Período**, **Estado**, **Zona**, **Categorías** y los filtros de columna; **Limpiar todos los filtros aplicados** vuelve a la lista completa. El mapa y la tabla muestran lo mismo. Esta consulta la hace cualquier perfil (Campo ve solo los servicios de su cuadrilla).
+- **Buscar y filtrar servicios:** en **Servicios**, escriba en la búsqueda («Buscar servicio, zona o cuadrilla…») o use **Período**, **Estado**, **Zona**, **Categorías** y los filtros de columna; **Limpiar filtros** vuelve a la lista completa. El mapa y la tabla muestran lo mismo. Esta consulta la hace cualquier perfil (Campo ve solo los servicios de su cuadrilla).
 - **Pedir un corte de calle o una reparación:** en el detalle de un servicio **Programado** o **A reprogramar**, **Solicitar corte de calle** (a M7; con el corte pendiente el servicio no puede iniciarse) o **Crear derivación de reparación** (a M3). Las respuestas se siguen en **Derivaciones**.
 - **Administrar catálogos:** **Catálogo** reúne tipos de servicio, sitios de disposición, zonas operativas, recorridos, frecuencias de servicio, vehículos, cuadrillas, espacios verdes, contenedores, puntos verdes, árboles e intervenciones de arbolado. Todos los perfiles lo consultan. Operaciones (`…10002`) da de alta, edita y da de baja contenedores, puntos verdes, espacios verdes y árboles; los tipos de servicio, recorridos, frecuencias, cuadrillas, vehículos, zonas y sitios de disposición los administra la cuenta de **administración** (`…10000`). La baja es lógica y el código de un contenedor, un tipo de servicio o un relevamiento no se puede cambiar.
 - **Intervenciones sobre arbolado:** en **Catálogo → Intervenciones de arbolado**, Operaciones solicita la intervención y puede **Autorizar intervención** una poda. **Autorizar o rechazar una extracción** exige la cuenta de **administración** (`…10000`). Para un relevamiento, abra el árbol y pulse **Registrar relevamiento** (acción de Campo).
@@ -323,7 +323,7 @@ Cuenta de Operaciones (`…10002`) salvo donde se indique.
 
 | Situación | Qué significa | Qué hacer |
 |---|---|---|
-| **401**, *«Inicie sesión para continuar»* | La sesión venció o no existe | Pulse **Volver a iniciar sesión** (la pantalla de ingreso lo lleva de vuelta a donde estaba) |
+| **401** (sesión vencida o inexistente) | La sesión venció o no existe | Pulse **Iniciar sesión**, o ingrese de nuevo desde la pantalla de ingreso, que muestra *«Su sesión terminó. Vuelva a ingresar.»* y lo lleva de vuelta a donde estaba |
 | **403** | Su perfil no puede hacer eso (**ROLE_REQUIRED**), o el servicio o la inspección es de otra cuadrilla (**NOT_ASSIGNED**) | No es un error del sistema: pida a Oficina que lo haga o que lo reasigne. Un botón que falta casi siempre responde a la misma regla |
 | **409** | El paso no corresponde al estado actual (por ejemplo, completar un servicio que ya se completó, o iniciarlo con un corte pendiente); suele pasar si otra persona cambió el registro | Recargue la pantalla y revise qué acciones ofrece ahora |
 | **Sesión expirada en medio de una tarea** | La sesión venció mientras trabajaba | Vuelva a ingresar. Lo que haya quedado como borrador local (Campo) se conserva |
