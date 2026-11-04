@@ -64,3 +64,6 @@ Thumbs.db
 
 # Planes y specs de trabajo de las sesiones con IA (no se versionan).
 docs/superpowers/
+
+# PDF generados desde docs/QA (npm run qa:pdf): se regeneran, no se versionan.
+docs/QA/build/
