@@ -143,6 +143,29 @@ jobs:
         run: npm run test:e2e
 
   # ──────────────────────────────────────────────────────────────
+  # secrets — Escaneo de secretos sobre TODO el historial (gitleaks).
+  #
+  # Como e2e, no es check obligatorio ni frena el deploy; se mira igual. Usa la
+  # imagen oficial fijada en vez de la acción para no depender de licencias.
+  # Las excepciones (valores de ejemplo y de prueba) están en .gitleaks.toml.
+  # ──────────────────────────────────────────────────────────────
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (historial completo)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
+            git /repo --redact --no-banner --log-opts="--all"
+
+  # ──────────────────────────────────────────────────────────────
   # deploy — Dispara el deploy en Render (solo push a main).
   # Depende de build+test: si el CI falla, no se deploya.
   # ──────────────────────────────────────────────────────────────

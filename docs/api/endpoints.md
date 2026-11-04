@@ -459,6 +459,47 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 | ------ | -------- | ------------------------ | -------- |
 | GET    | `/audit` | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más reciente al más antiguo. Filtros opcionales `entityType` (valor cerrado: `CONTAINER`, `ENVIRONMENTAL_REPORT`, `ENVIRONMENTAL_INSPECTION`, `VIOLATION_NOTICE`, `REPAIR_REQUEST`, `STREET_CLOSURE_REQUEST`, `TREE_INTERVENTION`, `SERVICE`, `CREW`, `ZONE`, `VEHICLE`, `ROUTE`) y `entityId` (UUID); 400 si alguno es inválido. Cada fila trae `action`, `fromStatus`/`toStatus`, `actorUserId` y `actorRoles` (del token, nunca del body), `note` (solo el motivo que el flujo ya pedía) y `occurredAt` |
 
+**Query params de `GET /audit`** (todos opcionales; un valor fuera de rango o con formato inválido da 400):
+
+| Param | Tipo | Detalle |
+| ----- | ---- | ------- |
+| `page` | entero | 1 a 10.000.000, default 1 |
+| `pageSize` | entero | 1 a 100, default 20 |
+| `entityType` | enum | Uno de los 12 valores de arriba; cualquier otro da 400 |
+| `entityId` | UUID | Id de la entidad; se combina con `entityType` (AND). Sin filtros devuelve toda la tabla |
+
+**Respuesta 200:** `{ data: [...], meta: { total, page, pageSize, totalPages } }`, ordenada por `occurredAt` descendente y, a igual instante, por `id` descendente. Cada elemento (`AuditLogResponseDto`):
+
+| Campo | Tipo | Detalle |
+| ----- | ---- | ------- |
+| `id` | UUID | Id de la fila de auditoría |
+| `entityType` | string | Uno de los valores cerrados del filtro |
+| `entityId` | string | Id de la entidad afectada |
+| `action` | string | Acción en MAYÚSCULAS (tabla de abajo); no es un enum cerrado en el contrato |
+| `fromStatus` | string o null | Estado anterior; en los catálogos con baja lógica, `ACTIVE`/`INACTIVE` |
+| `toStatus` | string o null | Estado nuevo |
+| `actorUserId` | string | Id de M1 de quien actuó, tomado del token |
+| `actorRoles` | `M6Role[]` | Roles de M6 efectivos al momento de la acción |
+| `note` | string o null | Motivo que el flujo ya pedía, hasta 500 caracteres; `null` si no hubo |
+| `occurredAt` | ISO 8601 | Cuándo ocurrió |
+
+**Errores:** 400 (query inválida), 401 (token ausente o inválido), 403 `ROLE_REQUIRED` (sin `M6_ADMIN` ni `M6_AUDITOR`), 500. Un `entityId` inexistente no da 404: devuelve la página vacía.
+
+**Valores de `action` que emite el backend**, por `entityType` (salvedades en [entidades/auditoria.md](../entidades/auditoria.md)):
+
+| `entityType` | `action` |
+| ------------ | -------- |
+| `CONTAINER` | `CREATE`, `REPORT_OVERFLOW`, `EMPTY`, `REPORT_DAMAGE`, `START_REPAIR`, `COMPLETE_REPAIR`, `RELOCATE`, `CONFIRM_RELOCATION`, `REMOVE`, `COMPLETE_SERVICE` |
+| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REQUEST_INFORMATION`, `STATUS_CHANGE` |
+| `ENVIRONMENTAL_INSPECTION` | `SCHEDULE`, `COMPLETE` |
+| `VIOLATION_NOTICE` | `ISSUE` |
+| `REPAIR_REQUEST` | `CREATE`, `START`, `CLOSE` |
+| `STREET_CLOSURE_REQUEST` | `CREATE`, `APPROVE`, `REJECT`, `END` |
+| `TREE_INTERVENTION` | `CREATE`, `SUBMIT_FOR_AUTHORIZATION`, `AUTHORIZE`, `REJECT`, `ASSIGN_SERVICE` |
+| `SERVICE` | `CREATE`, `UPDATE`, `ASSIGN_CREW`, `START`, `SUSPEND`, `RESUME`, `COMPLETE`, `CANCEL`, `RESCHEDULE`, `CONFIRM_RESCHEDULE` |
+| `CREW` | `CREATE`, `ACTIVATE`, `DEACTIVATE`, `ADD_MEMBERS`, `REMOVE_MEMBER`, `REASSIGN_ZONE` |
+| `ZONE`, `VEHICLE`, `ROUTE` | `CREATE`, `ACTIVATE`, `DEACTIVATE` |
+
 La tabla es de solo agregado (un trigger rechaza modificar, borrar y vaciar) y no se purga. No audita lecturas ni las transiciones que hace el sistema (consumidores de eventos y barridos).
 
 ## `repair-requests` — reparaciones derivadas a M3

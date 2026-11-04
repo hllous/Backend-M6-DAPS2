@@ -146,12 +146,12 @@ No hay que hacer nada manual: el deploy sale con el release a `main`. Un push a 
 
 | Variable | Valor |
 |---|---|
-| `M6_AUTH_MODE` | `backend-development` (demo contra el backend real) |
+| `M6_AUTH_MODE` | `real-m1` (login real contra M1; un build desplegado con otro valor no arranca) |
+| `M1_BASE_URL` | `https://ciudadanos-m1-backend.onrender.com/` (HTTPS en producción; solo servidor) |
 | `M6_BACKEND_ORIGIN` | `https://m6-backend-m64k.onrender.com` |
-| `M6_DEV_JWT` | Access token con el contrato de M1 (`node scripts/generate-demo-jwt.mjs <JWT_SECRET base64> RESPONSABLE_AREA 1 2026-12-16`; sin la fecha final dura 15 min) |
 | `M6_SESSION_SECRET` | Clave secreta para sellar la cookie de sesión del Next.js BFF |
 
-> `M6_AUTH_MODE=backend-development` reenvía cada petición del BFF al backend con `M6_DEV_JWT` como Bearer. `M6_BACKEND_ORIGIN`, `M6_DEV_JWT` y `M6_SESSION_SECRET` se leen en runtime (server-side), así que se pueden cambiar sin rebuild. `NEXT_PUBLIC_API_URL` quedó obsoleto: el código actual no lo usa.
+> Con `M6_AUTH_MODE=real-m1` el BFF hace el login contra M1 (`POST /auth/usuario/login`), valida la sesión con `GET /me` del backend y sella una cookie `HttpOnly`; el JWT de M1 dura 15 min y se renueva con `POST /auth/refresh`. `M1_BASE_URL`, `M6_BACKEND_ORIGIN` y `M6_SESSION_SECRET` se leen en runtime (server-side), así que se pueden cambiar sin rebuild. **Ya no existen** `M6_DEV_JWT`, `M6_JWT_SECRET` ni el modo `backend-development` (excepción de demo al ADR-004, retirada en el backend el 3/11 en #488; el frontend la quita en Frontend #800): si siguen en Vercel, borrarlas. `NEXT_PUBLIC_API_URL` quedó obsoleto: el código actual no lo usa.
 
 ### Checklist de despliegue para DevOps
 
@@ -162,7 +162,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 | Lugar | Variable | Qué va | Por qué | A quién pedirlo | Cuándo | Secreto |
 |---|---|---|---|---|---|---|
 | Render | `JWT_SECRET` | Base64 de 32 bytes o más. Provisorio: `openssl rand -base64 32` | La validación del token de M1 cambió (#354). Con el valor viejo en texto plano **el servicio no arranca** | Al PO de M6: M1 manda el definitivo por el grupo de POs | **Antes del deploy** | Sí |
-| Render | `M6_BOOTSTRAP_ADMIN_USER_IDS` | `user_id` de M1 del primer admin (varios, separados por coma) | Sin él nadie puede asignar roles (#161) | M1 entregó el `user_id` 1 (26/10); M1 no está hosteado, así que no se verifica con un token de M1: cargar `1` y regenerar `M6_DEV_JWT` con el script (abajo) | Con el deploy de la base de roles | No |
+| Render | `M6_BOOTSTRAP_ADMIN_USER_IDS` | `user_id` de M1 del primer admin (varios, separados por coma) | Sin él nadie puede asignar roles (#161) | `1` es la cuenta compartida de M1 (`admin@municipio.gob.ar`) y entra como admin solo por esta variable; `10000` y `10001` ya son `M6_ADMIN` por el seed (#488). Se comprueba con login real + `GET /me` | Con el deploy de la base de roles | No |
 | Render | `RABBITMQ_URL` | `amqps://module_ambiente:<clave>@core-uade-2026.duckdns.org:5671/core` (clave percent-encoded si lleva `/ ? # @ : %`) | Conecta con el bus del Core. Sin ella la app arranca, pero no publica ni consume | Al PO de M6: ficha privada de M9, usuario `module_ambiente` | Cuando llegue la ficha | **Sí** |
 | Render | `CORE_API_URL` | `https://core-uade-2026.duckdns.org` | API REST del Core (token de módulo y registro de suscripciones) | No hace falta pedirla: es un dato conocido | Con la ficha | No |
 | Render | `CORE_MODULE_SECRET` | El secret de máquina de M9 | Pide el token de módulo al Core; obligatoria si hay `CORE_API_URL` | Al PO de M6: ficha privada de M9 | Cuando llegue la ficha | **Sí** |
@@ -175,9 +175,8 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 
 | Lugar | Variable | Qué va | Por qué | A quién pedirlo | Cuándo | Secreto |
 |---|---|---|---|---|---|---|
-| Vercel | `M6_DEV_JWT` | Se genera con `node scripts/generate-demo-jwt.mjs <JWT_SECRET de Render> RESPONSABLE_AREA <user_id del admin inicial>` (el mismo id de `M6_BOOTSTRAP_ADMIN_USER_IDS`) | Token de demo del BFF. **Dura 15 minutos salvo que se pase una fecha límite como 5.º argumento (`... 2026-12-16`, fin de la cursada); no se puede revocar sin rotar `JWT_SECRET`.** Tiene que ser de un empleado. Excepción de demo al [ADR-004](decisiones/adr-004-jwt-m1-y-puerto-identidad.md) mientras M1 no esté hosteado: lo firmamos nosotros ([ficha de M1](integracion/m1.md#respuesta-al-seguimiento-2610-cuenta-compartida-y-m1-no-hosteado)) | Lo genera DevOps con el secreto de Render | Después de cargar el `JWT_SECRET` | Sí |
 | Vercel | `M6_SESSION_SECRET` | Valor aleatorio propio | Sella la cookie de sesión del BFF | Lo genera DevOps | Si no existe | Sí |
-| Vercel | `M6_AUTH_MODE`, `M6_BACKEND_ORIGIN` | `backend-development` y `https://m6-backend-m64k.onrender.com` | Modo demo contra el backend real | – | Solo verificar | No |
+| Vercel | `M6_AUTH_MODE`, `M1_BASE_URL`, `M6_BACKEND_ORIGIN` | `real-m1`, `https://ciudadanos-m1-backend.onrender.com/` y `https://m6-backend-m64k.onrender.com` | Login real de M1. **Borrar** `M6_DEV_JWT` y `M6_JWT_SECRET` si quedaron | – | Solo verificar | No |
 
 **Del lado de M9** (lo coordina el PO): los rangos de salida de Render, `74.220.48.0/24` y `74.220.56.0/24`, están habilitados desde el 28/10 (dato de M9; falta probar desde Render). Si Render cambia sus IPs, avisar.
 
@@ -186,7 +185,7 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 1. Cargar `JWT_SECRET` y borrar los overrides viejos.
 2. Desplegar y mirar en los logs que se apliquen las migraciones (`prisma migrate deploy` corre solo al arrancar).
 3. Cargar `M6_BOOTSTRAP_ADMIN_USER_IDS` y comprobarlo con `GET /me` y el log de arranque (dice cuántos admins hay).
-4. Regenerar `M6_DEV_JWT` en Vercel.
+4. En Vercel: `M6_AUTH_MODE=real-m1`, `M1_BASE_URL`, y borrar `M6_DEV_JWT` y `M6_JWT_SECRET`. Probar login real + `GET /me` (200) con una cuenta de M1.
 5. Cuando llegue la ficha de M9: cargar `RABBITMQ_URL`, `CORE_API_URL` y `CORE_MODULE_SECRET` y reiniciar. Verificar el registro con `GET /api/v1/event-types/map`.
 
 ### Sincronizar zonas y comunas con el catálogo de M9 (#421)
@@ -271,7 +270,7 @@ curl https://m6-backend-m64k.onrender.com/zones
 
 **Un 401 acá es la respuesta correcta, no un error.** Significa que la base tiene esquema y que el guard está funcionando. Si devuelve `500`, ahí sí hay algo roto.
 
-Para probar con datos, generá un access token con `node scripts/generate-demo-jwt.mjs <JWT_SECRET base64> [ROL]` (mismo contrato que M1, dura 15 min) y pegalo en el botón **Authorize** del [Swagger UI](https://m6-backend-m64k.onrender.com/api/docs).
+Para probar con datos, hacé login en M1 (`POST https://ciudadanos-m1-backend.onrender.com/auth/usuario/login` con `{"email": …, "password": …}`; el token viene en el header `authorization`, dura 15 min) y pegalo en el botón **Authorize** del [Swagger UI](https://m6-backend-m64k.onrender.com/api/docs). Las cuentas de la demo están en [`seed.md`](seed.md).
 
 ---
 
