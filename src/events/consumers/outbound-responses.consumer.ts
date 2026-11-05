@@ -243,6 +243,16 @@ export class OutboundResponsesConsumer implements OnModuleInit {
           },
         });
         if (count > 0) {
+          // El where acota a SCHEDULED: el estado de origen es conocido sin leerlo.
+          await this.audit.record(tx, {
+            entityType: 'SERVICE',
+            entityId: request.sourceId,
+            action: 'RESCHEDULE',
+            fromStatus: ServiceStatus.SCHEDULED,
+            toStatus: ServiceStatus.RESCHEDULED,
+            actor: M7,
+            note: 'streetClosureRejected',
+          });
           this.logger.log(
             `Servicio ${request.sourceId}: marcado para reprogramar por el rechazo del corte`,
           );

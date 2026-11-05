@@ -1,9 +1,13 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { EnvironmentalReportStatus as S, SanctionDecision } from '@prisma/client';
+import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent } from '../inbox/consumed-events';
 import { Data, esUuid, requerido } from '../inbox/payload-validation';
+import { sistema } from './system-audit';
+
+const M4 = sistema('m4');
 
 const validarActa = (d: Data): string[] =>
   requerido(d, ['sourceViolationId', 'violationId'], 'uuid', esUuid);
@@ -29,6 +33,7 @@ export class SanctionsConsumer implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inbox: InboxService,
+    private readonly audit: AuditService,
   ) {}
 
   onModuleInit(): void {
@@ -129,6 +134,22 @@ export class SanctionsConsumer implements OnModuleInit {
           where: { id: report.id },
           data: { status: S.CLOSED },
         });
+        // Una fila por transición, aunque ocurran juntas. Sin entityType para
+        // SanctionOutcome: sumarlo es un valor nuevo de AUDIT_ENTITY_TYPES (#518, fuera de alcance).
+        for (const [from, to] of [
+          [S.NOTICE_ISSUED, S.SANCTIONED],
+          [S.SANCTIONED, S.CLOSED],
+        ]) {
+          await this.audit.record(tx, {
+            entityType: 'ENVIRONMENTAL_REPORT',
+            entityId: report.id,
+            action: 'STATUS_CHANGE',
+            fromStatus: from,
+            toStatus: to,
+            actor: M4,
+            note: decision,
+          });
+        }
       }
     });
 

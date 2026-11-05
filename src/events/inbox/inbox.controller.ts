@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { InboxService, IngestResult } from './inbox.service';
 import { InboxAdminService } from './inbox-admin.service';
@@ -10,7 +21,12 @@ import {
 import { IngestEventDto, toInboundEnvelope } from './ingest-event.dto';
 import { IngestResultDto, RegisteredHandlersDto } from './inbox-response.dto';
 import { ErrorResponseDto, PaginatedResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  MAX_EXTERNAL_ID_LENGTH,
+  Roles,
+} from '../../common/decorators';
 import { ROLES_ADMIN, ROLES_OUTBOX_LECTURA } from '../../auth/role-groups';
 
 /**
@@ -26,6 +42,8 @@ import { ROLES_ADMIN, ROLES_OUTBOX_LECTURA } from '../../auth/role-groups';
 @ApiBearerAuth('JWT-auth')
 @Controller('events')
 export class InboxController {
+  private readonly logger = new Logger(InboxController.name);
+
   constructor(
     private readonly inbox: InboxService,
     private readonly inboxAdmin: InboxAdminService,
@@ -58,7 +76,12 @@ export class InboxController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async ingest(@Body() dto: IngestEventDto): Promise<IngestResult> {
+  async ingest(
+    @Body() dto: IngestEventDto,
+    @CurrentUser('userId') userId: string,
+  ): Promise<IngestResult> {
+    // Distingue un evento inyectado a mano del que entra por el bus. Solo ids, nada del payload.
+    this.logger.log(`Evento ${dto.eventType} (${dto.eventId}) inyectado a mano por ${userId}`);
     return this.inbox.ingest(toInboundEnvelope(dto));
   }
 
@@ -101,6 +124,11 @@ export class InboxController {
     description: 'Evento con payload',
     type: InboxEventDetailResponseDto,
   })
+  @ApiResponse({
+    status: 400,
+    description: 'messageId más largo que el máximo de un id externo',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({
     status: 403,
@@ -110,6 +138,9 @@ export class InboxController {
   @ApiResponse({ status: 404, description: 'No existe ese evento', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findOne(@Param('messageId') messageId: string): Promise<InboxEventDetailResponseDto> {
+    if (messageId.length > MAX_EXTERNAL_ID_LENGTH) {
+      throw new BadRequestException(`messageId excede ${MAX_EXTERNAL_ID_LENGTH} caracteres`);
+    }
     return this.inboxAdmin.findOne(messageId);
   }
 

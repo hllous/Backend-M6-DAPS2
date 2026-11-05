@@ -388,6 +388,16 @@
               }
             }
           },
+          "400": {
+            "description": "messageId más largo que el máximo de un id externo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {

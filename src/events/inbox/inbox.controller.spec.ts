@@ -41,8 +41,13 @@ describe('InboxController', () => {
       data: { foo: 'bar' },
     };
 
-    await expect(controller.ingest(dto)).resolves.toEqual({ status: 'processed' });
+    await expect(controller.ingest(dto, '42')).resolves.toEqual({ status: 'processed' });
     expect(service.ingest).toHaveBeenCalledWith(dto);
+  });
+
+  it('el detalle rechaza un messageId demasiado largo sin consultar', async () => {
+    await expect(controller.findOne('x'.repeat(101))).rejects.toThrow('excede');
+    expect(admin.findOne).not.toHaveBeenCalled();
   });
 
   it('handlers devuelve los tipos registrados', async () => {

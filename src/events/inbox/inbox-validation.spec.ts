@@ -84,10 +84,10 @@ describe('validación del payload en el inbox', () => {
     // Los handlers reales no se ejecutan acá: se reemplazan por stubs que
     // conservan la validación registrada.
     for (const c of [
-      new TicketsConsumer(p, inbox, {} as never),
+      new TicketsConsumer(p, inbox, {} as never, { record: jest.fn() } as unknown as AuditService),
       new OutboundResponsesConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
-      new SanctionsConsumer(p, inbox),
-      new WeatherConsumer(p, inbox),
+      new SanctionsConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
+      new WeatherConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
     ]) {
       c.onModuleInit();
     }

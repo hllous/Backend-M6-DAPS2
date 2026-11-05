@@ -45,7 +45,10 @@ function crearPrisma() {
       findUnique: jest.fn().mockResolvedValue({ id: ID, sourceType: 'SERVICE', sourceId: 'srv-1' }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
-    service: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    service: {
+      findMany: jest.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     violationNotice: {
       findUnique: jest.fn().mockResolvedValue({
         id: ID,
@@ -57,6 +60,7 @@ function crearPrisma() {
     environmentalReport: {
       findUnique: jest.fn().mockResolvedValue({ id: 'rep-1', status: S.NOTICE_ISSUED }),
       findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
       create: jest.fn().mockResolvedValue({ id: ID, reportType: 'NOISE' }),
       update: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -89,9 +93,11 @@ async function correr(
   const p = prisma as unknown as PrismaService;
   [
     new OutboundResponsesConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
-    new SanctionsConsumer(p, inbox),
-    new TicketsConsumer(p, inbox, new OutboxService()),
-    new WeatherConsumer(p, inbox),
+    new SanctionsConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
+    new TicketsConsumer(p, inbox, new OutboxService(), {
+      record: jest.fn(),
+    } as unknown as AuditService),
+    new WeatherConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
   ].forEach((c) => c.onModuleInit());
   const { status } = await inbox.ingest({ eventId: EVENT_ID, eventType, occurredAt, data });
   return { status, calls: llamadas(prisma) };
@@ -242,11 +248,9 @@ describe('sobre re-serializado por el Core (#296)', () => {
           },
         );
         const inbox = new InboxService(prisma as unknown as PrismaService);
-        new TicketsConsumer(
-          prisma as unknown as PrismaService,
-          inbox,
-          new OutboxService(),
-        ).onModuleInit();
+        new TicketsConsumer(prisma as unknown as PrismaService, inbox, new OutboxService(), {
+          record: jest.fn(),
+        } as unknown as AuditService).onModuleInit();
         await inbox.ingest({
           eventId: EVENT_ID,
           eventType: 'ticketUpdated',
