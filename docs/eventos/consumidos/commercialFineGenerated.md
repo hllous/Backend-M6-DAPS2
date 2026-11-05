@@ -16,7 +16,7 @@ El `SanctionOutcome` es un **espejo de solo lectura**: no lo editamos, existe pa
 | `actId` | ✅ Confirmado (21/10): es distinto de `externalRef`. Es el identificador interno del acta de M4 que fundamenta la sanción. No lo persistimos: queda como dato del evento |
 | `decision` | Qué resolvieron |
 | ✅ `decidedAt` | Confirmado por M4 (27/10), ya en su contrato. Opcional: M4 lo envía al formalizar la decisión |
-| ✅ `externalRef` | La referencia administrativa visible de la resolución, disposición o multa (es lo que guardamos en `SanctionOutcome.externalRef`). Confirmado por M4 (27/10), ya en su contrato. Opcional: M4 lo envía al formalizar la decisión |
+| ✅ `externalRef` | La referencia administrativa visible de la resolución, disposición o multa (es lo que guardamos en `SanctionOutcome.externalRef`). Confirmado por M4 (27/10), ya en su contrato. No es el número público de la multa/acta: ese es el `noticeNumber` del acta de M6. Opcional: M4 lo envía al formalizar la decisión |
 
 Nice to have: `establishmentId`, que ya tienen — lo aprovechamos, pero no reemplaza a `sourceViolationId`.
 

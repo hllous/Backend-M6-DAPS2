@@ -568,6 +568,7 @@ export class EnvironmentalReportsService {
       lat: toNumber(report.lat),
       lng: toNumber(report.lng),
       ticketId: report.ticketId,
+      caseNumber: report.caseNumber,
       publicId: report.publicId,
       priority: report.priority,
       escalated: report.escalated,

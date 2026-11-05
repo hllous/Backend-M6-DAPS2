@@ -44,6 +44,7 @@ describe('EnvironmentalReportsService', () => {
       lat: new Prisma.Decimal('-34.6037'),
       lng: null,
       ticketId: 'TCK-2026-004512',
+      caseNumber: 'EXP-2026-000123',
       reporterSnapshot: null,
       priority: 'HIGH',
       escalated: false,
@@ -166,7 +167,13 @@ describe('EnvironmentalReportsService', () => {
 
   describe('alta y listado', () => {
     it('un expediente de oficio nace en RECEIVED y sin reclamo', async () => {
-      await service.create({ reportType: 'NOISE' } as any, actorCon(M6Role.M6_ADMIN));
+      const res = await service.create({ reportType: 'NOISE' } as any, actorCon(M6Role.M6_ADMIN));
+
+      // El número lo pone la base (default de columna): el alta no lo manda y la respuesta lo expone.
+      expect(prisma.environmentalReport.create.mock.calls[0][0].data).not.toHaveProperty(
+        'caseNumber',
+      );
+      expect(res.caseNumber).toBe('EXP-2026-000123');
 
       expect(prisma.environmentalReport.create.mock.calls[0][0].data).toMatchObject({
         reportType: 'NOISE',

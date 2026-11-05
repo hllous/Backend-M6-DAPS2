@@ -19592,7 +19592,7 @@
           },
           "noticeNumber": {
             "type": "string",
-            "description": "Número de acta correlativo. Es lo que identifica el acto administrativo.",
+            "description": "Número público del acta, correlativo. Es lo que identifica el acto administrativo; el externalRef de M4 no lo es.",
             "example": "ACTA-2026-000012"
           },
           "inspectionId": {
@@ -19740,6 +19740,11 @@
             "description": "UUID del expediente",
             "format": "uuid"
           },
+          "caseNumber": {
+            "type": "string",
+            "description": "Número de expediente de M6, legible y estable. Lo tienen todos, también los de oficio sin reclamo (que no tienen publicId). Solo para mostrar: no es credencial ni viaja en eventos.",
+            "example": "EXP-2026-000123"
+          },
           "reportType": {
             "type": "string",
             "description": "Tipo de denuncia",
@@ -19873,6 +19878,7 @@
         },
         "required": [
           "id",
+          "caseNumber",
           "reportType",
           "status",
           "escalated",

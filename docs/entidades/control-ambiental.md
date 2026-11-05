@@ -32,6 +32,8 @@ Al emitirse sale [`environmentalViolationDetected`](../eventos/publicados/enviro
 
 ## `SanctionOutcome`
 
+`externalRef` es la referencia de M4 y **no** es el número público del acta. El número público es el `noticeNumber` del `ViolationNotice` (`ACTA-2026-000012`), que ya sale en la API del acta.
+
 **Espejo de solo lectura de lo que decidió M4.** No lo editamos: existe para poder cerrar el expediente y para mostrar en qué terminó.
 
 Se llena al recibir [`commercialFineGenerated`](../eventos/consumidos/commercialFineGenerated.md) o [`closureUpdate`](../eventos/consumidos/closureUpdate.md) (`ORDERED` o `LIFTED`) de M4. Ambos traen `sourceViolationId` —el `violationId` que mandamos en el acta—, confirmado el 24/08: sin ese campo no sabríamos cuál de nuestras actas resolvieron. Estado vivo en [bloqueantes.md](../integracion/m4.md#acordado-el-2110).

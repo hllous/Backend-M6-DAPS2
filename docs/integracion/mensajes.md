@@ -335,3 +335,19 @@ El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9 los avisos de esta sección (
 **→ M1 (Ciudadanos)** — *enviado el 3 nov 2026 con el CSV de todas las cuentas (1.510); espera respuesta de M1*
 
 > Gracias por las respuestas. Anotamos la opción B (RS256 local, solo en `/integraciones/v1/**`) y esperamos la URL final para probar con un module-token real de Ambiente. Adjuntamos el CSV con las columnas de `cuenta_empleado` (`empleado_id`, `mail`, `nombre_empleado`, `apellido_empleado`, `rol`, `activo`, `uuid`): 1.510 empleados, las 12 cuentas de login (`10000`–`10011`) y los integrantes de las cuadrillas, todos `EMPLEADO`; `uuid` queda vacío para que lo genere M1. `empleado_id` tiene que ser el `sub` que figure en el token. Las contraseñas de las 12 de login van por privado. Sobre el 401 que vimos: nuestro backend desplegado rechaza el token de `admin@municipio.gob.ar`; para descartar un error de firma necesitamos el secreto HS256 vigente y su largo (base64). Si sigue igual, les pasamos header y payload decodificados con la fecha de la prueba.
+
+**→ M2 (Atención Ciudadana)** — *enviado el 5 nov 2026 a las 14:06 ([#499](https://github.com/hllous/Backend-M6-DAPS2/issues/499))*
+
+> Una consulta sobre los adjuntos de `updateTicketStatus`. Mantenemos la forma que publicaron (`{ fileName, contentType, url, sizeBytes? }`, sin `attachmentId`) y no la vamos a cambiar. Lo que necesitamos saber es **qué adjuntos puede ver el vecino** en el seguimiento de su ticket: ¿todos los que mandamos, o solo los que marquemos de alguna manera? ¿Hay alguna condición (estado del ticket, tipo de archivo)? Del lado nuestro, las fotos de inspección son evidencia interna y no las mandamos; solo viajarían archivos pensados para el vecino. Con su respuesta dejamos la regla documentada.
+
+**→ M4 (Faltas / Sanciones)** — *enviado el 5 nov 2026 a las 14:06 ([#500](https://github.com/hllous/Backend-M6-DAPS2/issues/500))*
+
+> Seguimos esperando la búsqueda de establecimientos por REST: sin `establishmentId` no podemos derivar un acta a ustedes. Para cerrarlo necesitamos tres cosas: (1) la consulta (ruta y parámetros: dirección, CUIT o barrio); (2) qué identificador estable devuelven y es el que mandamos como `establishmentId`; (3) qué responden cuando no hay coincidencias y cuando hay varias. Con eso documentamos el contrato y habilitamos la derivación.
+
+**→ M4 (Faltas / Sanciones), versión con plan B** — *redactado el 5 nov 2026; pendiente de enviar ([#500](https://github.com/hllous/Backend-M6-DAPS2/issues/500)). Reemplaza al mensaje anterior de #500 si todavía no contestaron*
+
+> Sobre la búsqueda de establecimientos por REST (dirección, CUIT o barrio): estamos en la recta final y necesitamos saber **si piensan implementarla**. Sin `establishmentId` no podemos derivar un acta a ustedes. Si sí: pasennos la ruta, los parámetros, el identificador estable que devuelven y qué responden con cero o varias coincidencias. Si no llegan, díganlo ya: del lado nuestro tendríamos que cambiar el flujo (por ejemplo, que el inspector cargue el `establishmentId` a mano, o derivar el acta sin él). Necesitamos la respuesta hoy o mañana para decidir.
+
+**→ M2 (Atención Ciudadana), aviso de la regla de adjuntos** — *redactado el 5 nov 2026; pendiente de enviar ([#499](https://github.com/hllous/Backend-M6-DAPS2/issues/499)). Reemplaza al mensaje anterior de #499, que preguntaba*
+
+> Les avisamos cómo queda del lado nuestro lo de los adjuntos, para que no tengan que decidir nada: M6 **solo informa el estado del ticket** en `updateTicketStatus` (resuelto, en curso, qué pasó) con el mensaje público. **No mandamos fotos ni evidencia**: las de inspección son de uso interno y no salen de M6, así que el vecino no ve ninguna desde nosotros. La forma de `attachments[]` que publicaron no cambia y la seguimos respetando por si en algún momento mandamos alguno. Si ven algún problema con esto, avísennos; si no, lo damos por cerrado.
