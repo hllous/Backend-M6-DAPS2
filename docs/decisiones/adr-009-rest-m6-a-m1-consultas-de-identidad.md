@@ -40,7 +40,13 @@ M6 puede hacer **REST a M1 únicamente para consultas de identidad de solo lectu
 
 ### Neutras
 
-- M1 desplegado y probado el 5/11: 200 con `actorId` UUID para `sub=1`; 404 «Empleado inexistente» para uno inexistente; organizaciones y ciudadanos inexistentes devuelven 404 con el prefijo `/integraciones/v1` (sin prefijo, 401). El cliente todavía no se usa: el cableado en cuadrillas es #521.
+- M1 desplegado y probado el 5/11: 200 con `actorId` UUID para `sub=1`; 404 «Empleado inexistente» para uno inexistente; organizaciones y ciudadanos inexistentes devuelven 404 con el prefijo `/integraciones/v1` (sin prefijo, 401). Cuadrillas lo usa desde #521: ver «Uso en cuadrillas».
+
+### Uso en cuadrillas (#521)
+
+`CrewsService` valida con `findEmployeeBySub` el líder (alta, y edición solo si cambió) y cada integrante nuevo (`addMembers` no consulta a los que ya están), antes de abrir la transacción. Inexistente o con `estado` distinto de `ACTIVO` → 422 con todos los `sub` fallidos juntos; `IdentityUnavailableError` → 503 y no se guarda nada. Si no vienen `leaderName` / `displayName`, se completan con `nombre apellido` de M1; el que manda el cliente gana.
+
+**Decisión: sin `M1_BASE_URL` no se valida.** Como la variable es opcional, con el cliente deshabilitado la validación se omite (con un `warn` la primera vez) y la cuadrilla se guarda como antes; así local, e2e y demo siguen andando. Solo con M1 configurada y fallando es 503. El seed escribe directo con Prisma y no pasa por la validación.
 
 ### Riesgos aceptados
 

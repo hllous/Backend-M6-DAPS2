@@ -292,12 +292,12 @@ Cada alta y baja escribe una fila de auditoría (`role_assignment_audit`, append
 
 | Método | Ruta                         | Qué hace                                              |
 | ------ | ---------------------------- | ----------------------------------------------------- |
-| POST   | `/crews`                     | Crear cuadrilla. `specialty` es obligatoria (`COLLECTION`, `SWEEPING`, `CLEANING`, `RECYCLING`, `TREES`, `GREEN_SPACES`, `INSPECTION`); `homeZoneId` (zona base, una sola), `leaderName` y `organizationName` son opcionales |
+| POST   | `/crews`                     | Crear cuadrilla (`leaderUserId` se valida contra M1: 422 si no existe o está inactivo, 503 si M1 no responde; sin `M1_BASE_URL` no se valida, [ADR-009](../decisiones/adr-009-rest-m6-a-m1-consultas-de-identidad.md); sin `leaderName` se usa el nombre de M1). `specialty` es obligatoria (`COLLECTION`, `SWEEPING`, `CLEANING`, `RECYCLING`, `TREES`, `GREEN_SPACES`, `INSPECTION`); `homeZoneId` (zona base, una sola), `leaderName` y `organizationName` son opcionales |
 | GET    | `/crews`                     | Listar, con `membersCount` y `effectiveZoneId`. Filtros: `active`, `crewType`, `defaultShift`, `specialty`, `zoneId` (zona **efectiva hoy**: la reubicación vigente y, si no hay, la base) |
 | GET    | `/crews/:id`                 | Detalle, con los integrantes y sus nombres            |
-| PATCH  | `/crews/:id`                 | Actualizar (también `specialty`, `homeZoneId` y los nombres; `null` los borra) |
+| PATCH  | `/crews/:id`                 | Actualizar (también `specialty`, `homeZoneId` y los nombres; `null` los borra). Un `leaderUserId` distinto del guardado se valida contra M1 (422 / 503) |
 | DELETE | `/crews/:id`                 | Baja lógica                                           |
-| POST   | `/crews/:id/members`         | Agregar integrantes: `members: [{ userId, displayName? }]` o, por compatibilidad, `userIds`. Un integrante que ya estaba solo se toca si trae nombre |
+| POST   | `/crews/:id/members`         | Agregar integrantes: `members: [{ userId, displayName? }]` o, por compatibilidad, `userIds`. Un integrante que ya estaba solo se toca si trae nombre; los nuevos se validan contra M1 (422 / 503, igual que el líder) y sin `displayName` se guarda el de M1 |
 | DELETE | `/crews/:id/members/:userId` | Quitar un integrante                                  |
 | POST   | `/crews/:id/zone-assignments` | Reubicar la cuadrilla en otra zona entre `validFrom` y `validTo` (inclusive; sin `validTo`, hasta nuevo aviso). El actor sale del token. 409 si el período se pisa con otra reubicación; 400 si `validTo < validFrom` o la zona está de baja |
 | GET    | `/crews/:id/zone-assignments` | Historial de reubicaciones, la más reciente primero   |
