@@ -5,6 +5,7 @@ import { OutboxService } from './outbox/outbox.service';
 import { OutboxAdminService } from './outbox/outbox-admin.service';
 import { OutboxController } from './outbox/outbox.controller';
 import { InboxService } from './inbox/inbox.service';
+import { InboxAdminService } from './inbox/inbox-admin.service';
 import { InboxController } from './inbox/inbox.controller';
 import { OutboundResponsesConsumer } from './consumers/outbound-responses.consumer';
 import { SanctionsConsumer } from './consumers/sanctions.consumer';
@@ -78,6 +79,7 @@ export function createRabbitMqConsumer(
     OutboxAdminService,
     OutboxDispatcher,
     InboxService,
+    InboxAdminService,
     // Cada uno registra sus handlers en su onModuleInit.
     OutboundResponsesConsumer,
     SanctionsConsumer,

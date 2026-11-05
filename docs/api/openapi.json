@@ -191,6 +191,252 @@
             "JWT-auth": []
           }
         ]
+      },
+      "get": {
+        "operationId": "InboxController_findAll",
+        "summary": "Listar los eventos entrantes recibidos",
+        "description": "Listado paginado para el Monitor de integración, del más reciente al más viejo por `receivedAt`, con estado derivado (`processed`, `failed`, `pending`) y error acotado. Filtra por `status`, `eventType`, `sourceModule` y rango de `receivedAt` (días argentinos, inclusivos). No incluye el payload, que es de terceros y puede traer datos personales: está en el detalle, solo para admin.",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-indexed)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Registros por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Estado derivado: `processed` (efecto aplicado), `failed` (el handler falló y quedó con error, reintentable) o `pending` (guardado, sin procesar ni error: en curso)",
+            "schema": {
+              "example": "failed",
+              "enum": [
+                "processed",
+                "failed",
+                "pending"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por tipo de evento (exacto, camelCase)",
+            "schema": {
+              "maxLength": 100,
+              "example": "ticketUpdated",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceModule",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por módulo emisor del sobre (exacto)",
+            "schema": {
+              "maxLength": 100,
+              "example": "tickets",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Recibidos desde este día, inclusive (YYYY-MM-DD, día argentino UTC-3). Filtra por `receivedAt`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Recibidos hasta este día, inclusive: hasta las 23:59:59 ART (YYYY-MM-DD). No puede ser anterior a `from`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado de eventos entrantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InboxEventResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros inválidos (estado desconocido, fecha mal formada, `from` > `to`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_AUDITOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/events/inbox/{messageId}": {
+      "get": {
+        "operationId": "InboxController_findOne",
+        "summary": "Detalle de un evento entrante, con su payload",
+        "description": "Devuelve el evento tal como se guardó, con el payload recibido. Solo admin, porque el payload es de terceros y puede incluir datos personales.",
+        "parameters": [
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "description": "eventId del sobre",
+            "schema": {
+              "example": "ev-0001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evento con payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxEventDetailResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe ese evento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
       }
     },
     "/events/handlers": {
@@ -14932,25 +15178,6 @@
           "status"
         ]
       },
-      "RegisteredHandlersDto": {
-        "type": "object",
-        "properties": {
-          "eventTypes": {
-            "example": [
-              "ticketUpdated",
-              "weatherAlertIssued"
-            ],
-            "description": "Tipos de evento con handler registrado",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "eventTypes"
-        ]
-      },
       "PaginationMeta": {
         "type": "object",
         "properties": {
@@ -14980,6 +15207,163 @@
           "page",
           "pageSize",
           "totalPages"
+        ]
+      },
+      "InboxEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "example": "a1b2c3d4-e5f6-4a78-9b01-234567890abc",
+            "description": "eventId del sobre"
+          },
+          "eventType": {
+            "type": "string",
+            "example": "ticketUpdated",
+            "description": "Tipo de evento (camelCase)"
+          },
+          "sourceModule": {
+            "type": "string",
+            "nullable": true,
+            "example": "tickets",
+            "description": "Módulo emisor según el sobre del Core; null si no lo mandó"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processed",
+              "failed",
+              "pending"
+            ],
+            "example": "processed"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-28T14:30:00.000Z"
+          },
+          "processedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuándo se aplicó el efecto; null si no se procesó"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "occurredAt del sobre; null si no lo trajo"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "example": "ticketId inexistente",
+            "description": "Error del último intento del handler, acotado a 500 caracteres"
+          }
+        },
+        "required": [
+          "messageId",
+          "eventType",
+          "status",
+          "receivedAt"
+        ]
+      },
+      "InboxEventDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "example": "a1b2c3d4-e5f6-4a78-9b01-234567890abc",
+            "description": "eventId del sobre"
+          },
+          "eventType": {
+            "type": "string",
+            "example": "ticketUpdated",
+            "description": "Tipo de evento (camelCase)"
+          },
+          "sourceModule": {
+            "type": "string",
+            "nullable": true,
+            "example": "tickets",
+            "description": "Módulo emisor según el sobre del Core; null si no lo mandó"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processed",
+              "failed",
+              "pending"
+            ],
+            "example": "processed"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-28T14:30:00.000Z"
+          },
+          "processedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuándo se aplicó el efecto; null si no se procesó"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "occurredAt del sobre; null si no lo trajo"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "example": "ticketId inexistente",
+            "description": "Error del último intento del handler, acotado a 500 caracteres"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "ticketId": "b2c3d4e5-f6a7-4b89-8c12-34567890abcd",
+              "status": "RESOLVED"
+            },
+            "description": "Payload tal como llegó. Puede incluir datos personales"
+          }
+        },
+        "required": [
+          "messageId",
+          "eventType",
+          "status",
+          "receivedAt",
+          "payload"
+        ]
+      },
+      "RegisteredHandlersDto": {
+        "type": "object",
+        "properties": {
+          "eventTypes": {
+            "example": [
+              "ticketUpdated",
+              "weatherAlertIssued"
+            ],
+            "description": "Tipos de evento con handler registrado",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "eventTypes"
         ]
       },
       "OutboxEventResponseDto": {

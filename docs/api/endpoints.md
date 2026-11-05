@@ -76,7 +76,9 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 | GET | `/environmental-reports/:reportId/inspections` | cualquier rol de M6 |
 | POST | `/environmental-reports/:reportId/inspections` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
 | GET | `/events/handlers` | cualquier rol de M6 |
+| GET | `/events/inbox` | `M6_ADMIN`, `M6_AUDITOR` |
 | POST | `/events/inbox` | `M6_ADMIN` |
+| GET | `/events/inbox/:messageId` | `M6_ADMIN` |
 | GET | `/events/outbox` | `M6_ADMIN`, `M6_AUDITOR` |
 | GET | `/events/outbox/:id` | `M6_ADMIN` |
 | POST | `/events/outbox/:id/retry` | `M6_ADMIN` |
@@ -425,6 +427,8 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 | ------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/events/inbox`    | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. Acepta `occuredAt` (typo de M1 v3.0) como alias deprecado de `occurredAt`: si vienen los dos manda `occurredAt`, y el alias también debe ser ISO 8601. 400 si `occurredAt` no es ISO 8601 (o `occuredAt`), si `correlationId` o `causationId` (este puede ir `null`) no son UUID, si `eventId`, `eventType`, `sourceModule` o `eventVersion` pasan su tope, si `sourceModule` trae algo que no sea letras, números, `-` o `_`, o si el `data` de un evento con handler no trae sus campos obligatorios (no se guarda; ver [consumidos](../eventos/consumidos/README.md)) |
 | GET    | `/events/handlers` | Los tipos de evento con handler registrado                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| GET    | `/events/inbox`    | Listado paginado de lo recibido (`M6_ADMIN`, `M6_AUDITOR`), del más reciente al más viejo por `receivedAt`, para el Monitor de integración. Filtros: `status` (`processed`: con `processedAt`; `failed`: sin `processedAt` y con `error`; `pending`: ninguno de los dos), `eventType`, `sourceModule`, `from`/`to` (días argentinos inclusivos sobre `receivedAt`; 400 si `from` > `to`). Trae `messageId`, `eventType`, `sourceModule`, `status`, fechas, `correlationId` y `error` (máx. 500 caracteres). **No trae el `payload`**: es de terceros y puede incluir datos personales |
+| GET    | `/events/inbox/:messageId` | Detalle con el `payload` recibido (`M6_ADMIN`). 404 si no existe |
 
 **La idempotencia es por `eventId`** y vive en el inbox, no en cada handler: un mensaje ya procesado (o en curso) se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. La decide el `@unique` de `InboxEvent.messageId`, no una consulta previa que podría correr en paralelo con otra igual.
 
