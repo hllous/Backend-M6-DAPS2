@@ -276,6 +276,14 @@ describe('configuration — metas de los indicadores (#473, #475)', () => {
     });
   });
 
+  it('INBOX_RETENTION_DAYS: default 180, 0 apaga la purga y vacío o negativo se rechaza', () => {
+    expect(config().inboxRetentionDays).toBe(180);
+    expect(config({ INBOX_RETENTION_DAYS: '0' }).inboxRetentionDays).toBe(0);
+    expect(config({ INBOX_RETENTION_DAYS: '30' }).inboxRetentionDays).toBe(30);
+    expect(() => config({ INBOX_RETENTION_DAYS: '' })).toThrow();
+    expect(() => config({ INBOX_RETENTION_DAYS: '-1' })).toThrow();
+  });
+
   it('se pueden cambiar por variable de entorno', () => {
     const { indicators } = config({
       INDICATORS_TARGET_COVERAGE_PCT: '97.5',

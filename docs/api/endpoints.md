@@ -76,7 +76,9 @@ Tabla generada desde `@Roles`/`@Public` (`npm run docs:roles`); un spec falla si
 | GET | `/environmental-reports/:reportId/inspections` | cualquier rol de M6 |
 | POST | `/environmental-reports/:reportId/inspections` | `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` |
 | GET | `/events/handlers` | cualquier rol de M6 |
+| GET | `/events/inbox` | `M6_ADMIN`, `M6_AUDITOR` |
 | POST | `/events/inbox` | `M6_ADMIN` |
+| GET | `/events/inbox/:messageId` | `M6_ADMIN` |
 | GET | `/events/outbox` | `M6_ADMIN`, `M6_AUDITOR` |
 | GET | `/events/outbox/:id` | `M6_ADMIN` |
 | POST | `/events/outbox/:id/retry` | `M6_ADMIN` |
@@ -205,7 +207,7 @@ No filtra los listados: Campo sigue viendo todo en los `GET`; la pertenencia es 
 | Método | Ruta            | Qué hace                                                                                                                     |
 | ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/health`       | Liveness: el proceso responde. **Público**, no consulta la base (lo usa el keepalive).                                       |
-| GET    | `/health/ready` | Readiness: `SELECT 1` con timeout de 3 s. **Público**. 200 `database: up` o 503 si la base no responde; usar para monitoreo. |
+| GET    | `/health/ready` | Readiness: `SELECT 1` con timeout de 3 s. **Público**. 200 `database: up` o 503 si la base no responde; usar para monitoreo. Incluye `broker` (`connected`, `reconnecting` o `disabled` sin `RABBITMQ_URL`): es informativo, un bus caído no da 503. |
 
 ## `auth` y `role-assignments` — identidad y roles de M6
 
@@ -425,6 +427,8 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 | ------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/events/inbox`    | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. Acepta `occuredAt` (typo de M1 v3.0) como alias deprecado de `occurredAt`: si vienen los dos manda `occurredAt`, y el alias también debe ser ISO 8601. 400 si `occurredAt` no es ISO 8601 (o `occuredAt`), si `correlationId` o `causationId` (este puede ir `null`) no son UUID, si `eventId`, `eventType`, `sourceModule` o `eventVersion` pasan su tope, si `sourceModule` trae algo que no sea letras, números, `-` o `_`, o si el `data` de un evento con handler no trae sus campos obligatorios (no se guarda; ver [consumidos](../eventos/consumidos/README.md)) |
 | GET    | `/events/handlers` | Los tipos de evento con handler registrado                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| GET    | `/events/inbox`    | Listado paginado de lo recibido (`M6_ADMIN`, `M6_AUDITOR`), del más reciente al más viejo por `receivedAt`, para el Monitor de integración. Filtros: `status` (`processed`: con `processedAt`; `failed`: sin `processedAt` y con `error`; `pending`: ninguno de los dos), `eventType`, `sourceModule`, `from`/`to` (días argentinos inclusivos sobre `receivedAt`; 400 si `from` > `to`). Trae `messageId`, `eventType`, `sourceModule`, `status`, fechas, `correlationId` y `error` (máx. 500 caracteres). **No trae el `payload`**: es de terceros y puede incluir datos personales |
+| GET    | `/events/inbox/:messageId` | Detalle con el `payload` recibido (`M6_ADMIN`). 404 si no existe |
 
 **La idempotencia es por `eventId`** y vive en el inbox, no en cada handler: un mensaje ya procesado (o en curso) se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. La decide el `@unique` de `InboxEvent.messageId`, no una consulta previa que podría correr en paralelo con otra igual.
 
@@ -457,7 +461,7 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 
 | Método | Ruta     | Roles                    | Qué hace |
 | ------ | -------- | ------------------------ | -------- |
-| GET    | `/audit` | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más reciente al más antiguo. Filtros opcionales `entityType` (valor cerrado: `CONTAINER`, `ENVIRONMENTAL_REPORT`, `ENVIRONMENTAL_INSPECTION`, `VIOLATION_NOTICE`, `REPAIR_REQUEST`, `STREET_CLOSURE_REQUEST`, `TREE_INTERVENTION`, `SERVICE`, `CREW`, `ZONE`, `VEHICLE`, `ROUTE`) y `entityId` (UUID); 400 si alguno es inválido. Cada fila trae `action`, `fromStatus`/`toStatus`, `actorUserId` y `actorRoles` (del token, nunca del body), `note` (solo el motivo que el flujo ya pedía) y `occurredAt` |
+| GET    | `/audit` | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más reciente al más antiguo. Filtros opcionales `entityType` (valor cerrado: `CONTAINER`, `ENVIRONMENTAL_REPORT`, `ENVIRONMENTAL_INSPECTION`, `VIOLATION_NOTICE`, `REPAIR_REQUEST`, `STREET_CLOSURE_REQUEST`, `TREE_INTERVENTION`, `SERVICE`, `CREW`, `ZONE`, `VEHICLE`, `ROUTE`, `SANCTION_OUTCOME`) y `entityId` (UUID); 400 si alguno es inválido. Cada fila trae `action`, `fromStatus`/`toStatus`, `actorUserId` y `actorRoles` (del token, nunca del body), `note` (solo el motivo que el flujo ya pedía) y `occurredAt` |
 
 **Query params de `GET /audit`** (todos opcionales; un valor fuera de rango o con formato inválido da 400):
 
@@ -490,7 +494,7 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 | `entityType` | `action` |
 | ------------ | -------- |
 | `CONTAINER` | `CREATE`, `REPORT_OVERFLOW`, `EMPTY`, `REPORT_DAMAGE`, `START_REPAIR`, `COMPLETE_REPAIR`, `RELOCATE`, `CONFIRM_RELOCATION`, `REMOVE`, `COMPLETE_SERVICE` |
-| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REQUEST_INFORMATION`, `STATUS_CHANGE` |
+| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REQUEST_INFORMATION`, `STATUS_CHANGE`, y las del sistema por evento de M2: `REACTIVATE`, `REOPEN`, `PRIORITY_CHANGE`, `INFORMATION_PROVIDED`, `CANCEL_INFORMATION_REQUEST`, `ESCALATION_CHANGE` |
 | `ENVIRONMENTAL_INSPECTION` | `SCHEDULE`, `COMPLETE` |
 | `VIOLATION_NOTICE` | `ISSUE` |
 | `REPAIR_REQUEST` | `CREATE`, `START`, `CLOSE` |
@@ -499,8 +503,9 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 | `SERVICE` | `CREATE`, `UPDATE`, `ASSIGN_CREW`, `START`, `SUSPEND`, `RESUME`, `COMPLETE`, `CANCEL`, `RESCHEDULE`, `CONFIRM_RESCHEDULE` |
 | `CREW` | `CREATE`, `ACTIVATE`, `DEACTIVATE`, `ADD_MEMBERS`, `REMOVE_MEMBER`, `REASSIGN_ZONE` |
 | `ZONE`, `VEHICLE`, `ROUTE` | `CREATE`, `ACTIVATE`, `DEACTIVATE` |
+| `SANCTION_OUTCOME` | `RECORD_OUTCOME` |
 
-La tabla es de solo agregado (un trigger rechaza modificar, borrar y vaciar) y no se purga. No audita lecturas ni las transiciones que hace el sistema (consumidores de eventos y barridos).
+La tabla es de solo agregado (un trigger rechaza modificar, borrar y vaciar) y no se purga. No audita lecturas ni las transiciones de otros consumidores de eventos y barridos. Las respuestas de M3 y M7 (`workOrder*`, `streetClosure*`) sí, con `actorUserId` `system:m3` / `system:m7` y `actorRoles` vacío, y solo si cambiaron el estado.
 
 ## `repair-requests` — reparaciones derivadas a M3
 

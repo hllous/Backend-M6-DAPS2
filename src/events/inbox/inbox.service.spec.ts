@@ -168,6 +168,21 @@ describe('InboxService', () => {
       expect(args.data.error).toBeNull();
     });
 
+    it('el error guardado y devuelto es solo la primera línea (los errores de Prisma traen valores del payload)', async () => {
+      inbox.register(
+        'streetClosureApproved',
+        jest
+          .fn()
+          .mockRejectedValue(new Error('Unique constraint failed\nvalor: Juan Perez, 30111222')),
+      );
+
+      const result = await inbox.ingest(sobre());
+
+      expect(result).toEqual({ status: 'failed', detail: 'Unique constraint failed' });
+      const [[args]] = prisma.inboxEvent.update.mock.calls;
+      expect(args.data).toEqual({ error: 'Unique constraint failed' });
+    });
+
     it('si vuelve a fallar, sigue failed y sin processedAt', async () => {
       inbox.register('streetClosureApproved', jest.fn().mockRejectedValue(new Error('otra vez')));
 

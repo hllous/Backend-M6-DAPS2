@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Channel, ChannelModel, ConsumeMessage, RecoveringChannelModel, connect } from 'amqplib';
 import { globalPipes } from '../../configure-app';
+import { BusStatus } from '../bus-status';
 import { InboxService } from '../inbox/inbox.service';
 import { IngestEventDto, toInboundEnvelope } from '../inbox/ingest-event.dto';
 import { paraLog } from '../log-safe';
@@ -48,7 +49,10 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
   constructor(
     private readonly config: RabbitMqConfig,
     private readonly inbox: InboxService,
-  ) {}
+    private readonly bus: BusStatus = new BusStatus(),
+  ) {
+    this.bus.state = 'reconnecting';
+  }
 
   async onApplicationBootstrap(): Promise<void> {
     const connection = await connect(this.config.url, {
@@ -59,20 +63,27 @@ export class RabbitMqConsumer implements OnApplicationBootstrap, OnModuleDestroy
         setup: (m: ChannelModel) => this.setup(m),
       },
     });
-    connection.on('connect', () =>
-      this.logger.log(`Consumiendo ${this.config.queue} desde ${brokerHost(this.config.url)}`),
-    );
-    connection.on('reconnect-scheduled', ({ attempt, delay, error }) =>
+    connection.on('connect', () => {
+      this.bus.state = 'connected';
+      this.logger.log(`Consumiendo ${this.config.queue} desde ${brokerHost(this.config.url)}`);
+    });
+    // Cubre la caída de una conexión que andaba (el setup ya no corre hasta reconectar).
+    connection.on('disconnect', () => {
+      this.bus.state = 'reconnecting';
+    });
+    connection.on('reconnect-scheduled', ({ attempt, delay, error }) => {
+      this.bus.state = 'reconnecting';
       this.logger.warn(
         `RabbitMQ no disponible (${error.message}): reintento ${attempt} en ${delay} ms`,
-      ),
-    );
+      );
+    });
     // Sin listener, un 'error' de la conexión es una excepción no capturada.
     connection.on('error', (err: Error) => this.logger.warn(`RabbitMQ: ${err.message}`));
     this.connection = connection;
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.bus.state = 'disabled';
     await this.connection?.close();
   }
 

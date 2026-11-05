@@ -130,6 +130,15 @@ export const envSchema = z
     // Core vuelve después de los que venían atrás), pero no lo empeoramos.
     RABBITMQ_PREFETCH: z.coerce.number().int().positive().default(1),
 
+    // Días que se conserva una fila procesada de `inbox_event` antes de purgarla.
+    // 0 = no purgar nunca. Pasado el plazo, un reenvío del mismo eventId ya no se
+    // detecta como duplicado. Las filas pendientes o fallidas no se tocan.
+    // Vacía es inválida: Number('') es 0 y apagaría la purga sin avisar.
+    INBOX_RETENTION_DAYS: z.preprocess(
+      (v) => (v === '' ? NaN : v),
+      z.coerce.number().int().min(0).default(180),
+    ),
+
     // Identificador de M6 ante el Core: va como `sourceModule` en el sobre y
     // tiene que coincidir con el módulo del token, o el Core responde 403.
     CORE_MODULE_ID: z.string().min(1).max(60).default('ambiente'),

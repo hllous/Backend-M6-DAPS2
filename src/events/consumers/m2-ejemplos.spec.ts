@@ -1,3 +1,4 @@
+import { AuditService } from '../../common/audit/audit.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Logger } from '@nestjs/common';
@@ -48,11 +49,15 @@ describeM2('ejemplos válidos de M2 v1.78 contra nuestro inbox', () => {
     prisma = {
       environmentalReport: {
         findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
         create: jest.fn().mockResolvedValue({ id: 'r1', reportType: 'OTHER' }),
         update: jest.fn().mockResolvedValue({}),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
-      service: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      service: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
       ticketM2State: {
         findUnique: jest.fn().mockResolvedValue(null),
         upsert: jest.fn().mockResolvedValue({}),
@@ -68,7 +73,12 @@ describeM2('ejemplos válidos de M2 v1.78 contra nuestro inbox', () => {
       enqueue: jest.fn().mockResolvedValue(undefined),
       enqueueMany: jest.fn().mockResolvedValue(undefined),
     };
-    new TicketsConsumer(prisma as unknown as PrismaService, inbox, outbox as never).onModuleInit();
+    new TicketsConsumer(
+      prisma as unknown as PrismaService,
+      inbox,
+      outbox as never,
+      { record: jest.fn() } as unknown as AuditService,
+    ).onModuleInit();
   });
 
   /** Pasa el sobre por el `ValidationPipe` real: el del bus (tolerante) o el de `POST /events/inbox`. */

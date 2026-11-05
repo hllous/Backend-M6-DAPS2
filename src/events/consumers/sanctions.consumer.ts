@@ -1,9 +1,13 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { EnvironmentalReportStatus as S, SanctionDecision } from '@prisma/client';
+import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent } from '../inbox/consumed-events';
 import { Data, esUuid, requerido } from '../inbox/payload-validation';
+import { sistema } from './system-audit';
+
+const M4 = sistema('m4');
 
 const validarActa = (d: Data): string[] =>
   requerido(d, ['sourceViolationId', 'violationId'], 'uuid', esUuid);
@@ -29,6 +33,7 @@ export class SanctionsConsumer implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inbox: InboxService,
+    private readonly audit: AuditService,
   ) {}
 
   onModuleInit(): void {
@@ -106,7 +111,7 @@ export class SanctionsConsumer implements OnModuleInit {
     if (!report) return;
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.sanctionOutcome.create({
+      const outcome = await tx.sanctionOutcome.create({
         data: {
           violationNoticeId: notice.id,
           decision,
@@ -119,6 +124,15 @@ export class SanctionsConsumer implements OnModuleInit {
           externalRef: (data.externalRef ?? null) as string | null,
         },
       });
+      // La nota es el enum de la decisión, no el externalRef ni nada libre de M4.
+      await this.audit.record(tx, {
+        entityType: 'SANCTION_OUTCOME',
+        entityId: outcome.id,
+        action: 'RECORD_OUTCOME',
+        toStatus: decision,
+        actor: M4,
+        note: decision,
+      });
 
       if (report.status === S.NOTICE_ISSUED) {
         await tx.environmentalReport.update({
@@ -129,6 +143,21 @@ export class SanctionsConsumer implements OnModuleInit {
           where: { id: report.id },
           data: { status: S.CLOSED },
         });
+        // Una fila por transición, aunque ocurran juntas.
+        for (const [from, to] of [
+          [S.NOTICE_ISSUED, S.SANCTIONED],
+          [S.SANCTIONED, S.CLOSED],
+        ]) {
+          await this.audit.record(tx, {
+            entityType: 'ENVIRONMENTAL_REPORT',
+            entityId: report.id,
+            action: 'STATUS_CHANGE',
+            fromStatus: from,
+            toStatus: to,
+            actor: M4,
+            note: decision,
+          });
+        }
       }
     });
 

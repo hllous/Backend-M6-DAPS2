@@ -8,6 +8,7 @@ import {
   Severity,
   StreetClosureRequestStatus,
 } from '@prisma/client';
+import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { OutboxService } from '../outbox/outbox.service';
@@ -29,6 +30,7 @@ describe('consumidores de eventos', () => {
   const ID = '11111111-1111-1111-1111-111111111111';
   let prisma: any;
   let inbox: InboxService;
+  let audit: { record: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -40,16 +42,20 @@ describe('consumidores de eventos', () => {
         findUnique: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
-      service: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      service: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
       violationNotice: { findUnique: jest.fn() },
       environmentalReport: {
         findUnique: jest.fn(),
         findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
         create: jest.fn().mockResolvedValue({ id: ID, reportType: 'NOISE' }),
         update: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
-      sanctionOutcome: { create: jest.fn() },
+      sanctionOutcome: { create: jest.fn().mockResolvedValue({ id: 'out-1' }) },
       // Estado del ticket en M2 (#303): sin dato por defecto.
       ticketM2State: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -58,6 +64,7 @@ describe('consumidores de eventos', () => {
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
+    audit = { record: jest.fn() };
   });
 
   describe('respuestas de M3 y M7', () => {
@@ -65,7 +72,11 @@ describe('consumidores de eventos', () => {
 
     beforeEach(() => {
       h = registrar(
-        new OutboundResponsesConsumer(prisma as unknown as PrismaService, inbox),
+        new OutboundResponsesConsumer(
+          prisma as unknown as PrismaService,
+          inbox,
+          audit as unknown as AuditService,
+        ),
         inbox,
       );
     });
@@ -79,6 +90,181 @@ describe('consumidores de eventos', () => {
         where: { id: ID, status: { in: [RepairRequestStatus.REQUESTED] } },
         data: { status: RepairRequestStatus.IN_PROGRESS, workOrderId: 'OT-1' },
       });
+    });
+
+    describe('auditoría de las transiciones del sistema', () => {
+      const m3 = { userId: 'system:m3', roles: [] };
+      const m7 = { userId: 'system:m7', roles: [] };
+
+      it.each([
+        [
+          'workOrderScheduled',
+          'repairRequest',
+          'REPAIR_REQUEST',
+          'START',
+          'REQUESTED',
+          'IN_PROGRESS',
+          m3,
+          { sourceRequestId: ID },
+        ],
+        [
+          'workOrderCompleted',
+          'repairRequest',
+          'REPAIR_REQUEST',
+          'CLOSE',
+          'IN_PROGRESS',
+          'CLOSED',
+          m3,
+          { sourceRequestId: ID },
+        ],
+        [
+          'streetClosureApproved',
+          'streetClosureRequest',
+          'STREET_CLOSURE_REQUEST',
+          'APPROVE',
+          'REQUESTED',
+          'APPROVED',
+          m7,
+          { closureRequestId: ID },
+        ],
+        [
+          'streetClosureRejected',
+          'streetClosureRequest',
+          'STREET_CLOSURE_REQUEST',
+          'REJECT',
+          'REQUESTED',
+          'REJECTED',
+          m7,
+          { closureRequestId: ID },
+        ],
+        [
+          'streetClosureEnded',
+          'streetClosureRequest',
+          'STREET_CLOSURE_REQUEST',
+          'END',
+          'APPROVED',
+          'ENDED',
+          m7,
+          { closureRequestId: ID },
+        ],
+      ])(
+        '%s audita con el actor del módulo emisor',
+        async (ev, model, entityType, action, from, to, actor, data) => {
+          prisma[model].findUnique.mockResolvedValue({ id: ID, status: from, sourceType: 'OTHER' });
+
+          await h(ev)(data);
+
+          expect(audit.record).toHaveBeenCalledTimes(1);
+          expect(audit.record).toHaveBeenCalledWith(
+            prisma,
+            expect.objectContaining({
+              entityType,
+              entityId: ID,
+              action,
+              fromStatus: from,
+              toStatus: to,
+              actor,
+            }),
+          );
+        },
+      );
+
+      it.each([
+        ['workOrderScheduled', 'repairRequest', { sourceRequestId: ID }],
+        ['workOrderCompleted', 'repairRequest', { sourceRequestId: ID }],
+        ['streetClosureApproved', 'streetClosureRequest', { closureRequestId: ID }],
+        ['streetClosureRejected', 'streetClosureRequest', { closureRequestId: ID }],
+        ['streetClosureEnded', 'streetClosureRequest', { closureRequestId: ID }],
+      ])('%s repetido o tardío (count=0) no deja auditoría', async (ev, model, data) => {
+        prisma[model].findUnique.mockResolvedValue({
+          id: ID,
+          status: 'CLOSED',
+          sourceType: 'OTHER',
+        });
+        prisma[model].updateMany.mockResolvedValue({ count: 0 });
+        const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+        await h(ev)(data);
+
+        expect(audit.record).not.toHaveBeenCalled();
+        warn.mockRestore();
+      });
+
+      it('streetClosureRejected audita también la reprogramación del servicio', async () => {
+        prisma.streetClosureRequest.findUnique.mockResolvedValue({
+          id: ID,
+          status: 'REQUESTED',
+          sourceType: 'SERVICE',
+          sourceId: 'srv-1',
+        });
+
+        await h('streetClosureRejected')({ closureRequestId: ID });
+
+        expect(audit.record).toHaveBeenCalledTimes(2);
+        expect(audit.record).toHaveBeenLastCalledWith(
+          prisma,
+          expect.objectContaining({
+            entityType: 'SERVICE',
+            entityId: 'srv-1',
+            action: 'RESCHEDULE',
+            fromStatus: 'SCHEDULED',
+            toStatus: 'RESCHEDULED',
+            actor: m7,
+          }),
+        );
+      });
+
+      it('streetClosureRejected con el servicio ya movido no audita la reprogramación', async () => {
+        prisma.streetClosureRequest.findUnique.mockResolvedValue({
+          id: ID,
+          status: 'REQUESTED',
+          sourceType: 'SERVICE',
+          sourceId: 'srv-1',
+        });
+        prisma.service.updateMany.mockResolvedValue({ count: 0 });
+
+        await h('streetClosureRejected')({ closureRequestId: ID });
+
+        expect(audit.record).toHaveBeenCalledTimes(1);
+        expect(audit.record).toHaveBeenCalledWith(
+          prisma,
+          expect.objectContaining({ entityType: 'STREET_CLOSURE_REQUEST' }),
+        );
+      });
+    });
+
+    it('workOrderCompleted sin programación previa guarda el workOrderId', async () => {
+      prisma.repairRequest.findUnique.mockResolvedValue({
+        id: ID,
+        status: 'REQUESTED',
+        workOrderId: null,
+      });
+      await h('workOrderCompleted')({ sourceRequestId: ID, workOrderId: 'OT-9' });
+      expect(prisma.repairRequest.updateMany.mock.calls[0][0].data).toEqual({
+        status: RepairRequestStatus.CLOSED,
+        workOrderId: 'OT-9',
+      });
+    });
+
+    it('workOrderCompleted sin workOrderId en el payload no borra el existente', async () => {
+      prisma.repairRequest.findUnique.mockResolvedValue({
+        id: ID,
+        status: 'IN_PROGRESS',
+        workOrderId: 'OT-1',
+      });
+      await h('workOrderCompleted')({ sourceRequestId: ID });
+      expect(prisma.repairRequest.updateMany.mock.calls[0][0].data.workOrderId).toBe('OT-1');
+    });
+
+    it('validarM3 rechaza un workOrderId que no es texto y acepta su ausencia', async () => {
+      const v = (
+        inbox as unknown as {
+          options: Map<string, { validate: (d: Record<string, unknown>) => string[] }>;
+        }
+      ).options.get('workOrderCompleted')!.validate;
+      expect(v({ sourceRequestId: ID, workOrderId: 123 })).toEqual(['workOrderId (string)']);
+      expect(v({ sourceRequestId: ID, workOrderId: 'OT-1' })).toEqual([]);
+      expect(v({ sourceRequestId: ID })).toEqual([]);
     });
 
     it('un sourceRequestId que no es nuestro se descarta sin fallar', async () => {
@@ -464,7 +650,14 @@ describe('consumidores de eventos', () => {
     let h: (t: string) => (d: Record<string, unknown>) => Promise<void>;
 
     beforeEach(() => {
-      h = registrar(new SanctionsConsumer(prisma as unknown as PrismaService, inbox), inbox);
+      h = registrar(
+        new SanctionsConsumer(
+          prisma as unknown as PrismaService,
+          inbox,
+          audit as unknown as AuditService,
+        ),
+        inbox,
+      );
       prisma.violationNotice.findUnique.mockResolvedValue({
         id: ID,
         noticeNumber: 'ACTA-2026-000001',
@@ -490,6 +683,69 @@ describe('consumidores de eventos', () => {
         ([a]: [{ data: { status: string } }]) => a.data.status,
       );
       expect(estados).toEqual([S.SANCTIONED, S.CLOSED]);
+    });
+
+    it('audita NOTICE_ISSUED a SANCTIONED y a CLOSED, una fila por transición, como M4', async () => {
+      await h('commercialFineGenerated')({ sourceViolationId: ID });
+
+      const filas = audit.record.mock.calls
+        .map(([, e]) => e)
+        .filter((e) => e.entityType === 'ENVIRONMENTAL_REPORT');
+      expect(filas).toEqual([
+        expect.objectContaining({
+          entityType: 'ENVIRONMENTAL_REPORT',
+          entityId: 'rep-1',
+          action: 'STATUS_CHANGE',
+          fromStatus: S.NOTICE_ISSUED,
+          toStatus: S.SANCTIONED,
+          actor: { userId: 'system:m4', roles: [] },
+        }),
+        expect.objectContaining({ fromStatus: S.SANCTIONED, toStatus: S.CLOSED }),
+      ]);
+    });
+
+    it('audita SANCTION_OUTCOME · RECORD_OUTCOME con la decisión y el actor de M4', async () => {
+      await h('closureUpdate')({ sourceViolationId: ID, status: 'ORDERED', externalRef: 'REF-9' });
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'SANCTION_OUTCOME',
+          entityId: 'out-1',
+          action: 'RECORD_OUTCOME',
+          toStatus: SanctionDecision.CLOSURE_ORDERED,
+          note: SanctionDecision.CLOSURE_ORDERED,
+          actor: { userId: 'system:m4', roles: [] },
+        }),
+      );
+    });
+
+    it('si el expediente no estaba en NOTICE_ISSUED, no audita transiciones pero sí la resolución', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue({ id: 'rep-1', status: S.CLOSED });
+
+      await h('commercialFineGenerated')({ sourceViolationId: ID });
+
+      const tipos = audit.record.mock.calls.map(([, e]) => e.entityType);
+      expect(tipos).toEqual(['SANCTION_OUTCOME']);
+    });
+
+    it('si el acta ya tenía resolución, no audita', async () => {
+      prisma.violationNotice.findUnique.mockResolvedValue({
+        id: ID,
+        noticeNumber: 'ACTA-1',
+        inspection: { reportId: 'rep-1' },
+        sanctionOutcome: { decision: SanctionDecision.FINE_ISSUED },
+      });
+
+      await h('commercialFineGenerated')({ sourceViolationId: ID });
+
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('si falla la auditoría falla el handler: la transacción no deja el cambio sin su fila', async () => {
+      audit.record.mockRejectedValue(new Error('boom'));
+
+      await expect(h('commercialFineGenerated')({ sourceViolationId: ID })).rejects.toThrow('boom');
     });
 
     it('actId no se usa como externalRef: son datos distintos (M4, 21/10)', async () => {
@@ -546,7 +802,12 @@ describe('consumidores de eventos', () => {
     beforeEach(() => {
       outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
       h = registrar(
-        new TicketsConsumer(prisma as unknown as PrismaService, inbox, outbox as never),
+        new TicketsConsumer(
+          prisma as unknown as PrismaService,
+          inbox,
+          outbox as never,
+          audit as unknown as AuditService,
+        ),
         inbox,
       )('ticketUpdated');
       prisma.environmentalReport.findFirst.mockResolvedValue(null);
@@ -931,6 +1192,7 @@ describe('consumidores de eventos', () => {
             prisma as unknown as PrismaService,
             inboxReal,
             new OutboxService(),
+            audit as unknown as AuditService,
           ).onModuleInit();
 
           await inboxReal.ingest({
@@ -1097,6 +1359,244 @@ describe('consumidores de eventos', () => {
         expect(args.data[campo]).toEqual(valor);
       },
     );
+
+    describe('auditoría (actor system:m2)', () => {
+      const m2 = { userId: 'system:m2', roles: [] };
+      const nuestro = { ticketId: 'TCK-1', responsibleAreaId: 'M6' };
+
+      it('el alta ROUTED audita CREATE a RECEIVED dentro de la transacción', async () => {
+        await h({ ...nuestro, updateType: 'ROUTED' });
+
+        expect(audit.record).toHaveBeenCalledWith(
+          prisma,
+          expect.objectContaining({
+            entityType: 'ENVIRONMENTAL_REPORT',
+            entityId: ID,
+            action: 'CREATE',
+            toStatus: S.RECEIVED,
+            actor: m2,
+          }),
+        );
+      });
+
+      it('un cambio de estado de M2 que apaga la solicitud pendiente audita CANCEL_INFORMATION_REQUEST', async () => {
+        prisma.environmentalReport.findMany.mockResolvedValue([
+          { id: 'rep-1', status: S.UNDER_REVIEW },
+        ]);
+
+        await h({ ...nuestro, updateType: 'STATUS_CHANGED', currentStatus: 'IN_PROGRESS' });
+
+        expect(audit.record).toHaveBeenCalledTimes(1);
+        const [, entry] = audit.record.mock.calls[0];
+        expect(entry).toMatchObject({
+          entityType: 'ENVIRONMENTAL_REPORT',
+          entityId: 'rep-1',
+          action: 'CANCEL_INFORMATION_REQUEST',
+          fromStatus: S.UNDER_REVIEW,
+          actor: m2,
+        });
+      });
+
+      it('sin solicitud pendiente (count 0) no audita CANCEL_INFORMATION_REQUEST', async () => {
+        prisma.environmentalReport.findMany.mockResolvedValue([
+          { id: 'rep-1', status: S.UNDER_REVIEW },
+        ]);
+        prisma.environmentalReport.updateMany.mockResolvedValue({ count: 0 });
+
+        await h({ ...nuestro, updateType: 'STATUS_CHANGED', currentStatus: 'IN_PROGRESS' });
+
+        expect(audit.record).not.toHaveBeenCalled();
+      });
+
+      it('si falla la auditoría del alta, falla el handler', async () => {
+        audit.record.mockRejectedValue(new Error('boom'));
+
+        await expect(h({ ...nuestro, updateType: 'ROUTED' })).rejects.toThrow('boom');
+      });
+
+      it('la reactivación FORWARDED a UNDER_REVIEW audita REACTIVATE; sin cambio, no', async () => {
+        prisma.environmentalReport.findFirst.mockResolvedValue({
+          id: 'rep-1',
+          status: S.FORWARDED,
+          ticketId: null,
+        });
+        await h({ ...nuestro, updateType: 'ROUTED' });
+        expect(audit.record).toHaveBeenCalledWith(
+          prisma,
+          expect.objectContaining({
+            entityId: 'rep-1',
+            action: 'REACTIVATE',
+            fromStatus: S.FORWARDED,
+            toStatus: S.UNDER_REVIEW,
+            actor: m2,
+          }),
+        );
+
+        audit.record.mockClear();
+        prisma.environmentalReport.updateMany.mockResolvedValue({ count: 0 });
+        await h({ ...nuestro, updateType: 'ROUTED' });
+        expect(audit.record).not.toHaveBeenCalled();
+      });
+
+      it('un ROUTED a otra área cierra el devuelto y audita CLOSE; con count 0, no', async () => {
+        prisma.environmentalReport.findMany.mockResolvedValue([{ id: 'rep-1' }]);
+        await h({ ticketId: 'TCK-1', responsibleAreaId: 'M3', updateType: 'ROUTED' });
+        expect(audit.record).toHaveBeenCalledWith(
+          prisma,
+          expect.objectContaining({
+            entityId: 'rep-1',
+            action: 'CLOSE',
+            fromStatus: S.FORWARDED,
+            toStatus: S.CLOSED,
+            actor: m2,
+          }),
+        );
+
+        audit.record.mockClear();
+        prisma.environmentalReport.updateMany.mockResolvedValue({ count: 0 });
+        await h({ ticketId: 'TCK-1', responsibleAreaId: 'M3', updateType: 'ROUTED' });
+        expect(audit.record).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        [S.UNDER_REVIEW, 'DISMISS', S.DISMISSED],
+        [S.FORWARDED, 'CLOSE', S.CLOSED],
+      ])('CANCELLED desde %s audita %s', async (from, action, to) => {
+        prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'rep-1', status: from });
+
+        await h({ ...nuestro, updateType: 'CANCELLED' });
+
+        expect(audit.record).toHaveBeenCalledWith(
+          prisma,
+          expect.objectContaining({
+            entityType: 'ENVIRONMENTAL_REPORT',
+            entityId: 'rep-1',
+            action,
+            fromStatus: from,
+            toStatus: to,
+            actor: m2,
+          }),
+        );
+      });
+
+      it('CANCELLED deja una fila CANCEL por servicio cancelado, con su estado de origen', async () => {
+        prisma.service.findMany.mockResolvedValue([
+          { id: 'srv-1', status: 'SCHEDULED' },
+          { id: 'srv-2', status: 'RESCHEDULED' },
+        ]);
+        prisma.service.updateMany.mockResolvedValue({ count: 2 });
+
+        await h({ ...nuestro, updateType: 'CANCELLED' });
+
+        const filas = audit.record.mock.calls.map(([, e]) => [
+          e.entityType,
+          e.entityId,
+          e.fromStatus,
+        ]);
+        expect(filas).toEqual([
+          ['SERVICE', 'srv-1', 'SCHEDULED'],
+          ['SERVICE', 'srv-2', 'RESCHEDULED'],
+        ]);
+        expect(audit.record).toHaveBeenCalledWith(
+          prisma,
+          expect.objectContaining({ action: 'CANCEL', toStatus: 'CANCELLED', actor: m2 }),
+        );
+      });
+
+      it('si findMany y updateMany no coinciden se lanza para revertir y reintentar', async () => {
+        prisma.service.findMany.mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]);
+        prisma.service.updateMany.mockResolvedValue({ count: 3 });
+        await expect(h({ ...nuestro, updateType: 'CANCELLED' })).rejects.toThrow('se reintenta');
+
+        prisma.environmentalReport.findMany.mockResolvedValue([
+          { id: 'rep-1', status: S.UNDER_REVIEW },
+          { id: 'rep-2', status: S.UNDER_REVIEW },
+        ]);
+        prisma.environmentalReport.updateMany.mockResolvedValue({ count: 1 });
+        await expect(
+          h({ ...nuestro, updateType: 'PRIORITY_CHANGED', currentPriority: 'HIGH' }),
+        ).rejects.toThrow('se reintenta');
+
+        prisma.environmentalReport.findMany.mockResolvedValue([{ id: 'rep-1' }, { id: 'rep-2' }]);
+        await expect(
+          h({ ticketId: 'TCK-1', responsibleAreaId: 'M3', updateType: 'ROUTED' }),
+        ).rejects.toThrow('se reintenta');
+        expect(audit.record).not.toHaveBeenCalled();
+      });
+
+      it('CANCELLED sin nada que cancelar (count 0) no audita', async () => {
+        prisma.service.findMany.mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]);
+        prisma.service.updateMany.mockResolvedValue({ count: 0 });
+
+        await h({ ...nuestro, updateType: 'CANCELLED' });
+
+        expect(audit.record).not.toHaveBeenCalled();
+      });
+
+      it('REOPENED audita REOPEN desde el estado leído; con count 0, no', async () => {
+        prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'rep-1', status: S.CLOSED });
+        await h({ ...nuestro, updateType: 'REOPENED' });
+        expect(audit.record).toHaveBeenCalledWith(
+          prisma,
+          expect.objectContaining({
+            entityId: 'rep-1',
+            action: 'REOPEN',
+            fromStatus: S.CLOSED,
+            toStatus: S.UNDER_REVIEW,
+            actor: m2,
+          }),
+        );
+
+        audit.record.mockClear();
+        prisma.environmentalReport.updateMany.mockResolvedValue({ count: 0 });
+        await h({ ...nuestro, updateType: 'REOPENED' });
+        expect(audit.record).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['PRIORITY_CHANGED', { currentPriority: 'HIGH' }, 'PRIORITY_CHANGE'],
+        [
+          'INFORMATION_PROVIDED',
+          { details: { informationResponse: { message: 'Mi telefono es 11-5555-5555' } } },
+          'INFORMATION_PROVIDED',
+        ],
+        ['ESCALATION_CHANGED', { details: { escalation: { active: true } } }, 'ESCALATION_CHANGE'],
+      ])('%s audita %s sin copiar el texto del vecino', async (updateType, extra, action) => {
+        prisma.environmentalReport.findMany.mockResolvedValue([
+          { id: 'rep-1', status: S.UNDER_REVIEW },
+        ]);
+
+        await h({ ...nuestro, updateType, ...extra });
+
+        expect(audit.record).toHaveBeenCalledTimes(1);
+        const [, entry] = audit.record.mock.calls[0];
+        expect(entry).toMatchObject({
+          entityType: 'ENVIRONMENTAL_REPORT',
+          entityId: 'rep-1',
+          action,
+          fromStatus: S.UNDER_REVIEW,
+          actor: m2,
+        });
+        expect(entry.note).not.toContain('11-5555');
+      });
+
+      it.each([
+        ['PRIORITY_CHANGED', { currentPriority: 'HIGH' }],
+        ['ESCALATION_CHANGED', { details: { escalation: { active: true } } }],
+      ])('%s atrasado (count 0) no deja auditoría', async (updateType, extra) => {
+        prisma.environmentalReport.findMany.mockResolvedValue([{ id: 'rep-1', status: S.CLOSED }]);
+        prisma.environmentalReport.updateMany.mockResolvedValue({ count: 0 });
+        prisma.environmentalReport.findFirst.mockResolvedValue({
+          id: 'rep-1',
+          priorityChangedAt: new Date('2099-01-01'),
+          escalationChangedAt: new Date('2099-01-01'),
+        });
+
+        await h({ ...nuestro, updateType, ...extra, updatedAt: '2026-01-01T00:00:00.000Z' });
+
+        expect(audit.record).not.toHaveBeenCalled();
+      });
+    });
 
     // ─── #144: la forma del contrato, con el valor y no solo la clave ──
 
@@ -1960,7 +2460,11 @@ describe('consumidores de eventos', () => {
 
     beforeEach(() => {
       h = registrar(
-        new WeatherConsumer(prisma as unknown as PrismaService, inbox),
+        new WeatherConsumer(
+          prisma as unknown as PrismaService,
+          inbox,
+          audit as unknown as AuditService,
+        ),
         inbox,
       )('weatherAlertIssued');
     });
@@ -1977,6 +2481,90 @@ describe('consumidores de eventos', () => {
       const [[args]] = prisma.service.updateMany.mock.calls;
       expect(args.data.status).toBe(ServiceStatus.RESCHEDULED);
       expect(args.where.zones).toEqual({ some: { zoneId: { in: ['z1', 'z2'] } } });
+    });
+
+    it('audita una fila RESCHEDULE por servicio movido, con el actor del origen simulado', async () => {
+      prisma.service.findMany.mockResolvedValue([{ id: 'srv-1' }, { id: 'srv-2' }]);
+      prisma.service.updateMany.mockResolvedValue({ count: 2 });
+
+      await h({
+        alertType: 'TORMENTA',
+        severity: 'HIGH',
+        zoneIds: [ID],
+        from: '2026-10-01T00:00:00.000Z',
+        to: '2026-10-02T00:00:00.000Z',
+      });
+
+      expect(audit.record.mock.calls.map(([, e]) => e.entityId)).toEqual(['srv-1', 'srv-2']);
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'SERVICE',
+          action: 'RESCHEDULE',
+          fromStatus: 'SCHEDULED',
+          toStatus: 'RESCHEDULED',
+          actor: { userId: 'system:weather', roles: [] },
+        }),
+      );
+    });
+
+    it('alertType libre no llega a la nota ni al motivo: queda un texto fijo', async () => {
+      prisma.service.findMany.mockResolvedValue([{ id: 'srv-1' }]);
+
+      await h({
+        alertType: 'Llamar a Juan Perez al 11-5555-5555 <script>',
+        severity: 'HIGH',
+        zoneIds: [ID],
+        from: '2026-10-01T00:00:00.000Z',
+        to: '2026-10-02T00:00:00.000Z',
+      });
+
+      const [[args]] = prisma.service.updateMany.mock.calls;
+      expect(args.data.statusReason).toBe('Alerta meteorológica (HIGH)');
+      expect(audit.record.mock.calls[0][1].note).toBe('Alerta meteorológica (HIGH)');
+    });
+
+    it('un alertType corto y válido se conserva', async () => {
+      prisma.service.findMany.mockResolvedValue([{ id: 'srv-1' }]);
+
+      await h({
+        alertType: 'TORMENTA',
+        severity: 'HIGH',
+        zoneIds: [ID],
+        from: '2026-10-01T00:00:00.000Z',
+        to: '2026-10-02T00:00:00.000Z',
+      });
+
+      expect(audit.record.mock.calls[0][1].note).toBe('Alerta meteorológica TORMENTA (HIGH)');
+    });
+
+    it('si findMany y updateMany no coinciden se lanza para revertir y reintentar', async () => {
+      prisma.service.findMany.mockResolvedValue([{ id: 'srv-1' }, { id: 'srv-2' }]);
+      prisma.service.updateMany.mockResolvedValue({ count: 3 });
+
+      await expect(
+        h({
+          severity: 'HIGH',
+          zoneIds: [ID],
+          from: '2026-10-01T00:00:00.000Z',
+          to: '2026-10-02T00:00:00.000Z',
+        }),
+      ).rejects.toThrow('se reintenta');
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('una alerta repetida (count 0) o leve no deja auditoría', async () => {
+      prisma.service.findMany.mockResolvedValue([{ id: 'srv-1' }]);
+      prisma.service.updateMany.mockResolvedValue({ count: 0 });
+      await h({
+        severity: 'HIGH',
+        zoneIds: [ID],
+        from: '2026-10-01T00:00:00.000Z',
+        to: '2026-10-02T00:00:00.000Z',
+      });
+      await h({ severity: 'LOW', zoneIds: [ID] });
+
+      expect(audit.record).not.toHaveBeenCalled();
     });
 
     it('una alerta leve avisa pero no reprograma', async () => {
