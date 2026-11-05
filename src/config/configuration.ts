@@ -45,6 +45,7 @@ export default () => {
       subscriptionMaxAttempts: parsed.CORE_SUBSCRIPTION_MAX_ATTEMPTS,
       registerOnBoot: parsed.CORE_REGISTER_ON_BOOT,
     },
+    m1: { baseUrl: parsed.M1_BASE_URL },
     corsOrigins: parsed.CORS_ORIGINS?.split(',')
       .map((o) => o.trim())
       .filter(Boolean),

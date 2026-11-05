@@ -153,6 +153,22 @@ export const envSchema = z
         .refine((v) => /^https?:\/\//i.test(v), 'CORE_API_URL debe empezar con http:// o https://')
         .optional(),
     ),
+    // URL de M1 para consultas de identidad (ADR-009). Opcional: sin ella el
+    // cliente queda deshabilitado. Vacía cuenta como ausente. Va el Bearer del
+    // Core, por eso en producción tiene que ser https.
+    M1_BASE_URL: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z
+        .string()
+        .url()
+        .refine((v) => /^https?:\/\//i.test(v), 'M1_BASE_URL debe empezar con http:// o https://')
+        // El Bearer del Core viaja a esta URL: nada de credenciales, query ni hash.
+        .refine((v) => {
+          const u = new URL(v);
+          return !u.username && !u.password && !/[?#]/.test(v);
+        }, 'M1_BASE_URL no puede llevar credenciales, query ni hash')
+        .optional(),
+    ),
     // Secret de máquina con el que pedimos el token de módulo. Lo entrega M9;
     // nunca se loguea ni va en un mensaje de error. Uno en blanco ("  ") no
     // pasa; largo mínimo no se exige porque M9 no lo fijó.
@@ -222,6 +238,13 @@ export const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ['CORE_API_URL'],
         message: 'En producción CORE_API_URL tiene que ser https://',
+      });
+    }
+    if (env.NODE_ENV === 'production' && /^http:/i.test(env.M1_BASE_URL ?? '')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['M1_BASE_URL'],
+        message: 'En producción M1_BASE_URL tiene que ser https://',
       });
     }
     if (env.CORE_API_URL && !env.CORE_MODULE_SECRET) {
