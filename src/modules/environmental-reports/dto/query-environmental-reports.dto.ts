@@ -1,5 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateOnly, SearchText, MAX_EXTERNAL_ID_LENGTH } from '../../../common/decorators';
+import {
+  IsDateOnly,
+  SearchText,
+  ToBoolean,
+  MAX_EXTERNAL_ID_LENGTH,
+} from '../../../common/decorators';
 import { EnvironmentalReportStatus, EnvironmentalReportType, Severity } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import { ArrayNotEmpty, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
@@ -89,6 +94,44 @@ export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
   @IsOptional()
   @IsDateOnly()
   to?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Creados desde este día, inclusive (YYYY-MM-DD, día argentino). Es el período de `indicators/incidents`, que cuenta por fecha de alta (no por `from`/`to`, que miran la última actualización)',
+    example: '2026-09-01',
+    format: 'date',
+  })
+  @IsOptional()
+  @IsDateOnly()
+  createdFrom?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Creados hasta este día, inclusive (YYYY-MM-DD). No puede ser anterior a `createdFrom`',
+    example: '2026-09-30',
+    format: 'date',
+  })
+  @IsOptional()
+  @IsDateOnly()
+  createdTo?: string;
+
+  @ApiPropertyOptional({
+    description:
+      '`true`: solo las vencidas (abiertas, es decir no CLOSED, con más días hábiles desde el alta hasta hoy que `INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS`), con el criterio exacto de `indicators/incidents` → `reports.overdue`. `false`: el resto. Sin el parámetro no filtra',
+    example: true,
+  })
+  @IsOptional()
+  @ToBoolean()
+  overdue?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Zona derivada de la denuncia: la del servicio de su inspección más reciente (sin contar CANCELLED) cuando cubre una sola zona. Coincide con `reports.overdue.byZone`',
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  zoneId?: string;
 
   @ApiPropertyOptional({
     description: 'Buscar por dirección (parcial, case-insensitive)',

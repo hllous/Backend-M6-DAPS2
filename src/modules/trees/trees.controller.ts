@@ -53,9 +53,14 @@ export class TreesController {
   @ApiOperation({
     summary: 'Listar árboles del inventario',
     description:
-      'Retorna un listado paginado de árboles. Se puede filtrar por estado, zona y buscar por especie o dirección.',
+      'Retorna un listado paginado de árboles. Se puede filtrar por estado, zona y nivel de riesgo (`riskLevel`, del último relevamiento) y buscar por especie o dirección.',
   })
   @ApiPaginatedResponse(TreeResponseDto, 'Listado paginado de árboles')
+  @ApiResponse({
+    status: 400,
+    description: 'Filtro inválido (p. ej. riskLevel fuera del enum)',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findAll(@Query() query: QueryTreesDto) {

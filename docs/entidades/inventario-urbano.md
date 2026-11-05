@@ -17,6 +17,8 @@ El árbol es la entidad estable; el relevamiento es la foto. **`Tree` guarda el 
 
 El relevamiento es el que decide: `riskLevel` y `riskType` salen de acá, y `suggestedIntervention` es lo que después se materializa en una [`TreeIntervention`](tree-intervention.md).
 
+**El riesgo actual de un árbol es el `riskLevel` de su último `TreeSurvey`** (`surveyedAt` más reciente); lo usan el indicador `trees.byRiskLevel`/`byZone` y el filtro `GET /trees?riskLevel=`, con la misma consulta.
+
 **Un `TreeSurvey` con `riskLevel` en `HIGH` o `CRITICAL` dispara [`treeRiskDetected`](../eventos/publicados/treeRiskDetected.md)** → M3 (el corte de calle, si hace falta, se pide aparte con `streetClosureRequested`). Con cualquier otro valor no sale nada. Con HIGH o CRITICAL `riskType` es obligatorio (400 si falta), y `surveyedAt` no puede ser posterior a hoy (huso Argentina).
 
 `requiresPublicWorks` señala el componente que no nos corresponde (una raíz que levantó la vereda); `requiresStreetClosure` anticipa que la intervención va a necesitar cortar la calle.
