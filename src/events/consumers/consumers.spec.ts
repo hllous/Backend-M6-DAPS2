@@ -8,6 +8,7 @@ import {
   Severity,
   StreetClosureRequestStatus,
 } from '@prisma/client';
+import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { OutboxService } from '../outbox/outbox.service';
@@ -29,6 +30,7 @@ describe('consumidores de eventos', () => {
   const ID = '11111111-1111-1111-1111-111111111111';
   let prisma: any;
   let inbox: InboxService;
+  let audit: { record: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -58,6 +60,7 @@ describe('consumidores de eventos', () => {
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
+    audit = { record: jest.fn() };
   });
 
   describe('respuestas de M3 y M7', () => {
@@ -65,7 +68,11 @@ describe('consumidores de eventos', () => {
 
     beforeEach(() => {
       h = registrar(
-        new OutboundResponsesConsumer(prisma as unknown as PrismaService, inbox),
+        new OutboundResponsesConsumer(
+          prisma as unknown as PrismaService,
+          inbox,
+          audit as unknown as AuditService,
+        ),
         inbox,
       );
     });
@@ -79,6 +86,139 @@ describe('consumidores de eventos', () => {
         where: { id: ID, status: { in: [RepairRequestStatus.REQUESTED] } },
         data: { status: RepairRequestStatus.IN_PROGRESS, workOrderId: 'OT-1' },
       });
+    });
+
+    describe('auditoría de las transiciones del sistema', () => {
+      const m3 = { userId: 'system:m3', roles: [] };
+      const m7 = { userId: 'system:m7', roles: [] };
+
+      it.each([
+        [
+          'workOrderScheduled',
+          'repairRequest',
+          'REPAIR_REQUEST',
+          'START',
+          'REQUESTED',
+          'IN_PROGRESS',
+          m3,
+          { sourceRequestId: ID },
+        ],
+        [
+          'workOrderCompleted',
+          'repairRequest',
+          'REPAIR_REQUEST',
+          'CLOSE',
+          'IN_PROGRESS',
+          'CLOSED',
+          m3,
+          { sourceRequestId: ID },
+        ],
+        [
+          'streetClosureApproved',
+          'streetClosureRequest',
+          'STREET_CLOSURE_REQUEST',
+          'APPROVE',
+          'REQUESTED',
+          'APPROVED',
+          m7,
+          { closureRequestId: ID },
+        ],
+        [
+          'streetClosureRejected',
+          'streetClosureRequest',
+          'STREET_CLOSURE_REQUEST',
+          'REJECT',
+          'REQUESTED',
+          'REJECTED',
+          m7,
+          { closureRequestId: ID },
+        ],
+        [
+          'streetClosureEnded',
+          'streetClosureRequest',
+          'STREET_CLOSURE_REQUEST',
+          'END',
+          'APPROVED',
+          'ENDED',
+          m7,
+          { closureRequestId: ID },
+        ],
+      ])(
+        '%s audita con el actor del módulo emisor',
+        async (ev, model, entityType, action, from, to, actor, data) => {
+          prisma[model].findUnique.mockResolvedValue({ id: ID, status: from, sourceType: 'OTHER' });
+
+          await h(ev)(data);
+
+          expect(audit.record).toHaveBeenCalledTimes(1);
+          expect(audit.record).toHaveBeenCalledWith(
+            prisma,
+            expect.objectContaining({
+              entityType,
+              entityId: ID,
+              action,
+              fromStatus: from,
+              toStatus: to,
+              actor,
+            }),
+          );
+        },
+      );
+
+      it.each([
+        ['workOrderScheduled', 'repairRequest', { sourceRequestId: ID }],
+        ['workOrderCompleted', 'repairRequest', { sourceRequestId: ID }],
+        ['streetClosureApproved', 'streetClosureRequest', { closureRequestId: ID }],
+        ['streetClosureRejected', 'streetClosureRequest', { closureRequestId: ID }],
+        ['streetClosureEnded', 'streetClosureRequest', { closureRequestId: ID }],
+      ])('%s repetido o tardío (count=0) no deja auditoría', async (ev, model, data) => {
+        prisma[model].findUnique.mockResolvedValue({
+          id: ID,
+          status: 'CLOSED',
+          sourceType: 'OTHER',
+        });
+        prisma[model].updateMany.mockResolvedValue({ count: 0 });
+        const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+        await h(ev)(data);
+
+        expect(audit.record).not.toHaveBeenCalled();
+        warn.mockRestore();
+      });
+    });
+
+    it('workOrderCompleted sin programación previa guarda el workOrderId', async () => {
+      prisma.repairRequest.findUnique.mockResolvedValue({
+        id: ID,
+        status: 'REQUESTED',
+        workOrderId: null,
+      });
+      await h('workOrderCompleted')({ sourceRequestId: ID, workOrderId: 'OT-9' });
+      expect(prisma.repairRequest.updateMany.mock.calls[0][0].data).toEqual({
+        status: RepairRequestStatus.CLOSED,
+        workOrderId: 'OT-9',
+      });
+    });
+
+    it('workOrderCompleted sin workOrderId en el payload no borra el existente', async () => {
+      prisma.repairRequest.findUnique.mockResolvedValue({
+        id: ID,
+        status: 'IN_PROGRESS',
+        workOrderId: 'OT-1',
+      });
+      await h('workOrderCompleted')({ sourceRequestId: ID });
+      expect(prisma.repairRequest.updateMany.mock.calls[0][0].data.workOrderId).toBe('OT-1');
+    });
+
+    it('validarM3 rechaza un workOrderId que no es texto y acepta su ausencia', async () => {
+      const v = (
+        inbox as unknown as {
+          options: Map<string, { validate: (d: Record<string, unknown>) => string[] }>;
+        }
+      ).options.get('workOrderCompleted')!.validate;
+      expect(v({ sourceRequestId: ID, workOrderId: 123 })).toEqual(['workOrderId (string)']);
+      expect(v({ sourceRequestId: ID, workOrderId: 'OT-1' })).toEqual([]);
+      expect(v({ sourceRequestId: ID })).toEqual([]);
     });
 
     it('un sourceRequestId que no es nuestro se descarta sin fallar', async () => {

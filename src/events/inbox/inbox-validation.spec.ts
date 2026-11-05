@@ -1,3 +1,4 @@
+import { AuditService } from '../../common/audit/audit.service';
 import { Logger, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -84,7 +85,7 @@ describe('validación del payload en el inbox', () => {
     // conservan la validación registrada.
     for (const c of [
       new TicketsConsumer(p, inbox, {} as never),
-      new OutboundResponsesConsumer(p, inbox),
+      new OutboundResponsesConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
       new SanctionsConsumer(p, inbox),
       new WeatherConsumer(p, inbox),
     ]) {

@@ -1,3 +1,4 @@
+import { AuditService } from '../../common/audit/audit.service';
 import { Logger } from '@nestjs/common';
 import { EnvironmentalReportStatus as S } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -87,7 +88,7 @@ async function correr(
   const inbox = new InboxService(prisma as unknown as PrismaService);
   const p = prisma as unknown as PrismaService;
   [
-    new OutboundResponsesConsumer(p, inbox),
+    new OutboundResponsesConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
     new SanctionsConsumer(p, inbox),
     new TicketsConsumer(p, inbox, new OutboxService()),
     new WeatherConsumer(p, inbox),

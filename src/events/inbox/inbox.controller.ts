@@ -43,6 +43,11 @@ export class InboxController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 403,
+    description: 'Solo M6_ADMIN puede inyectar eventos a mano',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async ingest(@Body() dto: IngestEventDto): Promise<IngestResult> {
     return this.inbox.ingest(toInboundEnvelope(dto));

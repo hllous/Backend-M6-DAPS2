@@ -500,7 +500,7 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 | `CREW` | `CREATE`, `ACTIVATE`, `DEACTIVATE`, `ADD_MEMBERS`, `REMOVE_MEMBER`, `REASSIGN_ZONE` |
 | `ZONE`, `VEHICLE`, `ROUTE` | `CREATE`, `ACTIVATE`, `DEACTIVATE` |
 
-La tabla es de solo agregado (un trigger rechaza modificar, borrar y vaciar) y no se purga. No audita lecturas ni las transiciones que hace el sistema (consumidores de eventos y barridos).
+La tabla es de solo agregado (un trigger rechaza modificar, borrar y vaciar) y no se purga. No audita lecturas ni las transiciones de otros consumidores de eventos y barridos. Las respuestas de M3 y M7 (`workOrder*`, `streetClosure*`) sí, con `actorUserId` `system:m3` / `system:m7` y `actorRoles` vacío, y solo si cambiaron el estado.
 
 ## `repair-requests` — reparaciones derivadas a M3
 

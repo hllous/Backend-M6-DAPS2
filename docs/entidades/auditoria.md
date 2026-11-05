@@ -33,9 +33,13 @@ Tabla `domain_audit_log`, índice `(entity_type, entity_id, occurred_at)`.
 | `CREW` | `CREATE`, `ACTIVATE`/`DEACTIVATE`, `ADD_MEMBERS`, `REMOVE_MEMBER`, `REASSIGN_ZONE` |
 | `ZONE`, `VEHICLE`, `ROUTE` | `CREATE`, `ACTIVATE`/`DEACTIVATE` |
 
+### Respuestas de M3 y M7
+
+`workOrderScheduled`/`workOrderCompleted` (M3) y `streetClosureApproved`/`Rejected`/`Ended` (M7) se auditan con las mismas `action` que las manuales (`START`, `CLOSE`, `APPROVE`, `REJECT`, `END`) y el actor `system:m3` o `system:m7` (`actorRoles` vacío), en la misma transacción del cambio. Solo si el estado realmente cambió: un evento repetido o tardío no deja fila. `fromStatus` es el estado visto al leer la solicitud, antes de la transacción: con eventos concurrentes sobre la misma solicitud podría quedar desfasado (carrera improbable, sin `SELECT FOR UPDATE`). `system:m3`/`system:m7` significa "llegó por el inbox", ya sea por el bus o por `POST /events/inbox` manual: un admin puede inyectar el evento y hoy no se distingue el origen. La reprogramación del servicio por un corte rechazado no se audita todavía.
+
 ### Lo que no queda registrado
 
-- Las transiciones que hace el **sistema** y no una persona: los consumidores de eventos (`ticketUpdated`, `weatherAlert`, `streetClosure*`, `workOrder*`, `sanctionApplied`…) y los barridos (vencimiento del plazo del acta, vencimiento de cortes). No hay un actor humano en el token; quedan en su propio historial y en el inbox.
+- Las transiciones que hace el **sistema** y no una persona: los consumidores de eventos (`ticketUpdated`, `weatherAlert`, `sanctionApplied`…) y los barridos (vencimiento del plazo del acta, vencimiento de cortes). No hay un actor humano en el token; quedan en su propio historial y en el inbox.
 - Los avisos de demora, resultados por zona y registros de recolección de un servicio (no son estados).
 - La edición de campos que no son estado (`PATCH` de contenedor, de cuadrilla, zona, vehículo o recorrido salvo `active`), el alta de paradas de un recorrido y las altas/bajas de barrios de una zona.
 - Los puntos verdes, espacios verdes y árboles (no están en el alcance del pedido).
