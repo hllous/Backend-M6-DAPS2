@@ -32,7 +32,7 @@ Al emitirse sale [`environmentalViolationDetected`](../eventos/publicados/enviro
 
 ## `SanctionOutcome`
 
-Dos números distintos: el `noticeNumber` del `ViolationNotice` (`ACTA-2026-000012`) identifica el acta de M6 y ya sale en la API del acta; el `externalRef` de M4 (`MULTA-2026-00125`, `DISP-2026-00124`) es el número administrativo legible de la multa o clausura y es el que se muestra para ellas. Hoy `SanctionOutcome` no sale en la API: para mostrarlo hay que exponerlo en el detalle del acta.
+Dos números distintos: el `noticeNumber` del `ViolationNotice` (`ACTA-2026-000012`) identifica el acta de M6 y ya sale en la API del acta; el `externalRef` de M4 (`MULTA-2026-00125`, `DISP-2026-00124`) es el número administrativo legible de la multa o clausura y es el que se muestra para ellas. `SanctionOutcome` sale en el detalle del acta (`GET`/`POST /environmental-inspections/:id/violation-notice`) como `sanctionOutcome` (`decision`, `decidedAt`, `externalRef`, `dismissalReason`), `null` mientras M4 no resolvió.
 
 **Espejo de solo lectura de lo que decidió M4.** No lo editamos: existe para poder cerrar el expediente y para mostrar en qué terminó.
 

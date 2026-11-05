@@ -850,11 +850,46 @@ describe('EnvironmentalInspectionsService', () => {
         severity: Severity.HIGH,
         suggestedAction: SuggestedAction.FINE,
         priorNoticeCount: 0,
+        sanctionOutcome: null,
         createdAt: new Date(),
       });
 
       const result = await service.findNotice(INSPECTION_ID);
       expect(result?.noticeNumber).toBe('ACTA-2026-000001');
+      expect(result?.sanctionOutcome).toBeNull();
+    });
+
+    it('findNotice expone la resolución de M4 con su externalRef', async () => {
+      const decidedAt = new Date();
+      prisma.violationNotice.findUnique.mockResolvedValue({
+        id: 'notice-1',
+        noticeNumber: 'ACTA-2026-000001',
+        inspectionId: INSPECTION_ID,
+        issuedAt: new Date(),
+        establishmentId: ESTABLISHMENT,
+        violationType: ViolationType.UNTREATED_DISCHARGE,
+        severity: Severity.HIGH,
+        suggestedAction: SuggestedAction.FINE,
+        priorNoticeCount: 0,
+        sanctionOutcome: {
+          id: 'so-1',
+          violationNoticeId: 'notice-1',
+          decision: 'FINE_ISSUED',
+          decidedAt,
+          externalRef: 'MULTA-2026-00125',
+          dismissalReason: null,
+          createdAt: new Date(),
+        },
+        createdAt: new Date(),
+      });
+
+      const result = await service.findNotice(INSPECTION_ID);
+      expect(result?.sanctionOutcome).toEqual({
+        decision: 'FINE_ISSUED',
+        decidedAt,
+        externalRef: 'MULTA-2026-00125',
+        dismissalReason: null,
+      });
     });
 
     it('findNotice devuelve null si la inspección existe y no tiene acta', async () => {
