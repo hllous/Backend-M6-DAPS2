@@ -44,6 +44,7 @@ describe('TreesService', () => {
         count: jest.fn().mockResolvedValue(1),
         update: jest.fn().mockResolvedValue(arbol()),
       },
+      $queryRaw: jest.fn().mockResolvedValue([]),
     };
     service = new TreesService(prisma as unknown as PrismaService);
   });
@@ -103,6 +104,16 @@ describe('TreesService', () => {
         zoneId: 'z-sur',
         active: false,
       });
+    });
+
+    it('riskLevel filtra por el último relevamiento, con el mismo DISTINCT ON del indicador', async () => {
+      prisma.$queryRaw.mockResolvedValue([{ id: 't1' }, { id: 't2' }]);
+
+      await service.findAll({ page: 1, pageSize: 20, riskLevel: 'HIGH' } as any);
+
+      expect(String(prisma.$queryRaw.mock.calls[0][0].join(''))).toContain('DISTINCT ON (tree_id)');
+      expect(prisma.tree.findMany.mock.calls[0][0].where).toEqual({ id: { in: ['t1', 't2'] } });
+      expect(prisma.tree.count.mock.calls[0][0].where).toEqual({ id: { in: ['t1', 't2'] } });
     });
 
     it('ordena por código de censo', async () => {

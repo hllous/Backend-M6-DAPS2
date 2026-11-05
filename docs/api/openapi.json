@@ -6229,7 +6229,7 @@
       "get": {
         "operationId": "TreesController_findAll",
         "summary": "Listar árboles del inventario",
-        "description": "Retorna un listado paginado de árboles. Se puede filtrar por estado, zona y buscar por especie o dirección.",
+        "description": "Retorna un listado paginado de árboles. Se puede filtrar por estado, zona y nivel de riesgo (`riskLevel`, del último relevamiento) y buscar por especie o dirección.",
         "parameters": [
           {
             "name": "page",
@@ -6275,6 +6275,22 @@
             }
           },
           {
+            "name": "riskLevel",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por nivel de riesgo del último relevamiento (el mismo criterio que `indicators/incidents` → `trees.byRiskLevel`). Los árboles sin relevamiento no coinciden con ningún nivel",
+            "schema": {
+              "enum": [
+                "NONE",
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
@@ -6307,6 +6323,16 @@
                       "$ref": "#/components/schemas/PaginationMeta"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtro inválido (p. ej. riskLevel fuera del enum)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -11290,6 +11316,50 @@
               "format": "date",
               "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
               "example": "2026-09-30",
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "description": "Creados desde este día, inclusive (YYYY-MM-DD, día argentino). Es el período de `indicators/incidents`, que cuenta por fecha de alta (no por `from`/`to`, que miran la última actualización)",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-09-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "description": "Creados hasta este día, inclusive (YYYY-MM-DD). No puede ser anterior a `createdFrom`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-09-30",
+              "type": "string"
+            }
+          },
+          {
+            "name": "overdue",
+            "required": false,
+            "in": "query",
+            "description": "`true`: solo las vencidas (abiertas, es decir no CLOSED, con más días hábiles desde el alta hasta hoy que `INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS`), con el criterio exacto de `indicators/incidents` → `reports.overdue`. `false`: el resto. Sin el parámetro no filtra",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "zoneId",
+            "required": false,
+            "in": "query",
+            "description": "Zona derivada de la denuncia: la del servicio de su inspección más reciente (sin contar CANCELLED) cuando cubre una sola zona. Coincide con `reports.overdue.byZone`",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -21420,6 +21490,36 @@
           "count"
         ]
       },
+      "TreesByZoneDto": {
+        "type": "object",
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "Z-CENTRO"
+          },
+          "name": {
+            "type": "string",
+            "example": "Centro"
+          },
+          "byRiskLevel": {
+            "description": "Árboles activos de la zona por nivel, según su último relevamiento. Solo niveles con árboles",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RiskCountDto"
+            }
+          }
+        },
+        "required": [
+          "zoneId",
+          "code",
+          "name",
+          "byRiskLevel"
+        ]
+      },
       "TreeIncidentsDto": {
         "type": "object",
         "properties": {
@@ -21429,10 +21529,18 @@
             "items": {
               "$ref": "#/components/schemas/RiskCountDto"
             }
+          },
+          "byZone": {
+            "description": "La misma foto abierta por la zona del árbol (`Tree.zoneId`, siempre informada). No depende del período. Para listar: `GET /trees?riskLevel=HIGH&active=true&zoneId=…`",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TreesByZoneDto"
+            }
           }
         },
         "required": [
-          "byRiskLevel"
+          "byRiskLevel",
+          "byZone"
         ]
       },
       "WithinDeadlineDto": {
@@ -21461,6 +21569,53 @@
           "pct"
         ]
       },
+      "OverdueByZoneDto": {
+        "type": "object",
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Zona derivada del servicio de la inspección más reciente (sin contar CANCELLED), solo si ese servicio cubre una única zona. `null` agrupa las denuncias sin inspección con servicio o con un servicio de varias zonas"
+          },
+          "code": {
+            "type": "string",
+            "example": "Z-CENTRO",
+            "nullable": true,
+            "description": "Null si `zoneId` es null"
+          },
+          "name": {
+            "type": "string",
+            "example": "Centro",
+            "nullable": true,
+            "description": "Null si `zoneId` es null"
+          },
+          "open": {
+            "type": "number",
+            "description": "Abiertas (no CLOSED) de la zona creadas en el período",
+            "example": 4
+          },
+          "overdue": {
+            "type": "number",
+            "description": "Vencidas de la zona, con la misma definición que `overdue.overdue`",
+            "example": 1
+          },
+          "pct": {
+            "type": "number",
+            "description": "Vencidas ÷ abiertas de la zona, un decimal",
+            "example": 25,
+            "nullable": true
+          }
+        },
+        "required": [
+          "zoneId",
+          "code",
+          "name",
+          "open",
+          "overdue",
+          "pct"
+        ]
+      },
       "OverdueDto": {
         "type": "object",
         "properties": {
@@ -21479,12 +21634,20 @@
             "description": "Vencidos ÷ abiertos, con un decimal. **Null si no hay abiertos**: es la ausencia de dato, no un 0 %",
             "example": 11.1,
             "nullable": true
+          },
+          "byZone": {
+            "description": "Desglose por zona; suma lo mismo que `open` y `overdue`. Solo trae zonas con abiertas. Ordenado por vencidas, de mayor a menor. Para listar: `GET /environmental-reports?overdue=true&zoneId=…&createdFrom=…&createdTo=…`",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OverdueByZoneDto"
+            }
           }
         },
         "required": [
           "open",
           "overdue",
-          "pct"
+          "pct",
+          "byZone"
         ]
       },
       "ReportTypeCountDto": {

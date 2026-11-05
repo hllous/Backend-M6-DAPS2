@@ -17,6 +17,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ACTOR } from '../../common/audit/audit-test-actor';
+import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../common/audit/audit.service';
 import { EnvironmentalReportsService } from '../environmental-reports/environmental-reports.service';
 import { EnvironmentalInspectionsService } from './environmental-inspections.service';
@@ -116,6 +117,7 @@ describe('EnvironmentalInspectionsService', () => {
       prisma as unknown as PrismaService,
       outbox,
       audit as unknown as AuditService,
+      { get: () => 5 } as unknown as ConfigService,
     );
     service = new EnvironmentalInspectionsService(
       prisma as unknown as PrismaService,

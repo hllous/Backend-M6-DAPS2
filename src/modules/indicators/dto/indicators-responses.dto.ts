@@ -416,12 +416,37 @@ export class ContainerIncidentsDto {
   byZone: ContainersByZoneDto[];
 }
 
+export class TreesByZoneDto {
+  @ApiProperty({ format: 'uuid' })
+  zoneId: string;
+
+  @ApiProperty({ example: 'Z-CENTRO' })
+  code: string;
+
+  @ApiProperty({ example: 'Centro' })
+  name: string;
+
+  @ApiProperty({
+    type: [RiskCountDto],
+    description:
+      'Árboles activos de la zona por nivel, según su último relevamiento. Solo niveles con árboles',
+  })
+  byRiskLevel: RiskCountDto[];
+}
+
 export class TreeIncidentsDto {
   @ApiProperty({
     type: [RiskCountDto],
     description: 'Cada árbol cuenta una sola vez, por su último relevamiento',
   })
   byRiskLevel: RiskCountDto[];
+
+  @ApiProperty({
+    type: [TreesByZoneDto],
+    description:
+      'La misma foto abierta por la zona del árbol (`Tree.zoneId`, siempre informada). No depende del período. Para listar: `GET /trees?riskLevel=HIGH&active=true&zoneId=…`',
+  })
+  byZone: TreesByZoneDto[];
 }
 
 /** Reclamos resueltos y cuántos se cerraron dentro del plazo objetivo. */
@@ -479,6 +504,51 @@ export class ReportsTotalsDto {
   withinDeadline: WithinDeadlineDto;
 }
 
+/** Abiertas y vencidas de una zona (o de las que no tienen zona, con `zoneId: null`). */
+export class OverdueByZoneDto {
+  @ApiProperty({
+    format: 'uuid',
+    nullable: true,
+    type: String,
+    description:
+      'Zona derivada del servicio de la inspección más reciente (sin contar CANCELLED), solo si ese servicio cubre una única zona. `null` agrupa las denuncias sin inspección con servicio o con un servicio de varias zonas',
+  })
+  zoneId: string | null;
+
+  @ApiProperty({
+    example: 'Z-CENTRO',
+    nullable: true,
+    type: String,
+    description: 'Null si `zoneId` es null',
+  })
+  code: string | null;
+
+  @ApiProperty({
+    example: 'Centro',
+    nullable: true,
+    type: String,
+    description: 'Null si `zoneId` es null',
+  })
+  name: string | null;
+
+  @ApiProperty({ description: 'Abiertas (no CLOSED) de la zona creadas en el período', example: 4 })
+  open: number;
+
+  @ApiProperty({
+    description: 'Vencidas de la zona, con la misma definición que `overdue.overdue`',
+    example: 1,
+  })
+  overdue: number;
+
+  @ApiProperty({
+    description: 'Vencidas ÷ abiertas de la zona, un decimal',
+    example: 25,
+    nullable: true,
+    type: Number,
+  })
+  pct: number | null;
+}
+
 /** Foto de hoy de los reclamos abiertos creados en el período. */
 export class OverdueDto {
   @ApiProperty({
@@ -502,6 +572,13 @@ export class OverdueDto {
     type: Number,
   })
   pct: number | null;
+
+  @ApiProperty({
+    type: [OverdueByZoneDto],
+    description:
+      'Desglose por zona; suma lo mismo que `open` y `overdue`. Solo trae zonas con abiertas. Ordenado por vencidas, de mayor a menor. Para listar: `GET /environmental-reports?overdue=true&zoneId=…&createdFrom=…&createdTo=…`',
+  })
+  byZone: OverdueByZoneDto[];
 }
 
 export class ReportIncidentsDto extends ReportsTotalsDto {
