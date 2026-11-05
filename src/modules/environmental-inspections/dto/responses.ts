@@ -177,7 +177,7 @@ export class ViolationNoticeResponseDto {
 
   @ApiProperty({
     description:
-      'Número público del acta, correlativo. Es lo que identifica el acto administrativo; el externalRef de M4 no lo es.',
+      'Número del acta de M6, correlativo. Es lo que identifica el acta; el número de la multa o clausura es el externalRef de M4.',
     example: 'ACTA-2026-000012',
   })
   noticeNumber: string;
