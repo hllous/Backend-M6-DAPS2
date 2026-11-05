@@ -65,7 +65,7 @@ function crearPrisma() {
       update: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
-    sanctionOutcome: { create: jest.fn() },
+    sanctionOutcome: { create: jest.fn().mockResolvedValue({ id: 'out-1' }) },
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
   };
   return prisma;

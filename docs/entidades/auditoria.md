@@ -23,7 +23,7 @@ Tabla `domain_audit_log`, índice `(entity_type, entity_id, occurred_at)`.
 | `entityType` | Acciones |
 |---|---|
 | `CONTAINER` | `CREATE`, `REPORT_OVERFLOW`, `EMPTY`, `REPORT_DAMAGE`, `START_REPAIR`, `COMPLETE_REPAIR`, `RELOCATE`, `CONFIRM_RELOCATION`, `REMOVE`, y `COMPLETE_SERVICE` cuando lo mueve el cierre de un servicio |
-| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REACTIVATE`, `REOPEN`, `PRIORITY_CHANGE`, `INFORMATION_PROVIDED`, `ESCALATION_CHANGE`, `REQUEST_INFORMATION` (sin el mensaje) y `STATUS_CHANGE` para lo que dispara la inspección o el acta |
+| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REACTIVATE`, `REOPEN`, `PRIORITY_CHANGE`, `INFORMATION_PROVIDED`, `CANCEL_INFORMATION_REQUEST`, `ESCALATION_CHANGE`, `REQUEST_INFORMATION` (sin el mensaje) y `STATUS_CHANGE` para lo que dispara la inspección o el acta |
 | `ENVIRONMENTAL_INSPECTION` | `SCHEDULE`, `COMPLETE` |
 | `VIOLATION_NOTICE` | `ISSUE` (la nota dice si se derivó a M4) |
 | `REPAIR_REQUEST` | `CREATE`, `START`, `CLOSE` |
@@ -32,6 +32,7 @@ Tabla `domain_audit_log`, índice `(entity_type, entity_id, occurred_at)`.
 | `SERVICE` | `CREATE`, `UPDATE`, `ASSIGN_CREW`, `START`, `SUSPEND`, `RESUME`, `COMPLETE`, `CANCEL`, `RESCHEDULE`, `CONFIRM_RESCHEDULE` |
 | `CREW` | `CREATE`, `ACTIVATE`/`DEACTIVATE`, `ADD_MEMBERS`, `REMOVE_MEMBER`, `REASSIGN_ZONE` |
 | `ZONE`, `VEHICLE`, `ROUTE` | `CREATE`, `ACTIVATE`/`DEACTIVATE` |
+| `SANCTION_OUTCOME` | `RECORD_OUTCOME` (`toStatus` y `note` son la decisión de M4; solo lo escribe el consumidor de M4) |
 
 ### Respuestas de M3 y M7
 
@@ -50,10 +51,12 @@ Mismo criterio (actor `system:<módulo>`, `actorRoles` vacío, misma transacció
 | CANCELLED | servicios `SCHEDULED`/`RESCHEDULED` → `CANCELLED` (una fila por servicio) | `SERVICE` · `CANCEL` |
 | REOPENED | → `UNDER_REVIEW` | `ENVIRONMENTAL_REPORT` · `REOPEN` |
 | PRIORITY_CHANGED, INFORMATION_PROVIDED, ESCALATION_CHANGED | datos sin máquina de estados: `fromStatus` es el estado del expediente, `toStatus` queda vacío | `ENVIRONMENTAL_REPORT` · `PRIORITY_CHANGE`, `INFORMATION_PROVIDED`, `ESCALATION_CHANGE` |
+| cualquier `ticketUpdated` que cambia el estado en M2 (no a `PENDING_INFORMATION`) | se apaga la solicitud de información pendiente | `ENVIRONMENTAL_REPORT` · `CANCEL_INFORMATION_REQUEST` |
+| `commercialFineGenerated` / `closureUpdate` (`system:m4`) | alta de la resolución espejo de M4 | `SANCTION_OUTCOME` · `RECORD_OUTCOME` |
 | `commercialFineGenerated` / `closureUpdate` (`system:m4`) | `NOTICE_ISSUED` → `SANCTIONED` → `CLOSED` (una fila por transición) | `ENVIRONMENTAL_REPORT` · `STATUS_CHANGE` |
 | `weatherAlertIssued` (`system:weather`) | servicios `SCHEDULED` → `RESCHEDULED` (una fila por servicio) | `SERVICE` · `RESCHEDULE` |
 
-La `note` nunca lleva el texto del vecino (`INFORMATION_PROVIDED` solo dice que respondió). `weatherAlertIssued` no lo publica ningún módulo (lo simulamos nosotros), por eso el actor es `system:weather` y no `system:m9`. La alta de `SanctionOutcome` (el espejo de la resolución de M4) y `cerrarSolicitud` (apagar la solicitud de información pendiente) **no** se auditan: lo primero pide un `entityType` nuevo, lo segundo es de baja prioridad. Tampoco `TicketM2State`, que es un espejo del estado de M2.
+La `note` nunca lleva el texto del vecino (`INFORMATION_PROVIDED` solo dice que respondió). `weatherAlertIssued` no lo publica ningún módulo (lo simulamos nosotros), por eso el actor es `system:weather` y no `system:m9`. `TicketM2State` **no** se audita: que es un espejo del estado de M2.
 
 ### Lo que no queda registrado
 

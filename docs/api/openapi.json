@@ -980,7 +980,8 @@
                 "CREW",
                 "ZONE",
                 "VEHICLE",
-                "ROUTE"
+                "ROUTE",
+                "SANCTION_OUTCOME"
               ],
               "type": "string"
             }
@@ -15649,7 +15650,8 @@
               "CREW",
               "ZONE",
               "VEHICLE",
-              "ROUTE"
+              "ROUTE",
+              "SANCTION_OUTCOME"
             ],
             "example": "CONTAINER"
           },

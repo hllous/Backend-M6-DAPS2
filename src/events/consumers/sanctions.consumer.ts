@@ -111,7 +111,7 @@ export class SanctionsConsumer implements OnModuleInit {
     if (!report) return;
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.sanctionOutcome.create({
+      const outcome = await tx.sanctionOutcome.create({
         data: {
           violationNoticeId: notice.id,
           decision,
@@ -124,6 +124,15 @@ export class SanctionsConsumer implements OnModuleInit {
           externalRef: (data.externalRef ?? null) as string | null,
         },
       });
+      // La nota es el enum de la decisión, no el externalRef ni nada libre de M4.
+      await this.audit.record(tx, {
+        entityType: 'SANCTION_OUTCOME',
+        entityId: outcome.id,
+        action: 'RECORD_OUTCOME',
+        toStatus: decision,
+        actor: M4,
+        note: decision,
+      });
 
       if (report.status === S.NOTICE_ISSUED) {
         await tx.environmentalReport.update({
@@ -134,8 +143,7 @@ export class SanctionsConsumer implements OnModuleInit {
           where: { id: report.id },
           data: { status: S.CLOSED },
         });
-        // Una fila por transición, aunque ocurran juntas. Sin entityType para
-        // SanctionOutcome: sumarlo es un valor nuevo de AUDIT_ENTITY_TYPES (#518, fuera de alcance).
+        // Una fila por transición, aunque ocurran juntas.
         for (const [from, to] of [
           [S.NOTICE_ISSUED, S.SANCTIONED],
           [S.SANCTIONED, S.CLOSED],

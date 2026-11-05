@@ -258,14 +258,16 @@ export class TicketsConsumer implements OnModuleInit {
    * estado recibido (`registrarRecibido`). Sin pendiente no toca nada.
    */
   private async cerrarSolicitud(ticketId: string, at: Date | null): Promise<void> {
-    const { count } = await this.prisma.environmentalReport.updateMany({
-      where: {
+    const count = await this.updateConAuditoria(
+      {
         ticketId,
         informationRequestedAt: { not: null },
         ...this.noAtrasado('citizenResponseAt', at),
       },
-      data: SIN_SOLICITUD,
-    });
+      SIN_SOLICITUD,
+      'CANCEL_INFORMATION_REQUEST',
+      'La solicitud de información dejó de estar vigente',
+    );
     if (count) {
       this.logger.log(`ticketUpdated: solicitud de información del ticket ${ticketId} cerrada`);
     }

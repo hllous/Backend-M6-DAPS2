@@ -55,7 +55,7 @@ describe('consumidores de eventos', () => {
         update: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
-      sanctionOutcome: { create: jest.fn() },
+      sanctionOutcome: { create: jest.fn().mockResolvedValue({ id: 'out-1' }) },
       // Estado del ticket en M2 (#303): sin dato por defecto.
       ticketM2State: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -688,7 +688,9 @@ describe('consumidores de eventos', () => {
     it('audita NOTICE_ISSUED a SANCTIONED y a CLOSED, una fila por transición, como M4', async () => {
       await h('commercialFineGenerated')({ sourceViolationId: ID });
 
-      const filas = audit.record.mock.calls.map(([, e]) => e);
+      const filas = audit.record.mock.calls
+        .map(([, e]) => e)
+        .filter((e) => e.entityType === 'ENVIRONMENTAL_REPORT');
       expect(filas).toEqual([
         expect.objectContaining({
           entityType: 'ENVIRONMENTAL_REPORT',
@@ -702,12 +704,29 @@ describe('consumidores de eventos', () => {
       ]);
     });
 
-    it('si el expediente no estaba en NOTICE_ISSUED, no audita', async () => {
+    it('audita SANCTION_OUTCOME · RECORD_OUTCOME con la decisión y el actor de M4', async () => {
+      await h('closureUpdate')({ sourceViolationId: ID, status: 'ORDERED', externalRef: 'REF-9' });
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          entityType: 'SANCTION_OUTCOME',
+          entityId: 'out-1',
+          action: 'RECORD_OUTCOME',
+          toStatus: SanctionDecision.CLOSURE_ORDERED,
+          note: SanctionDecision.CLOSURE_ORDERED,
+          actor: { userId: 'system:m4', roles: [] },
+        }),
+      );
+    });
+
+    it('si el expediente no estaba en NOTICE_ISSUED, no audita transiciones pero sí la resolución', async () => {
       prisma.environmentalReport.findUnique.mockResolvedValue({ id: 'rep-1', status: S.CLOSED });
 
       await h('commercialFineGenerated')({ sourceViolationId: ID });
 
-      expect(audit.record).not.toHaveBeenCalled();
+      const tipos = audit.record.mock.calls.map(([, e]) => e.entityType);
+      expect(tipos).toEqual(['SANCTION_OUTCOME']);
     });
 
     it('si el acta ya tenía resolución, no audita', async () => {
@@ -1358,6 +1377,35 @@ describe('consumidores de eventos', () => {
             actor: m2,
           }),
         );
+      });
+
+      it('un cambio de estado de M2 que apaga la solicitud pendiente audita CANCEL_INFORMATION_REQUEST', async () => {
+        prisma.environmentalReport.findMany.mockResolvedValue([
+          { id: 'rep-1', status: S.UNDER_REVIEW },
+        ]);
+
+        await h({ ...nuestro, updateType: 'STATUS_CHANGED', currentStatus: 'IN_PROGRESS' });
+
+        expect(audit.record).toHaveBeenCalledTimes(1);
+        const [, entry] = audit.record.mock.calls[0];
+        expect(entry).toMatchObject({
+          entityType: 'ENVIRONMENTAL_REPORT',
+          entityId: 'rep-1',
+          action: 'CANCEL_INFORMATION_REQUEST',
+          fromStatus: S.UNDER_REVIEW,
+          actor: m2,
+        });
+      });
+
+      it('sin solicitud pendiente (count 0) no audita CANCEL_INFORMATION_REQUEST', async () => {
+        prisma.environmentalReport.findMany.mockResolvedValue([
+          { id: 'rep-1', status: S.UNDER_REVIEW },
+        ]);
+        prisma.environmentalReport.updateMany.mockResolvedValue({ count: 0 });
+
+        await h({ ...nuestro, updateType: 'STATUS_CHANGED', currentStatus: 'IN_PROGRESS' });
+
+        expect(audit.record).not.toHaveBeenCalled();
       });
 
       it('si falla la auditoría del alta, falla el handler', async () => {

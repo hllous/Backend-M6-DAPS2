@@ -461,7 +461,7 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 
 | Método | Ruta     | Roles                    | Qué hace |
 | ------ | -------- | ------------------------ | -------- |
-| GET    | `/audit` | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más reciente al más antiguo. Filtros opcionales `entityType` (valor cerrado: `CONTAINER`, `ENVIRONMENTAL_REPORT`, `ENVIRONMENTAL_INSPECTION`, `VIOLATION_NOTICE`, `REPAIR_REQUEST`, `STREET_CLOSURE_REQUEST`, `TREE_INTERVENTION`, `SERVICE`, `CREW`, `ZONE`, `VEHICLE`, `ROUTE`) y `entityId` (UUID); 400 si alguno es inválido. Cada fila trae `action`, `fromStatus`/`toStatus`, `actorUserId` y `actorRoles` (del token, nunca del body), `note` (solo el motivo que el flujo ya pedía) y `occurredAt` |
+| GET    | `/audit` | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más reciente al más antiguo. Filtros opcionales `entityType` (valor cerrado: `CONTAINER`, `ENVIRONMENTAL_REPORT`, `ENVIRONMENTAL_INSPECTION`, `VIOLATION_NOTICE`, `REPAIR_REQUEST`, `STREET_CLOSURE_REQUEST`, `TREE_INTERVENTION`, `SERVICE`, `CREW`, `ZONE`, `VEHICLE`, `ROUTE`, `SANCTION_OUTCOME`) y `entityId` (UUID); 400 si alguno es inválido. Cada fila trae `action`, `fromStatus`/`toStatus`, `actorUserId` y `actorRoles` (del token, nunca del body), `note` (solo el motivo que el flujo ya pedía) y `occurredAt` |
 
 **Query params de `GET /audit`** (todos opcionales; un valor fuera de rango o con formato inválido da 400):
 
@@ -494,7 +494,7 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 | `entityType` | `action` |
 | ------------ | -------- |
 | `CONTAINER` | `CREATE`, `REPORT_OVERFLOW`, `EMPTY`, `REPORT_DAMAGE`, `START_REPAIR`, `COMPLETE_REPAIR`, `RELOCATE`, `CONFIRM_RELOCATION`, `REMOVE`, `COMPLETE_SERVICE` |
-| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REQUEST_INFORMATION`, `STATUS_CHANGE` |
+| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REQUEST_INFORMATION`, `STATUS_CHANGE`, y las del sistema por evento de M2: `REACTIVATE`, `REOPEN`, `PRIORITY_CHANGE`, `INFORMATION_PROVIDED`, `CANCEL_INFORMATION_REQUEST`, `ESCALATION_CHANGE` |
 | `ENVIRONMENTAL_INSPECTION` | `SCHEDULE`, `COMPLETE` |
 | `VIOLATION_NOTICE` | `ISSUE` |
 | `REPAIR_REQUEST` | `CREATE`, `START`, `CLOSE` |
@@ -503,6 +503,7 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 | `SERVICE` | `CREATE`, `UPDATE`, `ASSIGN_CREW`, `START`, `SUSPEND`, `RESUME`, `COMPLETE`, `CANCEL`, `RESCHEDULE`, `CONFIRM_RESCHEDULE` |
 | `CREW` | `CREATE`, `ACTIVATE`, `DEACTIVATE`, `ADD_MEMBERS`, `REMOVE_MEMBER`, `REASSIGN_ZONE` |
 | `ZONE`, `VEHICLE`, `ROUTE` | `CREATE`, `ACTIVATE`, `DEACTIVATE` |
+| `SANCTION_OUTCOME` | `RECORD_OUTCOME` |
 
 La tabla es de solo agregado (un trigger rechaza modificar, borrar y vaciar) y no se purga. No audita lecturas ni las transiciones de otros consumidores de eventos y barridos. Las respuestas de M3 y M7 (`workOrder*`, `streetClosure*`) sí, con `actorUserId` `system:m3` / `system:m7` y `actorRoles` vacío, y solo si cambiaron el estado.
 
