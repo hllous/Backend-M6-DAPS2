@@ -207,7 +207,7 @@ No filtra los listados: Campo sigue viendo todo en los `GET`; la pertenencia es 
 | Método | Ruta            | Qué hace                                                                                                                     |
 | ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/health`       | Liveness: el proceso responde. **Público**, no consulta la base (lo usa el keepalive).                                       |
-| GET    | `/health/ready` | Readiness: `SELECT 1` con timeout de 3 s. **Público**. 200 `database: up` o 503 si la base no responde; usar para monitoreo. |
+| GET    | `/health/ready` | Readiness: `SELECT 1` con timeout de 3 s. **Público**. 200 `database: up` o 503 si la base no responde; usar para monitoreo. Incluye `broker` (`connected`, `reconnecting` o `disabled` sin `RABBITMQ_URL`): es informativo, un bus caído no da 503. |
 
 ## `auth` y `role-assignments` — identidad y roles de M6
 

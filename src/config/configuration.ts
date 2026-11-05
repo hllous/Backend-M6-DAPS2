@@ -31,6 +31,7 @@ export default () => {
         reportsOverduePct: parsed.INDICATORS_TARGET_REPORTS_OVERDUE_PCT,
       },
     },
+    inboxRetentionDays: parsed.INBOX_RETENTION_DAYS,
     rabbitmq: {
       url: parsed.RABBITMQ_URL,
       exchange: parsed.RABBITMQ_EXCHANGE,

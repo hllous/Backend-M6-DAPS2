@@ -16,6 +16,8 @@ import { OutboxDispatcher } from './outbox/outbox-dispatcher.service';
 import { EventPublisher } from './publishers/event-publisher.port';
 import { RabbitMqEventPublisher } from './publishers/rabbitmq.publisher';
 import { LoggingEventPublisher } from './publishers/logging.publisher';
+import { BusStatus } from './bus-status';
+import { InboxRetentionSweeper } from './inbox/inbox-retention.sweeper';
 import { brokerHost, brokerUser, RabbitMqConfig } from './rabbitmq';
 
 /** La config del bus, o `undefined` si no hay `RABBITMQ_URL`. */
@@ -55,9 +57,10 @@ export function createEventPublisher(config: ConfigService): EventPublisher {
 export function createRabbitMqConsumer(
   config: ConfigService,
   inbox: InboxService,
+  bus: BusStatus = new BusStatus(),
 ): RabbitMqConsumer | null {
   const rabbit = rabbitMq(config);
-  return rabbit ? new RabbitMqConsumer(rabbit, inbox) : null;
+  return rabbit ? new RabbitMqConsumer(rabbit, inbox, bus) : null;
 }
 
 /**
@@ -80,6 +83,8 @@ export function createRabbitMqConsumer(
     OutboxDispatcher,
     InboxService,
     InboxAdminService,
+    InboxRetentionSweeper,
+    BusStatus,
     // Cada uno registra sus handlers en su onModuleInit.
     OutboundResponsesConsumer,
     SanctionsConsumer,
@@ -92,10 +97,10 @@ export function createRabbitMqConsumer(
     },
     {
       provide: RabbitMqConsumer,
-      inject: [ConfigService, InboxService],
+      inject: [ConfigService, InboxService, BusStatus],
       useFactory: createRabbitMqConsumer,
     },
   ],
-  exports: [OutboxService, OutboxDispatcher, InboxService],
+  exports: [OutboxService, OutboxDispatcher, InboxService, BusStatus],
 })
 export class EventsModule {}

@@ -77,11 +77,12 @@ export class OutboundResponsesConsumer implements OnModuleInit {
   // ─── M3 ───────────────────────────────────────────
 
   /**
-   * Sigue abierta la pregunta de **cuándo** dispara M3 este evento: "creada" y
-   * "programada" no significan lo mismo, y si es lo segundo, entre que mandamos
-   * la solicitud y ellos le ponen fecha no tenemos ninguna señal
-   * (bloqueantes.md). No cambia el handler, sí cambia qué tan pronto se entera
-   * el operador.
+   * Qué se verificó (prueba del 5/11 con M3 y el Core): M3 publicó este evento
+   * y `workOrderCompleted` y la solicitud terminó Cerrada. Qué no: el momento
+   * exacto de cada publicación (solo vimos el estado final y los contadores del
+   * Core), así que sigue sin saberse si M3 lo dispara al crear o al programar la
+   * orden. Es indiferente para el handler, pero cambia cuán pronto se entera el
+   * operador de que la solicitud pasó a en curso.
    */
   private async workOrderScheduled(data: Record<string, unknown>): Promise<void> {
     const request = await this.findRepairRequest(data);

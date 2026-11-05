@@ -2,6 +2,7 @@ import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators';
 import { ErrorResponseDto } from '../common/dto';
+import { BusStatus } from '../events/bus-status';
 import { PrismaService } from '../prisma/prisma.service';
 import { HealthResponseDto, ReadinessResponseDto } from './health-response.dto';
 
@@ -11,7 +12,10 @@ const DB_TIMEOUT_MS = 3000;
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly bus: BusStatus,
+  ) {}
 
   // Liveness: no toca la base a propósito. Lo usa el keepalive de GitHub y no
   // debe fallar (ni tardar) por un problema de la base.
@@ -32,7 +36,7 @@ export class HealthController {
   @ApiOperation({
     summary: 'Readiness: verifica la conexión a la base',
     description:
-      'Ejecuta un SELECT 1 con un timeout de 3 s. Responde 503 si la base no contesta; es el endpoint para monitoreo.',
+      'Ejecuta un SELECT 1 con un timeout de 3 s. Responde 503 si la base no contesta; es el endpoint para monitoreo. Informa también el estado del bus (`broker`), pero un bus caído no cambia el código: la API sigue sirviendo.',
   })
   @ApiResponse({
     status: 200,
@@ -59,6 +63,14 @@ export class HealthController {
     } finally {
       clearTimeout(timer);
     }
-    return { status: 'ok', database: 'up', timestamp: new Date().toISOString(), service: SERVICE };
+    // El bus es informativo a propósito: el consumidor reconecta solo y la API no
+    // depende de él para servir, así que no entra en el 503.
+    return {
+      status: 'ok',
+      database: 'up',
+      broker: this.bus.state,
+      timestamp: new Date().toISOString(),
+      service: SERVICE,
+    };
   }
 }

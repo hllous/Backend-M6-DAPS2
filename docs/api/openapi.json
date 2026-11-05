@@ -28,7 +28,7 @@
       "get": {
         "operationId": "HealthController_ready",
         "summary": "Readiness: verifica la conexión a la base",
-        "description": "Ejecuta un SELECT 1 con un timeout de 3 s. Responde 503 si la base no contesta; es el endpoint para monitoreo.",
+        "description": "Ejecuta un SELECT 1 con un timeout de 3 s. Responde 503 si la base no contesta; es el endpoint para monitoreo. Informa también el estado del bus (`broker`), pero un bus caído no cambia el código: la API sigue sirviendo.",
         "parameters": [],
         "responses": {
           "200": {
@@ -14917,13 +14917,24 @@
             "type": "string",
             "example": "up",
             "description": "Estado de la conexión a la base"
+          },
+          "broker": {
+            "type": "string",
+            "enum": [
+              "connected",
+              "reconnecting",
+              "disabled"
+            ],
+            "example": "connected",
+            "description": "Estado del consumidor del bus de eventos (RabbitMQ). Es solo informativo: un bus caído no vuelve 503, la API sigue sirviendo. \"disabled\" = sin RABBITMQ_URL."
           }
         },
         "required": [
           "status",
           "timestamp",
           "service",
-          "database"
+          "database",
+          "broker"
         ]
       },
       "ErrorResponseDto": {

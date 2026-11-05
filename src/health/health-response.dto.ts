@@ -14,4 +14,12 @@ export class HealthResponseDto {
 export class ReadinessResponseDto extends HealthResponseDto {
   @ApiProperty({ example: 'up', description: 'Estado de la conexión a la base' })
   database: string;
+
+  @ApiProperty({
+    enum: ['connected', 'reconnecting', 'disabled'],
+    example: 'connected',
+    description:
+      'Estado del consumidor del bus de eventos (RabbitMQ). Es solo informativo: un bus caído no vuelve 503, la API sigue sirviendo. "disabled" = sin RABBITMQ_URL.',
+  })
+  broker: 'connected' | 'reconnecting' | 'disabled';
 }
