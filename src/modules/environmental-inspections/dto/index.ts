@@ -8,5 +8,6 @@ export {
   InspectionResponseDto,
   AllowedActionsDto,
   ChecklistItemResponseDto,
+  SanctionOutcomeResponseDto,
   ViolationNoticeResponseDto,
 } from './responses';

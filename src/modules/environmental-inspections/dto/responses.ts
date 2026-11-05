@@ -3,6 +3,7 @@ import {
   EnvironmentalReportType,
   InspectionNextStep,
   InspectionOutcome,
+  SanctionDecision,
   Severity,
   SuggestedAction,
   ViolationType,
@@ -171,12 +172,46 @@ export class InspectionResponseDto {
   updatedAt: Date;
 }
 
+export class SanctionOutcomeResponseDto {
+  @ApiProperty({
+    description: 'Qué resolvió M4',
+    enum: SanctionDecision,
+    example: SanctionDecision.FINE_ISSUED,
+  })
+  decision: SanctionDecision;
+
+  @ApiPropertyOptional({
+    description: 'Cuándo decidió M4',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  decidedAt: Date | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Número administrativo legible de la multa o clausura que informa M4. Null si M4 no lo envió.',
+    nullable: true,
+    type: String,
+    example: 'MULTA-2026-00125',
+  })
+  externalRef: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Motivo del desistimiento, si lo hubo',
+    nullable: true,
+    type: String,
+  })
+  dismissalReason: string | null;
+}
+
 export class ViolationNoticeResponseDto {
   @ApiProperty({ description: 'UUID del acta', format: 'uuid' })
   id: string;
 
   @ApiProperty({
-    description: 'Número de acta correlativo. Es lo que identifica el acto administrativo.',
+    description:
+      'Número del acta de M6, correlativo. Es lo que identifica el acta; el número de la multa o clausura es el externalRef de M4.',
     example: 'ACTA-2026-000012',
   })
   noticeNumber: string;
@@ -213,6 +248,14 @@ export class ViolationNoticeResponseDto {
     example: 2,
   })
   priorNoticeCount: number;
+
+  @ApiProperty({
+    description:
+      'Resolución de M4 (multa o clausura). Null mientras M4 no resolvió. Solo lectura: se espeja desde el bus.',
+    type: SanctionOutcomeResponseDto,
+    nullable: true,
+  })
+  sanctionOutcome: SanctionOutcomeResponseDto | null;
 
   @ApiProperty({ description: 'Fecha de creación', format: 'date-time' })
   createdAt: Date;

@@ -19582,6 +19582,42 @@
           "suggestedAction"
         ]
       },
+      "SanctionOutcomeResponseDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "description": "Qué resolvió M4",
+            "enum": [
+              "FINE_ISSUED",
+              "CLOSURE_ORDERED",
+              "FORMAL_NOTICE_ISSUED",
+              "DISMISSED"
+            ],
+            "example": "FINE_ISSUED"
+          },
+          "decidedAt": {
+            "type": "string",
+            "description": "Cuándo decidió M4",
+            "format": "date-time",
+            "nullable": true
+          },
+          "externalRef": {
+            "type": "string",
+            "description": "Número administrativo legible de la multa o clausura que informa M4. Null si M4 no lo envió.",
+            "nullable": true,
+            "example": "MULTA-2026-00125"
+          },
+          "dismissalReason": {
+            "type": "string",
+            "description": "Motivo del desistimiento, si lo hubo",
+            "nullable": true
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
       "ViolationNoticeResponseDto": {
         "type": "object",
         "properties": {
@@ -19592,7 +19628,7 @@
           },
           "noticeNumber": {
             "type": "string",
-            "description": "Número de acta correlativo. Es lo que identifica el acto administrativo.",
+            "description": "Número del acta de M6, correlativo. Es lo que identifica el acta; el número de la multa o clausura es el externalRef de M4.",
             "example": "ACTA-2026-000012"
           },
           "inspectionId": {
@@ -19648,6 +19684,15 @@
             "description": "Actas previas al mismo establecimiento en nuestro histórico. Le adelanta la reincidencia a M4.",
             "example": 2
           },
+          "sanctionOutcome": {
+            "description": "Resolución de M4 (multa o clausura). Null mientras M4 no resolvió. Solo lectura: se espeja desde el bus.",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SanctionOutcomeResponseDto"
+              }
+            ]
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string",
@@ -19663,6 +19708,7 @@
           "severity",
           "suggestedAction",
           "priorNoticeCount",
+          "sanctionOutcome",
           "createdAt"
         ]
       },
@@ -19739,6 +19785,11 @@
             "type": "string",
             "description": "UUID del expediente",
             "format": "uuid"
+          },
+          "caseNumber": {
+            "type": "string",
+            "description": "Número de expediente de M6, legible y estable. Lo tienen todos, también los de oficio sin reclamo (que no tienen publicId). Solo para mostrar: no es credencial ni viaja en eventos.",
+            "example": "EXP-2026-000123"
           },
           "reportType": {
             "type": "string",
@@ -19873,6 +19924,7 @@
         },
         "required": [
           "id",
+          "caseNumber",
           "reportType",
           "status",
           "escalated",
