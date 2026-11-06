@@ -55,6 +55,15 @@ npm run test:e2e -- services-lifecycle
 | `environmental-flow.e2e-spec.ts` | Expediente → inspección → acta, con la derivación a M4 en el outbox (el acta hacia M4 y el `updateTicketStatus` hacia M2 comparten `correlationId`: un hilo por request, #267), y la vuelta de M4 por el inbox (`commercialFineGenerated` cierra el expediente; sin `sourceViolationId` válido da 400 y no deja fila). No prueba rollback |
 | `street-closure-expiry.e2e-spec.ts` | Corte aprobado con ventana ya vencida (#321): el barrido lo pasa a `EXPIRED` y reprograma el servicio `SCHEDULED` (uno `IN_PROGRESS`, uno vigente o uno dentro de la gracia no se tocan), es idempotente, no publica nada hacia M7, y un `streetClosureEnded` posterior sobre `EXPIRED` lo pasa a `ENDED` |
 | `containers-close.e2e-spec.ts` | Cerrar el servicio transiciona el contenedor. Es la única suite que prueba el rollback: un `CHECK` temporal hace fallar el `UPDATE` del contenedor dentro de la transacción y se verifica que el servicio siga `IN_PROGRESS` y que no se encole nada |
+| `audit.e2e-spec.ts` | Auditoría de dominio |
+| `auth-roles.e2e-spec.ts` | Roles de M6: matriz por rol |
+| `demo-personas.e2e-spec.ts` | Personas de demostración |
+| `environmental-notice-ticket.e2e-spec.ts` | Acta ambiental: aviso a M2 según el estado del ticket |
+| `information-request.e2e-spec.ts` | Solicitud de información al vecino |
+| `outbox-retry.e2e-spec.ts` | Outbox: consulta y reintento |
+| `overdue-risk-counts.e2e-spec.ts` | Conteos de vencidas y riesgo alto |
+| `role-assignments.e2e-spec.ts` | Asignación de roles de M6 |
+| `tree-intervention-authorization.e2e-spec.ts` | Autorización de intervenciones sobre árboles |
 
 Los datos se arman por caso con los helpers, **no con `prisma/seed.ts`**: el seed monta un escenario de demo entero y ata los tests a filas que no controlan.
 
