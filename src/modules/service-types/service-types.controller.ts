@@ -22,6 +22,7 @@ import {
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, Roles } from '../../common/decorators';
 import { ROLES_ADMIN } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('service-types')
 @ApiBearerAuth('JWT-auth')
@@ -57,6 +58,7 @@ export class ServiceTypesController {
     return this.serviceTypesService.create(dto);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar tipos de servicio',
@@ -74,6 +76,7 @@ export class ServiceTypesController {
     return this.serviceTypesService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener un tipo de servicio por ID',

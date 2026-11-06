@@ -12,14 +12,14 @@
 | [`streetClosureApproved`](streetClosureApproved.md) | **M7** | Habilitamos la ejecución del servicio bloqueado |
 | [`streetClosureRejected`](streetClosureRejected.md) | **M7** | Reprogramamos o cancelamos el servicio dependiente |
 | [`streetClosureEnded`](streetClosureEnded.md) | **M7** | Liberamos la dependencia |
-| [`notificationSent`](notificationSent.md) | **M9** | Registramos el acuse. 🔴 Puede que lo saquemos |
+| [`notificationSent`](notificationSent.md) | **M9** | **Sin handler ni suscripción:** nadie lo publica y el 27/10 se descartó (`#300`, ver [resueltos](../../integracion/resueltos.md)). La ficha queda como registro |
 | [`weatherAlertIssued`](weatherAlertIssued.md) | *nadie* | **Simulado internamente.** Dispara la reprogramación masiva por zona |
 
 Nueve de la cohorte, de cinco módulos, más uno simulado (M4 fusionó `closureOrdered` + `closureLifted` en `closureUpdate` el 24/08; los dos viejos ya no tienen ficha). **De M1, M5 y M8 no consumimos ningún evento.** M1 define para nosotros dos eventos de respuesta, `citizenInfoDelivered` y `organizationInfoDelivered`, pero no el de consulta que los dispara, y siguen en el sobre viejo de M2 (con un `correlationId` que no es UUID, que el inbox rechazaría): no tienen ficha y no nos suscribimos. Ver [bloqueantes.md](../../integracion/m1.md#m1--ciudadanos--roles-e-identidad-recibidos-falta-el-jwt).
 
 ## Qué se consume hoy
 
-**Nueve de los diez tienen handler.** Entran por dos vías: `POST /events/inbox` y, con `RABBITMQ_URL` configurada, la cola `q.ambiente` (`RABBITMQ_QUEUE`), que crea el Core al registrar nuestras suscripciones: la app solo verifica que exista y no declara bindings. Ahí llegan mezclados todos los `eventType` que suscribimos. Las dos vías pasan por la misma validación y el mismo `InboxService.ingest()`; la idempotencia es por `eventId`, resuelta en el inbox y no en cada handler.
+**Diez documentados, ocho suscriptos en el Core.** Los ocho que el registro (`src/core/`) suscribe en `q.ambiente` son los de M2, M3, M4 y M7; `weatherAlertIssued` se simula adentro y no se suscribe, y `notificationSent` no tiene handler ni suscripción. **Nueve de los diez tienen handler.** Entran por dos vías: `POST /events/inbox` y, con `RABBITMQ_URL` configurada, la cola `q.ambiente` (`RABBITMQ_QUEUE`), que crea el Core al registrar nuestras suscripciones: la app solo verifica que exista y no declara bindings. Ahí llegan mezclados todos los `eventType` que suscribimos. Las dos vías pasan por la misma validación y el mismo `InboxService.ingest()`; la idempotencia es por `eventId`, resuelta en el inbox y no en cada handler.
 
 M1 v3.0 manda `occuredAt` (una sola `r`): el inbox lo lee como `occurredAt`. M6 solo emite `occurredAt`.
 

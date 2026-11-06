@@ -25,6 +25,7 @@ import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('routes')
 @ApiBearerAuth('JWT-auth')
@@ -59,6 +60,7 @@ export class RoutesController {
     return this.routesService.create(dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar recorridos',
@@ -72,6 +74,7 @@ export class RoutesController {
     return this.routesService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener un recorrido por ID',

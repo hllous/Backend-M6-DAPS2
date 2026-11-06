@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { NeighborhoodsService } from './neighborhoods.service';
 import { NeighborhoodResponseDto, QueryNeighborhoodsDto } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('neighborhoods')
 @ApiBearerAuth('JWT-auth')
@@ -10,6 +11,7 @@ import { ErrorResponseDto } from '../../common/dto';
 export class NeighborhoodsController {
   constructor(private readonly neighborhoodsService: NeighborhoodsService) {}
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar los barrios del catálogo de M9',

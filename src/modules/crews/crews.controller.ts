@@ -26,6 +26,7 @@ import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('crews')
 @ApiBearerAuth('JWT-auth')
@@ -85,6 +86,7 @@ export class CrewsController {
     return this.crewsService.create(dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar cuadrillas',
@@ -112,6 +114,7 @@ export class CrewsController {
     return this.crewsService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener una cuadrilla por ID',
@@ -376,6 +379,7 @@ export class CrewsController {
     return this.crewsService.createZoneAssignment(id, dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get(':id/zone-assignments')
   @ApiOperation({
     summary: 'Listar las reubicaciones de una cuadrilla',

@@ -7,7 +7,7 @@
 | Pieza | Dónde | Para qué |
 |---|---|---|
 | Esquema | `prisma/schema.prisma` | Modelos, enums y relaciones. Fuente de verdad de la base y de los tipos TypeScript |
-| Migraciones | `prisma/migrations/` | Una carpeta SQL por cambio de esquema, versionada en git. Nunca se editan una vez mergeadas |
+| Migraciones | `prisma/migrations/` | Una carpeta SQL por cambio de esquema, versionada en git (33 al 06/11). Nunca se editan una vez mergeadas |
 | Cliente | `@prisma/client` (generado) | Lo usan los services vía `PrismaService` (`src/prisma/`) |
 | Seed | `prisma/seed.ts` | Datos de demostración (ver abajo) |
 
@@ -154,7 +154,7 @@ Para **refrescar las fechas** de una base que ya tiene servicios hay que vaciarl
 
 **Base desplegada (Supabase): aplicado el 27/10 con confirmación del PO, dos veces:** primero el seed de las zonas por barrio y esa misma noche el de IDECABA (#439), cada vez con copia previa y vaciado. Se hizo así:
 1. `pg_dump` del esquema `public` como copia (fuera del repo). Supabase corre PostgreSQL 17: el `pg_dump` tiene que ser de la misma versión.
-2. `prisma migrate status`: las 23 migraciones ya estaban aplicadas (Render corre `migrate deploy` al arrancar).
+2. `prisma migrate status`: las 23 migraciones ya estaban aplicadas (Render corre `migrate deploy` al arrancar). Dato histórico del 27/10: al 06/11 `prisma/migrations/` tiene 33 carpetas (el `migration_lock.toml` no cuenta).
 3. Vaciado: `TRUNCATE ... RESTART IDENTITY CASCADE` de las 38 tablas de `public` salvo `_prisma_migrations`, `role_assignment_audit` y `domain_audit_log`, en una sola transacción (`psql -1`, `ON_ERROR_STOP`). `role_assignment_audit` y `domain_audit_log` (#460) son de solo agregado y un trigger bloquea el `TRUNCATE` a propósito: no se saltean; quedan como están.
 4. `SEED_CONFIRM_REMOTE=1 npm run prisma:seed` con `DATABASE_URL` apuntando a Supabase (sin esa variable el seed aborta: es la confirmación explícita de que se quiere escribir en una base remota): **16 min 20 s** con 788 servicios (primera vez) y **16 min 23 s** con 800 (segunda, con el inventario de IDECABA). El seed hace su propio `syncZones`, así que no hace falta correr antes `zones:sync-from-core`.
 5. Verificado con SQL y contra la API desplegada tras la segunda vez: 15 comunas, 48 zonas (ninguna `Z-…`, todas con comuna y barrio UUID), 800 servicios, 1412 `service_zone`, 1366 espacios verdes, 500 contenedores (356 `HOUSEHOLD`, 139 `RECYCLABLE`, 5 de otros tipos; 9 a 13 por barrio, sin códigos repetidos), 28 puntos verdes, 442 árboles, 72 roles, 0 eventos `PENDING`.

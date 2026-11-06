@@ -22,6 +22,7 @@ import { ErrorResponseDto } from '../../common/dto';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { ROLES_AMBIENTAL, ROLES_EXPEDIENTE_ALTA } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
 const NOT_FOUND = { status: 404, description: 'Expediente no encontrado', type: ErrorResponseDto };
@@ -61,6 +62,7 @@ export class EnvironmentalReportsController {
     return this.reportsService.create(dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar expedientes ambientales',
@@ -80,6 +82,7 @@ export class EnvironmentalReportsController {
     return this.reportsService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener un expediente por ID',

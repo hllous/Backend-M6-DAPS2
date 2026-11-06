@@ -6,7 +6,7 @@ El **contrato autoritativo** es [`openapi.json`](openapi.json), generado desde e
 
 El mismo documento se sirve interactivo en `/api/docs`, pero el JSON del repo se lee sin levantar nada y se difea en un PR.
 
-> 150 rutas, agrupadas en 29 tags de Swagger (cuenta contrastada contra `openapi.json`).
+> 152 operaciones sobre 103 rutas, agrupadas en 29 tags de Swagger (cuenta contrastada contra `openapi.json`).
 
 ## Convenciones
 
@@ -21,7 +21,7 @@ Todas descriptas en [`estandar-swagger.md`](estandar-swagger.md). Lo mínimo par
 - **Tope de tamaño**: `search` admite hasta 100 caracteres; los ids externos (`ticketId`, `publicId`, `weatherAlertId`, `leaderUserId`, `organizationId`, `authorizedByUserId`, `inspectorId`, `eventId` y cada elemento de `userIds` y `neighborhoodIds`) hasta 100; en el sobre del bus, `eventType` hasta 120, `sourceModule` hasta 60 y `eventVersion` hasta 20 (los topes del Core); `reason` de un aviso de demora hasta 500 y `notes` de un servicio y `description` de un expediente hasta 2000. Los arrays (`userIds`, `neighborhoodIds`, `treeIds`, `wasteTypes`) admiten hasta 100 elementos. Pasarse da 400.
 - **Errores**: `{ statusCode, message, error, timestamp, path }`.
 - **CORS**: los orígenes permitidos salen de `CORS_ORIGINS`. Sin esa variable se acepta cualquiera, que es lo que hace falta en desarrollo. El JWT viaja en un header y no en una cookie, así que esto no cierra un CSRF — es higiene, no un límite de seguridad.
-- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 27 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
+- **Tags**: cada recurso tiene su propio tag en Swagger UI, y los 29 tags están declarados en `src/swagger-config.ts` en orden de lectura — primero sobre qué se programa, después la operación, después el inventario.
 - **Baja**: es lógica (`active = false`) en todos los catálogos e inventarios. `DELETE` devuelve 204 y el registro sigue existiendo. La excepción está anotada donde corresponde.
 
 ## Rol requerido por endpoint

@@ -17,6 +17,7 @@ import { CreateTreeDto, UpdateTreeDto, TreeResponseDto, QueryTreesDto } from './
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, Roles } from '../../common/decorators';
 import { ROLES_OPERACIONES } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('trees')
 @ApiBearerAuth('JWT-auth')
@@ -49,6 +50,7 @@ export class TreesController {
     return this.treesService.create(dto);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar árboles del inventario',
@@ -67,6 +69,7 @@ export class TreesController {
     return this.treesService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener un árbol por ID',

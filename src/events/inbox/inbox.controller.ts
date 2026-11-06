@@ -28,6 +28,7 @@ import {
   Roles,
 } from '../../common/decorators';
 import { ROLES_ADMIN, ROLES_OUTBOX_LECTURA } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 /**
  * Entrada manual de eventos.
@@ -144,6 +145,7 @@ export class InboxController {
     return this.inboxAdmin.findOne(messageId);
   }
 
+  @ApiAnyM6Role()
   @Get('handlers')
   @ApiOperation({
     summary: 'Listar los eventos que M6 sabe procesar',

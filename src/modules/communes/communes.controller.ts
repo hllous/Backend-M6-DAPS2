@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { CommunesService } from './communes.service';
 import { CommuneResponseDto, QueryCommunesDto } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('communes')
 @ApiBearerAuth('JWT-auth')
@@ -10,6 +11,7 @@ import { ErrorResponseDto } from '../../common/dto';
 export class CommunesController {
   constructor(private readonly communesService: CommunesService) {}
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar las comunas con sus zonas y barrios',
