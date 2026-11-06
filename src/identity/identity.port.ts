@@ -27,6 +27,8 @@ export type CitizenRecord = DirectoryRecord;
  * `null` es "no existe" (404); un registro inactivo vuelve con su `estado`.
  */
 export abstract class IdentityPort {
+  /** false si falta M1_BASE_URL: quien llama decide si omite la consulta. */
+  abstract get enabled(): boolean;
   abstract findEmployeeBySub(sub: string): Promise<IdentityRecord | null>;
   abstract findCitizenById(id: string): Promise<CitizenRecord | null>;
   abstract findOrganizationById(id: string): Promise<OrganizationRecord | null>;

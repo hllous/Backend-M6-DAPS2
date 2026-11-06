@@ -63,8 +63,19 @@ export class CrewsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 422,
+    description:
+      'Algún id de usuario no existe en M1 o no es un empleado activo (el mensaje los lista)',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 500,
     description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'M1 no responde y no se pudo validar a los usuarios; no se guardó nada',
     type: ErrorResponseDto,
   })
   async create(
@@ -161,8 +172,19 @@ export class CrewsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 422,
+    description:
+      'Algún id de usuario no existe en M1 o no es un empleado activo (el mensaje los lista)',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 500,
     description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'M1 no responde y no se pudo validar a los usuarios; no se guardó nada',
     type: ErrorResponseDto,
   })
   async update(
@@ -239,8 +261,19 @@ export class CrewsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 422,
+    description:
+      'Algún id de usuario no existe en M1 o no es un empleado activo (el mensaje los lista)',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 500,
     description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'M1 no responde y no se pudo validar a los usuarios; no se guardó nada',
     type: ErrorResponseDto,
   })
   async addMembers(
