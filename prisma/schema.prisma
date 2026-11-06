@@ -872,6 +872,10 @@ model EnvironmentalReport {
   // EXT M2, referencia humana (TK-2026-000123) desde la v1.70. No es credencial:
   // se muestra y se busca con auth, nunca reemplaza al ticketId.
   publicId                     String?                   @map("public_id")
+  // Numero de expediente de M6 (EXP-2026-000123), legible y estable, tambien para
+  // los de oficio que no tienen publicId. Lo pone la base (secuencia
+  // environmental_report_case_seq): interno, no viaja en los eventos.
+  caseNumber                   String                    @unique @map("case_number") @default(dbgenerated("((('EXP-'::text || to_char(now(), 'YYYY'::text)) || '-'::text) || lpad((nextval('environmental_report_case_seq'::regclass))::text, 6, '0'::text))"))
   reporterSnapshot             Json?                     @map("reporter_snapshot")
   status                       EnvironmentalReportStatus @default(RECEIVED)
   priority                     Severity?

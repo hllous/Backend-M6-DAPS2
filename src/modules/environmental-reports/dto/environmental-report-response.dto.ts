@@ -5,6 +5,14 @@ export class EnvironmentalReportResponseDto {
   @ApiProperty({ description: 'UUID del expediente', format: 'uuid' })
   id: string;
 
+  @ApiProperty({
+    description:
+      'Número de expediente de M6, legible y estable. Lo tienen todos, también los de oficio sin reclamo (que no tienen publicId). Solo para mostrar: no es credencial ni viaja en eventos.',
+    example: 'EXP-2026-000123',
+    type: String,
+  })
+  caseNumber: string;
+
   @ApiProperty({ description: 'Tipo de denuncia', enum: EnvironmentalReportType })
   reportType: EnvironmentalReportType;
 

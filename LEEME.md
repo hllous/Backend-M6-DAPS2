@@ -23,7 +23,7 @@ Los tres PDF están en [`docs/`](docs/) para tenerlos junto al resto de la docum
 |---|---|
 | [`docs/Documento de Alcance - Grupo 04 (Modulo 6).pdf`](docs/Documento%20de%20Alcance%20-%20Grupo%2004%20%28Modulo%206%29.pdf) | **El entregable de la cátedra.** Alcance completo del módulo |
 | [`docs/Diagrama de Eventos - Grupo 04 (Modulo 6).pdf`](docs/Diagrama%20de%20Eventos%20-%20Grupo%2004%20%28Modulo%206%29.pdf) | Diagrama de integración M6 ↔ resto vía Core |
-| `docs/Acuerdo-Eventos-M6.pdf` (compilado, en el repositorio de documentación) | **El documento que circula a los otros grupos.** Los 8 eventos que publicamos con sus payloads, lo que consumimos, y las incongruencias abiertas |
+| `docs/Acuerdo-Eventos-M6.pdf` (compilado, en el repositorio de documentación) | **El documento que circula a los otros grupos.** Los 6 eventos que publicamos con sus payloads, lo que consumimos, y las incongruencias abiertas |
 | `docs/Sobres-M6.md` | **Anexo del Acuerdo, para los otros grupos.** Un mensaje completo, con el sobre del Core, por cada evento que publicamos y recibimos |
 | `Cruce-Eventos-M6.md` | Análisis interno: cruce de las listas de eventos de M1–M9 contra la nuestra |
 | `M6-por-modulo/M6-para-M{1..9}.md` | Una ficha por módulo, para mandarle a cada grupo la suya |
@@ -77,15 +77,15 @@ En cuanto se cree el proyecto NestJS, se suman en la raíz: `src/`, `prisma/`, `
 
 ## Estado de la integración
 
-> **Versión resumida, al 5 de octubre de 2026.** El estado vivo, con el detalle por contraparte y la fecha de cada pedido, está en [`docs/bloqueantes.md`](docs/bloqueantes.md), que es la fuente única: si difiere de este archivo, vale ese.
+> **Versión resumida; esta sección se revisó por última vez el 6 de noviembre de 2026.** El estado vivo, con el detalle por contraparte y la fecha de cada pedido, está en [`docs/bloqueantes.md`](docs/bloqueantes.md), que es la fuente única: si difiere de este archivo, vale ese.
 
-**Publicamos 8 eventos y los ocho tienen consumidor confirmado.** Eran 15: los siete que le ofrecíamos a M2 como detalle del avance se quedaron sin consumidor cuando M2 definió que todo lo suyo entra por `updateTicketStatus`, y los sacamos del contrato. El diseño de esos siete queda escrito en `fuentes/alcance.md`, sección 7.2.
+**Publicamos 6 eventos y los seis tienen consumidor declarado** (`updateTicketStatus` a M2; `containerDamaged`, `treeRiskDetected` e `infrastructureRepairRequested` a M3; `environmentalViolationDetected` a M4; `streetClosureRequested` a M7). Eran 15: los siete que le ofrecíamos a M2 como detalle del avance se quedaron sin consumidor cuando M2 definió que todo lo suyo entra por `updateTicketStatus`, y el 21/10 bajaron de ocho a seis (M7 no consume `urbanServiceScheduled` ni `treePruningScheduled`). El diseño de los descartados queda en `fuentes/alcance.md`, sección 7.2, y en `docs/eventos/publicados/descartados.md`. **Probado de punta a punta contra el Core solo `infrastructureRepairRequested` (M3, 5/11).** M4 declaró el 2/11 que no tiene acreditados su publisher/consumer RabbitMQ ni los UUID de integración, y falta la prueba E2E de cortes con M7; de los otros tres no tenemos una prueba de recepción registrada. Detalle por contraparte en [`docs/integracion/`](docs/integracion/README.md).
 
 **Consumimos 10 eventos, de cinco módulos.** De M1, M5 y M8 no consumimos nada.
 
-**Contexto vigente.** La referencia de M2 es la v1.75 (WIP). El contrato con M3 quedó cerrado el 5 de octubre. El bus es RabbitMQ ([ADR-006](docs/decisiones/adr-006-rabbitmq-como-bus.md), reemplazado en parte por [ADR-007](docs/decisiones/adr-007-contrato-de-integracion-del-core.md)): M9 anunció el cambio desde Kafka el 27 de septiembre y el 7 de octubre fijó el contrato de integración (sobre, `muni.inbox`, reintentos). El JWT lo emite M1, no M9.
+**Contexto vigente.** La referencia de M2 es la v1.78 (contra ella M2 aprobó nuestro Acuerdo el 23/10, con ajustes). El contrato con M3 quedó cerrado el 5 de octubre. El bus es RabbitMQ ([ADR-006](docs/decisiones/adr-006-rabbitmq-como-bus.md), reemplazado en parte por [ADR-007](docs/decisiones/adr-007-contrato-de-integracion-del-core.md)): M9 anunció el cambio desde Kafka el 27 de septiembre y el 7 de octubre fijó el contrato de integración (sobre, `muni.inbox`, reintentos). El JWT lo emite M1, no M9.
 
-**Bloqueantes abiertos** (🔴 en [`docs/bloqueantes.md`](docs/bloqueantes.md)): el contrato técnico del JWT de M1, y de M9 el despliegue del Core (sin ambientes ni fecha, M9 del 20/10) con las credenciales del broker, y el catálogo de barrios, que M9 dice que no es suyo y el TPO §9 le asigna. Hay además avisos pendientes, entre ellos reenviar a M7 los cambios de enums y de `neighborhoodId`, y regenerar el PDF del acuerdo de eventos. M3 y M4 no tienen bloqueantes.
+**Abierto hoy** (tablero de [`docs/bloqueantes.md`](docs/bloqueantes.md), 6/11): 5 filas, todas 🟡 esperando a otro módulo y ninguna 🔴. Son M3 (pendientes del Core y validación formal de sus schemas), M7 (que declare `streetClosureEnded` y la prueba E2E de cortes), M9 / M2 (decisiones del Core que rompen algo) y M4 (contrato de búsqueda de establecimientos, [#500](https://github.com/hllous/Backend-M6-DAPS2/issues/500); plan B: el inspector carga el `establishmentId` a mano). M1 ya no tiene nada abierto.
 
 ## Referencia importante
 

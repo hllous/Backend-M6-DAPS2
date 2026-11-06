@@ -8,7 +8,9 @@ La denuncia ambiental tal como la tramitamos nosotros: ruidos, vertidos, microba
 
 | Entidad | Campos principales |
 |---|---|
-| `EnvironmentalReport` | `reportType`, `location`, `description`, `ticketId`, `publicId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `informationRequestedAt`, `informationRequestMessage`, `informationRequestRequiredBy`, `deadlineAt` |
+| `EnvironmentalReport` | `reportType`, `location`, `description`, `caseNumber`, `ticketId`, `publicId`, `reporterSnapshot`, `status`, `priority`, `escalated`, `citizenResponse`, `informationRequestedAt`, `informationRequestMessage`, `informationRequestRequiredBy`, `deadlineAt` |
+
+`caseNumber` (`EXP-2026-000123`) es el número legible del expediente en M6, interno: lo genera la base con la secuencia `environmental_report_case_seq` (default de columna, vale para todo alta), es único y no cambia. Lo tienen también los de oficio, que no tienen `publicId`. La secuencia no se reinicia por año: el año del prefijo es el del alta, la cuenta sigue. No viaja en eventos.
 
 Enums: `reportType` es `EnvironmentalReportType`, `status` es `EnvironmentalReportStatus` — ver [enumeraciones.md](../enumeraciones.md).
 

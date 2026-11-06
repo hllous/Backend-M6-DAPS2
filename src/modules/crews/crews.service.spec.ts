@@ -1,7 +1,14 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ACTOR } from '../../common/audit/audit-test-actor';
 import { AuditService } from '../../common/audit/audit.service';
+import { IdentityPort, IdentityUnavailableError } from '../../identity/identity.port';
 import { CrewsService } from './crews.service';
 
 const ID = '44444444-4444-4444-4444-444444444444';
@@ -11,6 +18,7 @@ const OTRA_ZONA = '66666666-6666-6666-6666-666666666666';
 describe('CrewsService', () => {
   let prisma: any;
   let audit: { record: jest.Mock };
+  let identity: { enabled: boolean; findEmployeeBySub: jest.Mock };
   let service: CrewsService;
 
   const cuadrilla = (over: Record<string, unknown> = {}) => ({
@@ -55,6 +63,7 @@ describe('CrewsService', () => {
       },
       crewMember: {
         upsert: jest.fn((args: unknown) => args),
+        findMany: jest.fn().mockResolvedValue([]),
         deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       crewZoneAssignment: {
@@ -70,9 +79,17 @@ describe('CrewsService', () => {
       ),
     };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
+    // Por defecto M1 está configurada y todos los subs son empleados activos.
+    identity = {
+      enabled: true,
+      findEmployeeBySub: jest.fn((sub: string) =>
+        Promise.resolve({ sub, nombre: 'Ana', apellido: 'Pérez', estado: 'ACTIVO' }),
+      ),
+    };
     service = new CrewsService(
       prisma as unknown as PrismaService,
       audit as unknown as AuditService,
+      identity as unknown as IdentityPort,
     );
   });
 
@@ -177,7 +194,10 @@ describe('CrewsService', () => {
     it('cambiar el líder también normaliza el id', async () => {
       await service.update(ID, { leaderUserId: '007' } as any, ACTOR);
 
-      expect(prisma.crew.update.mock.calls[0][0].data).toEqual({ leaderUserId: '7' });
+      expect(prisma.crew.update.mock.calls[0][0].data).toEqual({
+        leaderUserId: '7',
+        leaderName: 'Ana Pérez',
+      });
     });
 
     it('nombres vacíos o null se guardan como null; especialidad y zona se cambian', async () => {
@@ -227,6 +247,11 @@ describe('CrewsService', () => {
   });
 
   describe('miembros', () => {
+    // Acá importa qué se guarda, no M1: sin ella no se completan nombres.
+    beforeEach(() => {
+      identity.enabled = false;
+    });
+
     const upserts = () => prisma.crewMember.upsert.mock.calls.map((c: any[]) => c[0]);
 
     it('userIds sigue andando: ids normalizados y sin nombre', async () => {
@@ -562,6 +587,136 @@ describe('CrewsService', () => {
     it('un update que no toca active no audita', async () => {
       await service.update(ID, { name: 'Otro' } as any, ACTOR);
       expect(audit.record).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('validación contra M1 (#521)', () => {
+    const base = { name: 'C1', crewType: 'MUNICIPAL', defaultShift: 'MORNING' };
+    const rec = (estado: string) => ({ nombre: 'X', apellido: 'Y', estado });
+
+    it('create: líder válido, snapshot de nombre desde M1', async () => {
+      await service.create({ ...base, leaderUserId: '007' } as any, ACTOR);
+      expect(identity.findEmployeeBySub).toHaveBeenCalledWith('7');
+      expect(prisma.crew.create.mock.calls[0][0].data).toMatchObject({
+        leaderUserId: '7',
+        leaderName: 'Ana Pérez',
+      });
+    });
+
+    it('create: el nombre del dto gana sobre el de M1', async () => {
+      await service.create({ ...base, leaderUserId: '7', leaderName: 'Anita' } as any, ACTOR);
+      expect(prisma.crew.create.mock.calls[0][0].data.leaderName).toBe('Anita');
+    });
+
+    it('create: líder inexistente es 422 y no abre la transacción', async () => {
+      identity.findEmployeeBySub.mockResolvedValue(null);
+      const err = await service
+        .create({ ...base, leaderUserId: '9' } as any, ACTOR)
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(UnprocessableEntityException);
+      expect(err.message).toContain('no existen en M1: 9');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('create: líder inactivo es 422', async () => {
+      identity.findEmployeeBySub.mockResolvedValue(rec('INACTIVO'));
+      await expect(service.create({ ...base, leaderUserId: '9' } as any, ACTOR)).rejects.toThrow(
+        /inactivos en M1: 9/,
+      );
+    });
+
+    it('create sin líder no consulta a M1', async () => {
+      await service.create(base as any, ACTOR);
+      expect(identity.findEmployeeBySub).not.toHaveBeenCalled();
+    });
+
+    it('M1 caída es 503 y no guarda nada', async () => {
+      identity.findEmployeeBySub.mockRejectedValue(new IdentityUnavailableError('secreto interno'));
+      const err = await service
+        .create({ ...base, leaderUserId: '9' } as any, ACTOR)
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(ServiceUnavailableException);
+      expect(err.message).not.toContain('secreto');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('un error que no es de M1 se propaga tal cual', async () => {
+      identity.findEmployeeBySub.mockRejectedValue(new TypeError('bug'));
+      await expect(service.create({ ...base, leaderUserId: '9' } as any, ACTOR)).rejects.toThrow(
+        TypeError,
+      );
+    });
+
+    it('deshabilitado: no valida y avisa una sola vez', async () => {
+      identity.enabled = false;
+      const warn = jest.spyOn((service as any).logger, 'warn').mockImplementation();
+      await service.create({ ...base, leaderUserId: '9' } as any, ACTOR);
+      await service.create({ ...base, leaderUserId: '9' } as any, ACTOR);
+      expect(identity.findEmployeeBySub).not.toHaveBeenCalled();
+      expect(prisma.crew.create.mock.calls[0][0].data.leaderName).toBeNull();
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('update: solo consulta si el líder cambió y completa el nombre', async () => {
+      prisma.crew.findUnique.mockResolvedValue(cuadrilla({ leaderUserId: '1' }));
+      await service.update(ID, { leaderUserId: '1' } as any, ACTOR);
+      expect(identity.findEmployeeBySub).not.toHaveBeenCalled();
+
+      await service.update(ID, { leaderUserId: '2' } as any, ACTOR);
+      expect(identity.findEmployeeBySub).toHaveBeenCalledWith('2');
+      expect(prisma.crew.update.mock.calls[1][0].data.leaderName).toBe('Ana Pérez');
+    });
+
+    it('update: leaderUserId null o ausente no consulta; el nombre del dto gana', async () => {
+      await service.update(ID, { leaderUserId: null } as any, ACTOR);
+      await service.update(ID, { name: 'x' } as any, ACTOR);
+      expect(identity.findEmployeeBySub).not.toHaveBeenCalled();
+
+      await service.update(ID, { leaderUserId: '5', leaderName: 'Pepe' } as any, ACTOR);
+      expect(prisma.crew.update.mock.calls[2][0].data.leaderName).toBe('Pepe');
+    });
+
+    it('update: líder inexistente es 422', async () => {
+      identity.findEmployeeBySub.mockResolvedValue(null);
+      await expect(service.update(ID, { leaderUserId: '5' } as any, ACTOR)).rejects.toThrow(
+        UnprocessableEntityException,
+      );
+    });
+
+    it('addMembers: no consulta a los que ya están y completa el nombre', async () => {
+      prisma.crewMember.findMany.mockResolvedValue([{ userId: '1' }]);
+      await service.addMembers(
+        ID,
+        {
+          members: [{ userId: '1' }, { userId: '2' }, { userId: '3', displayName: 'Propio' }],
+        } as any,
+        ACTOR,
+      );
+      expect(identity.findEmployeeBySub.mock.calls.map((c) => c[0])).toEqual(['2', '3']);
+      const creates = prisma.crewMember.upsert.mock.calls.map(
+        (c: any[]) => c[0].create.displayName,
+      );
+      expect(creates).toEqual([null, 'Ana Pérez', 'Propio']);
+    });
+
+    it('addMembers: varios fallos juntos en un solo 422', async () => {
+      identity.findEmployeeBySub.mockImplementation((sub: string) =>
+        Promise.resolve(sub === '1' ? null : sub === '2' ? rec('INACTIVO') : rec('ACTIVO')),
+      );
+      const err = await service
+        .addMembers(ID, { userIds: ['1', '2', '3', '3'] } as any, ACTOR)
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(UnprocessableEntityException);
+      expect(err.message).toContain('no existen en M1: 1');
+      expect(err.message).toContain('inactivos en M1: 2');
+      expect(identity.findEmployeeBySub).toHaveBeenCalledTimes(3);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('addMembers: consulta en lotes de 5', async () => {
+      const ids = Array.from({ length: 12 }, (_, i) => String(i + 1));
+      await service.addMembers(ID, { userIds: ids } as any, ACTOR);
+      expect(identity.findEmployeeBySub).toHaveBeenCalledTimes(12);
     });
   });
 });

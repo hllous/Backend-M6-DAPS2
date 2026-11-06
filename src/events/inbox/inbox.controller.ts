@@ -1,11 +1,34 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { InboxService, IngestResult } from './inbox.service';
+import { InboxAdminService } from './inbox-admin.service';
+import {
+  InboxEventDetailResponseDto,
+  InboxEventResponseDto,
+  QueryInboxDto,
+} from './inbox-admin.dto';
 import { IngestEventDto, toInboundEnvelope } from './ingest-event.dto';
 import { IngestResultDto, RegisteredHandlersDto } from './inbox-response.dto';
-import { ErrorResponseDto } from '../../common/dto';
-import { Roles } from '../../common/decorators';
-import { ROLES_ADMIN } from '../../auth/role-groups';
+import { ErrorResponseDto, PaginatedResponseDto } from '../../common/dto';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  MAX_EXTERNAL_ID_LENGTH,
+  Roles,
+} from '../../common/decorators';
+import { ROLES_ADMIN, ROLES_OUTBOX_LECTURA } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 /**
  * Entrada manual de eventos.
@@ -20,7 +43,12 @@ import { ROLES_ADMIN } from '../../auth/role-groups';
 @ApiBearerAuth('JWT-auth')
 @Controller('events')
 export class InboxController {
-  constructor(private readonly inbox: InboxService) {}
+  private readonly logger = new Logger(InboxController.name);
+
+  constructor(
+    private readonly inbox: InboxService,
+    private readonly inboxAdmin: InboxAdminService,
+  ) {}
 
   @Post('inbox')
   @Roles(...ROLES_ADMIN)
@@ -43,11 +71,81 @@ export class InboxController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 403,
+    description: 'Solo M6_ADMIN puede inyectar eventos a mano',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async ingest(@Body() dto: IngestEventDto): Promise<IngestResult> {
+  async ingest(
+    @Body() dto: IngestEventDto,
+    @CurrentUser('userId') userId: string,
+  ): Promise<IngestResult> {
+    // Distingue un evento inyectado a mano del que entra por el bus. Solo ids, nada del payload.
+    this.logger.log(`Evento ${dto.eventType} (${dto.eventId}) inyectado a mano por ${userId}`);
     return this.inbox.ingest(toInboundEnvelope(dto));
   }
 
+  @Get('inbox')
+  @Roles(...ROLES_OUTBOX_LECTURA)
+  @ApiOperation({
+    summary: 'Listar los eventos entrantes recibidos',
+    description:
+      'Listado paginado para el Monitor de integración, del más reciente al más viejo por `receivedAt`, con estado derivado (`processed`, `failed`, `pending`) y error acotado. Filtra por `status`, `eventType`, `sourceModule` y rango de `receivedAt` (días argentinos, inclusivos). No incluye el payload, que es de terceros y puede traer datos personales: está en el detalle, solo para admin.',
+  })
+  @ApiPaginatedResponse(InboxEventResponseDto, 'Listado paginado de eventos entrantes')
+  @ApiResponse({
+    status: 400,
+    description: 'Parámetros inválidos (estado desconocido, fecha mal formada, `from` > `to`)',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 403,
+    description: 'Solo M6_ADMIN y M6_AUDITOR pueden ver el inbox',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  async findAll(
+    @Query() query: QueryInboxDto,
+  ): Promise<PaginatedResponseDto<InboxEventResponseDto>> {
+    return this.inboxAdmin.findAll(query);
+  }
+
+  @Get('inbox/:messageId')
+  @Roles(...ROLES_ADMIN)
+  @ApiOperation({
+    summary: 'Detalle de un evento entrante, con su payload',
+    description:
+      'Devuelve el evento tal como se guardó, con el payload recibido. Solo admin, porque el payload es de terceros y puede incluir datos personales.',
+  })
+  @ApiParam({ name: 'messageId', description: 'eventId del sobre', example: 'ev-0001' })
+  @ApiResponse({
+    status: 200,
+    description: 'Evento con payload',
+    type: InboxEventDetailResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'messageId más largo que el máximo de un id externo',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
+  @ApiResponse({
+    status: 403,
+    description: 'Solo M6_ADMIN puede ver el payload',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'No existe ese evento', type: ErrorResponseDto })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  async findOne(@Param('messageId') messageId: string): Promise<InboxEventDetailResponseDto> {
+    if (messageId.length > MAX_EXTERNAL_ID_LENGTH) {
+      throw new BadRequestException(`messageId excede ${MAX_EXTERNAL_ID_LENGTH} caracteres`);
+    }
+    return this.inboxAdmin.findOne(messageId);
+  }
+
+  @ApiAnyM6Role()
   @Get('handlers')
   @ApiOperation({
     summary: 'Listar los eventos que M6 sabe procesar',

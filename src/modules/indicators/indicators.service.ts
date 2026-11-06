@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import { startOfDayArgentina, toDateOnly, todayArgentina } from '../../common/utils/date-only';
 import { PrismaService } from '../../prisma/prisma.service';
+import { DenunciaConZona, estaVencida, zonaDeDenuncia, ZONA_DE_DENUNCIA } from './report-overdue';
 import {
   diaArgentino,
   diasHabiles,
@@ -28,7 +29,9 @@ import {
   CoverageTotalsDto,
   IncidentsIndicatorDto,
   PeriodDto,
+  OverdueByZoneDto,
   OverdueDto,
+  TreesByZoneDto,
   PeriodQueryDto,
   ReportsTotalsDto,
   ServicePeriodQueryDto,
@@ -344,36 +347,58 @@ export class IndicatorsService {
     const tramos = query.bucket ? intervalos(p.from, p.to, query.bucket) : undefined;
     const rango = { gte: p.desde, lt: p.hasta };
 
-    const [porEstado, porZona, zonas, riesgos, porTipo, porStatus, denuncias, historial] =
-      await Promise.all([
-        this.prisma.container.groupBy({ by: ['status'], _count: { _all: true } }),
-        this.prisma.container.groupBy({ by: ['zoneId', 'status'], _count: { _all: true } }),
-        this.prisma.zone.findMany({ select: { id: true, code: true, name: true } }),
-        // El último relevamiento de cada árbol: DISTINCT ON es exactamente eso
-        // en una pasada, y Prisma no lo expresa con su API de agregación.
-        this.prisma.$queryRaw<{ riskLevel: RiskLevel; count: bigint }[]>`
+    const [
+      porEstado,
+      porZona,
+      zonas,
+      riesgos,
+      riesgosZona,
+      porTipo,
+      porStatus,
+      denuncias,
+      abiertas,
+      historial,
+    ] = await Promise.all([
+      this.prisma.container.groupBy({ by: ['status'], _count: { _all: true } }),
+      this.prisma.container.groupBy({ by: ['zoneId', 'status'], _count: { _all: true } }),
+      this.prisma.zone.findMany({ select: { id: true, code: true, name: true } }),
+      // El último relevamiento de cada árbol: DISTINCT ON es exactamente eso
+      // en una pasada, y Prisma no lo expresa con su API de agregación.
+      this.prisma.$queryRaw<{ riskLevel: RiskLevel; count: bigint }[]>`
           SELECT ultimo.risk_level AS "riskLevel", COUNT(*) AS count
           FROM (
             SELECT DISTINCT ON (tree_id) tree_id, risk_level
             FROM tree_survey
-            ORDER BY tree_id, surveyed_at DESC
+            ORDER BY tree_id, surveyed_at DESC, id DESC
           ) ultimo
           JOIN tree t ON t.id = ultimo.tree_id AND t.active = true
           GROUP BY ultimo.risk_level
         `,
-        this.prisma.environmentalReport.groupBy({
-          by: ['reportType'],
-          where: { createdAt: rango },
-          _count: { _all: true },
-        }),
-        this.prisma.environmentalReport.groupBy({
-          by: ['status'],
-          where: { createdAt: rango },
-          _count: { _all: true },
-        }),
-        this.denunciasDelPeriodo(p),
-        this.historialDeContenedores(p),
-      ]);
+      // Misma foto (último relevamiento, árboles activos) abierta por zona.
+      this.prisma.$queryRaw<{ zoneId: string; riskLevel: RiskLevel; count: bigint }[]>`
+          SELECT t.zone_id AS "zoneId", ultimo.risk_level AS "riskLevel", COUNT(*) AS count
+          FROM (
+            SELECT DISTINCT ON (tree_id) tree_id, risk_level
+            FROM tree_survey
+            ORDER BY tree_id, surveyed_at DESC, id DESC
+          ) ultimo
+          JOIN tree t ON t.id = ultimo.tree_id AND t.active = true
+          GROUP BY t.zone_id, ultimo.risk_level
+        `,
+      this.prisma.environmentalReport.groupBy({
+        by: ['reportType'],
+        where: { createdAt: rango },
+        _count: { _all: true },
+      }),
+      this.prisma.environmentalReport.groupBy({
+        by: ['status'],
+        where: { createdAt: rango },
+        _count: { _all: true },
+      }),
+      this.denunciasDelPeriodo(p),
+      this.denunciasAbiertas(p),
+      this.historialDeContenedores(p),
+    ]);
 
     const nombres = new Map(zonas.map((z) => [z.id, z]));
     const contadores = new Map<string, { overflowed: number; damaged: number; total: number }>();
@@ -386,6 +411,7 @@ export class IndicatorsService {
     }
 
     const plazo = this.cfg.reportDeadlineBusinessDays;
+    const ahora = new Date();
     const totales = resumenDenuncias(denuncias, plazo);
 
     const result: IncidentsIndicatorDto = {
@@ -407,11 +433,15 @@ export class IndicatorsService {
       },
       trees: {
         byRiskLevel: riesgos.map((r) => ({ riskLevel: r.riskLevel, count: Number(r.count) })),
+        byZone: riesgosPorZona(riesgosZona, nombres),
       },
       reports: {
         ...totales,
         deadlineBusinessDays: plazo,
-        overdue: resumenVencidas(denuncias, plazo, new Date()),
+        overdue: {
+          ...resumenVencidas(denuncias, plazo, ahora),
+          byZone: vencidasPorZona(abiertas, plazo, ahora, nombres),
+        },
         byType: porTipo.map((f) => ({ reportType: f.reportType, count: f._count._all })),
         byStatus: porStatus.map((f) => ({ status: f.status, count: f._count._all })),
       },
@@ -589,6 +619,17 @@ export class IndicatorsService {
     return this.prisma.environmentalReport.findMany({
       where: { createdAt: { gte: p.desde, lt: p.hasta } },
       select: { createdAt: true, updatedAt: true, status: true },
+    });
+  }
+
+  /** Las denuncias del período sin cerrar, con lo necesario para ubicarlas en una zona. */
+  private denunciasAbiertas(p: Periodo) {
+    return this.prisma.environmentalReport.findMany({
+      where: {
+        createdAt: { gte: p.desde, lt: p.hasta },
+        status: { not: EnvironmentalReportStatus.CLOSED },
+      },
+      select: { createdAt: true, status: true, ...ZONA_DE_DENUNCIA },
     });
   }
 
@@ -801,10 +842,57 @@ function resumenVencidas(
   denuncias: { createdAt: Date; status: EnvironmentalReportStatus }[],
   plazo: number,
   ahora: Date,
-): OverdueDto {
+): Omit<OverdueDto, 'byZone'> {
   const abiertas = denuncias.filter((d) => !cerrada(d));
-  const vencidas = abiertas.filter((d) => diasHabiles(d.createdAt, ahora) > plazo).length;
+  const vencidas = abiertas.filter((d) => estaVencida(d, plazo, ahora)).length;
   return { open: abiertas.length, overdue: vencidas, pct: pctONull(vencidas, abiertas.length) };
+}
+
+/** Abiertas y vencidas por zona; las que no tienen zona van juntas con `zoneId: null`. */
+function vencidasPorZona(
+  abiertas: DenunciaConZona[],
+  plazo: number,
+  ahora: Date,
+  zonas: Map<string, { code: string; name: string }>,
+): OverdueByZoneDto[] {
+  const porZona = new Map<string | null, { open: number; overdue: number }>();
+  for (const d of abiertas) {
+    const zona = zonaDeDenuncia(d);
+    const c = porZona.get(zona) ?? { open: 0, overdue: 0 };
+    c.open += 1;
+    if (estaVencida(d, plazo, ahora)) c.overdue += 1;
+    porZona.set(zona, c);
+  }
+  return [...porZona.entries()]
+    .map(([zoneId, c]) => ({
+      zoneId,
+      code: zoneId ? (zonas.get(zoneId)?.code ?? '?') : null,
+      name: zoneId ? (zonas.get(zoneId)?.name ?? '?') : null,
+      ...c,
+      pct: pctONull(c.overdue, c.open),
+    }))
+    .sort((a, b) => b.overdue - a.overdue || (a.code ?? '').localeCompare(b.code ?? ''));
+}
+
+/** Árboles por zona y nivel de riesgo (último relevamiento, activos). */
+function riesgosPorZona(
+  filas: { zoneId: string; riskLevel: RiskLevel; count: bigint }[],
+  zonas: Map<string, { code: string; name: string }>,
+): TreesByZoneDto[] {
+  const porZona = new Map<string, { riskLevel: RiskLevel; count: number }[]>();
+  for (const f of filas) {
+    const niveles = porZona.get(f.zoneId) ?? [];
+    niveles.push({ riskLevel: f.riskLevel, count: Number(f.count) });
+    porZona.set(f.zoneId, niveles);
+  }
+  return [...porZona.entries()]
+    .map(([zoneId, byRiskLevel]) => ({
+      zoneId,
+      code: zonas.get(zoneId)?.code ?? '?',
+      name: zonas.get(zoneId)?.name ?? '?',
+      byRiskLevel,
+    }))
+    .sort((a, b) => a.code.localeCompare(b.code));
 }
 
 /** Kilos, metros cúbicos y desvío del relleno de un grupo de registros. */

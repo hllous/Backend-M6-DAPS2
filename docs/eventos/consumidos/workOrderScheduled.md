@@ -28,7 +28,7 @@ El `data` que propone M3; en el sobre, `causationId` es el `eventId` de nuestro 
 }
 ```
 
-M3 pide a M6 tres cosas: validar sus schemas de `workOrderScheduled` y `workOrderCompleted`, confirmar `workOrderId` UUID con `workOrderNumber` opcional, y correr la prueba `requestId` → `sourceRequestId`. Estado en [bloqueantes.md](../../integracion/m3.md#m3--obras-públicas). El backend de M3 todavía no tiene adaptador RabbitMQ/Core, inbox/outbox ni todos los handlers (su documento, §9).
+M3 pide a M6 tres cosas: validar sus schemas de `workOrderScheduled` y `workOrderCompleted`, confirmar `workOrderId` UUID con `workOrderNumber` opcional, y correr la prueba `requestId` → `sourceRequestId`. Estado en [m3.md](../../integracion/m3.md#m3--obras-públicas). **Superado por la prueba del 5/11:** M3 recibió nuestra solicitud por el Core y publicó `workOrderScheduled` y `workOrderCompleted`, y la derivación quedó Cerrada ([historial](../../integracion/historial.md)); el «backend sin adaptador» era de su §9 al 20/10. Sigue sin verificarse la validación formal de sus schemas y la hora exacta de cada publicación.
 
 ## Cuándo se dispara
 

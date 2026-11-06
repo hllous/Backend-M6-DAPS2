@@ -55,7 +55,7 @@ Para orientarse en el repo, el punto de entrada recomendado es [`AGENTS.md`](AGE
 ```
 .
 ├── docs/                    documentación técnica y de gestión
-├── src/                     código NestJS: 150 rutas en 19 módulos (18 con endpoints; weather-alerts está vacío)
+├── src/                     código NestJS: 103 rutas (152 operaciones) en 22 módulos (21 con endpoints; weather-alerts está vacío)
 │   ├── auth/                validación del JWT que emite M1
 │   ├── common/              guards, filtros, interceptores y DTOs compartidos
 │   ├── events/              outbox, inbox, consumidores y publishers

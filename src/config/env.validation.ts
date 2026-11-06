@@ -130,6 +130,15 @@ export const envSchema = z
     // Core vuelve después de los que venían atrás), pero no lo empeoramos.
     RABBITMQ_PREFETCH: z.coerce.number().int().positive().default(1),
 
+    // Días que se conserva una fila procesada de `inbox_event` antes de purgarla.
+    // 0 = no purgar nunca. Pasado el plazo, un reenvío del mismo eventId ya no se
+    // detecta como duplicado. Las filas pendientes o fallidas no se tocan.
+    // Vacía es inválida: Number('') es 0 y apagaría la purga sin avisar.
+    INBOX_RETENTION_DAYS: z.preprocess(
+      (v) => (v === '' ? NaN : v),
+      z.coerce.number().int().min(0).default(180),
+    ),
+
     // Identificador de M6 ante el Core: va como `sourceModule` en el sobre y
     // tiene que coincidir con el módulo del token, o el Core responde 403.
     CORE_MODULE_ID: z.string().min(1).max(60).default('ambiente'),
@@ -142,6 +151,22 @@ export const envSchema = z
         .string()
         .url()
         .refine((v) => /^https?:\/\//i.test(v), 'CORE_API_URL debe empezar con http:// o https://')
+        .optional(),
+    ),
+    // URL de M1 para consultas de identidad (ADR-009). Opcional: sin ella el
+    // cliente queda deshabilitado. Vacía cuenta como ausente. Va el Bearer del
+    // Core, por eso en producción tiene que ser https.
+    M1_BASE_URL: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z
+        .string()
+        .url()
+        .refine((v) => /^https?:\/\//i.test(v), 'M1_BASE_URL debe empezar con http:// o https://')
+        // El Bearer del Core viaja a esta URL: nada de credenciales, query ni hash.
+        .refine((v) => {
+          const u = new URL(v);
+          return !u.username && !u.password && !/[?#]/.test(v);
+        }, 'M1_BASE_URL no puede llevar credenciales, query ni hash')
         .optional(),
     ),
     // Secret de máquina con el que pedimos el token de módulo. Lo entrega M9;
@@ -213,6 +238,13 @@ export const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ['CORE_API_URL'],
         message: 'En producción CORE_API_URL tiene que ser https://',
+      });
+    }
+    if (env.NODE_ENV === 'production' && /^http:/i.test(env.M1_BASE_URL ?? '')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['M1_BASE_URL'],
+        message: 'En producción M1_BASE_URL tiene que ser https://',
       });
     }
     if (env.CORE_API_URL && !env.CORE_MODULE_SECRET) {

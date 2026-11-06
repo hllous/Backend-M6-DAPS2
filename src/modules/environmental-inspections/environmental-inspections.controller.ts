@@ -31,6 +31,7 @@ import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiNotAssigned, CurrentUser, Roles } from '../../common/decorators';
 import { ROLES_ACTA_LECTURA, ROLES_AMBIENTAL, ROLES_INSPECTOR } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
 const NOT_FOUND = { status: 404, description: 'Inspección no encontrada', type: ErrorResponseDto };
@@ -76,6 +77,7 @@ export class EnvironmentalInspectionsController {
     return this.inspectionsService.create(reportId, dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get('environmental-reports/:reportId/inspections')
   @ApiOperation({
     summary: 'Listar las inspecciones de un expediente',
@@ -96,6 +98,7 @@ export class EnvironmentalInspectionsController {
     return this.inspectionsService.findByReport(reportId);
   }
 
+  @ApiAnyM6Role()
   @Get('environmental-inspections/:id')
   @ApiOperation({
     summary: 'Obtener una inspección por ID',

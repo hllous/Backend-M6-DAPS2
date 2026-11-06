@@ -59,6 +59,21 @@ export class TreesService {
     const where: Prisma.TreeWhereInput = {};
     if (query.active !== undefined) where.active = query.active;
     if (query.zoneId) where.zoneId = query.zoneId;
+    if (query.riskLevel) {
+      // «Último relevamiento» no se expresa con la API de Prisma: mismo DISTINCT ON
+      // que el indicador, así el listado y el conteo no pueden divergir.
+      // ponytail: pasa los ids en un IN; con decenas de miles de árboles en un mismo
+      // nivel se choca con el tope de parámetros de Postgres (32k): ahí, subconsulta.
+      const ids = await this.prisma.$queryRaw<{ id: string }[]>`
+        SELECT tree_id AS id FROM (
+          SELECT DISTINCT ON (tree_id) tree_id, risk_level
+          FROM tree_survey
+          ORDER BY tree_id, surveyed_at DESC, id DESC
+        ) ultimo
+        WHERE risk_level = ${query.riskLevel}::"RiskLevel"
+      `;
+      where.id = { in: ids.map((r) => r.id) };
+    }
     if (query.search) {
       where.OR = [
         { species: { contains: query.search, mode: 'insensitive' } },

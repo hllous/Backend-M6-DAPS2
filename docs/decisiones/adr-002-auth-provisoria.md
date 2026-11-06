@@ -5,6 +5,8 @@
 **Aceptado** — 2026-09-02
 
 > Corregido el 2026-09-02: la versión original de este ADR atribuía la identidad a **M9 (Core)**. Es **M1** quien gestiona los usuarios y emite el JWT, como ya establece [ADR-004](adr-004-jwt-m1-y-puerto-identidad.md). La decisión técnica no cambia —era y sigue siendo una estrategia HS256 provisoria aislada en un archivo—; lo que cambia es a quién hay que reclamarle el contrato. M9 sigue siendo el dueño del bus de eventos y del catálogo de barrios, y esas menciones no se tocaron.
+>
+> Nota del 2026-11-06 (el texto de abajo se conserva como se decidió): lo diferido quedó superado. La autorización por rol existe desde #161 ([ADR-008](adr-008-roles-m6-adaptados-desde-m1.md)): `RolesGuard` es el segundo `APP_GUARD` y falla cerrado, así que "diferimos los `@Roles()`" y "la autorización por rol sigue sin existir" ya no describen el código. La verificación del JWT ya no es un stopgap: sigue el contrato real de M1 (#354, #448; ver [ADR-004](adr-004-jwt-m1-y-puerto-identidad.md)) y el login real quedó verificado el 3/11.
 
 ## Contexto
 

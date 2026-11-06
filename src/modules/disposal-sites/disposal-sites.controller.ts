@@ -22,6 +22,7 @@ import {
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, Roles } from '../../common/decorators';
 import { ROLES_ADMIN } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('disposal-sites')
 @ApiBearerAuth('JWT-auth')
@@ -57,6 +58,7 @@ export class DisposalSitesController {
     return this.disposalSitesService.create(dto);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar sitios de disposición',
@@ -74,6 +76,7 @@ export class DisposalSitesController {
     return this.disposalSitesService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener un sitio de disposición por ID',

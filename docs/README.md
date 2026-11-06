@@ -49,7 +49,7 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 
 ## Mapa de esta carpeta
 
-- [api/](api/) — estándar Swagger y 150 endpoints REST del backend
+- [api/](api/) — estándar Swagger y 152 endpoints REST del backend
 - [entidades/](entidades/) — modelo conceptual de datos y máquinas de estados
 - [DER.md](DER.md) — modelo relacional entidad-relación (diagrama Mermaid y reglas de esquema)
 - [eventos/publicados/](eventos/publicados/) — los 6 eventos que este módulo emite (con sus `.schema.json`)
@@ -60,7 +60,7 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 - [integracion/](integracion/README.md) — fichas por módulo (M1, M2, M3, M4, M7, M9), historial, resueltos, riesgos y mensajes enviados
 - [enumeraciones.md](enumeraciones.md) — catálogo de valores cerrados
 - [decisiones/](decisiones/) — ADRs (decisiones técnicas de arquitectura)
-- [manual-de-usuario.md](manual-de-usuario.md) — manual para el usuario final (Oficina y Campo), clasificado según Diátaxis; capturas en `manual-de-usuario/img/`
+- [QA/manual-de-usuario.md](QA/manual-de-usuario.md) — manual para el usuario final (Oficina y Campo), clasificado según Diátaxis; capturas en `manual-de-usuario/img/`
 - [deploy.md](deploy.md) — despliegue, URLs, variables de entorno y estado operativo
 - [testing.md](testing.md) — tests unitarios y e2e contra Postgres: cómo correrlos y qué cubre cada suite
 - [gestion/](gestion/) — proceso Scrum: DoD, sprints y bitácoras

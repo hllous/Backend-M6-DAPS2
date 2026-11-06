@@ -259,6 +259,36 @@ describe('configuration — Core', () => {
   });
 });
 
+describe('configuration — M1', () => {
+  it('M1_BASE_URL es opcional: ausente o vacía no hay cliente', () => {
+    expect(config().m1.baseUrl).toBeUndefined();
+    expect(config({ M1_BASE_URL: '' }).m1.baseUrl).toBeUndefined();
+  });
+
+  it('toma la URL y rechaza lo que no es http(s)', () => {
+    expect(config({ M1_BASE_URL: 'https://m1.app' }).m1.baseUrl).toBe('https://m1.app');
+    expect(() => config({ M1_BASE_URL: 'm1.app' })).toThrow();
+    expect(() => config({ M1_BASE_URL: 'ftp://m1.app' })).toThrow(/http/);
+  });
+
+  it.each([
+    'https://user:pass@m1.app',
+    'https://m1.app/?token=x',
+    'https://m1.app/#frag',
+    'https://m1.app?',
+    'https://m1.app#',
+  ])('rechaza credenciales, query o hash: %s', (url) => {
+    expect(() => config({ M1_BASE_URL: url })).toThrow();
+  });
+
+  it('en producción exige https://', () => {
+    expect(() => config({ NODE_ENV: 'production', M1_BASE_URL: 'http://m1.app' })).toThrow(/https/);
+    expect(config({ NODE_ENV: 'production', M1_BASE_URL: 'https://m1.app' }).m1.baseUrl).toBe(
+      'https://m1.app',
+    );
+  });
+});
+
 describe('configuration — metas de los indicadores (#473, #475)', () => {
   it('por defecto son las que definió el equipo el 29/10', () => {
     expect(config().indicators).toEqual({
@@ -274,6 +304,14 @@ describe('configuration — metas de los indicadores (#473, #475)', () => {
         reportsOverduePct: 10,
       },
     });
+  });
+
+  it('INBOX_RETENTION_DAYS: default 180, 0 apaga la purga y vacío o negativo se rechaza', () => {
+    expect(config().inboxRetentionDays).toBe(180);
+    expect(config({ INBOX_RETENTION_DAYS: '0' }).inboxRetentionDays).toBe(0);
+    expect(config({ INBOX_RETENTION_DAYS: '30' }).inboxRetentionDays).toBe(30);
+    expect(() => config({ INBOX_RETENTION_DAYS: '' })).toThrow();
+    expect(() => config({ INBOX_RETENTION_DAYS: '-1' })).toThrow();
   });
 
   it('se pueden cambiar por variable de entorno', () => {

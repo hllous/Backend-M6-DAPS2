@@ -9,6 +9,7 @@ import { QueryEnvironmentalReportsDto, RequestInformationDto } from './dto';
 import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from '../../events/m2-contract.testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
+import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../common/audit/audit.service';
 import { EnvironmentalReportsService, REPORT_TRANSITIONS } from './environmental-reports.service';
 
@@ -44,6 +45,7 @@ describe('EnvironmentalReportsService', () => {
       lat: new Prisma.Decimal('-34.6037'),
       lng: null,
       ticketId: 'TCK-2026-004512',
+      caseNumber: 'EXP-2026-000123',
       reporterSnapshot: null,
       priority: 'HIGH',
       escalated: false,
@@ -79,6 +81,7 @@ describe('EnvironmentalReportsService', () => {
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,
       audit as unknown as AuditService,
+      { get: () => 5 } as unknown as ConfigService,
     );
   });
 
@@ -166,7 +169,13 @@ describe('EnvironmentalReportsService', () => {
 
   describe('alta y listado', () => {
     it('un expediente de oficio nace en RECEIVED y sin reclamo', async () => {
-      await service.create({ reportType: 'NOISE' } as any, actorCon(M6Role.M6_ADMIN));
+      const res = await service.create({ reportType: 'NOISE' } as any, actorCon(M6Role.M6_ADMIN));
+
+      // El número lo pone la base (default de columna): el alta no lo manda y la respuesta lo expone.
+      expect(prisma.environmentalReport.create.mock.calls[0][0].data).not.toHaveProperty(
+        'caseNumber',
+      );
+      expect(res.caseNumber).toBe('EXP-2026-000123');
 
       expect(prisma.environmentalReport.create.mock.calls[0][0].data).toMatchObject({
         reportType: 'NOISE',
@@ -429,6 +438,58 @@ describe('EnvironmentalReportsService', () => {
       await service.findAll(consulta({ to: '2026-09-01' }));
       expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual({
         updatedAt: { lt: new Date('2026-09-02T03:00:00.000Z') },
+      });
+    });
+
+    it('createdFrom/createdTo filtran por alta, día argentino inclusive', async () => {
+      await service.findAll(consulta({ createdFrom: '2026-09-01', createdTo: '2026-09-01' }));
+      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where.createdAt).toEqual({
+        gte: new Date('2026-09-01T03:00:00.000Z'),
+        lt: new Date('2026-09-02T03:00:00.000Z'),
+      });
+      await expect(
+        service.findAll(consulta({ createdFrom: '2026-09-30', createdTo: '2026-09-01' })),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    describe('overdue y zoneId', () => {
+      const cand = (id: string, creada: string, status: string, zoneId?: string) => ({
+        id,
+        createdAt: new Date(creada),
+        status,
+        inspections: zoneId ? [{ service: { zones: [{ zoneId }] } }] : [],
+      });
+      beforeEach(() => {
+        jest.useFakeTimers({ now: new Date('2026-08-24T15:00:00.000Z') });
+        // La primera lectura son los candidatos; la segunda, la página.
+        prisma.environmentalReport.findMany.mockResolvedValueOnce([
+          cand('vieja', '2026-08-10T15:00:00.000Z', 'RECEIVED', 'z1'),
+          cand('cerrada', '2026-08-10T15:00:00.000Z', 'CLOSED', 'z1'),
+          cand('nueva', '2026-08-24T12:00:00.000Z', 'RECEIVED', 'z1'),
+          cand('otra-zona', '2026-08-10T15:00:00.000Z', 'UNDER_REVIEW', 'z2'),
+        ]);
+      });
+      afterEach(() => jest.useRealTimers());
+
+      it('overdue=true deja solo las abiertas pasadas de plazo', async () => {
+        await service.findAll(consulta({ overdue: true }));
+        expect(prisma.environmentalReport.findMany.mock.calls[1][0].where.id).toEqual({
+          in: ['vieja', 'otra-zona'],
+        });
+      });
+
+      it('overdue=false deja el resto y zoneId acota por la zona derivada', async () => {
+        await service.findAll(consulta({ overdue: false }));
+        expect(prisma.environmentalReport.findMany.mock.calls[1][0].where.id).toEqual({
+          in: ['nueva', 'cerrada'],
+        });
+      });
+
+      it('overdue=true con zoneId', async () => {
+        await service.findAll(consulta({ overdue: true, zoneId: 'z2' }));
+        expect(prisma.environmentalReport.findMany.mock.calls[1][0].where.id).toEqual({
+          in: ['otra-zona'],
+        });
       });
     });
 

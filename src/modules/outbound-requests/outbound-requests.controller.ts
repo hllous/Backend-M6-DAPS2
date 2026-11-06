@@ -26,6 +26,7 @@ import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
 const CONFLICT = {
@@ -74,6 +75,7 @@ export class RepairRequestsController {
     return this.service.createRepairRequest(dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar solicitudes de reparación',
@@ -86,6 +88,7 @@ export class RepairRequestsController {
     return this.service.findRepairRequests(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener una solicitud de reparación',
@@ -187,6 +190,7 @@ export class StreetClosureRequestsController {
     return this.service.createClosureRequest(dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar solicitudes de corte',
@@ -199,6 +203,7 @@ export class StreetClosureRequestsController {
     return this.service.findClosureRequests(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener una solicitud de corte',

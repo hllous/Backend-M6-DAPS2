@@ -299,7 +299,7 @@ Cambios entre el volcado de Trello (20/10) y el 03/11/2026 que afectan a esta HU
 
 - **Como** equipo de M6 **quiero** que M6 publique y consuma con el sobre y la cola definitivos del Core **para** integrarse con el resto de los módulos.
 - **Prioridad:** Must — fuente: Trello (R2 MUST). **Release:** R2.
-- **Estado:** En curso: queda abierto el paraguas BE #257 (Sprint 10).
+- **Estado:** En curso (al 03/11: paraguas BE #257 abierto). Al 06/11 #257 está cerrado desde el 05/11; las decisiones del Core que siguen abiertas están en [`bloqueantes.md`](../bloqueantes.md) (fila M9 / M2).
 
 - **CA-HU20-1** (Feliz; propuesto, a validar por el PO): **DADO** un evento en el outbox de M6, **CUANDO** el dispatcher lo publica al exchange fanout muni.inbox, **ENTONCES** el sobre lleva exactamente las claves del Core, el eventId es el id de la fila, occurredAt va en ISO 8601 con offset y la fila queda SENT con publishedAt.
 - **CA-HU20-2** (Feliz; propuesto, a validar por el PO): **DADO** un mensaje en la cola q.ambiente, **CUANDO** M6 lo consume, **ENTONCES** si el inbox responde processed, duplicate o ignored se hace ack, y el sobre llega al inbox con eventId y correlación. — *Agregado por ACT-24*
@@ -347,7 +347,7 @@ Cambios entre el volcado de Trello (20/10) y el 03/11/2026 que afectan a esta HU
 
 - **Como** equipo de M6 **quiero** probar M6 contra el Core real de M9 **para** verificar la circulación de eventos de ida y vuelta antes de la entrega.
 - **Prioridad:** Must — fuente: Trello (R2 MUST). **Release:** R2.
-- **Estado:** En curso: pendiente BE #442 (prueba pasiva desde Render y suscripción pruebaConexionM6), Sprint 10.
+- **Estado:** En curso (al 03/11: pendiente BE #442, prueba pasiva desde Render y suscripción pruebaConexionM6). Al 06/11 #442 está cerrado desde el 05/11 y la prueba con el Core real se hizo con M3 (ver [historial](../integracion/historial.md)).
 
 - **CA-HU24-1** (Feliz): **DADO** RabbitMQ y el Core de M9 levantados en local según docs/testing.md, **CUANDO** M6 publica en muni.inbox y consume de q.ambiente, **ENTONCES** los eventos de ida y vuelta se ven funcionando.
 - **CA-HU24-2** (Alternativo; propuesto, a validar por el PO): **DADO** el puerto 5671 habilitado para los rangos de Render (M9, 28/10), **CUANDO** ejecuto la prueba pasiva desde Render (BE #442), **ENTONCES** se verifica TCP/TLS, autenticación y checkQueue de q.ambiente sin publicar ni consumir, y se documenta el eventId del evento pruebaConexionM6.
@@ -397,7 +397,7 @@ Cambios entre el volcado de Trello (20/10) y el 03/11/2026 que afectan a esta HU
 - **CA-HU28-2** (Alternativo; propuesto, a validar por el PO): **DADO** un período y el período anterior de igual duración, **CUANDO** consulto con bucket y compare=previous, **ENTONCES** la suma de la serie es igual a totals y delta trae la diferencia; sin base en alguno de los períodos la diferencia es null. — *Corregido por ACT-13*
 - **CA-HU28-3** (Error; propuesto, a validar por el PO): **DADO** parámetros inválidos, **CUANDO** consulto con from posterior a to o con una serie de más de 90 puntos, **ENTONCES** recibo 400 con el motivo, antes de consultar la base. — *Agregado por ACT-13*
 - **CA-HU28-4** (Alternativo; propuesto, a validar por el PO): **DADO** sin reclamos abiertos o sin historial de contenedores, **CUANDO** consulto incidencias, **ENTONCES** el porcentaje de vencidos y los contenedores dañados pendientes son null, no 0. — *Agregado por ACT-13*
-- **CA-HU28-5** (Alternativo; propuesto, a validar por el PO): **DADO** reclamos CLOSED y reclamos abiertos, **CUANDO** consulto GET /indicators/incidents, **ENTONCES** reports.withinDeadline trae {resolved, withinDeadline, pct} y reports.overdue trae {open, overdue, pct}, en días hábiles contra INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS (5 por defecto); sin cerrados o sin abiertos el pct es null. — *Agregado por ACT-13*
+- **CA-HU28-5** (Alternativo; propuesto, a validar por el PO): **DADO** reclamos CLOSED y reclamos abiertos, **CUANDO** consulto GET /indicators/incidents, **ENTONCES** reports.withinDeadline trae {resolved, withinDeadline, pct} y reports.overdue trae {open, overdue, pct, byZone}, en días hábiles contra INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS (5 por defecto); sin cerrados o sin abiertos el pct es null. — *Agregado por ACT-13*
 - **CA-HU28-6** (Alternativo; propuesto, a validar por el PO): **DADO** el historial de estados de contenedores (container_status_history), **CUANDO** consulto GET /indicators/incidents, **ENTONCES** los desbordes y daños se cuentan por transición con origen no nulo (no por contenedor), los dañados pendientes salen del último estado conocido y sin historial son null; trackingSince indica desde cuándo hay datos. — *Agregado por ACT-13*
 
 ## HU-29 — Ver y hacer solo lo que mi rol permite, con el rol que viene de M1
@@ -418,7 +418,7 @@ Cambios entre el volcado de Trello (20/10) y el 03/11/2026 que afectan a esta HU
 
 - **Como** Oficina y Campo **quiero** iniciar sesión con mi cuenta real de M1 **para** operar con mi identidad y mis roles reales.
 - **Prioridad:** Must — fuente: Trello (R2 MUST). **Release:** R2.
-- **Estado:** Backend hecho el 3/11 (#488: secreto vigente en Render, login real + `GET /me` en 200); el frontend retira el modo backend-development en FE #800.
+- **Estado:** Backend hecho el 3/11 (#488: secreto vigente en Render, login real + `GET /me` en 200); el frontend retiró el modo backend-development en FE #800 (cerrado el 04/11).
 
 - **CA-HU30-1** (Feliz; propuesto, a validar por el PO): **DADO** la cuenta de un empleado en M1 y el secreto vigente de M1 cargado en el backend (JWT_SECRET, JWT_ISSUER), **CUANDO** inicio sesión por el BFF (POST {M1}/auth/usuario/login) y consulto GET /me, **ENTONCES** recibo 200 con mis roles de M6; el JWT de M1 va en una cookie sellada httpOnly y nunca llega al navegador.
 - **CA-HU30-2** (Error; propuesto, a validar por el PO): **DADO** un JWT firmado con un secreto distinto del cargado en el backend, **CUANDO** llamo a un endpoint protegido, **ENTONCES** recibo 401 (hoy sucede en Render hasta que se cargue el secreto vigente de M1).
@@ -528,7 +528,7 @@ Los criterios de este documento siguen el código. Estas son las diferencias enc
 2. **HU-19 y HU-23:** Trello dice "8 eventos publicados y 10 consumidos". El código registra 6 publicaciones y 8 suscripciones (weatherAlertIssued es simulado y no se suscribe); los consumidos documentados son 10 y 9 tienen handler.
 3. **HU-21:** Trello dice que M2 recibe STARTED y luego PROGRESS. El código emite uno solo según el estado del ticket: STARTED si está en ROUTED o es desconocido, PROGRESS si ya está IN_PROGRESS.
 4. **HU-18:** Trello la marca Bloqueado, pero existen el endpoint request-information, el consumo de INFORMATION_PROVIDED y un e2e (`test/information-request.e2e-spec.ts`).
-5. **HU-31:** los veredictos de las tarjetas SEC son del 13/10. SEC-W02 figuraba NO CUMPLE y hoy el `RolesGuard` es global y falla cerrado (ACT-01); SEC-W01 se corrigió con la validación del JWT de M1 (ACT-02). SEC-D02 sigue sin cumplirse. SEC-W05 sigue parcial (sin id de correlación, sin RFC 9457). `AGENTS.md` todavía dice que ningún endpoint usa @Roles: está desactualizado.
+5. **HU-31:** los veredictos de las tarjetas SEC son del 13/10. SEC-W02 figuraba NO CUMPLE y hoy el `RolesGuard` es global y falla cerrado (ACT-01); SEC-W01 se corrigió con la validación del JWT de M1 (ACT-02). SEC-D02 sigue sin cumplirse. SEC-W05 sigue parcial (sin id de correlación, sin RFC 9457). `AGENTS.md` decía que ningún endpoint usa @Roles (DEF-16); se corrigió el 06/11.
 6. **HU-14:** el filtro de fechas actúa sobre updatedAt y no sobre createdAt; está pendiente de confirmar con el PO.
 7. **HU-28:** la tarjeta dice que FE #82 y #143 siguen abiertos en GitHub; la tarjeta de higiene del 03/11 dice que están cerrados. GitHub confirma que ambos se cerraron el 20/10.
 8. **HU-15:** la tarjeta dice "señal de posible denuncia duplicada: BE #285 ✅ y FE #413 ✅". No se implementó: el PO decidió el 16/10 que no se quiere advertencia de denuncias parecidas, y BE #285 se cerró como no planificado (ACT-N1).

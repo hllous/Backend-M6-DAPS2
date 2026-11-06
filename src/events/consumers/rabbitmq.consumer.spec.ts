@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ChannelModel, ConsumeMessage, connect } from 'amqplib';
 import { MAX_MESSAGE_BYTES, RabbitMqConsumer } from './rabbitmq.consumer';
 import { createRabbitMqConsumer } from '../events.module';
+import { BusStatus } from '../bus-status';
 import { InboxService } from '../inbox/inbox.service';
 import { RabbitMqConfig } from '../rabbitmq';
 
@@ -396,6 +397,27 @@ describe('RabbitMqConsumer', () => {
       await arrancar();
       await consumer.onModuleDestroy();
       expect(recovering.close).toHaveBeenCalled();
+    });
+
+    it('expone el estado del bus según los eventos de la conexión', async () => {
+      const bus = new BusStatus();
+      consumer = new RabbitMqConsumer(config, inbox as unknown as InboxService, bus);
+      expect(bus.state).toBe('reconnecting');
+      await consumer.onApplicationBootstrap();
+
+      recovering.emit('connect');
+      expect(bus.state).toBe('connected');
+      recovering.emit('disconnect');
+      expect(bus.state).toBe('reconnecting');
+      recovering.emit('connect');
+      recovering.emit('reconnect-scheduled', { attempt: 1, delay: 1000, error: new Error('x') });
+      expect(bus.state).toBe('reconnecting');
+      await consumer.onModuleDestroy();
+      expect(bus.state).toBe('disabled');
+    });
+
+    it('sin RABBITMQ_URL el estado queda disabled', () => {
+      expect(new BusStatus().state).toBe('disabled');
     });
 
     it('onModuleDestroy no falla si nunca arrancó', async () => {

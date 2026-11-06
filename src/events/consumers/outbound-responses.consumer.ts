@@ -1,5 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { RepairRequestStatus, ServiceStatus, StreetClosureRequestStatus } from '@prisma/client';
+import {
+  Prisma,
+  RepairRequestStatus,
+  ServiceStatus,
+  StreetClosureRequestStatus,
+} from '@prisma/client';
+import { AuditActor, AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent } from '../inbox/consumed-events';
@@ -11,9 +17,17 @@ import {
   sourcesOf,
 } from '../../modules/outbound-requests/outbound-requests.transitions';
 
+// Quién actuó cuando no hay persona: el módulo emisor, para que el historial diga de quién vino el cambio.
+const M3: AuditActor = { userId: 'system:m3', roles: [] };
+const M7: AuditActor = { userId: 'system:m7', roles: [] };
+
 // Sin el id de correlación no se sabe de qué solicitud nuestra habla el evento.
-const validarM3 = (d: Data): string[] =>
-  requerido(d, ['sourceRequestId', 'requestId'], 'uuid', esUuid);
+// `workOrderId` es opcional, pero si viene tiene que ser texto: un valor de otro
+// tipo rompería el update dentro de la transacción.
+const validarM3 = (d: Data): string[] => [
+  ...requerido(d, ['sourceRequestId', 'requestId'], 'uuid', esUuid),
+  ...(d.workOrderId == null || typeof d.workOrderId === 'string' ? [] : ['workOrderId (string)']),
+];
 const validarM7 = (d: Data): string[] =>
   requerido(d, ['closureRequestId', 'sourceRequestId'], 'uuid', esUuid);
 
@@ -47,6 +61,7 @@ export class OutboundResponsesConsumer implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inbox: InboxService,
+    private readonly audit: AuditService,
   ) {}
 
   onModuleInit(): void {
@@ -62,11 +77,12 @@ export class OutboundResponsesConsumer implements OnModuleInit {
   // ─── M3 ───────────────────────────────────────────
 
   /**
-   * Sigue abierta la pregunta de **cuándo** dispara M3 este evento: "creada" y
-   * "programada" no significan lo mismo, y si es lo segundo, entre que mandamos
-   * la solicitud y ellos le ponen fecha no tenemos ninguna señal
-   * (bloqueantes.md). No cambia el handler, sí cambia qué tan pronto se entera
-   * el operador.
+   * Qué se verificó (prueba del 5/11 con M3 y el Core): M3 publicó este evento
+   * y `workOrderCompleted` y la solicitud terminó Cerrada. Qué no: el momento
+   * exacto de cada publicación (solo vimos el estado final y los contadores del
+   * Core), así que sigue sin saberse si M3 lo dispara al crear o al programar la
+   * orden. Es indiferente para el handler, pero cambia cuán pronto se entera el
+   * operador de que la solicitud pasó a en curso.
    */
   private async workOrderScheduled(data: Record<string, unknown>): Promise<void> {
     const request = await this.findRepairRequest(data);
@@ -74,15 +90,30 @@ export class OutboundResponsesConsumer implements OnModuleInit {
 
     // `updateMany` no pasa por assertTransition: el filtro por estado de origen
     // es el guard, y además es atómico frente a un evento repetido o tardío.
-    const { count } = await this.prisma.repairRequest.updateMany({
-      where: {
-        id: request.id,
-        status: { in: sourcesOf(REPAIR_TRANSITIONS, RepairRequestStatus.IN_PROGRESS) },
-      },
-      data: {
-        status: RepairRequestStatus.IN_PROGRESS,
-        workOrderId: (data.workOrderId as string) ?? request.workOrderId,
-      },
+    // La auditoría va en la misma transacción y solo si el update aplicó.
+    const count = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.repairRequest.updateMany({
+        where: {
+          id: request.id,
+          status: { in: sourcesOf(REPAIR_TRANSITIONS, RepairRequestStatus.IN_PROGRESS) },
+        },
+        data: {
+          status: RepairRequestStatus.IN_PROGRESS,
+          workOrderId: (data.workOrderId as string) ?? request.workOrderId,
+        },
+      });
+      if (count > 0) {
+        await this.audit.record(tx, {
+          entityType: 'REPAIR_REQUEST',
+          entityId: request.id,
+          action: 'START',
+          fromStatus: request.status,
+          toStatus: RepairRequestStatus.IN_PROGRESS,
+          actor: M3,
+          note: 'workOrderScheduled',
+        });
+      }
+      return count;
     });
     if (this.applied(count, `Reparación ${request.id}`, 'workOrderScheduled')) {
       this.logger.log(`Reparación ${request.id}: M3 la agendó`);
@@ -94,12 +125,30 @@ export class OutboundResponsesConsumer implements OnModuleInit {
     if (!request) return;
 
     // Guard por estado de origen, mismo criterio que workOrderScheduled.
-    const { count } = await this.prisma.repairRequest.updateMany({
-      where: {
-        id: request.id,
-        status: { in: sourcesOf(REPAIR_TRANSITIONS, RepairRequestStatus.CLOSED) },
-      },
-      data: { status: RepairRequestStatus.CLOSED },
+    const count = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.repairRequest.updateMany({
+        where: {
+          id: request.id,
+          status: { in: sourcesOf(REPAIR_TRANSITIONS, RepairRequestStatus.CLOSED) },
+        },
+        // Si el cierre se adelanta a la programación (o ésta se perdió), la OT se guarda acá.
+        data: {
+          status: RepairRequestStatus.CLOSED,
+          workOrderId: (data.workOrderId as string) ?? request.workOrderId,
+        },
+      });
+      if (count > 0) {
+        await this.audit.record(tx, {
+          entityType: 'REPAIR_REQUEST',
+          entityId: request.id,
+          action: 'CLOSE',
+          fromStatus: request.status,
+          toStatus: RepairRequestStatus.CLOSED,
+          actor: M3,
+          note: 'workOrderCompleted',
+        });
+      }
+      return count;
     });
     if (this.applied(count, `Reparación ${request.id}`, 'workOrderCompleted')) {
       this.logger.log(`Reparación ${request.id}: M3 la completó`);
@@ -114,19 +163,30 @@ export class OutboundResponsesConsumer implements OnModuleInit {
     if (!request) return;
 
     // Guard por estado de origen: un "aprobado" tardío no pisa un corte ya rechazado o terminado.
-    const { count } = await this.prisma.streetClosureRequest.updateMany({
-      where: {
-        id: request.id,
-        status: { in: sourcesOf(CLOSURE_TRANSITIONS, StreetClosureRequestStatus.APPROVED) },
-      },
-      data: {
-        status: StreetClosureRequestStatus.APPROVED,
-        closureId: (data.streetClosureId as string) ?? (data.closureId as string) ?? null,
-        // La ventana autorizada prevalece sobre la pedida y es la que vence el
-        // StreetClosureExpirySweeper. Ausente o ilegible no tumba el handler:
-        // el corte queda sin vencimiento. Va aparte de closureFrom/To.
-        ...ventana(data),
-      },
+    const count = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.streetClosureRequest.updateMany({
+        where: {
+          id: request.id,
+          status: { in: sourcesOf(CLOSURE_TRANSITIONS, StreetClosureRequestStatus.APPROVED) },
+        },
+        data: {
+          status: StreetClosureRequestStatus.APPROVED,
+          closureId: (data.streetClosureId as string) ?? (data.closureId as string) ?? null,
+          // La ventana autorizada prevalece sobre la pedida y es la que vence el
+          // StreetClosureExpirySweeper. Ausente o ilegible no tumba el handler:
+          // el corte queda sin vencimiento. Va aparte de closureFrom/To.
+          ...ventana(data),
+        },
+      });
+      if (count > 0)
+        await this.auditClosure(
+          tx,
+          request.id,
+          'APPROVE',
+          request.status,
+          StreetClosureRequestStatus.APPROVED,
+        );
+      return count;
     });
     if (this.applied(count, `Corte ${request.id}`, 'streetClosureApproved')) {
       this.logger.log(`Corte ${request.id}: aprobado por M7, el trabajo queda habilitado`);
@@ -164,6 +224,13 @@ export class OutboundResponsesConsumer implements OnModuleInit {
         },
       });
       if (rejected === 0) return false;
+      await this.auditClosure(
+        tx,
+        request.id,
+        'REJECT',
+        request.status,
+        StreetClosureRequestStatus.REJECTED,
+      );
 
       if (request.sourceType === 'SERVICE') {
         // El `where` acota a SCHEDULED, que es el único estado desde el que
@@ -177,6 +244,16 @@ export class OutboundResponsesConsumer implements OnModuleInit {
           },
         });
         if (count > 0) {
+          // El where acota a SCHEDULED: el estado de origen es conocido sin leerlo.
+          await this.audit.record(tx, {
+            entityType: 'SERVICE',
+            entityId: request.sourceId,
+            action: 'RESCHEDULE',
+            fromStatus: ServiceStatus.SCHEDULED,
+            toStatus: ServiceStatus.RESCHEDULED,
+            actor: M7,
+            note: 'streetClosureRejected',
+          });
           this.logger.log(
             `Servicio ${request.sourceId}: marcado para reprogramar por el rechazo del corte`,
           );
@@ -197,19 +274,47 @@ export class OutboundResponsesConsumer implements OnModuleInit {
     // puede adelantarse a streetClosureApproved (el Core no garantiza orden);
     // en ese caso el id de cierre de M7 se guarda acá, si no lo teníamos.
     const closureId = (data.streetClosureId as string) ?? (data.closureId as string);
-    const { count } = await this.prisma.streetClosureRequest.updateMany({
-      where: {
-        id: request.id,
-        status: { in: sourcesOf(CLOSURE_TRANSITIONS, StreetClosureRequestStatus.ENDED) },
-      },
-      data: {
-        status: StreetClosureRequestStatus.ENDED,
-        ...(closureId && !request.closureId && { closureId }),
-      },
+    const count = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.streetClosureRequest.updateMany({
+        where: {
+          id: request.id,
+          status: { in: sourcesOf(CLOSURE_TRANSITIONS, StreetClosureRequestStatus.ENDED) },
+        },
+        data: {
+          status: StreetClosureRequestStatus.ENDED,
+          ...(closureId && !request.closureId && { closureId }),
+        },
+      });
+      if (count > 0)
+        await this.auditClosure(
+          tx,
+          request.id,
+          'END',
+          request.status,
+          StreetClosureRequestStatus.ENDED,
+        );
+      return count;
     });
     if (this.applied(count, `Corte ${request.id}`, 'streetClosureEnded')) {
       this.logger.log(`Corte ${request.id}: finalizado, dependencia liberada`);
     }
+  }
+
+  private auditClosure(
+    tx: Prisma.TransactionClient,
+    id: string,
+    action: 'APPROVE' | 'REJECT' | 'END',
+    from: StreetClosureRequestStatus,
+    to: StreetClosureRequestStatus,
+  ): Promise<void> {
+    return this.audit.record(tx, {
+      entityType: 'STREET_CLOSURE_REQUEST',
+      entityId: id,
+      action,
+      fromStatus: from,
+      toStatus: to,
+      actor: M7,
+    });
   }
 
   /** Si el update no aplicó, el evento llegó tarde o repetido: se descarta con log, sin error. */

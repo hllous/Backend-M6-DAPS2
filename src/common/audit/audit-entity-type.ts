@@ -15,6 +15,7 @@ export const AUDIT_ENTITY_TYPES = [
   'ZONE',
   'VEHICLE',
   'ROUTE',
+  'SANCTION_OUTCOME',
 ] as const;
 
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];

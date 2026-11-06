@@ -64,6 +64,18 @@ export const Roles = (...roles: M6Role[]) =>
   );
 
 /**
+ * Documenta el 403 de un GET sin @Roles: el RolesGuard exige igual algún rol de
+ * M6 (solo documenta, no hace cumplir nada). Un GET autenticado sin 403 en el
+ * swagger rompe openapi-contract.spec. No combinar con @Roles: ya documenta su
+ * propio 403 y los dos se pisarían.
+ */
+export const ApiAnyM6Role = () =>
+  ApiForbiddenResponse({
+    description: `Falta algún rol de M6 (code ${ROLE_REQUIRED_CODE}). También 403 si el token no es de personal municipal`,
+    type: ErrorResponseDto,
+  });
+
+/**
  * Pide JWT de empleado pero ningún rol de M6. Solo para `GET /me`: un empleado
  * recién creado, sin asignaciones, tiene que poder preguntar qué puede hacer.
  */

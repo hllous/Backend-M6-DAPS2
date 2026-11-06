@@ -318,7 +318,8 @@ export class EnvironmentalInspectionsService {
     this.logger.log(
       `Acta emitida: ${noticeNumber} (${dto.violationType}, ${priorNoticeCount} acta/s previa/s)`,
     );
-    return this.toNoticeDto(notice);
+    // Recién emitida: M4 todavía no pudo resolver.
+    return this.toNoticeDto({ ...notice, sanctionOutcome: null });
   }
 
   async findByReport(reportId: string): Promise<InspectionResponseDto[]> {
@@ -338,7 +339,10 @@ export class EnvironmentalInspectionsService {
   // Una inspección sin acta es el estado normal (el acta solo existe tras VIOLATION_FOUND),
   // por eso devuelve null; el 404 queda para la inspección inexistente.
   async findNotice(inspectionId: string): Promise<ViolationNoticeResponseDto | null> {
-    const notice = await this.prisma.violationNotice.findUnique({ where: { inspectionId } });
+    const notice = await this.prisma.violationNotice.findUnique({
+      where: { inspectionId },
+      include: { sanctionOutcome: true },
+    });
     if (!notice) {
       await this.getInspection(inspectionId);
       return null;
@@ -500,8 +504,9 @@ export class EnvironmentalInspectionsService {
   }
 
   private toNoticeDto(
-    notice: Prisma.ViolationNoticeGetPayload<object>,
+    notice: Prisma.ViolationNoticeGetPayload<{ include: { sanctionOutcome: true } }>,
   ): ViolationNoticeResponseDto {
+    const so = notice.sanctionOutcome;
     return {
       id: notice.id,
       noticeNumber: notice.noticeNumber,
@@ -512,6 +517,14 @@ export class EnvironmentalInspectionsService {
       severity: notice.severity,
       suggestedAction: notice.suggestedAction,
       priorNoticeCount: notice.priorNoticeCount,
+      sanctionOutcome: so
+        ? {
+            decision: so.decision,
+            decidedAt: so.decidedAt,
+            externalRef: so.externalRef,
+            dismissalReason: so.dismissalReason,
+          }
+        : null,
       createdAt: notice.createdAt,
     };
   }

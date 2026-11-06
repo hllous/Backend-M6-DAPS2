@@ -13,6 +13,8 @@ import {
   Prisma,
   ServiceStatus,
 } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
+import { estaVencida, zonaDeDenuncia, ZONA_DE_DENUNCIA } from '../indicators/report-overdue';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditActor, AuditService } from '../../common/audit/audit.service';
 import { OutboxEntry, OutboxService } from '../../events/outbox/outbox.service';
@@ -106,6 +108,7 @@ export class EnvironmentalReportsService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly audit: AuditService,
+    private readonly config: ConfigService,
   ) {}
 
   async create(
@@ -171,6 +174,24 @@ export class EnvironmentalReportsService {
       };
     }
 
+    if (
+      query.createdFrom &&
+      query.createdTo &&
+      toDateOnly(query.createdFrom) > toDateOnly(query.createdTo)
+    ) {
+      throw new BadRequestException(
+        `'createdFrom' (${query.createdFrom}) no puede ser posterior a 'createdTo' (${query.createdTo})`,
+      );
+    }
+    if (query.createdFrom || query.createdTo) {
+      where.createdAt = {
+        ...(query.createdFrom && { gte: startOfDayArgentina(query.createdFrom) }),
+        ...(query.createdTo && {
+          lt: new Date(startOfDayArgentina(query.createdTo).getTime() + DAY_MS),
+        }),
+      };
+    }
+
     if (query.status) where.status = { in: query.status };
     if (query.reportType) where.reportType = query.reportType;
     if (query.priority) where.priority = query.priority;
@@ -184,6 +205,40 @@ export class EnvironmentalReportsService {
     // que `count` y la página filtren lo mismo.
     if (query.crewId) {
       where.inspections = { some: { service: { ...ACTIVE_SERVICE, crewId: query.crewId } } };
+    }
+
+    // «Vencida» y «zona» no se expresan en SQL (días hábiles, zona derivada): se
+    // resuelven los ids con las mismas funciones que el indicador y el resto de
+    // los filtros se aplica en la base. ponytail: lee los candidatos en memoria;
+    // si el volumen crece, una columna/vista materializada.
+    if (query.overdue !== undefined || query.zoneId) {
+      const plazo = this.config.get<number>('indicators.reportDeadlineBusinessDays');
+      if (plazo === undefined) throw new Error('Falta el plazo de resolución de denuncias');
+      const ahora = new Date();
+      const candidatas = await this.prisma.environmentalReport.findMany({
+        where,
+        select: { id: true, createdAt: true, status: true, ...ZONA_DE_DENUNCIA },
+      });
+      const elegidas = candidatas
+        .filter(
+          (d) =>
+            (query.overdue === undefined || estaVencida(d, plazo, ahora) === query.overdue) &&
+            (!query.zoneId || zonaDeDenuncia(d) === query.zoneId),
+        )
+        .sort((x, y) => y.createdAt.getTime() - x.createdAt.getTime());
+      // Se pagina acá y solo los ids de la página vuelven a la base: pasar todos
+      // en un IN pasaría el tope de parámetros de Postgres.
+      const pagina = await this.prisma.environmentalReport.findMany({
+        where: { id: { in: elegidas.slice(query.skip, query.skip + query.take).map((d) => d.id) } },
+        include: WITH_ASSIGNED_CREW,
+        orderBy: { createdAt: 'desc' },
+      });
+      return new PaginatedResponseDto(
+        pagina.map((r) => this.toResponseDto(r)),
+        elegidas.length,
+        query.page,
+        query.pageSize,
+      );
     }
 
     const [reports, total] = await Promise.all([
@@ -568,6 +623,7 @@ export class EnvironmentalReportsService {
       lat: toNumber(report.lat),
       lng: toNumber(report.lng),
       ticketId: report.ticketId,
+      caseNumber: report.caseNumber,
       publicId: report.publicId,
       priority: report.priority,
       escalated: report.escalated,

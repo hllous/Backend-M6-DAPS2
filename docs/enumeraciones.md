@@ -46,7 +46,7 @@ Catálogo de valores cerrados usados en [entidades](entidades/) y [eventos](even
 | `StreetDirection` | `FORWARD`, `REVERSE`, `BOTH` |
 | `StreetClosureRequestStatus` | `REQUESTED`, `APPROVED`, `REJECTED`, `ENDED`, `EXPIRED` |
 
-Son 34 enums de dominio (`prisma/schema.prisma` tiene 36: faltan `OutboxEventStatus` —`PENDING`, `SENT`, `FAILED`— y `TicketStateSource` —`DEDUCED`, `RECEIVED`, de dónde salió el estado del ticket en M2 (#303)—, ambos de infraestructura). `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
+Son 35 enums de dominio (`prisma/schema.prisma` tiene 39: faltan los dos de roles, `M6Role` —`M6_ADMIN`, `M6_OFICINA_OPERACIONES`, `M6_OFICINA_AMBIENTAL`, `M6_CAMPO_CUADRILLA`, `M6_CAMPO_INSPECTOR`, `M6_AUDITOR`; ver [ADR-008](decisiones/adr-008-roles-m6-adaptados-desde-m1.md)— y `RoleAssignmentAction` —`GRANT`, `REVOKE`—, más `OutboxEventStatus` —`PENDING`, `SENT`, `FAILED`— y `TicketStateSource` —`DEDUCED`, `RECEIVED`, de dónde salió el estado del ticket en M2 (#303)—, ambos de infraestructura). `DamageType` y `ViolationType` viajan **como texto** en los eventos que salen: el [acuerdo](Acuerdo-Eventos-M6.md) §1.1 los declara así ("sale de nuestro catálogo, viaja como texto"), porque el consumidor no tiene por qué validar contra un catálogo nuestro. Adentro del módulo siguen siendo enums.
 
 ## Divergencias con el acuerdo publicado — resueltas
 

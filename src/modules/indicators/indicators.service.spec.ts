@@ -805,7 +805,57 @@ describe('IndicatorsService', () => {
             ]
           : [{ status: 'ACTIVE', _count: { _all: 40 } }],
       );
-      prisma.$queryRaw.mockResolvedValue([{ riskLevel: 'HIGH', count: 12n }]);
+      prisma.$queryRaw.mockImplementation((sql: TemplateStringsArray) =>
+        String(sql.join('')).includes('t.zone_id')
+          ? [
+              { zoneId: 'z-centro', riskLevel: 'HIGH', count: 7n },
+              { zoneId: 'z-sur', riskLevel: 'HIGH', count: 5n },
+            ]
+          : [{ riskLevel: 'HIGH', count: 12n }],
+      );
+    });
+
+    it('árboles de riesgo alto por zona, con la misma foto que el total', async () => {
+      const result = await indicators.incidents({});
+
+      expect(result.trees.byZone.map((z) => [z.code, z.byRiskLevel])).toEqual([
+        ['Z-CENTRO', [{ riskLevel: 'HIGH', count: 7 }]],
+        ['Z-SUR', [{ riskLevel: 'HIGH', count: 5 }]],
+      ]);
+    });
+
+    describe('vencidas por zona', () => {
+      afterEach(() => jest.useRealTimers());
+      const conZona = (zonas: string[] | null, creada: string) => ({
+        createdAt: new Date(creada),
+        status: 'RECEIVED',
+        inspections: zonas ? [{ service: { zones: zonas.map((zoneId) => ({ zoneId })) } }] : [],
+      });
+
+      it('agrupa por zona derivada y deja las sin zona (o multizona) en null', async () => {
+        jest.useFakeTimers({ now: new Date('2026-08-24T15:00:00.000Z') }); // lunes 24
+        // lunes 10 vence (10 hábiles); lunes 24 no.
+        prisma.environmentalReport.findMany.mockResolvedValue([
+          conZona(['z-centro'], '2026-08-10T15:00:00.000Z'),
+          conZona(['z-centro'], '2026-08-24T12:00:00.000Z'),
+          conZona(null, '2026-08-10T15:00:00.000Z'),
+          conZona(['z-centro', 'z-sur'], '2026-08-10T15:00:00.000Z'),
+        ]);
+
+        const { byZone } = (await indicators.incidents({})).reports.overdue;
+
+        expect(byZone).toEqual([
+          { zoneId: null, code: null, name: null, open: 2, overdue: 2, pct: 100 },
+          {
+            zoneId: 'z-centro',
+            code: 'Z-CENTRO',
+            name: expect.any(String),
+            open: 2,
+            overdue: 1,
+            pct: 50,
+          },
+        ]);
+      });
     });
 
     it('ordena las zonas por incidencias, no alfabéticamente', async () => {
@@ -866,7 +916,7 @@ describe('IndicatorsService', () => {
 
       expect(result.containers.byStatus).toEqual([{ status: 'ACTIVE', count: 40 }]);
       expect(result.containers.byZone.map((z) => z.code)).toEqual(['Z-SUR', 'Z-CENTRO']);
-      expect(result.trees).toEqual({ byRiskLevel: [{ riskLevel: 'HIGH', count: 12 }] });
+      expect(result.trees.byRiskLevel).toEqual([{ riskLevel: 'HIGH', count: 12 }]);
       expect(result.reports).toMatchObject({
         total: 1,
         avgResolutionDays: 3,
@@ -1299,7 +1349,7 @@ describe('IndicatorsService', () => {
 
         const result = await indicators.incidents(AGOSTO);
 
-        expect(result.reports.overdue).toEqual({ open: 4, overdue: 2, pct: 50 });
+        expect(result.reports.overdue).toMatchObject({ open: 4, overdue: 2, pct: 50 });
       });
 
       it('un reclamo cerrado nunca cuenta como abierto ni como vencido', async () => {
@@ -1310,7 +1360,7 @@ describe('IndicatorsService', () => {
 
         const result = await indicators.incidents(AGOSTO);
 
-        expect(result.reports.overdue).toEqual({ open: 0, overdue: 0, pct: null });
+        expect(result.reports.overdue).toMatchObject({ open: 0, overdue: 0, pct: null });
       });
 
       /**
@@ -1325,14 +1375,14 @@ describe('IndicatorsService', () => {
 
           const result = await indicators.incidents(AGOSTO);
 
-          expect(result.reports.overdue).toEqual({ open: 1, overdue: 1, pct: 100 });
+          expect(result.reports.overdue).toMatchObject({ open: 1, overdue: 1, pct: 100 });
         },
       );
 
       it('sin reclamos abiertos el porcentaje de vencidos es null, no 0 %', async () => {
         const result = await indicators.incidents(AGOSTO);
 
-        expect(result.reports.overdue).toEqual({ open: 0, overdue: 0, pct: null });
+        expect(result.reports.overdue).toMatchObject({ open: 0, overdue: 0, pct: null });
       });
 
       it('hoy es el día argentino: a las 22:00 ART del jueves todavía es jueves', async () => {
@@ -1343,7 +1393,7 @@ describe('IndicatorsService', () => {
 
         const result = await indicators.incidents(AGOSTO);
 
-        expect(result.reports.overdue).toEqual({ open: 1, overdue: 0, pct: 0 });
+        expect(result.reports.overdue).toMatchObject({ open: 1, overdue: 0, pct: 0 });
       });
 
       it('el universo son los reclamos creados en el período', async () => {

@@ -18,6 +18,7 @@ import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('vehicles')
 @ApiBearerAuth('JWT-auth')
@@ -64,6 +65,7 @@ export class VehiclesController {
     return this.vehiclesService.create(dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar vehículos',
@@ -85,6 +87,7 @@ export class VehiclesController {
     return this.vehiclesService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener un vehículo por ID',
