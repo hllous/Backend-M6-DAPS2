@@ -22,6 +22,7 @@ import {
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, Roles } from '../../common/decorators';
 import { ROLES_ADMIN } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('service-frequencies')
 @ApiBearerAuth('JWT-auth')
@@ -64,6 +65,7 @@ export class ServiceFrequenciesController {
     return this.serviceFrequenciesService.create(dto);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar frecuencias de servicio',
@@ -77,6 +79,7 @@ export class ServiceFrequenciesController {
     return this.serviceFrequenciesService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener una frecuencia por ID',

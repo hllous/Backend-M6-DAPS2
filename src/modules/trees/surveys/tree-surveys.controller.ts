@@ -5,6 +5,7 @@ import { CreateTreeSurveyDto, TreeSurveyResponseDto, QueryTreeSurveysDto } from 
 import { ErrorResponseDto } from '../../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../../common/decorators';
 import { ROLES_CUADRILLA } from '../../../auth/role-groups';
+import { ApiAnyM6Role } from '../../../common/decorators/roles.decorator';
 
 @ApiTags('tree-surveys')
 @ApiBearerAuth('JWT-auth')
@@ -41,6 +42,7 @@ export class TreeSurveysController {
     return this.treeSurveysService.create(treeId, dto, userId);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar relevamientos de un árbol',
@@ -59,6 +61,7 @@ export class TreeSurveysController {
     return this.treeSurveysService.findAllByTree(treeId, query);
   }
 
+  @ApiAnyM6Role()
   @Get(':surveyId')
   @ApiOperation({
     summary: 'Obtener un relevamiento por ID',

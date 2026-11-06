@@ -10,6 +10,7 @@ import {
   WasteIndicatorDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('indicators')
 @ApiBearerAuth('JWT-auth')
@@ -17,6 +18,7 @@ import { ErrorResponseDto } from '../../common/dto';
 export class IndicatorsController {
   constructor(private readonly indicatorsService: IndicatorsService) {}
 
+  @ApiAnyM6Role()
   @Get('coverage')
   @ApiOperation({
     summary: 'Cobertura del servicio',
@@ -40,6 +42,7 @@ export class IndicatorsController {
     return this.indicatorsService.coverage(query);
   }
 
+  @ApiAnyM6Role()
   @Get('compliance')
   @ApiOperation({
     summary: 'Cumplimiento y zonas no atendidas',
@@ -67,6 +70,7 @@ export class IndicatorsController {
     return this.indicatorsService.compliance(query);
   }
 
+  @ApiAnyM6Role()
   @Get('incidents')
   @ApiOperation({
     summary: 'Incidencias del inventario y de las denuncias',
@@ -94,6 +98,7 @@ export class IndicatorsController {
     return this.indicatorsService.incidents(query);
   }
 
+  @ApiAnyM6Role()
   @Get('waste')
   @ApiOperation({
     summary: 'Residuos recolectados y destino final',

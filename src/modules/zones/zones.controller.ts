@@ -24,6 +24,7 @@ import { ErrorResponseDto } from '../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('zones')
 @ApiBearerAuth('JWT-auth')
@@ -72,6 +73,7 @@ export class ZonesController {
     return this.zonesService.create(dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar zonas operativas',
@@ -98,6 +100,7 @@ export class ZonesController {
     return this.zonesService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener una zona por ID',

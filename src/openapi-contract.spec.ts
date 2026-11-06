@@ -41,6 +41,17 @@ describe('contrato OpenAPI', () => {
     expect(sinSchema).toEqual([]);
   });
 
+  it('todo GET autenticado declara el 403 (estandar-swagger.md)', () => {
+    // Un GET sin @Roles igual exige algun rol de M6 (RolesGuard): usar @ApiAnyM6Role.
+    const sin403: string[] = [];
+    for (const [ruta, operaciones] of Object.entries(documento.paths)) {
+      const get = operaciones.get as
+        { security?: unknown[]; responses?: Record<string, unknown> } | undefined;
+      if (get?.security?.length && !get.responses?.['403']) sin403.push(`GET ${ruta}`);
+    }
+    expect(sin403).toEqual([]);
+  });
+
   it('docs/api/openapi.json está al día con el código', () => {
     const versionado = JSON.parse(
       readFileSync(join(__dirname, '..', 'docs', 'api', 'openapi.json'), 'utf-8'),
