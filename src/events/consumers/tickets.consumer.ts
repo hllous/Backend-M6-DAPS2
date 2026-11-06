@@ -6,6 +6,7 @@ import {
   ServiceStatus,
   Severity,
 } from '@prisma/client';
+import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { aFecha, InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent, TicketUpdateType } from '../inbox/consumed-events';
@@ -16,6 +17,10 @@ import { OutboxService } from '../outbox/outbox.service';
 import { AggregateType, EventType } from '../event-types';
 import * as payloads from '../payloads';
 import { REPORT_TRANSITIONS } from '../../modules/environmental-reports/environmental-reports.service';
+import { recordEach, sistema } from './system-audit';
+
+/** Quien actuó en lo que dispara M2: no hay persona en el token. */
+const M2 = sistema('m2');
 
 /**
  * Cómo nos nombra M2 en `responsibleAreaId`: el identificador canónico `Mx` de
@@ -110,6 +115,7 @@ export class TicketsConsumer implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly inbox: InboxService,
     private readonly outbox: OutboxService,
+    private readonly audit: AuditService,
   ) {}
 
   onModuleInit(): void {
@@ -252,14 +258,16 @@ export class TicketsConsumer implements OnModuleInit {
    * estado recibido (`registrarRecibido`). Sin pendiente no toca nada.
    */
   private async cerrarSolicitud(ticketId: string, at: Date | null): Promise<void> {
-    const { count } = await this.prisma.environmentalReport.updateMany({
-      where: {
+    const count = await this.updateConAuditoria(
+      {
         ticketId,
         informationRequestedAt: { not: null },
         ...this.noAtrasado('citizenResponseAt', at),
       },
-      data: SIN_SOLICITUD,
-    });
+      SIN_SOLICITUD,
+      'CANCEL_INFORMATION_REQUEST',
+      'La solicitud de información dejó de estar vigente',
+    );
     if (count) {
       this.logger.log(`ticketUpdated: solicitud de información del ticket ${ticketId} cerrada`);
     }
@@ -270,9 +278,29 @@ export class TicketsConsumer implements OnModuleInit {
    * evita que un ROUTED viejo, de antes de la devolución, que llega tarde lo cierre.
    */
   private async cerrarDevuelto(ticketId: string, at: Date | null): Promise<void> {
-    const { count } = await this.prisma.environmentalReport.updateMany({
-      where: { ticketId, status: S.FORWARDED, ...this.noAtrasado('ticketStatusAt', at) },
-      data: { status: S.CLOSED },
+    const where = { ticketId, status: S.FORWARDED, ...this.noAtrasado('ticketStatusAt', at) };
+    const count = await this.prisma.$transaction(async (tx) => {
+      const filas = await tx.environmentalReport.findMany({ where, select: { id: true } });
+      const { count } = await tx.environmentalReport.updateMany({
+        where,
+        data: { status: S.CLOSED },
+      });
+      if (count) {
+        await recordEach(
+          this.audit,
+          tx,
+          filas.map(({ id }) => ({ id, fromStatus: S.FORWARDED })),
+          count,
+          {
+            entityType: 'ENVIRONMENTAL_REPORT',
+            action: 'CLOSE',
+            toStatus: S.CLOSED,
+            actor: M2,
+            note: 'ticketUpdated/ROUTED a otra área',
+          },
+        );
+      }
+      return count;
     });
     if (count) {
       this.logger.log(
@@ -371,6 +399,17 @@ export class TicketsConsumer implements OnModuleInit {
           },
           data: { ...snapshot, status: S.UNDER_REVIEW },
         });
+        if (count) {
+          await this.audit.record(tx, {
+            entityType: 'ENVIRONMENTAL_REPORT',
+            entityId: existente.id,
+            action: 'REACTIVATE',
+            fromStatus: S.FORWARDED,
+            toStatus: S.UNDER_REVIEW,
+            actor: M2,
+            note: 'ticketUpdated/ROUTED',
+          });
+        }
         if (count && existente.ticketId) {
           // Si por algún motivo el ticket ya está IN_PROGRESS, repetir STARTED no
           // es válido para M2: va como PROGRESS. Desde un estado que no admite
@@ -401,8 +440,19 @@ export class TicketsConsumer implements OnModuleInit {
       return;
     }
 
-    const report = await this.prisma.environmentalReport.create({
-      data: { ticketId, ...snapshot, status: S.RECEIVED },
+    const report = await this.prisma.$transaction(async (tx) => {
+      const creado = await tx.environmentalReport.create({
+        data: { ticketId, ...snapshot, status: S.RECEIVED },
+      });
+      await this.audit.record(tx, {
+        entityType: 'ENVIRONMENTAL_REPORT',
+        entityId: creado.id,
+        action: 'CREATE',
+        toStatus: S.RECEIVED,
+        actor: M2,
+        note: 'ticketUpdated/ROUTED',
+      });
+      return creado;
     });
 
     this.logger.log(
@@ -446,32 +496,53 @@ export class TicketsConsumer implements OnModuleInit {
       if (report?.status === S.UNDER_REVIEW) {
         // El estado leído en el `where` es el guard: si otro evento lo movió
         // entre la lectura y acá, no se pisa.
-        await tx.environmentalReport.updateMany({
+        const { count } = await tx.environmentalReport.updateMany({
           where: { id: report.id, status: S.UNDER_REVIEW },
           // Sale de UNDER_REVIEW: la solicitud pendiente quedaría pegada (y close()
           // daría 409 para siempre), y este camino no depende de que venga currentStatus.
           data: { status: S.DISMISSED, ...SIN_SOLICITUD },
         });
+        if (count) {
+          await this.auditCancelacion(tx, report.id, 'DISMISS', S.UNDER_REVIEW, S.DISMISSED);
+        }
       }
 
       if (report?.status === S.FORWARDED) {
         // M2 canceló administrativamente el ticket que habíamos devuelto.
-        await tx.environmentalReport.updateMany({
+        const { count } = await tx.environmentalReport.updateMany({
           where: { id: report.id, status: S.FORWARDED },
           data: { status: S.CLOSED, ...SIN_SOLICITUD },
         });
+        if (count) await this.auditCancelacion(tx, report.id, 'CLOSE', S.FORWARDED, S.CLOSED);
       }
 
+      const where = {
+        ticketId,
+        status: { in: [ServiceStatus.SCHEDULED, ServiceStatus.RESCHEDULED] },
+      };
+      const servicios = await tx.service.findMany({ where, select: { id: true, status: true } });
       const { count } = await tx.service.updateMany({
-        where: {
-          ticketId,
-          status: { in: [ServiceStatus.SCHEDULED, ServiceStatus.RESCHEDULED] },
-        },
+        where,
         data: {
           status: ServiceStatus.CANCELLED,
           statusReason: 'El vecino canceló el reclamo en M2',
         },
       });
+      if (count) {
+        await recordEach(
+          this.audit,
+          tx,
+          servicios.map(({ id, status }) => ({ id, fromStatus: status })),
+          count,
+          {
+            entityType: 'SERVICE',
+            action: 'CANCEL',
+            toStatus: ServiceStatus.CANCELLED,
+            actor: M2,
+            note: 'ticketUpdated/CANCELLED',
+          },
+        );
+      }
       return count;
     });
 
@@ -497,10 +568,12 @@ export class TicketsConsumer implements OnModuleInit {
     const priority = this.prioridad(data.currentPriority);
     if (!priority) return;
 
-    const { count } = await this.prisma.environmentalReport.updateMany({
-      where: { ticketId, ...this.noAtrasado('priorityChangedAt', at) },
-      data: { priority, ...(at && { priorityChangedAt: at }) },
-    });
+    const count = await this.updateConAuditoria(
+      { ticketId, ...this.noAtrasado('priorityChangedAt', at) },
+      { priority, ...(at && { priorityChangedAt: at }) },
+      'PRIORITY_CHANGE',
+      `Prioridad: ${priority}`,
+    );
     if (!count) return this.sinFilas('PRIORITY_CHANGED', 'priorityChangedAt', ticketId, at);
     this.logger.log(
       `ticketUpdated/PRIORITY_CHANGED: ${count} expediente/s del reclamo ${ticketId} a ${priority}`,
@@ -556,16 +629,19 @@ export class TicketsConsumer implements OnModuleInit {
       return;
     }
 
-    const { count } = await this.prisma.environmentalReport.updateMany({
-      where: { ticketId, ...this.noAtrasado('citizenResponseAt', at) },
-      data: {
+    // La nota no lleva el texto: es contenido del vecino y la auditoría no se purga.
+    const count = await this.updateConAuditoria(
+      { ticketId, ...this.noAtrasado('citizenResponseAt', at) },
+      {
         citizenResponse: respuesta.slice(0, 2000),
         ...(at && { citizenResponseAt: at }),
         // Contestó: se cierra la solicitud pendiente (#169), en el mismo update para
         // que el orden por citizenResponseAt valga también para cerrarla.
         ...SIN_SOLICITUD,
       },
-    });
+      'INFORMATION_PROVIDED',
+      'El vecino respondió la solicitud de información',
+    );
     if (!count) return this.sinFilas('INFORMATION_PROVIDED', 'citizenResponseAt', ticketId, at);
     this.logger.log(
       `ticketUpdated/INFORMATION_PROVIDED: respuesta del vecino sumada a ${count} expediente/s`,
@@ -603,9 +679,23 @@ export class TicketsConsumer implements OnModuleInit {
 
     // `updateMany` no pasa por assertTransition: el estado leído (que la tabla
     // acaba de admitir) en el `where` es el guard, junto con la marca.
-    const { count } = await this.prisma.environmentalReport.updateMany({
-      where: { id: report.id, status: report.status, ...this.noAtrasado('ticketStatusAt', at) },
-      data: { status: S.UNDER_REVIEW, ...(at && { ticketStatusAt: at }) },
+    const count = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.environmentalReport.updateMany({
+        where: { id: report.id, status: report.status, ...this.noAtrasado('ticketStatusAt', at) },
+        data: { status: S.UNDER_REVIEW, ...(at && { ticketStatusAt: at }) },
+      });
+      if (count) {
+        await this.audit.record(tx, {
+          entityType: 'ENVIRONMENTAL_REPORT',
+          entityId: report.id,
+          action: 'REOPEN',
+          fromStatus: report.status,
+          toStatus: S.UNDER_REVIEW,
+          actor: M2,
+          note: 'ticketUpdated/REOPENED',
+        });
+      }
+      return count;
     });
     if (!count) {
       this.logger.warn(
@@ -640,10 +730,12 @@ export class TicketsConsumer implements OnModuleInit {
       return;
     }
 
-    const { count } = await this.prisma.environmentalReport.updateMany({
-      where: { ticketId, ...this.noAtrasado('escalationChangedAt', at) },
-      data: { escalated, ...(at && { escalationChangedAt: at }) },
-    });
+    const count = await this.updateConAuditoria(
+      { ticketId, ...this.noAtrasado('escalationChangedAt', at) },
+      { escalated, ...(at && { escalationChangedAt: at }) },
+      'ESCALATION_CHANGE',
+      `Escalamiento: ${escalated ? 'activo' : 'inactivo'}`,
+    );
     if (!count) return this.sinFilas('ESCALATION_CHANGED', 'escalationChangedAt', ticketId, at);
     this.logger.log(
       `ticketUpdated/ESCALATION_CHANGED: ${count} expediente/s marcado/s escalated=${escalated}`,
@@ -651,6 +743,56 @@ export class TicketsConsumer implements OnModuleInit {
   }
 
   // ─── Helpers ──────────────────────────────────────
+
+  /**
+   * Un cambio de dato sin máquina de estados (prioridad, respuesta, escalamiento)
+   * con su fila de auditoría. `updateMany` no devuelve ids: se leen con un
+   * `findMany` del mismo where en la misma transacción, y solo se audita si el
+   * update tocó filas (un evento atrasado no deja rastro). El estado del
+   * expediente no cambia: va como `fromStatus` para ubicarlo.
+   */
+  private updateConAuditoria(
+    where: Prisma.EnvironmentalReportWhereInput,
+    data: Prisma.EnvironmentalReportUpdateManyMutationInput,
+    action: string,
+    note: string,
+  ): Promise<number> {
+    return this.prisma.$transaction(async (tx) => {
+      const filas = await tx.environmentalReport.findMany({
+        where,
+        select: { id: true, status: true },
+      });
+      const { count } = await tx.environmentalReport.updateMany({ where, data });
+      if (count) {
+        await recordEach(
+          this.audit,
+          tx,
+          filas.map(({ id, status }) => ({ id, fromStatus: status })),
+          count,
+          { entityType: 'ENVIRONMENTAL_REPORT', action, actor: M2, note },
+        );
+      }
+      return count;
+    });
+  }
+
+  private auditCancelacion(
+    tx: Prisma.TransactionClient,
+    id: string,
+    action: 'DISMISS' | 'CLOSE',
+    from: S,
+    to: S,
+  ): Promise<void> {
+    return this.audit.record(tx, {
+      entityType: 'ENVIRONMENTAL_REPORT',
+      entityId: id,
+      action,
+      fromStatus: from,
+      toStatus: to,
+      actor: M2,
+      note: 'ticketUpdated/CANCELLED',
+    });
+  }
 
   /**
    * El filtro que deja escribir solo si el evento no es más viejo que el último

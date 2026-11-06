@@ -22,6 +22,7 @@ import { ErrorResponseDto } from '../../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../../common/decorators';
 import { ROLES_OPERACIONES } from '../../../auth/role-groups';
 import { AuthenticatedUser } from '../../../auth/jwt.strategy';
+import { ApiAnyM6Role } from '../../../common/decorators/roles.decorator';
 
 @ApiTags('tree-interventions')
 @ApiBearerAuth('JWT-auth')
@@ -56,6 +57,7 @@ export class TreeInterventionsController {
     return this.treeInterventionsService.create(dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar intervenciones sobre árboles',
@@ -74,6 +76,7 @@ export class TreeInterventionsController {
     return this.treeInterventionsService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener una intervención por ID',

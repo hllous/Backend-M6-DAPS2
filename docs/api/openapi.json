@@ -28,7 +28,7 @@
       "get": {
         "operationId": "HealthController_ready",
         "summary": "Readiness: verifica la conexión a la base",
-        "description": "Ejecuta un SELECT 1 con un timeout de 3 s. Responde 503 si la base no contesta; es el endpoint para monitoreo.",
+        "description": "Ejecuta un SELECT 1 con un timeout de 3 s. Responde 503 si la base no contesta; es el endpoint para monitoreo. Informa también el estado del bus (`broker`), pero un bus caído no cambia el código: la API sigue sirviendo.",
         "parameters": [],
         "responses": {
           "200": {
@@ -191,6 +191,262 @@
             "JWT-auth": []
           }
         ]
+      },
+      "get": {
+        "operationId": "InboxController_findAll",
+        "summary": "Listar los eventos entrantes recibidos",
+        "description": "Listado paginado para el Monitor de integración, del más reciente al más viejo por `receivedAt`, con estado derivado (`processed`, `failed`, `pending`) y error acotado. Filtra por `status`, `eventType`, `sourceModule` y rango de `receivedAt` (días argentinos, inclusivos). No incluye el payload, que es de terceros y puede traer datos personales: está en el detalle, solo para admin.",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-indexed)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Registros por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Estado derivado: `processed` (efecto aplicado), `failed` (el handler falló y quedó con error, reintentable) o `pending` (guardado, sin procesar ni error: en curso)",
+            "schema": {
+              "example": "failed",
+              "enum": [
+                "processed",
+                "failed",
+                "pending"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por tipo de evento (exacto, camelCase)",
+            "schema": {
+              "maxLength": 100,
+              "example": "ticketUpdated",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceModule",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por módulo emisor del sobre (exacto)",
+            "schema": {
+              "maxLength": 100,
+              "example": "tickets",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Recibidos desde este día, inclusive (YYYY-MM-DD, día argentino UTC-3). Filtra por `receivedAt`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Recibidos hasta este día, inclusive: hasta las 23:59:59 ART (YYYY-MM-DD). No puede ser anterior a `from`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado de eventos entrantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InboxEventResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros inválidos (estado desconocido, fecha mal formada, `from` > `to`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_AUDITOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/events/inbox/{messageId}": {
+      "get": {
+        "operationId": "InboxController_findOne",
+        "summary": "Detalle de un evento entrante, con su payload",
+        "description": "Devuelve el evento tal como se guardó, con el payload recibido. Solo admin, porque el payload es de terceros y puede incluir datos personales.",
+        "parameters": [
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "description": "eventId del sobre",
+            "schema": {
+              "example": "ev-0001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evento con payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxEventDetailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "messageId más largo que el máximo de un id externo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe ese evento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
       }
     },
     "/events/handlers": {
@@ -212,6 +468,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -724,7 +990,8 @@
                 "CREW",
                 "ZONE",
                 "VEHICLE",
-                "ROUTE"
+                "ROUTE",
+                "SANCTION_OUTCOME"
               ],
               "type": "string"
             }
@@ -1013,6 +1280,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -1064,6 +1341,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -1522,6 +1809,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -1596,6 +1893,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -1831,6 +2138,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -1882,6 +2199,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -2278,6 +2605,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -2329,6 +2666,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -2720,6 +3067,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -2771,6 +3128,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3299,6 +3666,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -3350,6 +3727,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3633,8 +4020,28 @@
               }
             }
           },
+          "422": {
+            "description": "Algún id de usuario no existe en M1 o no es un empleado activo (el mensaje los lista)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "M1 no responde y no se pudo validar a los usuarios; no se guardó nada",
             "content": {
               "application/json": {
                 "schema": {
@@ -3799,6 +4206,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -3850,6 +4267,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -3965,8 +4392,28 @@
               }
             }
           },
+          "422": {
+            "description": "Algún id de usuario no existe en M1 o no es un empleado activo (el mensaje los lista)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "M1 no responde y no se pudo validar a los usuarios; no se guardó nada",
             "content": {
               "application/json": {
                 "schema": {
@@ -4134,8 +4581,28 @@
               }
             }
           },
+          "422": {
+            "description": "Algún id de usuario no existe en M1 o no es un empleado activo (el mensaje los lista)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "M1 no responde y no se pudo validar a los usuarios; no se guardó nada",
             "content": {
               "application/json": {
                 "schema": {
@@ -4384,6 +4851,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Cuadrilla no encontrada",
             "content": {
@@ -4596,6 +5073,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -4647,6 +5134,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -5082,6 +5579,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -5133,6 +5640,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -5338,6 +5855,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6229,7 +6756,7 @@
       "get": {
         "operationId": "TreesController_findAll",
         "summary": "Listar árboles del inventario",
-        "description": "Retorna un listado paginado de árboles. Se puede filtrar por estado, zona y buscar por especie o dirección.",
+        "description": "Retorna un listado paginado de árboles. Se puede filtrar por estado, zona y nivel de riesgo (`riskLevel`, del último relevamiento) y buscar por especie o dirección.",
         "parameters": [
           {
             "name": "page",
@@ -6275,6 +6802,22 @@
             }
           },
           {
+            "name": "riskLevel",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por nivel de riesgo del último relevamiento (el mismo criterio que `indicators/incidents` → `trees.byRiskLevel`). Los árboles sin relevamiento no coinciden con ningún nivel",
+            "schema": {
+              "enum": [
+                "NONE",
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
@@ -6311,8 +6854,28 @@
               }
             }
           },
+          "400": {
+            "description": "Filtro inválido (p. ej. riskLevel fuera del enum)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6372,6 +6935,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6785,6 +7358,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Árbol no encontrado",
             "content": {
@@ -6856,6 +7439,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7118,6 +7711,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -7169,6 +7772,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7806,6 +8419,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -7857,6 +8480,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8274,6 +8907,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -8325,6 +8968,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -8854,6 +9507,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -8905,6 +9568,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -9399,6 +10072,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -10309,6 +10992,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Servicio no encontrado",
             "content": {
@@ -10480,6 +11173,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -10667,6 +11370,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Expediente no encontrado",
             "content": {
@@ -10728,6 +11441,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -11294,6 +12017,50 @@
             }
           },
           {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "description": "Creados desde este día, inclusive (YYYY-MM-DD, día argentino). Es el período de `indicators/incidents`, que cuenta por fecha de alta (no por `from`/`to`, que miran la última actualización)",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-09-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "description": "Creados hasta este día, inclusive (YYYY-MM-DD). No puede ser anterior a `createdFrom`",
+            "schema": {
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-09-30",
+              "type": "string"
+            }
+          },
+          {
+            "name": "overdue",
+            "required": false,
+            "in": "query",
+            "description": "`true`: solo las vencidas (abiertas, es decir no CLOSED, con más días hábiles desde el alta hasta hoy que `INDICATORS_REPORT_DEADLINE_BUSINESS_DAYS`), con el criterio exacto de `indicators/incidents` → `reports.overdue`. `false`: el resto. Sin el parámetro no filtra",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "zoneId",
+            "required": false,
+            "in": "query",
+            "description": "Zona derivada de la denuncia: la del servicio de su inspección más reciente (sin contar CANCELLED) cuando cubre una sola zona. Coincide con `reports.overdue.byZone`",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
@@ -11343,6 +12110,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -11402,6 +12179,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -12164,6 +12951,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -12215,6 +13012,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -12631,6 +13438,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -12682,6 +13499,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -13687,6 +14514,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -13812,6 +14649,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -13917,6 +14764,16 @@
               }
             }
           },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -14014,6 +14871,16 @@
           },
           "401": {
             "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta algún rol de M6 (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
             "content": {
               "application/json": {
                 "schema": {
@@ -14590,13 +15457,24 @@
             "type": "string",
             "example": "up",
             "description": "Estado de la conexión a la base"
+          },
+          "broker": {
+            "type": "string",
+            "enum": [
+              "connected",
+              "reconnecting",
+              "disabled"
+            ],
+            "example": "connected",
+            "description": "Estado del consumidor del bus de eventos (RabbitMQ). Es solo informativo: un bus caído no vuelve 503, la API sigue sirviendo. \"disabled\" = sin RABBITMQ_URL."
           }
         },
         "required": [
           "status",
           "timestamp",
           "service",
-          "database"
+          "database",
+          "broker"
         ]
       },
       "ErrorResponseDto": {
@@ -14862,25 +15740,6 @@
           "status"
         ]
       },
-      "RegisteredHandlersDto": {
-        "type": "object",
-        "properties": {
-          "eventTypes": {
-            "example": [
-              "ticketUpdated",
-              "weatherAlertIssued"
-            ],
-            "description": "Tipos de evento con handler registrado",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "eventTypes"
-        ]
-      },
       "PaginationMeta": {
         "type": "object",
         "properties": {
@@ -14910,6 +15769,163 @@
           "page",
           "pageSize",
           "totalPages"
+        ]
+      },
+      "InboxEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "example": "a1b2c3d4-e5f6-4a78-9b01-234567890abc",
+            "description": "eventId del sobre"
+          },
+          "eventType": {
+            "type": "string",
+            "example": "ticketUpdated",
+            "description": "Tipo de evento (camelCase)"
+          },
+          "sourceModule": {
+            "type": "string",
+            "nullable": true,
+            "example": "tickets",
+            "description": "Módulo emisor según el sobre del Core; null si no lo mandó"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processed",
+              "failed",
+              "pending"
+            ],
+            "example": "processed"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-28T14:30:00.000Z"
+          },
+          "processedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuándo se aplicó el efecto; null si no se procesó"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "occurredAt del sobre; null si no lo trajo"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "example": "ticketId inexistente",
+            "description": "Error del último intento del handler, acotado a 500 caracteres"
+          }
+        },
+        "required": [
+          "messageId",
+          "eventType",
+          "status",
+          "receivedAt"
+        ]
+      },
+      "InboxEventDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "example": "a1b2c3d4-e5f6-4a78-9b01-234567890abc",
+            "description": "eventId del sobre"
+          },
+          "eventType": {
+            "type": "string",
+            "example": "ticketUpdated",
+            "description": "Tipo de evento (camelCase)"
+          },
+          "sourceModule": {
+            "type": "string",
+            "nullable": true,
+            "example": "tickets",
+            "description": "Módulo emisor según el sobre del Core; null si no lo mandó"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processed",
+              "failed",
+              "pending"
+            ],
+            "example": "processed"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-28T14:30:00.000Z"
+          },
+          "processedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuándo se aplicó el efecto; null si no se procesó"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "occurredAt del sobre; null si no lo trajo"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "example": "ticketId inexistente",
+            "description": "Error del último intento del handler, acotado a 500 caracteres"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "ticketId": "b2c3d4e5-f6a7-4b89-8c12-34567890abcd",
+              "status": "RESOLVED"
+            },
+            "description": "Payload tal como llegó. Puede incluir datos personales"
+          }
+        },
+        "required": [
+          "messageId",
+          "eventType",
+          "status",
+          "receivedAt",
+          "payload"
+        ]
+      },
+      "RegisteredHandlersDto": {
+        "type": "object",
+        "properties": {
+          "eventTypes": {
+            "example": [
+              "ticketUpdated",
+              "weatherAlertIssued"
+            ],
+            "description": "Tipos de evento con handler registrado",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "eventTypes"
         ]
       },
       "OutboxEventResponseDto": {
@@ -15185,7 +16201,8 @@
               "CREW",
               "ZONE",
               "VEHICLE",
-              "ROUTE"
+              "ROUTE",
+              "SANCTION_OUTCOME"
             ],
             "example": "CONTAINER"
           },
@@ -19582,6 +20599,42 @@
           "suggestedAction"
         ]
       },
+      "SanctionOutcomeResponseDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "description": "Qué resolvió M4",
+            "enum": [
+              "FINE_ISSUED",
+              "CLOSURE_ORDERED",
+              "FORMAL_NOTICE_ISSUED",
+              "DISMISSED"
+            ],
+            "example": "FINE_ISSUED"
+          },
+          "decidedAt": {
+            "type": "string",
+            "description": "Cuándo decidió M4",
+            "format": "date-time",
+            "nullable": true
+          },
+          "externalRef": {
+            "type": "string",
+            "description": "Número administrativo legible de la multa o clausura que informa M4. Null si M4 no lo envió.",
+            "nullable": true,
+            "example": "MULTA-2026-00125"
+          },
+          "dismissalReason": {
+            "type": "string",
+            "description": "Motivo del desistimiento, si lo hubo",
+            "nullable": true
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
       "ViolationNoticeResponseDto": {
         "type": "object",
         "properties": {
@@ -19592,7 +20645,7 @@
           },
           "noticeNumber": {
             "type": "string",
-            "description": "Número de acta correlativo. Es lo que identifica el acto administrativo.",
+            "description": "Número del acta de M6, correlativo. Es lo que identifica el acta; el número de la multa o clausura es el externalRef de M4.",
             "example": "ACTA-2026-000012"
           },
           "inspectionId": {
@@ -19648,6 +20701,15 @@
             "description": "Actas previas al mismo establecimiento en nuestro histórico. Le adelanta la reincidencia a M4.",
             "example": 2
           },
+          "sanctionOutcome": {
+            "description": "Resolución de M4 (multa o clausura). Null mientras M4 no resolvió. Solo lectura: se espeja desde el bus.",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SanctionOutcomeResponseDto"
+              }
+            ]
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string",
@@ -19663,6 +20725,7 @@
           "severity",
           "suggestedAction",
           "priorNoticeCount",
+          "sanctionOutcome",
           "createdAt"
         ]
       },
@@ -19739,6 +20802,11 @@
             "type": "string",
             "description": "UUID del expediente",
             "format": "uuid"
+          },
+          "caseNumber": {
+            "type": "string",
+            "description": "Número de expediente de M6, legible y estable. Lo tienen todos, también los de oficio sin reclamo (que no tienen publicId). Solo para mostrar: no es credencial ni viaja en eventos.",
+            "example": "EXP-2026-000123"
           },
           "reportType": {
             "type": "string",
@@ -19873,6 +20941,7 @@
         },
         "required": [
           "id",
+          "caseNumber",
           "reportType",
           "status",
           "escalated",
@@ -21368,6 +22437,36 @@
           "count"
         ]
       },
+      "TreesByZoneDto": {
+        "type": "object",
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "Z-CENTRO"
+          },
+          "name": {
+            "type": "string",
+            "example": "Centro"
+          },
+          "byRiskLevel": {
+            "description": "Árboles activos de la zona por nivel, según su último relevamiento. Solo niveles con árboles",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RiskCountDto"
+            }
+          }
+        },
+        "required": [
+          "zoneId",
+          "code",
+          "name",
+          "byRiskLevel"
+        ]
+      },
       "TreeIncidentsDto": {
         "type": "object",
         "properties": {
@@ -21377,10 +22476,18 @@
             "items": {
               "$ref": "#/components/schemas/RiskCountDto"
             }
+          },
+          "byZone": {
+            "description": "La misma foto abierta por la zona del árbol (`Tree.zoneId`, siempre informada). No depende del período. Para listar: `GET /trees?riskLevel=HIGH&active=true&zoneId=…`",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TreesByZoneDto"
+            }
           }
         },
         "required": [
-          "byRiskLevel"
+          "byRiskLevel",
+          "byZone"
         ]
       },
       "WithinDeadlineDto": {
@@ -21409,6 +22516,53 @@
           "pct"
         ]
       },
+      "OverdueByZoneDto": {
+        "type": "object",
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Zona derivada del servicio de la inspección más reciente (sin contar CANCELLED), solo si ese servicio cubre una única zona. `null` agrupa las denuncias sin inspección con servicio o con un servicio de varias zonas"
+          },
+          "code": {
+            "type": "string",
+            "example": "Z-CENTRO",
+            "nullable": true,
+            "description": "Null si `zoneId` es null"
+          },
+          "name": {
+            "type": "string",
+            "example": "Centro",
+            "nullable": true,
+            "description": "Null si `zoneId` es null"
+          },
+          "open": {
+            "type": "number",
+            "description": "Abiertas (no CLOSED) de la zona creadas en el período",
+            "example": 4
+          },
+          "overdue": {
+            "type": "number",
+            "description": "Vencidas de la zona, con la misma definición que `overdue.overdue`",
+            "example": 1
+          },
+          "pct": {
+            "type": "number",
+            "description": "Vencidas ÷ abiertas de la zona, un decimal",
+            "example": 25,
+            "nullable": true
+          }
+        },
+        "required": [
+          "zoneId",
+          "code",
+          "name",
+          "open",
+          "overdue",
+          "pct"
+        ]
+      },
       "OverdueDto": {
         "type": "object",
         "properties": {
@@ -21427,12 +22581,20 @@
             "description": "Vencidos ÷ abiertos, con un decimal. **Null si no hay abiertos**: es la ausencia de dato, no un 0 %",
             "example": 11.1,
             "nullable": true
+          },
+          "byZone": {
+            "description": "Desglose por zona; suma lo mismo que `open` y `overdue`. Solo trae zonas con abiertas. Ordenado por vencidas, de mayor a menor. Para listar: `GET /environmental-reports?overdue=true&zoneId=…&createdFrom=…&createdTo=…`",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OverdueByZoneDto"
+            }
           }
         },
         "required": [
           "open",
           "overdue",
-          "pct"
+          "pct",
+          "byZone"
         ]
       },
       "ReportTypeCountDto": {

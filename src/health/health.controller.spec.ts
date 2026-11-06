@@ -1,10 +1,12 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { HealthController } from './health.controller';
+import { BusStatus } from '../events/bus-status';
 import { PrismaService } from '../prisma/prisma.service';
 
 describe('HealthController', () => {
   const queryRaw = jest.fn();
-  const controller = new HealthController({ $queryRaw: queryRaw } as unknown as PrismaService);
+  const bus = new BusStatus();
+  const controller = new HealthController({ $queryRaw: queryRaw } as unknown as PrismaService, bus);
 
   beforeEach(() => queryRaw.mockReset());
   afterEach(() => jest.useRealTimers());
@@ -21,9 +23,19 @@ describe('HealthController', () => {
     jest.useFakeTimers();
     queryRaw.mockResolvedValue([{ ok: 1 }]);
     const result = await controller.ready();
-    expect(result).toMatchObject({ status: 'ok', database: 'up' });
+    expect(result).toMatchObject({ status: 'ok', database: 'up', broker: 'disabled' });
     // El timeout de la carrera se limpia: si no, queda un timer vivo 3 s.
     expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('un broker caído no tumba ready: solo se informa', async () => {
+    queryRaw.mockResolvedValue([{ ok: 1 }]);
+    bus.state = 'reconnecting';
+    await expect(controller.ready()).resolves.toMatchObject({
+      database: 'up',
+      broker: 'reconnecting',
+    });
+    bus.state = 'disabled';
   });
 
   it('ready responde 503 sin filtrar el error de la base', async () => {

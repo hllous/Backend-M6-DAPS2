@@ -25,6 +25,7 @@ import { ErrorResponseDto, PaginationQueryDto } from '../../common/dto';
 import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('containers')
 @ApiBearerAuth('JWT-auth')
@@ -78,6 +79,7 @@ export class ContainersController {
     return this.containersService.create(dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar contenedores',
@@ -99,6 +101,7 @@ export class ContainersController {
     return this.containersService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener un contenedor por ID',
@@ -134,6 +137,7 @@ export class ContainersController {
     return this.containersService.findOne(id);
   }
 
+  @ApiAnyM6Role()
   @Get(':id/history')
   @ApiOperation({
     summary: 'Historial de estados de un contenedor',

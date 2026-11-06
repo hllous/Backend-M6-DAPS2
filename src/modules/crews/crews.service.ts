@@ -4,6 +4,8 @@ import {
   Injectable,
   NotFoundException,
   Logger,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -17,6 +19,7 @@ import {
   CreateCrewZoneAssignmentDto,
   CrewZoneAssignmentResponseDto,
 } from './dto';
+import { IdentityPort, IdentityUnavailableError } from '../../identity/identity.port';
 import { PaginatedResponseDto } from '../../common/dto';
 import { normalizeM1UserId } from '../../common/decorators';
 import { toDateOnly, todayArgentina } from '../../common/utils/date-only';
@@ -45,9 +48,12 @@ type CrewRow = Prisma.CrewGetPayload<{ include: ReturnType<typeof crewInclude> }
 export class CrewsService {
   private readonly logger = new Logger(CrewsService.name);
 
+  private avisoM1Emitido = false;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly identity: IdentityPort,
   ) {}
 
   /**
@@ -55,6 +61,8 @@ export class CrewsService {
    */
   async create(dto: CreateCrewDto, actor: AuditActor): Promise<CrewResponseDto> {
     if (dto.homeZoneId) await this.assertZoneUsable(dto.homeZoneId);
+    const leaderUserId = dto.leaderUserId ? normalizeM1UserId(dto.leaderUserId) : null;
+    const m1 = await this.validateAgainstM1(leaderUserId ? [leaderUserId] : []);
 
     const crew = await this.prisma.$transaction(async (tx) => {
       const created = await tx.crew.create({
@@ -64,8 +72,8 @@ export class CrewsService {
           defaultShift: dto.defaultShift,
           specialty: dto.specialty,
           homeZoneId: dto.homeZoneId ?? null,
-          leaderUserId: dto.leaderUserId ? normalizeM1UserId(dto.leaderUserId) : null,
-          leaderName: dto.leaderName || null,
+          leaderUserId,
+          leaderName: dto.leaderName || this.fullName(m1.get(leaderUserId ?? '')),
           organizationId: dto.organizationId ?? null,
           organizationName: dto.organizationName || null,
           active: dto.active ?? true,
@@ -158,8 +166,13 @@ export class CrewsService {
    * crewType no se puede cambiar después de la creación.
    */
   async update(id: string, dto: UpdateCrewDto, actor: AuditActor): Promise<CrewResponseDto> {
-    await this.ensureExists(id);
+    const current = await this.ensureExists(id);
     if (dto.homeZoneId) await this.assertZoneUsable(dto.homeZoneId);
+    // Solo se consulta un líder nuevo: reeditar otros campos no depende de M1.
+    const newLeader = dto.leaderUserId ? normalizeM1UserId(dto.leaderUserId) : null;
+    const m1 = await this.validateAgainstM1(
+      newLeader && newLeader !== current.leaderUserId ? [newLeader] : [],
+    );
 
     const crew = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.crew.update({
@@ -168,12 +181,13 @@ export class CrewsService {
         data: {
           ...(dto.name !== undefined && { name: dto.name }),
           ...(dto.defaultShift !== undefined && { defaultShift: dto.defaultShift }),
-          ...(dto.leaderUserId !== undefined && {
-            leaderUserId: dto.leaderUserId ? normalizeM1UserId(dto.leaderUserId) : null,
-          }),
+          ...(dto.leaderUserId !== undefined && { leaderUserId: newLeader }),
           ...(dto.organizationId !== undefined && { organizationId: dto.organizationId }),
           // Vacío y null borran el nombre guardado: no queda un "" que se muestre como nombre.
           ...(dto.leaderName !== undefined && { leaderName: dto.leaderName || null }),
+          // Líder nuevo sin nombre en el dto: el de M1 reemplaza el del líder anterior.
+          ...(dto.leaderName === undefined &&
+            m1.has(newLeader ?? '') && { leaderName: this.fullName(m1.get(newLeader ?? '')) }),
           ...(dto.organizationName !== undefined && {
             organizationName: dto.organizationName || null,
           }),
@@ -243,11 +257,19 @@ export class CrewsService {
       entradas.set(userId, m.displayName || entradas.get(userId) || null);
     }
 
+    // Los que ya integran la cuadrilla ya se validaron al entrar: no se consultan de nuevo.
+    const existentes = await this.prisma.crewMember.findMany({
+      where: { crewId, userId: { in: [...entradas.keys()] } },
+      select: { userId: true },
+    });
+    const yaEstan = new Set(existentes.map((e) => e.userId));
+    const m1 = await this.validateAgainstM1([...entradas.keys()].filter((u) => !yaEstan.has(u)));
+
     await this.prisma.$transaction(async (tx) => {
       for (const [userId, displayName] of entradas) {
         await tx.crewMember.upsert({
           where: { crewId_userId: { crewId, userId } },
-          create: { crewId, userId, displayName },
+          create: { crewId, userId, displayName: displayName ?? this.fullName(m1.get(userId)) },
           update: displayName ? { displayName } : {},
         });
       }
@@ -372,14 +394,68 @@ export class CrewsService {
 
   // ─── Helpers ──────────────────────────────────────
 
-  private async ensureExists(id: string): Promise<void> {
+  private async ensureExists(id: string): Promise<{ leaderUserId: string | null }> {
     const exists = await this.prisma.crew.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, leaderUserId: true },
     });
     if (!exists) {
       throw new NotFoundException(`Cuadrilla con id '${id}' no encontrada`);
     }
+    return exists;
+  }
+
+  private fullName(r?: { nombre: string; apellido: string }): string | null {
+    return r ? `${r.nombre} ${r.apellido}`.trim() : null;
+  }
+
+  /**
+   * Comprueba en M1 que cada `sub` sea un empleado activo (ADR-009). Se llama antes
+   * de abrir la transacción: con M1 caída no se guarda nada. Todos los fallos
+   * salen juntos en un solo 422. Sin M1_BASE_URL se omite (local, e2e, demo).
+   */
+  private async validateAgainstM1(subs: string[]) {
+    const found = new Map<string, { nombre: string; apellido: string }>();
+    const unicos = [...new Set(subs)];
+    if (unicos.length === 0) return found;
+    if (!this.identity.enabled) {
+      if (!this.avisoM1Emitido) {
+        this.avisoM1Emitido = true;
+        this.logger.warn(
+          'M1_BASE_URL sin configurar: no se validan líder ni integrantes contra M1',
+        );
+      }
+      return found;
+    }
+
+    const inexistentes: string[] = [];
+    const inactivos: string[] = [];
+    try {
+      // Lotes de 5 para no saturar a M1 con una cuadrilla grande.
+      for (let i = 0; i < unicos.length; i += 5) {
+        const lote = unicos.slice(i, i + 5);
+        const res = await Promise.all(lote.map((s) => this.identity.findEmployeeBySub(s)));
+        res.forEach((r, j) => {
+          if (!r) inexistentes.push(lote[j]);
+          else if (r.estado !== 'ACTIVO') inactivos.push(lote[j]);
+          else found.set(lote[j], r);
+        });
+      }
+    } catch (e) {
+      if (!(e instanceof IdentityUnavailableError)) throw e;
+      this.logger.error(`No se pudo validar contra M1: ${e.message}`);
+      throw new ServiceUnavailableException(
+        'No se pudo validar a los usuarios contra M1. Reintentá en unos minutos',
+      );
+    }
+
+    const partes: string[] = [];
+    if (inexistentes.length) partes.push(`no existen en M1: ${inexistentes.join(', ')}`);
+    if (inactivos.length) partes.push(`están inactivos en M1: ${inactivos.join(', ')}`);
+    if (partes.length) {
+      throw new UnprocessableEntityException(`Usuarios inválidos (${partes.join('; ')})`);
+    }
+    return found;
   }
 
   private async assertZoneUsable(zoneId: string): Promise<void> {

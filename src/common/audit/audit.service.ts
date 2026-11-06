@@ -6,7 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditEntityType } from './audit-entity-type';
 import { AuditLogResponseDto, QueryAuditDto } from './dto';
 
-/** Quien actuó: sale del token (`req.user`), nunca del body. */
+/** Quien actuó: sale del token (`req.user`), nunca del body; en eventos entrantes es `system:<módulo>` (p. ej. `system:m3`). */
 export interface AuditActor {
   userId: string;
   /** UUID de M1 para `updatedBy.id` hacia M2 (#485); no se audita. */

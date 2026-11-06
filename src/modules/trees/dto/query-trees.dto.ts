@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID } from 'class-validator';
+import { RiskLevel } from '@prisma/client';
+import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { SearchText, ToBoolean } from '../../../common/decorators';
 import { PaginationQueryDto } from '../../../common/dto';
 
@@ -13,6 +14,15 @@ export class QueryTreesDto extends PaginationQueryDto {
   @IsOptional()
   @IsUUID()
   zoneId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Filtrar por nivel de riesgo del último relevamiento (el mismo criterio que `indicators/incidents` → `trees.byRiskLevel`). Los árboles sin relevamiento no coinciden con ningún nivel',
+    enum: RiskLevel,
+  })
+  @IsOptional()
+  @IsEnum(RiskLevel)
+  riskLevel?: RiskLevel;
 
   @ApiPropertyOptional({ description: 'Buscar por especie o dirección' })
   @IsOptional()

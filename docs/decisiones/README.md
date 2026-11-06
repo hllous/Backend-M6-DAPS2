@@ -17,10 +17,11 @@ Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeraci�
 | Nº | Título | Estado | Fecha |
 |---|---|---|---|
 | [001](adr-001-stack-tecnologico.md) | Stack tecnológico del módulo | Aceptado | 2026-08-20 |
-| [002](adr-002-auth-provisoria.md) | Autenticación provisoria mientras M1 no publica su contrato de JWT | Aceptado | 2026-09-02 |
+| [002](adr-002-auth-provisoria.md) | Autenticación provisoria mientras M1 no publica su contrato de JWT | Aceptado (roles superados por ADR-008; nota del 2026-11-06) | 2026-09-02 |
 | [003](adr-003-divergencias-enums.md) | Resolución de las divergencias de enums con el acuerdo publicado | Aceptado | 2026-09-02 |
 | [004](adr-004-jwt-m1-y-puerto-identidad.md) | JWT de usuario emitido por M1 y consulta a identidad desacoplada por puerto | Aceptado | 2026-09-01 |
 | [005](adr-005-alineacion-frontend-sesion-y-seguridad.md) | Alineación de arquitectura de sesión BFF, separación de actores y postura de seguridad con el Frontend | Aceptado | 2026-09-03 |
 | [006](adr-006-rabbitmq-como-bus.md) | RabbitMQ como bus de eventos (reemplaza a Kafka) | Reemplazado parcialmente por ADR-007 | 2026-09-27 |
 | [007](adr-007-contrato-de-integracion-del-core.md) | Contrato de integración del Core (sobre, topología, reintentos, catálogo y token) | Aceptado | 2026-10-07 |
 | [008](adr-008-roles-m6-adaptados-desde-m1.md) | Roles de M6 adaptados desde el rol único de M1 y asignados localmente | Aceptado | 2026-10-21 |
+| [009](adr-009-rest-m6-a-m1-consultas-de-identidad.md) | REST de M6 a M1 solo para consultas de identidad, con el module-token del Core (excepción a ADR-006) | Aceptado | 2026-11-05 |

@@ -1,10 +1,17 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ServiceStatus, Severity } from '@prisma/client';
+import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { toDateOnly } from '../../common/utils/date-only';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent } from '../inbox/consumed-events';
 import { Data, esFecha, esTexto, esUuid, requerido } from '../inbox/payload-validation';
+import { recordEach, sistema } from './system-audit';
+
+// Nadie publica esta alerta (la simulamos nosotros, weatherAlertIssued.md): el actor es el origen simulado.
+const CLIMA = sistema('weather');
+
+const TIPO_ALERTA = /^[A-Za-z0-9_ -]{1,40}$/;
 
 /** Con menos que esto se avisa, no se reprograma. */
 const SEVERIDAD_QUE_REPROGRAMA: Severity[] = [Severity.HIGH, Severity.CRITICAL];
@@ -49,6 +56,7 @@ export class WeatherConsumer implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inbox: InboxService,
+    private readonly audit: AuditService,
   ) {}
 
   onModuleInit(): void {
@@ -95,18 +103,41 @@ export class WeatherConsumer implements OnModuleInit {
     // RESCHEDULED, y `updateMany` no pasa por assertTransition. El filtro es el
     // guard. Un servicio ya iniciado no se reprograma por una alerta: lo
     // suspende la cuadrilla que está en la calle.
-    const { count } = await this.prisma.service.updateMany({
-      where: {
-        status: ServiceStatus.SCHEDULED,
-        zones: { some: { zoneId: { in: zoneIds } } },
-        // scheduledDate es @db.Date: sin truncar, un `from` con hora deja
-        // afuera los servicios de ese mismo día.
-        scheduledDate: { gte: toDateOnly(desde), lte: toDateOnly(hasta) },
-      },
-      data: {
-        status: ServiceStatus.RESCHEDULED,
-        statusReason: `Alerta meteorológica ${data.alertType ?? ''} (${severity})`.trim(),
-      },
+    // findMany + updateMany con el mismo where en una transacción: updateMany no
+    // devuelve ids y se audita una fila por servicio movido.
+    const where = {
+      status: ServiceStatus.SCHEDULED,
+      zones: { some: { zoneId: { in: zoneIds } } },
+      // scheduledDate es @db.Date: sin truncar, un `from` con hora deja
+      // afuera los servicios de ese mismo día.
+      scheduledDate: { gte: toDateOnly(desde), lte: toDateOnly(hasta) },
+    };
+    // alertType es texto libre de un tercero y acaba en statusReason y en la auditoría
+    // (que no se purga): solo pasa un identificador corto.
+    const tipo = TIPO_ALERTA.test(String(data.alertType ?? '')) ? String(data.alertType) : '';
+    const alerta = `Alerta meteorológica ${tipo ? tipo + ' ' : ''}(${severity})`;
+    const count = await this.prisma.$transaction(async (tx) => {
+      const afectados = await tx.service.findMany({ where, select: { id: true } });
+      const { count } = await tx.service.updateMany({
+        where,
+        data: { status: ServiceStatus.RESCHEDULED, statusReason: alerta },
+      });
+      if (count > 0) {
+        await recordEach(
+          this.audit,
+          tx,
+          afectados.map(({ id }) => ({ id, fromStatus: ServiceStatus.SCHEDULED })),
+          count,
+          {
+            entityType: 'SERVICE',
+            action: 'RESCHEDULE',
+            toStatus: ServiceStatus.RESCHEDULED,
+            actor: CLIMA,
+            note: alerta,
+          },
+        );
+      }
+      return count;
     });
 
     this.logger.log(

@@ -35,6 +35,7 @@ import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ErrorResponseDto } from '../../common/dto';
 import { ApiNotAssigned, ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
+import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 const AUTH = { status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto };
 const FORBIDDEN = {
@@ -88,6 +89,7 @@ export class ServicesController {
     return this.servicesService.create(dto, actor);
   }
 
+  @ApiAnyM6Role()
   @Get()
   @ApiOperation({
     summary: 'Listar servicios',
@@ -107,6 +109,7 @@ export class ServicesController {
     return this.servicesService.findAll(query);
   }
 
+  @ApiAnyM6Role()
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener un servicio por ID',
@@ -258,6 +261,7 @@ export class ServicesController {
     return this.servicesService.addDelayNotice(id, dto, actor.userId, actor.actorId);
   }
 
+  @ApiAnyM6Role()
   @Get(':id/delay-notices')
   @ApiOperation({
     summary: 'Historial de avisos de demora',
@@ -501,6 +505,7 @@ export class ServicesController {
     return this.servicesService.addZoneResult(id, dto, actor.userId);
   }
 
+  @ApiAnyM6Role()
   @Get(':id/zone-results')
   @ApiOperation({
     summary: 'Listar los resultados por zona',
@@ -561,6 +566,7 @@ export class ServicesController {
     return this.servicesService.addCollectionRecord(id, dto, actor.userId);
   }
 
+  @ApiAnyM6Role()
   @Get(':id/collection-records')
   @ApiOperation({
     summary: 'Listar los registros de recolección',

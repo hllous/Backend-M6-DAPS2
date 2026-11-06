@@ -1,6 +1,6 @@
 # 06 · Registro de defectos y limitaciones conocidas
 
-> Backend del Módulo 6 (Grupo 04). Estado al **03/11/2026**, sobre `develop` @ `f288d31`. Lo cargó el QA desde GitHub Issues, `docs/bloqueantes.md`, el código y la auditoría del 03/11. Todo lo marcado como abierto se **verificó contra el código actual** antes de listarlo.
+> Backend del Módulo 6 (Grupo 04). Estado al **03/11/2026**, sobre `develop` @ `f288d31`; abiertos y cerrados **recontados el 06/11/2026** sobre `develop` @ `aa540be`. Lo cargó el QA desde GitHub Issues, `docs/bloqueantes.md`, el código y la auditoría del 03/11. Todo lo marcado como abierto se **verificó contra el código actual** antes de listarlo.
 
 El equipo usa **GitHub Issues** (`hllous/Backend-M6-DAPS2`) y Trello en lugar de Jira. El identificador de cada defecto es el número de Issue; si el hallazgo todavía no tiene Issue, figura como **sin issue** y se propone abrirlo.
 
@@ -19,66 +19,26 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 
 | | Cantidad |
 |---|---|
-| Issues en el repo | 215 (7 abiertos al 03/11: #257, #299, #442, #447, #488, #494 y #495) |
+| Issues en el repo | 215 al 03/11 (7 abiertos ese día: #257, #299, #442, #447, #488, #494 y #495). Al 06/11 (`gh issue list`) el único abierto es #500; los demás están cerrados |
 | Issues con etiqueta `bug`, `security` o `fix` | 55, **todos cerrados** |
-| Defectos y brechas abiertos en este registro | 19 |
+| Defectos y brechas abiertos en este registro | 13 de 19 (el 03/11 eran 19 abiertos). Cerrados: DEF-01, DEF-02, DEF-03 y DEF-12 (issues cerrados entre el 03/11 y el 05/11) y DEF-16 y DEF-17 (corregidos el 06/11) |
 | Verificaciones no realizadas (no son defectos) | 7 (ver sección 5) |
 
 | Severidad | Abiertos | Dentro del máximo de la cátedra |
 |---|---|---|
 | Bloqueante | 0 | Sí |
-| Crítica | **3** (HU Must en curso, ver DEF-01 a DEF-03) | **No** (máximo 0) |
-| Mayor | **10** | **No** (máximo 3) |
-| Menor | 6 | Sí |
+| Crítica | 0 (eran 3 al 03/11: DEF-01, DEF-02 y DEF-03) | Sí |
+| Mayor | **9** (eran 10: DEF-12 se cerró) | **No** (máximo 3) |
+| Menor | 4 (DEF-14, DEF-15, DEF-18 y DEF-19) | Sí |
+| **Total abierto** | **13** (0 + 9 + 4) | |
 
-**Lectura honesta:** hoy no se cumple el criterio de salida. Las tres Críticas son HU Must que dependen de otros módulos (M1 y M9) y se cierran con acciones de ellos más pruebas nuestras; las Mayores se cierran con trabajo propio que está en el plan de la sección 6. Las Mayores y Críticas son **propuestas de severidad**: el equipo y el PO las validan antes de la entrega.
+**Lectura honesta:** el criterio de salida **sigue sin cumplirse por las Mayores** (9 abiertas contra un máximo de 3); las Críticas están en 0. Las Mayores se cierran con trabajo propio que está en el plan de la sección 6. La severidad de las Mayores es una **propuesta**: el equipo y el PO la validan antes de la entrega.
 
 ## 3. Defectos y brechas abiertos
 
 ### Críticas (HU Must incumplida)
 
-#### DEF-01 · Login real con M1 sin probar de punta a punta en el despliegue
-
-| Campo | Detalle |
-|---|---|
-| ID | [#488](https://github.com/hllous/Backend-M6-DAPS2/issues/488) (backend), FE #800 |
-| Severidad / prioridad | Crítica / Alta |
-| HU | HU-30 (autenticación real de M1), Must |
-| Pasos | 1. Hacer `POST /auth/usuario/login` en M1 con una cuenta de empleado. 2. Llamar `GET /me` en el backend desplegado con ese token. |
-| Esperado | 200 con los roles de M6 |
-| Obtenido | 401: el `JWT_SECRET` cargado en Render (el del 22/10) no coincide con el que firma M1 hoy (según el issue, probado el 02/11) |
-| Evidencia | Texto del issue #488. Comentarios del 02/11 y 03/11 con el pedido del secreto y de 12 cuentas de empleado a M1. Los claims del token pasan `jwt.strategy.ts`; falla solo la firma |
-| Estado | **Resuelto el 3/11.** M1 mandó el secreto vigente, DevOps lo cargó en Render (informado por el PO) y el login real + `GET /me` dan 200 con `10000`, `10007`, `10011` y `admin@municipio.gob.ar`. La excepción de demo (ADR-004) se retira: backend hecho, frontend en FE #800 |
-| Causa raíz | Dependencia externa: M1 rotó el secreto y no lo comunicó a M6 |
-| Workaround | Ya no se usa: el JWT de demo se retiró junto con `scripts/generate-demo-jwt.mjs` |
-
-#### DEF-02 · Contrato definitivo de M9 sin cerrar
-
-| Campo | Detalle |
-|---|---|
-| ID | [#257](https://github.com/hllous/Backend-M6-DAPS2/issues/257) |
-| Severidad / prioridad | Crítica / Alta |
-| HU | HU «Adaptar M6 al contrato de integración definitivo de M9» (ver `02-historias-y-criterios.md`), Must |
-| Pasos | Revisar `docs/bloqueantes.md`: el tablero lista decisiones del Core que rompen algo y no están tomadas (validación de `format` en `data`, control de identidad por AMQP, clave de barrio) |
-| Esperado | Payloads y routing keys alineados al contrato, y probados contra el Core real |
-| Obtenido | Parte implementada (consumidor RabbitMQ, registro de suscripciones, `nack` sin reencolar) y parte pendiente de decisiones de M9 |
-| Evidencia | [#257](https://github.com/hllous/Backend-M6-DAPS2/issues/257), [`docs/bloqueantes.md`](../bloqueantes.md), [`docs/integracion/m9.md`](../integracion/m9.md) |
-| Estado | **Abierto** |
-| Causa raíz | Contrato del Core todavía en definición |
-
-#### DEF-03 · Integración con el Core real sin probar
-
-| Campo | Detalle |
-|---|---|
-| ID | [#299](https://github.com/hllous/Backend-M6-DAPS2/issues/299) y [#442](https://github.com/hllous/Backend-M6-DAPS2/issues/442) |
-| Severidad / prioridad | Crítica / Alta |
-| HU | HU-24 (probar M6 contra el Core real), Must |
-| Pasos | Publicar en `muni.inbox` y consumir de `q.ambiente` contra el Core real, desde Render |
-| Esperado | Eventos de ida y vuelta visibles, con el `eventId` documentado |
-| Obtenido | Sin evidencia de la prueba. Hoy todos los tests de mensajería usan mocks o Postgres; ninguno usa un RabbitMQ real |
-| Evidencia | Grep de `amqp` en `test/`: sin resultados. Estado de #299 y #442 en GitHub |
-| Estado | **Abierto.** M9 habilitó el puerto 5671 para Render el 28/10; la primera prueba es pasiva y se coordina con M9 |
-| Causa raíz | Ambiente compartido y único, que exige coordinar con M9 y con los módulos destinatarios |
+Ninguna abierta. DEF-01, DEF-02 y DEF-03 se cerraron (ver sección 4).
 
 ### Mayores
 
@@ -192,24 +152,10 @@ La severidad queda en Mayor hasta confirmar si alguna es explotable en M6; si lo
 | HU | HU-23 y las HU de integración con M2 |
 | Pasos | Mirar el job `test` del CI (run [41556929968](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/41556929968)) |
 | Esperado | Los 12 tests contra el paquete de M2 v1.78 corren |
-| Obtenido | `Tests: 12 skipped`. Hay 4 puntos de salto por `PAQUETE_M2_PRESENTE`: `src/events/consumers/m2-ejemplos.spec.ts:32`, `src/events/payloads.spec.ts:427`, `src/modules/environmental-reports/environmental-reports.service.spec.ts:862` y `src/modules/services/services.service.spec.ts:1376`. El paquete vive en `docs/documentacion/`, que no se versiona |
+| Obtenido | `Tests: 12 skipped`. Hay 4 puntos de salto por `PAQUETE_M2_PRESENTE`: `src/events/consumers/m2-ejemplos.spec.ts:32`, `src/events/payloads.spec.ts:427`, `src/modules/environmental-reports/environmental-reports.service.spec.ts:923` y `src/modules/services/services.service.spec.ts:1376`. El paquete vive en `docs/documentacion/`, que no se versiona |
 | Evidencia | Log del run: `console.warn` «Paquete de M2 v1.78 ausente» |
 | Estado | Abierto |
 | Workaround | En local corren si existe la carpeta. Es un hueco del tipo del #314 (ver `09-lecciones-aprendidas.md`; a validar con el equipo) |
-
-#### DEF-12 · Cortes de calle: contrato final de M7 pendiente de la prueba E2E
-
-| Campo | Detalle |
-|---|---|
-| ID | [#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447) |
-| Severidad / prioridad | Mayor / Media |
-| HU | HU-05 (derivar un corte de calle) |
-| Pasos | Pedir un corte desde un servicio y observar la respuesta de M7 |
-| Esperado | `streetClosureRequested` aceptado por M7 y procesado de punta a punta |
-| Obtenido | Los tramos `{street, from, to, direction}` ya salen en el formato final (`docs/bloqueantes.md`, fila M7); falta validar las dos suscripciones (`streetClosureEnded` y la histórica) y la prueba E2E |
-| Evidencia | `docs/bloqueantes.md`, `docs/integracion/m7.md` |
-| Estado | Abierto, esperando a M7 |
-| Causa raíz | Contrato de M7 cambió el 28/10 |
 
 #### DEF-13 · Sin ZAP, SCA ni análisis estático de seguridad en el CI
 
@@ -230,8 +176,6 @@ La severidad queda en Mayor hasta confirmar si alguna es explotable en M6; si lo
 |---|---|---|---|
 | DEF-14 (sin issue) | El job `e2e` corre en cada PR (último run: 291 pasados) pero no es check obligatorio de la rama: un rojo no frena el merge | `.github/branch-protection-rules.json:17-19` (exige solo `build` y `test`) | Transversal · abierto |
 | DEF-15 (sin issue) | El timeout del cliente al Core es de 10 s; la cátedra prueba 5 s. Es efectivo, pero no cumple el valor pedido. No hay circuit breaker ni test que dispare el timeout real | `src/core/core.client.ts:6` y `:150-151` | HU-24 · abierto |
-| DEF-16 (sin issue) | `AGENTS.md` dice que `@Roles` y `RolesGuard` no se usan; `RolesGuard` es global desde #161 y el spec `route-roles.spec.ts` lo garantiza | `AGENTS.md:36` vs `src/app.module.ts:82-83` | HU-29 · abierto (documentación) |
-| DEF-17 (sin issue) | `docs/bloqueantes.md` (revisión del 28/10) dice que `actorId` no se lee; se lee desde #485 | `docs/bloqueantes.md`, fila M1, vs `src/auth/jwt.strategy.ts` | HU-30 · abierto (documentación) |
 | DEF-18 (sin issue) | `CORS_ORIGINS` es opcional: si falta, la API acepta cualquier origen (sin `credentials`). Hay que confirmar que esté cargada en Render | `src/main.ts:19-27` | HU-31 · abierto, a verificar en el despliegue |
 | DEF-19 (sin issue) | Swagger UI queda publicado en `/api/docs` también en producción; los errores 500 no llevan id de correlación y `path` incluye la query string; la evidencia se sirve por URL pública del bucket (protegida solo por una key UUID aleatoria) y los PDF conservan sus metadatos | `src/main.ts:40`; `src/common/filters/http-exception.filter.ts:116`; `src/modules/attachments/storage/r2-evidence.storage.ts:66`; tarjeta SEC-W06 | HU-31 · abierto |
 
@@ -239,12 +183,17 @@ Un test débil adicional, `services.service.spec.ts:875` (`resolves.toBeDefined(
 
 ## 4. Defectos cerrados y corregidos
 
-Los 55 issues con etiqueta `bug`, `security` o `fix` están **cerrados** en GitHub (`gh issue list --state all`, 03/11). Esta sección lista los que más enseñan, con su causa raíz y la **evidencia del cierre**: el commit de la corrección en `develop` y el run del workflow `CI` de ese commit.
+Los 55 issues con etiqueta `bug`, `security` o `fix` están **cerrados** en GitHub (`gh issue list --state all`, 03/11). Los defectos y brechas de este registro que se cerraron desde entonces están en la tabla siguiente, antes de las filas históricas. Esta sección lista los que más enseñan, con su causa raíz y la **evidencia del cierre**: el commit de la corrección en `develop` y el run del workflow `CI` de ese commit.
 
 Cómo leer la evidencia de CI: «CI verde, run N» significa que `gh run list --workflow CI --commit <sha>` devolvió un *push* a `develop` con conclusión `success`. Prueba que el build, el lint y los tests del repo pasaron en ese commit; no prueba por sí sola que el test nombrado cubra la corrección. Los runs se ven en `https://github.com/hllous/Backend-M6-DAPS2/actions/runs/<N>`. Donde no se ubicó el commit, la tabla dice «corregido (cerrado en #n); ejecución pendiente», sin inventar un verde.
 
 | # | Defecto | Causa raíz | Corrección (commit · fecha) | Evidencia de cierre |
 |---|---|---|---|---|
+| DEF-01 · [#488](https://github.com/hllous/Backend-M6-DAPS2/issues/488) | Login real con M1 sin probar de punta a punta: `GET /me` daba 401 (HU-30, era Crítica) | M1 rotó el `JWT_SECRET` y no lo comunicó a M6 | Secreto vigente cargado en Render; login de demo retirado · 03/11 | Issue cerrado el 03/11. Login real + `GET /me` en 200 con cuatro cuentas (informado por el PO). Frontend: FE #800 |
+| DEF-02 · [#257](https://github.com/hllous/Backend-M6-DAPS2/issues/257) | Contrato definitivo de M9 sin cerrar (HU Must, era Crítica) | Contrato del Core en definición | Sobre, topología, reintentos y catálogo adaptados · 05/11 | Issue cerrado el 05/11, junto con la prueba AMQP con M9 y M3. Lo que queda es de M9 y M2 y no frena el trabajo: fila «M9 / M2» de [`bloqueantes.md`](../bloqueantes.md) |
+| DEF-03 · [#299](https://github.com/hllous/Backend-M6-DAPS2/issues/299) y [#442](https://github.com/hllous/Backend-M6-DAPS2/issues/442) | Integración con el Core real sin probar (HU-24, era Crítica) | Ambiente compartido que exige coordinar con M9 y los destinatarios | Prueba con el Core real · 05/11 | Issues cerrados el 05/11. M6 publicó `infrastructureRepairRequested` y M3 respondió `workOrderScheduled` y `workOrderCompleted` ([historial](../integracion/historial.md)) |
+| DEF-12 · [#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447) | `streetClosureRequested` con el contrato final de cortes de M7 (HU-05, era Mayor) | El contrato de M7 cambió el 28/10 | Tramos `{street, from, to, direction}` en el formato final · PR #478, 02/11 | Issue cerrado el 05/11. Falta entre M7 y el Core (`streetClosureEnded`) y la prueba E2E, en la fila M7 de [`bloqueantes.md`](../bloqueantes.md) |
+| DEF-16 y DEF-17 | `AGENTS.md` decía que `RolesGuard` no se usa; `bloqueantes.md` decía que `actorId` no se leía | Documentos desactualizados respecto del código | Textos corregidos · 06/11 | Revisión contra `src/app.module.ts` y `src/auth/jwt.strategy.ts` |
 | [#466](https://github.com/hllous/Backend-M6-DAPS2/issues/466) | `GET /evidence` sin rol ni pertenencia: cualquier token válido leía la evidencia de cualquier dueño | La pertenencia (`assertOwnerAccess`) se aplicó solo al alta; el GET quedó sin `@Roles` ni chequeo. Lo encontró la revisión del frontend | `c2d12a8` (PR #468) · 30/10 | CI verde, run 41047597104. Test: `attachments.service.spec.ts:543` (Campo ajeno: 403 `NOT_ASSIGNED`) |
 | [#314](https://github.com/hllous/Backend-M6-DAPS2/issues/314) | `updateTicketStatus` mandaba `updatedBy.id` que no era UUID y M2 v1.78 lo rechazaba | Se enviaba el `sub` numérico del JWT donde el contrato pide UUID o `null` | `a5f4153` (PR #318) · 20/10 | CI verde, run 39474682821. Test: `payloads.spec.ts:393-408` (UUID o `null`) |
 | [#485](https://github.com/hllous/Backend-M6-DAPS2/issues/485) | `updatedBy.id` seguía en `null` aunque M1 ya emite `actorId` | M1 confirmó el 02/11 que el token trae `actorId` (UUID) además del `sub` numérico | `a108b56` (PR #489) · 02/11 | CI verde, run 41539493018. Test: `jwt.strategy.spec.ts:78-83` |
@@ -272,7 +221,7 @@ Cómo leer la evidencia de CI: «CI verde, run N» significa que `gh run list --
 | [#460](https://github.com/hllous/Backend-M6-DAPS2/issues/460) | No se registraba quién hizo cada cambio de estado | No existía el historial de auditoría | `39069dc` (#483) · 02/11 | CI verde, run 41531138310. Test: `test/audit.e2e-spec.ts` |
 | [#132](https://github.com/hllous/Backend-M6-DAPS2/issues/132) | Todos los deploys a Render fallaban desde #126 y nadie lo notó | `scripts/generate-openapi.ts` quedó dentro del build, movió la salida a `dist/src/` y el `Dockerfile` buscaba `dist/main.js`. Render mantenía viva la última build buena | **Corregido (cerrado en #132); ejecución pendiente**: el commit de la corrección no se ubicó por el título | — |
 
-Cada fila con un run de CI citado se verificó con `gh run list --workflow CI --commit`; no se citó ningún run que no se hubiera consultado. Son 26 filas con run verde (algunas agrupan varios issues) y una sin evidencia de ejecución (#132); el resto de los 55 cerrados no se detalla acá.
+Las cinco filas DEF de arriba citan el estado del issue, no un run. Cada fila con un run de CI citado se verificó con `gh run list --workflow CI --commit`; no se citó ningún run que no se hubiera consultado. Son 26 filas con run verde (algunas agrupan varios issues) y una sin evidencia de ejecución (#132); el resto de los 55 cerrados no se detalla acá.
 
 ## 5. Verificaciones no realizadas (no son defectos)
 
@@ -299,8 +248,9 @@ La regla G9 pide no omitir nada conocido. Estas pruebas **no se hicieron** y no 
 | 5 | DEF-05, DEF-06 | `ETag`/`If-Match` en un `PATCH` crítico e `Idempotency-Key` en `POST /services`, con un e2e cada uno | 1 día |
 | 6 | DEF-07 | Throttler global con un e2e de 429 | 2 h |
 | 7 | DEF-11, DEF-14 | Versionar los schemas de M2 o hacer que el CI avise; hacer obligatorio el job `e2e` | 2 h |
-| 8 | DEF-16, DEF-17, DEF-18, DEF-19 | Corregir los textos, confirmar `CORS_ORIGINS` en Render y decidir qué hacer con `/api/docs` | 1 h |
-| 9 | DEF-01, DEF-02, DEF-03, DEF-12 | Dependen de M1, M9 y M7: seguir los pedidos y probar apenas respondan | no estimable |
-| 10 | DEF-09 | Interceptor de lectura de datos Tier 2 | 1 día |
+| 8 | DEF-18, DEF-19 | Corregir los textos, confirmar `CORS_ORIGINS` en Render y decidir qué hacer con `/api/docs` | 1 h |
+| 9 | DEF-09 | Interceptor de lectura de datos Tier 2 | 1 día |
+
+Cerrados y fuera del plan: DEF-01, DEF-02, DEF-03, DEF-12, DEF-16 y DEF-17. Lo que sigue abierto con M7, M9 y M2 está en [`bloqueantes.md`](../bloqueantes.md).
 
 Cualquier cambio de código sale en Issues propios, fuera de #494.

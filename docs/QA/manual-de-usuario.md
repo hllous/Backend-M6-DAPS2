@@ -78,7 +78,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 **Quién:** todos los empleados. **Dónde:** pantalla de ingreso.
 
 1. Abra `https://m6-ambiente-higiene.vercel.app`. Si no tiene sesión, se muestra la pantalla **Ingresar**.
-2. Escriba su **Correo electrónico** (el de empleado, con la forma `nombre.apellido.NNNNN@municipio.gob.ar`) y su **Contraseña**.
+2. Escriba su **Correo electrónico** (el de empleado, con la forma `nombre.apellido.NNNNN@municipio.gob.ar`) y su **Contraseña** (el ícono del ojo la muestra u oculta).
 3. Pulse **Ingresar al sistema**. Mientras valida, el botón muestra *«Ingresando…»* y los campos se bloquean; la primera vez del día puede tardar (sección 1.2).
 4. Se abre **Mi trabajo**. El menú de la izquierda muestra las secciones de su perfil: **Mi trabajo**, **Servicios**, **Derivaciones**, **Control Ambiental**, **Mapa**, **Catálogo** y **Tableros**. Las cuentas de administración suman **Monitor de integración**.
 
@@ -396,7 +396,7 @@ Estas reglas dependen de la cuenta: cada fila se comprobó en la pantalla con la
 - **Exportación:** solo **Tableros** exporta (**Exportar CSV**); el resto de las pantallas no.
 - **PDF adjuntos:** no se limpian de metadatos ni se analizan en busca de virus.
 - **Campo y el catálogo:** el menú de Campo incluye **Catálogo** porque cualquier perfil lo consulta; Campo no administra el catálogo.
-- **Capturas:** son del 03/11/2026, sacadas de la aplicación desplegada con el login real (datos de demostración). Los datos y las fechas cambian: lo que vea puede diferir.
+- **Capturas:** son del 03/11/2026 (la de ingreso, del 04/11/2026, con el rediseño de la pantalla), sacadas de la aplicación desplegada con el login real (datos de demostración). Los datos y las fechas cambian: lo que vea puede diferir.
 
 ### Qué se verificó y con qué cuenta
 

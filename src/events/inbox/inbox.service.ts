@@ -225,12 +225,15 @@ export class InboxService {
       return { status: 'processed' };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      // Solo la primera línea: los errores de Prisma traen en las siguientes los
+      // valores del payload (datos de terceros), y esto sale por GET /events/inbox.
+      const resumen = message.split(/\r?\n/)[0].slice(0, 500);
       await this.prisma.inboxEvent.update({
         where: { messageId },
-        data: { error: message.slice(0, 500) },
+        data: { error: resumen },
       });
-      this.logger.error(`${envelope.eventType} (${idLog}) falló: ${message}`);
-      return { status: 'failed', detail: message };
+      this.logger.error(`${envelope.eventType} (${idLog}) falló: ${resumen}`);
+      return { status: 'failed', detail: resumen };
     }
   }
 
