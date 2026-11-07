@@ -1,6 +1,26 @@
 # Fase 3 — Plan de cambios
 
-Estado: **propuesta, pendiente de aprobación.** Nada de esto está implementado.
+Estado al 2026-11-07: **ejecutado**, salvo E10 (pospuesto) y lo que figura como pendiente al final de esta sección. Issue general: [#530](https://github.com/hllous/Backend-M6-DAPS2/issues/530).
+
+| Ítem | Sub-issue | PR |
+|---|---|---|
+| Informes de la auditoría | #531 | #543 |
+| QW1 a QW3 (plantillas de PR e issues, `SECURITY.md`) | #532 | #544 |
+| QW4 a QW10 (correcciones puntuales) | #533 | #545 |
+| E1 `LEEME.md` fusionado en `docs/README.md` | #534 | #546 |
+| E2 `devops/` (borrar bitácora, `CODEOWNERS`, mensaje a M9) | #535 | #553 |
+| E3 referencia de variables, URLs y workflows | #536 | #550 |
+| E4 desplegar e historial; `deploy.md` como índice | #537 | #551 |
+| E5 runbooks | #538 | #552, #557 |
+| E6 `docs:check` ampliado | #539 | #558 |
+| E7 vistas C4 y secuencias | #540 | #547 |
+| E8 semántica de entrega de eventos | #541 | #549 |
+| E9 ejemplos en Swagger | #542 | #548 |
+| Extra: compose para G1 y su corrección | #555, #561 | #556, #562 |
+| Extra: CodeQL en `develop` | #563 | #564 |
+| E10 tabla de rutas y roles generada | — | **pospuesto** |
+
+Pendiente fuera de este plan: frontend en el compose, fijado al tag `v1.0-testing` ([#560](https://github.com/hllous/Backend-M6-DAPS2/issues/560)); e2e intermitente ([#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554)); reporte privado de vulnerabilidades de GitHub (lo habilita el dueño del repo) y después actualizar `SECURITY.md`; decidir si habrá backup de la base. Lo que sigue describe el plan tal como se aprobó.
 
 ## Decisiones ya tomadas (2026-11-07)
 
