@@ -54,7 +54,7 @@ Además de lo general:
 
 - [ ] Los links internos funcionan (no llevan a archivos inexistentes).
 - [ ] La ortografía y gramática están revisadas.
-- [ ] Si el cambio actualiza un tema que aparece en varios lugares (por ejemplo, un evento documentado en su `.md`, en el `bloqueantes.md` y en el `LEEME.md`), **todos los lugares están alineados**.
+- [ ] Si el cambio actualiza un tema que aparece en varios lugares (por ejemplo, un evento documentado en su `.md`, en el `bloqueantes.md` y en `docs/README.md`), **todos los lugares están alineados**.
 
 ## Cuando la tarjeta es una decisión técnica
 

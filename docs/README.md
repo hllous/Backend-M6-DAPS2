@@ -65,3 +65,23 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 - [testing.md](testing.md) — tests unitarios y e2e contra Postgres: cómo correrlos y qué cubre cada suite
 - [gestion/](gestion/) — proceso Scrum: DoD, sprints y bitácoras
 - [agents/](agents/README.md) — andamiaje para agentes de IA (cómo leer estos docs, tracker de issues, labels de triage); no documenta el producto
+
+## Repositorio de documentación
+
+Este repo tiene la documentación **interna** (equipo + IA que programe el módulo). Lo que se entrega a la cátedra y lo que circula a otros grupos se produce en el **repositorio de documentación**: `<URL_REPO_DOCUMENTACION>` *(placeholder: falta la URL)*. Si ambos difieren en el estado de la integración, vale [bloqueantes.md](bloqueantes.md). Los dos conjuntos no están unificados todavía: es una mejora pendiente, no un bug.
+
+| Fuente (repositorio de documentación) | Qué produce |
+|---|---|
+| `Acuerdo-Eventos-M6.md` | `Acuerdo-Eventos-M6.pdf` (circula a otros grupos; también hay copia editable en [Acuerdo-Eventos-M6.md](Acuerdo-Eventos-M6.md)) |
+| `Sobres-M6.md` | `Sobres-M6.pdf` (circula junto al Acuerdo; copia en [Sobres-M6.md](Sobres-M6.md)) |
+| `Cruce-Eventos-M6.md` | análisis interno, no se entrega ([copia](Cruce-Eventos-M6.md)) |
+| `fuentes/alcance-entregable.md` | `Documento de Alcance - Grupo 04 (Modulo 6).pdf` (entregable de la cátedra, versionado en esta carpeta) |
+| `fuentes/alcance.md` | versión larga de trabajo, no se entrega |
+| `M6-por-modulo/M6-para-M{1..9}.md` | una ficha por módulo, que circula una a una |
+| `fuentes/informacion-para-modulos-Modulo6.md` | las fichas concatenadas en un solo PDF |
+
+Los PDF de esta carpeta (`Documento de Alcance`, `Diagrama de Eventos`) son entregables compilados: no se regeneran desde este repo.
+
+**Qué no se puede verificar desde este repo:** el contenido de los PDF compilados, de las fichas por módulo, de las versiones largas del alcance y del enunciado del TPO. Los conteos y las rutas de esta documentación sí se contrastan con el código.
+
+`docs/documentacion/` puede existir como copia local del repositorio de documentación, para consultas cruzadas. Está ignorada por git (`.gitignore`), así que no existe en CI ni en un clon nuevo: ningún documento versionado debe enlazarla.
