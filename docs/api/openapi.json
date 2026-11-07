@@ -3965,6 +3965,20 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateCrewDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Cuadrilla municipal de recolección",
+                  "value": {
+                    "name": "Cuadrilla Norte - Turno Mañana",
+                    "crewType": "MUNICIPAL",
+                    "defaultShift": "MORNING",
+                    "specialty": "COLLECTION",
+                    "leaderUserId": "1",
+                    "leaderName": "Marta Gómez",
+                    "homeZoneId": "a1b2c3d4-e5f6-4789-8abc-def012345678"
+                  }
+                }
               }
             }
           }
@@ -4526,6 +4540,23 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AddCrewMembersDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Alta de dos integrantes",
+                  "value": {
+                    "members": [
+                      {
+                        "userId": "10",
+                        "displayName": "Lucía Fernández"
+                      },
+                      {
+                        "userId": "11",
+                        "displayName": "Tomás Ruiz"
+                      }
+                    ]
+                  }
+                }
               }
             }
           }
@@ -4726,6 +4757,17 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateCrewZoneAssignmentDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Reubicación temporal por refuerzo",
+                  "value": {
+                    "zoneId": "a1b2c3d4-e5f6-4789-8abc-def012345678",
+                    "validFrom": "2027-03-22",
+                    "validTo": "2027-04-05",
+                    "reason": "Refuerzo por acumulación de residuos tras el temporal"
+                  }
+                }
               }
             }
           }
@@ -9196,6 +9238,21 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateServiceDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Recolección planificada de un recorrido",
+                  "value": {
+                    "serviceTypeId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "scheduledDate": "2027-03-15",
+                    "origin": "PLANNED",
+                    "routeId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                    "crewId": "e5f6a7b8-c9d0-4234-8fab-345678901234",
+                    "vehicleId": "f6a7b8c9-d0e1-4345-8abc-456789012345",
+                    "windowFrom": "08:00",
+                    "windowTo": "12:00"
+                  }
+                }
               }
             }
           }
@@ -9747,6 +9804,15 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AssignCrewDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Asignar cuadrilla y vehículo",
+                  "value": {
+                    "crewId": "e5f6a7b8-c9d0-4234-8fab-345678901234",
+                    "vehicleId": "f6a7b8c9-d0e1-4345-8abc-456789012345"
+                  }
+                }
               }
             }
           }
@@ -9955,6 +10021,16 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateDelayNoticeDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Demora de 90 minutos antes de arrancar",
+                  "value": {
+                    "delayType": "START",
+                    "delayMinutes": 90,
+                    "reason": "Corte de calle imprevisto por rotura de un caño"
+                  }
+                }
               }
             }
           }
@@ -10233,6 +10309,15 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SuspendServiceDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Suspensión por falla del camión",
+                  "value": {
+                    "reason": "Falla mecánica del vehículo",
+                    "note": "El camión 12 se quedó sin frenos; esperan reemplazo"
+                  }
+                }
               }
             }
           }
@@ -10431,6 +10516,12 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CompleteServiceDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Cierre sin datos extra",
+                  "value": {}
+                }
               }
             }
           }
@@ -10540,6 +10631,14 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/StatusChangeDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Cancelación por alerta meteorológica",
+                  "value": {
+                    "reason": "Alerta meteorológica: tormenta fuerte en la zona"
+                  }
+                }
               }
             }
           }
@@ -10649,6 +10748,14 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/StatusChangeDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Marcar para reprogramar por clima",
+                  "value": {
+                    "reason": "Alerta meteorológica: tormenta fuerte en la zona"
+                  }
+                }
               }
             }
           }
@@ -10758,6 +10865,16 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ConfirmRescheduleDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Nueva fecha y ventana",
+                  "value": {
+                    "scheduledDate": "2027-03-22",
+                    "windowFrom": "07:00",
+                    "windowTo": "11:00"
+                  }
+                }
               }
             }
           }
@@ -10867,6 +10984,18 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateZoneResultDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Zona no atendida por acceso bloqueado",
+                  "value": {
+                    "zoneId": "d4e5f6a7-b8c9-4123-8efa-234567890123",
+                    "status": "NOT_SERVICED",
+                    "reason": "BLOCKED_ACCESS",
+                    "proposedDate": "2027-03-16",
+                    "notes": "Camión de mudanza bloqueando la cuadra entre Mitre y San Martín."
+                  }
+                }
               }
             }
           }
@@ -11056,6 +11185,17 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateCollectionRecordDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Residuos domiciliarios del recorrido",
+                  "value": {
+                    "wasteType": "HOUSEHOLD",
+                    "disposalSiteId": "a7b8c9d0-e1f2-3456-abcd-567890123456",
+                    "volumeM3": 12.5,
+                    "weightKg": 3400.75
+                  }
+                }
               }
             }
           }
@@ -11802,6 +11942,20 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateEnvironmentalReportDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Basural a cielo abierto con reclamo de M2",
+                  "value": {
+                    "reportType": "ILLEGAL_DUMPSITE",
+                    "address": "Camino de Cintura 4500",
+                    "description": "Acopio de escombros sobre la vereda, frente al número 4500.",
+                    "lat": -34.7,
+                    "lng": -58.5,
+                    "ticketId": "TCK-2026-004821",
+                    "priority": "HIGH"
+                  }
+                }
               }
             }
           }
@@ -12340,6 +12494,14 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ReportStatusChangeDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Derivación a otra área",
+                  "value": {
+                    "reason": "El hecho denunciado corresponde a Obras Públicas, no a Ambiente."
+                  }
+                }
               }
             }
           }
@@ -12449,6 +12611,14 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ReportStatusChangeDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Desestimación de la denuncia",
+                  "value": {
+                    "reason": "La denuncia duplica el expediente ya abierto para la misma dirección."
+                  }
+                }
               }
             }
           }
@@ -12558,6 +12728,16 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RequestInformationDto"
+              },
+              "examples": {
+                "ejemplo": {
+                  "summary": "Pedido de una foto adicional",
+                  "value": {
+                    "message": "Necesitamos una foto más del frente del local, tomada de noche.",
+                    "requiredBy": "2027-03-20",
+                    "internalNote": "La foto anterior salió movida."
+                  }
+                }
               }
             }
           }
@@ -14210,11 +14390,13 @@
                       "ZONE_RESULT",
                       "INSPECTION",
                       "CONTAINER"
-                    ]
+                    ],
+                    "example": "SERVICE"
                   },
                   "ownerId": {
                     "type": "string",
-                    "format": "uuid"
+                    "format": "uuid",
+                    "example": "c3d4e5f6-a7b8-4012-8def-123456789012"
                   }
                 }
               }

@@ -63,8 +63,16 @@ export class AttachmentsController {
       required: ['file', 'ownerType', 'ownerId'],
       properties: {
         file: { type: 'string', format: 'binary' },
-        ownerType: { type: 'string', enum: Object.values(AttachmentOwnerType) },
-        ownerId: { type: 'string', format: 'uuid' },
+        ownerType: {
+          type: 'string',
+          enum: Object.values(AttachmentOwnerType),
+          example: AttachmentOwnerType.SERVICE,
+        },
+        ownerId: {
+          type: 'string',
+          format: 'uuid',
+          example: 'c3d4e5f6-a7b8-4012-8def-123456789012',
+        },
       },
     },
   })

@@ -11,7 +11,14 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CrewsService } from './crews.service';
 import {
   CreateCrewDto,
@@ -38,6 +45,23 @@ export class CrewsController {
 
   @Post()
   @Roles(...ROLES_ADMIN)
+  @ApiBody({
+    type: CreateCrewDto,
+    examples: {
+      ejemplo: {
+        summary: 'Cuadrilla municipal de recolección',
+        value: {
+          name: 'Cuadrilla Norte - Turno Mañana',
+          crewType: 'MUNICIPAL',
+          defaultShift: 'MORNING',
+          specialty: 'COLLECTION',
+          leaderUserId: '1',
+          leaderName: 'Marta Gómez',
+          homeZoneId: 'a1b2c3d4-e5f6-4789-8abc-def012345678',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Crear una cuadrilla',
     description:
@@ -237,6 +261,20 @@ export class CrewsController {
 
   @Post(':id/members')
   @Roles(...ROLES_ADMIN)
+  @ApiBody({
+    type: AddCrewMembersDto,
+    examples: {
+      ejemplo: {
+        summary: 'Alta de dos integrantes',
+        value: {
+          members: [
+            { userId: '10', displayName: 'Lucía Fernández' },
+            { userId: '11', displayName: 'Tomás Ruiz' },
+          ],
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Agregar miembros a una cuadrilla',
     description:
@@ -330,6 +368,20 @@ export class CrewsController {
 
   @Post(':id/zone-assignments')
   @Roles(...ROLES_OPERACIONES)
+  @ApiBody({
+    type: CreateCrewZoneAssignmentDto,
+    examples: {
+      ejemplo: {
+        summary: 'Reubicación temporal por refuerzo',
+        value: {
+          zoneId: 'a1b2c3d4-e5f6-4789-8abc-def012345678',
+          validFrom: '2027-03-22',
+          validTo: '2027-04-05',
+          reason: 'Refuerzo por acumulación de residuos tras el temporal',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Reubicar una cuadrilla en otra zona por un período',
     description:
