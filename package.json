@@ -30,7 +30,7 @@
     "m1:export-cuentas": "ts-node -P tsconfig.json scripts/export-cuentas-m1.ts",
     "crews:migrate-user-ids": "ts-node -P tsconfig.json scripts/migrate-crew-user-ids.ts",
     "openapi:generate": "ts-node -P tsconfig.json scripts/generate-openapi.ts",
-    "docs:check": "node scripts/check-docs-integracion.mjs",
+    "docs:check": "node scripts/check-docs-integracion.mjs && node scripts/check-docs.mjs",
     "docs:roles": "ts-node -P tsconfig.json scripts/generate-roles-table.ts",
     "qa:pdf": "node scripts/build-qa-pdf.mjs",
     "prisma:generate": "prisma generate",
