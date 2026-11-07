@@ -1,6 +1,8 @@
 # Integración con los demás módulos
 
 > Índice de la documentación de integración inter-módulo de M6. **Fuente única** del estado: reemplaza lo que estaba duplicado en [`LEEME.md`](../../LEEME.md) y, en el repositorio de documentación, en `Eventos.txt` y `fuentes/alcance-entregable.md` §7. Si algo de eso dice otra cosa, vale lo que dice acá.
+>
+> Los CSV de este directorio (`cuentas-empleado-m1.csv`) son **datos ficticios**.
 
 ## ¿Dónde está lo que busco?
 
