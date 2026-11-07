@@ -11,6 +11,8 @@
 | [`infrastructureRepairRequested`](infrastructureRepairRequested.md) | **M3** | Detectamos un daño de infraestructura ajeno |
 | [`streetClosureRequested`](streetClosureRequested.md) | **M7** | Un servicio o una poda requiere cortar la calle. **Es lo único que M7 consume de nosotros** |
 
+Cómo viajan, se reintentan y se versionan los eventos: [semantica-de-entrega.md](../semantica-de-entrega.md).
+
 Los nueve que se cayeron del contrato están en [descartados.md](descartados.md), con su payload ya diseñado. Los dos últimos, `urbanServiceScheduled` y `treePruningScheduled`, los dejamos de emitir el 21/10 porque M7 no los consume.
 
 ## Qué se emite hoy
