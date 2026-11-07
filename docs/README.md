@@ -64,4 +64,4 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 - [deploy.md](deploy.md) — despliegue, URLs, variables de entorno y estado operativo
 - [testing.md](testing.md) — tests unitarios y e2e contra Postgres: cómo correrlos y qué cubre cada suite
 - [gestion/](gestion/) — proceso Scrum: DoD, sprints y bitácoras
-- [agents/](agents/) — configuración para skills de IA: cómo leer estos docs, tracker de issues y labels de triage
+- [agents/](agents/README.md) — andamiaje para agentes de IA (cómo leer estos docs, tracker de issues, labels de triage); no documenta el producto
