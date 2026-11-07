@@ -403,7 +403,7 @@ Entregable 3 de QA. Versión del 03/11/2026. Relaciona **HU → criterio de acep
 Relevamiento al 03/11/2026 de lo corregido o agregado después del volcado de Trello (20/10) y de la matriz SEC (13/10): issues cerrados en backend y frontend, PR mergeados y CI de develop. El detalle de cada cambio está en las subsecciones "Actualizaciones posteriores a la HU" de [02-historias-y-criterios.md](02-historias-y-criterios.md).
 
 - Correcciones relevadas: **39** (31 de backend con test, 7 de frontend y 1 aclaración).
-- Criterios con corrección posterior: **78** de 175 (44,6 %), de los cuales **11** son criterios nuevos agregados por la corrección y 67 ya existían en la HU.
+- Criterios con corrección posterior: **78** de 175 (44,6 %), de los cuales **50** son criterios nuevos agregados por la corrección y 28 ya existían en la HU.
 - **Con evidencia de CI (Pasó): 71** criterios.
 - **Sin evidencia de CI: 7** criterios: 7 corregidos solo en el frontend (sin test verificado) y 0 de backend sin CI confirmado.
 - Casos marcados como Corregido: **116** de 334, con evidencia de CI: 111.
