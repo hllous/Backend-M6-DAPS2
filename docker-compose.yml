@@ -1,0 +1,109 @@
+# ═══════════════════════════════════════════════════════════════
+# M6 Ambiente, Higiene y Servicios Urbanos — backend en local
+#
+#   docker compose up --build      # un solo comando: base + broker + backend
+#   docker compose --profile seed run --rm seed   # (opcional) datos de demo
+#
+# SOLO PARA DESARROLLO LOCAL. Las credenciales de abajo son de ejemplo y no
+# protegen nada; en Render van otras (ver docs/operacion/referencia.md).
+#
+# El Core de M9 no se levanta acá: RabbitMQ local hace de bus, con el mismo
+# exchange (muni.inbox, fanout) y la misma cola (q.ambiente) que crea el Core.
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: m6
+      POSTGRES_PASSWORD: m6_local_dev
+      POSTGRES_DB: m6_ambiente
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U m6 -d m6_ambiente"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: m6
+      RABBITMQ_DEFAULT_PASS: m6_local_dev
+    ports:
+      - "5672:5672"
+      - "15672:15672" # consola de administración: http://localhost:15672
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # Crea lo que en producción crea el Core: M6 solo verifica que la cola exista
+  # (checkQueue) y publica al exchange. Corre una vez y termina.
+  rabbitmq-setup:
+    image: curlimages/curl:8.10.1
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        api=http://rabbitmq:15672/api
+        auth=m6:m6_local_dev
+        json='Content-Type: application/json'
+        curl -fsS -u $$auth -H "$$json" -X PUT  $$api/exchanges/%2F/muni.inbox -d '{"type":"fanout","durable":true}'
+        curl -fsS -u $$auth -H "$$json" -X PUT  $$api/queues/%2F/q.ambiente    -d '{"durable":true}'
+        curl -fsS -u $$auth -H "$$json" -X POST $$api/bindings/%2F/e/muni.inbox/q/q.ambiente -d '{"routing_key":""}'
+        echo "exchange muni.inbox y cola q.ambiente listos"
+
+  backend:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq-setup:
+        condition: service_completed_successfully
+    environment:
+      # La imagen trae NODE_ENV=production, que exige amqps y prohíbe estos valores.
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://m6:m6_local_dev@postgres:5432/m6_ambiente?schema=public
+      # Valor público de ejemplo (el mismo de .env.example); en producción se rechaza.
+      JWT_SECRET: Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==
+      RABBITMQ_URL: amqp://m6:m6_local_dev@rabbitmq:5672/
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  # Opcional: carga los datos de demo (docs/seed.md). Usa la etapa "builder" de
+  # la imagen, que trae ts-node y el seed. La base es la del compose.
+  seed:
+    profiles: ["seed"]
+    build:
+      context: .
+      target: builder
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://m6:m6_local_dev@postgres:5432/m6_ambiente?schema=public
+      SEED_CONFIRM_REMOTE: "1" # el seed solo corre contra localhost salvo que se confirme
+    command: ["npx", "prisma", "db", "seed"]
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
