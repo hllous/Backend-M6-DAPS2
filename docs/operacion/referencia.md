@@ -1,6 +1,6 @@
 # Referencia de operación
 
-Datos que cambian poco: dónde está cada cosa, qué corre en CI y qué variables lee el backend. Cómo se usa todo esto: [desplegar.md](desplegar.md) y [runbooks.md](runbooks.md).
+Datos que cambian poco: dónde está cada cosa, qué corre en CI y qué variables lee el backend. Cómo se usa todo esto: [desplegar.md](desplegar.md).
 
 ## URLs
 
