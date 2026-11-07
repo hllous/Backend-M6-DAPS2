@@ -343,6 +343,8 @@ Cambios entre el volcado de Trello (20/10) y el 03/11/2026 que afectan a esta HU
 - **CA-HU23-4** (Falla externa; propuesto, a validar por el PO): **DADO** un envío al broker que falla 5 veces seguidas o un handler que falla, **CUANDO** corren el dispatcher o el inbox, **ENTONCES** la fila del outbox queda FAILED con lastError y deja de barrerse, y M6_ADMIN la reencola con retry (FAILED → PENDING → SENT, auditado); un handler que falla deja la fila sin processedAt y un reenvío del mismo eventId lo reintenta. — *Agregado por ACT-11*
 - **CA-HU23-5** (Error; propuesto, a validar por el PO): **DADO** un token de ciudadano o un empleado que no es M6_ADMIN, **CUANDO** invoco POST /events/inbox, **ENTONCES** recibo 403 y no se procesa nada. — *Agregado por ACT-03*
 
+- **Nota del 07/11/2026 (sin criterio nuevo):** la pantalla **Eventos** (antes «Monitor de integración»; menú de Admin y Auditor, ruta `/app/admin/integration-monitor`) tiene tres pestañas: **Eventos salientes** (el outbox, con el reintento de los `FAILED`), **Eventos recibidos** (el inbox: tipo, área emisora, estado, recibido, procesado y error; lee `GET /events/inbox`, #516) y **Registro de actividad**, donde el actor de un evento de otro módulo se ve como «Sistema · Obras Públicas» (M3), «Sistema · Tránsito» (M7), «Sistema · Faltas» (M4), «Sistema · Reclamos» (M2) o «Sistema · Alerta meteorológica». Esa lectura del inbox y esos rótulos no tienen criterio ni caso en esta matriz.
+
 ## HU-24 — Probar M6 contra el Core real de M9 antes de la entrega
 
 - **Como** equipo de M6 **quiero** probar M6 contra el Core real de M9 **para** verificar la circulación de eventos de ida y vuelta antes de la entrega.
