@@ -231,7 +231,7 @@ export class EnvironmentalReportsController {
         summary: 'Pedido de una foto adicional',
         value: {
           message: 'Necesitamos una foto más del frente del local, tomada de noche.',
-          requiredBy: '2026-11-03',
+          requiredBy: '2027-03-20',
           internalNote: 'La foto anterior salió movida.',
         },
       },

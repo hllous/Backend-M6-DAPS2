@@ -70,7 +70,7 @@ export class ServicesController {
         summary: 'Recolección planificada de un recorrido',
         value: {
           serviceTypeId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-          scheduledDate: '2026-09-15',
+          scheduledDate: '2027-03-15',
           origin: 'PLANNED',
           routeId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
           crewId: 'e5f6a7b8-c9d0-4234-8fab-345678901234',
@@ -543,7 +543,7 @@ export class ServicesController {
       ejemplo: {
         summary: 'Nueva fecha y ventana',
         value: {
-          scheduledDate: '2026-09-22',
+          scheduledDate: '2027-03-22',
           windowFrom: '07:00',
           windowTo: '11:00',
         },
@@ -588,7 +588,7 @@ export class ServicesController {
           zoneId: 'd4e5f6a7-b8c9-4123-8efa-234567890123',
           status: 'NOT_SERVICED',
           reason: 'BLOCKED_ACCESS',
-          proposedDate: '2026-09-16',
+          proposedDate: '2027-03-16',
           notes: 'Camión de mudanza bloqueando la cuadra entre Mitre y San Martín.',
         },
       },

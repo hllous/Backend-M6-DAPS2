@@ -375,8 +375,8 @@ export class CrewsController {
         summary: 'Reubicación temporal por refuerzo',
         value: {
           zoneId: 'a1b2c3d4-e5f6-4789-8abc-def012345678',
-          validFrom: '2026-11-02',
-          validTo: '2026-11-15',
+          validFrom: '2027-03-22',
+          validTo: '2027-04-05',
           reason: 'Refuerzo por acumulación de residuos tras el temporal',
         },
       },
