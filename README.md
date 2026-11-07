@@ -16,6 +16,30 @@ Ver decisiones detalladas en [`docs/decisiones/`](docs/decisiones/).
 
 ## Cómo correr localmente
 
+### Con Docker (un solo comando)
+
+Requiere Docker con Compose. Levanta Postgres, RabbitMQ (con el exchange `muni.inbox` y la cola `q.ambiente` ya creados, como los crea el Core) y el backend, con credenciales de ejemplo solo para desarrollo local:
+
+```bash
+docker compose up --build
+```
+
+Cuando termina, el backend responde en `http://localhost:3000`:
+
+- `GET /health/ready` → 200 con `"database":"up"` y `"broker":"connected"`.
+- Swagger en `http://localhost:3000/api/docs`.
+- Consola de RabbitMQ en `http://localhost:15672` (usuario `m6`, clave `m6_local_dev`).
+
+Para cargar los datos de demo (opcional, ver [`docs/seed.md`](docs/seed.md)):
+
+```bash
+docker compose --profile seed run --rm seed
+```
+
+Sin las variables de Cloudflare R2, `POST /evidence` responde 503; el resto funciona. `docker compose down -v` borra la base y la cola. El Core de M9 no se levanta: RabbitMQ local hace de bus.
+
+### Sin Docker
+
 ```bash
 npm install
 cp .env.example .env          # completar DATABASE_URL y JWT_SECRET
@@ -29,8 +53,6 @@ Requisitos:
 - Node.js 22 LTS o superior
 - PostgreSQL 15+ (o base gestionada tipo Neon)
 - RabbitMQ (el bus del Core, vía el exchange `muni.inbox`)
-
-> Para levantar el stack completo con Docker local: ver `docker-compose.yml` en la raíz del workspace DevOps.
 
 ## Enlaces útiles
 
