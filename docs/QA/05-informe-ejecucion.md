@@ -125,7 +125,7 @@ El job `e2e` **no es check obligatorio** de la protección de ramas (`.github/br
 
 | Punto | Archivo |
 |---|---|
-| `describe.skip` de toda la suite | `src/events/consumers/m2-ejemplos.spec.ts:32` |
+| `describe.skip` de toda la suite | `src/events/consumers/m2-ejemplos.spec.ts:33` |
 | `it.skip` | `src/events/payloads.spec.ts:427` |
 | `it.skip` | `src/modules/environmental-reports/environmental-reports.service.spec.ts:923` |
 | `it.skip.each` (`ROUTED`, `IN_PROGRESS`) | `src/modules/services/services.service.spec.ts:1376` |
@@ -143,8 +143,8 @@ Son 4 puntos, 12 tests saltados y 1 suite saltada en el CI. Están **justificado
 | Qué | Estado |
 |---|---|
 | `docs/api/openapi.json` | 103 rutas y 152 operaciones (6/11; el 03/11 eran 102 y 150). El CI regenera el archivo con `npm run openapi:generate` y falla si queda desactualizado (`git diff --exit-code`) |
-| `src/openapi-contract.spec.ts` | 4 tests: toda operación 200/201 declara el schema de su respuesta; el `openapi.json` está al día con el código; ninguna propiedad queda como `type: object` sin forma; todo campo con `@Min`, `@Max`, `@IsLatitude` o `@IsLongitude` declara `minimum` y `maximum` |
-| Eventos publicados | 7 `.schema.json` en `docs/eventos/publicados/`, validados con `ajv` en `src/events/payloads.spec.ts` |
+| `src/openapi-contract.spec.ts` | 5 tests: toda operación 200/201 declara el schema de su respuesta; todo `GET` autenticado declara el 403; el `openapi.json` está al día con el código; ninguna propiedad queda como `type: object` sin forma; todo campo con `@Min`, `@Max`, `@IsLatitude` o `@IsLongitude` declara `minimum` y `maximum` |
+| Eventos publicados | 6 `.schema.json` (uno por evento) más `_shared.schema.json` en `docs/eventos/publicados/`, validados con `ajv` en `src/events/payloads.spec.ts` |
 | Respuestas reales contra OpenAPI | **No realizado**: no hay Schemathesis ni Pact |
 | Colección Postman, Newman o Karate | **No realizada**: los e2e usan `supertest` |
 | Todos los endpoints con un caso de éxito y uno de error | **No verificado**: hay 152 operaciones y 17 archivos e2e al 06/11 (16 suites corridas en el CI el 03/11); no existe un mapeo de endpoint a caso |

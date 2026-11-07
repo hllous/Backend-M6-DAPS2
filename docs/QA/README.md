@@ -17,7 +17,7 @@
 | 6. Informe de seguridad | `07-informe-seguridad.md` | Borrador completo; a validar por el equipo |
 | 7. Declaración y plan de IA | `08-declaracion-ia.md` | Borrador completo; faltan datos del equipo (firmas, prompts exactos) |
 | 8. Lecciones aprendidas | `09-lecciones-aprendidas.md` | Borrador completo; a validar por el equipo |
-| Manual de usuario (prueba «tarea al azar», Eje A) | `manual-de-usuario.md` | Borrador v0.2; textos de UI por verificar (están marcados) |
+| Manual de usuario (prueba «tarea al azar», Eje A) | `manual-de-usuario.md` | Borrador v0.4 (03/11); textos de UI por verificar (están marcados). Las capturas viven en `img/` (se referencian como `img/NN-nombre.png`) |
 
 Los PDF van en `docs/QA/build/` y **no se versionan** (están en `.gitignore`).
 
@@ -44,7 +44,7 @@ El script falla si falta alguno de los `01` a `09`, para no entregar un PDF inco
 | Tema | Estado |
 |---|---|
 | **G5 (Jira).** La cátedra pide Jira actualizado con casos de prueba y defectos, con estado real, responsable y vínculo a la HU, y acceso de lectura para el docente. El equipo trabaja con **GitHub Issues y un tablero de Trello**, no con Jira | **Abierta.** Hay que consultar por el Teams de la cátedra si alcanza como equivalente (las consultas cierran el **09/11**). Hasta que respondan, se mantienen casos y defectos en Issues y Trello con estado, responsable y vínculo a la HU, y se prepara el acceso de lectura para el docente |
-| **Manual de usuario.** Vive en este repo y se espeja en el frontend | Issue espejo: [FE #818](https://github.com/hllous/Frontend-M6-DAPS2/issues/818) |
+| **Manual de usuario.** Vive en este repo y se espeja en el frontend (con la carpeta `img/`) | Issue espejo: [FE #818](https://github.com/hllous/Frontend-M6-DAPS2/issues/818) (cerrado). Actualización por los cambios de la interfaz del 07/11: [BE #528](https://github.com/hllous/Backend-M6-DAPS2/issues/528) |
 | **Firma de tests generados con IA** | Pendiente de cada integrante (ver `08-declaracion-ia.md`) |
 | **Tag `v1.0-testing`** en `main`, antes de las 13:30 del 10/11, en backend y frontend | Pendiente; se propone hacerlo el 09/11 |
 

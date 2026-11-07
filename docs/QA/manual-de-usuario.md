@@ -1,6 +1,6 @@
 # Manual de usuario — Módulo 6: Ambiente e Higiene
 
-> Versión 0.4, revisión del 03/11/2026 para la prueba del TP del 10/11. Parte del manual v0.1 (`docs/manual-de-usuario.md`, 20/10) y lo reorganiza **por tareas**: cada tarea se puede hacer siguiendo solo su sección. Se guarda en el repo de backend y se espeja en el de frontend (Issue FE #818).
+> Versión 0.5, revisión del 07/11/2026 (nombres y capturas de la interfaz actual, Issue BE #528) para la prueba del TP del 10/11. Parte del manual v0.1 (`docs/manual-de-usuario.md`, 20/10) y lo reorganiza **por tareas**: cada tarea se puede hacer siguiendo solo su sección. Se guarda en el repo de backend y se espeja en el de frontend (Issue FE #818, cerrado).
 >
 > **Marcas de verificación.** Los nombres de menús, botones y mensajes se contrastaron el 03/11/2026 con la aplicación **desplegada** (`https://m6-ambiente-higiene.vercel.app`), ingresando con el login real de M1 con siete cuentas: administración (10000), Oficina de Operaciones (10002), Oficina Ambiental (10004), auditoría (10007), responsable de cuadrilla (10009), integrante de cuadrilla (10010) e inspector (10011; solo se vio su lista de servicios). Qué se pudo y qué no se pudo verificar está en la sección 5. Las acciones que modifican datos (guardar, confirmar, iniciar, cancelar) **no se ejecutaron** durante esa verificación para no alterar los datos compartidos: de ellas se verificaron el botón, el formulario y sus textos, pero no el mensaje de éxito. Las capturas son de esa misma sesión (datos de demostración, sin contraseñas).
 
@@ -40,7 +40,7 @@ El servidor del backend y el de identidad se «duermen» cuando no se usan. La *
 | **Campo — integrante de cuadrilla** | Consulta el trabajo asignado de su cuadrilla, el mapa y los expedientes. En el detalle de un servicio la pantalla muestra **Solo consulta** y **no ofrece** Iniciar servicio ni los demás botones del responsable | Celular o tableta |
 | **Auditoría** | Solo lectura: ve servicios, expedientes, mapa y tableros, sin botones para modificar | Escritorio |
 
-En la parte superior de la pantalla, junto a **Cerrar sesión**, figura su perfil (**Oficina** o **Responsable de cuadrilla**) y su identificación (*Empleado M1 · número*). El rótulo puede repetirse entre cuentas con permisos distintos: las de Operaciones, Ambiental, auditoría y administración muestran todas **Oficina**; el integrante muestra **Integrante de cuadrilla**. El rótulo del inspector no se comprobó.
+En la parte superior de la pantalla, junto a **Cerrar sesión**, figura su perfil (**Oficina** o **Responsable de cuadrilla**) y debajo su nombre. El rótulo puede repetirse entre cuentas con permisos distintos: las de Operaciones, Ambiental, auditoría y administración muestran todas **Oficina**; el integrante muestra **Integrante de cuadrilla**. El rótulo del inspector no se comprobó.
 
 **Cómo abrir un servicio.** En **Servicios** (Oficina), pulse la fila del servicio y luego **Ver detalle**; desde **Mi trabajo**, pulse el nombre del servicio. En **Mi trabajo** de Campo, pulse **Abrir**. Todas las tareas de este manual dicen «abra el servicio» y significan eso.
 
@@ -60,7 +60,7 @@ El perfil de cada cuenta decide qué botones ve (sección 4.5). Para repetir las
 | 10 (reportar desborde, reportar daño, vaciar contenedor) | `sofia.lopez.10009@municipio.gob.ar` | Campo, responsable de cuadrilla |
 | 10 (iniciar y completar reparación, reubicar, confirmar ubicación, retirar contenedor) | `julian.lopez.10002@municipio.gob.ar` (o la de administración) | Oficina de Operaciones |
 | 14 (consultas, contenedores, puntos y espacios verdes, árboles, derivaciones, cortes de calle) | `julian.lopez.10002@municipio.gob.ar` | Oficina de Operaciones |
-| 14 (autorizar la extracción de un árbol; tipos de servicio, recorridos, frecuencias, cuadrillas, vehículos, zonas y sitios de disposición; **Monitor de integración**; este último también lo ve la cuenta de auditoría `camila.medina.10007@municipio.gob.ar`) | `carlos.rodriguez.10000@municipio.gob.ar` | Administración |
+| 14 (autorizar la extracción de un árbol; tipos de servicio, recorridos, frecuencias, cuadrillas, vehículos, zonas y sitios de disposición; **Eventos**; esta pantalla también lo ve la cuenta de auditoría `camila.medina.10007@municipio.gob.ar`) | `carlos.rodriguez.10000@municipio.gob.ar` | Administración |
 | Ver cómo se limita el integrante de cuadrilla | `diego.martinez.10010@municipio.gob.ar` | Campo, integrante |
 | Solo lectura | `camila.medina.10007@municipio.gob.ar` | Auditoría |
 | 11 (consulta del vecino) | ninguna: es pública | — |
@@ -80,13 +80,13 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 1. Abra `https://m6-ambiente-higiene.vercel.app`. Si no tiene sesión, se muestra la pantalla **Ingresar**.
 2. Escriba su **Correo electrónico** (el de empleado, con la forma `nombre.apellido.NNNNN@municipio.gob.ar`) y su **Contraseña** (el ícono del ojo la muestra u oculta).
 3. Pulse **Ingresar al sistema**. Mientras valida, el botón muestra *«Ingresando…»* y los campos se bloquean; la primera vez del día puede tardar (sección 1.2).
-4. Se abre **Mi trabajo**. El menú de la izquierda muestra las secciones de su perfil: **Mi trabajo**, **Servicios**, **Derivaciones**, **Control Ambiental**, **Mapa**, **Catálogo** y **Tableros**. Las cuentas de administración suman **Monitor de integración**.
+4. Se abre **Mi trabajo**. El menú de la izquierda muestra las secciones de su perfil: **Mi trabajo**, **Servicios**, **Derivaciones**, **Control Ambiental**, **Mapa**, **Catálogo** y **Tableros**. Las cuentas de administración suman **Eventos**.
 
-**Resultado esperado:** entra a **Mi trabajo** y, arriba, ve su perfil (**Oficina** o **Responsable de cuadrilla**) y *Empleado M1 · número*. Oficina ve **Acciones de la jornada**, con los pendientes agrupados según la cuenta (Operaciones: **Servicios sin cuadrilla**, **Servicios por reprogramar**, **Intervenciones de arbolado**, **Contenedores desbordados**; Ambiental: **Expedientes por clasificar**; cada grupo con un contador y el enlace **Ver todos**); un grupo sin pendientes no se muestra. Auditoría ve *«Su perfil es de solo lectura: no tiene tareas para resolver acá.»* con un enlace **Ir a Tableros**. Campo ve **Servicios asignados**: la lista de servicios de su cuadrilla.
+**Resultado esperado:** entra a **Mi trabajo** y, arriba, ve su perfil (**Oficina** o **Responsable de cuadrilla**) y, debajo, su nombre. Oficina ve **Acciones de la jornada**, con los pendientes agrupados según la cuenta (Operaciones: **Servicios sin cuadrilla**, **Servicios por reprogramar**, **Intervenciones de arbolado**, **Contenedores desbordados**; Ambiental: **Expedientes por clasificar**; cada grupo con un contador y el enlace **Ver todos**); un grupo sin pendientes no se muestra. Auditoría ve *«Su perfil es de solo lectura: no tiene tareas para resolver acá.»* con un enlace **Ir a Tableros**. Campo ve **Servicios asignados**: la lista de servicios de su cuadrilla.
 
-![Pantalla de ingreso](../manual-de-usuario/img/01-login.png)
+![Pantalla de ingreso](img/01-login.png)
 
-![Mi trabajo de Oficina](../manual-de-usuario/img/02-office-mi-trabajo.png)
+![Mi trabajo de Oficina](img/02-office-mi-trabajo.png)
 
 **Si algo falla**
 
@@ -104,7 +104,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Dónde:** menú **Servicios**.
 
-1. Entre a **Servicios**: se ven el mapa y la tabla (la tabla pagina de a 25 con **Anterior** y **Siguiente**).
+1. Entre a **Servicios**: se ven el mapa y la tabla (la tabla pagina de a 25; el paginador compacto muestra «Mostrando 1–25 de N» y los botones ‹ › con «1 / N»).
 2. Pulse **Programar servicio** (arriba a la derecha). Se abre una ventana con ese título.
 3. Complete el formulario:
    - **Tipo de servicio**: por ejemplo *Barrido mecánico (Recorrido)*. La lista indica entre paréntesis si el tipo es por *Recorrido* o *Punto* (puntual).
@@ -117,7 +117,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Resultado esperado:** el servicio aparece en la tabla en estado **Programado**, sin vehículo y, si dejó la cuadrilla en *Sin asignar*, sin cuadrilla.
 
-![Formulario para programar un servicio](../manual-de-usuario/img/12-programar-servicio.png)
+![Formulario para programar un servicio](img/12-programar-servicio.png)
 
 **Notas.** Si se entra desde una denuncia, el formulario muestra *«Origen: Denuncia ciudadana»* y, si hace falta, el campo **Nº de reclamo**: pegue el **UUID técnico** del ticket de M2: el código corto `TK-…` no sirve (*«El ticketId debe ser un UUID válido»*). Una fecha pasada se rechaza (*«La fecha programada debe ser hoy o una fecha posterior en Argentina»*).
 
@@ -132,7 +132,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Resultado esperado:** el detalle muestra la cuadrilla y el vehículo asignados; el servicio sigue **Programado**. Ahora el responsable de esa cuadrilla puede iniciarlo.
 
-![Asignación con aviso de superposición](../manual-de-usuario/img/15-asignar-cuadrilla.png)
+![Asignación con aviso de superposición](img/15-asignar-cuadrilla.png)
 
 ### Tarea 4 — Reprogramar o cancelar un servicio (Oficina de Operaciones)
 
@@ -141,7 +141,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 1. Abra un servicio **Programado**: el detalle ofrece **Reasignar cuadrilla**, **Crear derivación de reparación**, **Reprogramar**, **Cancelar servicio** y **Solicitar corte de calle**. Pulse **Reprogramar** y escriba el **Motivo** (obligatorio). El servicio pasa a **A reprogramar**.
 2. Cuando conozca la nueva fecha, abra el servicio (los **A reprogramar** están en **Mi trabajo → Servicios por reprogramar**) y pulse **Confirmar nueva fecha**; indique fecha y ventana horaria y confirme. En un servicio **A reprogramar** el detalle muestra el **Motivo** y los botones **Reasignar cuadrilla**, **Crear derivación de reparación**, **Confirmar nueva fecha**, **Cancelar servicio** y **Solicitar corte de calle**; **Volver a Servicios** regresa a la lista.
 
-![Detalle de un servicio A reprogramar](../manual-de-usuario/img/14-detalle-servicio.png)
+![Detalle de un servicio A reprogramar](img/14-detalle-servicio.png)
 
 **Resultado esperado:** vuelve a **Programado** con la fecha nueva y el motivo en el historial.
 
@@ -166,11 +166,11 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Resultado esperado:** el servicio queda **Completado** si todas las zonas se atendieron, o **Parcial** si alguna no. Lo calcula el sistema; no se elige. Oficina lo ve en **Servicios**.
 
-![Mi trabajo de Campo](../manual-de-usuario/img/04-campo-mi-trabajo.png)
+![Mi trabajo de Campo](img/04-campo-mi-trabajo.png)
 
-![Servicios de Campo](../manual-de-usuario/img/05-campo-servicios.png)
+![Servicios de Campo](img/05-campo-servicios.png)
 
-![Detalle de un servicio en el celular](../manual-de-usuario/img/19-campo-detalle.png)
+![Detalle de un servicio en el celular](img/19-campo-detalle.png)
 
 **Suspender y reanudar.** Con el servicio **En curso** y un impedimento, **Suspender servicio** (pide un motivo y, opcionalmente, una nota). Con la causa resuelta, **Reanudar servicio**. Un servicio suspendido que no se puede retomar lo cancela Oficina.
 
@@ -190,7 +190,7 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Dónde:** menú **Control Ambiental**.
 
-1. Abra **Control Ambiental**: la cola de expedientes (cada fila muestra el código `#xxxxxxxx`, el tipo de hallazgo, la dirección, la última actualización y el estado). Filtre por **Estado**, **Tipo de hallazgo** y **Prioridad**, busque con **Buscar expediente**, o filtre por **Última actualización** (**Desde** y **Hasta**).
+1. Abra **Control Ambiental**: la cola de expedientes (cada fila muestra el número del expediente (`EXP-AAAA-NNNNNN`, o `TK-…` si viene de un reclamo), el tipo de hallazgo, la dirección, la última actualización y el estado). Filtre por **Estado**, **Tipo de hallazgo** y **Prioridad**, busque con **Buscar expediente**, o filtre por **Última actualización** (**Desde** y **Hasta**).
 2. Pulse la fila de un expediente en estado **Recibido**. En el detalle, pulse **Iniciar revisión**. Pasa a **En revisión**.
 3. En **En revisión**, el recuadro **Acciones** ofrece cuatro caminos:
    - **Programar inspección**: se abre una ventana con **Fecha de inspección**, **Inicio** y **Fin**, **Zona operativa** y **Cuadrilla** (la fecha, la zona y la cuadrilla son obligatorias); confirme con **Programar inspección**.
@@ -202,11 +202,11 @@ Cada tarea indica **Quién**, **Dónde**, los **Pasos** y el **Resultado esperad
 
 **Resultado esperado:** con **Programar inspección**, el expediente pasa a **Inspección programada** y se crea el servicio de inspección para la cuadrilla elegida. El sistema avisa si la denuncia podría estar duplicada.
 
-![Cola de expedientes ambientales](../manual-de-usuario/img/06-office-control-ambiental.png)
+![Cola de expedientes ambientales](img/06-office-control-ambiental.png)
 
-![Detalle de un expediente En revisión con sus acciones](../manual-de-usuario/img/17-expediente-detalle.png)
+![Detalle de un expediente En revisión con sus acciones](img/17-expediente-detalle.png)
 
-![Ventana Programar inspección](../manual-de-usuario/img/24-programar-inspeccion.png)
+![Ventana Programar inspección](img/24-programar-inspeccion.png)
 
 **Si algo falla:** *«Debe seleccionar una zona operativa para programar la inspección»*. Si ve *«No se pudo actualizar el expediente. Recargue la pantalla»*, el expediente cambió de estado: recargue y revise las acciones disponibles.
 
@@ -258,11 +258,11 @@ Con resultado inconcluso, Oficina Ambiental usa **Programar reinspección** (se 
 
 La cuenta de integrante (`…10010`) también ve **Vaciar contenedor**. **Editar** (datos del contenedor) lo ofrece Oficina. El vaciado y la reubicación se ejecutan como un servicio puntual: **cerrar ese servicio** es lo que cambia el estado del contenedor. El código de un contenedor no se puede cambiar después de crearlo.
 
-![Catálogo de contenedores](../manual-de-usuario/img/18-catalogo-contenedores.png)
+![Catálogo de contenedores](img/18-catalogo-contenedores.png)
 
-![Detalle de un contenedor visto por Oficina](../manual-de-usuario/img/20-contenedor-detalle-oficina.png)
+![Detalle de un contenedor visto por Oficina](img/20-contenedor-detalle-oficina.png)
 
-![Detalle de un contenedor visto por Campo](../manual-de-usuario/img/23-contenedor-detalle-campo.png)
+![Detalle de un contenedor visto por Campo](img/23-contenedor-detalle-campo.png)
 
 ### Tarea 11 — Consultar el estado de una denuncia sin ingresar (vecino)
 
@@ -273,9 +273,9 @@ La cuenta de integrante (`…10010`) también ve **Vaciar contenedor**. **Editar
 
 **Resultado esperado:** se muestra la **etapa** de la denuncia, el tipo, la dirección y las fechas. **No** se muestran el inspector, los hallazgos ni el acta. Si el código no corresponde a ninguna denuncia, se muestra *«No encontramos una denuncia con ese código. Revisá que sea el código de seguimiento de tu comprobante.»*: no se revela si existe. Si el código no tiene formato de identificador, el aviso es *«Ese código no tiene el formato correcto. Copialo tal cual figura en tu comprobante.»*. Hay un límite de consultas por minuto: si lo supera, espere un momento.
 
-![Consulta ciudadana](../manual-de-usuario/img/21-consulta-vecino.png)
+![Consulta ciudadana](img/21-consulta-vecino.png)
 
-![Seguir mi denuncia, con un código inexistente](../manual-de-usuario/img/22-seguir-denuncia.png)
+![Seguir mi denuncia, con un código inexistente](img/22-seguir-denuncia.png)
 
 ### Tarea 12 — Trabajar sin conexión (Campo)
 
@@ -301,21 +301,21 @@ La cuenta de integrante (`…10010`) también ve **Vaciar contenedor**. **Editar
 
 **Resultado esperado:** los gráficos reflejan el período y los filtros elegidos. Cada tarjeta compara con el período anterior y con la meta, cuando existe (*Cumple la meta* o *Bajo la meta*). La unidad de análisis es **servicio + zona**: un recorrido que pasa por cuatro zonas y atiende tres cuenta como tres objetivos atendidos y uno pendiente. Los servicios cancelados no cuentan como incumplimiento.
 
-![Tablero de indicadores](../manual-de-usuario/img/10-tableros.png)
+![Tablero de indicadores](img/10-tableros.png)
 
 ### Tarea 14 — Otras consultas y tareas de Oficina
 
 Cuenta de Operaciones (`…10002`) salvo donde se indique.
 
-- **Buscar y filtrar servicios:** en **Servicios**, escriba en la búsqueda («Buscar servicio, zona o cuadrilla…») o use **Período**, **Estado**, **Zona**, **Categorías** y los filtros de columna; **Limpiar filtros** vuelve a la lista completa. El mapa y la tabla muestran lo mismo. Esta consulta la hace cualquier perfil (Campo ve solo los servicios de su cuadrilla).
+- **Buscar y filtrar servicios:** en **Servicios**, escriba en la búsqueda («Buscar servicio, zona o cuadrilla…») o use **Período**, **Estado**, **Comuna y barrio**, **Cuadrilla** y **Categorías** (una sola barra de filtros); **Limpiar filtros** vuelve a la lista completa. El mapa y la tabla muestran lo mismo. Esta consulta la hace cualquier perfil (Campo ve solo los servicios de su cuadrilla).
 - **Pedir un corte de calle o una reparación:** en el detalle de un servicio **Programado** o **A reprogramar**, **Solicitar corte de calle** (a M7; con el corte pendiente el servicio no puede iniciarse) o **Crear derivación de reparación** (a M3). Las respuestas se siguen en **Derivaciones**.
 - **Administrar catálogos:** **Catálogo** reúne tipos de servicio, sitios de disposición, zonas operativas, recorridos, frecuencias de servicio, vehículos, cuadrillas, espacios verdes, contenedores, puntos verdes, árboles e intervenciones de arbolado. Todos los perfiles lo consultan. Operaciones (`…10002`) da de alta, edita y da de baja contenedores, puntos verdes, espacios verdes y árboles; los tipos de servicio, recorridos, frecuencias, cuadrillas, vehículos, zonas y sitios de disposición los administra la cuenta de **administración** (`…10000`). La baja es lógica y el código de un contenedor, un tipo de servicio o un relevamiento no se puede cambiar.
 - **Intervenciones sobre arbolado:** en **Catálogo → Intervenciones de arbolado**, Operaciones solicita la intervención y puede **Autorizar intervención** una poda. **Autorizar o rechazar una extracción** exige la cuenta de **administración** (`…10000`). Para un relevamiento, abra el árbol y pulse **Registrar relevamiento** (acción de Campo).
 - **Consultar el mapa:** **Mapa** (**Mapa operativo**) tiene las vistas **Inventario**, **Zonas**, **Cobertura**, **Recorrido** y **Hoy**, y las capas **Contenedores**, **Puntos verdes**, **Espacios verdes** y **Arbolado**, que se activan o desactivan. Toda la información del mapa también está en la lista **Elementos**.
-- **Monitor de integración** (eventos salientes fallidos): aparece con la cuenta de administración y con la de auditoría. **Accesos** (asignar roles de M6) no apareció con ninguna de las cuentas probadas.
+- **Eventos** (antes «Monitor de integración»; ruta `/app/admin/integration-monitor`): aparece con la cuenta de administración y con la de auditoría, con las pestañas **Eventos salientes** (fallidos y reintento), **Eventos recibidos** (tipo, área emisora, estado, recibido, procesado y error) y **Registro de actividad** (el actor de un evento de otro módulo se ve como «Sistema · Obras Públicas», «Sistema · Tránsito», «Sistema · Faltas», «Sistema · Reclamos» o «Sistema · Alerta meteorológica»). **Accesos** (asignar roles de M6) no apareció con ninguna de las cuentas probadas.
 
-![Servicios: mapa y tabla](../manual-de-usuario/img/03-office-servicios.png)
-![Mapa operativo](../manual-de-usuario/img/08-mapa.png)
+![Servicios: mapa y tabla](img/03-office-servicios.png)
+![Mapa operativo](img/08-mapa.png)
 
 ---
 
@@ -382,7 +382,7 @@ Activo, Desbordado, Dañado, En reparación, En reubicación, Retirado.
 | Autorizar una poda | ✔ | — | ✔ | — | — | — | — |
 | Autorizar una extracción de árbol | — | — | ✔ | — | — | — | — |
 | Administrar tipos de servicio, recorridos, cuadrillas y demás catálogos | — | — | ✔ | — | — | — | — |
-| Ver Monitor de integración | — | — | ✔ | ✔ | — | — | — |
+| Ver Eventos | — | — | ✔ | ✔ | — | — | — |
 
 Estas reglas dependen de la cuenta: cada fila se comprobó en la pantalla con la cuenta indicada en 1.4, salvo las de la columna **Inspector** (que solo se vio la lista de servicios y el botón **Iniciar servicio**). Las acciones que la pantalla no ofrece, el servidor las rechaza con 403 cuando el perfil no tiene el rol; para el integrante de cuadrilla la documentación del servidor le da el mismo rol de Campo que al responsable, de modo que **la pantalla no lo ofrece** pero eso no es una garantía de que el servidor lo impida.
 
@@ -400,7 +400,7 @@ Estas reglas dependen de la cuenta: cada fila se comprobó en la pantalla con la
 
 ### Qué se verificó y con qué cuenta
 
-- **Verificadas en la pantalla** (3/11/2026): administración `…10000` (expedientes y sus acciones, tableros, Monitor de integración); Operaciones `…10002` (programar, asignar, servicio Programado y A reprogramar, contenedores en todos los estados, intervención de arbolado, catálogo); Ambiental `…10004` (Mi trabajo, acciones de cada estado de expediente); auditoría `…10007` (menú, tableros, expedientes y servicios sin botones de escritura); responsable `…10009` (Mi trabajo, detalle del servicio, reportes de contenedor); integrante `…10010` (detalle **Solo consulta**, tableros, **Vaciar contenedor**).
+- **Verificadas en la pantalla** (3/11/2026): administración `…10000` (expedientes y sus acciones, tableros, Eventos); Operaciones `…10002` (programar, asignar, servicio Programado y A reprogramar, contenedores en todos los estados, intervención de arbolado, catálogo); Ambiental `…10004` (Mi trabajo, acciones de cada estado de expediente); auditoría `…10007` (menú, tableros, expedientes y servicios sin botones de escritura); responsable `…10009` (Mi trabajo, detalle del servicio, reportes de contenedor); integrante `…10010` (detalle **Solo consulta**, tableros, **Vaciar contenedor**).
 - **Vista parcial:** inspector `…10011` (solo su lista de servicios de inspección y el botón **Iniciar servicio**, sin ejecutarlo; su rótulo de perfil y sus permisos sobre contenedores no se comprobaron).
 - **No verificado:** todo lo que modifica datos (guardar, confirmar, iniciar, completar, suspender, cancelar, reprogramar, emitir acta, **Confirmar vaciado**, adjuntar evidencia, completar inspección) y sus mensajes de éxito; la tarea 9 completa (no hay expediente **Sancionado** en los datos y no se cerró ninguno); la tarea 12 (trabajo sin conexión); **Accesos** (no apareció en el menú de ninguna cuenta); un código de seguimiento real en la tarea 11 y el aviso del límite de consultas; la cuenta de Operaciones aplicada a expedientes (se comprobó solo que no ve las acciones).
 
@@ -426,3 +426,5 @@ Las HU son las del tablero «M6 - Product Backlog & Story Map» de Trello; sus i
 | 12 Trabajar sin conexión | HU-08: Como miembro de cuadrilla quiero adjuntar fotos como evidencia, con reintento seguro |
 | 13 Leer los indicadores | HU-28: Como Oficina quiero un tablero de indicadores (cobertura, cumplimiento, incidencias y residuos) |
 | 14 Otras tareas de Oficina | HU-12, HU-13, HU-09: Como Oficina quiero llevar el censo de arbolado…; Como Oficina quiero administrar espacios verdes y puntos verdes; Como cuadrilla quiero derivar una reparación o pedir un corte de calle |
+
+**Revisión del 07/11/2026 (Issue #528).** Se cambiaron los nombres de la pantalla Eventos y del identificador de los expedientes y se rehicieron las 19 capturas de `img/` con la interfaz actual del Frontend en modo demostración (datos de demo, sin personas reales). Dos salvedades: **01-login** muestra el selector de perfil del modo demostración, porque los campos Correo y Contraseña solo existen con el ingreso real de M1; y **17-expediente-detalle** muestra un expediente con reclamo (`TK-…`), porque es el que ofrece las cuatro acciones. No se re-verificaron en el sistema desplegado los textos de la tarea 13 (filtros de Tableros, ahora tras **Más filtros**) ni la ausencia de **Accesos** (el modo demostración la muestra a administración).
