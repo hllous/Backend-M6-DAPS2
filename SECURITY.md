@@ -4,7 +4,7 @@ Este repositorio es el backend del Módulo 6 (Grupo 04) de un trabajo práctico 
 
 ## Cómo reportar una vulnerabilidad
 
-**No abras un issue público.** Usá el reporte privado de GitHub (pestaña *Security* → *Report a vulnerability*) o avisá directamente a los integrantes del equipo.
+**No abras un issue público.** Avisá directamente a los integrantes del equipo (mensaje privado o correo).
 
 Incluí qué endpoint o componente afecta, cómo reproducirlo y el impacto que ves. No pegues tokens, contraseñas ni datos reales.
 
@@ -14,4 +14,4 @@ El equipo responde dentro de los 7 días corridos. Al ser un proyecto académico
 
 ## Secretos
 
-Las credenciales no se versionan (hay `gitleaks` en el CI sobre todo el historial). Si encontrás una expuesta, reportala por el mismo canal privado.
+Las credenciales no se versionan (hay `gitleaks` en el CI sobre todo el historial). Si encontrás una expuesta, reportala por ese mismo canal.
