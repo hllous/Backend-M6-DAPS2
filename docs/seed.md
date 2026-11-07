@@ -202,6 +202,6 @@ DELETE FROM user_role_assignment
 
 ## 7. Zonas y comunas desde M9 (#421, #422)
 
-El seed crea las zonas con `syncZones` y el snapshot versionado `prisma/data/m9-barrios.json` y `m9-zonas.json` (64 barrios, 48 activos de CABA; 20 zonas administrativas, 15 comunas activas; los ids UUID no son secretos). El snapshot es una foto del 27/10: si M9 cambia el catálogo hay que volver a bajarlo. Para sincronizar contra el catálogo vivo del Core está `npm run zones:sync-from-core` (ver [deploy.md](deploy.md#sincronizar-zonas-y-comunas-con-el-catálogo-de-m9-421)); el orden es migrar, sync, seed.
+El seed crea las zonas con `syncZones` y el snapshot versionado `prisma/data/m9-barrios.json` y `m9-zonas.json` (64 barrios, 48 activos de CABA; 20 zonas administrativas, 15 comunas activas; los ids UUID no son secretos). El snapshot es una foto del 27/10: si M9 cambia el catálogo hay que volver a bajarlo. Para sincronizar contra el catálogo vivo del Core está `npm run zones:sync-from-core` (ver [desplegar.md](operacion/desplegar.md#sincronizar-zonas-y-comunas-con-el-catálogo-de-m9-421)); el orden es migrar, sync, seed.
 
 Una base con el seed viejo conserva sus ocho zonas `Z-…` (y sus `caba-…`) como *legacy*: el sync las reporta y no las toca si tienen datos. Se limpian al vaciar lo operativo (sección 5) o con `--clean-legacy`.
