@@ -6,7 +6,8 @@ Criterio de verificación de cada paso, contra el código del 07/11/2026 o contr
 
 - **Verificado en código**: el comportamiento descripto está en el archivo citado (rutas y funciones al lado).
 - **Verificado en vivo**: se ejecutó contra el backend desplegado el 07/11/2026 (solo los `curl` de [desplegar.md](desplegar.md#cómo-verificar-que-está-todo-ok)).
-- **No verificado**: acción en un panel (Render, Supabase, Vercel, GitHub) o contra el Core que no se ejecutó; sigue lo que indica la plataforma o el contrato de M9.
+- **Confirmado por el equipo (07/11/2026)**: acciones en paneles (Render, Supabase, Vercel, GitHub) y contra el Core que no se ejecutaron al escribir este documento y que el equipo confirmó que existen y funcionan como se describen.
+- **Abierto**: lo que todavía no está resuelto, hoy solo el backup de la base (ver el [runbook 2](#2-base-caída-y-healthready-503)).
 
 Ningún runbook usa valores reales: los secretos se cargan solo en el panel de Render.
 
@@ -50,14 +51,14 @@ Notas generales que aplican a varios (los antiguos "gotchas"):
 
 **Acción.**
 1. Esperar hasta 3 minutos y repetir el `curl`. Antes de una demo, despertarlo a mano: GitHub › Actions › `keepalive` › Run workflow, o el `curl` de arriba.
-2. Si `RENDER_HEALTH_URL` no existe, el `keepalive` avisa y sale sin fallar: cargarla en Settings › Secrets and variables › Actions › Variables con `https://m6-backend-m64k.onrender.com/health` (no verificado: es un panel).
+2. Si `RENDER_HEALTH_URL` no existe, el `keepalive` avisa y sale sin fallar: cargarla en Settings › Secrets and variables › Actions › Variables con `https://m6-backend-m64k.onrender.com/health` (confirmado por el equipo el 07/11/2026).
 3. Recordar que el `keepalive` **no evita el spin-down**: pide el cron cada 10 min pero GitHub lo corre cada 2-3 horas. Lo que mantiene tibio el servicio es el pinger externo (cron-job.org, monitor HTTP cada 5 min sobre `RENDER_HEALTH_URL`; cuenta anotada en `keepalive.yml`). El `--max-time` del ping es 180 s porque con 90 s fallaba por timeout sin que nada estuviera roto.
 
 **Verificación.** `/health` 200 y `/health/ready` 200 con `"database":"up"`. Que el outbox se vació: `GET /events/outbox?status=PENDING` (rol `M6_ADMIN` o `M6_AUDITOR`) sin filas viejas.
 
 **Rollback.** No aplica: no hubo cambio.
 
-**Escalamiento.** Si pasa de 5 minutos sin responder, ir al [runbook 2](#2-base-caída-y-healthready-503) (puede ser la base) y revisar el estado de Render (status page de la plataforma, no verificado).
+**Escalamiento.** Si pasa de 5 minutos sin responder, ir al [runbook 2](#2-base-caída-y-healthready-503) (puede ser la base) y revisar el estado de Render (status page de la plataforma).
 
 ---
 
@@ -69,7 +70,7 @@ Notas generales que aplican a varios (los antiguos "gotchas"):
 1. `curl -i https://m6-backend-m64k.onrender.com/health` → 200 aunque la base esté caída: es solo liveness. **Un `/health` verde no prueba la base.**
 2. `curl -i https://m6-backend-m64k.onrender.com/health/ready` → hace `SELECT 1` con timeout de 3 s; 503 si no contesta o tarda más. El error no trae detalle a propósito (podría traer host o usuario): el motivo está en los logs de Render.
 3. Con la base inalcanzable **al arrancar**, el servidor ni empieza a escuchar (Prisma falla en `onModuleInit`): `/health/ready` solo detecta una base que se cae con el proceso ya arriba. En ese caso el síntoma es que ni `/health` responde.
-4. Causas probables, en orden: proyecto de Supabase **pausado** por inactividad (~1 semana), `DATABASE_URL` mal cargada o rotada, límite de conexiones (el `SELECT 1` colgado no se cancela y sigue ocupando una conexión del pool; con la base caída y un monitor consultando seguido pueden acumularse). No verificado contra Supabase: los chequeos del panel no se ejecutaron.
+4. Causas probables, en orden: proyecto de Supabase **pausado** por inactividad (~1 semana), `DATABASE_URL` mal cargada o rotada, límite de conexiones (el `SELECT 1` colgado no se cancela y sigue ocupando una conexión del pool; con la base caída y un monitor consultando seguido pueden acumularse). Los chequeos del panel de Supabase (pausa y reactivación) están confirmados por el equipo (07/11/2026).
 
 **Acción.**
 1. Supabase pausado: reactivar desde el dashboard (no pierde datos). Esperar a que quede `Available`.
@@ -81,7 +82,7 @@ Notas generales que aplican a varios (los antiguos "gotchas"):
 
 **Rollback.** Si el cambio fue un `DATABASE_URL` nuevo, volver al valor anterior en el panel y redesplegar. No tocar datos ni correr migraciones a mano: el contenedor ya aplica `prisma migrate deploy` al arrancar y no levanta si falla.
 
-**Escalamiento.** Si la base está `Available` y el servicio igual da 503, pasar a quien tenga la cuenta de Supabase/Render (DevOps). Los datos son de demo: no hay backup acordado (no verificado).
+**Escalamiento.** Si la base está `Available` y el servicio igual da 503, pasar a quien tenga la cuenta de Supabase/Render (DevOps). Los datos son de demo: **no hay backup acordado**; es una decisión pendiente del equipo.
 
 ---
 
@@ -98,11 +99,11 @@ Notas generales que aplican a varios (los antiguos "gotchas"):
    - `<evento> (<id>) falló en el intento N/5` → el dispatcher no pudo publicar.
 3. Cola de salida: `GET /events/outbox?status=PENDING` y `?status=FAILED` (rol `M6_ADMIN` o `M6_AUDITOR`; el listado no trae el `payload`). El dispatcher barre cada 10 s, toma hasta 50 `PENDING` por pasada y reintenta solo: tras **5 intentos** la fila queda `FAILED` y deja de tomarse; `lastError` guarda el motivo (500 caracteres).
 4. Con el servicio dormido el dispatcher no corre: ver [runbook 1](#1-render-dormido-o-cold-start).
-5. Firewall: el puerto 5671 del Core solo abre para las IP de salida dadas de alta en M9 (rangos de Render en [referencia.md](referencia.md#urls)). Si Render cambió los rangos, la conexión se corta (no verificado: no se probó desde Render con IP nueva).
+5. Firewall: el puerto 5671 del Core solo abre para las IP de salida dadas de alta en M9 (rangos de Render en [referencia.md](referencia.md#urls)). Si Render cambió los rangos, la conexión se corta (el cambio de IP de salida en M9 está confirmado por el equipo, 07/11/2026).
 
 **Acción.**
 1. `disabled`: cargar `RABBITMQ_URL` (`amqps://`, usuario `module_ambiente`, clave percent-encoded; la entrega M9 por privado) y reiniciar.
-2. `reconnecting` con 404 de cola: correr `npm run core:register -- --dry-run` (solo lectura) y, si faltan suscripciones, `npm run core:register`; confirmar con `GET /api/v1/event-types/map` en el Core que `ambiente` figura suscripto a los 8 y publicando los 6 (no verificado en vivo). Ver [registro en el catálogo](desplegar.md#registro-en-el-catálogo-del-core-266).
+2. `reconnecting` con 404 de cola: correr `npm run core:register -- --dry-run` (solo lectura) y, si faltan suscripciones, `npm run core:register`; confirmar con `GET /api/v1/event-types/map` en el Core que `ambiente` figura suscripto a los 8 y publicando los 6 (confirmado por el equipo, 07/11/2026). Ver [registro en el catálogo](desplegar.md#registro-en-el-catálogo-del-core-266).
 3. `reconnecting` sin 404: avisar a M9 (broker o IP de salida).
 4. `FAILED` por transporte (broker caído, red): una vez recuperado el bus, `POST /events/outbox/:id/retry` o, en lote, `POST /events/outbox/retry-failed` con `{ "confirm": true, "limit": 20 }` (rol `M6_ADMIN`; deja auditoría en `outbox_retry_audit`; republica con el mismo `eventId`, los receptores deduplican). Si el motivo fue un payload rechazado, el reintento no lo arregla: [runbook 4](#4-evento-rechazado-por-el-core).
 5. No hay alerta por mensajes pendientes en `q.ambiente`: se mira en el panel del Core.
@@ -160,7 +161,7 @@ Notas generales que aplican a varios (los antiguos "gotchas"):
 
 **Verificación.** Login real en M1, `GET /me` con ese token → 200 y los roles esperados. Al arrancar, el log dice cuántos admins hay (`M6_BOOTSTRAP_ADMIN_USER_IDS`).
 
-**Rollback.** Volver al valor anterior de `JWT_SECRET` en el panel y reiniciar (Render conserva el historial de variables según la plataforma, no verificado: guardar el valor viejo en el gestor de secretos del equipo antes de cambiar).
+**Rollback.** Volver al valor anterior de `JWT_SECRET` en el panel y reiniciar (Render conserva el historial de variables, confirmado por el equipo el 07/11/2026; igual, guardar el valor viejo en el gestor de secretos del equipo antes de cambiar).
 
 **Escalamiento.** M1 si el login funciona en M1 y `GET /me` sigue en 401 con el secreto confirmado igual. Ver [m1.md](../integracion/m1.md).
 
@@ -172,16 +173,16 @@ Notas generales que aplican a varios (los antiguos "gotchas"):
 
 **Diagnóstico.**
 1. GitHub › Actions › CI en `main`: si `build` o `test` fallaron, el job `deploy` **no** corrió y no hay nada que revertir en Render (verificado en código: `ci.yml`, `needs: [build, test]`).
-2. Render › Deploys: estado del último deploy y logs. Una migración que falla impide que el contenedor levante a propósito (el `CMD` corre `prisma migrate deploy && node dist/main.js`); el deploy anterior sigue sirviendo hasta que el nuevo pasa el health check (comportamiento de Render, no verificado aquí).
+2. Render › Deploys: estado del último deploy y logs. Una migración que falla impide que el contenedor levante a propósito (el `CMD` corre `prisma migrate deploy && node dist/main.js`); el deploy anterior sigue sirviendo hasta que el nuevo pasa el health check (comportamiento de Render, confirmado por el equipo el 07/11/2026).
 3. `Timed Out` con la app arrancando bien: revisar que el Health Check Path esté vacío y que `PORT` no esté seteado.
 4. Doble deploy: Auto-Deploy de Render tiene que estar apagado; el único disparador es el Deploy Hook del job `deploy`.
 
 **Acción.**
-1. Rollback de código: Render › servicio › **Deploys** › elegir el deploy previo que anduvo › **Rollback** (o *Redeploy* de ese commit). No verificado: es un panel.
+1. Rollback de código: Render › servicio › **Deploys** › elegir el deploy previo que anduvo › **Rollback** (o *Redeploy* de ese commit). Confirmado por el equipo (07/11/2026).
 2. Rollback por git: revertir el merge en `main` con un PR de `revert` por Git Flow (nunca commit directo); el CI vuelve a correr y el hook redespliega.
 3. Si la causa es una variable nueva, restaurar la anterior ([referencia.md](referencia.md#variables-de-entorno-del-backend)) y reiniciar.
 4. **Migraciones**: Prisma no tiene rollback automático. Si la migración ya se aplicó, el código viejo corre contra el esquema nuevo: sólo es seguro si la migración fue aditiva. Una migración destructiva exige un fix hacia adelante (nueva migración) coordinado con el implementador; **no** editar la base a mano ni borrar filas de `_prisma_migrations`.
-5. Frontend (Vercel): Deployments › deploy previo › **Promote to Production** (no verificado).
+5. Frontend (Vercel): Deployments › deploy previo › **Promote to Production** (confirmado por el equipo, 07/11/2026).
 
 **Verificación.** Los `curl` de [desplegar.md](desplegar.md#cómo-verificar-que-está-todo-ok): `/health` 200, `/health/ready` 200 con `"database":"up"`, `/public/zones` 200, `/zones` sin token 401; y `/api/health` del frontend 200.
 
