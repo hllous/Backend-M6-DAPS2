@@ -33,17 +33,17 @@ Cualquier reducción de alcance después del 03/11 requiere acuerdo escrito con 
 
 | Nivel | Qué cubre | Qué existe hoy | Qué falta |
 |---|---|---|---|
-| **Unitario** (backend) | Reglas de negocio de cada service con Prisma mockeado | 108 archivos `*.spec.ts` en `src/`; `npm run test:cov`; umbral global y por archivo de 85% en `jest.coverageThreshold`; corre en el job `test` del CI | Mutation testing (Stryker); algunos tests prueban llamadas a mocks más que comportamiento |
+| **Unitario** (backend) | Reglas de negocio de cada service con Prisma mockeado | 111 archivos `*.spec.ts` en `src/`; `npm run test:cov`; umbral de 85% global y, además, por archivo en 7 servicios críticos (`jest.coverageThreshold`); corre en el job `test` del CI | Mutation testing (Stryker); algunos tests prueban llamadas a mocks más que comportamiento |
 | **Unitario** (frontend) | Componentes y lógica de `src/lib` | Vitest en el job de lint y tests del CI | Sin configuración de cobertura ni umbral |
 | **Integración / e2e** (backend) | App completa contra Postgres real: auth, `ValidationPipe`, máquinas de estado, outbox e inbox, rollback | 17 archivos `test/*.e2e-spec.ts` al 06/11 (16 al 03/11, que son los que corrió el CI ese día) contra `postgres:16` (job `e2e` del CI, **no** es check obligatorio de rama); guard que impide apuntar a una base no local | RabbitMQ real (ninguna prueba usa el broker); Testcontainers |
-| **E2E de usuario** (frontend) | Flujos de punta a punta en navegador | 53 specs Playwright en 3 shards en el CI | Viewports 360 y 768 px (hoy 390 y 1280) |
+| **E2E de usuario** (frontend) | Flujos de punta a punta en navegador | 58 specs Playwright en 10 shards en el CI (al 07/11, contra el `develop` del frontend; el 03/11 eran 53 en 3 shards) | Viewports 360 y 768 px (hoy 390 y 1280) |
 | **Contrato** | Respuestas contra OpenAPI; payloads de eventos contra sus `.schema.json` | `openapi-contract.spec.ts`, `payloads.spec.ts` (ajv), CI exige `docs/api/openapi.json` al día | Validación de respuestas reales contra el OpenAPI (Schemathesis); specs contra el paquete de M2 se saltean en CI |
 | **API** | Cada endpoint con un caso de éxito y uno de error | Los e2e con supertest cubren los flujos principales (152 operaciones HTTP en 103 rutas al 06/11) | Colección versionada (Postman/Newman o Karate) y mapa endpoint → caso |
 | **Estado (transiciones)** | Toda transición inválida devuelve 409 | `assertTransition` con tablas por entidad; `it.each` en contenedores, expedientes y outbound-requests; e2e `services-lifecycle` | Test que recorra todos los pares origen × destino de `ServiceStatus` |
 | **Resiliencia** | Duplicados, reintentos, rollback, caída de broker | `inbox.e2e-spec`, `outbox-retry.e2e-spec`, `containers-close.e2e-spec` (rollback) | Caída real del broker; timeout del Core contra un fetch colgado |
 | **Seguridad** | BOLA/BFLA, JWT, mass assignment, adjuntos | `auth-roles`, `crew-ownership` e2e; `route-roles.spec`; `jwt.strategy.spec`; `security-headers.middleware.spec` | ZAP, SCA (`npm audit`, Dependabot), escaneo de secretos en CI |
 | **No funcional** (carga) | 50 usuarios, 5 min, p95 < 500 ms | Nada | Script k6 sobre 3 endpoints críticos y reporte |
-| **Accesibilidad** (frontend) | WCAG 2.2 AA | `accessibility.spec.ts` con axe en el CI | Lighthouse, confirmar la etiqueta `wcag22aa` |
+| **Accesibilidad** (frontend) | WCAG 2.2 AA | `accessibility.spec.ts` con axe en el CI | Lighthouse (la etiqueta `wcag22aa` ya está en los specs de axe) |
 
 ## 3. Entornos
 
@@ -78,7 +78,7 @@ Cualquier reducción de alcance después del 03/11 requiere acuerdo escrito con 
 
 | Criterio | Umbral |
 |---|---|
-| Cobertura de líneas en dominio | ≥ 80% (el proyecto exige 85% por archivo y global) |
+| Cobertura de líneas en dominio | ≥ 80% (el proyecto exige 85% global y por archivo en 7 servicios críticos) |
 | Cobertura de ramas en dominio | ≥ 70% (el proyecto exige 85%) |
 | Mutation score en dominio | ≥ 60% (hoy no medido: ver riesgo R13) |
 | HU del alcance ejecutadas | 100% |
