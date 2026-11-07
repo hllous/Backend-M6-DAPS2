@@ -83,7 +83,7 @@ services:
     ports:
       - "3000:3000"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health/ready"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health/ready"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -102,6 +102,9 @@ services:
     environment:
       DATABASE_URL: postgresql://m6:m6_local_dev@postgres:5432/m6_ambiente?schema=public
       SEED_CONFIRM_REMOTE: "1" # el seed solo corre contra localhost salvo que se confirme
+    volumes:
+      # El seed lee los barrios y comunas de CABA; docs/ no entra en la imagen (.dockerignore).
+      - ./docs/geojson:/app/docs/geojson:ro
     command: ["npx", "prisma", "db", "seed"]
 
 volumes:
