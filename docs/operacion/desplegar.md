@@ -1,6 +1,6 @@
 # Desplegar y verificar
 
-URLs, workflows y variables: [referencia.md](referencia.md).
+URLs, workflows y variables: [referencia.md](referencia.md). Si algo falla: [runbooks.md](runbooks.md).
 
 ## Cómo verificar que está todo OK
 
