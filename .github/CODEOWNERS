@@ -1,6 +1,11 @@
+# Roles del equipo
+#   @Benji-9         dev principal (backend y devops)
+#   @hllous          dev secundario
+#   @bcanteli-dev    devops secundario
+
 # 1. Code owners por defecto del repositorio
 # Ante cualquier cambio en archivos no especificados abajo, se les solicitará revisión a ellos.
-* @hllous @bcanteli-dev @Benji-9 @MQuintieriFulter
+* @Benji-9 @hllous @bcanteli-dev @MQuintieriFulter
 
 # 2. Backend
 /src/     @Benji-9 @hllous @MQuintieriFulter
@@ -8,11 +13,10 @@
 /prisma/  @Benji-9 @hllous @MQuintieriFulter
 
 # 3. Infraestructura y DevOps
-/.github/            @bcanteli-dev
-/Dockerfile          @bcanteli-dev
-/.dockerignore       @bcanteli-dev
-/docker/             @bcanteli-dev
-/docker-compose.yml  @bcanteli-dev
+/.github/            @Benji-9 @hllous @bcanteli-dev
+/Dockerfile          @Benji-9 @hllous @bcanteli-dev
+/.dockerignore       @Benji-9 @hllous @bcanteli-dev
+/docker-compose.yml  @Benji-9 @hllous @bcanteli-dev
 
 # 4. Autorización y contrato (la última regla que coincide gana: va al final)
 # La matriz de roles, su tabla generada, el escaneo de rutas y las migraciones

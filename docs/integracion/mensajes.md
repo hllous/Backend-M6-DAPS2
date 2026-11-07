@@ -290,3 +290,13 @@
 **→ M3 (Infraestructura)** — *enviado el 5 oct 2026, dentro del cierre del contrato*
 
 > En `treeRiskDetected`, `TreeHealthStatus` conserva `WEAKENED` y `DISEASED` como valores separados; no existe `DECLINING` de nuestro lado (ADR-003).
+
+## Enviado hacia el 2/10 (M9)
+
+**→ M9 (Core), datos del broker RabbitMQ** — *enviado hacia el 2 oct 2026, fecha y hora exactas no registradas (el texto se redactó en el commit `c24908a`, 2 oct 2026 08:49)*
+
+> Pedido de los datos para enchufar el bus real, tras el anuncio del 27/09 de que la cohorte pasa de Kafka a RabbitMQ: URL del broker (host, puerto, vhost, TLS), credenciales AMQP de M6 y cómo recibirlas sin pasarlas por el repo, exchange (nombre y tipo, común o por módulo), routing key, nombre de cola, dead-letter exchange con política de reintentos y TTL, tipo de cola y permisos. Además: formato exacto del mensaje, si hay un usuario AMQP por módulo, si hay alternate exchange y un ambiente de prueba compartido con fecha estimada. Aclaraba que sin esos datos M6 arranca igual (outbox + log y la ingesta manual por `POST /events/inbox`).
+>
+> **Respuesta de M9:** el 7/10 fijó el contrato de integración para toda la cohorte (exchange `fanout` común `muni.inbox`, una cola por módulo, reintentos a cargo del Core); ver [ADR-007](../decisiones/adr-007-contrato-de-integracion-del-core.md).
+>
+> *El texto completo se borró de `devops/MENSAJE-M9-RABBITMQ.md` en [#535](https://github.com/hllous/Backend-M6-DAPS2/issues/535); queda en el historial de git: `git show c24908a:devops/MENSAJE-M9-RABBITMQ.md`.*
