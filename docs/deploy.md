@@ -94,7 +94,6 @@ No hay que hacer nada manual: el deploy sale con el release a `main`. Un push a 
 | `JWT_SECRET` | `APP_JWT_SECRET` de M1: clave HS256 en **base64**, decodifica a ≥ 32 bytes (256 bits). Se pide a M1 por el grupo de POs; nunca al repo. Con el valor viejo (texto plano) el servicio no arranca | ✅ Sí |
 | `JWT_ISSUER` | `modulo1-ciudadanos` (`iss` exigido en el token) | No (default `modulo1-ciudadanos`) |
 | `M6_BOOTSTRAP_ADMIN_USER_IDS` | Ids de M1 (el `sub`, numéricos) de los `M6_ADMIN` iniciales, separados por coma (ej. `1,42`). Cada uno necesita además `RESPONSABLE_AREA` en M1. Al arrancar se loguea solo cuántos hay, no los ids | No, pero **sin ella nadie puede asignar roles** (ver [ADR-008](decisiones/adr-008-roles-m6-adaptados-desde-m1.md)) |
-| `CORS_ORIGINS` | `https://frontend-m6-daps2-grupo4-modulo6.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
 | `BFF_SHARED_KEY` | Secreto compartido con el BFF del frontend (≥ 32 caracteres, ej. `openssl rand -base64 32`). El mismo valor va en Vercel y se manda en el header `X-M6-BFF-Key`; ver [portal](api/endpoints.md#citizen-portal--vista-pública) | No, pero **sin ella todos los vecinos del BFF comparten un solo límite de tasa** |
 | `CORS_ORIGINS` | `https://m6-ambiente-higiene.vercel.app` | No, pero conviene: sin ella se acepta cualquier origen |
 | `NODE_ENV` | `production` | ✅ Sí |
