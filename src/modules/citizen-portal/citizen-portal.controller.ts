@@ -104,7 +104,19 @@ export class CitizenPortalController {
     description:
       'Las zonas activas, para poder ofrecer el filtro de los otros dos listados. Sin paginar: son pocas y el frontend las carga una vez.',
   })
-  @ApiResponse({ status: 200, description: 'Zonas activas', type: [PublicZoneResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'Zonas activas',
+    type: [PublicZoneResponseDto],
+    content: {
+      'application/json': {
+        example: [
+          { id: 'd4e5f6a7-b8c9-4123-8efa-234567890123', code: 'Z-CENTRO', name: 'Centro' },
+          { id: 'a1b2c3d4-e5f6-4789-8abc-def012345678', code: 'Z-NORTE', name: 'Norte' },
+        ],
+      },
+    },
+  })
   @ApiResponse({
     status: 429,
     description: 'Demasiadas consultas desde la misma dirección',

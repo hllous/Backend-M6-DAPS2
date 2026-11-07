@@ -9,7 +9,14 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { EnvironmentalReportsService } from './environmental-reports.service';
 import {
   CreateEnvironmentalReportDto,
@@ -37,6 +44,23 @@ export class EnvironmentalReportsController {
 
   @Post()
   @Roles(...ROLES_EXPEDIENTE_ALTA)
+  @ApiBody({
+    type: CreateEnvironmentalReportDto,
+    examples: {
+      ejemplo: {
+        summary: 'Basural a cielo abierto con reclamo de M2',
+        value: {
+          reportType: 'ILLEGAL_DUMPSITE',
+          address: 'Camino de Cintura 4500',
+          description: 'Acopio de escombros sobre la vereda, frente al número 4500.',
+          lat: -34.7,
+          lng: -58.5,
+          ticketId: 'TCK-2026-004821',
+          priority: 'HIGH',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Abrir un expediente ambiental',
     description:
@@ -129,6 +153,15 @@ export class EnvironmentalReportsController {
   @Post(':id/forward')
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: ReportStatusChangeDto,
+    examples: {
+      ejemplo: {
+        summary: 'Derivación a otra área',
+        value: { reason: 'El hecho denunciado corresponde a Obras Públicas, no a Ambiente.' },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Derivar: no es de nuestra competencia',
     description:
@@ -156,6 +189,15 @@ export class EnvironmentalReportsController {
   @Post(':id/dismiss')
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: ReportStatusChangeDto,
+    examples: {
+      ejemplo: {
+        summary: 'Desestimación de la denuncia',
+        value: { reason: 'La denuncia duplica el expediente ya abierto para la misma dirección.' },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Desestimar sin inspección',
     description: 'UNDER_REVIEW → DISMISSED. Hacia M2 sale como REJECTED.',
@@ -182,6 +224,19 @@ export class EnvironmentalReportsController {
   @Post(':id/request-information')
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: RequestInformationDto,
+    examples: {
+      ejemplo: {
+        summary: 'Pedido de una foto adicional',
+        value: {
+          message: 'Necesitamos una foto más del frente del local, tomada de noche.',
+          requiredBy: '2026-11-03',
+          internalNote: 'La foto anterior salió movida.',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Pedirle información al vecino',
     description:
