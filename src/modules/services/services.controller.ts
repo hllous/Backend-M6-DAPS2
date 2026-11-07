@@ -10,7 +10,14 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ServicesService } from './services.service';
 import {
   AssignCrewDto,
@@ -56,6 +63,24 @@ export class ServicesController {
 
   @Post()
   @Roles(...ROLES_OPERACIONES)
+  @ApiBody({
+    type: CreateServiceDto,
+    examples: {
+      ejemplo: {
+        summary: 'Recolección planificada de un recorrido',
+        value: {
+          serviceTypeId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+          scheduledDate: '2027-03-15',
+          origin: 'PLANNED',
+          routeId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+          crewId: 'e5f6a7b8-c9d0-4234-8fab-345678901234',
+          vehicleId: 'f6a7b8c9-d0e1-4345-8abc-456789012345',
+          windowFrom: '08:00',
+          windowTo: '12:00',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Programar un servicio urbano',
     description:
@@ -159,6 +184,18 @@ export class ServicesController {
   @Post(':id/assign-crew')
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: AssignCrewDto,
+    examples: {
+      ejemplo: {
+        summary: 'Asignar cuadrilla y vehículo',
+        value: {
+          crewId: 'e5f6a7b8-c9d0-4234-8fab-345678901234',
+          vehicleId: 'f6a7b8c9-d0e1-4345-8abc-456789012345',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Asignar cuadrilla a un servicio',
     description:
@@ -229,6 +266,19 @@ export class ServicesController {
   @Post(':id/delay-notices')
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
+  @ApiBody({
+    type: CreateDelayNoticeDto,
+    examples: {
+      ejemplo: {
+        summary: 'Demora de 90 minutos antes de arrancar',
+        value: {
+          delayType: 'START',
+          delayMinutes: 90,
+          reason: 'Corte de calle imprevisto por rotura de un caño',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Avisar que el servicio se demora',
     description:
@@ -316,6 +366,18 @@ export class ServicesController {
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: SuspendServiceDto,
+    examples: {
+      ejemplo: {
+        summary: 'Suspensión por falla del camión',
+        value: {
+          reason: 'Falla mecánica del vehículo',
+          note: 'El camión 12 se quedó sin frenos; esperan reemplazo',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Suspender la ejecución',
     description:
@@ -362,6 +424,15 @@ export class ServicesController {
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: CompleteServiceDto,
+    examples: {
+      ejemplo: {
+        summary: 'Cierre sin datos extra',
+        value: {},
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Cerrar el servicio',
     description:
@@ -395,6 +466,15 @@ export class ServicesController {
   @Post(':id/cancel')
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: StatusChangeDto,
+    examples: {
+      ejemplo: {
+        summary: 'Cancelación por alerta meteorológica',
+        value: { reason: 'Alerta meteorológica: tormenta fuerte en la zona' },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Cancelar el servicio',
     description:
@@ -421,6 +501,15 @@ export class ServicesController {
   @Post(':id/reschedule')
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: StatusChangeDto,
+    examples: {
+      ejemplo: {
+        summary: 'Marcar para reprogramar por clima',
+        value: { reason: 'Alerta meteorológica: tormenta fuerte en la zona' },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Marcar el servicio para reprogramar',
     description:
@@ -448,6 +537,19 @@ export class ServicesController {
   @Post(':id/confirm-reschedule')
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: ConfirmRescheduleDto,
+    examples: {
+      ejemplo: {
+        summary: 'Nueva fecha y ventana',
+        value: {
+          scheduledDate: '2027-03-22',
+          windowFrom: '07:00',
+          windowTo: '11:00',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Confirmar la nueva fecha',
     description:
@@ -477,6 +579,21 @@ export class ServicesController {
   @Post(':id/zone-results')
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
+  @ApiBody({
+    type: CreateZoneResultDto,
+    examples: {
+      ejemplo: {
+        summary: 'Zona no atendida por acceso bloqueado',
+        value: {
+          zoneId: 'd4e5f6a7-b8c9-4123-8efa-234567890123',
+          status: 'NOT_SERVICED',
+          reason: 'BLOCKED_ACCESS',
+          proposedDate: '2027-03-16',
+          notes: 'Camión de mudanza bloqueando la cuadra entre Mitre y San Martín.',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Informar el resultado de una zona',
     description:
@@ -529,6 +646,20 @@ export class ServicesController {
   @Post(':id/collection-records')
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
+  @ApiBody({
+    type: CreateCollectionRecordDto,
+    examples: {
+      ejemplo: {
+        summary: 'Residuos domiciliarios del recorrido',
+        value: {
+          wasteType: 'HOUSEHOLD',
+          disposalSiteId: 'a7b8c9d0-e1f2-3456-abcd-567890123456',
+          volumeM3: 12.5,
+          weightKg: 3400.75,
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Registrar residuos recolectados',
     description:
