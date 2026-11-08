@@ -22,3 +22,10 @@ docker run --rm -i -v "$PWD:/w" -w /w -e BASE_URL=http://host.docker.internal:30
 ```
 
 Humo de 30 s: agregar `-e DURATION=30s`. `VUS` también es variable. `reports/` está en `.gitignore`.
+
+## Rate limit (#568)
+
+El backend aplica un límite global de 600 req/min por IP y por endpoint (`THROTTLE_LIMIT`, `THROTTLE_TTL_MS`). Esta prueba hace ~50 req/s por endpoint desde una sola IP, así que recibiría 429 y rompería el umbral de error `< 1%`.
+
+- Backend local o de pruebas: arrancarlo con `THROTTLE_LIMIT=100000` (solo para la prueba).
+- Despliegue real: coordinarlo con el equipo antes; el límite protege producción y no se sube sin acordarlo.

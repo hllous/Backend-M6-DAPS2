@@ -1,6 +1,9 @@
 // Carga (#574): 50 usuarios concurrentes, 5 min, 3 listados autenticados del flujo principal.
 // Solo lecturas: seguro contra cualquier entorno. Los endpoints públicos se evitan a propósito
 // (rate limit por IP, #568). Ver test/perf/README.md.
+// OJO: desde una sola IP son ~50 req/s por endpoint; el rate limit global (#568, 600 req/min
+// por IP y endpoint) devolvería 429 y rompería el umbral de error. Contra un backend local o
+// de pruebas arrancarlo con THROTTLE_LIMIT alto; contra el despliegue real, coordinarlo.
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
