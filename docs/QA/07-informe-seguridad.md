@@ -109,6 +109,16 @@ Una corrida previa con `--offline` dio 0 vulnerabilidades; ese resultado venía 
 2. Para lo que exige NestJS 12, **documentar la mitigación una por una** en este informe (la cátedra acepta CVE con mitigación documentada). Por ejemplo: las rutas con `multer` exigen rol de Campo y un token válido; M6 usa `trust proxy 1` (número de saltos) y no una lista de subredes. **No se analizó la explotabilidad**; eso queda para quien corrija.
 3. Agregar `npm audit --omit=dev --audit-level=high` al CI y Dependabot.
 
+**Re-corrida del 08/11/2026 tras `npm audit fix` (Issue #566).** Resultado en producción: **13 vulnerabilidades, 0 críticas, 6 altas, 7 moderadas** (antes 15: 1 crítica, 6 altas, 8 moderadas). La crítica `proxy-addr` quedó resuelta sin cambios mayores. Build, lint y los 2650 tests siguen en verde. Quedan las 6 altas, todas con corrección solo por salto mayor (`@nestjs/*` 12, `zod` 4.6.7). El salto mayor queda fuera de este corte para no cambiar la plataforma a días de la prueba. Lo que se pudo comprobar en el código:
+
+| Alta restante | Qué se comprobó | Qué NO se analizó |
+|---|---|---|
+| `zod` | Solo lo importan `src/config/env.validation.ts` y `src/identity/m1-identity.client.ts`: valida variables de entorno y respuestas de M1, no cuerpos de usuarios | Si una respuesta de M1 podría traer una colección enorme |
+| `@nestjs/platform-express`, `body-parser`, `multer` | La subida de archivos exige token válido y rol (ver `attachments.service.ts` y el límite de 10 MB) | Explotabilidad real del DoS de `multer` y de `body-parser` |
+| `@nestjs/swagger`, `js-yaml`, `lodash`, `@nestjs/config` | — | Explotabilidad: no se analizó |
+
+Estado: **riesgo aceptado y abierto**, sin análisis de explotabilidad. No se puede declarar «CUMPLE» en este criterio hasta correr un SCA adicional (Trivy) y decidir el salto a NestJS 12.
+
 ### 5.2 OWASP ZAP
 
 **No realizado.** No hay configuración ni ejecución. Plan: `zap-baseline.py` contra el despliegue (1 a 2 h), archivar el reporte y justificar cada alerta Media.
