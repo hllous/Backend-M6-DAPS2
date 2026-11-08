@@ -1,6 +1,6 @@
 import { lastValueFrom, of } from 'rxjs';
 import { CallHandler, ExecutionContext, Logger } from '@nestjs/common';
-import { LoggingInterceptor, redactUrl } from './logging.interceptor';
+import { LoggingInterceptor } from './logging.interceptor';
 
 describe('LoggingInterceptor', () => {
   let logSpy: jest.SpyInstance;
@@ -26,13 +26,6 @@ describe('LoggingInterceptor', () => {
     await expect(lastValueFrom(interceptor.intercept(context, next))).resolves.toBe('resultado');
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('GET /services → 200'));
-  });
-
-  it('redacta token y similares y respeta el resto de la query', () => {
-    expect(redactUrl('/x?search=a&token=abc.def&Access_Token=z&page=2&k=%E0%A4')).toBe(
-      '/x?search=a&token=[REDACTED]&Access_Token=[REDACTED]&page=2&k=%E0%A4',
-    );
-    expect(redactUrl('/services')).toBe('/services');
   });
 
   it('el log no incluye el token de la query ni el header Authorization', async () => {

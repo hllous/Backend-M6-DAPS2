@@ -1,31 +1,6 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
-
-// Parámetros cuyo valor no debe quedar en los logs (ni en los del proxy que los copie).
-const SENSITIVE_PARAM =
-  /^(token|access_token|refresh_token|id_token|authorization|api_?key|key|secret|password)$/i;
-
-/** Reemplaza el valor de los parámetros sensibles de la query; el resto de la URL queda igual. */
-export function redactUrl(url: string): string {
-  const i = url.indexOf('?');
-  if (i === -1) return url;
-  const query = url
-    .slice(i + 1)
-    .split('&')
-    .map((pair) => {
-      const name = pair.split('=')[0];
-      // Un nombre con % mal formado no debe tirar el request: se compara tal cual.
-      let decoded = name;
-      try {
-        decoded = decodeURIComponent(name);
-      } catch {
-        // se usa el nombre crudo
-      }
-      return SENSITIVE_PARAM.test(decoded) ? `${name}=[REDACTED]` : pair;
-    })
-    .join('&');
-  return `${url.slice(0, i)}?${query}`;
-}
+import { redactUrl } from '../utils/redact-url';
 
 /**
  * Interceptor global que loguea el tiempo de respuesta de cada request.

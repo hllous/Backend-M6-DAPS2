@@ -131,7 +131,8 @@ describe('Seguridad de entrada (e2e)', () => {
         .post('/zones')
         .set(bearer(tokenFor('CIUDADANO', '777', 'CIUDADANO')))
         .send({ code: 'ESC-1', name: 'x', role: 'M6_ADMIN' });
-      expect([400, 403]).toContain(res.status);
+      // El RolesGuard corta antes que el ValidationPipe: sin rol de M6 no se llega al body.
+      expect(res.status).toBe(403);
       await expect(prisma.zone.count({ where: { code: 'ESC-1' } })).resolves.toBe(0);
     });
   });
@@ -158,7 +159,9 @@ describe('Seguridad de entrada (e2e)', () => {
       );
     });
 
-    it('/api/docs queda sin CSP (Swagger UI necesita scripts en línea)', async () => {
+    // Swagger no se monta en createTestApp (404): solo se prueba que el middleware
+    // no agrega CSP en esa ruta. Que Swagger UI renderice no está verificado en e2e.
+    it('el middleware no agrega CSP en /api/docs (aunque acá responda 404)', async () => {
       const res = await request(app.getHttpServer()).get('/api/docs');
       expect(res.headers['content-security-policy']).toBeUndefined();
     });
