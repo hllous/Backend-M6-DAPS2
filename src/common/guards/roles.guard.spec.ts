@@ -1,3 +1,4 @@
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { AppModule } from '../../app.module';
@@ -55,7 +56,7 @@ describe('RolesGuard', () => {
       useClass?: unknown;
     }[];
     const guards = providers.filter((p) => p.provide === APP_GUARD).map((p) => p.useClass);
-    expect(guards).toEqual([JwtAuthGuard, RolesGuard]);
+    expect(guards).toEqual([ThrottlerGuard, JwtAuthGuard, RolesGuard]);
   });
 
   it('@Public() lo saltea, aunque no haya usuario', () => {

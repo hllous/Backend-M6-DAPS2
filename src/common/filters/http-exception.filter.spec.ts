@@ -36,6 +36,18 @@ describe('HttpExceptionFilter', () => {
     });
   });
 
+  it('no devuelve en path los tokens de la query', () => {
+    const status = jest.fn(() => ({ json }));
+    const h = {
+      switchToHttp: () => ({
+        getResponse: () => ({ status }),
+        getRequest: () => ({ url: '/zones?access_token=SECRETO&page=2' }),
+      }),
+    } as unknown as ArgumentsHost;
+    filter.catch(new NotFoundException('x'), h);
+    expect(captured().path).toBe('/zones?access_token=[REDACTED]&page=2');
+  });
+
   it('conserva el code de la excepción (403 ROLE_REQUIRED) y no agrega uno si no hay', () => {
     filter.catch(
       new ForbiddenException({ statusCode: 403, message: 'Sin rol', code: 'ROLE_REQUIRED' }),
