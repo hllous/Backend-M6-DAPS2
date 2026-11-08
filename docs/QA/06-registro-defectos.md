@@ -21,7 +21,7 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 |---|---|
 | Issues en el repo | 215 al 03/11 (7 abiertos ese día: #257, #299, #442, #447, #488, #494 y #495). Al 06/11 (`gh issue list`) el único abierto es #500; los demás están cerrados |
 | Issues con etiqueta `bug`, `security` o `fix` | 55, **todos cerrados** |
-| Defectos y brechas abiertos en este registro | 13 de 19 (el 03/11 eran 19 abiertos). Cerrados: DEF-01, DEF-02, DEF-03 y DEF-12 (issues cerrados entre el 03/11 y el 05/11) y DEF-16 y DEF-17 (corregidos el 06/11) |
+| Defectos y brechas abiertos en este registro | 15 de 21 (el 03/11 eran 19 abiertos). Cerrados: DEF-01, DEF-02, DEF-03 y DEF-12 (issues cerrados entre el 03/11 y el 05/11) y DEF-16 y DEF-17 (corregidos el 06/11). Registrados el 08/11: DEF-20 y DEF-21 (hallazgos de Schemathesis) |
 | Verificaciones no realizadas (no son defectos) | 7 (ver sección 5) |
 
 | Severidad | Abiertos | Dentro del máximo de la cátedra |
@@ -29,8 +29,8 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 | Bloqueante | 0 | Sí |
 | Crítica | 0 (eran 3 al 03/11: DEF-01, DEF-02 y DEF-03) | Sí |
 | Mayor | **9** (eran 10: DEF-12 se cerró) | **No** (máximo 3) |
-| Menor | 4 (DEF-14, DEF-15, DEF-18 y DEF-19) | Sí |
-| **Total abierto** | **13** (0 + 9 + 4) | |
+| Menor | 6 (DEF-14, DEF-15, DEF-18, DEF-19, DEF-20 y DEF-21) | Sí |
+| **Total abierto** | **15** (0 + 9 + 6) | |
 
 **Lectura honesta:** el criterio de salida **sigue sin cumplirse por las Mayores** (9 abiertas contra un máximo de 3); las Críticas están en 0. Las Mayores se cierran con trabajo propio que está en el plan de la sección 6. La severidad de las Mayores es una **propuesta**: el equipo y el PO la validan antes de la entrega.
 
@@ -178,6 +178,8 @@ La severidad queda en Mayor hasta confirmar si alguna es explotable en M6; si lo
 | DEF-15 (sin issue) | El timeout del cliente al Core es de 10 s; la cátedra prueba 5 s. Es efectivo, pero no cumple el valor pedido. No hay circuit breaker ni test que dispare el timeout real | `src/core/core.client.ts:6` y `:150-151` | HU-24 · abierto |
 | DEF-18 (sin issue) | `CORS_ORIGINS` es opcional: si falta, la API acepta cualquier origen (sin `credentials`). Hay que confirmar que esté cargada en Render | `src/main.ts:19-27` | HU-31 · abierto, a verificar en el despliegue |
 | DEF-19 (sin issue) | Swagger UI queda publicado en `/api/docs` también en producción; los errores 500 no llevan id de correlación y `path` incluye la query string; la evidencia se sirve por URL pública del bucket (protegida solo por una key UUID aleatoria) y los PDF conservan sus metadatos | `src/main.ts:40`; `src/common/filters/http-exception.filter.ts:116`; `src/modules/attachments/storage/r2-evidence.storage.ts:66`; tarjeta SEC-W06 | HU-31 · abierto |
+| DEF-20 ([#586](https://github.com/hllous/Backend-M6-DAPS2/issues/586)) | **Hallazgo H-1 de Schemathesis.** Los `GET` con parámetro de ruta UUID (`ParseUUIDPipe`) o con `@Query()` DTO devuelven **400** del `ValidationPipe` global, pero el OpenAPI no declara ese 400 (por ejemplo `/containers` documenta 200, 401, 403 y 500). Incumple `docs/api/estandar-swagger.md` (la tabla de códigos pide 400 en endpoints con entrada). Schemathesis lo marca con `status_code_conformance` (ST103) en al menos 40 `GET`; la auditoría de contratos del 08/11 contó **46 de 65 `GET` sin 400 declarado** (quedan fuera `/health`, `/health/ready` y `/me`, que no lo lanzan). Afecta a `/containers`, `/crews/{id}`, `/services/{id}/…`, `/trees/…`, `/public/services`, `/public/green-points` y `/evidence`, entre otros. No es un fallo de funcionamiento: el 400 es correcto, falta declararlo | `src/configure-app.ts:52` (`forbidNonWhitelisted`); `docs/api/openapi.json`; `test/api/PENDIENTES.md` (rama de #572, PR #583); el check corre en `.github/workflows/api-tests.yml` como paso **informativo** | Transversal · abierto. Corrección: un helper `ApiBadRequestParams()` en `src/common/decorators` y un caso en `openapi-contract.spec.ts` que lo exija; al cerrarlo, pasar el paso a bloqueante. Cambia `openapi.json` |
+| DEF-21 | **Hallazgo H-2 de Schemathesis.** `GET /neighborhoods` responde **503** («El catálogo de barrios de M9 todavía no está disponible») cuando M6 no tiene acceso al catálogo de M9. El 503 está documentado y es el comportamiento previsto ante una dependencia caída, pero en el CI y en el `docker compose up` local **no existe M9**, así que ese endpoint no se puede usar ni probar fuera del despliegue. Se **excluyó** de Schemathesis (`--exclude-path /neighborhoods`); si no, rompe `not_a_server_error` | `src/modules/neighborhoods/neighborhoods.service.ts:15` y el `@ApiResponse` 503 de su controller; exclusión comentada en `.github/workflows/api-tests.yml` | HU-31 · abierto. Corrección: un seed o mock de barrios para el entorno local y el CI |
 
 Un test débil adicional, `services.service.spec.ts:875` (`resolves.toBeDefined()` como única aserción), se registra en `05-informe-ejecucion.md`.
 
@@ -250,6 +252,7 @@ La regla G9 pide no omitir nada conocido. Estas pruebas **no se hicieron** y no 
 | 7 | DEF-11, DEF-14 | Versionar los schemas de M2 o hacer que el CI avise; hacer obligatorio el job `e2e` | 2 h |
 | 8 | DEF-18, DEF-19 | Corregir los textos, confirmar `CORS_ORIGINS` en Render y decidir qué hacer con `/api/docs` | 1 h |
 | 9 | DEF-09 | Interceptor de lectura de datos Tier 2 | 1 día |
+| 10 | DEF-20, DEF-21 | Declarar el 400 en los `GET` con parámetro UUID o query (helper + caso en `openapi-contract.spec.ts`, regenerar `openapi.json` y la colección) y volver bloqueante el paso `status_code_conformance`; seed o mock de barrios para local y CI | 3 a 4 h |
 
 Cerrados y fuera del plan: DEF-01, DEF-02, DEF-03, DEF-12, DEF-16 y DEF-17. Lo que sigue abierto con M7, M9 y M2 está en [`bloqueantes.md`](../bloqueantes.md).
 
