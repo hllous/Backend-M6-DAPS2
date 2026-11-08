@@ -12,6 +12,7 @@ export default () => {
       secret: parsed.JWT_SECRET,
       issuer: parsed.JWT_ISSUER,
     },
+    throttle: { limit: parsed.THROTTLE_LIMIT, ttl: parsed.THROTTLE_TTL_MS },
     bffSharedKey: parsed.BFF_SHARED_KEY,
     // Ids como string, sin ceros a la izquierda ('007' y '7' son el mismo `sub` de M1).
     bootstrapAdminUserIds: (parsed.M6_BOOTSTRAP_ADMIN_USER_IDS?.split(',') ?? []).map((id) =>

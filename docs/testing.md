@@ -56,6 +56,7 @@ npm run test:e2e -- services-lifecycle
 | `street-closure-expiry.e2e-spec.ts` | Corte aprobado con ventana ya vencida (#321): el barrido lo pasa a `EXPIRED` y reprograma el servicio `SCHEDULED` (uno `IN_PROGRESS`, uno vigente o uno dentro de la gracia no se tocan), es idempotente, no publica nada hacia M7, y un `streetClosureEnded` posterior sobre `EXPIRED` lo pasa a `ENDED` |
 | `containers-close.e2e-spec.ts` | Cerrar el servicio transiciona el contenedor. Es la única suite que prueba el rollback: un `CHECK` temporal hace fallar el `UPDATE` del contenedor dentro de la transacción y se verifica que el servicio siga `IN_PROGRESS` y que no se encole nada |
 | `security-input.e2e-spec.ts` | Seguridad de entrada (#569): payloads SQL (`'; DROP TABLE--`, `' OR 1=1--`) y XSS en zonas, expedientes ambientales y servicios (se guardan como texto, sin 500); mass assignment (`status`/`role`/`id` en `PATCH /services/:id` y `/zones/:id` dan 400 y no persisten); 413 por archivo de más de 10 MB; CSP en la API y ausente en `/api/docs` |
+| `rabbitmq-real.e2e-spec.ts` | Consumer del bus contra un RabbitMQ real (#575): mensaje válido, mismo `eventId` dos veces (una sola fila), JSON/sobre inválido (sin fila, no traba la cola) y recuperación cuando el broker cierra la conexión (vía API de management, `DELETE /api/connections`). Se saltea con aviso si no hay `RABBITMQ_URL` o no apunta a localhost. Local: `docker run -d -p 5672:5672 -p 15672:15672 rabbitmq:3-management` y `RABBITMQ_URL=amqp://guest:guest@localhost:5672 npm run test:e2e -- rabbitmq-real`. El caso de recuperación cierra **todas** las conexiones del broker local salvo la suya (incluido un backend del compose, que reconectaría) y se saltea si `RABBITMQ_MGMT_URL` no apunta a localhost. Apagar el broker de verdad no es viable en un service container del CI; cerrar la conexión ejercita la misma reconexión (`recovery`) |
 | `audit.e2e-spec.ts` | Auditoría de dominio |
 | `auth-roles.e2e-spec.ts` | Roles de M6: matriz por rol |
 | `demo-personas.e2e-spec.ts` | Personas de demostración |
@@ -72,7 +73,7 @@ El `OutboxDispatcher` se reemplaza por un stub sin `@Interval`. Si no, barre la 
 
 ## En el CI
 
-El job `e2e` de `.github/workflows/ci.yml` levanta `postgres:16` con `services:` y corre `npm run test:e2e`; las migraciones las aplica `global-setup.ts`, igual que en local.
+El job `e2e` de `.github/workflows/ci.yml` levanta `postgres:16` y `rabbitmq:3-management` con `services:` y corre `npm run test:e2e` (la suite de RabbitMQ en un paso aparte, con `RABBITMQ_URL`, para no activar el consumer en las demás); las migraciones las aplica `global-setup.ts`, igual que en local.
 
 **No es check obligatorio** de la protección de ramas: ahí siguen solo `build` y `test`. La cobertura de los e2e tampoco se suma al 85%, que se sigue midiendo con los unitarios.
 

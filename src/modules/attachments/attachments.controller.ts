@@ -18,6 +18,8 @@ import {
   ApiBody,
   ApiHeader,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { EVIDENCE_UPLOAD } from '../../common/rate-limits';
 import { AttachmentsService } from './attachments.service';
 import { UploadEvidenceDto, EvidenceResponseDto, QueryEvidenceDto } from './dto';
 import { AttachmentOwnerType } from './attachment-owner-type';
@@ -34,6 +36,7 @@ export class AttachmentsController {
   constructor(private readonly attachmentsService: AttachmentsService) {}
 
   @Post()
+  @Throttle({ default: EVIDENCE_UPLOAD })
   @ApiNotAssigned(
     'la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION)',
   )
@@ -92,6 +95,11 @@ export class AttachmentsController {
   @ApiResponse({
     status: 413,
     description: 'El archivo supera los 10 MB (lo corta multer antes de terminar de recibirlo)',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Demasiadas subidas desde la misma dirección en el último minuto',
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
