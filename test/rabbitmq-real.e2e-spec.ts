@@ -134,19 +134,28 @@ describeReal('Consumer RabbitMQ con broker real (e2e)', () => {
   it('se recupera cuando el broker le cierra la conexión', async () => {
     const u = new URL(url!);
     const mgmt = process.env.RABBITMQ_MGMT_URL ?? `http://${u.hostname}:15672`;
+    // Cierra TODAS las conexiones del broker menos la del test: nunca contra uno ajeno.
+    if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(mgmt).hostname)) {
+      console.warn('[rabbitmq-real] recuperación saltada: RABBITMQ_MGMT_URL no apunta a localhost');
+      return;
+    }
     const auth = `Basic ${Buffer.from(`${decodeURIComponent(u.username)}:${decodeURIComponent(u.password)}`).toString('base64')}`;
 
-    const lista = await fetch(`${mgmt}/api/connections`, { headers: { Authorization: auth } });
-    expect(lista.ok).toBe(true);
-    const conexiones = (await lista.json()) as {
-      name: string;
-      client_properties?: { connection_name?: string };
-    }[];
     // Todas menos la del publisher del test: lo que queda es la del consumer.
-    const victimas = conexiones.filter(
-      (c) => c.client_properties?.connection_name !== 'm6-e2e-publisher',
-    );
-    expect(victimas.length).toBeGreaterThan(0);
+    // La API de management refresca sus estadísticas cada ~5 s: una conexión
+    // recién abierta tarda en aparecer, por eso se espera.
+    let victimas: { name: string }[] = [];
+    await esperar(async () => {
+      const lista = await fetch(`${mgmt}/api/connections`, { headers: { Authorization: auth } });
+      const conexiones = (await lista.json()) as {
+        name: string;
+        client_properties?: { connection_name?: string };
+      }[];
+      victimas = conexiones.filter(
+        (c) => c.client_properties?.connection_name !== 'm6-e2e-publisher',
+      );
+      return victimas.length > 0;
+    }, 20_000);
     for (const c of victimas) {
       await fetch(`${mgmt}/api/connections/${encodeURIComponent(c.name)}`, {
         method: 'DELETE',
@@ -157,5 +166,5 @@ describeReal('Consumer RabbitMQ con broker real (e2e)', () => {
     const id = randomUUID();
     publicar(sobre(id), id);
     await esperar(procesado(id), 30_000);
-  });
+  }, 60_000);
 });
