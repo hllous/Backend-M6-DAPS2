@@ -18,25 +18,44 @@ Ver decisiones detalladas en [`docs/decisiones/`](docs/decisiones/).
 
 ### Con Docker (un solo comando)
 
-Requiere Docker con Compose. Levanta Postgres, RabbitMQ (con el exchange `muni.inbox` y la cola `q.ambiente` ya creados, como los crea el Core) y el backend, con credenciales de ejemplo solo para desarrollo local:
+Requiere Docker con Compose. Levanta Postgres, RabbitMQ (con el exchange `muni.inbox` y la cola `q.ambiente` ya creados, como los crea el Core) y el backend.
 
 ```bash
-docker compose up --build
+cp .env.example .env        # 1. crear tu .env (no se versiona)
+# 2. editar .env: completar lo de la tabla
+docker compose up --build   # 3. un solo comando
 ```
+
+Qué completar en `.env`:
+
+| Variable | Qué poner |
+|---|---|
+| `POSTGRES_PASSWORD` | una clave a elección (solo letras y números) |
+| `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | usuario y clave a elección para el RabbitMQ local |
+| `JWT_SECRET` | ya trae un valor de ejemplo válido para local; no hace falta tocarlo |
+| `POSTGRES_USER`, `POSTGRES_DB` | opcionales (default `m6` / `m6_ambiente`) |
+
+Si falta el `.env` o una variable obligatoria, `docker compose` corta con un mensaje del tipo `Falta POSTGRES_PASSWORD en .env`. Las credenciales no se imprimen en los logs. Con `cp .env.example .env` las claves quedan predecibles (`cambiame`), por eso Postgres (5432) y RabbitMQ (5672 y consola 15672) se publican solo en `127.0.0.1`: no son accesibles desde otras máquinas de la red. Si cambiás ese binding, cambiá antes las claves.
 
 Cuando termina, el backend responde en `http://localhost:3000`:
 
-- `GET /health/ready` → 200 con `"database":"up"` y `"broker":"connected"`.
-- Swagger en `http://localhost:3000/api/docs`.
-- Consola de RabbitMQ en `http://localhost:15672` (usuario `m6`, clave `m6_local_dev`).
+- Salud: `GET http://localhost:3000/health/ready` → 200 con `"database":"up"` y `"broker":"connected"`.
+- Swagger: `http://localhost:3000/api/docs`.
+- Consola de RabbitMQ: `http://localhost:15672` (con el `RABBITMQ_USER` y `RABBITMQ_PASSWORD` de tu `.env`).
 
-Para cargar los datos de demo (opcional, ver [`docs/seed.md`](docs/seed.md)):
+Datos de demo (opcional, ver [`docs/seed.md`](docs/seed.md)):
 
 ```bash
 docker compose --profile seed run --rm seed
 ```
 
+**Cómo se entra en local.** No hay usuario ni contraseña: el frontend trae un M1 falso con un selector de perfiles, y se elige un perfil. El servicio frontend del compose se suma en #560 (todavía no está). El login real contra M1 existe solo en el despliegue (ver abajo).
+
 Sin las variables de Cloudflare R2, `POST /evidence` responde 503; el resto funciona. `docker compose down -v` borra la base y la cola. El Core de M9 no se levanta: RabbitMQ local hace de bus.
+
+### Despliegue (login real contra M1)
+
+En Render el JWT lo emite M1 con el login real y las credenciales y secretos van en el panel del servicio, no en `.env`. Ver [`docs/deploy.md`](docs/deploy.md).
 
 ### Sin Docker
 
