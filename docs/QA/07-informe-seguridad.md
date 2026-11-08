@@ -1,26 +1,26 @@
 # 07 · Informe de seguridad
 
-> Backend del Módulo 6 (Grupo 04). Estado al **03/11/2026**, sobre `develop` @ `f288d31`. Base: criterios SEC de la Clase 11 (OWASP ASVS 5.0, OWASP API Security Top 10, Ley 25.326) y pruebas de seguridad de la cátedra.
+> Backend del Módulo 6 (Grupo 04). Versión original del **03/11/2026** (`develop` @ `f288d31`), **actualizada el 08/11/2026** sobre `develop` @ `1d600d2`. Base: criterios SEC de la Clase 11 (OWASP ASVS 5.0, OWASP API Security Top 10, Ley 25.326) y pruebas de seguridad de la cátedra.
 
 ## 1. Método y regla de evidencia
 
 - Cada control se **reverificó contra el código y los tests actuales**. Los veredictos del 13/10 que figuran en las tarjetas SEC de Trello quedaron viejos: se citan como «veredicto 13/10» solo para mostrar qué cambió.
-- **Regla de la cátedra:** un CUMPLE sin test ejecutado ni evidencia se toma como NO VERIFICABLE. Por eso un CUMPLE acá siempre cita un test que corrió (la corrida local del 03/11 pasó los 112 suites y el CI de `main` pasó los 291 e2e) o una prueba observable.
+- **Regla de la cátedra:** un CUMPLE sin test ejecutado ni evidencia se toma como NO VERIFICABLE. Por eso un CUMPLE acá siempre cita un test que corrió (**R08**, la corrida local del 08/11 sobre `1d600d2`: 2746 unitarios y 312 e2e pasan, 4 de 4 en RabbitMQ real, 0 fallos; y el CI de `develop`, run [42508633321](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42508633321) en verde) o una prueba observable.
 - La revisión de código sola, sin test, deja el control en NO VERIFICABLE.
-- Esta auditoría **no ejecutó ataques en vivo** contra el despliegue ni corrió ZAP. Lo que depende de eso figura como no verificable.
-- Estados: **CUMPLE**, **NO CUMPLE**, **NO VERIFICABLE**, **N/A** (no aplica a este módulo).
+- Las pruebas de entrada (SQL, XSS, mass assignment, 413, CSP) se ejecutaron **contra la aplicación levantada en el e2e local y en el CI**, no contra el despliegue de Render. Esta auditoría **no ejecutó ataques en vivo** contra el despliegue ni corrió ZAP ni Trivy. Lo que depende de eso figura como NO VERIFICABLE o NO HECHO.
+- Estados: **CUMPLE**, **NO CUMPLE**, **NO VERIFICABLE**, **N/A** (no aplica a este módulo). **Mixto** agrupa los controles con una parte en cada estado.
 
 ## 2. Resumen
 
 | Estado | Controles de la Clase 11 (10) | Pruebas de la cátedra (20 filas) |
 |---|---|---|
-| CUMPLE | 4 (W01, W02, W04, I01) | 6 (BOLA, BFLA, JWT, mass assignment, errores sin stack, datos minimizados) |
-| Mixto: CUMPLE en una parte, NO CUMPLE o NO VERIFICABLE en otra | 4 (W03, W06, I02, D01) | 2 (cabeceras y CSP, TLS del broker y del HTTP) |
-| NO CUMPLE | 2 (W05, D02) | 2 (rate limiting de la API, dependencias) |
-| NO VERIFICABLE | 0 | 5 (inyección SQL, XSS, ZAP, CORS en el despliegue, logs HTTP) |
+| CUMPLE | 6 (W01, W02, W04, W06, D01, I01) | 9 (BOLA, BFLA, JWT, mass assignment, inyección SQL, rate limiting, errores sin stack, logs, datos minimizados) |
+| Mixto: CUMPLE en una parte, NO CUMPLE o NO VERIFICABLE en otra | 2 (W03, I02) | 3 (XSS, cabeceras y CSP, TLS del broker y del HTTP) |
+| NO CUMPLE | 2 (W05, D02) | 1 (dependencias) |
+| NO VERIFICABLE | 0 | 2 (ZAP, CORS en el despliegue) |
 | N/A | 0 | 5 (NoSQL, XXE, fuerza bruta en login, cookies, hash de contraseñas) |
 
-Hallazgos mayores: **dependencias con 1 crítica y 6 altas** (DEF-08), **sin rate limiting fuera del portal** (DEF-07), **sin auditoría de lecturas Tier 2** (DEF-09), **sin ZAP ni escaneo de secretos con herramienta** (DEF-13). No hay hallazgos bloqueantes. Los números de `DEF-xx` remiten a [`06-registro-defectos.md`](06-registro-defectos.md).
+Hallazgos mayores abiertos: **dependencias con 6 altas aceptadas como riesgo, sin análisis de explotabilidad** (DEF-08), **sin auditoría de lecturas Tier 2** (DEF-09), **errores sin id de correlación ni RFC 9457** (DEF-10 / SEC-W05), **sin ZAP ni Trivy** (DEF-13). Cerrados desde el 03/11: **rate limiting** (DEF-07, #580) y **logs con `access_token`** (DEF-22, #581). No hay hallazgos bloqueantes. Los números de `DEF-xx` remiten a [`06-registro-defectos.md`](06-registro-defectos.md).
 
 ## 3. Controles de la Clase 11 (SEC-W01 a SEC-D02)
 
@@ -28,15 +28,15 @@ Origen: tarjetas del tablero «M6 - Histórico de Sprints», lista «Clase 11: S
 
 | ID | Control | Estado hoy | Evidencia | Veredicto 13/10 |
 |---|---|---|---|---|
-| **SEC-W01** | Validación del token JWT | **CUMPLE** | `src/auth/jwt.strategy.spec.ts:167-187` (`rechaza: %s`): 16 casos que pasan por el flujo real de `passport-jwt` y dan 401. Cubren firma incorrecta, `iss` incorrecto o ausente, `typ=refresh`, sin `exp`, **vencido**, **`alg` none**, `alg` RS256, rol ausente o inválido y subtipo inesperado. 401 sin token en `test/services-lifecycle.e2e-spec.ts:53` y `test/auth-roles.e2e-spec.ts:159`. Algoritmos fijados en `src/auth/jwt.strategy.ts:55` (HS256, HS384, HS512); `iss` obligatorio en `:56`; `ignoreExpiration: false` en `:57` | «Cumple por código; falta ejecutar el test». Decía que no se fijaba el algoritmo: hoy sí |
-| **SEC-W02** | Autorización por rol en acciones de gestión | **CUMPLE** | `RolesGuard` global como `APP_GUARD` registrado después de `JwtAuthGuard` (`src/app.module.ts:84-85`); una escritura sin `@Roles` da 403 para todos (`src/common/guards/roles.guard.ts`). `src/auth/route-roles.spec.ts`: toda escritura no pública declara `@Roles`, `M6_AUDITOR` no figura en ninguna escritura y `POST /events/inbox` es solo de `M6_ADMIN`. Matriz 200/401/403 por rol en `test/auth-roles.e2e-spec.ts`. El 403 lleva `code: ROLE_REQUIRED` y no revela qué rol faltaba (`auth-roles.e2e-spec.ts:245`) | **NO CUMPLE**. Está desactualizado: lo cerraron #161 (21/10) y #235 |
-| **SEC-W03** | Portal ciudadano: mínima exposición y límite de consultas | **CUMPLE** (a y b) · **NO VERIFICABLE** (c) | (a) un reclamo sin expediente da 404 sin decir si el ticket existe: `src/modules/citizen-portal/citizen-portal.service.spec.ts:113`. (b) devuelve «exactamente los campos públicos, ni uno más» (`:38`) y no consulta hallazgos, inspector, checklist ni denunciante (`:56`). (c) el límite existe (`ThrottlerGuard` en `src/modules/citizen-portal/citizen-portal.controller.ts:30`, 20 por minuto en seguimiento según `rate-limits.ts:26`), pero **ningún test dispara el 429** | «Cumple por código; falta ejecutar el test» |
-| **SEC-W04** | Campos no permitidos rechazados | **CUMPLE** | `ValidationPipe` con `whitelist` y `forbidNonWhitelisted` (`src/configure-app.ts:52-55`), la misma configuración en los e2e. `test/services-lifecycle.e2e-spec.ts:61`: un campo extra da 400. `UpdateServiceDto` no declara `status`. El caso exacto de la tarjeta (`PATCH /services/:id` con `status`) no tiene test propio | «Cumple por código; falta ejecutar el test» |
-| **SEC-W05** | Manejo seguro de errores internos | **NO CUMPLE** | Cumple el mensaje genérico y que no se filtre el stack: `src/common/filters/http-exception.filter.ts` responde «Error interno del servidor» y manda el stack solo al log (`http-exception.filter.spec.ts:72`). **No existe el id de correlación** que pide la tarjeta (ni en el filtro ni en el interceptor). El cuerpo no es Problem Details (RFC 9457) y `path` incluye la query string (`http-exception.filter.ts:116`) | «Parcial». Sigue igual |
-| **SEC-W06** | Carga segura de evidencias | **CUMPLE** (a y c) · **NO VERIFICABLE** (b) | (a) un contenido que no coincide con el tipo declarado da 400 y no sube nada (`src/modules/attachments/attachments.service.spec.ts:255`); tipos fuera de la lista blanca (`:237`). (c) se eliminan EXIF y GPS (`:285`, `src/modules/attachments/evidence-file.spec.ts`). (b) 413 por más de 10 MB: el límite existe (multer, documentado en `attachments.controller.ts:85`), pero el test del service devuelve 400 y **no hay e2e del 413**. Los PDF conservan sus metadatos | «Cumple por código; falta e2e». Sigue sin e2e |
-| **SEC-D01** | Logs sin secretos ni datos personales | **CUMPLE** (log del consumidor AMQP) · **NO VERIFICABLE** (log HTTP) | AMQP: la línea de log del consumidor no incluye el contenido del evento: `src/events/consumers/rabbitmq.consumer.spec.ts:329` verifica que un `x-core-last-error` con `NEGOCIO-SECRETO` no aparezca en el log (#317). HTTP: `src/common/interceptors/logging.interceptor.ts:21` loguea solo método, URL, estado y duración, pero **ningún test comprueba que el token no aparezca en un log**, y la URL se registra con su query string | «Cumple por código; falta ejecutar el test». Mejoró en parte (ver sección 3.1) |
-| **SEC-I01** | Idempotencia en el consumo de eventos | **CUMPLE** | `test/inbox.e2e-spec.ts:103` («descarta el mismo eventId sin volver a aplicarlo») corre en el CI. El duplicado lo detecta la base (`messageId` único), no una consulta previa | «Cumple por código; falta ejecutar el e2e». Ya ejecutado: 291 e2e pasados en el CI |
-| **SEC-I02** | Rechazo de eventos que violan el contrato | **CUMPLE** (400 y sin fila) · **NO VERIFICABLE** (apartado en DLQ) | `test/inbox.e2e-spec.ts:131`: el payload inválido da 400 y no deja fila. El mensaje apartado en una DLQ depende del Core: M6 hace `nack` sin reencolar (#264) y la DLQ es de M9; no se puede probar desde este repo. Los campos extra se toleran a propósito en el bus (`configure-app.ts:44-49`) | «Parcial; revalidar contra develop». Revalidado en parte |
+| **SEC-W01** | Validación del token JWT | **CUMPLE** | `src/auth/jwt.strategy.spec.ts` (`rechaza: %s`, `it.each` de 16 casos que pasan por el flujo real de `passport-jwt` y dan 401: firma incorrecta, `iss` incorrecto o ausente, `typ=refresh`, sin `exp`, **vencido**, **`alg` none**, `alg` RS256, rol ausente o inválido y subtipo inesperado). 401 sin token en `test/services-lifecycle.e2e-spec.ts:53` y `test/auth-roles.e2e-spec.ts`. Algoritmos fijados en `src/auth/jwt.strategy.ts:55` (HS256, HS384, HS512); `iss` obligatorio en `:56`; `ignoreExpiration: false` en `:57` | «Cumple por código; falta ejecutar el test». Decía que no se fijaba el algoritmo: hoy sí |
+| **SEC-W02** | Autorización por rol en acciones de gestión | **CUMPLE** | `RolesGuard` global como `APP_GUARD` registrado después de `JwtAuthGuard` (`src/app.module.ts:103-104`); una escritura sin `@Roles` da 403 para todos (`src/common/guards/roles.guard.ts`). `src/auth/route-roles.spec.ts`: toda escritura no pública declara `@Roles`, `M6_AUDITOR` no figura en ninguna escritura y `POST /events/inbox` es solo de `M6_ADMIN`. Matriz 200/401/403 por rol en `test/auth-roles.e2e-spec.ts`. El 403 lleva `code: ROLE_REQUIRED` y no revela qué rol faltaba (`auth-roles.e2e-spec.ts:245`) | **NO CUMPLE**. Está desactualizado: lo cerraron #161 (21/10) y #235 |
+| **SEC-W03** | Portal ciudadano: mínima exposición y límite de consultas | **CUMPLE** (a y b) · **CUMPLE con salvedad** (c) | (a) un reclamo sin expediente da 404 sin decir si el ticket existe: `src/modules/citizen-portal/citizen-portal.service.spec.ts:113`. (b) devuelve «exactamente los campos públicos, ni uno más» (`:38`) y no consulta hallazgos, inspector, checklist ni denunciante (`:56`). (c) el límite del portal existe (`ThrottlerGuard` en `citizen-portal.controller.ts`, 20 por minuto en seguimiento según `rate-limits.ts`). Desde el 08/11 **hay un e2e del 429**: `test/throttler.e2e-spec.ts` (límite global, `GET /zones` con `THROTTLE_LIMIT=3`). **Salvedad:** el e2e prueba el límite global, no el tope de 20 por minuto del portal | «Cumple por código; falta ejecutar el test» |
+| **SEC-W04** | Campos no permitidos rechazados | **CUMPLE** | `ValidationPipe` con `whitelist` y `forbidNonWhitelisted` (`src/configure-app.ts:52-55`), la misma configuración en los e2e. `test/services-lifecycle.e2e-spec.ts:61`: un campo extra da 400. Desde el 08/11, `test/security-input.e2e-spec.ts` prueba el caso exacto de la tarjeta: `PATCH /services/:id` con `{status:'COMPLETED'}` (y `role`, `id`, una mezcla) da 400 y la fila queda idéntica; `PATCH /zones/:id` con campos fuera del DTO también | «Cumple por código; falta ejecutar el test» |
+| **SEC-W05** | Manejo seguro de errores internos | **NO CUMPLE** | Cumple el mensaje genérico y que no se filtre el stack: `src/common/filters/http-exception.filter.ts` responde «Error interno del servidor» y manda el stack solo al log (`http-exception.filter.spec.ts`, «deja en 500 cualquier error no contemplado», `:84`). **No existe el id de correlación** que pide la tarjeta (ni en el filtro ni en el interceptor). El cuerpo no es Problem Details (RFC 9457). El `path` sigue incluyendo la query string, pero desde #581 con los parámetros sensibles redactados (`http-exception.filter.ts:118`) | «Parcial». Sigue igual |
+| **SEC-W06** | Carga segura de evidencias | **CUMPLE** | (a) un contenido que no coincide con el tipo declarado da 400 y no sube nada (`src/modules/attachments/attachments.service.spec.ts:255`); tipos fuera de la lista blanca (`:237`). (c) se eliminan EXIF y GPS (`:285`, `evidence-file.spec.ts`). (b) **413 por más de 10 MB: ahora hay e2e** (`test/security-input.e2e-spec.ts` › «un archivo de más de 10 MB responde 413 (lo corta multer)»). Limitación conocida: los PDF conservan sus metadatos y la evidencia se sirve por URL pública (DEF-19) | «Cumple por código; falta e2e». El e2e del 413 se sumó el 08/11 |
+| **SEC-D01** | Logs sin secretos ni datos personales | **CUMPLE** (consumidor AMQP y log HTTP) | AMQP: `src/events/consumers/rabbitmq.consumer.spec.ts:329` verifica que un `x-core-last-error` con `NEGOCIO-SECRETO` no aparezca en el log (#317). HTTP: **defecto real corregido (DEF-22, #581)**: el `LoggingInterceptor` registraba la URL completa con su query, incluido un `access_token`. Ahora pasa por `redactUrl` (`src/common/utils/redact-url.ts`). Tests: `src/common/utils/redact-url.spec.ts` (21 nombres sensibles redactados, 8 parámetros legítimos intactos) y `logging.interceptor.spec.ts` › «el log no incluye el token de la query ni el header Authorization» | «Cumple por código; falta ejecutar el test». El 03/11 el log HTTP figuraba NO VERIFICABLE; el PR que sumó el test corrigió además el defecto |
+| **SEC-I01** | Idempotencia en el consumo de eventos | **CUMPLE** | `test/inbox.e2e-spec.ts:103` («descarta el mismo eventId sin volver a aplicarlo») corre en el CI. El duplicado lo detecta la base (`messageId` único), no una consulta previa. Desde el 08/11, `test/rabbitmq-real.e2e-spec.ts` lo prueba también por un RabbitMQ real («un eventId repetido se procesa una sola vez») | «Cumple por código; falta ejecutar el e2e». Ya ejecutado |
+| **SEC-I02** | Rechazo de eventos que violan el contrato | **CUMPLE** (400 y sin fila) · **NO VERIFICABLE** (apartado en DLQ) | `test/inbox.e2e-spec.ts:131`: el payload inválido da 400 y no deja fila; por un broker real, `rabbitmq-real` («un mensaje inválido no deja fila ni traba al consumer»). El mensaje apartado en una DLQ depende del Core: M6 hace `nack` sin reencolar (#264) y la DLQ es de M9; no se puede probar desde este repo. Los campos extra se toleran a propósito en el bus (`configure-app.ts:44-49`) | «Parcial; revalidar contra develop». Revalidado en parte |
 | **SEC-D02** | Auditoría de lectura de datos Tier 2 | **NO CUMPLE** | No hay interceptor de lecturas. `src/common/audit/` registra solo cambios de estado (#460). El ADR-005 lo exige para producción (`docs/decisiones/adr-005-alineacion-frontend-sesion-y-seguridad.md:22` y `:46`) | **NO CUMPLE**. Sigue igual |
 
 ### 3.1 Estado el 13/10 → estado hoy: qué se corrigió
@@ -45,42 +45,41 @@ La matriz de Trello (SEC-W01 a D02) se evaluó el 13/10. Esta tabla muestra, por
 
 | ID | 13/10 | Hoy | Corrección hecha (issue · PR · commit · fecha) | Test que la cubre | Evidencia de ejecución |
 |---|---|---|---|---|---|
-| **SEC-W01** | «Cumple por código; falta ejecutar el test». No fijaba el algoritmo; no verificaba `iss` | **CUMPLE** | #354 · PR #358 · `b9511a7` · 21/10: validar el JWT de M1 (HS256 con secreto base64, `iss`, `typ` y claim `rol`). #448 · PR #450 · `bd61e3a` · 28/10: aceptar HS256, HS384 y HS512 | `src/auth/jwt.strategy.spec.ts:167-187` (16 casos de rechazo) | CI verde: runs 39636009746 (`b9511a7`) y 40767759833 (`bd61e3a`). **Pasó** en la corrida local del 03/11 (112 suites, 2533 tests, 0 fallados) |
-| **SEC-W02** | **NO CUMPLE**: `RolesGuard` y `@Roles` existían pero ningún controller los usaba | **CUMPLE** | #161 · PR #366 · `e6153f9` · 21/10 (base de roles adaptados desde M1) y PR #369 · `f1e1ff6` · 21/10 (**`RolesGuard` global y `@Roles` en todas las escrituras**). #235 (matriz 200/401/403) entró en el mismo PR #369. #466 · PR #468 · `c2d12a8` · 30/10 cerró la lectura de evidencia | `src/auth/route-roles.spec.ts` y `test/auth-roles.e2e-spec.ts` | CI verde: runs 39651981646 (`e6153f9`), 39673886235 (`f1e1ff6`) y 41047597104 (`c2d12a8`). **Pasó** `PASS test/auth-roles.e2e-spec.ts` en el CI de `main` del 03/11 ([run 41556929968](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/41556929968)) |
-| **SEC-W03** | «Cumple por código; falta ejecutar el test». Menores: `ticketId` sin `ParseUUIDPipe` | **CUMPLE** (a, b) · **NO VERIFICABLE** (c, 429) | #470 · PR #480 · `65dde9f` · 02/11: el límite cuenta la IP del vecino que reenvía el BFF (con `X-M6-BFF-Key`), no la del BFF | `src/modules/citizen-portal/client-tracker.spec.ts` (dos vecinos, claves distintas; clave incorrecta ignora `X-Forwarded-For`) y `citizen-portal.service.spec.ts:38`, `:56` y `:113` | CI verde: run 41476302943. **Pasó** en la corrida local del 03/11. **Pendiente:** ningún test dispara el 429; sigue sin `ParseUUIDPipe` |
-| **SEC-W04** | «Cumple por código; falta ejecutar el test» | **CUMPLE** | Sin corrección de código: el e2e existe desde #162 · PR #219 · `8985eb1` · 21/09 | `test/services-lifecycle.e2e-spec.ts:61` | CI verde: run 35598688580. **Pasó** `PASS test/services-lifecycle.e2e-spec.ts` en el CI de `main` del 03/11 (run 41556929968). El caso `PATCH /services/:id` con `status` no tiene test propio |
-| **SEC-W05** | «Parcial» | **NO CUMPLE** | **Sin cambios** (verificado): sigue sin id de correlación y sin formato RFC 9457 | Mensaje genérico y sin stack: `http-exception.filter.spec.ts:72` | Corregido: nada. Abierto en DEF-10 |
-| **SEC-W06** | «Cumple por código; falta e2e» | **CUMPLE** (a, c) · **NO VERIFICABLE** (b, 413) | Sin cambios en la carga (validación autoritativa, EXIF y nombre: #110 · `34c44a3` · 04/09). Se sumó el control de lectura: #466 · PR #468 · `c2d12a8` · 30/10 | `src/modules/attachments/attachments.service.spec.ts:255`, `:285` y `evidence-file.spec.ts` | CI verde: run 41047597104. **Pasó** en la corrida local del 03/11. **Pendiente:** e2e del 413 |
-| **SEC-D01** | «Cumple por código; falta ejecutar el test» | **CUMPLE** (consumidor AMQP) · **NO VERIFICABLE** (log HTTP) | #317 · `d3b9d08` · 20/10: saneo de logs del consumidor (el detalle del error se trunca y no se vuelca el contenido del evento) | `src/events/consumers/rabbitmq.consumer.spec.ts:329` (no aparece `NEGOCIO-SECRETO`) y `:121` (el error se trunca a 500 caracteres) | CI verde: run 39458179963. **Pasó** en la corrida local del 03/11. **Pendiente:** test de que el token no aparezca en el log HTTP |
-| **SEC-I01** | «Cumple por código; el e2e ya existe, falta ejecutarlo y adjuntar la captura» | **CUMPLE** | Sin corrección de código. Lo que faltaba era la ejecución | `test/inbox.e2e-spec.ts:103` | **Pasó** `PASS test/inbox.e2e-spec.ts` en el CI de `main` del 03/11 (run 41556929968, job `e2e`: 16 suites, 291 tests) |
-| **SEC-I02** | «Parcial; revalidar contra `develop`» | **CUMPLE** (400 y sin fila) · **NO VERIFICABLE** (DLQ) | #189 · PR #215 · `6048655` · 20/09: rechazar con 400 los eventos con payload inválido. #264 · PR #271 · `3ca3625` · 07/10: nunca reencolar (`nack` con `requeue=false`) y delegar los reintentos al backoff del Core. Revalidado contra `develop` el 03/11 | `test/inbox.e2e-spec.ts:131` y `src/events/consumers/rabbitmq.consumer.spec.ts:64`, `:95`, `:130`, `:135` (todo error → `nack`) | CI verde: runs 35519143213 (`6048655`) y 37710896602 (`3ca3625`). **Pasó** `PASS test/inbox.e2e-spec.ts` en el CI de `main` del 03/11. **Pendiente:** la DLQ es de M9, no se prueba desde M6 |
-| **SEC-D02** | **NO CUMPLE** | **NO CUMPLE** | **Sin cambios** (verificado): el interceptor de lecturas no existe. Lo más cercano, #460 · PR #483 · `39069dc` · 02/11, registra solo **cambios de estado** | `test/audit.e2e-spec.ts` (cubre las escrituras, no las lecturas) | CI verde: run 41531138310 (cubre #460, no la lectura Tier 2). Abierto en DEF-09 |
+| **SEC-W01** | «Cumple por código; falta ejecutar el test». No fijaba el algoritmo; no verificaba `iss` | **CUMPLE** | #354 · PR #358 · `b9511a7` · 21/10: validar el JWT de M1 (HS256 con secreto base64, `iss`, `typ` y claim `rol`). #448 · PR #450 · `bd61e3a` · 28/10: aceptar HS256, HS384 y HS512 | `src/auth/jwt.strategy.spec.ts` (`rechaza: %s`, 16 casos) | CI verde: runs 39636009746 (`b9511a7`) y 40767759833 (`bd61e3a`). **Pasó** en R08 (08/11) |
+| **SEC-W02** | **NO CUMPLE**: `RolesGuard` y `@Roles` existían pero ningún controller los usaba | **CUMPLE** | #161 · PR #366 · `e6153f9` · 21/10 (base de roles adaptados desde M1) y PR #369 · `f1e1ff6` · 21/10 (**`RolesGuard` global y `@Roles` en todas las escrituras**). #235 (matriz 200/401/403) entró en el mismo PR #369. #466 · PR #468 · `c2d12a8` · 30/10 cerró la lectura de evidencia | `src/auth/route-roles.spec.ts` y `test/auth-roles.e2e-spec.ts` | CI verde: runs 39651981646 (`e6153f9`), 39673886235 (`f1e1ff6`) y 41047597104 (`c2d12a8`). **Pasó** en R08 y en el CI de `develop` del 08/11 |
+| **SEC-W03** | «Cumple por código; falta ejecutar el test». Menores: `ticketId` sin `ParseUUIDPipe` | **CUMPLE** (a, b) · **CUMPLE con salvedad** (c, 429) | #470 · PR #480 · `65dde9f` · 02/11: el límite cuenta la IP del vecino que reenvía el BFF (con `X-M6-BFF-Key`), no la del BFF. #568 · PR #580 · `fb62519` · 08/11: `ThrottlerGuard` global y e2e del 429 | `client-tracker.spec.ts`, `citizen-portal.service.spec.ts:38`, `:56` y `:113`, y `test/throttler.e2e-spec.ts` | CI verde: runs 41476302943 y 42507156312. **Pasó** en R08. **Pendiente:** el 20 por minuto del portal no tiene e2e propio; sigue sin `ParseUUIDPipe` |
+| **SEC-W04** | «Cumple por código; falta ejecutar el test» | **CUMPLE** | Sin corrección de código: el e2e existe desde #162 · PR #219 · `8985eb1` · 21/09. El caso exacto de la tarjeta se probó el 08/11 (#569 · PR #581) | `test/services-lifecycle.e2e-spec.ts:61` y `test/security-input.e2e-spec.ts` | CI verde: runs 35598688580 y 42507405163. **Pasó** en R08 |
+| **SEC-W05** | «Parcial» | **NO CUMPLE** | **Sin cambios** salvo la redacción de la query en `path` (#581): sigue sin id de correlación y sin formato RFC 9457 | Mensaje genérico y sin stack: `http-exception.filter.spec.ts` | Corregido: nada de fondo. Abierto en DEF-10 |
+| **SEC-W06** | «Cumple por código; falta e2e» | **CUMPLE** | Sin cambios en la carga (validación autoritativa, EXIF y nombre: #110 · `34c44a3` · 04/09). Control de lectura: #466 · PR #468 · `c2d12a8` · 30/10. e2e del 413: #569 · PR #581 · `a733f44` · 08/11 | `attachments.service.spec.ts:255`, `:285`, `evidence-file.spec.ts` y `test/security-input.e2e-spec.ts` | CI verde: runs 41047597104 y 42507405163. **Pasó** en R08 |
+| **SEC-D01** | «Cumple por código; falta ejecutar el test» | **CUMPLE** | #317 · `d3b9d08` · 20/10: saneo de logs del consumidor. #569 · PR #581 · `a733f44` · 08/11: `redactUrl` en el interceptor de logs y en el `path` de los errores (DEF-22) | `rabbitmq.consumer.spec.ts:329` y `:121`, `redact-url.spec.ts` y `logging.interceptor.spec.ts` | CI verde: runs 39458179963 y 42507405163. **Pasó** en R08 |
+| **SEC-I01** | «Cumple por código; el e2e ya existe, falta ejecutarlo y adjuntar la captura» | **CUMPLE** | Sin corrección de código. Lo que faltaba era la ejecución | `test/inbox.e2e-spec.ts:103` y `test/rabbitmq-real.e2e-spec.ts` | **Pasó** en el CI del 03/11 y en R08 |
+| **SEC-I02** | «Parcial; revalidar contra `develop`» | **CUMPLE** (400 y sin fila) · **NO VERIFICABLE** (DLQ) | #189 · PR #215 · `6048655` · 20/09: rechazar con 400 los eventos con payload inválido. #264 · PR #271 · `3ca3625` · 07/10: nunca reencolar (`nack` con `requeue=false`) y delegar los reintentos al backoff del Core | `test/inbox.e2e-spec.ts:131` y `src/events/consumers/rabbitmq.consumer.spec.ts` (todo error → `nack`) | CI verde: runs 35519143213 y 37710896602. **Pasó** en R08. **Pendiente:** la DLQ es de M9 |
+| **SEC-D02** | **NO CUMPLE** | **NO CUMPLE** | **Sin cambios**: el interceptor de lecturas no existe. Lo más cercano, #460 · PR #483 · `39069dc` · 02/11, registra solo **cambios de estado** | `test/audit.e2e-spec.ts` (cubre las escrituras, no las lecturas) | CI verde: run 41531138310. Abierto en DEF-09 |
 
-**Resumen de lo corregido desde el 13/10:** SEC-W02 pasó de **NO CUMPLE a CUMPLE** (`RolesGuard` global, 21/10); SEC-W01 ganó los algoritmos fijados y la validación de `iss` y `typ`; SEC-D01 sumó una prueba de que el consumidor AMQP no vuelca datos de negocio al log; SEC-I02 quedó revalidado contra `develop` con el `nack` sin reencolar. **No cambiaron** SEC-W05 y SEC-D02, que siguen abiertos.
-
+**Resumen de lo corregido desde el 13/10:** SEC-W02 pasó de **NO CUMPLE a CUMPLE** (`RolesGuard` global, 21/10); SEC-W01 ganó los algoritmos fijados y la validación de `iss` y `typ`; SEC-D01 pasó de NO VERIFICABLE a CUMPLE el 08/11, y el PR que sumó el test corrigió un defecto real (el `access_token` de la query en los logs); SEC-W06 ganó el e2e del 413; SEC-W03 ganó un e2e del 429. **No cambiaron** SEC-W05 y SEC-D02, que siguen abiertos.
 
 ## 4. Pruebas de seguridad de la cátedra
 
 | Prueba | Resultado esperado | Estado | Evidencia y observaciones |
 |---|---|---|---|
-| **BOLA / IDOR** (A pide un recurso de B) | 403 o 404, nunca el dato | **CUMPLE** para recursos con dueño | Campo solo actúa sobre lo propio: `test/crew-ownership.e2e-spec.ts:65-66` (403 `NOT_ASSIGNED`) y la matriz propio, ajeno y sin cuadrilla. La lectura de evidencia también (#466): `attachments.service.spec.ts:543`. Un token de ciudadano recibe 403 en todo lo no público (`src/common/guards/jwt-auth.guard.spec.ts:59`, `test/inbox.e2e-spec.ts:363`). **Matiz de diseño:** Oficina, Auditoría y Campo leen todos los recursos por `GET`; el dominio es compartido y no hay datos «por usuario». Hay que defenderlo en la prueba |
+| **BOLA / IDOR** (A pide un recurso de B) | 403 o 404, nunca el dato | **CUMPLE** para recursos con dueño | Campo solo actúa sobre lo propio: `test/crew-ownership.e2e-spec.ts:66` (403 `NOT_ASSIGNED`) y la matriz propio, ajeno y sin cuadrilla. La lectura de evidencia también (#466): `attachments.service.spec.ts:543`. Un token de ciudadano recibe 403 en todo lo no público (`src/common/guards/jwt-auth.guard.spec.ts:59`, `test/inbox.e2e-spec.ts:363`). **Matiz de diseño:** Oficina, Auditoría y Campo leen todos los recursos por `GET`; el dominio es compartido y no hay datos «por usuario». Hay que defenderlo en la prueba |
 | **BFLA** (rol sin privilegio invoca un endpoint de administración) | 403 | **CUMPLE** | Matriz por actor en `test/auth-roles.e2e-spec.ts` (`it.each(TODOS)`, `:169`) y `route-roles.spec.ts`. Tabla endpoint por rol en `docs/api/endpoints.md`, generada de la metadata |
-| **JWT** vencido, firma alterada, `alg=none`, otro emisor | 401 | **CUMPLE** | `jwt.strategy.spec.ts:167-187` (ver SEC-W01) |
-| **Mass assignment** | Ignorado o 400, nunca persistido | **CUMPLE** | `configure-app.ts:52-55`, `services-lifecycle.e2e-spec.ts:61` |
-| **Inyección SQL** | Sin ejecución | **NO VERIFICABLE** | Prisma parametriza. Hay 5 consultas crudas y las 5 usan *template tag*, sin `Unsafe`: `src/health/health.controller.ts:55`, `src/modules/crews/crews.service.ts:344`, `src/modules/indicators/indicators.service.ts:367` y `:378`, `src/modules/trees/trees.service.ts:67`. **No hay test con payloads de inyección** |
+| **JWT** vencido, firma alterada, `alg=none`, otro emisor | 401 | **CUMPLE** | `jwt.strategy.spec.ts` (`rechaza: %s`; ver SEC-W01) |
+| **Mass assignment** | Ignorado o 400, nunca persistido | **CUMPLE** (400) | `configure-app.ts:52-55`; `test/security-input.e2e-spec.ts` (6 tests): `PATCH /services/:id` con `status`, `role`, `id` o una mezcla da 400 y la fila queda idéntica; `PATCH /zones/:id` con `code` y `createdAt` da 400; un `role` en el body no escala privilegios. También `services-lifecycle.e2e-spec.ts:61` |
+| **Inyección SQL** | Sin ejecución | **CUMPLE** | `test/security-input.e2e-spec.ts` (9 tests: `'; DROP TABLE zone;--`, `' OR 1=1--` y `<script>alert(1)</script>` en nombre de zona, dirección y descripción de expediente y notas de servicio): ni 500 ni efectos, el dato vuelve idéntico y la tabla sigue viva. Prisma parametriza; hay 5 consultas crudas, todas con *template tag* y sin `Unsafe`: `src/health/health.controller.ts:58`, `src/modules/crews/crews.service.ts:344`, `src/modules/indicators/indicators.service.ts:367` y `:378`, `src/modules/trees/trees.service.ts:67`. **Qué NO se hizo:** las 5 consultas crudas no tienen un test propio con payloads |
 | **NoSQL** | — | **N/A** | La base es PostgreSQL |
-| **XSS** en campos de texto | Escapado o rechazado | **NO VERIFICABLE** | La API devuelve solo JSON con `nosniff` y no refleja HTML; el texto libre se guarda tal cual y depende de que el frontend escape. Los DTO recortan y limitan el largo. **No hay test con `<script>`**. Los caracteres nulos y el JSON demasiado anidado sí se rechazan (`no-null-chars.pipe.spec.ts`) |
+| **XSS** en campos de texto | Escapado o rechazado | **Mixto** | Los mismos 9 tests de arriba. **La API no rechaza ni escapa el `<script>`: lo guarda como texto y lo devuelve idéntico.** No se ejecuta porque la API responde solo JSON con `nosniff` y `Content-Security-Policy: default-src 'none'`. El criterio literal «escapado o rechazado» **no se cumple**; la defensa real depende de que el frontend escape al renderizar, y eso **no se verificó** en este informe. Los caracteres nulos y el JSON demasiado anidado sí se rechazan (`no-null-chars.pipe.spec.ts`) |
 | **XXE** en SOAP | Rechazado | **N/A** | M6 no tiene canal SOAP |
 | **Fuerza bruta sobre el login** | 429 | **N/A** | M6 no tiene login: el JWT lo emite M1 |
-| **Rate limiting** de la API | 429 | **CUMPLE** (DEF-07, cerrado por #568) | `ThrottlerGuard` global (`THROTTLE_LIMIT`) con topes propios en `POST /events/inbox` y `POST /evidence`; e2e de 429 en `test/throttler.e2e-spec.ts` |
-| **OWASP ZAP** (baseline y activo autenticado) | 0 alertas High | **NO VERIFICABLE** | No realizado: no hay configuración ni ejecución (DEF-13) |
-| **Dependencias** (SCA) | 0 CVE críticas o altas sin mitigación | **NO CUMPLE** | `npm audit --omit=dev` del 03/11: 15 vulnerabilidades (1 crítica, 6 altas, 8 moderadas). Ver sección 5 |
-| **Cabeceras de seguridad** | CSP, HSTS y `X-Content-Type-Options` | **CUMPLE** (cabeceras) · **NO CUMPLE** (CSP) | `src/common/middleware/security-headers.middleware.ts` pone `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: same-site` y HSTS solo si `NODE_ENV=production`; probado en `security-headers.middleware.spec.ts:21` y `:32`, y en `services-lifecycle.e2e-spec.ts:67`. `X-Powered-By` está deshabilitado (`configure-app.ts:26`). **No hay CSP**, a propósito: rompería Swagger UI (`/api/docs`). No hay helmet ni `Permissions-Policy` |
-| **CORS** sin comodín con credenciales | Sin `*` con credenciales | **NO VERIFICABLE** en el despliegue | `src/main.ts:19-27`: sin `CORS_ORIGINS` se acepta cualquier origen, pero **sin `credentials`**, que es la combinación peligrosa. Hay que confirmar que la variable esté cargada en Render (DEF-18) |
+| **Rate limiting** de la API | 429 | **CUMPLE** (DEF-07, cerrado por #568 · PR #580) | `ThrottlerGuard` global (primer `APP_GUARD`, `src/app.module.ts:100`): 600 por minuto por IP y por endpoint (`THROTTLE_LIMIT`, `THROTTLE_TTL_MS`), `POST /events/inbox` 300 por minuto, `POST /evidence` 30 por minuto, `/health` excluido. e2e en `test/throttler.e2e-spec.ts` (corre en el CI). Decisión en [ADR-010](../decisiones/adr-010-rate-limit-global.md). **Límites:** los contadores están en memoria, valen para **una** instancia; y detrás del BFF el límite solo cuenta por vecino si el BFF manda `X-M6-BFF-Key` y sobrescribe `X-Forwarded-For`: **ese contrato con el frontend no se verificó** (issue al frontend pendiente) |
+| **OWASP ZAP** (baseline y activo autenticado) | 0 alertas High | **NO VERIFICABLE: NO HECHO** | No hay configuración ni ejecución (DEF-13) |
+| **Dependencias** (SCA) | 0 CVE críticas o altas sin mitigación | **NO CUMPLE** (riesgo aceptado, sin mitigación analizada) | `npm audit --omit=dev` del 08/11: 13 vulnerabilidades en producción, **0 críticas, 6 altas, 7 moderadas**. Las 6 altas están aceptadas sin análisis de explotabilidad. Ver sección 5.1 |
+| **Cabeceras de seguridad** | CSP, HSTS y `X-Content-Type-Options` | **CUMPLE** salvo `/api/docs` | `src/common/middleware/security-headers.middleware.ts` pone `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` en toda ruta **salvo `/api/docs`** (Swagger UI la necesita), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: same-site` y HSTS solo si `NODE_ENV=production`. Probado en `security-headers.middleware.spec.ts` (`:21`, `:45`), `services-lifecycle.e2e-spec.ts:67` y `test/security-input.e2e-spec.ts` (CSP presente; ausente en `/api/docs`). `X-Powered-By` está deshabilitado (`configure-app.ts:26`). `/api/docs` sin CSP queda en DEF-19. No hay helmet ni `Permissions-Policy` |
+| **CORS** sin comodín con credenciales | Sin `*` con credenciales | **NO VERIFICABLE** en el despliegue | `src/main.ts:18-31`: sin `CORS_ORIGINS` se acepta cualquier origen, pero **sin `credentials`**, que es la combinación peligrosa. No se verificó que la variable esté cargada en Render (DEF-18), ni `BFF_SHARED_KEY` |
 | **Cookies** (`Secure`, `HttpOnly`, `SameSite`) | — | **N/A** | El backend no emite cookies: el JWT va en el header |
-| **Errores sin stack al cliente** | Sin trazas | **CUMPLE** | `http-exception.filter.spec.ts:72` |
-| **Logs sin datos personales ni tokens** | Sin datos sensibles | **NO VERIFICABLE** | Ver SEC-D01 |
-| **TLS** en tránsito | Cifrado | **CUMPLE** (broker y Core) · **NO VERIFICABLE** (HTTP) | En producción la validación de arranque exige `amqps://`, prohíbe el usuario `guest` y exige `https://` para el Core y para M1 (`src/config/env.validation.ts:216-250`), cubierto en `src/config/configuration.spec.ts:172-184`. El TLS del HTTP lo termina Render y no se puede probar desde el repo |
+| **Errores sin stack al cliente** | Sin trazas | **CUMPLE** | `http-exception.filter.spec.ts` («deja en 500 cualquier error no contemplado») |
+| **Logs sin datos personales ni tokens** | Sin datos sensibles | **CUMPLE** | Ver SEC-D01. El `access_token` de la query se redacta (DEF-22, cerrado) |
+| **TLS** en tránsito | Cifrado | **CUMPLE** (broker y Core) · **NO VERIFICABLE** (HTTP) | En producción la validación de arranque exige `amqps://`, prohíbe el usuario `guest` y exige `https://` para el Core y para M1 (`src/config/env.validation.ts`, bloque de producción desde la línea 216), cubierto en `src/config/configuration.spec.ts`. El TLS del HTTP lo termina Render y no se puede probar desde el repo |
 | **Hash de contraseñas** | bcrypt o Argon2 | **N/A** | M6 no almacena contraseñas |
 | **Datos sensibles minimizados** | — | **CUMPLE** | El portal público devuelve solo etapa, tipo, dirección y fechas (`citizen-portal.service.spec.ts:38` y `:56`). Las URLs de evidencia son públicas, protegidas por una key aleatoria (DEF-19) |
 
@@ -88,28 +87,27 @@ La matriz de Trello (SEC-W01 a D02) se evaluó el 13/10. Esta tabla muestra, por
 
 ### 5.1 Dependencias: `npm audit` (SCA)
 
-`npm audit --omit=dev` el 03/11/2026 **con red**. Resultado: **15 vulnerabilidades en producción: 1 crítica, 6 altas, 8 moderadas**. Con las dependencias de desarrollo son 64 (2 críticas y 11 altas). El CI del backend **no corre `npm audit`**, por eso no se había visto.
-
-Una corrida previa con `--offline` dio 0 vulnerabilidades; ese resultado venía de la caché local y **no es válido**.
+**03/11/2026, con red:** 15 vulnerabilidades en producción (1 crítica, 6 altas, 8 moderadas); con las dependencias de desarrollo, 64 (2 críticas y 11 altas). El CI del backend no corría `npm audit`, por eso no se había visto. Una corrida previa con `--offline` dio 0 vulnerabilidades; ese resultado venía de la caché local y **no es válido**.
 
 | Severidad | Paquete | Directa | Qué reporta | Corrección |
 |---|---|---|---|---|
-| Crítica | `proxy-addr` | No (Express) | Suplantación de IP vía subred de IPv6 mapeada a IPv4 (GHSA-jqcg-44mw-7w3h) | `npm audit fix`, sin cambio mayor |
+| Crítica | `proxy-addr` | No (Express) | Suplantación de IP vía subred de IPv6 mapeada a IPv4 (GHSA-jqcg-44mw-7w3h) | **Resuelta el 08/11** con `npm audit fix` (#566, PR #576) |
 | Alta | `@nestjs/platform-express` | Sí | Arrastra `body-parser` y `multer` | Subir a NestJS 12 (cambio mayor) |
 | Alta | `body-parser` | No | DoS por un `limit` inválido y por bytes sobrantes tras un cuerpo comprimido | NestJS 12 |
 | Alta | `multer` | No | DoS por un `fileFilter` asíncrono pendiente tras cerrar el pedido (GHSA-q7qp-rjg7-q26m) | NestJS 12 |
 | Alta | `js-yaml` | No (Swagger) | Contaminación de prototipo y DoS por claves de fusión | `@nestjs/swagger` 12 |
 | Alta | `lodash` | No | Inyección de código en `_.template` y contaminación de prototipo | `@nestjs/swagger` o `@nestjs/config` 12 |
 | Alta | `zod` | Sí | Agotamiento de memoria al validar colecciones enormes (GHSA-mrhx-c7xc-m3w5) | `zod` 4.6.7 (cambio mayor) |
-| Moderadas (8) | `@nestjs/common`, `@nestjs/config`, `@nestjs/core`, `@nestjs/schedule`, `@nestjs/swagger`, `file-type`, `qs`, `uuid` | Mixto | DoS y neutralización incorrecta de caracteres especiales | `npm audit fix` resuelve `file-type`, `qs` y `@nestjs/common`; el resto, cambio mayor |
+| Moderadas | `@nestjs/common`, `@nestjs/config`, `@nestjs/core`, `@nestjs/schedule`, `@nestjs/swagger`, `file-type`, `qs`, `uuid` | Mixto | DoS y neutralización incorrecta de caracteres especiales | `npm audit fix` resolvió `file-type`, `qs` y `@nestjs/common`; el resto, cambio mayor |
 
-**Tratamiento propuesto (DEF-08):**
+**Lo que se hizo (DEF-08):**
 
-1. Correr `npm audit fix` (sin `--force`) y volver a correr los tests: según npm resuelve `proxy-addr`, `qs`, `file-type` y `@nestjs/common` sin cambios mayores.
-2. Para lo que exige NestJS 12, **documentar la mitigación una por una** en este informe (la cátedra acepta CVE con mitigación documentada). Por ejemplo: las rutas con `multer` exigen rol de Campo y un token válido; M6 usa `trust proxy 1` (número de saltos) y no una lista de subredes. **No se analizó la explotabilidad**; eso queda para quien corrija.
-3. Agregar `npm audit --omit=dev --audit-level=high` al CI y Dependabot.
+1. `npm audit fix` sin `--force` (#566, PR #576). Resultado del **08/11/2026** en producción: **13 vulnerabilidades, 0 críticas, 6 altas, 7 moderadas**. Build, lint y tests siguieron en verde.
+2. Job `audit` en el CI (#578): corre `npm audit --omit=dev --audit-level=high` y es **informativo**: si hay altas, termina en verde con un aviso (`::warning`) y no bloquea el merge.
+3. Dependabot semanal (`.github/dependabot.yml`), sin los majors de `@nestjs/*` ni de `zod`.
+4. El salto mayor (NestJS 12, zod 4) queda fuera de este corte para no cambiar la plataforma a días de la prueba.
 
-**Re-corrida del 08/11/2026 tras `npm audit fix` (Issue #566).** Resultado en producción: **13 vulnerabilidades, 0 críticas, 6 altas, 7 moderadas** (antes 15: 1 crítica, 6 altas, 8 moderadas). La crítica `proxy-addr` quedó resuelta sin cambios mayores. Build, lint y los 2650 tests siguen en verde. Quedan las 6 altas, todas con corrección solo por salto mayor (`@nestjs/*` 12, `zod` 4.6.7). El salto mayor queda fuera de este corte para no cambiar la plataforma a días de la prueba. Lo que se pudo comprobar en el código:
+Lo que se pudo comprobar en el código sobre las 6 altas restantes:
 
 | Alta restante | Qué se comprobó | Qué NO se analizó |
 |---|---|---|
@@ -117,15 +115,19 @@ Una corrida previa con `--offline` dio 0 vulnerabilidades; ese resultado venía 
 | `@nestjs/platform-express`, `body-parser`, `multer` | La subida de archivos exige token válido y rol (ver `attachments.service.ts` y el límite de 10 MB) | Explotabilidad real del DoS de `multer` y de `body-parser` |
 | `@nestjs/swagger`, `js-yaml`, `lodash`, `@nestjs/config` | — | Explotabilidad: no se analizó |
 
-Estado: **riesgo aceptado y abierto**, sin análisis de explotabilidad. No se puede declarar «CUMPLE» en este criterio hasta correr un SCA adicional (Trivy) y decidir el salto a NestJS 12.
+**Estado unificado:** el criterio de dependencias es **NO CUMPLE**, con las 6 altas como **riesgo aceptado y abierto, sin mitigación analizada**. No se puede declarar CUMPLE hasta analizar la explotabilidad, correr un segundo SCA (Trivy, **NO HECHO**) y decidir el salto a NestJS 12.
 
-### 5.2 OWASP ZAP
+### 5.2 OWASP ZAP y Trivy
 
-**No realizado.** No hay configuración ni ejecución. Plan: `zap-baseline.py` contra el despliegue (1 a 2 h), archivar el reporte y justificar cada alerta Media.
+**ZAP: NO HECHO.** No hay configuración ni ejecución. **Trivy: NO HECHO.** Plan: `zap-baseline.py` contra el despliegue (1 a 2 h), archivar el reporte y justificar cada alerta Media.
 
-### 5.3 Escaneo de secretos
+### 5.3 CodeQL
 
-**Realizado el 03/11/2026 con gitleaks v8.30.1** (imagen `zricethezav/gitleaks:v8.30.1`) sobre todas las ramas: 270 commits, 78 MB.
+El workflow `codeql.yml` corre en el CI y el del commit `1d600d2` terminó en `success` ([run 42508633438](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42508633438)). **El contenido de sus alertas no se revisó**: resultado no verificado.
+
+### 5.4 Escaneo de secretos
+
+**Realizado el 03/11/2026 con gitleaks v8.30.1** (imagen `zricethezav/gitleaks:v8.30.1`) sobre todas las ramas: 270 commits, 78 MB. Desde entonces corre **en el CI sobre todo el historial** (job `secrets`, checkout completo, en cada PR y push); en el run del 08/11 de `develop` terminó en verde (53 s).
 
 ```bash
 docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 git /repo --redact --no-banner --log-opts="--all"
@@ -133,21 +135,24 @@ docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 git /repo --redact 
 
 | Corrida | Resultado |
 |---|---|
-| Sin configuración propia | **9 hallazgos**, todos reglas `generic-api-key`, que se reducen a **2 valores** (ver abajo) |
-| Con [`.gitleaks.toml`](../../.gitleaks.toml) | **0 hallazgos** (`no leaks found`) |
+| Sin configuración propia (03/11) | **9 hallazgos**, todos reglas `generic-api-key`, que se reducen a **2 valores** (ver abajo) |
+| Con [`.gitleaks.toml`](../../.gitleaks.toml) (03/11) | **0 hallazgos** (`no leaks found`) |
+| CI de `develop` (08/11) | Job `secrets` en verde |
 
 Los 2 valores marcados, ambos verificados a mano:
 
 | Valor | Dónde | Por qué no es un secreto |
 |---|---|---|
-| `JWT_SECRET` de ejemplo (base64) | `.env.example`, `src/config/env.validation.ts:33` (`JWT_SECRET_EJEMPLO`), commits b9511a7, c8eb299 y fb60b7e | Decodifica a `CHANGE_ME_local_dev_secret_m6_32bytes`. **El equipo confirmó el 03/11 que nunca fue un secreto real.** En producción la validación de arranque lo rechaza |
+| `JWT_SECRET` de ejemplo (base64) | `.env.example`, `src/config/env.validation.ts` (`JWT_SECRET_EJEMPLO`), commits b9511a7, c8eb299 y fb60b7e | Decodifica a `CHANGE_ME_local_dev_secret_m6_32bytes`. **El equipo confirmó el 03/11 que nunca fue un secreto real.** En producción la validación de arranque lo rechaza |
 | `SECRET = secreto-de-maquina-m6` | `src/core/core.client.spec.ts:4`, commits 3ca3625, 96087d7 y 6d2c732 | Valor de prueba de un test unitario |
 
-El `.gitleaks.toml` excluye esos dos valores **por valor exacto**, no por archivo, así que una credencial real en esos mismos archivos se sigue detectando. El job `secrets` del CI (`.github/workflows/ci.yml`) repite el escaneo del historial completo en cada PR y push.
+El `.gitleaks.toml` excluye esos dos valores **por valor exacto**, no por archivo, así que una credencial real en esos mismos archivos se sigue detectando.
 
-Revisión complementaria previa por expresiones regulares (todas las ramas, 252 commits): sin claves privadas, claves de AWS ni tokens de GitHub o Slack; `.env` ignorado y nunca versionado (`git log --all -- .env` vacío); sin `.pem`, `.key`, `.p12` ni `.pfx` versionados; el resto de los `JWT_SECRET`, `DATABASE_URL` y URLs de RabbitMQ con credenciales son marcadores de posición o valores de prueba de specs.
+**Incidente del 08/11 (registrado como P-1 en [`06-registro-defectos.md`](06-registro-defectos.md)):** el workflow `api-tests.yml` de #572 llevaba un **secreto de juguete escrito literalmente**. El job `secrets` lo detectó en el CI (run [42505473347](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42505473347), commit `e07ad42`, job `secrets` en rojo). No era una credencial real; se corrigió **reescribiendo la rama** antes de mergear (ahora el workflow genera un secreto efímero) y nunca llegó a `develop`. Es una prueba de que el control funciona, y también de que un secreto literal estuvo a un `git push` de entrar.
 
-**Un punto sigue abierto:** `.env.example:92` y `docs/deploy.md` publican el usuario `module_ambiente` y el host del broker (`core-uade-2026.duckdns.org:5671/core`). La clave figura como marcador y gitleaks no encontró ninguna. Confirmar con M9 si es aceptable que usuario y host sean públicos; si la clave alguna vez se pegó en un commit, hay que **rotarla** en vez de reescribir el historial.
+Revisión complementaria previa por expresiones regulares (03/11, todas las ramas, 252 commits): sin claves privadas, claves de AWS ni tokens de GitHub o Slack; `.env` ignorado y nunca versionado (`git log --all -- .env` vacío); sin `.pem`, `.key`, `.p12` ni `.pfx` versionados.
+
+**Un punto sigue abierto:** `.env.example` y `docs/deploy.md` publican el usuario `module_ambiente` y el host del broker (`core-uade-2026.duckdns.org:5671/core`). La clave figura como marcador y gitleaks no encontró ninguna. Confirmar con M9 si es aceptable que usuario y host sean públicos; si la clave alguna vez se pegó en un commit, hay que **rotarla** en vez de reescribir el historial.
 
 Limitaciones: gitleaks no analiza el contenido de los PDF ni de los binarios, y trufflehog no se corrió.
 
@@ -155,16 +160,17 @@ Limitaciones: gitleaks no analiza el contenido de los PDF ni de los binarios, y 
 
 | # | Hallazgo | Severidad propuesta | Tratamiento | Registro |
 |---|---|---|---|---|
-| 1 | 1 crítica y 6 altas en dependencias de producción | Mayor (sube a Crítica si hay explotabilidad) | `npm audit fix`, documentar mitigaciones y sumar `npm audit` al CI | DEF-08 |
-| 2 | Sin rate limiting fuera del portal público | Mayor | ~~Throttler global y un e2e de 429~~ (cerrado, #568) | DEF-07 |
-| 3 | Sin auditoría de lecturas Tier 2 (SEC-D02) | Mayor | Interceptor de lectura sobre los `GET` de denuncias y actas | DEF-09 |
-| 4 | Sin ZAP (el escaneo de secretos con gitleaks ya se hizo y corre en el CI) | Mayor | `zap-baseline` manual | DEF-13 |
-| 5 | Errores sin id de correlación ni formato RFC 9457 (SEC-W05) | Mayor | Migrar el filtro y avisar al frontend | DEF-10 |
-| 6 | CORS abierto si falta `CORS_ORIGINS` | Menor | Confirmar la variable en Render | DEF-18 |
-| 7 | Sin CSP, helmet ni `Permissions-Policy`; Swagger UI público en producción | Menor | Decisión documentada por Swagger UI; ocultarlo o aceptarlo | DEF-19 |
+| 1 | 6 altas en dependencias de producción (la crítica se resolvió) | Mayor (sube a Crítica si hay explotabilidad) | `npm audit fix` hecho (#566), job `audit` informativo y Dependabot hechos (#578); pendiente: análisis de explotabilidad, Trivy y salto a NestJS 12 | DEF-08 |
+| 2 | Sin rate limiting fuera del portal público | Mayor | **Cerrado** (#568, PR #580) | DEF-07 |
+| 3 | Sin auditoría de lecturas Tier 2 (SEC-D02) | Mayor | Interceptor de lectura sobre los `GET` de denuncias y actas (sin hacer) | DEF-09 |
+| 4 | Sin ZAP ni Trivy (SCA informativo, Dependabot, CodeQL y gitleaks sí) | Mayor | `zap-baseline` manual (sin hacer) | DEF-13 |
+| 5 | Errores sin id de correlación ni formato RFC 9457 (SEC-W05) | Mayor | Migrar el filtro y avisar al frontend (sin hacer) | DEF-10 |
+| 6 | CORS abierto si falta `CORS_ORIGINS`; `BFF_SHARED_KEY` sin verificar | Menor | Confirmar las variables en Render (sin hacer) | DEF-18 |
+| 7 | Swagger UI público y sin CSP en producción | Menor | Decisión documentada por Swagger UI; ocultarlo o aceptarlo | DEF-19 |
 | 8 | Evidencia servida por URL pública; los PDF conservan metadatos | Menor | URLs firmadas, o aceptar el riesgo por escrito | DEF-19 |
-| 9 | Sin tests de inyección, XSS, 429 ni 413 | Menor | Sumar un test por cada uno | — |
-| 10 | No se valida `aud` del JWT | Menor | Justificado: M1 no emite `aud` (`docs/integracion/m1.md`) | — |
+| 9 | Logs con `access_token` de la query | Mayor (corregido) | **Cerrado** (#581): `redactUrl` en logs y en el `path` de los errores | DEF-22 |
+| 10 | Tests de inyección, XSS, 429 y 413 | Menor | **Hecho** (#569, #568): `security-input` y `throttler` | — |
+| 11 | No se valida `aud` del JWT | Menor | Justificado: M1 no emite `aud` (`docs/integracion/m1.md`) | — |
 
 ## 7. Cómo reproducir las pruebas en vivo
 
@@ -173,6 +179,10 @@ Limitaciones: gitleaks no analiza el contenido de los PDF ni de los binarios, y 
 | Rechazo de JWT (16 casos) | `npx jest src/auth/jwt.strategy.spec.ts` |
 | Roles por endpoint | `npx jest src/auth/route-roles.spec.ts` y `npm run test:e2e -- auth-roles` (con una base descartable; ver `docs/testing.md`) |
 | Pertenencia de Campo | `npm run test:e2e -- crew-ownership` |
-| Mass assignment y cabeceras | `npm run test:e2e -- services-lifecycle` |
+| Mass assignment, SQL, XSS, 413 y CSP | `npm run test:e2e -- security-input` |
+| Cabeceras | `npm run test:e2e -- services-lifecycle` |
+| Rate limiting (429) | `npm run test:e2e -- throttler` |
+| Logs sin token | `npx jest src/common/utils/redact-url.spec.ts src/common/interceptors/logging.interceptor.spec.ts` |
 | Idempotencia del inbox | `npm run test:e2e -- inbox` |
+| Consumer contra RabbitMQ real | `npm run test:e2e -- rabbitmq-real` (con `RABBITMQ_URL` local; ver `docs/testing.md`) |
 | Dependencias | `npm audit --omit=dev` |
