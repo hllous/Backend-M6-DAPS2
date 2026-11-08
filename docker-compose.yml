@@ -12,6 +12,11 @@
 # exchange (muni.inbox, fanout) y la misma cola (q.ambiente) que crea el Core.
 # ═══════════════════════════════════════════════════════════════
 
+# Nombre del stack ("Módulo 6 - Ambiente"). Compose solo admite minúsculas, números,
+# guiones y guiones bajos: por eso va así y no con espacios ni mayúsculas.
+# Es el prefijo de contenedores, red y volúmenes, y lo que muestra Docker Desktop.
+name: modulo-6-ambiente
+
 services:
   postgres:
     image: postgres:16-alpine
