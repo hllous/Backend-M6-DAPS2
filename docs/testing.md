@@ -77,3 +77,9 @@ El job `e2e` de `.github/workflows/ci.yml` levanta `postgres:16` con `services:`
 **No es check obligatorio** de la protección de ramas: ahí siguen solo `build` y `test`. La cobertura de los e2e tampoco se suma al 85%, que se sigue midiendo con los unitarios.
 
 **Specs contra el paquete de M2 (v1.78).** `payloads.spec.ts` y `services.service.spec.ts` validan los `updateTicketStatus` reales contra los schemas del paquete de M2 (helper `src/events/m2-contract.testing.ts`, excluido de la cobertura). El paquete vive en `docs/documentacion/`, que no se versiona: **en el CI esos specs se saltean** con un aviso (`console.warn`), no fallan. En local corren si la carpeta existe, o apuntando `M2_V178_SCHEMAS` a la carpeta `schemas/` del paquete. El otro sentido (sus ejemplos `examples/valid/` contra nuestro inbox) lo cubre `src/events/consumers/m2-ejemplos.spec.ts`, que se saltea igual en el CI.
+
+## Mutation testing (Stryker, #573)
+
+`npm run test:mutation` (config en `stryker.config.json`, ~15 min en local) muta `outbound-requests.transitions.ts` y `street-closure-expiry.sweeper.ts`; umbral `break: 60`. Reporte en `reports/mutation/` (ignorado por git). El workflow `.github/workflows/mutation.yml` corre solo a mano o semanal, no en cada push.
+
+Primera medición: transitions 100 %, sweeper 79,07 % (total 84,21 %). Los 9 mutantes sobrevivientes del sweeper eran todos del contador y el log final (`expired -= 1`, la condición `expired > 0`, el texto del log, y `return false`/`return true` de `expireOne` en las líneas 88 y 103), porque ningún test miraba el log. Se cerraron afirmando en el spec el log `1 corte/s ...` cuando vence uno y su ausencia cuando la carrera con `streetClosureEnded` deja `count: 0`. Remedición solo del sweeper: 100 %, 0 sobrevivientes.
