@@ -67,3 +67,7 @@ docs/superpowers/
 
 # PDF generados desde docs/QA (npm run qa:pdf): se regeneran, no se versionan.
 docs/QA/build/
+
+/reports/
+.schemathesis/
+schema-coverage.html
