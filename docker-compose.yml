@@ -66,9 +66,12 @@ services:
         api=http://rabbitmq:15672/api
         auth=${RABBITMQ_USER:?Falta RABBITMQ_USER en .env (cp .env.example .env)}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env (cp .env.example .env)}
         json='Content-Type: application/json'
-        curl -fsS -u $$auth -H "$$json" -X PUT  $$api/exchanges/%2F/muni.inbox -d '{"type":"fanout","durable":true}'
-        curl -fsS -u $$auth -H "$$json" -X PUT  $$api/queues/%2F/q.ambiente    -d '{"durable":true}'
-        curl -fsS -u $$auth -H "$$json" -X POST $$api/bindings/%2F/e/muni.inbox/q/q.ambiente -d '{"routing_key":""}'
+        # El healthcheck de rabbitmq da "healthy" antes de que escuche la consola (15672):
+        # sin reintentos, el primer `docker compose up` en frío fallaba con "exit 7".
+        retry='--retry 30 --retry-delay 2 --retry-connrefused'
+        curl -fsS $$retry -u $$auth -H "$$json" -X PUT  $$api/exchanges/%2F/muni.inbox -d '{"type":"fanout","durable":true}'
+        curl -fsS $$retry -u $$auth -H "$$json" -X PUT  $$api/queues/%2F/q.ambiente    -d '{"durable":true}'
+        curl -fsS $$retry -u $$auth -H "$$json" -X POST $$api/bindings/%2F/e/muni.inbox/q/q.ambiente -d '{"routing_key":""}'
         echo "exchange muni.inbox y cola q.ambiente listos"
 
   backend:
