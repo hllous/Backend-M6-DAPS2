@@ -55,6 +55,7 @@ npm run test:e2e -- services-lifecycle
 | `environmental-flow.e2e-spec.ts` | Expediente → inspección → acta, con la derivación a M4 en el outbox (el acta hacia M4 y el `updateTicketStatus` hacia M2 comparten `correlationId`: un hilo por request, #267), y la vuelta de M4 por el inbox (`commercialFineGenerated` cierra el expediente; sin `sourceViolationId` válido da 400 y no deja fila). No prueba rollback |
 | `street-closure-expiry.e2e-spec.ts` | Corte aprobado con ventana ya vencida (#321): el barrido lo pasa a `EXPIRED` y reprograma el servicio `SCHEDULED` (uno `IN_PROGRESS`, uno vigente o uno dentro de la gracia no se tocan), es idempotente, no publica nada hacia M7, y un `streetClosureEnded` posterior sobre `EXPIRED` lo pasa a `ENDED` |
 | `containers-close.e2e-spec.ts` | Cerrar el servicio transiciona el contenedor. Es la única suite que prueba el rollback: un `CHECK` temporal hace fallar el `UPDATE` del contenedor dentro de la transacción y se verifica que el servicio siga `IN_PROGRESS` y que no se encole nada |
+| `security-input.e2e-spec.ts` | Seguridad de entrada (#569): payloads SQL (`'; DROP TABLE--`, `' OR 1=1--`) y XSS en zonas, expedientes ambientales y servicios (se guardan como texto, sin 500); mass assignment (`status`/`role`/`id` en `PATCH /services/:id` y `/zones/:id` dan 400 y no persisten); 413 por archivo de más de 10 MB; CSP en la API y ausente en `/api/docs` |
 | `audit.e2e-spec.ts` | Auditoría de dominio |
 | `auth-roles.e2e-spec.ts` | Roles de M6: matriz por rol |
 | `demo-personas.e2e-spec.ts` | Personas de demostración |
