@@ -79,6 +79,13 @@ El job `e2e` de `.github/workflows/ci.yml` levanta `postgres:16` y `rabbitmq:3-m
 
 **Specs contra el paquete de M2 (v1.78).** `payloads.spec.ts` y `services.service.spec.ts` validan los `updateTicketStatus` reales contra los schemas del paquete de M2 (helper `src/events/m2-contract.testing.ts`, excluido de la cobertura). El paquete vive en `docs/documentacion/`, que no se versiona: **en el CI esos specs se saltean** con un aviso (`console.warn`), no fallan. En local corren si la carpeta existe, o apuntando `M2_V178_SCHEMAS` a la carpeta `schemas/` del paquete. El otro sentido (sus ejemplos `examples/valid/` contra nuestro inbox) lo cubre `src/events/consumers/m2-ejemplos.spec.ts`, que se saltea igual en el CI.
 
+## Tests de API (Newman + Schemathesis, #572)
+
+Workflow aparte, `.github/workflows/api-tests.yml` (no es check obligatorio): levanta Postgres, migra, siembra el seed de demo, arranca `node dist/main` con un `JWT_SECRET` de juguete declarado en el workflow y corre:
+
+- **Newman** con `test/api/m6.postman_collection.json` (generada desde `docs/api/openapi.json` con `npm run api:collection`; regenerarla y commitearla si cambia el OpenAPI). Casos de éxito (GET), 401, 403 (AUDITOR en escrituras) y 400/404 por endpoint. `test/api/PENDIENTES.md` lista los endpoints sin caso de éxito (las escrituras, que necesitan estado de dominio). Los tokens no se versionan: `JWT_SECRET=<base64> node test/api/make-token.mjs admin|auditor` los firma, y se pasan con `--env-var token=… auditorToken=…`.
+- **Rate limit:** el backend arranca con `THROTTLE_LIMIT=100000`. El `ThrottlerGuard` global (#568, 600 req/min por IP) devolvería 429 a Newman y sobre todo a Schemathesis (miles de casos desde una sola IP). Es inocuo mientras la variable no exista. El `JWT_SECRET` se genera por corrida (`openssl rand -base64 32`, enmascarado); las versiones de Newman y de la imagen de Schemathesis están fijadas.
+- **Schemathesis** (solo GET) contra el OpenAPI: `response_schema_conformance` y `not_a_server_error` bloqueantes; `status_code_conformance` informativo porque hoy falla (hallazgo: ~40 GET devuelven un 400 del ValidationPipe que el OpenAPI no declara). `GET /neighborhoods` queda excluido: da 503 sin el catálogo de M9.
 ## Mutation testing (Stryker, #573)
 
 `npm run test:mutation` (config en `stryker.config.json`, ~15 min en local) muta `outbound-requests.transitions.ts` y `street-closure-expiry.sweeper.ts`; umbral `break: 60`. Reporte en `reports/mutation/` (ignorado por git). El workflow `.github/workflows/mutation.yml` corre solo a mano o semanal, no en cada push.
