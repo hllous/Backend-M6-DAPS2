@@ -70,6 +70,11 @@ export const envSchema = z
       z.string().trim().min(32, 'BFF_SHARED_KEY: mínimo 32 caracteres').optional(),
     ),
 
+    // Límite de tasa global por IP (y por endpoint) para todo lo autenticado. Generoso a
+    // propósito: frena abuso y fuerza bruta, no el uso normal de un operador (#568).
+    THROTTLE_LIMIT: z.coerce.number().int().min(1).default(600),
+    THROTTLE_TTL_MS: z.coerce.number().int().min(1000).default(60_000),
+
     // Ids de M1 (`sub`, numéricos) de los M6_ADMIN iniciales, separados por coma.
     // Sin ellos nadie puede asignar roles (ADR-008). Además necesitan el rol
     // RESPONSABLE_AREA en M1. Vacía cuenta como ausente.
