@@ -35,7 +35,7 @@ Qué completar en `.env`:
 | `JWT_SECRET` | ya trae un valor de ejemplo válido para local; no hace falta tocarlo |
 | `POSTGRES_USER`, `POSTGRES_DB` | opcionales (default `m6` / `m6_ambiente`) |
 
-Si falta el `.env` o una variable obligatoria, `docker compose` corta con un mensaje del tipo `Falta POSTGRES_PASSWORD en .env`. Las credenciales no se imprimen en los logs.
+Si falta el `.env` o una variable obligatoria, `docker compose` corta con un mensaje del tipo `Falta POSTGRES_PASSWORD en .env`. Las credenciales no se imprimen en los logs. Con `cp .env.example .env` las claves quedan predecibles (`cambiame`), por eso Postgres (5432) y RabbitMQ (5672 y consola 15672) se publican solo en `127.0.0.1`: no son accesibles desde otras máquinas de la red. Si cambiás ese binding, cambiá antes las claves.
 
 Cuando termina, el backend responde en `http://localhost:3000`:
 
