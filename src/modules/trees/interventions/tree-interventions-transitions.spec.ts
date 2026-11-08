@@ -44,6 +44,28 @@ describe('TreeInterventionsService — transiciones inválidas (409)', () => {
     ),
   );
 
+  // Pares fijos, independientes de la tabla: AUTHORIZED y REJECTED son finales.
+  it.each([
+    ['authorize', I.AUTHORIZED],
+    ['authorize', I.REJECTED],
+    ['reject', I.AUTHORIZED],
+    ['reject', I.REJECTED],
+    ['submitForAuthorization', I.AUTHORIZED],
+    ['submitForAuthorization', I.REJECTED],
+    ['reject', I.REQUESTED],
+  ] as [string, I][])('crítico: %s desde %s es 409', async (nombre, from) => {
+    prisma.treeIntervention.findUnique.mockResolvedValue({
+      id: ID,
+      interventionType: T.REMOVAL,
+      status: from,
+      trees: [],
+    });
+
+    await expect(acciones[nombre].run()).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.treeIntervention.update).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
   it.each(casos)('%s desde %s hacia %s: 409 y no escribe nada', async (nombre, from) => {
     prisma.treeIntervention.findUnique.mockResolvedValue({
       id: ID,

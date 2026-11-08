@@ -99,6 +99,48 @@ describe('OutboundRequestsService — transiciones inválidas (409)', () => {
     });
   });
 
+  // Pares fijos, independientes de las tablas: CLOSED, REJECTED y ENDED son
+  // terminales y un evento tardío o una llamada manual no los reabre.
+  describe('críticos: salidas de estados terminales', () => {
+    it.each([
+      ['startRepair', R.CLOSED],
+      ['closeRepair', R.CLOSED],
+    ] as [string, R][])('reparación: %s desde %s es 409', async (nombre, from) => {
+      prisma.repairRequest.findUnique.mockResolvedValue({ id: ID, status: from });
+      const run =
+        nombre === 'startRepair'
+          ? service.startRepair(ID, {}, ACTOR)
+          : service.closeRepair(ID, ACTOR);
+
+      await expect(run).rejects.toBeInstanceOf(ConflictException);
+      sinEscrituras('repairRequest');
+    });
+
+    it.each([
+      ['approveClosure', C.REJECTED],
+      ['approveClosure', C.ENDED],
+      ['rejectClosure', C.ENDED],
+      ['rejectClosure', C.REJECTED],
+      ['endClosure', C.REJECTED],
+      ['endClosure', C.ENDED],
+    ] as [string, C][])('corte: %s desde %s es 409', async (nombre, from) => {
+      prisma.streetClosureRequest.findUnique.mockResolvedValue({
+        id: ID,
+        status: from,
+        streets: [],
+      });
+      const run =
+        nombre === 'approveClosure'
+          ? service.approveClosure(ID, {}, ACTOR)
+          : nombre === 'rejectClosure'
+            ? service.rejectClosure(ID, 'obra', ACTOR)
+            : service.endClosure(ID, ACTOR);
+
+      await expect(run).rejects.toBeInstanceOf(ConflictException);
+      sinEscrituras('streetClosureRequest');
+    });
+  });
+
   // Incluye destinos sin endpoint (REQUESTED, EXPIRED, que fija el sweeper) y
   // los pares de estado a sí mismo: complemento completo contra la regla compartida.
   describe('assertTransition: complemento completo de cada tabla', () => {

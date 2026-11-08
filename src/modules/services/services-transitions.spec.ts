@@ -106,6 +106,24 @@ describe('ServicesService — transiciones inválidas (409)', () => {
     },
   );
 
+  // Pares fijos, independientes de la tabla: si alguien afloja VALID_TRANSITIONS,
+  // estos siguen exigiendo 409. Los estados finales no se reabren.
+  it.each([
+    ['start', S.COMPLETED],
+    ['start', S.CANCELLED],
+    ['cancel', S.COMPLETED],
+    ['cancel', S.PARTIALLY_COMPLETED],
+    ['cancel', S.CANCELLED],
+    ['suspend', S.CANCELLED],
+    ['reschedule', S.COMPLETED],
+    ['confirmReschedule', S.CANCELLED],
+  ] as [string, S][])('crítico: %s desde %s (terminal) es 409', async (nombre, from) => {
+    prisma.service.findUnique.mockResolvedValue(row(from));
+
+    await expect(acciones[nombre].run()).rejects.toBeInstanceOf(ConflictException);
+    sinEscrituras();
+  });
+
   // resume tiene su propia guarda (solo desde SUSPENDED): SCHEDULED→IN_PROGRESS
   // es válido en la tabla pero no por resume.
   it.each(ESTADOS.filter((e) => e !== S.SUSPENDED))(
