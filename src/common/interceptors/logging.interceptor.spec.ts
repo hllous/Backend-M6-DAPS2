@@ -27,4 +27,21 @@ describe('LoggingInterceptor', () => {
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('GET /services → 200'));
   });
+
+  it('el log no incluye el token de la query ni el header Authorization', async () => {
+    const context = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: 'GET',
+          url: '/zones?access_token=SECRETO123',
+          headers: { authorization: 'Bearer SECRETO456' },
+        }),
+        getResponse: () => ({ statusCode: 200 }),
+      }),
+    } as unknown as ExecutionContext;
+    await lastValueFrom(new LoggingInterceptor().intercept(context, { handle: () => of(1) }));
+    const salida = JSON.stringify(logSpy.mock.calls);
+    expect(salida).not.toContain('SECRETO');
+    expect(salida).toContain('access_token=[REDACTED]');
+  });
 });

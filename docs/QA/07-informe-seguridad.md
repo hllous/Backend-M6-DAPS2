@@ -72,7 +72,7 @@ La matriz de Trello (SEC-W01 a D02) se evaluó el 13/10. Esta tabla muestra, por
 | **XSS** en campos de texto | Escapado o rechazado | **NO VERIFICABLE** | La API devuelve solo JSON con `nosniff` y no refleja HTML; el texto libre se guarda tal cual y depende de que el frontend escape. Los DTO recortan y limitan el largo. **No hay test con `<script>`**. Los caracteres nulos y el JSON demasiado anidado sí se rechazan (`no-null-chars.pipe.spec.ts`) |
 | **XXE** en SOAP | Rechazado | **N/A** | M6 no tiene canal SOAP |
 | **Fuerza bruta sobre el login** | 429 | **N/A** | M6 no tiene login: el JWT lo emite M1 |
-| **Rate limiting** de la API | 429 | **NO CUMPLE** | `ThrottlerGuard` solo en el portal público; los endpoints autenticados y `POST /events/inbox` no tienen límite (DEF-07). No hay test de 429 |
+| **Rate limiting** de la API | 429 | **CUMPLE** (DEF-07, cerrado por #568) | `ThrottlerGuard` global (`THROTTLE_LIMIT`) con topes propios en `POST /events/inbox` y `POST /evidence`; e2e de 429 en `test/throttler.e2e-spec.ts` |
 | **OWASP ZAP** (baseline y activo autenticado) | 0 alertas High | **NO VERIFICABLE** | No realizado: no hay configuración ni ejecución (DEF-13) |
 | **Dependencias** (SCA) | 0 CVE críticas o altas sin mitigación | **NO CUMPLE** | `npm audit --omit=dev` del 03/11: 15 vulnerabilidades (1 crítica, 6 altas, 8 moderadas). Ver sección 5 |
 | **Cabeceras de seguridad** | CSP, HSTS y `X-Content-Type-Options` | **CUMPLE** (cabeceras) · **NO CUMPLE** (CSP) | `src/common/middleware/security-headers.middleware.ts` pone `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: same-site` y HSTS solo si `NODE_ENV=production`; probado en `security-headers.middleware.spec.ts:21` y `:32`, y en `services-lifecycle.e2e-spec.ts:67`. `X-Powered-By` está deshabilitado (`configure-app.ts:26`). **No hay CSP**, a propósito: rompería Swagger UI (`/api/docs`). No hay helmet ni `Permissions-Policy` |
@@ -108,6 +108,16 @@ Una corrida previa con `--offline` dio 0 vulnerabilidades; ese resultado venía 
 1. Correr `npm audit fix` (sin `--force`) y volver a correr los tests: según npm resuelve `proxy-addr`, `qs`, `file-type` y `@nestjs/common` sin cambios mayores.
 2. Para lo que exige NestJS 12, **documentar la mitigación una por una** en este informe (la cátedra acepta CVE con mitigación documentada). Por ejemplo: las rutas con `multer` exigen rol de Campo y un token válido; M6 usa `trust proxy 1` (número de saltos) y no una lista de subredes. **No se analizó la explotabilidad**; eso queda para quien corrija.
 3. Agregar `npm audit --omit=dev --audit-level=high` al CI y Dependabot.
+
+**Re-corrida del 08/11/2026 tras `npm audit fix` (Issue #566).** Resultado en producción: **13 vulnerabilidades, 0 críticas, 6 altas, 7 moderadas** (antes 15: 1 crítica, 6 altas, 8 moderadas). La crítica `proxy-addr` quedó resuelta sin cambios mayores. Build, lint y los 2650 tests siguen en verde. Quedan las 6 altas, todas con corrección solo por salto mayor (`@nestjs/*` 12, `zod` 4.6.7). El salto mayor queda fuera de este corte para no cambiar la plataforma a días de la prueba. Lo que se pudo comprobar en el código:
+
+| Alta restante | Qué se comprobó | Qué NO se analizó |
+|---|---|---|
+| `zod` | Solo lo importan `src/config/env.validation.ts` y `src/identity/m1-identity.client.ts`: valida variables de entorno y respuestas de M1, no cuerpos de usuarios | Si una respuesta de M1 podría traer una colección enorme |
+| `@nestjs/platform-express`, `body-parser`, `multer` | La subida de archivos exige token válido y rol (ver `attachments.service.ts` y el límite de 10 MB) | Explotabilidad real del DoS de `multer` y de `body-parser` |
+| `@nestjs/swagger`, `js-yaml`, `lodash`, `@nestjs/config` | — | Explotabilidad: no se analizó |
+
+Estado: **riesgo aceptado y abierto**, sin análisis de explotabilidad. No se puede declarar «CUMPLE» en este criterio hasta correr un SCA adicional (Trivy) y decidir el salto a NestJS 12.
 
 ### 5.2 OWASP ZAP
 
@@ -146,7 +156,7 @@ Limitaciones: gitleaks no analiza el contenido de los PDF ni de los binarios, y 
 | # | Hallazgo | Severidad propuesta | Tratamiento | Registro |
 |---|---|---|---|---|
 | 1 | 1 crítica y 6 altas en dependencias de producción | Mayor (sube a Crítica si hay explotabilidad) | `npm audit fix`, documentar mitigaciones y sumar `npm audit` al CI | DEF-08 |
-| 2 | Sin rate limiting fuera del portal público | Mayor | Throttler global y un e2e de 429 | DEF-07 |
+| 2 | Sin rate limiting fuera del portal público | Mayor | ~~Throttler global y un e2e de 429~~ (cerrado, #568) | DEF-07 |
 | 3 | Sin auditoría de lecturas Tier 2 (SEC-D02) | Mayor | Interceptor de lectura sobre los `GET` de denuncias y actas | DEF-09 |
 | 4 | Sin ZAP (el escaneo de secretos con gitleaks ya se hizo y corre en el CI) | Mayor | `zap-baseline` manual | DEF-13 |
 | 5 | Errores sin id de correlación ni formato RFC 9457 (SEC-W05) | Mayor | Migrar el filtro y avisar al frontend | DEF-10 |

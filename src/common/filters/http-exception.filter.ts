@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
+import { redactUrl } from '../utils/redact-url';
 
 /**
  * Filtro global de excepciones HTTP.
@@ -113,7 +114,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       error,
       ...(code && { code }),
       timestamp: new Date().toISOString(),
-      path: request.url,
+      // La URL vuelve al cliente y a los logs de cualquier proxy: sin tokens de la query.
+      path: redactUrl(request.url),
     });
   }
 }

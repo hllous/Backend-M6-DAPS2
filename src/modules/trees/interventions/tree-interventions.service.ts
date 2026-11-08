@@ -32,7 +32,7 @@ import { roleRequiredException } from '../../../common/decorators';
  *   PENDING_AUTHORIZATION → AUTHORIZED
  *   PENDING_AUTHORIZATION → REJECTED
  */
-const VALID_TRANSITIONS: Record<TreeInterventionStatus, TreeInterventionStatus[]> = {
+export const VALID_TRANSITIONS: Record<TreeInterventionStatus, TreeInterventionStatus[]> = {
   REQUESTED: [TreeInterventionStatus.PENDING_AUTHORIZATION, TreeInterventionStatus.AUTHORIZED],
   PENDING_AUTHORIZATION: [TreeInterventionStatus.AUTHORIZED, TreeInterventionStatus.REJECTED],
   AUTHORIZED: [],
