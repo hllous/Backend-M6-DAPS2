@@ -80,7 +80,7 @@ import { reubicacionVigente, zonaEfectiva } from '../crews/crew-zone';
  * fila el operador tenía que confirmar una reprogramación a una fecha inventada
  * para poder cancelar después.
  */
-const VALID_TRANSITIONS: Record<ServiceStatus, ServiceStatus[]> = {
+export const VALID_TRANSITIONS: Record<ServiceStatus, ServiceStatus[]> = {
   SCHEDULED: [ServiceStatus.IN_PROGRESS, ServiceStatus.RESCHEDULED, ServiceStatus.CANCELLED],
   RESCHEDULED: [ServiceStatus.SCHEDULED, ServiceStatus.CANCELLED],
   IN_PROGRESS: [
