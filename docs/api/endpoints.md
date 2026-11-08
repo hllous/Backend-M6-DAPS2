@@ -705,7 +705,7 @@ Tabla de metas del equipo (29/10). Se calculan todos menos zonas no atendidas, q
 
 **Quién es "la dirección" cuando llama el BFF.** El frontend llama desde su servidor, así que por defecto el contador ve siempre la IP del BFF. Para contar por vecino, el BFF manda dos headers: `X-M6-BFF-Key: <BFF_SHARED_KEY>` (el secreto compartido, variable del backend en [deploy](../deploy.md)) y `X-Forwarded-For: <IP del vecino>` (se toma la primera IP de la lista, que debe ser una IP válida; si no, cuenta `req.ip`). **El BFF tiene que sobrescribir** este header con la IP que le entrega Vercel, nunca reenviar el que trae el navegador: si lo reenviara, la primera entrada la elegiría el vecino y podría saltearse el límite. El backend solo cree el `X-Forwarded-For` si la clave coincide (comparación en tiempo constante); sin clave, con una incorrecta, o con `BFF_SHARED_KEY` sin configurar, lo ignora y cuenta `req.ip`, de modo que un pedido directo con un `X-Forwarded-For` inventado no evita el límite. La clave nunca debe llegar al navegador.
 
-No hay límite global: también alcanzaría a un operador municipal en su turno, y un 429 a mitad de una carga de resultados de zona es peor que el riesgo que evita.
+Las rutas `/public/*` pasan por **dos guards**: el global de la app (generoso, ver abajo) y el propio del portal, con su contador cada uno; manda el más estricto. Además hay un límite global generoso (`THROTTLE_LIMIT`, 600 por minuto por IP y endpoint) y topes propios en `POST /events/inbox` (300/min) y `POST /evidence` (30/min); pasado el tope, 429. `GET /health*` no cuenta.
 
 **Cada respuesta es una proyección explícita, no la fila de la base.** La diferencia importa: si mañana alguien agrega una columna al expediente, una proyección no la publica sola.
 

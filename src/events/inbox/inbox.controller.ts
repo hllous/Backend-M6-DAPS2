@@ -11,6 +11,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { INBOX_INGEST } from '../../common/rate-limits';
 import { InboxService, IngestResult } from './inbox.service';
 import { InboxAdminService } from './inbox-admin.service';
 import {
@@ -51,6 +53,7 @@ export class InboxController {
   ) {}
 
   @Post('inbox')
+  @Throttle({ default: INBOX_INGEST })
   @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -74,6 +77,11 @@ export class InboxController {
   @ApiResponse({
     status: 403,
     description: 'Solo M6_ADMIN puede inyectar eventos a mano',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Demasiados eventos desde la misma dirección en el último minuto',
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
