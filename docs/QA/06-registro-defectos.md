@@ -95,7 +95,7 @@ Ninguna abierta. DEF-01, DEF-02 y DEF-03 se cerraron (ver sección 4).
 | Esperado | `429 Too Many Requests` a partir de un umbral |
 | Obtenido | Sin límite. `ThrottlerGuard` está solo en `citizen-portal.controller.ts:30` (20 por minuto en seguimiento, 60 en consulta) |
 | Evidencia | Grep de `Throttle` y `APP_GUARD` en `src`. Sin test de 429 en `test/` |
-| Estado | Abierto |
+| Estado | **Cerrado por #568**: `ThrottlerGuard` global, topes propios en `POST /events/inbox` y `POST /evidence`, e2e de 429 (`test/throttler.e2e-spec.ts`) |
 | Workaround | El JWT lo emite M1 y vence en 15 minutos; no hay login en M6 que atacar |
 
 #### DEF-08 · Dependencias de producción con vulnerabilidades conocidas
@@ -248,7 +248,7 @@ La regla G9 pide no omitir nada conocido. Estas pruebas **no se hicieron** y no 
 | 3 | DEF-15 | Timeout de 5 s con un test que lo dispare de verdad | 1 a 2 h |
 | 4 | DEF-10 | Migrar el filtro a RFC 9457 y avisar al frontend (cambio de contrato) | medio día a 1 día |
 | 5 | DEF-05, DEF-06 | `ETag`/`If-Match` en un `PATCH` crítico e `Idempotency-Key` en `POST /services`, con un e2e cada uno | 1 día |
-| 6 | DEF-07 | Throttler global con un e2e de 429 | 2 h |
+| 6 | DEF-07 | ~~Throttler global con un e2e de 429~~ (hecho, #568) | 2 h |
 | 7 | DEF-11, DEF-14 | Versionar los schemas de M2 o hacer que el CI avise; hacer obligatorio el job `e2e` | 2 h |
 | 8 | DEF-18, DEF-19 | Corregir los textos, confirmar `CORS_ORIGINS` en Render y decidir qué hacer con `/api/docs` | 1 h |
 | 9 | DEF-09 | Interceptor de lectura de datos Tier 2 | 1 día |

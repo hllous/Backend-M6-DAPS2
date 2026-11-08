@@ -1,5 +1,6 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../common/decorators';
 import { ErrorResponseDto } from '../common/dto';
 import { BusStatus } from '../events/bus-status';
@@ -9,6 +10,8 @@ import { HealthResponseDto, ReadinessResponseDto } from './health-response.dto';
 const SERVICE = 'm6-ambiente-backend';
 const DB_TIMEOUT_MS = 3000;
 
+// Lo consultan el keepalive de GitHub y el healthcheck de Render: un 429 los daría por caídos.
+@SkipThrottle()
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
