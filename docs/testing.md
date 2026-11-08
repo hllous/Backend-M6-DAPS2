@@ -55,6 +55,7 @@ npm run test:e2e -- services-lifecycle
 | `environmental-flow.e2e-spec.ts` | Expediente → inspección → acta, con la derivación a M4 en el outbox (el acta hacia M4 y el `updateTicketStatus` hacia M2 comparten `correlationId`: un hilo por request, #267), y la vuelta de M4 por el inbox (`commercialFineGenerated` cierra el expediente; sin `sourceViolationId` válido da 400 y no deja fila). No prueba rollback |
 | `street-closure-expiry.e2e-spec.ts` | Corte aprobado con ventana ya vencida (#321): el barrido lo pasa a `EXPIRED` y reprograma el servicio `SCHEDULED` (uno `IN_PROGRESS`, uno vigente o uno dentro de la gracia no se tocan), es idempotente, no publica nada hacia M7, y un `streetClosureEnded` posterior sobre `EXPIRED` lo pasa a `ENDED` |
 | `containers-close.e2e-spec.ts` | Cerrar el servicio transiciona el contenedor. Es la única suite que prueba el rollback: un `CHECK` temporal hace fallar el `UPDATE` del contenedor dentro de la transacción y se verifica que el servicio siga `IN_PROGRESS` y que no se encole nada |
+| `rabbitmq-real.e2e-spec.ts` | Consumer del bus contra un RabbitMQ real (#575): mensaje válido, mismo `eventId` dos veces (una sola fila), JSON/sobre inválido (sin fila, no traba la cola) y recuperación cuando el broker cierra la conexión (vía API de management, `DELETE /api/connections`). Se saltea con aviso si no hay `RABBITMQ_URL` o no apunta a localhost. Local: `docker run -d -p 5672:5672 -p 15672:15672 rabbitmq:3-management` y `RABBITMQ_URL=amqp://guest:guest@localhost:5672 npm run test:e2e -- rabbitmq-real`. El caso de recuperación cierra **todas** las conexiones del broker local salvo la suya (incluido un backend del compose, que reconectaría) y se saltea si `RABBITMQ_MGMT_URL` no apunta a localhost. Apagar el broker de verdad no es viable en un service container del CI; cerrar la conexión ejercita la misma reconexión (`recovery`) |
 | `audit.e2e-spec.ts` | Auditoría de dominio |
 | `auth-roles.e2e-spec.ts` | Roles de M6: matriz por rol |
 | `demo-personas.e2e-spec.ts` | Personas de demostración |
@@ -71,8 +72,14 @@ El `OutboxDispatcher` se reemplaza por un stub sin `@Interval`. Si no, barre la 
 
 ## En el CI
 
-El job `e2e` de `.github/workflows/ci.yml` levanta `postgres:16` con `services:` y corre `npm run test:e2e`; las migraciones las aplica `global-setup.ts`, igual que en local.
+El job `e2e` de `.github/workflows/ci.yml` levanta `postgres:16` y `rabbitmq:3-management` con `services:` y corre `npm run test:e2e` (la suite de RabbitMQ en un paso aparte, con `RABBITMQ_URL`, para no activar el consumer en las demás); las migraciones las aplica `global-setup.ts`, igual que en local.
 
 **No es check obligatorio** de la protección de ramas: ahí siguen solo `build` y `test`. La cobertura de los e2e tampoco se suma al 85%, que se sigue midiendo con los unitarios.
 
 **Specs contra el paquete de M2 (v1.78).** `payloads.spec.ts` y `services.service.spec.ts` validan los `updateTicketStatus` reales contra los schemas del paquete de M2 (helper `src/events/m2-contract.testing.ts`, excluido de la cobertura). El paquete vive en `docs/documentacion/`, que no se versiona: **en el CI esos specs se saltean** con un aviso (`console.warn`), no fallan. En local corren si la carpeta existe, o apuntando `M2_V178_SCHEMAS` a la carpeta `schemas/` del paquete. El otro sentido (sus ejemplos `examples/valid/` contra nuestro inbox) lo cubre `src/events/consumers/m2-ejemplos.spec.ts`, que se saltea igual en el CI.
+
+## Mutation testing (Stryker, #573)
+
+`npm run test:mutation` (config en `stryker.config.json`, ~15 min en local) muta `outbound-requests.transitions.ts` y `street-closure-expiry.sweeper.ts`; umbral `break: 60`. Reporte en `reports/mutation/` (ignorado por git). El workflow `.github/workflows/mutation.yml` corre solo a mano o semanal, no en cada push.
+
+Primera medición: transitions 100 %, sweeper 79,07 % (total 84,21 %). Los 9 mutantes sobrevivientes del sweeper eran todos del contador y el log final (`expired -= 1`, la condición `expired > 0`, el texto del log, y `return false`/`return true` de `expireOne` en las líneas 88 y 103), porque ningún test miraba el log. Se cerraron afirmando en el spec el log `1 corte/s ...` cuando vence uno y su ausencia cuando la carrera con `streetClosureEnded` deja `count: 0`. Remedición solo del sweeper: 100 %, 0 sobrevivientes.
