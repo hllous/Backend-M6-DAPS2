@@ -138,6 +138,8 @@ Todo endpoint debe tener:
 
 ### 3.1 Códigos HTTP obligatorios
 
+> **429 transversal.** Cualquier endpoint puede devolver `429 Too Many Requests` por el límite global (`THROTTLE_LIMIT`, #568; ver [ADR-010](../decisiones/adr-010-rate-limit-global.md)). Se declara explícitamente solo donde hay un tope propio: `POST /events/inbox`, `POST /evidence` y `/public/*`. No se decoran el resto de los endpoints.
+
 Cada tipo de endpoint debe documentar como mínimo:
 
 | Tipo | Códigos obligatorios |

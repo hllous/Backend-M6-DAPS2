@@ -13,6 +13,11 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+// Valor JS para interpolar en el código de los tests de Postman. JSON.stringify solo no
+// alcanza (CodeQL js/bad-code-sanitization): no escapa <, > ni los separadores de línea.
+const ESCAPES = { '<': '\\u003C', '>': '\\u003E', '\u{2028}': '\\u2028', '\u{2029}': '\\u2029' };
+const lit = (valor) => JSON.stringify(valor).replace(/[<>\u{2028}\u{2029}]/gu, (c) => ESCAPES[c]);
+
 const spec = JSON.parse(readFileSync('docs/api/openapi.json', 'utf8'));
 const tmp = join(mkdtempSync(join(tmpdir(), 'm6-pm-')), 'base.json');
 execFileSync(
@@ -65,7 +70,7 @@ function prerequest(prefijos) {
     `const base = pm.variables.get('baseUrl'), tok = pm.variables.get('token');`,
     `const cache = (n, k) => pm.collectionVariables.get('cache:' + n + k);`,
     `const pedir = (url) => new Promise((ok, ko) => pm.sendRequest({ url, header: { Authorization: 'Bearer ' + tok } }, (e, r) => e ? ko(e) : ok(r.json())));`,
-    `const prefijos = ${JSON.stringify(prefijos)};`,
+    `const prefijos = ${lit(prefijos)};`,
     `(async () => {`,
     `  const previos = [];`,
     `  for (let i = 0; i < prefijos.length; i++) {`,
@@ -148,7 +153,7 @@ for (const [path, ops] of Object.entries(spec.paths)) {
             `pm.test('es JSON', () => pm.response.to.be.json);`,
             claves === 'array'
               ? `pm.test('es un arreglo', () => pm.expect(pm.response.json()).to.be.an('array'));`
-              : `pm.test('trae ${JSON.stringify(claves)}', () => pm.expect(pm.response.json()).to.include.all.keys(...${JSON.stringify(claves)}));`,
+              : `pm.test('trae ${lit(claves)}', () => pm.expect(pm.response.json()).to.include.all.keys(...${lit(claves)}));`,
           ]),
         });
         conExito.add(clave);
@@ -208,7 +213,7 @@ for (const [path, ops] of Object.entries(spec.paths)) {
       mk(`${esperado.join('/')} id inexistente o cuerpo invalido`, {
         url, pre, body, bearer: publico ? null : 'token',
         tests: test([
-          `pm.test('status ${esperado.join(' o ')}', () => pm.expect(pm.response.code).to.be.oneOf(${JSON.stringify(esperado)}));`,
+          `pm.test('status ${esperado.join(' o ')}', () => pm.expect(pm.response.code).to.be.oneOf(${lit(esperado)}));`,
           `pm.test('error con statusCode y message', () => { const j = pm.response.json(); pm.expect(j).to.have.property('statusCode'); pm.expect(j).to.have.property('message'); });`,
         ]),
       });

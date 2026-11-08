@@ -23,6 +23,7 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -62,6 +63,7 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -97,6 +99,7 @@ jobs:
   e2e:
     name: e2e
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     # No usa el GITHUB_TOKEN: sin permisos.
     permissions: {}
@@ -115,6 +118,19 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
+      # Para test/rabbitmq-real.e2e-spec.ts (#575). La imagen -management trae
+      # la API HTTP (15672) con la que el test le cierra la conexión al consumer.
+      rabbitmq:
+        image: rabbitmq:3-management
+        ports:
+          - 5672:5672
+          - 15672:15672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     # Sin JWT_SECRET: test/helpers.ts lo pisa con uno de juguete igual.
     env:
@@ -139,8 +155,14 @@ jobs:
       # Las migraciones las aplica test/global-setup.ts, después del guard.
       # Sin cobertura: el 85% del DoD se mide con los unitarios (job "test").
       # Mezclar los dos reportes es una mejora posterior, no un requisito.
+      # Sin RABBITMQ_URL en este paso: activaría el consumer en todas las suites.
       - name: Run e2e tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --testPathIgnorePatterns rabbitmq-real
+
+      - name: Run e2e tests (RabbitMQ real)
+        run: npm run test:e2e -- rabbitmq-real
+        env:
+          RABBITMQ_URL: amqp://guest:guest@localhost:5672
 
   # ──────────────────────────────────────────────────────────────
   # secrets — Escaneo de secretos sobre TODO el historial (gitleaks).
@@ -152,6 +174,7 @@ jobs:
   secrets:
     name: secrets
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:
@@ -166,6 +189,39 @@ jobs:
             git /repo --redact --no-banner --log-opts="--all"
 
   # ──────────────────────────────────────────────────────────────
+  # audit — Vulnerabilidades de dependencias de producción.
+  #
+  # Hoy `npm audit` falla: quedan 6 altas cuyo arreglo exige NestJS 12 / zod 4,
+  # aceptadas como riesgo (informe QA 07 §5.1). En vez de `continue-on-error`
+  # (que deja el check en rojo aunque no bloquee), el paso termina en verde y
+  # deja un aviso (warning) visible en el run. Para volverlo gate al migrar a
+  # NestJS 12 / zod 4: quitar el `if/else` y dejar solo el comando.
+  # ──────────────────────────────────────────────────────────────
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: npm audit (producción, severidad alta)
+        run: |
+          if npm audit --omit=dev --audit-level=high; then
+            echo "Sin vulnerabilidades altas ni críticas en producción."
+          else
+            echo "::warning title=npm audit::Hay vulnerabilidades altas o críticas en producción. Riesgo aceptado y abierto, ver docs/QA/07-informe-seguridad.md sección 5.1."
+          fi
+
+  # ──────────────────────────────────────────────────────────────
   # deploy — Dispara el deploy en Render (solo push a main).
   # Depende de build+test: si el CI falla, no se deploya.
   # ──────────────────────────────────────────────────────────────
@@ -174,6 +230,7 @@ jobs:
     needs: [build, test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - name: Trigger deploy en Render
         env:
