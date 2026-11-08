@@ -23,6 +23,7 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -62,6 +63,7 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -97,6 +99,7 @@ jobs:
   e2e:
     name: e2e
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     # No usa el GITHUB_TOKEN: sin permisos.
     permissions: {}
@@ -152,6 +155,7 @@ jobs:
   secrets:
     name: secrets
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:
@@ -166,6 +170,34 @@ jobs:
             git /repo --redact --no-banner --log-opts="--all"
 
   # ──────────────────────────────────────────────────────────────
+  # audit — Vulnerabilidades de dependencias de producción.
+  #
+  # Hoy fallaría: quedan 6 altas cuyo arreglo exige NestJS 12 / zod 4,
+  # aceptadas como riesgo (informe QA 07 §5.1). Por eso `continue-on-error`:
+  # el job informa pero no bloquea. QUITARLO cuando se migre a NestJS 12 /
+  # zod 4 (o se acepte formalmente otra postura), para que pase a ser gate.
+  # ──────────────────────────────────────────────────────────────
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: npm audit (producción, severidad alta)
+        run: npm audit --omit=dev --audit-level=high
+
+  # ──────────────────────────────────────────────────────────────
   # deploy — Dispara el deploy en Render (solo push a main).
   # Depende de build+test: si el CI falla, no se deploya.
   # ──────────────────────────────────────────────────────────────
@@ -174,6 +206,7 @@ jobs:
     needs: [build, test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - name: Trigger deploy en Render
         env:
