@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { securityHeaders } from './security-headers.middleware';
 
 describe('securityHeaders', () => {
-  const run = () => {
+  const run = (path = '/services') => {
     const headers: Record<string, string> = {};
     const res = {
       setHeader: (k: string, v: string) => {
@@ -10,7 +10,7 @@ describe('securityHeaders', () => {
       },
     } as unknown as Response;
     const next = jest.fn();
-    securityHeaders({} as Request, res, next);
+    securityHeaders({ path } as Request, res, next);
     return { headers, next };
   };
   const env = process.env.NODE_ENV;
@@ -28,6 +28,19 @@ describe('securityHeaders', () => {
     expect(headers['Strict-Transport-Security']).toBeUndefined();
     expect(next).toHaveBeenCalled();
   });
+
+  it('manda una CSP restrictiva en las rutas de la API', () => {
+    expect(run('/zones').headers['Content-Security-Policy']).toBe(
+      "default-src 'none'; frame-ancestors 'none'",
+    );
+  });
+
+  it.each(['/api/docs', '/api/docs/', '/api/docs/swagger-ui-bundle.js'])(
+    'no pone CSP en %s (Swagger UI)',
+    (p) => {
+      expect(run(p).headers['Content-Security-Policy']).toBeUndefined();
+    },
+  );
 
   it('agrega HSTS solo en producción', () => {
     process.env.NODE_ENV = 'production';
