@@ -82,6 +82,7 @@ Son las 34 claves de [`src/config/env.validation.ts`](../../src/config/env.valid
 | `RABBITMQ_QUEUE` | `q.ambiente` (default): la cola de la que consumimos | Opcional. La crea el Core al registrar las suscripciones; la app solo verifica. **No definirla en Render** (override viejo: `m6.ambiente`) | Render (no definir) |
 | `RABBITMQ_PREFETCH` | `1` (default): mensajes sin ack a la vez | Opcional. No garantiza orden: el Core reintenta y reordena | Render |
 | `INBOX_RETENTION_DAYS` | `180` (default); `0` = no purgar | Opcional. Un job diario (03:00) borra las filas de `inbox_event` procesadas con más de esos días; pendientes y fallidas no se tocan. Vacía es inválida | Render |
+| `BFF_SHARED_KEY` (nota) | — | Debe configurarse en Render y en Vercel: el límite global (#568) cuenta por IP también en los endpoints autenticados, y sin la clave todo el tráfico del BFF comparte un balde. El BFF tiene que **sobrescribir** `X-Forwarded-For` con la IP que le da Vercel. No se exige al arrancar para no tumbar el servicio si falta | Render |
 | `THROTTLE_LIMIT` | `600` (default) | Opcional. Límite global de pedidos por IP y por endpoint (#568); `POST /events/inbox` (300) y `POST /evidence` (30) tienen topes fijos más estrictos | Render |
 | `THROTTLE_TTL_MS` | `60000` (default) | Opcional. Ventana del límite global, en ms (mínimo 1000) | Render |
 

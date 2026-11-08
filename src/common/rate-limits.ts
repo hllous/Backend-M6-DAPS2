@@ -1,8 +1,9 @@
 /**
  * Límites de tasa más estrictos que el global (`THROTTLE_LIMIT`), por IP y por endpoint (#568).
  *
- * `POST /events/inbox` lo llama el Core (M9) desde una sola IP, así que el tope tiene que
- * tolerar ráfagas de reintentos: 300/min frena un bucle descontrolado, no una entrega normal.
+ * `POST /events/inbox` es la inyección manual de eventos (M6_ADMIN, herramienta de operación
+ * y de prueba): el Core (M9) entrega por AMQP al exchange `muni.inbox`, no por este endpoint.
+ * 300/min frena un script o un bucle descontrolado sin molestar a una demo con ráfagas.
  * `POST /evidence` sube archivos de hasta MAX_EVIDENCE_SIZE_BYTES a memoria: 30/min por
  * dirección alcanza a una cuadrilla cargando fotos y acota el costo de un abuso.
  */
