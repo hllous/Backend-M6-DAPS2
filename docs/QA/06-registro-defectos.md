@@ -1,8 +1,8 @@
 # 06 · Registro de defectos y limitaciones conocidas
 
-> Backend del Módulo 6 (Grupo 04). Estado al **03/11/2026**, sobre `develop` @ `f288d31`; abiertos y cerrados **recontados el 06/11/2026** sobre `develop` @ `aa540be`. Lo cargó el QA desde GitHub Issues, `docs/bloqueantes.md`, el código y la auditoría del 03/11. Todo lo marcado como abierto se **verificó contra el código actual** antes de listarlo.
+> Backend del Módulo 6 (Grupo 04). Versión original del **03/11/2026** (`develop` @ `f288d31`), recontada el 06/11. **Actualizada el 08/11/2026** sobre `develop` @ `1d600d2`: se cerraron DEF-07, DEF-22 y DEF-23, DEF-08 y DEF-13 cambiaron de estado y se sumó DEF-24. Lo cargó el QA desde GitHub Issues, `docs/bloqueantes.md`, el código y la auditoría del 03/11. Todo lo marcado como abierto se **verificó contra el código actual** antes de listarlo.
 
-El equipo usa **GitHub Issues** (`hllous/Backend-M6-DAPS2`) y Trello en lugar de Jira. El identificador de cada defecto es el número de Issue; si el hallazgo todavía no tiene Issue, figura como **sin issue** y se propone abrirlo.
+El equipo usa **GitHub Issues** (`hllous/Backend-M6-DAPS2`) y Trello en lugar de Jira; la cátedra confirmó que esa combinación reemplaza a Jira (G5 resuelta). El identificador de cada defecto es el número de Issue; si el hallazgo todavía no tiene Issue, figura como **sin issue** y se propone abrirlo.
 
 ## 1. Criterios
 
@@ -19,20 +19,20 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 
 | | Cantidad |
 |---|---|
-| Issues en el repo | 215 al 03/11 (7 abiertos ese día: #257, #299, #442, #447, #488, #494 y #495). Al 06/11 (`gh issue list`) el único abierto es #500; los demás están cerrados |
-| Issues con etiqueta `bug`, `security` o `fix` | 55, **todos cerrados** |
-| Defectos y brechas abiertos en este registro | 15 de 21 (el 03/11 eran 19 abiertos). Cerrados: DEF-01, DEF-02, DEF-03 y DEF-12 (issues cerrados entre el 03/11 y el 05/11) y DEF-16 y DEF-17 (corregidos el 06/11). Registrados el 08/11: DEF-20 y DEF-21 (hallazgos de Schemathesis) |
-| Verificaciones no realizadas (no son defectos) | 7 (ver sección 5) |
+| Issues en el repo | 257 al 08/11 (`gh issue list --state all`), 6 abiertos: #500, #554, #560, #572, #574 y #588. Los PR de #572 y #574 (#583 y #585) ya están mergeados; sus issues siguen abiertos |
+| Issues con etiqueta `bug`, `security` o `fix` | 58: 57 cerrados y 1 abierto ([#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554), registrado como DEF-24). El 03/11 eran 55, todos cerrados |
+| Defectos y brechas registrados | 24 (DEF-01 a DEF-24). **Abiertos: 15. Cerrados: 9** (DEF-01, DEF-02, DEF-03, DEF-07, DEF-12, DEF-16, DEF-17, DEF-22 y DEF-23) |
+| Verificaciones no realizadas (no son defectos) | 15 (ver sección 5) |
 
 | Severidad | Abiertos | Dentro del máximo de la cátedra |
 |---|---|---|
 | Bloqueante | 0 | Sí |
-| Crítica | 0 (eran 3 al 03/11: DEF-01, DEF-02 y DEF-03) | Sí |
-| Mayor | **9** (eran 10: DEF-12 se cerró) | **No** (máximo 3) |
-| Menor | 6 (DEF-14, DEF-15, DEF-18, DEF-19, DEF-20 y DEF-21) | Sí |
-| **Total abierto** | **15** (0 + 9 + 6) | |
+| Crítica | 0 | Sí |
+| Mayor | **8** (DEF-04, DEF-05, DEF-06, DEF-08, DEF-09, DEF-10, DEF-11 y DEF-13) | **No** (máximo 3) |
+| Menor | 7 (DEF-14, DEF-15, DEF-18, DEF-19, DEF-20, DEF-21 y DEF-24) | Sí |
+| **Total abierto** | **15** (0 + 8 + 7) | |
 
-**Lectura honesta:** el criterio de salida **sigue sin cumplirse por las Mayores** (9 abiertas contra un máximo de 3); las Críticas están en 0. Las Mayores se cierran con trabajo propio que está en el plan de la sección 6. La severidad de las Mayores es una **propuesta**: el equipo y el PO la validan antes de la entrega.
+**Lectura honesta:** el criterio de salida **no se cumple**: hay 8 Mayores abiertas contra un máximo de 3 (el 06/11 eran 9, con DEF-07 todavía contada; DEF-07 se cerró el 08/11). Las Críticas están en 0. Ninguna de las 8 está cerrada; el criterio exige, además, un workaround documentado para cada Mayor abierta, y esa columna está completa solo para algunas (DEF-09 dice «ninguno»). La severidad de las Mayores es una **propuesta**: el equipo y el PO la validan antes de la entrega.
 
 ## 3. Defectos y brechas abiertos
 
@@ -52,8 +52,8 @@ Ninguna abierta. DEF-01, DEF-02 y DEF-03 se cerraron (ver sección 4).
 | Pasos | 1. Apagar RabbitMQ. 2. Provocar una acción que publique un evento (cerrar un servicio). 3. Esperar más de 1 minuto. 4. Volver a levantar RabbitMQ |
 | Esperado | El sistema se recupera solo y el evento se envía |
 | Obtenido | El dispatcher barre cada 10 s y descarta la fila tras 5 intentos (`MAX_ATTEMPTS = 5`), unos 50 s según el código (no medido). La fila queda en `FAILED` y el barrido ya no la toma |
-| Evidencia | `src/events/outbox/outbox-dispatcher.service.ts:18` (`MAX_ATTEMPTS`), `:42` (`@Interval(10_000)`), `:85-93` (pasa a `FAILED`) |
-| Estado | Abierto |
+| Evidencia | `src/events/outbox/outbox-dispatcher.service.ts:18` (`MAX_ATTEMPTS = 5`, sin cambios al 08/11), `:42` (`@Interval(10_000)`), `:85-93` (pasa a `FAILED`) |
+| Estado | Abierto. El 08/11 se sumó `test/rabbitmq-real.e2e-spec.ts` (#579), que prueba que el **consumer** reconecta cuando el broker le **cierra las conexiones** (API de management). **No** prueba la publicación del outbox ni el paso a `FAILED` con el broker caído, y el broker **no se apagó** de verdad (solo se haría en la demo en vivo: NO HECHO). El defecto sigue como estaba |
 | Workaround | Reencolar a mano con `POST /events/outbox/retry-failed` (solo `M6_ADMIN`, con `confirm: true`; issue #459) |
 
 #### DEF-05 · Sin control de concurrencia optimista (ETag / `If-Match` → 412)
@@ -84,34 +84,19 @@ Ninguna abierta. DEF-01, DEF-02 y DEF-03 se cerraron (ver sección 4).
 | Estado | Abierto |
 | Workaround | La UI deshabilita el botón mientras el envío está pendiente (según la auditoría del frontend) |
 
-#### DEF-07 · Rate limiting solo en el portal ciudadano
-
-| Campo | Detalle |
-|---|---|
-| ID | sin issue (decisión documentada en `docs/api/endpoints.md`) |
-| Severidad / prioridad | Mayor / Media |
-| HU | HU-31 (seguridad de la Clase 11) |
-| Pasos | Enviar cientos de pedidos por minuto con un token válido a un endpoint autenticado o a `POST /events/inbox` |
-| Esperado | `429 Too Many Requests` a partir de un umbral |
-| Obtenido | Sin límite. `ThrottlerGuard` está solo en `citizen-portal.controller.ts:30` (20 por minuto en seguimiento, 60 en consulta) |
-| Evidencia | Grep de `Throttle` y `APP_GUARD` en `src`. Sin test de 429 en `test/` |
-| Estado | **Cerrado por #568**: `ThrottlerGuard` global, topes propios en `POST /events/inbox` y `POST /evidence`, e2e de 429 (`test/throttler.e2e-spec.ts`) |
-| Workaround | El JWT lo emite M1 y vence en 15 minutos; no hay login en M6 que atacar |
-
 #### DEF-08 · Dependencias de producción con vulnerabilidades conocidas
 
 | Campo | Detalle |
 |---|---|
-| ID | sin issue |
+| ID | sin issue (corrección parcial: [#566](https://github.com/hllous/Backend-M6-DAPS2/issues/566), PR #576) |
 | Severidad / prioridad | Mayor (propuesta) / Alta |
 | HU | HU-31 |
-| Pasos | `npm audit --omit=dev` el 03/11 |
+| Pasos | `npm audit --omit=dev` |
 | Esperado | 0 CVE críticas o altas sin mitigación documentada (criterio de la cátedra) |
-| Obtenido | 15 vulnerabilidades: **1 crítica, 6 altas, 8 moderadas**. Crítica: `proxy-addr` (suplantación de IP vía subred de IPv6 mapeada a IPv4, transitiva de Express). Altas: `@nestjs/platform-express`, `body-parser`, `multer`, `js-yaml`, `lodash`, `zod` |
-| Evidencia | Salida de `npm audit --omit=dev` (detalle en `07-informe-seguridad.md`) |
-| Estado | Abierto. **No se analizó la explotabilidad**: M6 usa `trust proxy 1` (número de saltos), no una lista de subredes, y las rutas con multer exigen rol de Campo |
-| Workaround | `npm audit fix` resuelve `proxy-addr`, `qs`, `file-type` y `@nestjs/common` sin cambios mayores (según npm). El resto exige subir a NestJS 12, o documentar la mitigación una por una |
-| Nota | El CI del backend no corre `npm audit`, por eso nadie lo vio |
+| Obtenido | **03/11:** 15 vulnerabilidades (1 crítica, 6 altas, 8 moderadas). **08/11, tras `npm audit fix`:** **13 en producción: 0 críticas, 6 altas, 7 moderadas**. La crítica (`proxy-addr`) quedó resuelta. Altas restantes: `@nestjs/platform-express`, `body-parser`, `multer`, `js-yaml`, `lodash` y `zod`; todas exigen un salto mayor (NestJS 12, zod 4) |
+| Evidencia | Salida de `npm audit --omit=dev` (detalle en [`07-informe-seguridad.md`](07-informe-seguridad.md) sección 5.1); job `audit` de `.github/workflows/ci.yml` |
+| Estado | **Riesgo aceptado y abierto.** Las 6 altas están aceptadas **sin análisis de explotabilidad**: no se analizó si el DoS de `multer` o `body-parser` es alcanzable en M6. Sin Trivy no hay segundo SCA |
+| Workaround | El job `audit` del CI corre `npm audit --omit=dev --audit-level=high` y es **informativo**: termina en verde con un aviso (`::warning`), no bloquea. Dependabot semanal (sin majors de `@nestjs/*` ni `zod`). El salto a NestJS 12 queda fuera de este corte |
 
 La severidad queda en Mayor hasta confirmar si alguna es explotable en M6; si lo es, pasa a Crítica.
 
@@ -139,7 +124,7 @@ La severidad queda en Mayor hasta confirmar si alguna es explotable en M6; si lo
 | Pasos | Provocar un 404 o un 400 y mirar el cuerpo y el `Content-Type` |
 | Esperado | `application/problem+json` con `type`, `title`, `status`, `detail`, `instance` |
 | Obtenido | `{ statusCode, message, error, code?, timestamp, path }` con `application/json`. No hay 422 |
-| Evidencia | `src/common/filters/http-exception.filter.ts:110-117` |
+| Evidencia | `src/common/filters/http-exception.filter.ts:111-119` |
 | Estado | Abierto. **Cambiar el formato es un cambio de contrato** (OpenAPI, frontend y `docs/api/estandar-swagger.md`) |
 | Workaround | Los códigos de estado son correctos (400, 401, 403, 404, 409, 429, 503) |
 
@@ -157,40 +142,44 @@ La severidad queda en Mayor hasta confirmar si alguna es explotable en M6; si lo
 | Estado | Abierto |
 | Workaround | En local corren si existe la carpeta. Es un hueco del tipo del #314 (ver `09-lecciones-aprendidas.md`; a validar con el equipo) |
 
-#### DEF-13 · Sin ZAP, SCA ni análisis estático de seguridad en el CI
+#### DEF-13 · Análisis de seguridad en el CI: parcial, faltan ZAP y Trivy
 
 | Campo | Detalle |
 |---|---|
 | ID | sin issue |
 | Severidad / prioridad | Mayor / Alta |
 | HU | HU-31 |
-| Pasos | Revisar `.github/workflows/ci.yml` |
+| Pasos | Revisar `.github/workflows/` y `.github/dependabot.yml` |
 | Esperado | Escaneo de dependencias, de secretos y análisis dinámico |
-| Obtenido | El CI hace build, lint, `test:cov`, OpenAPI al día y e2e. No hay `npm audit`, Dependabot, CodeQL ni ZAP. El escaneo de secretos con gitleaks se sumó al CI (job `secrets`, #494) |
-| Evidencia | `.github/workflows/ci.yml` y `.github/` (solo `workflows/`, `CODEOWNERS`, `scripts/`, `branch-protection-rules.json`) |
-| Estado | Abierto |
+| Obtenido | **Hecho:** `npm audit` informativo (job `audit`, #571), Dependabot semanal, CodeQL (`codeql.yml`), gitleaks sobre el historial completo (job `secrets`, #494). **No hecho:** OWASP ZAP y Trivy. El resultado de los hallazgos de CodeQL **no se verificó** (el workflow termina en `success`; no se revisó la pestaña de alertas) |
+| Evidencia | `.github/workflows/ci.yml` (jobs `audit` y `secrets`), `.github/workflows/codeql.yml`, `.github/dependabot.yml`; run de `develop` [42508633321](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42508633321) |
+| Estado | Abierto, **parcial** (el 03/11 no había nada de esto salvo gitleaks) |
 
 ### Menores
 
 | ID | Hallazgo | Evidencia | HU / estado |
 |---|---|---|---|
-| DEF-14 (sin issue) | El job `e2e` corre en cada PR (último run: 291 pasados) pero no es check obligatorio de la rama: un rojo no frena el merge | `.github/branch-protection-rules.json:17-19` (exige solo `build` y `test`) | Transversal · abierto |
-| DEF-15 (sin issue) | El timeout del cliente al Core es de 10 s; la cátedra prueba 5 s. Es efectivo, pero no cumple el valor pedido. No hay circuit breaker ni test que dispare el timeout real | `src/core/core.client.ts:6` y `:150-151` | HU-24 · abierto |
-| DEF-18 (sin issue) | `CORS_ORIGINS` es opcional: si falta, la API acepta cualquier origen (sin `credentials`). Hay que confirmar que esté cargada en Render | `src/main.ts:19-27` | HU-31 · abierto, a verificar en el despliegue |
-| DEF-19 (sin issue) | Swagger UI queda publicado en `/api/docs` también en producción; los errores 500 no llevan id de correlación y `path` incluye la query string; la evidencia se sirve por URL pública del bucket (protegida solo por una key UUID aleatoria) y los PDF conservan sus metadatos | `src/main.ts:40`; `src/common/filters/http-exception.filter.ts:116`; `src/modules/attachments/storage/r2-evidence.storage.ts:66`; tarjeta SEC-W06 | HU-31 · abierto |
+| DEF-14 (sin issue) | El job `e2e` corre en cada PR y **pasa en el CI de `develop`** (run [42508633321](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42508633321), `1d600d2`; 312 tests + 4 de RabbitMQ real), pero sigue sin ser check obligatorio de la rama: un rojo no frena el merge. Exigirlo pide permisos de admin sobre `hllous/Backend-M6-DAPS2` (NO HECHO) | `.github/branch-protection-rules.json:17-19` (exige solo `build` y `test`) | Transversal · abierto. Pasos: abrir un PR con un e2e roto y ver que se puede mergear. Esperado: el merge bloqueado. Obtenido: el merge queda habilitado |
+| DEF-15 (sin issue) | El timeout del cliente al Core es de 10 s; la cátedra prueba 5 s. Es efectivo, pero no cumple el valor pedido. No hay circuit breaker ni test que dispare el timeout real | `src/core/core.client.ts:6` y `:150-151` | HU-24 · abierto. Pasos: que el Core no responda (fetch colgado). Esperado: corte a los 5 s. Obtenido: corta a los 10 s |
+| DEF-18 (sin issue) | `CORS_ORIGINS` es opcional: si falta, la API acepta cualquier origen (sin `credentials`). Hay que confirmar que esté cargada en Render. **Tampoco se verificó `BFF_SHARED_KEY` en Render** (ADR-010 la deja opcional; sin ella el límite de tasa del BFF es un solo balde) | `src/main.ts:19-27` | HU-31 · abierto, **NO VERIFICABLE hasta verlo en Render**. Pasos: pedir con `Origin` ajeno sin `CORS_ORIGINS`. Esperado: rechazo. Obtenido: se acepta cualquier origen, sin `credentials` |
+| DEF-19 (sin issue) | Swagger UI queda publicado en `/api/docs` también en producción; los errores 500 no llevan id de correlación y `path` incluye la query string; la evidencia se sirve por URL pública del bucket (protegida solo por una key UUID aleatoria) y los PDF conservan sus metadatos. Desde #581, el `path` del error redacta los parámetros sensibles de la query (`redactUrl`), pero sigue incluyéndola; `/api/docs` es la única ruta sin CSP | `src/main.ts:40`; `src/common/filters/http-exception.filter.ts:118`; `src/modules/attachments/storage/r2-evidence.storage.ts:66`; tarjeta SEC-W06 | HU-31 · abierto. Falta de pasos/esperado/obtenido por cada uno de los cuatro puntos: son hallazgos de revisión de código, sin reproducción en vivo |
 | DEF-20 ([#586](https://github.com/hllous/Backend-M6-DAPS2/issues/586)) | **Hallazgo H-1 de Schemathesis.** Los `GET` con parámetro de ruta UUID (`ParseUUIDPipe`) o con `@Query()` DTO devuelven **400** del `ValidationPipe` global, pero el OpenAPI no declara ese 400 (por ejemplo `/containers` documenta 200, 401, 403 y 500). Incumple `docs/api/estandar-swagger.md` (la tabla de códigos pide 400 en endpoints con entrada). Schemathesis lo marca con `status_code_conformance` (ST103) en al menos 40 `GET`; la auditoría de contratos del 08/11 contó **46 de 65 `GET` sin 400 declarado** (quedan fuera `/health`, `/health/ready` y `/me`, que no lo lanzan). Afecta a `/containers`, `/crews/{id}`, `/services/{id}/…`, `/trees/…`, `/public/services`, `/public/green-points` y `/evidence`, entre otros. No es un fallo de funcionamiento: el 400 es correcto, falta declararlo | `src/configure-app.ts:52` (`forbidNonWhitelisted`); `docs/api/openapi.json`; `test/api/PENDIENTES.md` (rama de #572, PR #583); el check corre en `.github/workflows/api-tests.yml` como paso **informativo** | Transversal · abierto. Corrección: un helper `ApiBadRequestParams()` en `src/common/decorators` y un caso en `openapi-contract.spec.ts` que lo exija; al cerrarlo, pasar el paso a bloqueante. Cambia `openapi.json` |
 | DEF-21 | **Hallazgo H-2 de Schemathesis.** `GET /neighborhoods` responde **503** («El catálogo de barrios de M9 todavía no está disponible») cuando M6 no tiene acceso al catálogo de M9. El 503 está documentado y es el comportamiento previsto ante una dependencia caída, pero en el CI y en el `docker compose up` local **no existe M9**, así que ese endpoint no se puede usar ni probar fuera del despliegue. Se **excluyó** de Schemathesis (`--exclude-path /neighborhoods`); si no, rompe `not_a_server_error` | `src/modules/neighborhoods/neighborhoods.service.ts:15` y el `@ApiResponse` 503 de su controller; exclusión comentada en `.github/workflows/api-tests.yml` | HU-31 · abierto. Corrección: un seed o mock de barrios para el entorno local y el CI |
+| DEF-24 ([#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554)) | **e2e intermitente.** En el CI de un PR de documentación (#551) falló `test/crew-ownership.e2e-spec.ts` › «una inspección ya cerrada: el ajeno ve 403 (no el 409), el asignado ve 409» por una violación del check constraint `e2e_no_active` sobre `container` (Postgres 23514, en `ServicesService.complete`). Reintentar solo el job fallido pasó. `test/containers-close.e2e-spec.ts` agrega ese constraint temporal y lo borra al terminar; no se sabe por qué estaba activo cuando corrió otra suite (con `maxWorkers: 1`). **Aclaración honesta:** el 08/11, 3 corridas seguidas del e2e dieron resultado idéntico, lo que **no prueba que el defecto no exista**; la causa raíz no está investigada | `test/containers-close.e2e-spec.ts:122` y `:128`; `test/jest-e2e.json` (`maxWorkers: 1`); run [42374274615](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42374274615) | Transversal (HU-33) · abierto, Menor. Pasos: correr `npm run test:e2e` varias veces. Esperado: el mismo resultado siempre. Obtenido: 1 falla en CI no reproducida |
 
 Un test débil adicional, `services.service.spec.ts:875` (`resolves.toBeDefined()` como única aserción), se registra en `05-informe-ejecucion.md`.
 
 ## 4. Defectos cerrados y corregidos
 
-Los 55 issues con etiqueta `bug`, `security` o `fix` están **cerrados** en GitHub (`gh issue list --state all`, 03/11). Los defectos y brechas de este registro que se cerraron desde entonces están en la tabla siguiente, antes de las filas históricas. Esta sección lista los que más enseñan, con su causa raíz y la **evidencia del cierre**: el commit de la corrección en `develop` y el run del workflow `CI` de ese commit.
+De los 58 issues con etiqueta `bug`, `security` o `fix`, 57 están **cerrados** en GitHub y 1 sigue abierto (#554, DEF-24; `gh issue list --state all`, 08/11). El 03/11 eran 55, todos cerrados. Los defectos y brechas de este registro que se cerraron desde entonces están en la tabla siguiente, antes de las filas históricas. Esta sección lista los que más enseñan, con su causa raíz y la **evidencia del cierre**: el commit de la corrección en `develop` y el run del workflow `CI` de ese commit.
 
 Cómo leer la evidencia de CI: «CI verde, run N» significa que `gh run list --workflow CI --commit <sha>` devolvió un *push* a `develop` con conclusión `success`. Prueba que el build, el lint y los tests del repo pasaron en ese commit; no prueba por sí sola que el test nombrado cubra la corrección. Los runs se ven en `https://github.com/hllous/Backend-M6-DAPS2/actions/runs/<N>`. Donde no se ubicó el commit, la tabla dice «corregido (cerrado en #n); ejecución pendiente», sin inventar un verde.
 
 | # | Defecto | Causa raíz | Corrección (commit · fecha) | Evidencia de cierre |
 |---|---|---|---|---|
+| DEF-07 · [#568](https://github.com/hllous/Backend-M6-DAPS2/issues/568) | Rate limiting solo en el portal ciudadano: sin límite de tasa en el resto de la API (HU-31, era Mayor) | `ThrottlerModule` vivía solo en `citizen-portal`; [ADR-008](../decisiones/adr-008-roles-m6-adaptados-desde-m1.md) había dejado el límite general «para después de la entrega» | `fb62519` (PR #580) · 08/11: `ThrottlerGuard` global (600 por minuto, por IP y por endpoint), topes propios en `POST /events/inbox` (300) y `POST /evidence` (30), `/health` excluido; [ADR-010](../decisiones/adr-010-rate-limit-global.md). Los contadores están **en memoria**: valen para una sola instancia | CI verde, run 42507156312. Test: `test/throttler.e2e-spec.ts` (429 al pasar el límite). Pendiente: que el BFF mande `X-M6-BFF-Key` y sobrescriba `X-Forwarded-For`; si no, sus usuarios comparten un balde de 600 por minuto |
+| DEF-22 · [#569](https://github.com/hllous/Backend-M6-DAPS2/issues/569) | Los logs registraban el `access_token` de la query: el `LoggingInterceptor` escribía la URL completa y el `path` de los errores la devolvía al cliente | Se logueaba `request.url` sin filtrar. Los tests de logs cubrían método, URL y estado, pero ninguno usaba una URL con token; por eso SEC-D01 figuraba NO VERIFICABLE para el log HTTP. El fix entró en el mismo PR que los tests de seguridad de #569; no consta un incidente | `a733f44` (PR #581) · 08/11: `redactUrl` (`src/common/utils/redact-url.ts`) aplicado en el interceptor y en el filtro de excepciones | CI verde, run 42507405163. Tests: `src/common/utils/redact-url.spec.ts` (redacta por subcadena y no toca `page`, `status`, etc.) y `logging.interceptor.spec.ts` › «el log no incluye el token de la query ni el header Authorization» |
+| DEF-23 · [#567](https://github.com/hllous/Backend-M6-DAPS2/issues/567) | El primer `docker compose up` en frío fallaba: `rabbitmq-setup` salía con `exit 7` y el backend no levantaba. Heredado del compose de [#555](https://github.com/hllous/Backend-M6-DAPS2/issues/555) | El `healthcheck` de RabbitMQ da `healthy` antes de que la consola (puerto 15672) escuche, y `rabbitmq-setup` llamaba a esa API sin reintentos. Nadie había corrido `docker compose up` desde cero con volúmenes nuevos | `c9a8dc7` (PR #584) · 08/11: `curl --retry 30 --retry-delay 2 --retry-connrefused` en `docker-compose.yml` | CI verde, run 42507763344, **que no prueba el arreglo** (el CI no levanta el compose). Evidencia real: `docker compose up -d --build` en frío con volúmenes nuevos, 08/11, local: up en 35 s, `/health/ready` 200 a los 45 s, seed OK. Sin test automatizado |
 | DEF-01 · [#488](https://github.com/hllous/Backend-M6-DAPS2/issues/488) | Login real con M1 sin probar de punta a punta: `GET /me` daba 401 (HU-30, era Crítica) | M1 rotó el `JWT_SECRET` y no lo comunicó a M6 | Secreto vigente cargado en Render; login de demo retirado · 03/11 | Issue cerrado el 03/11. Login real + `GET /me` en 200 con cuatro cuentas (informado por el PO). Frontend: FE #800 |
 | DEF-02 · [#257](https://github.com/hllous/Backend-M6-DAPS2/issues/257) | Contrato definitivo de M9 sin cerrar (HU Must, era Crítica) | Contrato del Core en definición | Sobre, topología, reintentos y catálogo adaptados · 05/11 | Issue cerrado el 05/11, junto con la prueba AMQP con M9 y M3. Lo que queda es de M9 y M2 y no frena el trabajo: fila «M9 / M2» de [`bloqueantes.md`](../bloqueantes.md) |
 | DEF-03 · [#299](https://github.com/hllous/Backend-M6-DAPS2/issues/299) y [#442](https://github.com/hllous/Backend-M6-DAPS2/issues/442) | Integración con el Core real sin probar (HU-24, era Crítica) | Ambiente compartido que exige coordinar con M9 y los destinatarios | Prueba con el Core real · 05/11 | Issues cerrados el 05/11. M6 publicó `infrastructureRepairRequested` y M3 respondió `workOrderScheduled` y `workOrderCompleted` ([historial](../integracion/historial.md)) |
@@ -223,37 +212,55 @@ Cómo leer la evidencia de CI: «CI verde, run N» significa que `gh run list --
 | [#460](https://github.com/hllous/Backend-M6-DAPS2/issues/460) | No se registraba quién hizo cada cambio de estado | No existía el historial de auditoría | `39069dc` (#483) · 02/11 | CI verde, run 41531138310. Test: `test/audit.e2e-spec.ts` |
 | [#132](https://github.com/hllous/Backend-M6-DAPS2/issues/132) | Todos los deploys a Render fallaban desde #126 y nadie lo notó | `scripts/generate-openapi.ts` quedó dentro del build, movió la salida a `dist/src/` y el `Dockerfile` buscaba `dist/main.js`. Render mantenía viva la última build buena | **Corregido (cerrado en #132); ejecución pendiente**: el commit de la corrección no se ubicó por el título | — |
 
-Las cinco filas DEF de arriba citan el estado del issue, no un run. Cada fila con un run de CI citado se verificó con `gh run list --workflow CI --commit`; no se citó ningún run que no se hubiera consultado. Son 26 filas con run verde (algunas agrupan varios issues) y una sin evidencia de ejecución (#132); el resto de los 55 cerrados no se detalla acá.
+Las filas DEF-01, DEF-02, DEF-03, DEF-12, DEF-16 y DEF-17 citan el estado del issue, no un run. Cada fila con un run de CI citado se verificó con `gh run list --workflow CI --commit`; no se citó ningún run que no se hubiera consultado. Son 26 filas con run verde del 03/11 (algunas agrupan varios issues), 3 más del 08/11 (DEF-07, DEF-22 y DEF-23) y una sin evidencia de ejecución (#132); el resto de los cerrados no se detalla acá.
+
+### Hallazgos de proceso (no son defectos del producto)
+
+| ID | Hallazgo | Qué pasó | Estado |
+|---|---|---|---|
+| P-1 | Secreto de juguete literal en el workflow `api-tests.yml` de #572 | El workflow nuevo tenía un secreto de juguete escrito en el archivo. El job `secrets` (gitleaks sobre todo el historial) lo detectó en el CI: run [42505473347](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42505473347), commit `e07ad42`, job `secrets` en rojo. No era una credencial real. Se corrigió **reescribiendo la rama** antes de mergear (el workflow genera ahora un secreto efímero) y el job `secrets` volvió a verde en `develop` | Cerrado. Nunca llegó a `develop` |
+| P-2 | Dos commits publicados con autor `scratch <scratch@local>` | Los commits `5c8c78b` (rama de #583) y `a06b33b` (rama de #584) se hicieron con una configuración de git local mal puesta. Ambos PR se mergearon con squash: en `develop` el autor es Benjamin Martinez y `scratch <scratch@local>` aparece solo como `Co-authored-by` en `1d600d2` (#583) y `c9a8dc7` (#584). Los commits originales figuran en los PR #583 y #584 | **Abierto, sin reescribir.** El alias `scratch` no corresponde a ningún integrante. Pendiente de decisión del equipo; no se reescribió historial |
 
 ## 5. Verificaciones no realizadas (no son defectos)
 
-La regla G9 pide no omitir nada conocido. Estas pruebas **no se hicieron** y no se presentan como hechas.
+La regla G9 pide no omitir nada conocido. Estas pruebas **no se hicieron** (estado al 08/11) y no se presentan como hechas.
 
-| Verificación | Motivo |
-|---|---|
-| Mutation testing (Stryker) | No está configurado |
-| Prueba de carga con 50 usuarios (k6) | No hay script ni reporte |
-| Quality Gate de SonarCloud | No hay configuración ni cuenta |
-| OWASP ZAP baseline y activo autenticado | No se corrió |
-| Escaneo de secretos con trufflehog | No se corrió. gitleaks v8.30.1 sí se corrió el 03/11/2026 sobre 270 commits: 0 hallazgos con `.gitleaks.toml` (ver `07-informe-seguridad.md`) |
-| Caída real del broker durante la demo | Todos los tests de mensajería usan mocks; falta un ensayo manual |
-| Suite corrida 3 veces seguidas para detectar tests inestables | Solo hay una corrida local del 03/11; Jest avisó de un worker que no termina (handles abiertos) |
+| Verificación | Estado | Motivo |
+|---|---|---|
+| Tag `v1.0-testing` en `main` | NO HECHO | Pendiente del equipo (antes de las 13:30 del 10/11, backend y frontend) |
+| Quality Gate de SonarCloud | NO HECHO | Pide un administrador de `hllous`; no hay cuenta ni `sonar-project.properties` |
+| Job `e2e` obligatorio en la protección de ramas | NO HECHO | Idem: pide admin. El e2e corre y pasa en el CI, pero la regla exige solo `build` y `test` (DEF-14) |
+| Prueba de carga con 50 usuarios | NO HECHO | Hay script (`test/perf/k6-criticos.js`, #585) pero **cero resultados**: no se corrió, no hay p95 ni tasa de error |
+| OWASP ZAP baseline y activo autenticado | NO HECHO | No se corrió |
+| Trivy | NO HECHO | No se corrió |
+| Frontend dentro del compose | NO HECHO | Issue [#560](https://github.com/hllous/Backend-M6-DAPS2/issues/560) abierto |
+| Verificar `CORS_ORIGINS` y `BFF_SHARED_KEY` en Render | NO HECHO | Hay que mirar el panel de Render (DEF-18) |
+| Contrato del BFF con el frontend (`X-M6-BFF-Key` y `X-Forwarded-For` en llamadas autenticadas, sobrescribiendo XFF) | NO HECHO | Falta abrir el issue al repo del frontend |
+| Éxito por endpoint en los 92 endpoints restantes | NO HECHO | Hay caso de éxito en 60 de 152 operaciones; el resto está en `test/api/PENDIENTES.md` |
+| Apagar el broker de verdad | NO HECHO | Solo en la demo en vivo. El e2e de recuperación corta conexiones, no apaga el broker |
+| Mutation score global | NO HECHO | Medido solo en `outbound-requests` (84,21 %); no hay medición del dominio completo |
+| Firmas de tests por integrante y datos «A COMPLETAR» de `08-declaracion-ia.md` | NO HECHO | Solo el equipo puede completarlos |
+| Resultado de las alertas de CodeQL | NO VERIFICADO | El workflow corre y termina en `success`; no se revisó la pestaña de alertas |
+| Escaneo de secretos con trufflehog | NO HECHO | gitleaks sí se corre (03/11 y en cada PR) |
+
+Hechas desde el 03/11 y que antes figuraban en esta lista: Stryker acotado a `outbound-requests` (#577), suite corrida 3 veces seguidas (08/11, local), RabbitMQ real en el e2e (#579), Schemathesis y Newman (#583).
 
 ## 6. Plan de corrección propuesto
 
-| Prioridad | Defectos | Acción | Esfuerzo estimado |
+| Prioridad | Defectos | Acción | Estado al 08/11 |
 |---|---|---|---|
-| 1 | DEF-04 | Subir `MAX_ATTEMPTS` o reencolar `FAILED` por antigüedad, con test | 2 h a medio día |
-| 2 | DEF-08, DEF-13 | `npm audit fix` para lo no mayor; documentar la mitigación del resto; sumar `npm audit` y Dependabot al CI | 2 h |
-| 3 | DEF-15 | Timeout de 5 s con un test que lo dispare de verdad | 1 a 2 h |
-| 4 | DEF-10 | Migrar el filtro a RFC 9457 y avisar al frontend (cambio de contrato) | medio día a 1 día |
-| 5 | DEF-05, DEF-06 | `ETag`/`If-Match` en un `PATCH` crítico e `Idempotency-Key` en `POST /services`, con un e2e cada uno | 1 día |
-| 6 | DEF-07 | ~~Throttler global con un e2e de 429~~ (hecho, #568) | 2 h |
-| 7 | DEF-11, DEF-14 | Versionar los schemas de M2 o hacer que el CI avise; hacer obligatorio el job `e2e` | 2 h |
-| 8 | DEF-18, DEF-19 | Corregir los textos, confirmar `CORS_ORIGINS` en Render y decidir qué hacer con `/api/docs` | 1 h |
-| 9 | DEF-09 | Interceptor de lectura de datos Tier 2 | 1 día |
-| 10 | DEF-20, DEF-21 | Declarar el 400 en los `GET` con parámetro UUID o query (helper + caso en `openapi-contract.spec.ts`, regenerar `openapi.json` y la colección) y volver bloqueante el paso `status_code_conformance`; seed o mock de barrios para local y CI | 3 a 4 h |
+| 1 | DEF-04 | Subir `MAX_ATTEMPTS` o reencolar `FAILED` por antigüedad, con test | Sin hacer (`MAX_ATTEMPTS = 5`) |
+| 2 | DEF-08, DEF-13 | `npm audit fix`, documentar la mitigación del resto, sumar `npm audit` y Dependabot al CI | **Hecho en parte**: `npm audit fix` (#576), job `audit` informativo y Dependabot (#578). Falta el análisis de explotabilidad, ZAP y Trivy |
+| 3 | DEF-15 | Timeout de 5 s con un test que lo dispare de verdad | Sin hacer |
+| 4 | DEF-10 | Migrar el filtro a RFC 9457 y avisar al frontend (cambio de contrato) | Sin hacer |
+| 5 | DEF-05, DEF-06 | `ETag`/`If-Match` en un `PATCH` crítico e `Idempotency-Key` en `POST /services`, con un e2e cada uno | Sin hacer |
+| 6 | DEF-07 | ~~Throttler global con un e2e de 429~~ | **Hecho** (#568, PR #580) |
+| 7 | DEF-11, DEF-14 | Versionar los schemas de M2 o hacer que el CI avise; hacer obligatorio el job `e2e` | Sin hacer (DEF-14 pide admin) |
+| 8 | DEF-18, DEF-19 | Corregir los textos, confirmar `CORS_ORIGINS` en Render y decidir qué hacer con `/api/docs` | Sin hacer |
+| 9 | DEF-09 | Interceptor de lectura de datos Tier 2 | Sin hacer |
+| 10 | DEF-20, DEF-21 | Declarar el 400 en los `GET` con parámetro UUID o query (helper + caso en `openapi-contract.spec.ts`, regenerar `openapi.json` y la colección) y volver bloqueante el paso `status_code_conformance`; seed o mock de barrios para local y CI | Sin hacer |
+| 11 | DEF-24 | Investigar por qué `e2e_no_active` quedaba activo con `maxWorkers: 1` y reemplazar el `ALTER TABLE` temporal | Sin hacer |
 
-Cerrados y fuera del plan: DEF-01, DEF-02, DEF-03, DEF-12, DEF-16 y DEF-17. Lo que sigue abierto con M7, M9 y M2 está en [`bloqueantes.md`](../bloqueantes.md).
+Cerrados y fuera del plan: DEF-01, DEF-02, DEF-03, DEF-07, DEF-12, DEF-16, DEF-17, DEF-22 y DEF-23. Lo que sigue abierto con M7, M9 y M2 está en [`bloqueantes.md`](../bloqueantes.md).
 
 Cualquier cambio de código sale en Issues propios, fuera de #494.
