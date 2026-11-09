@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ApiPaginatedResponse, Public } from '../../common/decorators';
+import { ApiPaginatedResponse, Public, ApiBadRequestParams } from '../../common/decorators';
 import { CitizenPortalService } from './citizen-portal.service';
 import {
   PublicGreenPointResponseDto,
@@ -57,6 +57,7 @@ export class CitizenPortalController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findReport(@Param('ticketId') ticketId: string): Promise<PublicReportResponseDto> {
     return this.citizenPortalService.findReportByTicket(ticketId);
   }
@@ -75,6 +76,7 @@ export class CitizenPortalController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findServices(@Query() query: QueryPublicServicesDto) {
     return this.citizenPortalService.findServices(query);
   }
@@ -93,6 +95,7 @@ export class CitizenPortalController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findGreenPoints(@Query() query: QueryPublicGreenPointsDto) {
     return this.citizenPortalService.findGreenPoints(query);
   }
@@ -104,7 +107,11 @@ export class CitizenPortalController {
     description:
       'Las zonas activas, para poder ofrecer el filtro de los otros dos listados. Sin paginar: son pocas y el frontend las carga una vez.',
   })
-  @ApiResponse({ status: 200, description: 'Zonas activas', type: [PublicZoneResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'Zonas activas',
+    type: [PublicZoneResponseDto],
+  })
   @ApiResponse({
     status: 429,
     description: 'Demasiadas consultas desde la misma dirección',

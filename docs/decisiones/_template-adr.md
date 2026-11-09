@@ -2,7 +2,9 @@
 
 ## Estado
 
-**[Propuesto | Aceptado | Rechazado | Deprecado | Reemplazado por ADR-YYY]** — YYYY-MM-DD
+**[Propuesto | Aceptado | Rechazado | Deprecado | Reemplazado por ADR-YYY | Reemplazado parcialmente por ADR-YYY]** — YYYY-MM-DD
+
+Si la decisión sigue vigente pero una parte quedó superada, se deja **Aceptado** y se agrega debajo una nota fechada (`> Nota del AAAA-MM-DD: …`), como en ADR-001 y ADR-002.
 
 ## Contexto
 

@@ -57,6 +57,7 @@ describe('StreetClosureExpirySweeper', () => {
     expect(svc.where).toEqual({ id: 's1', status: ServiceStatus.SCHEDULED });
     expect(svc.data.status).toBe(ServiceStatus.RESCHEDULED);
     expect(svc.data.statusReason).toBe('venció la ventana autorizada del corte');
+    expect(Logger.prototype.log).toHaveBeenCalledWith(expect.stringMatching(/^1 corte\/s/));
   });
 
   it('si el corte ya no esta APPROVED (carrera con Ended) no toca el servicio', async () => {
@@ -68,6 +69,7 @@ describe('StreetClosureExpirySweeper', () => {
     await sweeper.expireClosures();
 
     expect(prisma.service.updateMany).not.toHaveBeenCalled();
+    expect(Logger.prototype.log).not.toHaveBeenCalled();
   });
 
   it('un corte de arbolado se vence sin tocar ningun servicio', async () => {

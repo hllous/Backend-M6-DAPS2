@@ -14,6 +14,7 @@ export { Public, IS_PUBLIC_KEY } from './public.decorator';
 export { CurrentUser } from './current-user.decorator';
 export { ToBoolean } from './to-boolean.decorator';
 export { ApiPaginatedResponse } from './api-paginated-response.decorator';
+export { ApiBadRequestParams } from './api-bad-request-params.decorator';
 export { IsDateOnly } from './date-only.decorator';
 export { Trim } from './trim.decorator';
 export { Latitude, Longitude } from './coordinates.decorator';

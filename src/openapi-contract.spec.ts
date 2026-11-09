@@ -1,18 +1,17 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { DECORATORS } from '@nestjs/swagger/dist/constants';
-import { SwaggerModule } from '@nestjs/swagger';
 import { getMetadataStorage } from 'class-validator';
 import { Test } from '@nestjs/testing';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
-import { buildSwaggerConfig } from './swagger-config';
+import { createOpenApiDocument } from './swagger-config';
 
 process.env.DATABASE_URL ??= 'postgresql://openapi:openapi@localhost:5432/openapi?schema=public';
 process.env.JWT_SECRET ??= Buffer.alloc(32).toString('base64');
 
 describe('contrato OpenAPI', () => {
-  let documento: ReturnType<typeof SwaggerModule.createDocument>;
+  let documento: ReturnType<typeof createOpenApiDocument>;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
@@ -20,7 +19,7 @@ describe('contrato OpenAPI', () => {
       .useValue({})
       .compile();
     const app = moduleRef.createNestApplication();
-    documento = SwaggerModule.createDocument(app, buildSwaggerConfig());
+    documento = createOpenApiDocument(app);
     await app.close();
   });
 
@@ -41,6 +40,21 @@ describe('contrato OpenAPI', () => {
     expect(sinSchema).toEqual([]);
   });
 
+  it('toda respuesta de error se declara como application/problem+json (ADR-011)', () => {
+    const mal: string[] = [];
+    for (const [ruta, operaciones] of Object.entries(documento.paths)) {
+      for (const [metodo, op] of Object.entries(operaciones)) {
+        const responses = (op as { responses?: Record<string, { content?: object }> }).responses;
+        for (const [codigo, r] of Object.entries(responses ?? {})) {
+          if (/^[45]/.test(codigo) && r.content && !('application/problem+json' in r.content)) {
+            mal.push(`${metodo.toUpperCase()} ${ruta} ${codigo}`);
+          }
+        }
+      }
+    }
+    expect(mal).toEqual([]);
+  });
+
   it('todo GET autenticado declara el 403 (estandar-swagger.md)', () => {
     // Un GET sin @Roles igual exige algun rol de M6 (RolesGuard): usar @ApiAnyM6Role.
     const sin403: string[] = [];
@@ -50,6 +64,18 @@ describe('contrato OpenAPI', () => {
       if (get?.security?.length && !get.responses?.['403']) sin403.push(`GET ${ruta}`);
     }
     expect(sin403).toEqual([]);
+  });
+
+  it('todo GET con parámetros declara el 400 (DEF-20)', () => {
+    // El ParseUUIDPipe y el ValidationPipe global (whitelist + forbidNonWhitelisted)
+    // responden 400 ante un id o un query inválido: usar @ApiBadRequestParams.
+    const sin400: string[] = [];
+    for (const [ruta, operaciones] of Object.entries(documento.paths)) {
+      const get = operaciones.get as
+        { parameters?: unknown[]; responses?: Record<string, unknown> } | undefined;
+      if (get?.parameters?.length && !get.responses?.['400']) sin400.push(`GET ${ruta}`);
+    }
+    expect(sin400).toEqual([]);
   });
 
   it('docs/api/openapi.json está al día con el código', () => {

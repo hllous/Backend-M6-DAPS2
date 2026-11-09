@@ -16,6 +16,7 @@ import {
   ContainerStatusHistoryResponseDto,
 } from './dto';
 import { PaginatedResponseDto, PaginationQueryDto } from '../../common/dto';
+import { ifMatchWhere, isConditional, preconditionFailed } from '../../common/etag';
 
 /**
  * Transiciones válidas de la máquina de estados de Container.
@@ -183,12 +184,21 @@ export class ContainersService {
     );
   }
 
-  async update(id: string, dto: UpdateContainerDto): Promise<ContainerResponseDto> {
-    await this.ensureExists(id);
+  async update(
+    id: string,
+    dto: UpdateContainerDto,
+    ifMatch?: string,
+  ): Promise<ContainerResponseDto> {
+    const current = await this.prisma.container.findUnique({ where: { id } });
+    if (!current) {
+      throw new NotFoundException(`Contenedor con id '${id}' no encontrado`);
+    }
+    // ADR-012: con If-Match, updatedAt va en el where y el UPDATE es atómico con la lectura.
+    const stale = ifMatchWhere(ifMatch, current);
 
     try {
       const container = await this.prisma.container.update({
-        where: { id },
+        where: { id, ...stale },
         data: {
           ...(dto.zoneId !== undefined && { zoneId: dto.zoneId }),
           ...(dto.capacityLiters !== undefined && {
@@ -206,6 +216,13 @@ export class ContainersService {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
         throw new NotFoundException(`Zona con id '${dto.zoneId}' no encontrada`);
       }
+      if (
+        isConditional(ifMatch) &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw preconditionFailed();
+      }
       throw error;
     }
   }
@@ -213,12 +230,25 @@ export class ContainersService {
   // ─── Transiciones de estado ────────────────────────
 
   /** ACTIVE → OVERFLOWED */
-  async reportOverflow(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
-    return this.transition(actor, 'REPORT_OVERFLOW', id, ContainerStatus.OVERFLOWED);
+  async reportOverflow(
+    id: string,
+    actor: AuditActor,
+    ifMatch?: string,
+  ): Promise<ContainerResponseDto> {
+    return this.transition(
+      actor,
+      'REPORT_OVERFLOW',
+      id,
+      ContainerStatus.OVERFLOWED,
+      {},
+      undefined,
+      undefined,
+      ifMatch,
+    );
   }
 
   /** OVERFLOWED → ACTIVE */
-  async empty(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
+  async empty(id: string, actor: AuditActor, ifMatch?: string): Promise<ContainerResponseDto> {
     return this.transition(
       actor,
       'EMPTY',
@@ -233,6 +263,7 @@ export class ContainersService {
       },
       undefined,
       EMPTY_FROM,
+      ifMatch,
     );
   }
 
@@ -241,6 +272,7 @@ export class ContainersService {
     id: string,
     dto: ReportDamageDto,
     actor: AuditActor,
+    ifMatch?: string,
   ): Promise<ContainerResponseDto> {
     return this.transition(
       actor,
@@ -260,16 +292,35 @@ export class ContainersService {
         aggregateId: container.id,
         payload: containerDamaged(container, undefined, neighborhoodId),
       }),
+      undefined,
+      ifMatch,
     );
   }
 
   /** DAMAGED → UNDER_REPAIR */
-  async startRepair(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
-    return this.transition(actor, 'START_REPAIR', id, ContainerStatus.UNDER_REPAIR);
+  async startRepair(
+    id: string,
+    actor: AuditActor,
+    ifMatch?: string,
+  ): Promise<ContainerResponseDto> {
+    return this.transition(
+      actor,
+      'START_REPAIR',
+      id,
+      ContainerStatus.UNDER_REPAIR,
+      {},
+      undefined,
+      undefined,
+      ifMatch,
+    );
   }
 
   /** UNDER_REPAIR → ACTIVE */
-  async completeRepair(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
+  async completeRepair(
+    id: string,
+    actor: AuditActor,
+    ifMatch?: string,
+  ): Promise<ContainerResponseDto> {
     return this.transition(
       actor,
       'COMPLETE_REPAIR',
@@ -278,12 +329,22 @@ export class ContainersService {
       { damageType: null, severity: null, requiresPublicWorks: null, damageNotes: null },
       undefined,
       COMPLETE_REPAIR_FROM,
+      ifMatch,
     );
   }
 
   /** ACTIVE → RELOCATING */
-  async relocate(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
-    return this.transition(actor, 'RELOCATE', id, ContainerStatus.RELOCATING);
+  async relocate(id: string, actor: AuditActor, ifMatch?: string): Promise<ContainerResponseDto> {
+    return this.transition(
+      actor,
+      'RELOCATE',
+      id,
+      ContainerStatus.RELOCATING,
+      {},
+      undefined,
+      undefined,
+      ifMatch,
+    );
   }
 
   /** RELOCATING → ACTIVE (con nueva ubicación) */
@@ -291,6 +352,7 @@ export class ContainersService {
     id: string,
     dto: ConfirmRelocationDto,
     actor: AuditActor,
+    ifMatch?: string,
   ): Promise<ContainerResponseDto> {
     return this.transition(
       actor,
@@ -300,12 +362,22 @@ export class ContainersService {
       { address: dto.address, lat: dto.lat ?? null, lng: dto.lng ?? null },
       undefined,
       CONFIRM_RELOCATION_FROM,
+      ifMatch,
     );
   }
 
   /** DAMAGED → REMOVED (no admite reparación) */
-  async remove(id: string, actor: AuditActor): Promise<ContainerResponseDto> {
-    return this.transition(actor, 'REMOVE', id, ContainerStatus.REMOVED);
+  async remove(id: string, actor: AuditActor, ifMatch?: string): Promise<ContainerResponseDto> {
+    return this.transition(
+      actor,
+      'REMOVE',
+      id,
+      ContainerStatus.REMOVED,
+      {},
+      undefined,
+      undefined,
+      ifMatch,
+    );
   }
 
   // ─── Helpers ──────────────────────────────────────
@@ -325,6 +397,8 @@ export class ContainersService {
     event?: (container: Container, neighborhoodId?: string) => OutboxEntry,
     // Orígenes propios de la acción cuando el destino se alcanza desde varios.
     from?: ContainerStatus[],
+    // If-Match del request (ADR-012): se valida antes que el estado, y hace atómico el UPDATE.
+    ifMatch?: string,
   ): Promise<ContainerResponseDto> {
     const container = await this.prisma.container.findUnique({
       where: { id },
@@ -333,6 +407,8 @@ export class ContainersService {
     if (!container) {
       throw new NotFoundException(`Contenedor con id '${id}' no encontrado`);
     }
+
+    const stale = ifMatchWhere(ifMatch, container);
 
     const allowed = CONTAINER_TRANSITIONS[container.status] ?? [];
     if (!allowed.includes(targetStatus) || (from && !from.includes(container.status))) {
@@ -347,7 +423,7 @@ export class ContainersService {
         // El estado leído va en el where: si otro request lo cambió en el medio,
         // no se pisa (P2025 → 409) en vez de aplicar la acción sobre un origen viejo.
         const row = await tx.container.update({
-          where: { id, status: container.status },
+          where: { id, status: container.status, ...stale },
           data: {
             status: targetStatus,
             ...additionalData,
@@ -375,6 +451,8 @@ export class ContainersService {
       })
       .catch((error: unknown) => {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          // Con If-Match, updatedAt va en el where: no encontrar fila es "versión vieja".
+          if (isConditional(ifMatch)) throw preconditionFailed();
           throw new ConflictException(
             `El contenedor '${container.code}' cambió de estado mientras se procesaba la acción; reintentar`,
           );

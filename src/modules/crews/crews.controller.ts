@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Controller,
   Get,
@@ -11,7 +12,14 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CrewsService } from './crews.service';
 import {
   CreateCrewDto,
@@ -23,7 +31,12 @@ import {
   CrewZoneAssignmentResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
@@ -38,6 +51,23 @@ export class CrewsController {
 
   @Post()
   @Roles(...ROLES_ADMIN)
+  @ApiBody({
+    type: CreateCrewDto,
+    examples: {
+      ejemplo: {
+        summary: 'Cuadrilla municipal de recolección',
+        value: {
+          name: 'Cuadrilla Norte - Turno Mañana',
+          crewType: 'MUNICIPAL',
+          defaultShift: 'MORNING',
+          specialty: 'COLLECTION',
+          leaderUserId: '1',
+          leaderName: 'Marta Gómez',
+          homeZoneId: 'a1b2c3d4-e5f6-4789-8abc-def012345678',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Crear una cuadrilla',
     description:
@@ -79,6 +109,7 @@ export class CrewsController {
     description: 'M1 no responde y no se pudo validar a los usuarios; no se guardó nada',
     type: ErrorResponseDto,
   })
+  @Idempotent()
   async create(
     @Body() dto: CreateCrewDto,
     @CurrentUser() actor: AuthenticatedUser,
@@ -142,6 +173,7 @@ export class CrewsController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<CrewResponseDto> {
     return this.crewsService.findOne(id);
   }
@@ -237,6 +269,20 @@ export class CrewsController {
 
   @Post(':id/members')
   @Roles(...ROLES_ADMIN)
+  @ApiBody({
+    type: AddCrewMembersDto,
+    examples: {
+      ejemplo: {
+        summary: 'Alta de dos integrantes',
+        value: {
+          members: [
+            { userId: '10', displayName: 'Lucía Fernández' },
+            { userId: '11', displayName: 'Tomás Ruiz' },
+          ],
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Agregar miembros a una cuadrilla',
     description:
@@ -330,6 +376,20 @@ export class CrewsController {
 
   @Post(':id/zone-assignments')
   @Roles(...ROLES_OPERACIONES)
+  @ApiBody({
+    type: CreateCrewZoneAssignmentDto,
+    examples: {
+      ejemplo: {
+        summary: 'Reubicación temporal por refuerzo',
+        value: {
+          zoneId: 'a1b2c3d4-e5f6-4789-8abc-def012345678',
+          validFrom: '2027-03-22',
+          validTo: '2027-04-05',
+          reason: 'Refuerzo por acumulación de residuos tras el temporal',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Reubicar una cuadrilla en otra zona por un período',
     description:
@@ -408,6 +468,7 @@ export class CrewsController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async listZoneAssignments(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<CrewZoneAssignmentResponseDto[]> {

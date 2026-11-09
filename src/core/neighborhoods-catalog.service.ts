@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CoreClient } from './core.client';
 
 /** Un barrio del catálogo de M9 (`GET /api/v1/catalogos/barrios`). */
@@ -24,6 +26,10 @@ const PATH = '/api/v1/catalogos/barrios';
  * Core no responde o no hay CORE_API_URL la app sigue: `disponible` queda en false
  * y quien lo consulta degrada. Nada se borra en M9 (baja = `activo:false`), por lo
  * que un id guardado nunca deja de existir en el catálogo.
+ *
+ * Solo para local y CI (donde no existe M9): con NEIGHBORHOODS_CATALOG_FILE el
+ * catálogo sale de ese JSON y no se consulta al Core. La config lo prohíbe en
+ * producción, donde sin catálogo real sigue siendo "no disponible".
  */
 @Injectable()
 export class NeighborhoodsCatalogService implements OnApplicationBootstrap, OnModuleDestroy {
@@ -32,9 +38,20 @@ export class NeighborhoodsCatalogService implements OnApplicationBootstrap, OnMo
   private timer?: NodeJS.Timeout;
   private cerrado = false;
 
-  constructor(private readonly core: CoreClient) {}
+  private readonly archivo?: string;
+
+  constructor(
+    private readonly core: CoreClient,
+    config: ConfigService,
+  ) {
+    this.archivo = config.get<string>('neighborhoodsCatalogFile');
+  }
 
   onApplicationBootstrap(): void {
+    if (this.archivo) {
+      this.cargarArchivo(this.archivo);
+      return;
+    }
     if (!this.core.enabled) {
       this.logger.warn('Sin CORE_API_URL: el catálogo de barrios no se carga');
       return;
@@ -46,6 +63,15 @@ export class NeighborhoodsCatalogService implements OnApplicationBootstrap, OnMo
   onModuleDestroy(): void {
     this.cerrado = true;
     clearTimeout(this.timer);
+  }
+
+  /** Una ruta mal puesta es un error de configuración: que el arranque falle y no que el endpoint dé 503 en silencio. */
+  private cargarArchivo(ruta: string): void {
+    const lista = JSON.parse(readFileSync(ruta, 'utf8')) as unknown;
+    const validos = Array.isArray(lista) ? lista.filter(esBarrio) : [];
+    if (!validos.length) throw new Error(`NEIGHBORHOODS_CATALOG_FILE sin barrios válidos: ${ruta}`);
+    this.barrios = validos;
+    this.logger.warn(`Catálogo de barrios LOCAL (${validos.length}) desde ${ruta}; no es el de M9`);
   }
 
   get disponible(): boolean {

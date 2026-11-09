@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Controller,
   Get,
@@ -15,7 +16,12 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto, UpdateVehicleDto, VehicleResponseDto, QueryVehiclesDto } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
@@ -58,6 +64,7 @@ export class VehiclesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @Idempotent()
   async create(
     @Body() dto: CreateVehicleDto,
     @CurrentUser() actor: AuthenticatedUser,
@@ -83,6 +90,7 @@ export class VehiclesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findAll(@Query() query: QueryVehiclesDto) {
     return this.vehiclesService.findAll(query);
   }
@@ -114,6 +122,7 @@ export class VehiclesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<VehicleResponseDto> {
     return this.vehiclesService.findOne(id);
   }

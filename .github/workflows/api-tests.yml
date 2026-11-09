@@ -1,0 +1,134 @@
+# ──────────────────────────────────────────────────────────────
+# api-tests — Contrato REST contra el backend real (#572).
+#   1. Newman: colección Postman versionada en test/api/ (éxito + error por endpoint).
+#   2. Schemathesis: respuestas contra docs/api/openapi.json.
+# Workflow aparte de ci.yml; no es check obligatorio de la branch protection.
+# ──────────────────────────────────────────────────────────────
+
+name: API tests
+
+on:
+  pull_request:
+    branches: [develop, test, main]
+  push:
+    branches: [develop, test, main]
+
+jobs:
+  api:
+    name: api (newman + schemathesis)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: m6
+          POSTGRES_PASSWORD: m6
+          POSTGRES_DB: m6_api
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U m6 -d m6_api"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://m6:m6@localhost:5432/m6_api?schema=public
+      JWT_ISSUER: modulo1-ciudadanos
+      NODE_ENV: development
+      PORT: 3000
+
+    steps:
+      # Secreto efímero de este job (base64 de 32 bytes): no hay ninguno literal en el repo.
+      - name: JWT_SECRET de prueba
+        run: |
+          S=$(openssl rand -base64 32)
+          echo "::add-mask::$S"
+          echo "JWT_SECRET=$S" >> "$GITHUB_ENV"
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Migrar y sembrar el seed de demo
+        run: |
+          npx prisma migrate deploy
+          npm run prisma:seed
+
+      - name: Build
+        run: npm run build
+
+      - name: Arrancar el backend
+        run: |
+          mkdir -p reports
+          # THROTTLE_LIMIT alto: el ThrottlerGuard global (#568, 600 req/min por IP) devolvería
+          # 429 a Newman y sobre todo a Schemathesis (miles de casos desde una sola IP).
+          # Inocuo si la variable todavía no existe.
+          # NEIGHBORHOODS_CATALOG_FILE: no hay M9 en el CI; el catálogo de barrios sale del snapshot versionado (#594).
+          NEIGHBORHOODS_CATALOG_FILE=prisma/data/m9-barrios.json THROTTLE_LIMIT=100000 node dist/main > reports/backend.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/health && exit 0
+            sleep 2
+          done
+          echo "::error::El backend no respondió en /health"
+          cat reports/backend.log
+          exit 1
+
+      - name: Tokens de prueba
+        run: |
+          echo "ADMIN_TOKEN=$(node test/api/make-token.mjs admin)" >> "$GITHUB_ENV"
+          echo "AUDITOR_TOKEN=$(node test/api/make-token.mjs auditor)" >> "$GITHUB_ENV"
+
+      - name: Newman
+        run: |
+          npx --yes newman@6.2.3 run test/api/m6.postman_collection.json \
+            -e test/api/m6.postman_environment.json \
+            --env-var "token=$ADMIN_TOKEN" --env-var "auditorToken=$AUDITOR_TOKEN" \
+            --reporters cli,junit --reporter-junit-export reports/newman.xml
+
+      # max-examples acotado para entrar en < 8 min. Solo GET: con datos al azar las
+      # escrituras mutarían la base que Newman ya usó y no aportan al contrato.
+      # Bloqueante: conformidad de esquema + sin 500/503.
+      - name: Schemathesis (esquema y errores de servidor)
+        run: |
+          docker run --rm --network host --user "$(id -u):$(id -g)" -v "$PWD:/w" -w /w schemathesis/schemathesis:4.33.1 \
+            run docs/api/openapi.json --url http://localhost:3000 \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            --checks response_schema_conformance,not_a_server_error \
+            --include-method GET \
+            --max-examples 15 --workers 2 \
+            --report junit --report-dir reports/schemathesis
+
+      # Bloqueante: todo GET con parámetros declara su 400 (H-1 resuelto, #593).
+      - name: Schemathesis (status_code_conformance)
+        run: |
+          docker run --rm --network host --user "$(id -u):$(id -g)" -v "$PWD:/w" -w /w schemathesis/schemathesis:4.33.1 \
+            run docs/api/openapi.json --url http://localhost:3000 \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            --checks status_code_conformance \
+            --include-method GET \
+            --max-examples 15 --workers 2 \
+            --report junit --report-dir reports/schemathesis-status
+
+      - name: Reportes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-reports
+          path: reports/
+          if-no-files-found: ignore

@@ -18,12 +18,14 @@ import {
   ApiBody,
   ApiHeader,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { EVIDENCE_UPLOAD } from '../../common/rate-limits';
 import { AttachmentsService } from './attachments.service';
 import { UploadEvidenceDto, EvidenceResponseDto, QueryEvidenceDto } from './dto';
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { MAX_EVIDENCE_SIZE_BYTES } from './evidence-mime';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiNotAssigned, CurrentUser, Roles } from '../../common/decorators';
+import { ApiNotAssigned, CurrentUser, Roles, ApiBadRequestParams } from '../../common/decorators';
 import { M6Role } from '@prisma/client';
 import { ROLES_CAMPO, ROLES_EVIDENCIA_LECTURA } from '../../auth/role-groups';
 
@@ -34,6 +36,7 @@ export class AttachmentsController {
   constructor(private readonly attachmentsService: AttachmentsService) {}
 
   @Post()
+  @Throttle({ default: EVIDENCE_UPLOAD })
   @ApiNotAssigned(
     'la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION)',
   )
@@ -63,8 +66,16 @@ export class AttachmentsController {
       required: ['file', 'ownerType', 'ownerId'],
       properties: {
         file: { type: 'string', format: 'binary' },
-        ownerType: { type: 'string', enum: Object.values(AttachmentOwnerType) },
-        ownerId: { type: 'string', format: 'uuid' },
+        ownerType: {
+          type: 'string',
+          enum: Object.values(AttachmentOwnerType),
+          example: AttachmentOwnerType.SERVICE,
+        },
+        ownerId: {
+          type: 'string',
+          format: 'uuid',
+          example: 'c3d4e5f6-a7b8-4012-8def-123456789012',
+        },
       },
     },
   })
@@ -84,6 +95,11 @@ export class AttachmentsController {
   @ApiResponse({
     status: 413,
     description: 'El archivo supera los 10 MB (lo corta multer antes de terminar de recibirlo)',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Demasiadas subidas desde la misma dirección en el último minuto',
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
@@ -127,6 +143,7 @@ export class AttachmentsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findByOwner(
     @Query() query: QueryEvidenceDto,
     @CurrentUser('roles') roles: M6Role[],
