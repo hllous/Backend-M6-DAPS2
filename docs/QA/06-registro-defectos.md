@@ -239,7 +239,6 @@ La regla G9 pide no omitir nada conocido. Estas pruebas **no se hicieron** (esta
 | Éxito por endpoint en los 92 endpoints restantes | NO HECHO | Hay caso de éxito en 60 de 152 operaciones; el resto está en `test/api/PENDIENTES.md` |
 | Apagar el broker de verdad | NO HECHO | Solo en la demo en vivo. El e2e de recuperación corta conexiones, no apaga el broker |
 | Mutation score global | NO HECHO | Medido solo en `outbound-requests` (84,21 %); no hay medición del dominio completo |
-| Firmas de tests por integrante y datos «A COMPLETAR» de `08-declaracion-ia.md` | NO HECHO | Solo el equipo puede completarlos |
 | Resultado de las alertas de CodeQL | NO VERIFICADO | El workflow corre y termina en `success`; no se revisó la pestaña de alertas |
 | Escaneo de secretos con trufflehog | NO HECHO | gitleaks sí se corre (03/11 y en cada PR) |
 

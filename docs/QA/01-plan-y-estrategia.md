@@ -23,7 +23,7 @@
 | Cobro y gestión de multas | HU `WON'T`: la sanción la decide M4 |
 | App mobile nativa para cuadrillas | HU `WON'T`: Campo usa la web responsive |
 | SOAP / WSDL, XXE en canal SOAP | **No aplica**: el módulo es REST/JSON más RabbitMQ; no expone ni consume SOAP |
-| Funcionalidad de IA dentro del sistema | No existe; el punto 8.3 de los criterios no aplica (ver `08-declaracion-ia.md`) |
+| Funcionalidad de IA dentro del sistema | No existe; el punto 8.3 de los criterios no aplica (ver la declaración de IA entregada en la Clase 14) |
 | Pruebas internas de M1, M2, M3, M4, M7, M9 | Son de cada grupo; acá se prueba el contrato con ellos |
 | Hash de contraseñas, login y fuerza bruta | El JWT lo emite M1 (ADR-004); M6 no guarda contraseñas |
 
@@ -174,4 +174,4 @@ La cátedra puede interrogar a cualquier integrante sobre cualquier test o defec
 
 ## 10. Documentos relacionados
 
-`02-historias-y-criterios.md` (HU), `03-matriz-trazabilidad.md`, `04-especificacion-casos.md`, `05-informe-ejecucion.md`, `06-registro-defectos.md`, `07-informe-seguridad.md`, `08-declaracion-ia.md`, `09-lecciones-aprendidas.md`. Fuentes técnicas: `docs/testing.md`, `docs/gestion/definition-of-done.md`, `.github/workflows/ci.yml`.
+`02-historias-y-criterios.md` (HU), `03-matriz-trazabilidad.md`, `04-especificacion-casos.md`, `05-informe-ejecucion.md`, `06-registro-defectos.md`, `07-informe-seguridad.md`, `09-lecciones-aprendidas.md`. Fuentes técnicas: `docs/testing.md`, `docs/gestion/definition-of-done.md`, `.github/workflows/ci.yml`.

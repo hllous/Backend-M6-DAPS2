@@ -117,7 +117,6 @@ Generado desde `git ls-files` + `git log -1` (fecha = último commit que tocó e
 | `docs/QA/05-informe-ejecucion.md` | 15551 | 2026-11-06 | Registro |
 | `docs/QA/06-registro-defectos.md` | 26167 | 2026-11-06 | Registro |
 | `docs/QA/07-informe-seguridad.md` | 25188 | 2026-11-06 | Explicación/Referencia |
-| `docs/QA/08-declaracion-ia.md` | 13612 | 2026-11-06 | Explicación |
 | `docs/QA/09-lecciones-aprendidas.md` | 10088 | 2026-11-03 | Explicación |
 | `docs/QA/README.md` | 3838 | 2026-11-03 | Referencia (índice) |
 | `docs/QA/manual-de-usuario.md` | 42575 | 2026-11-04 | How-to/Tutorial (usuarios finales) |

@@ -15,7 +15,7 @@
 | 4. Informe de ejecución | `05-informe-ejecucion.md` | Re-armado con las cifras medidas el 08/11; **Quality Gate y carga NO HECHOS** |
 | 5. Registro de defectos | `06-registro-defectos.md` | Actualizado: 24 defectos, 15 abiertos (**8 Mayores: el criterio de salida no se cumple**); a validar por el equipo |
 | 6. Informe de seguridad | `07-informe-seguridad.md` | Actualizado; **ZAP y Trivy NO HECHOS**; CORS y `BFF_SHARED_KEY` NO VERIFICABLES hasta verlos en Render |
-| 7. Declaración y plan de IA | `08-declaracion-ia.md` | Actualizada y reconciliada con la Gobernanza de IA del 03/11; **faltan datos del equipo** (firmas, prompts, alias, herramientas sin verificar) |
+| 7. Declaración y plan de IA | Gobernanza de IA (Clase 14), `Clase14_Grupo4_Ambiente_IA.pdf`: archivo entregado, no versionado en este repo | Entregado y aprobado por el profesor el 03/11. No se mantiene un documento propio en QA |
 | 8. Lecciones aprendidas | `09-lecciones-aprendidas.md` | Tres lecciones del 03/11 y tres candidatas nuevas; **la validación del equipo sigue pendiente** |
 | Manual de usuario (prueba «tarea al azar», Eje A) | `manual-de-usuario.md` | Borrador v0.4 (03/11); textos de UI por verificar (están marcados). Las capturas viven en `img/` (se referencian como `img/NN-nombre.png`) |
 
@@ -46,13 +46,13 @@ El script falla si falta alguno de los `01` a `09`, para no entregar un PDF inco
 | **G5 (Jira).** La cátedra pedía Jira actualizado con casos y defectos | **Cerrada.** Trello + GitHub Issues vale como reemplazo de Jira. Casos y defectos siguen en Issues y Trello con estado, responsable y vínculo a la HU | Confirmado por la cátedra por Teams (consulta cerrada antes del 09/11). El mensaje original no está versionado: lo informó el equipo |
 | **G1 (arranque local con `docker compose`).** Aclaración de la cátedra | **Cerrada e implementada.** Se acepta `cp .env.example .env` antes de `docker compose up` si `.env.example` está comentado y sin valores reales; el arranque corta con un mensaje claro si falta una variable (`${VAR:?...}`); el README dice qué completar y con qué usuarios se ingresa (en local no hay usuario: selector de perfiles del M1 falso); `.env` está en `.gitignore` y las credenciales no se imprimen en logs | Aclaración de la cátedra informada por el equipo el 08/11. Implementado en [#584](https://github.com/hllous/Backend-M6-DAPS2/pull/584) (issue #567): `docker-compose.yml` con `${VAR:?...}`, `README.md` (sección «Con Docker») y stack `modulo-6-ambiente`. Verificado el 08/11: `docker compose up` en frío, up en 35 s, `/health/ready` 200 a los 45 s. **Sigue abierto** el frontend dentro del compose ([#560](https://github.com/hllous/Backend-M6-DAPS2/issues/560)) |
 | **Manual de usuario.** Dónde vive y cómo se espeja | **Cerrada.** Vive en este repo y se espeja en el frontend (con `img/`). Issues espejo cerrados: [FE #818](https://github.com/hllous/Frontend-M6-DAPS2/issues/818) y [BE #528](https://github.com/hllous/Backend-M6-DAPS2/issues/528) (actualización por los cambios de la interfaz del 07/11) | Estado de los issues consultado con `gh` el 08/11. Que el manual quede al día con la UI **no se re-verificó** |
+| **Declaración de IA.** Si hace falta un documento propio en QA además de la Gobernanza de IA | **Cerrada.** La declaración ya fue entregada y aprobada por el profesor (Clase 14); se retiró `08-declaracion-ia.md` de QA | 09/11/2026, informado por el equipo |
 
 ## Pendientes (no cerrados)
 
 | Tema | Estado al 08/11 | Responsable |
 |---|---|---|
 | **Tag `v1.0-testing`** en `main`, backend y frontend, antes de las 13:30 del 10/11 | **NO HECHO** | Equipo (DevOps: Bautista Canteli Castro, según el rol del plan). Se propone hacerlo el 09/11 |
-| **Firma de tests generados con IA** y datos «A COMPLETAR» de `08-declaracion-ia.md` | **NO HECHO** | Cada integrante (la lista por persona está al principio del 08) |
 | **SonarCloud y Quality Gate** | **NO HECHO**: pide un administrador del repositorio (`hllous`) | Administrador del repositorio |
 | **Job `e2e` obligatorio** en la protección de ramas | **NO HECHO**: pide administrador; el e2e corre y pasa en el CI pero no bloquea (DEF-14) | Administrador del repositorio |
 | **Prueba de carga con k6** | Hay script (`test/perf/k6-criticos.js`); **cero resultados** (no se corrió) | Benjamin Martinez (Dev Backend) |
