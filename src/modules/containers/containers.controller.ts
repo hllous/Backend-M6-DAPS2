@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Controller,
   Get,
@@ -80,6 +81,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @Idempotent()
   async create(
     @Body() dto: CreateContainerDto,
     @CurrentUser() actor: AuthenticatedUser,

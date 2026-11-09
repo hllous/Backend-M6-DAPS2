@@ -24,9 +24,9 @@ async function bootstrap() {
   // cierra un CSRF — no habia uno. Evita que un sitio cualquiera use la API
   // desde el navegador de un usuario nuestro.
   const corsOrigins = configService.get<string[]>('corsOrigins');
-  // allowedHeaders sin definir: se refleja lo que pide el preflight, así que If-Match ya pasa.
-  // ETag hay que exponerlo para que el navegador deje al frontend leerlo (ADR-012).
-  const exposedHeaders = ['ETag'];
+  // allowedHeaders sin definir: se refleja lo que pide el preflight, así que If-Match e Idempotency-Key ya pasan.
+  // ETag (ADR-012) e Idempotency-Replayed (ADR-013) se exponen para que el frontend, en otro origen, pueda leerlos.
+  const exposedHeaders = ['ETag', 'Idempotency-Replayed'];
   app.enableCors({ ...(corsOrigins?.length ? { origin: corsOrigins } : {}), exposedHeaders });
   logger.log(
     corsOrigins?.length

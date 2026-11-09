@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Controller,
   Get,
@@ -71,6 +72,7 @@ export class ZonesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @Idempotent()
   async create(
     @Body() dto: CreateZoneDto,
     @CurrentUser() actor: AuthenticatedUser,

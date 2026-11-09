@@ -27,3 +27,5 @@ Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeraci�
 | [009](adr-009-rest-m6-a-m1-consultas-de-identidad.md) | REST de M6 a M1 solo para consultas de identidad, con el module-token del Core (excepción a ADR-006) | Aceptado | 2026-11-05 |
 | [010](adr-010-rate-limit-global.md) | Límite de tasa global con topes propios | Aceptado | 2026-11-08 |
 | [011](adr-011-errores-problem-details-rfc-9457.md) | Errores en Problem Details (RFC 9457) con los campos históricos como extensión | Aceptado | 2026-11-09 |
+| [012](adr-012-concurrencia-optimista-etag.md) | Concurrencia optimista con ETag e If-Match | Aceptado | 2026-11-09 |
+| [013](adr-013-idempotency-key.md) | `Idempotency-Key` opcional en los POST de creación | Aceptado | 2026-11-09 |

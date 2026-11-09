@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Body,
   Controller,
@@ -54,6 +55,7 @@ export class DisposalSitesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @Idempotent()
   async create(@Body() dto: CreateDisposalSiteDto): Promise<DisposalSiteResponseDto> {
     return this.disposalSitesService.create(dto);
   }

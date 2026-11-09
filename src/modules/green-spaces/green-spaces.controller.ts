@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Controller,
   Get,
@@ -62,6 +63,7 @@ export class GreenSpacesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @Idempotent()
   async create(@Body() dto: CreateGreenSpaceDto): Promise<GreenSpaceResponseDto> {
     return this.greenSpacesService.create(dto);
   }

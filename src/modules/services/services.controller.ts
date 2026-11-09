@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Body,
   Controller,
@@ -116,6 +117,7 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @Idempotent()
   async create(
     @Body() dto: CreateServiceDto,
     @CurrentUser() actor: AuthenticatedUser,
@@ -317,6 +319,7 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @Idempotent()
   async addDelayNotice(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateDelayNoticeDto,
@@ -643,6 +646,7 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @Idempotent()
   async addZoneResult(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateZoneResultDto,
@@ -719,6 +723,7 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @Idempotent()
   async addCollectionRecord(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateCollectionRecordDto,
