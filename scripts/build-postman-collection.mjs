@@ -249,7 +249,7 @@ ${pendientes.map(([e, m]) => `| \`${e}\` | ${m} |`).join('\n')}
 
 Defectos reales del backend frente a \`docs/api/openapi.json\` (corrida local, solo GET, #572). No se arreglan en esta rama.
 
-- **H-1, 400 no declarado:** más de 40 GET devuelven un 400 del \`ValidationPipe\` (query o parámetro inválido, propiedad no declarada) que el OpenAPI no lista (ST103). Ejemplo: \`GET /containers\` documenta 200/401/403/500. Por eso \`status_code_conformance\` corre como step informativo en \`api-tests.yml\`.
+- **H-1, 400 no declarado (resuelto, #593):** los GET con parámetros declaran el 400 con \`@ApiBadRequestParams()\`, lo exige \`openapi-contract.spec\` y el step \`status_code_conformance\` de \`api-tests.yml\` es bloqueante.
 - **H-2, 503 en \`GET /neighborhoods\`:** sin acceso al catálogo de M9 responde 503 (ST101, error de servidor). Se excluye del step bloqueante con \`--exclude-path /neighborhoods\`.
 `,
 );
