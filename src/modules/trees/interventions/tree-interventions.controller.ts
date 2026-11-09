@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { TreeInterventionsService } from './tree-interventions.service';
@@ -25,12 +26,14 @@ import {
   Roles,
   ApiBadRequestParams,
 } from '../../../common/decorators';
+import { ApiETag, ETagInterceptor, IfMatch } from '../../../common/etag';
 import { ROLES_OPERACIONES } from '../../../auth/role-groups';
 import { AuthenticatedUser } from '../../../auth/jwt.strategy';
 import { ApiAnyM6Role } from '../../../common/decorators/roles.decorator';
 
 @ApiTags('tree-interventions')
 @ApiBearerAuth('JWT-auth')
+@UseInterceptors(ETagInterceptor)
 @Controller('tree-interventions')
 export class TreeInterventionsController {
   constructor(private readonly treeInterventionsService: TreeInterventionsService) {}
@@ -83,6 +86,7 @@ export class TreeInterventionsController {
 
   @ApiAnyM6Role()
   @Get(':id')
+  @ApiETag()
   @ApiOperation({
     summary: 'Obtener una intervención por ID',
     description: 'Retorna el detalle de una intervención incluyendo los árboles afectados.',
@@ -104,6 +108,7 @@ export class TreeInterventionsController {
   // ─── Transiciones de estado ────────────────────────
 
   @Post(':id/submit-for-authorization')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -129,11 +134,13 @@ export class TreeInterventionsController {
   async submitForAuthorization(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.submitForAuthorization(id, actor);
+    return this.treeInterventionsService.submitForAuthorization(id, actor, ifMatch);
   }
 
   @Post(':id/authorize')
+  @ApiETag({ ifMatch: true })
   // Arriba de @Roles: Swagger se queda con el último decorador aplicado por status.
   @ApiResponse({
     status: 403,
@@ -162,11 +169,13 @@ export class TreeInterventionsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AuthorizeInterventionDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.authorize(id, dto, actor);
+    return this.treeInterventionsService.authorize(id, dto, actor, ifMatch);
   }
 
   @Post(':id/reject')
+  @ApiETag({ ifMatch: true })
   // Arriba de @Roles: Swagger se queda con el último decorador aplicado por status.
   @ApiResponse({
     status: 403,
@@ -194,8 +203,9 @@ export class TreeInterventionsController {
   async reject(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<TreeInterventionResponseDto> {
-    return this.treeInterventionsService.reject(id, actor);
+    return this.treeInterventionsService.reject(id, actor, ifMatch);
   }
 
   @Post(':id/assign-service')

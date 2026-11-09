@@ -27,6 +27,7 @@ import {
   QueryEnvironmentalReportsDto,
   RequestInformationDto,
 } from './dto';
+import { ifMatchWhere, isConditional, preconditionFailed } from '../../common/etag';
 import { PaginatedResponseDto } from '../../common/dto';
 
 /**
@@ -274,7 +275,11 @@ export class EnvironmentalReportsService {
   // ─── Acciones ─────────────────────────────────────
 
   /** RECEIVED → UNDER_REVIEW */
-  async startReview(id: string, actor: AuditActor): Promise<EnvironmentalReportResponseDto> {
+  async startReview(
+    id: string,
+    actor: AuditActor,
+    ifMatch?: string,
+  ): Promise<EnvironmentalReportResponseDto> {
     const report = await this.getReport(id);
     // Si agendar un servicio ya arrancó el ticket, repetir STARTED no es válido
     // para M2: el mismo aviso viaja como PROGRESS (#303). Desde un estado que no
@@ -293,6 +298,7 @@ export class EnvironmentalReportsService {
             publicMessage: 'Su denuncia ambiental está en análisis.',
           })
         : [],
+      ifMatch,
     );
   }
 
@@ -306,15 +312,24 @@ export class EnvironmentalReportsService {
     id: string,
     reason: string,
     actor: AuditActor,
+    ifMatch?: string,
   ): Promise<EnvironmentalReportResponseDto> {
     const report = this.assertNoPendingRequest(await this.getReport(id));
-    return this.transition(actor, 'FORWARD', report, S.FORWARDED, {}, [
-      ...this.ticketEvents(report, actor.actorId ?? null, {
-        updateType: 'RETURNED',
-        internalMessage: reason,
-        details: { returnInfo: { reasonCode: 'REQUEST_TYPE_MISMATCH' } },
-      }),
-    ]);
+    return this.transition(
+      actor,
+      'FORWARD',
+      report,
+      S.FORWARDED,
+      {},
+      [
+        ...this.ticketEvents(report, actor.actorId ?? null, {
+          updateType: 'RETURNED',
+          internalMessage: reason,
+          details: { returnInfo: { reasonCode: 'REQUEST_TYPE_MISMATCH' } },
+        }),
+      ],
+      ifMatch,
+    );
   }
 
   /** UNDER_REVIEW → DISMISSED. Se desestima sin inspección; hacia M2 va como REJECTED. */
@@ -322,15 +337,24 @@ export class EnvironmentalReportsService {
     id: string,
     reason: string,
     actor: AuditActor,
+    ifMatch?: string,
   ): Promise<EnvironmentalReportResponseDto> {
     const report = this.assertNoPendingRequest(await this.getReport(id));
-    return this.transition(actor, 'DISMISS', report, S.DISMISSED, {}, [
-      ...this.ticketEvents(report, actor.actorId ?? null, {
-        updateType: 'REJECTED',
-        internalMessage: reason,
-        details: { cancellation: { reasonCode: 'DOES_NOT_APPLY' } },
-      }),
-    ]);
+    return this.transition(
+      actor,
+      'DISMISS',
+      report,
+      S.DISMISSED,
+      {},
+      [
+        ...this.ticketEvents(report, actor.actorId ?? null, {
+          updateType: 'REJECTED',
+          internalMessage: reason,
+          details: { cancellation: { reasonCode: 'DOES_NOT_APPLY' } },
+        }),
+      ],
+      ifMatch,
+    );
   }
 
   /**
@@ -341,7 +365,11 @@ export class EnvironmentalReportsService {
    * `CANCELLED`, y §8.2 solo acepta `RESOLVED` desde `ROUTED` o `IN_PROGRESS`.
    * Además le diría "fue cerrada" al vecino después de "no corresponde" (#146).
    */
-  async close(id: string, actor: AuditActor): Promise<EnvironmentalReportResponseDto> {
+  async close(
+    id: string,
+    actor: AuditActor,
+    ifMatch?: string,
+  ): Promise<EnvironmentalReportResponseDto> {
     const report = this.assertNoPendingRequest(await this.getReport(id));
     const yaInformado = report.status === S.FORWARDED || report.status === S.DISMISSED;
     return this.transition(
@@ -357,6 +385,7 @@ export class EnvironmentalReportsService {
             publicMessage: 'Su denuncia ambiental fue cerrada.',
             details: { resolution: { type: 'ACTION_COMPLETED' } },
           }),
+      ifMatch,
     );
   }
 
@@ -546,36 +575,51 @@ export class EnvironmentalReportsService {
     target: S,
     data: Prisma.EnvironmentalReportUpdateInput = {},
     events: OutboxEntry[] = [],
+    // If-Match del request (ADR-012): se valida antes que el estado y hace atómico el UPDATE.
+    ifMatch?: string,
   ): Promise<EnvironmentalReportResponseDto> {
+    const stale = ifMatchWhere(ifMatch, report);
     this.assertTransition(report.status, target);
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.environmentalReport.update({
-        where: { id: report.id },
-        // La solicitud pendiente solo tiene sentido en UNDER_REVIEW: una marca que
-        // sobrevive al cambio de estado bloquearía todo pedido nuevo.
-        data: {
-          status: target,
-          ...(target !== S.UNDER_REVIEW && {
-            informationRequestedAt: null,
-            informationRequestMessage: null,
-            informationRequestRequiredBy: null,
-          }),
-          ...data,
-        },
-        include: WITH_ASSIGNED_CREW,
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        // Con If-Match, updatedAt va en el where: otra escritura en el medio da P2025 (412).
+        const row = await tx.environmentalReport.update({
+          where: { id: report.id, ...stale },
+          // La solicitud pendiente solo tiene sentido en UNDER_REVIEW: una marca que
+          // sobrevive al cambio de estado bloquearía todo pedido nuevo.
+          data: {
+            status: target,
+            ...(target !== S.UNDER_REVIEW && {
+              informationRequestedAt: null,
+              informationRequestMessage: null,
+              informationRequestRequiredBy: null,
+            }),
+            ...data,
+          },
+          include: WITH_ASSIGNED_CREW,
+        });
+        await this.audit.record(tx, {
+          entityType: 'ENVIRONMENTAL_REPORT',
+          entityId: report.id,
+          action,
+          fromStatus: report.status,
+          toStatus: target,
+          actor,
+        });
+        await this.outbox.enqueueMany(tx, events);
+        return row;
+      })
+      .catch((error: unknown) => {
+        if (
+          isConditional(ifMatch) &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          throw preconditionFailed();
+        }
+        throw error;
       });
-      await this.audit.record(tx, {
-        entityType: 'ENVIRONMENTAL_REPORT',
-        entityId: report.id,
-        action,
-        fromStatus: report.status,
-        toStatus: target,
-        actor,
-      });
-      await this.outbox.enqueueMany(tx, events);
-      return row;
-    });
 
     this.logger.log(`Expediente ${report.id}: ${report.status} → ${target}`);
     return this.toResponseDto(updated);

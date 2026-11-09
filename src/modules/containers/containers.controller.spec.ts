@@ -64,48 +64,53 @@ describe('ContainersController', () => {
   it('update delega id y dto', async () => {
     const dto = {} as UpdateContainerDto;
     await controller.update(ID, dto);
-    expect(service.update).toHaveBeenCalledWith(ID, dto);
+    expect(service.update).toHaveBeenCalledWith(ID, dto, undefined);
+  });
+
+  it('reportOverflow pasa el If-Match al service', async () => {
+    await controller.reportOverflow(ID, USER, 'W/"1"');
+    expect(service.reportOverflow).toHaveBeenCalledWith(ID, USER, 'W/"1"');
   });
 
   it('reportOverflow delega el id', async () => {
     await controller.reportOverflow(ID, USER);
-    expect(service.reportOverflow).toHaveBeenCalledWith(ID, USER);
+    expect(service.reportOverflow).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('reportDamage delega id y dto', async () => {
     const dto = {} as ReportDamageDto;
     await controller.reportDamage(ID, dto, USER);
-    expect(service.reportDamage).toHaveBeenCalledWith(ID, dto, USER);
+    expect(service.reportDamage).toHaveBeenCalledWith(ID, dto, USER, undefined);
   });
 
   it('empty delega el id', async () => {
     await controller.empty(ID, USER);
-    expect(service.empty).toHaveBeenCalledWith(ID, USER);
+    expect(service.empty).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('startRepair delega el id', async () => {
     await controller.startRepair(ID, USER);
-    expect(service.startRepair).toHaveBeenCalledWith(ID, USER);
+    expect(service.startRepair).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('completeRepair delega el id', async () => {
     await controller.completeRepair(ID, USER);
-    expect(service.completeRepair).toHaveBeenCalledWith(ID, USER);
+    expect(service.completeRepair).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('relocate delega el id', async () => {
     await controller.relocate(ID, USER);
-    expect(service.relocate).toHaveBeenCalledWith(ID, USER);
+    expect(service.relocate).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('confirmRelocation delega id y dto', async () => {
     const dto = {} as ConfirmRelocationDto;
     await controller.confirmRelocation(ID, dto, USER);
-    expect(service.confirmRelocation).toHaveBeenCalledWith(ID, dto, USER);
+    expect(service.confirmRelocation).toHaveBeenCalledWith(ID, dto, USER, undefined);
   });
 
   it('remove delega el id', async () => {
     await controller.remove(ID, USER);
-    expect(service.remove).toHaveBeenCalledWith(ID, USER);
+    expect(service.remove).toHaveBeenCalledWith(ID, USER, undefined);
   });
 });

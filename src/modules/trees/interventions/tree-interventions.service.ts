@@ -21,6 +21,7 @@ import {
   TreeInterventionResponseDto,
   AuthorizeInterventionDto,
 } from './dto';
+import { ifMatchWhere, isConditional, preconditionFailed } from '../../../common/etag';
 import { PaginatedResponseDto } from '../../../common/dto';
 import { roleRequiredException } from '../../../common/decorators';
 
@@ -155,6 +156,7 @@ export class TreeInterventionsService {
   async submitForAuthorization(
     id: string,
     actor: AuditActor,
+    ifMatch?: string,
   ): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
 
@@ -169,6 +171,8 @@ export class TreeInterventionsService {
       'SUBMIT_FOR_AUTHORIZATION',
       intervention,
       TreeInterventionStatus.PENDING_AUTHORIZATION,
+      {},
+      ifMatch,
     );
   }
 
@@ -179,6 +183,7 @@ export class TreeInterventionsService {
     id: string,
     dto: AuthorizeInterventionDto,
     actor: AuditActor,
+    ifMatch?: string,
   ): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
     this.assertCanDecideRemoval(intervention, actor.userId, actor.roles);
@@ -195,21 +200,39 @@ export class TreeInterventionsService {
       );
     }
 
-    return this.transition(actor, 'AUTHORIZE', intervention, TreeInterventionStatus.AUTHORIZED, {
-      // Quién autoriza lo dice el token, nunca el body (dto.authorizedByUserId está deprecado e ignorado).
-      authorizedByUserId: actor.userId,
-      authorizedAt: new Date(),
-      ...(dto.justification && { justification: dto.justification }),
-    });
+    return this.transition(
+      actor,
+      'AUTHORIZE',
+      intervention,
+      TreeInterventionStatus.AUTHORIZED,
+      {
+        // Quién autoriza lo dice el token, nunca el body (dto.authorizedByUserId está deprecado e ignorado).
+        authorizedByUserId: actor.userId,
+        authorizedAt: new Date(),
+        ...(dto.justification && { justification: dto.justification }),
+      },
+      ifMatch,
+    );
   }
 
   /**
    * PENDING_AUTHORIZATION → REJECTED.
    */
-  async reject(id: string, actor: AuditActor): Promise<TreeInterventionResponseDto> {
+  async reject(
+    id: string,
+    actor: AuditActor,
+    ifMatch?: string,
+  ): Promise<TreeInterventionResponseDto> {
     const intervention = await this.getIntervention(id);
     this.assertCanDecideRemoval(intervention, actor.userId, actor.roles);
-    return this.transition(actor, 'REJECT', intervention, TreeInterventionStatus.REJECTED);
+    return this.transition(
+      actor,
+      'REJECT',
+      intervention,
+      TreeInterventionStatus.REJECTED,
+      {},
+      ifMatch,
+    );
   }
 
   /**
@@ -321,7 +344,10 @@ export class TreeInterventionsService {
     intervention: any,
     targetStatus: TreeInterventionStatus,
     additionalData: Record<string, any> = {},
+    // If-Match del request (ADR-012): se valida antes que el estado y hace atómico el UPDATE.
+    ifMatch?: string,
   ): Promise<TreeInterventionResponseDto> {
+    const stale = ifMatchWhere(ifMatch, intervention);
     const currentStatus = intervention.status as TreeInterventionStatus;
     const allowed = VALID_TRANSITIONS[currentStatus] ?? [];
     if (!allowed.includes(targetStatus)) {
@@ -330,22 +356,34 @@ export class TreeInterventionsService {
       );
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.treeIntervention.update({
-        where: { id: intervention.id },
-        data: { status: targetStatus, ...additionalData },
-        include: { trees: true },
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        const row = await tx.treeIntervention.update({
+          // Sin If-Match no hay guard de estado (como antes); con él, updatedAt en el where.
+          where: { id: intervention.id, ...stale },
+          data: { status: targetStatus, ...additionalData },
+          include: { trees: true },
+        });
+        await this.audit.record(tx, {
+          entityType: 'TREE_INTERVENTION',
+          entityId: intervention.id,
+          action,
+          fromStatus: currentStatus,
+          toStatus: targetStatus,
+          actor,
+        });
+        return row;
+      })
+      .catch((error: unknown) => {
+        if (
+          isConditional(ifMatch) &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          throw preconditionFailed();
+        }
+        throw error;
       });
-      await this.audit.record(tx, {
-        entityType: 'TREE_INTERVENTION',
-        entityId: intervention.id,
-        action,
-        fromStatus: currentStatus,
-        toStatus: targetStatus,
-        actor,
-      });
-      return row;
-    });
 
     this.logger.log(
       `Intervención ${intervention.id}: ${intervention.status} → ${targetStatus} (usuario ${actor.userId})`,
