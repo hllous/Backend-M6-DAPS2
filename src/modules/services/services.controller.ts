@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -40,6 +41,7 @@ import {
 } from './dto';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiETag, ETagInterceptor, IfMatch } from '../../common/etag';
 import { ApiNotAssigned, ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
@@ -55,6 +57,7 @@ const NOT_FOUND = { status: 404, description: 'Servicio no encontrado', type: Er
 
 @ApiTags('services')
 @ApiBearerAuth('JWT-auth')
+@UseInterceptors(ETagInterceptor)
 @Controller('services')
 export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
@@ -136,6 +139,7 @@ export class ServicesController {
 
   @ApiAnyM6Role()
   @Get(':id')
+  @ApiETag()
   @ApiOperation({
     summary: 'Obtener un servicio por ID',
     description:
@@ -337,6 +341,7 @@ export class ServicesController {
   // ─── Ejecución ────────────────────────────────────
 
   @Post(':id/start')
+  @ApiETag({ ifMatch: true })
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
@@ -358,11 +363,13 @@ export class ServicesController {
   async start(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.start(id, actor);
+    return this.servicesService.start(id, actor, ifMatch);
   }
 
   @Post(':id/suspend')
+  @ApiETag({ ifMatch: true })
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
@@ -394,11 +401,13 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SuspendServiceDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.suspend(id, actor, dto.reason, dto.note);
+    return this.servicesService.suspend(id, actor, dto.reason, dto.note, ifMatch);
   }
 
   @Post(':id/resume')
+  @ApiETag({ ifMatch: true })
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
@@ -416,11 +425,13 @@ export class ServicesController {
   async resume(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.resume(id, actor);
+    return this.servicesService.resume(id, actor, ifMatch);
   }
 
   @Post(':id/complete')
+  @ApiETag({ ifMatch: true })
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
@@ -459,11 +470,13 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CompleteServiceDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.complete(id, dto, actor);
+    return this.servicesService.complete(id, dto, actor, ifMatch);
   }
 
   @Post(':id/cancel')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiBody({
@@ -494,11 +507,13 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StatusChangeDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.cancel(id, dto.reason, actor);
+    return this.servicesService.cancel(id, dto.reason, actor, ifMatch);
   }
 
   @Post(':id/reschedule')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiBody({
@@ -530,11 +545,13 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StatusChangeDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.reschedule(id, dto.reason, actor);
+    return this.servicesService.reschedule(id, dto.reason, actor, ifMatch);
   }
 
   @Post(':id/confirm-reschedule')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiBody({
@@ -570,8 +587,9 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ConfirmRescheduleDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.confirmReschedule(id, dto, actor);
+    return this.servicesService.confirmReschedule(id, dto, actor, ifMatch);
   }
 
   // ─── Resultado por zona ───────────────────────────

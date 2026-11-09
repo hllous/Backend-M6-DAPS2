@@ -82,22 +82,22 @@ describe('EnvironmentalReportsController', () => {
 
   it('startReview delega id y userId', async () => {
     await controller.startReview(ID, USER);
-    expect(service.startReview).toHaveBeenCalledWith(ID, USER);
+    expect(service.startReview).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('forward delega id, motivo y userId', async () => {
     await controller.forward(ID, { reason: 'no compete' } as ReportStatusChangeDto, USER);
-    expect(service.forward).toHaveBeenCalledWith(ID, 'no compete', USER);
+    expect(service.forward).toHaveBeenCalledWith(ID, 'no compete', USER, undefined);
   });
 
   it('dismiss delega id, motivo y userId', async () => {
     await controller.dismiss(ID, { reason: 'sin mérito' } as ReportStatusChangeDto, USER);
-    expect(service.dismiss).toHaveBeenCalledWith(ID, 'sin mérito', USER);
+    expect(service.dismiss).toHaveBeenCalledWith(ID, 'sin mérito', USER, undefined);
   });
 
   it('close delega id y userId', async () => {
     await controller.close(ID, USER);
-    expect(service.close).toHaveBeenCalledWith(ID, USER);
+    expect(service.close).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('requestInformation delega el id, el dto y el actor', async () => {

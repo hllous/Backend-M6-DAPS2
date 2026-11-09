@@ -5682,6 +5682,15 @@
         "responses": {
           "200": {
             "description": "Contenedor encontrado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -5971,11 +5980,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Desborde registrado. Retorna el contenedor actualizado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -6024,6 +6051,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -6060,6 +6097,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -6075,6 +6121,15 @@
         "responses": {
           "200": {
             "description": "Daño registrado. Retorna el contenedor actualizado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -6133,6 +6188,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -6169,11 +6234,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Vaciado registrado. Retorna el contenedor actualizado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -6222,6 +6305,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -6258,11 +6351,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Reparación iniciada. Retorna el contenedor actualizado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -6311,6 +6422,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -6347,11 +6468,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Reparación completada. Retorna el contenedor actualizado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -6400,6 +6539,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -6436,11 +6585,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Reubicación iniciada. Retorna el contenedor actualizado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -6489,6 +6656,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -6525,6 +6702,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -6540,6 +6726,15 @@
         "responses": {
           "200": {
             "description": "Reubicación confirmada. Retorna el contenedor con la nueva ubicación",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -6598,6 +6793,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -6634,11 +6839,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Contenedor retirado. Retorna el contenedor en estado REMOVED",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -6679,6 +6902,16 @@
           },
           "409": {
             "description": "Transición inválida (solo se puede retirar desde DAMAGED; un ACTIVE debe reportarse dañado primero)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {
@@ -7814,6 +8047,15 @@
         "responses": {
           "200": {
             "description": "Intervención encontrada",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -7888,11 +8130,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Enviada a autorización",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -7951,6 +8211,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -7987,6 +8257,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -8002,6 +8281,15 @@
         "responses": {
           "200": {
             "description": "Intervención autorizada",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -8042,6 +8330,16 @@
           },
           "409": {
             "description": "Transición inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {
@@ -8086,11 +8384,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Intervención rechazada",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -8131,6 +8447,16 @@
           },
           "409": {
             "description": "Transición inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {
@@ -9625,6 +9951,15 @@
         "responses": {
           "200": {
             "description": "Servicio encontrado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -10222,11 +10557,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Servicio iniciado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -10275,6 +10628,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10311,6 +10674,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -10335,6 +10707,15 @@
         "responses": {
           "200": {
             "description": "Servicio suspendido",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -10393,6 +10774,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10429,11 +10820,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Servicio reanudado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -10482,6 +10891,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10518,6 +10937,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -10539,6 +10967,15 @@
         "responses": {
           "200": {
             "description": "Servicio cerrado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -10597,6 +11034,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10633,6 +11080,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -10656,6 +11112,15 @@
         "responses": {
           "200": {
             "description": "Servicio cancelado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -10706,6 +11171,16 @@
           },
           "409": {
             "description": "Transición inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {
@@ -10750,6 +11225,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -10773,6 +11257,15 @@
         "responses": {
           "200": {
             "description": "Servicio marcado para reprogramar",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -10831,6 +11324,16 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno del servidor",
             "content": {
@@ -10867,6 +11370,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -10892,6 +11404,15 @@
         "responses": {
           "200": {
             "description": "Servicio reprogramado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -10942,6 +11463,16 @@
           },
           "409": {
             "description": "Transición inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {
@@ -12333,6 +12864,15 @@
         "responses": {
           "200": {
             "description": "Expediente encontrado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -12407,11 +12947,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Expediente en análisis",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -12452,6 +13010,16 @@
           },
           "409": {
             "description": "Transición inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {
@@ -12496,6 +13064,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -12519,6 +13096,15 @@
         "responses": {
           "200": {
             "description": "Expediente derivado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -12569,6 +13155,16 @@
           },
           "409": {
             "description": "Transición inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {
@@ -12613,6 +13209,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -12636,6 +13241,15 @@
         "responses": {
           "200": {
             "description": "Expediente desestimado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -12686,6 +13300,16 @@
           },
           "409": {
             "description": "Transición inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {
@@ -12849,11 +13473,29 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Expediente cerrado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -12894,6 +13536,16 @@
           },
           "409": {
             "description": "Transición inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {

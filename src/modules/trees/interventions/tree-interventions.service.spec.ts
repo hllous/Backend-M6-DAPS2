@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   NotFoundException,
+  PreconditionFailedException,
 } from '@nestjs/common';
 import {
   M6Role,
@@ -14,6 +15,7 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ACTOR } from '../../../common/audit/audit-test-actor';
 import { AuditService } from '../../../common/audit/audit.service';
+import { etagOf } from '../../../common/etag';
 import { TreeInterventionsService } from './tree-interventions.service';
 import { QueryTreeInterventionsDto } from './dto';
 
@@ -496,6 +498,50 @@ describe('TreeInterventionsService', () => {
         ConflictException,
       );
       expect(audit.record).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── If-Match (ADR-012) ─────────────────────────────
+
+  describe('If-Match', () => {
+    const vigente = etagOf(intervencion().updatedAt as Date);
+    const pendiente = () => intervencion({ status: I.PENDING_AUTHORIZATION });
+
+    it('con un ETag viejo da 412 y no escribe ni audita', async () => {
+      prisma.treeIntervention.findUnique.mockResolvedValue(pendiente());
+      await expect(service.reject(ID, actorOf('user-7', ADMIN), 'W/"1"')).rejects.toBeInstanceOf(
+        PreconditionFailedException,
+      );
+      expect(prisma.treeIntervention.update).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('con el vigente condiciona el UPDATE por updatedAt', async () => {
+      prisma.treeIntervention.findUnique.mockResolvedValue(pendiente());
+      await service.reject(ID, actorOf('user-7', ADMIN), vigente);
+      expect(prisma.treeIntervention.update.mock.calls[0][0].where).toEqual({
+        id: ID,
+        updatedAt: intervencion().updatedAt,
+      });
+    });
+
+    it('sin If-Match el where no cambia', async () => {
+      prisma.treeIntervention.findUnique.mockResolvedValue(pendiente());
+      await service.reject(ID, actorOf('user-7', ADMIN));
+      expect(prisma.treeIntervention.update.mock.calls[0][0].where).toEqual({ id: ID });
+    });
+
+    it('P2025 con If-Match da 412; sin If-Match se propaga tal cual', async () => {
+      const err = new Prisma.PrismaClientKnownRequestError('x', {
+        code: 'P2025',
+        clientVersion: '5',
+      });
+      prisma.treeIntervention.findUnique.mockResolvedValue(pendiente());
+      prisma.treeIntervention.update.mockRejectedValue(err);
+      await expect(service.reject(ID, actorOf('user-7', ADMIN), vigente)).rejects.toBeInstanceOf(
+        PreconditionFailedException,
+      );
+      await expect(service.reject(ID, actorOf('user-7', ADMIN))).rejects.toBe(err);
     });
   });
 });

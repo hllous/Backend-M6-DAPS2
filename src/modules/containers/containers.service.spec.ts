@@ -1,9 +1,10 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException, PreconditionFailedException } from '@nestjs/common';
 import { Container, ContainerStatus as C, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ACTOR } from '../../common/audit/audit-test-actor';
 import { AuditService } from '../../common/audit/audit.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
+import { etagOf } from '../../common/etag';
 import { CONTAINER_TRANSITIONS, ContainersService } from './containers.service';
 
 const ID = '22222222-2222-2222-2222-222222222222';
@@ -103,6 +104,48 @@ describe('ContainersService', () => {
       for (const estado of [C.OVERFLOWED, C.UNDER_REPAIR, C.RELOCATING]) {
         expect(CONTAINER_TRANSITIONS[estado]).toContain(C.ACTIVE);
       }
+    });
+  });
+
+  // ─── If-Match (ADR-012) ─────────────────────────────
+
+  describe('If-Match', () => {
+    const vigente = etagOf(contenedor().updatedAt);
+
+    it('con el ETag vigente aplica y condiciona el UPDATE por updatedAt', async () => {
+      await service.reportOverflow(ID, ACTOR, vigente);
+      expect(prisma.container.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: ID, status: C.ACTIVE, updatedAt: contenedor().updatedAt },
+        }),
+      );
+    });
+
+    it('con un ETag viejo da 412 antes de escribir historial, auditoría o eventos', async () => {
+      await expect(service.reportOverflow(ID, ACTOR, 'W/"1"')).rejects.toBeInstanceOf(
+        PreconditionFailedException,
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('si otro request escribió entre la lectura y el UPDATE (P2025) da 412', async () => {
+      prisma.container.update.mockRejectedValue(prismaError('P2025'));
+      await expect(service.reportOverflow(ID, ACTOR, vigente)).rejects.toBeInstanceOf(
+        PreconditionFailedException,
+      );
+    });
+
+    it('sin If-Match el P2025 sigue siendo 409 y el where no lleva updatedAt', async () => {
+      prisma.container.update.mockRejectedValue(prismaError('P2025'));
+      await expect(service.reportOverflow(ID, ACTOR)).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('"*" pasa sin condicionar', async () => {
+      await service.reportOverflow(ID, ACTOR, '*');
+      expect(prisma.container.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: ID, status: C.ACTIVE } }),
+      );
     });
   });
 

@@ -54,6 +54,7 @@ import {
   ZoneResultResponseDto,
   CollectionRecordResponseDto,
 } from './dto';
+import { ifMatchWhere, isConditional, preconditionFailed } from '../../common/etag';
 import { PaginatedResponseDto } from '../../common/dto';
 import { notAssignedException } from '../../common/decorators';
 import { belongsToCrew } from '../../common/ownership';
@@ -671,7 +672,7 @@ export class ServicesService {
    * No se puede iniciar sin cuadrilla, ni sin vehículo si el tipo de servicio
    * lo exige: es el caso que el propio estándar Swagger usa como ejemplo de 409.
    */
-  async start(id: string, actor: AuditActor): Promise<ServiceResponseDto> {
+  async start(id: string, actor: AuditActor, ifMatch?: string): Promise<ServiceResponseDto> {
     // Un servicio sin cuadrilla también cae acá (403): nadie es "de su cuadrilla".
     const current = await this.assertCrewMember(await this.getService(id), actor.userId);
 
@@ -703,6 +704,8 @@ export class ServicesService {
             publicMessage: 'La cuadrilla comenzó a atender su reclamo.',
           })
         : [],
+      undefined,
+      ifMatch,
     );
   }
 
@@ -712,6 +715,7 @@ export class ServicesService {
     actor: AuditActor,
     reason: string,
     note?: string,
+    ifMatch?: string,
   ): Promise<ServiceResponseDto> {
     const current = await this.assertCrewMember(await this.getService(id), actor.userId);
     return this.transition(
@@ -725,11 +729,12 @@ export class ServicesService {
       },
       [],
       reason,
+      ifMatch,
     );
   }
 
   /** SUSPENDED → IN_PROGRESS */
-  async resume(id: string, actor: AuditActor): Promise<ServiceResponseDto> {
+  async resume(id: string, actor: AuditActor, ifMatch?: string): Promise<ServiceResponseDto> {
     const current = await this.assertCrewMember(await this.getService(id), actor.userId);
     // IN_PROGRESS también se alcanza desde SCHEDULED, pero eso es `start` (que
     // exige cuadrilla y vehículo): `resume` solo retoma lo que se suspendió.
@@ -738,10 +743,16 @@ export class ServicesService {
         `No se puede pasar de '${current.status}' a '${ServiceStatus.IN_PROGRESS}'. Transiciones válidas desde '${current.status}': [${VALID_TRANSITIONS[current.status].join(', ') || 'ninguna, es un estado final'}]. resume solo aplica desde '${ServiceStatus.SUSPENDED}'`,
       );
     }
-    return this.transition(actor, 'RESUME', current, ServiceStatus.IN_PROGRESS, {
-      statusReason: null,
-      statusNote: null,
-    });
+    return this.transition(
+      actor,
+      'RESUME',
+      current,
+      ServiceStatus.IN_PROGRESS,
+      { statusReason: null, statusNote: null },
+      [],
+      undefined,
+      ifMatch,
+    );
   }
 
   /**
@@ -755,6 +766,7 @@ export class ServicesService {
     id: string,
     dto: CompleteServiceDto,
     actor: AuditActor,
+    ifMatch?: string,
   ): Promise<ServiceResponseDto> {
     const current = await this.assertCrewMember(await this.getService(id), actor.userId);
 
@@ -772,6 +784,7 @@ export class ServicesService {
     const target = allServiced ? ServiceStatus.COMPLETED : ServiceStatus.PARTIALLY_COMPLETED;
     this.assertTransition(current.status, target);
 
+    const stale = ifMatchWhere(ifMatch, current);
     const containerUpdate = await this.resolveContainerOutcome(current, target, dto);
 
     // Las dos escrituras van juntas: si el contenedor no se puede actualizar, el
@@ -789,7 +802,7 @@ export class ServicesService {
     const updated = await this.prisma
       .$transaction(async (tx) => {
         const row = await tx.service.update({
-          where: { id: current.id, status: current.status },
+          where: { id: current.id, status: current.status, ...stale },
           data: { status: target },
           include: SERVICE_INCLUDE,
         });
@@ -826,6 +839,8 @@ export class ServicesService {
       })
       .catch((error: unknown) => {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          // Con If-Match, updatedAt va en el where del servicio: sin fila es "versión vieja".
+          if (isConditional(ifMatch)) throw preconditionFailed();
           throw new ConflictException(
             `El servicio '${current.id}' o el contenedor que atiende cambió de estado mientras se cerraba; reintentar`,
           );
@@ -930,7 +945,12 @@ export class ServicesService {
   }
 
   /** SCHEDULED | RESCHEDULED | SUSPENDED → CANCELLED */
-  async cancel(id: string, reason: string, actor: AuditActor): Promise<ServiceResponseDto> {
+  async cancel(
+    id: string,
+    reason: string,
+    actor: AuditActor,
+    ifMatch?: string,
+  ): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     return this.transition(
       actor,
@@ -945,6 +965,7 @@ export class ServicesService {
         details: { cancellation: { reasonCode: 'OTHER' } },
       }),
       reason,
+      ifMatch,
     );
   }
 
@@ -955,7 +976,12 @@ export class ServicesService {
    * estado en el que caen los servicios cuando llega una alerta meteorológica
    * o M7 rechaza un corte de calle. La fecha se pone con confirmReschedule.
    */
-  async reschedule(id: string, reason: string, actor: AuditActor): Promise<ServiceResponseDto> {
+  async reschedule(
+    id: string,
+    reason: string,
+    actor: AuditActor,
+    ifMatch?: string,
+  ): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     return this.transition(
       actor,
@@ -965,6 +991,7 @@ export class ServicesService {
       { statusReason: reason },
       [],
       reason,
+      ifMatch,
     );
   }
 
@@ -978,6 +1005,7 @@ export class ServicesService {
     id: string,
     dto: ConfirmRescheduleDto,
     actor: AuditActor,
+    ifMatch?: string,
   ): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
     this.assertWindowOrder(dto.windowFrom, dto.windowTo);
@@ -1010,6 +1038,8 @@ export class ServicesService {
         ...(dto.windowTo !== undefined && { windowTo }),
       },
       events,
+      undefined,
+      ifMatch,
     );
   }
 
@@ -1409,7 +1439,10 @@ export class ServicesService {
     events: OutboxEntry[] = [],
     // El motivo que la acción ya pide (suspender, cancelar, reprogramar).
     note?: string,
+    // If-Match del request (ADR-012): se valida antes que el estado y hace atómico el UPDATE.
+    ifMatch?: string,
   ): Promise<ServiceResponseDto> {
+    const stale = ifMatchWhere(ifMatch, current);
     this.assertTransition(current.status, targetStatus);
 
     const updated = await this.prisma
@@ -1417,7 +1450,7 @@ export class ServicesService {
         // El estado leído va en el where: si otro request lo movió en el medio
         // (p. ej. dos resume), el segundo falla en vez de repetir la acción.
         const row = await tx.service.update({
-          where: { id: current.id, status: current.status },
+          where: { id: current.id, status: current.status, ...stale },
           data: { status: targetStatus, ...additionalData },
           include: SERVICE_INCLUDE,
         });
@@ -1435,6 +1468,7 @@ export class ServicesService {
       })
       .catch((error: unknown) => {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          if (isConditional(ifMatch)) throw preconditionFailed();
           throw new ConflictException(
             `El servicio '${current.id}' cambió de estado mientras se procesaba la acción; reintentar`,
           );

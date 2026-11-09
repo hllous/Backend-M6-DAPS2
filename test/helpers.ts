@@ -190,10 +190,11 @@ export class Api {
     return bearer(this.token ?? tokenDe(actorPara(method, path)));
   }
 
-  post(path: string, body?: unknown) {
+  post(path: string, body?: unknown, headers: Record<string, string> = {}) {
     return request(this.app.getHttpServer())
       .post(path)
       .set(this.auth('POST', path))
+      .set(headers)
       .send(body ?? {});
   }
 
