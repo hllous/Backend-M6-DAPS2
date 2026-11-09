@@ -1177,7 +1177,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -1374,7 +1374,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -2056,7 +2056,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -2195,7 +2195,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -2274,7 +2274,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -2581,7 +2581,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -2704,7 +2704,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -2783,7 +2783,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -3090,7 +3090,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -3208,7 +3208,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -3287,7 +3287,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -3703,7 +3703,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -3849,7 +3849,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -3928,7 +3928,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -4259,7 +4259,7 @@
           "409": {
             "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -4514,7 +4514,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -5128,7 +5128,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -5268,7 +5268,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -5382,7 +5382,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -5461,7 +5461,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -5788,7 +5788,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -5930,7 +5930,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -6018,7 +6018,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -6173,7 +6173,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -6271,7 +6271,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -6418,7 +6418,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -6555,7 +6555,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -6672,7 +6672,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -6789,7 +6789,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -6906,7 +6906,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -7023,7 +7023,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -7160,7 +7160,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -7277,7 +7277,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -7397,7 +7397,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -7607,7 +7607,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -7924,7 +7924,7 @@
           "409": {
             "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -7934,7 +7934,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -8063,7 +8063,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -8162,7 +8162,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -8302,7 +8302,7 @@
           "409": {
             "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -8312,7 +8312,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -8546,7 +8546,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -8703,7 +8703,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -8830,7 +8830,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -8947,7 +8947,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -9166,7 +9166,7 @@
           "409": {
             "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -9176,7 +9176,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -9311,7 +9311,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -9390,7 +9390,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -9707,7 +9707,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -9841,7 +9841,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -9920,7 +9920,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -10252,7 +10252,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -10576,7 +10576,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -10741,7 +10741,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -10938,7 +10938,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -11108,7 +11108,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -11168,7 +11168,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -11315,7 +11315,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -11461,7 +11461,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -11578,7 +11578,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -11721,7 +11721,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -11866,7 +11866,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -12011,7 +12011,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -12158,7 +12158,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -12300,7 +12300,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -12360,7 +12360,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -12531,7 +12531,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -12591,7 +12591,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -12751,7 +12751,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -12811,7 +12811,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -12900,7 +12900,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -13210,7 +13210,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -13354,7 +13354,7 @@
           "409": {
             "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -13364,7 +13364,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -13713,7 +13713,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -13860,7 +13860,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -14005,7 +14005,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -14150,7 +14150,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -14386,7 +14386,7 @@
           "412": {
             "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -14506,7 +14506,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -14647,7 +14647,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -14726,7 +14726,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -15064,7 +15064,7 @@
           "422": {
             "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -15176,7 +15176,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -15255,7 +15255,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -15641,7 +15641,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -15784,7 +15784,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -15887,7 +15887,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
@@ -16169,7 +16169,7 @@
           "400": {
             "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 }
