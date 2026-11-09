@@ -13,11 +13,10 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { SwaggerModule } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { buildSwaggerConfig } from '../src/swagger-config';
+import { createOpenApiDocument } from '../src/swagger-config';
 
 // El esquema de entorno exige estas dos. Son de mentira a propósito: generar el
 // contrato no toca la base ni firma ningún token.
@@ -35,7 +34,7 @@ async function main() {
     .compile();
 
   const app = moduleRef.createNestApplication();
-  const document = SwaggerModule.createDocument(app, buildSwaggerConfig());
+  const document = createOpenApiDocument(app);
 
   writeFileSync(SALIDA, `${JSON.stringify(document, null, 2)}\n`, 'utf-8');
   await app.close();

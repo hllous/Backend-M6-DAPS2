@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  HttpException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { HttpExceptionFilter } from './http-exception.filter';
@@ -10,11 +11,13 @@ import { HttpExceptionFilter } from './http-exception.filter';
 describe('HttpExceptionFilter', () => {
   const filter = new HttpExceptionFilter();
   let json: jest.Mock;
+  let type: jest.Mock;
   let host: ArgumentsHost;
 
   beforeEach(() => {
     json = jest.fn();
-    const status = jest.fn(() => ({ json }));
+    type = jest.fn(() => ({ json }));
+    const status = jest.fn(() => ({ type }));
     host = {
       switchToHttp: () => ({
         getResponse: () => ({ status }),
@@ -37,7 +40,7 @@ describe('HttpExceptionFilter', () => {
   });
 
   it('no devuelve en path los tokens de la query', () => {
-    const status = jest.fn(() => ({ json }));
+    const status = jest.fn(() => ({ type }));
     const h = {
       switchToHttp: () => ({
         getResponse: () => ({ status }),
@@ -87,6 +90,79 @@ describe('HttpExceptionFilter', () => {
     expect(captured()).toMatchObject({
       statusCode: 500,
       error: 'Internal Server Error',
+    });
+  });
+
+  describe('Problem Details RFC 9457 (ADR-011)', () => {
+    it('responde application/problem+json con los campos RFC y los históricos', () => {
+      filter.catch(new NotFoundException('Contenedor no encontrado'), host);
+
+      expect(type).toHaveBeenCalledWith('application/problem+json');
+      expect(captured()).toEqual({
+        type: 'about:blank',
+        title: 'Not Found',
+        status: 404,
+        detail: 'Contenedor no encontrado',
+        instance: '/containers/abc',
+        statusCode: 404,
+        message: 'Contenedor no encontrado',
+        error: 'Not Found',
+        timestamp: expect.any(String),
+        path: '/containers/abc',
+      });
+    });
+
+    it('instance sale redactada igual que path', () => {
+      const status = jest.fn(() => ({ type }));
+      const h = {
+        switchToHttp: () => ({
+          getResponse: () => ({ status }),
+          getRequest: () => ({ url: '/zones?access_token=SECRETO' }),
+        }),
+      } as unknown as ArgumentsHost;
+      filter.catch(new NotFoundException('x'), h);
+      expect(captured().instance).toBe('/zones?access_token=[REDACTED]');
+    });
+
+    it('el arreglo de validación va unido en detail y message', () => {
+      filter.catch(new BadRequestException(['a', 'b']), host);
+      expect(captured()).toMatchObject({ status: 400, detail: 'a; b', message: 'a; b' });
+    });
+
+    it('mantiene code junto a los campos RFC', () => {
+      filter.catch(new ForbiddenException({ message: 'Sin rol', code: 'ROLE_REQUIRED' }), host);
+      expect(captured()).toMatchObject({ title: 'Forbidden', status: 403, code: 'ROLE_REQUIRED' });
+    });
+
+    it('P2002 y P2003 mantienen su mapeo', () => {
+      const prismaErr = (code: string) =>
+        new Prisma.PrismaClientKnownRequestError('x', { code, clientVersion: '5.22.0' });
+      filter.catch(prismaErr('P2002'), host);
+      expect(captured()).toMatchObject({ status: 409, title: 'Conflict' });
+      json.mockClear();
+      filter.catch(prismaErr('P2003'), host);
+      expect(captured()).toMatchObject({ status: 404, title: 'Not Found' });
+    });
+
+    it('500 genérico sin stack ni detalle interno', () => {
+      filter.catch(new Error('boom con secreto'), host);
+      const body = captured();
+      expect(body).toMatchObject({
+        type: 'about:blank',
+        title: 'Internal Server Error',
+        status: 500,
+        detail: 'Error interno del servidor',
+      });
+      expect(JSON.stringify(body)).not.toContain('secreto');
+    });
+
+    it('429 (ThrottlerException) sale como problem+json', () => {
+      filter.catch(new HttpException('ThrottlerException: Too Many Requests', 429), host);
+      expect(captured()).toMatchObject({
+        status: 429,
+        title: 'Too Many Requests',
+        statusCode: 429,
+      });
     });
   });
 });
