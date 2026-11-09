@@ -169,8 +169,8 @@ La cátedra puede interrogar a cualquier integrante sobre cualquier test o defec
 | 05/11 a 06/11 | Corrida real de unitarios, e2e y cobertura; informe de ejecución y registro de defectos |
 | 06/11 a 08/11 | Correcciones técnicas priorizadas (timeout, outbox, carga, transiciones, headers). **Hecho el 08/11:** transiciones, rate limiting, SQL/XSS/413/CSP, Stryker, Newman y Schemathesis, RabbitMQ real, npm audit y Dependabot, compose, script k6. **Hecho el 09/11 (PR #597):** Problem Details, ETag e `If-Match`, `Idempotency-Key`, 400 declarado, catálogo de barrios local y la corrida de k6 en local. **No hecho:** timeout de 5 s, `MAX_ATTEMPTS`, SonarCloud, ZAP, Trivy |
 | Sáb 08/11 | Congelamiento de código propuesto. Corrida de medición R08 y actualización de `docs/QA/` |
-| Dom 09/11 | **Parcial.** Merge de #597 a `develop` hecho (09/11 14:11 UTC) y actualización de QA en curso (#598). **Pendiente:** merge `develop → test → main`, tag `v1.0-testing` en ambos repos (**NO HECHO** al 09/11), consulta a la cátedra por Teams (cierran el 09/11) |
-| **Mar 10/11 antes de 13:30** | Entrega en Teams: PDF de QA y enlaces; **tag `v1.0-testing` ya creado** |
+| Dom 09/11 | **Hecho el 09/11:** merge de #597 a `develop` (14:11 UTC); promoción `develop → test → main` en ambos repos (backend `6333ecb`, frontend `c59e756`, ~19:00 UTC); tag `v1.0-testing` en ambos con el CI de `main` en verde (detalle y runs en `05-informe-ejecucion.md`); gitleaks sobre el historial del tag, 0 hallazgos. **Pendiente:** consulta a la cátedra por Teams (cierran el 09/11) |
+| **Mar 10/11 antes de 13:30** | Entrega en Teams: PDF de QA y enlaces. El tag `v1.0-testing` **ya está creado** (09/11) |
 | Mar 10/11 | Prueba del sistema (Clase 15) |
 | Mar 17/11 | 4.ª Entrega Parcial Obligatoria |
 | Mar 24/11 | Recuperatorio |
