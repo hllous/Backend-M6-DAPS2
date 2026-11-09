@@ -144,11 +144,11 @@ La cátedra pide tres defectos que se descubrieron tarde, por qué no se detecta
 
 ## 8. Un e2e completo cayó por timeout de arranque con la máquina cargada
 
-**Qué pasó.** El 09/11, al medir la rama de integración, una corrida completa de `npm run test:e2e` falló una vez por el timeout de 30 s (`testTimeout` de `test/jest-e2e.json`) en el arranque de una suite, mientras la máquina corría otras pruebas a la vez. Con la máquina libre, las dos corridas siguientes dieron resultado idéntico (343 tests pasan, 4 saltados; 94 s y 100 s). No se guardó el log de la corrida fallida y no se identificó qué suite fue.
+**Qué pasó.** El 09/11, al verificar la rama de #592 por separado, la segunda corrida completa de `npm run test:e2e` falló en el `beforeAll` de `test/environmental-flow.e2e-spec.ts` por el timeout de 30 s de Jest en el arranque de la suite (15 tests caídos), mientras otros agentes corrían pruebas en la misma máquina; la primera corrida de esa rama había pasado (320 tests). Después, sobre la rama de integración y con la máquina libre, dos corridas completas dieron resultado idéntico (343 tests pasan, 4 saltados; 94 s y 100 s). El log de la corrida fallida existe solo en el directorio temporal de la sesión de pruebas y no está versionado.
 
 **Por qué importa** (interpretación):
 
-- Es otra señal, junto con #554 (DEF-24), de que el e2e es sensible al estado de la máquina o de la base. La causa **no se investigó**, y este caso no se puede afirmar que sea el mismo que #554.
+- Es otra señal, junto con #554 (DEF-24, cerrado por decisión del equipo el 09/11 sin causa confirmada), de que el e2e puede ser sensible al estado de la máquina o de la base. La causa de este caso **no se investigó**. **No es DEF-24:** cayó una suite distinta (`environmental-flow`) y por otra causa aparente (timeout de arranque bajo carga, no el constraint `e2e_no_active`); el nombre de la suite se leyó del log de esa corrida, que no está versionado.
 - El criterio de la cátedra («0 tests inestables») se evidencia con corridas repetidas en una máquina libre; una máquina cargada es justo donde el criterio se rompe.
 
 **Qué prueba lo habría atrapado.** Ninguna que exista hoy. Habría ayudado repetir la suite en el CI (runners limpios y sin otras cargas) y guardar el log de cada corrida fallida. Ambas cosas están **NO HECHAS**.
