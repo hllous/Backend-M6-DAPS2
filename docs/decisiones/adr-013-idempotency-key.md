@@ -21,7 +21,7 @@ Header `Idempotency-Key` **opcional** en los POST de creación, implementado una
 - Solo se guardan **2xx**; un error libera la clave (se puede reintentar corregido).
 - **Carreras**: el `INSERT` inicial del registro `IN_PROGRESS` es atómico por el unique; solo un request lo gana.
 - **Retención**: `IdempotencyRetentionSweeper` (cron diario, 3 AM) borra registros de más de 24 h.
-- **CORS**: `Idempotency-Key` en `allowedHeaders`; `Idempotency-Replayed` en `exposedHeaders`.
+- **CORS**: `allowedHeaders` no se fija (el preflight sigue reflejando los headers pedidos, así `Idempotency-Key` pasa); `Idempotency-Replayed` va en `exposedHeaders`.
 
 ### Endpoints incluidos
 

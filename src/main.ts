@@ -27,7 +27,6 @@ async function bootstrap() {
   // Idempotency-Replayed se expone para que el frontend (otro origen) pueda leerlo (ADR-013).
   app.enableCors({
     ...(corsOrigins?.length ? { origin: corsOrigins } : {}),
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Idempotency-Key'],
     exposedHeaders: ['Idempotency-Replayed'],
   });
   logger.log(
