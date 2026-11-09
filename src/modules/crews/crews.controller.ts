@@ -30,7 +30,12 @@ import {
   CrewZoneAssignmentResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
@@ -166,6 +171,7 @@ export class CrewsController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<CrewResponseDto> {
     return this.crewsService.findOne(id);
   }
@@ -460,6 +466,7 @@ export class CrewsController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async listZoneAssignments(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<CrewZoneAssignmentResponseDto[]> {

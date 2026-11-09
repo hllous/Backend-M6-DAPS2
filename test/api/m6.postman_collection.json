@@ -236,7 +236,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventId\": \"<string>\",\n  \"eventType\": \"<string>\",\n  \"data\": {},\n  \"eventVersion\": \"<string>\",\n  \"occurredAt\": \"<dateTime>\",\n  \"occuredAt\": \"<dateTime>\",\n  \"sourceModule\": \"GG0qGANMYG\",\n  \"correlationId\": \"<uuid>\",\n  \"causationId\": \"<uuid>\",\n  \"specVersion\": \"<string>\",\n  \"producer\": \"<string>\",\n  \"subject\": \"<string>\"\n}",
+              "raw": "{\n  \"eventId\": \"<string>\",\n  \"eventType\": \"<string>\",\n  \"data\": {},\n  \"eventVersion\": \"<string>\",\n  \"occurredAt\": \"<dateTime>\",\n  \"occuredAt\": \"<dateTime>\",\n  \"sourceModule\": \"E\",\n  \"correlationId\": \"<uuid>\",\n  \"causationId\": \"<uuid>\",\n  \"specVersion\": \"<string>\",\n  \"producer\": \"<string>\",\n  \"subject\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -295,7 +295,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventId\": \"<string>\",\n  \"eventType\": \"<string>\",\n  \"data\": {},\n  \"eventVersion\": \"<string>\",\n  \"occurredAt\": \"<dateTime>\",\n  \"occuredAt\": \"<dateTime>\",\n  \"sourceModule\": \"GG0qGANMYG\",\n  \"correlationId\": \"<uuid>\",\n  \"causationId\": \"<uuid>\",\n  \"specVersion\": \"<string>\",\n  \"producer\": \"<string>\",\n  \"subject\": \"<string>\"\n}",
+              "raw": "{\n  \"eventId\": \"<string>\",\n  \"eventType\": \"<string>\",\n  \"data\": {},\n  \"eventVersion\": \"<string>\",\n  \"occurredAt\": \"<dateTime>\",\n  \"occuredAt\": \"<dateTime>\",\n  \"sourceModule\": \"E\",\n  \"correlationId\": \"<uuid>\",\n  \"causationId\": \"<uuid>\",\n  \"specVersion\": \"<string>\",\n  \"producer\": \"<string>\",\n  \"subject\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -2720,7 +2720,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"category\": \"GREEN_SPACES\",\n  \"mode\": \"ROUTE\",\n  \"requiresVehicle\": false,\n  \"active\": true\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"category\": \"ENVIRONMENTAL_CONTROL\",\n  \"mode\": \"ROUTE\",\n  \"requiresVehicle\": false,\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -2778,7 +2778,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"category\": \"GREEN_SPACES\",\n  \"mode\": \"ROUTE\",\n  \"requiresVehicle\": false,\n  \"active\": true\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"category\": \"ENVIRONMENTAL_CONTROL\",\n  \"mode\": \"ROUTE\",\n  \"requiresVehicle\": false,\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -3929,7 +3929,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"siteType\": \"COMPOSTING_PLANT\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"siteType\": \"LANDFILL\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -3988,7 +3988,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"siteType\": \"COMPOSTING_PLANT\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"siteType\": \"LANDFILL\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -5156,7 +5156,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"serviceTypeId\": \"<uuid>\",\n  \"routeId\": \"<uuid>\",\n  \"weekdays\": [\n    \"<number>\"\n  ],\n  \"shift\": \"MORNING\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
+              "raw": "{\n  \"serviceTypeId\": \"<uuid>\",\n  \"routeId\": \"<uuid>\",\n  \"weekdays\": [\n    \"<number>\"\n  ],\n  \"shift\": \"AFTERNOON\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -5214,7 +5214,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"serviceTypeId\": \"<uuid>\",\n  \"routeId\": \"<uuid>\",\n  \"weekdays\": [\n    \"<number>\"\n  ],\n  \"shift\": \"MORNING\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
+              "raw": "{\n  \"serviceTypeId\": \"<uuid>\",\n  \"routeId\": \"<uuid>\",\n  \"weekdays\": [\n    \"<number>\"\n  ],\n  \"shift\": \"AFTERNOON\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -5610,7 +5610,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"weekdays\": [\n    \"<number>\",\n    \"<number>\"\n  ],\n  \"shift\": \"MORNING\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
+              "raw": "{\n  \"weekdays\": [\n    \"<number>\",\n    \"<number>\"\n  ],\n  \"shift\": \"AFTERNOON\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -5669,7 +5669,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"weekdays\": [\n    \"<number>\",\n    \"<number>\"\n  ],\n  \"shift\": \"MORNING\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
+              "raw": "{\n  \"weekdays\": [\n    \"<number>\",\n    \"<number>\"\n  ],\n  \"shift\": \"AFTERNOON\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -5911,7 +5911,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"crewType\": \"CONTRACTOR\",\n  \"defaultShift\": \"NIGHT\",\n  \"specialty\": \"CLEANING\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"crewType\": \"COOPERATIVE\",\n  \"defaultShift\": \"AFTERNOON\",\n  \"specialty\": \"TREES\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -5969,7 +5969,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"crewType\": \"CONTRACTOR\",\n  \"defaultShift\": \"NIGHT\",\n  \"specialty\": \"CLEANING\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"crewType\": \"COOPERATIVE\",\n  \"defaultShift\": \"AFTERNOON\",\n  \"specialty\": \"TREES\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -6365,7 +6365,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"defaultShift\": \"MORNING\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"specialty\": \"RECYCLING\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"defaultShift\": \"NIGHT\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"specialty\": \"CLEANING\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -6424,7 +6424,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"defaultShift\": \"MORNING\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"specialty\": \"RECYCLING\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"defaultShift\": \"NIGHT\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"specialty\": \"CLEANING\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -6969,7 +6969,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"validFrom\": \"3622-92-70\",\n  \"validTo\": \"4837-96-61\"\n}",
+              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"validFrom\": \"7723-14-93\",\n  \"validTo\": \"6438-20-48\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -7029,7 +7029,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"validFrom\": \"3622-92-70\",\n  \"validTo\": \"4837-96-61\"\n}",
+              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"validFrom\": \"7723-14-93\",\n  \"validTo\": \"6438-20-48\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -7302,7 +7302,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"plate\": \"<string>\",\n  \"vehicleType\": \"DUMP_TRUCK\",\n  \"capacity\": \"<number>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"plate\": \"<string>\",\n  \"vehicleType\": \"CRANE_TRUCK\",\n  \"capacity\": \"<number>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -7360,7 +7360,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"plate\": \"<string>\",\n  \"vehicleType\": \"DUMP_TRUCK\",\n  \"capacity\": \"<number>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"plate\": \"<string>\",\n  \"vehicleType\": \"CRANE_TRUCK\",\n  \"capacity\": \"<number>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -8057,7 +8057,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"containerType\": \"RECYCLABLE\",\n  \"zoneId\": \"<uuid>\",\n  \"capacityLiters\": \"<number>\",\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\"\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"containerType\": \"BULKY\",\n  \"zoneId\": \"<uuid>\",\n  \"capacityLiters\": \"<number>\",\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -8115,7 +8115,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"containerType\": \"RECYCLABLE\",\n  \"zoneId\": \"<uuid>\",\n  \"capacityLiters\": \"<number>\",\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\"\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"containerType\": \"BULKY\",\n  \"zoneId\": \"<uuid>\",\n  \"capacityLiters\": \"<number>\",\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -8971,7 +8971,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"damageType\": \"VANDALIZED\",\n  \"severity\": \"HIGH\",\n  \"requiresPublicWorks\": false,\n  \"observations\": \"<string>\"\n}",
+              "raw": "{\n  \"damageType\": \"WHEELS_BROKEN\",\n  \"severity\": \"CRITICAL\",\n  \"requiresPublicWorks\": false,\n  \"observations\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -9031,7 +9031,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"damageType\": \"VANDALIZED\",\n  \"severity\": \"HIGH\",\n  \"requiresPublicWorks\": false,\n  \"observations\": \"<string>\"\n}",
+              "raw": "{\n  \"damageType\": \"WHEELS_BROKEN\",\n  \"severity\": \"CRITICAL\",\n  \"requiresPublicWorks\": false,\n  \"observations\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -10733,7 +10733,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"surveyedAt\": \"<dateTime>\",\n  \"healthStatus\": \"DEAD\",\n  \"riskLevel\": \"CRITICAL\",\n  \"riskType\": \"TRUNK_INSTABILITY\",\n  \"suggestedIntervention\": \"SAFETY_PRUNING\",\n  \"inspectorId\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"requiresPublicWorks\": false,\n  \"notes\": \"<string>\"\n}",
+              "raw": "{\n  \"surveyedAt\": \"<dateTime>\",\n  \"healthStatus\": \"WEAKENED\",\n  \"riskLevel\": \"CRITICAL\",\n  \"riskType\": \"SIGN_OBSTRUCTION\",\n  \"suggestedIntervention\": \"REMOVAL\",\n  \"inspectorId\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"requiresPublicWorks\": false,\n  \"notes\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -10793,7 +10793,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"surveyedAt\": \"<dateTime>\",\n  \"healthStatus\": \"DEAD\",\n  \"riskLevel\": \"CRITICAL\",\n  \"riskType\": \"TRUNK_INSTABILITY\",\n  \"suggestedIntervention\": \"SAFETY_PRUNING\",\n  \"inspectorId\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"requiresPublicWorks\": false,\n  \"notes\": \"<string>\"\n}",
+              "raw": "{\n  \"surveyedAt\": \"<dateTime>\",\n  \"healthStatus\": \"WEAKENED\",\n  \"riskLevel\": \"CRITICAL\",\n  \"riskType\": \"SIGN_OBSTRUCTION\",\n  \"suggestedIntervention\": \"REMOVAL\",\n  \"inspectorId\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"requiresPublicWorks\": false,\n  \"notes\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -11228,7 +11228,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"interventionType\": \"REMOVAL\",\n  \"treeIds\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"address\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"priority\": \"HIGH\",\n  \"justification\": \"<string>\"\n}",
+              "raw": "{\n  \"interventionType\": \"PLANTING\",\n  \"treeIds\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"address\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"priority\": \"LOW\",\n  \"justification\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -11286,7 +11286,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"interventionType\": \"REMOVAL\",\n  \"treeIds\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"address\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"priority\": \"HIGH\",\n  \"justification\": \"<string>\"\n}",
+              "raw": "{\n  \"interventionType\": \"PLANTING\",\n  \"treeIds\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"address\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"priority\": \"LOW\",\n  \"justification\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -13047,7 +13047,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"MIXED\",\n    \"MIXED\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"RECYCLABLE\",\n    \"BULKY\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -13105,7 +13105,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"MIXED\",\n    \"MIXED\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"RECYCLABLE\",\n    \"BULKY\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -13501,7 +13501,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"BULKY\",\n    \"MIXED\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"MIXED\",\n    \"BULKY\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -13560,7 +13560,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"BULKY\",\n    \"MIXED\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"MIXED\",\n    \"BULKY\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -16204,7 +16204,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"status\": \"SERVICED\",\n  \"reason\": \"EXCESS_VOLUME\",\n  \"proposedDate\": \"<date>\",\n  \"notes\": \"<string>\"\n}",
+              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"status\": \"PARTIAL\",\n  \"reason\": \"STREET_CLOSURE\",\n  \"proposedDate\": \"<date>\",\n  \"notes\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -16264,7 +16264,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"status\": \"SERVICED\",\n  \"reason\": \"EXCESS_VOLUME\",\n  \"proposedDate\": \"<date>\",\n  \"notes\": \"<string>\"\n}",
+              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"status\": \"PARTIAL\",\n  \"reason\": \"STREET_CLOSURE\",\n  \"proposedDate\": \"<date>\",\n  \"notes\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -16534,7 +16534,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"wasteType\": \"RECYCLABLE\",\n  \"disposalSiteId\": \"<uuid>\",\n  \"zoneResultId\": \"<uuid>\",\n  \"volumeM3\": \"<number>\",\n  \"weightKg\": \"<number>\"\n}",
+              "raw": "{\n  \"wasteType\": \"BULKY\",\n  \"disposalSiteId\": \"<uuid>\",\n  \"zoneResultId\": \"<uuid>\",\n  \"volumeM3\": \"<number>\",\n  \"weightKg\": \"<number>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -16594,7 +16594,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"wasteType\": \"RECYCLABLE\",\n  \"disposalSiteId\": \"<uuid>\",\n  \"zoneResultId\": \"<uuid>\",\n  \"volumeM3\": \"<number>\",\n  \"weightKg\": \"<number>\"\n}",
+              "raw": "{\n  \"wasteType\": \"BULKY\",\n  \"disposalSiteId\": \"<uuid>\",\n  \"zoneResultId\": \"<uuid>\",\n  \"volumeM3\": \"<number>\",\n  \"weightKg\": \"<number>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -17282,7 +17282,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"inspectedAt\": \"<dateTime>\",\n  \"outcome\": \"INCONCLUSIVE\",\n  \"nextStep\": \"CASE_CLOSED\",\n  \"findings\": \"<string>\",\n  \"checklist\": [\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    },\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    }\n  ],\n  \"conclusion\": \"<string>\",\n  \"violationType\": \"NO_WASTE_MANAGEMENT\",\n  \"severity\": \"HIGH\",\n  \"suggestedAction\": \"WARNING\"\n}",
+              "raw": "{\n  \"inspectedAt\": \"<dateTime>\",\n  \"outcome\": \"NO_VIOLATION\",\n  \"nextStep\": \"NOTICE_TO_BE_ISSUED\",\n  \"findings\": \"<string>\",\n  \"checklist\": [\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    },\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    }\n  ],\n  \"conclusion\": \"<string>\",\n  \"violationType\": \"NO_WASTE_MANAGEMENT\",\n  \"severity\": \"HIGH\",\n  \"suggestedAction\": \"FINE\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -17342,7 +17342,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"inspectedAt\": \"<dateTime>\",\n  \"outcome\": \"INCONCLUSIVE\",\n  \"nextStep\": \"CASE_CLOSED\",\n  \"findings\": \"<string>\",\n  \"checklist\": [\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    },\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    }\n  ],\n  \"conclusion\": \"<string>\",\n  \"violationType\": \"NO_WASTE_MANAGEMENT\",\n  \"severity\": \"HIGH\",\n  \"suggestedAction\": \"WARNING\"\n}",
+              "raw": "{\n  \"inspectedAt\": \"<dateTime>\",\n  \"outcome\": \"NO_VIOLATION\",\n  \"nextStep\": \"NOTICE_TO_BE_ISSUED\",\n  \"findings\": \"<string>\",\n  \"checklist\": [\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    },\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    }\n  ],\n  \"conclusion\": \"<string>\",\n  \"violationType\": \"NO_WASTE_MANAGEMENT\",\n  \"severity\": \"HIGH\",\n  \"suggestedAction\": \"FINE\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -17453,7 +17453,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"violationType\": \"AIR_EMISSION\",\n  \"severity\": \"LOW\",\n  \"suggestedAction\": \"WARNING\",\n  \"establishmentId\": \"<string>\"\n}",
+              "raw": "{\n  \"violationType\": \"NO_WASTE_MANAGEMENT\",\n  \"severity\": \"HIGH\",\n  \"suggestedAction\": \"FINE\",\n  \"establishmentId\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -17513,7 +17513,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"violationType\": \"AIR_EMISSION\",\n  \"severity\": \"LOW\",\n  \"suggestedAction\": \"WARNING\",\n  \"establishmentId\": \"<string>\"\n}",
+              "raw": "{\n  \"violationType\": \"NO_WASTE_MANAGEMENT\",\n  \"severity\": \"HIGH\",\n  \"suggestedAction\": \"FINE\",\n  \"establishmentId\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -18947,7 +18947,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"damageType\": \"DAMAGED_STRUCTURE\",\n  \"severity\": \"HIGH\",\n  \"publicSafetyRisk\": \"<boolean>\",\n  \"detectedInType\": \"SERVICE\",\n  \"detectedInId\": \"<uuid>\",\n  \"address\": \"<string>\"\n}",
+              "raw": "{\n  \"damageType\": \"BLOCKED_DRAIN\",\n  \"severity\": \"HIGH\",\n  \"publicSafetyRisk\": \"<boolean>\",\n  \"detectedInType\": \"SERVICE\",\n  \"detectedInId\": \"<uuid>\",\n  \"address\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -19005,7 +19005,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"damageType\": \"DAMAGED_STRUCTURE\",\n  \"severity\": \"HIGH\",\n  \"publicSafetyRisk\": \"<boolean>\",\n  \"detectedInType\": \"SERVICE\",\n  \"detectedInId\": \"<uuid>\",\n  \"address\": \"<string>\"\n}",
+              "raw": "{\n  \"damageType\": \"BLOCKED_DRAIN\",\n  \"severity\": \"HIGH\",\n  \"publicSafetyRisk\": \"<boolean>\",\n  \"detectedInType\": \"SERVICE\",\n  \"detectedInId\": \"<uuid>\",\n  \"address\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -19708,7 +19708,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sourceType\": \"SERVICE\",\n  \"sourceId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"sections\": [\n    {\n      \"streetName\": \"<string>\",\n      \"fromCross\": \"<string>\",\n      \"toCross\": \"<string>\",\n      \"direction\": \"REVERSE\"\n    }\n  ],\n  \"requestedFrom\": \"<dateTime>\",\n  \"requestedTo\": \"<dateTime>\",\n  \"closureType\": \"TOTAL\"\n}",
+              "raw": "{\n  \"sourceType\": \"SERVICE\",\n  \"sourceId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"sections\": [\n    {\n      \"streetName\": \"<string>\",\n      \"fromCross\": \"<string>\",\n      \"toCross\": \"<string>\",\n      \"direction\": \"FORWARD\"\n    }\n  ],\n  \"requestedFrom\": \"<dateTime>\",\n  \"requestedTo\": \"<dateTime>\",\n  \"closureType\": \"PARTIAL\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -19766,7 +19766,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sourceType\": \"SERVICE\",\n  \"sourceId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"sections\": [\n    {\n      \"streetName\": \"<string>\",\n      \"fromCross\": \"<string>\",\n      \"toCross\": \"<string>\",\n      \"direction\": \"REVERSE\"\n    }\n  ],\n  \"requestedFrom\": \"<dateTime>\",\n  \"requestedTo\": \"<dateTime>\",\n  \"closureType\": \"TOTAL\"\n}",
+              "raw": "{\n  \"sourceType\": \"SERVICE\",\n  \"sourceId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"sections\": [\n    {\n      \"streetName\": \"<string>\",\n      \"fromCross\": \"<string>\",\n      \"toCross\": \"<string>\",\n      \"direction\": \"FORWARD\"\n    }\n  ],\n  \"requestedFrom\": \"<dateTime>\",\n  \"requestedTo\": \"<dateTime>\",\n  \"closureType\": \"PARTIAL\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -20914,7 +20914,7 @@
                     "type": "text/plain"
                   },
                   "key": "ownerType",
-                  "value": "SERVICE",
+                  "value": "INSPECTION",
                   "type": "text"
                 },
                 {
@@ -21002,7 +21002,7 @@
                     "type": "text/plain"
                   },
                   "key": "ownerType",
-                  "value": "SERVICE",
+                  "value": "INSPECTION",
                   "type": "text"
                 },
                 {

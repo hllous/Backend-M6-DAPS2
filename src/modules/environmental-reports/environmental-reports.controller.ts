@@ -27,7 +27,12 @@ import {
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
 import { ROLES_AMBIENTAL, ROLES_EXPEDIENTE_ALTA } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
@@ -122,6 +127,7 @@ export class EnvironmentalReportsController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<EnvironmentalReportResponseDto> {
     return this.reportsService.findOne(id);
   }

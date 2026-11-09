@@ -3,7 +3,12 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { TreeSurveysService } from './tree-surveys.service';
 import { CreateTreeSurveyDto, TreeSurveyResponseDto, QueryTreeSurveysDto } from './dto';
 import { ErrorResponseDto } from '../../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../../common/decorators';
 import { ROLES_CUADRILLA } from '../../../auth/role-groups';
 import { ApiAnyM6Role } from '../../../common/decorators/roles.decorator';
 
@@ -54,6 +59,7 @@ export class TreeSurveysController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Árbol no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findAll(
     @Param('treeId', ParseUUIDPipe) treeId: string,
     @Query() query: QueryTreeSurveysDto,
@@ -77,6 +83,7 @@ export class TreeSurveysController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findOne(
     @Param('treeId', ParseUUIDPipe) treeId: string,
     @Param('surveyId', ParseUUIDPipe) surveyId: string,

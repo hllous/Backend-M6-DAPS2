@@ -22,7 +22,12 @@ import {
   ContainerStatusHistoryResponseDto,
 } from './dto';
 import { ErrorResponseDto, PaginationQueryDto } from '../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
@@ -97,6 +102,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findAll(@Query() query: QueryContainersDto) {
     return this.containersService.findAll(query);
   }
@@ -133,6 +139,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
     return this.containersService.findOne(id);
   }
@@ -165,6 +172,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findHistory(@Param('id', ParseUUIDPipe) id: string, @Query() query: PaginationQueryDto) {
     return this.containersService.findHistory(id, query);
   }

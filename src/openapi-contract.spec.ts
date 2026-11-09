@@ -52,6 +52,18 @@ describe('contrato OpenAPI', () => {
     expect(sin403).toEqual([]);
   });
 
+  it('todo GET con parámetros declara el 400 (DEF-20)', () => {
+    // El ParseUUIDPipe y el ValidationPipe global (whitelist + forbidNonWhitelisted)
+    // responden 400 ante un id o un query inválido: usar @ApiBadRequestParams.
+    const sin400: string[] = [];
+    for (const [ruta, operaciones] of Object.entries(documento.paths)) {
+      const get = operaciones.get as
+        { parameters?: unknown[]; responses?: Record<string, unknown> } | undefined;
+      if (get?.parameters?.length && !get.responses?.['400']) sin400.push(`GET ${ruta}`);
+    }
+    expect(sin400).toEqual([]);
+  });
+
   it('docs/api/openapi.json está al día con el código', () => {
     const versionado = JSON.parse(
       readFileSync(join(__dirname, '..', 'docs', 'api', 'openapi.json'), 'utf-8'),

@@ -40,7 +40,13 @@ import {
 } from './dto';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiNotAssigned, ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiNotAssigned,
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
@@ -146,6 +152,7 @@ export class ServicesController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ServiceResponseDto> {
     return this.servicesService.findOne(id);
   }
@@ -254,6 +261,7 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async assignmentConflicts(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: QueryAssignmentConflictsDto,
@@ -328,6 +336,7 @@ export class ServicesController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findDelayNotices(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<DelayNoticeResponseDto[]> {
@@ -637,6 +646,7 @@ export class ServicesController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findZoneResults(@Param('id', ParseUUIDPipe) id: string): Promise<ZoneResultResponseDto[]> {
     return this.servicesService.findZoneResults(id);
   }
@@ -712,6 +722,7 @@ export class ServicesController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findCollectionRecords(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<CollectionRecordResponseDto[]> {

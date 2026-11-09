@@ -1349,6 +1349,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -2138,6 +2148,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -2203,6 +2223,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServiceTypeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -2605,6 +2635,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -2670,6 +2710,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DisposalSiteResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -3067,6 +3117,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -3132,6 +3192,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RouteResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -3666,6 +3736,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -3731,6 +3811,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServiceFrequencyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -4285,6 +4375,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CrewResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -4893,6 +4993,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -5115,6 +5225,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -5180,6 +5300,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VehicleResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -5621,6 +5751,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -5686,6 +5826,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ContainerResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -5901,6 +6051,16 @@
                       "$ref": "#/components/schemas/PaginationMeta"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -6985,6 +7145,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -7400,6 +7570,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -7485,6 +7665,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TreeSurveyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -7818,6 +8008,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TreeInterventionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -8461,6 +8661,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -8526,6 +8736,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GreenSpaceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -8949,6 +9169,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -9014,6 +9244,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GreenPointResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -9633,6 +9873,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -9957,6 +10207,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -10152,6 +10412,16 @@
                   "items": {
                     "$ref": "#/components/schemas/DelayNoticeResponseDto"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -11121,6 +11391,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -11321,6 +11601,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -11510,6 +11800,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -11585,6 +11885,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InspectionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -11885,6 +12195,16 @@
                       "$ref": "#/components/schemas/ViolationNoticeResponseDto"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -12337,6 +12657,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EnvironmentalReportResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -13131,6 +13461,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -13196,6 +13536,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RepairRequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -13618,6 +13968,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Token JWT inválido o ausente",
             "content": {
@@ -13683,6 +14043,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/StreetClosureRequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -14063,6 +14433,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No hay una denuncia ambiental para ese reclamo",
             "content": {
@@ -14196,6 +14576,16 @@
               }
             }
           },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Demasiadas consultas desde la misma dirección",
             "content": {
@@ -14285,6 +14675,16 @@
                       "$ref": "#/components/schemas/PaginationMeta"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -14557,6 +14957,16 @@
                   "items": {
                     "$ref": "#/components/schemas/EvidenceResponseDto"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }

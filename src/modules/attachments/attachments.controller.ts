@@ -25,7 +25,7 @@ import { UploadEvidenceDto, EvidenceResponseDto, QueryEvidenceDto } from './dto'
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { MAX_EVIDENCE_SIZE_BYTES } from './evidence-mime';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiNotAssigned, CurrentUser, Roles } from '../../common/decorators';
+import { ApiNotAssigned, CurrentUser, Roles, ApiBadRequestParams } from '../../common/decorators';
 import { M6Role } from '@prisma/client';
 import { ROLES_CAMPO, ROLES_EVIDENCIA_LECTURA } from '../../auth/role-groups';
 
@@ -143,6 +143,7 @@ export class AttachmentsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findByOwner(
     @Query() query: QueryEvidenceDto,
     @CurrentUser('roles') roles: M6Role[],
