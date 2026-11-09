@@ -102,7 +102,7 @@ describe('ServicesController', () => {
   it('update delega id y dto', async () => {
     const dto = { notes: 'x' } as UpdateServiceDto;
     await controller.update(ID, dto, USER);
-    expect(service.update).toHaveBeenCalledWith(ID, dto, USER);
+    expect(service.update).toHaveBeenCalledWith(ID, dto, USER, undefined);
   });
 
   it('assignCrew delega id, dto y userId opcional', async () => {
@@ -130,39 +130,39 @@ describe('ServicesController', () => {
 
   it('start delega id y userId', async () => {
     await controller.start(ID, USER);
-    expect(service.start).toHaveBeenCalledWith(ID, USER);
+    expect(service.start).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('suspend delega id y motivo y nota del dto', async () => {
     await controller.suspend(ID, { reason: 'lluvia', note: 'detalle' } as SuspendServiceDto, USER);
-    expect(service.suspend).toHaveBeenCalledWith(ID, USER, 'lluvia', 'detalle');
+    expect(service.suspend).toHaveBeenCalledWith(ID, USER, 'lluvia', 'detalle', undefined);
   });
 
   it('resume delega el id', async () => {
     await controller.resume(ID, USER);
-    expect(service.resume).toHaveBeenCalledWith(ID, USER);
+    expect(service.resume).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('complete delega id, dto y userId', async () => {
     const dto = {} as CompleteServiceDto;
     await controller.complete(ID, dto, USER);
-    expect(service.complete).toHaveBeenCalledWith(ID, dto, USER);
+    expect(service.complete).toHaveBeenCalledWith(ID, dto, USER, undefined);
   });
 
   it('cancel delega id, motivo y userId', async () => {
     await controller.cancel(ID, { reason: 'x' } as StatusChangeDto, USER);
-    expect(service.cancel).toHaveBeenCalledWith(ID, 'x', USER);
+    expect(service.cancel).toHaveBeenCalledWith(ID, 'x', USER, undefined);
   });
 
   it('reschedule delega id y motivo', async () => {
     await controller.reschedule(ID, { reason: 'x' } as StatusChangeDto, USER);
-    expect(service.reschedule).toHaveBeenCalledWith(ID, 'x', USER);
+    expect(service.reschedule).toHaveBeenCalledWith(ID, 'x', USER, undefined);
   });
 
   it('confirmReschedule delega id, dto y quién actuó', async () => {
     const dto = {} as ConfirmRescheduleDto;
     await controller.confirmReschedule(ID, dto, USER);
-    expect(service.confirmReschedule).toHaveBeenCalledWith(ID, dto, USER);
+    expect(service.confirmReschedule).toHaveBeenCalledWith(ID, dto, USER, undefined);
   });
 
   it('addZoneResult delega id y dto', async () => {

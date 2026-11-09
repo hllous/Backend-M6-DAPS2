@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Body,
   Controller,
@@ -9,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -40,7 +42,14 @@ import {
 } from './dto';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiNotAssigned, ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiNotAssigned,
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
+import { ApiETag, ETagInterceptor, IfMatch } from '../../common/etag';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
@@ -55,6 +64,7 @@ const NOT_FOUND = { status: 404, description: 'Servicio no encontrado', type: Er
 
 @ApiTags('services')
 @ApiBearerAuth('JWT-auth')
+@UseInterceptors(ETagInterceptor)
 @Controller('services')
 export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
@@ -107,6 +117,7 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @Idempotent()
   async create(
     @Body() dto: CreateServiceDto,
     @CurrentUser() actor: AuthenticatedUser,
@@ -136,6 +147,7 @@ export class ServicesController {
 
   @ApiAnyM6Role()
   @Get(':id')
+  @ApiETag()
   @ApiOperation({
     summary: 'Obtener un servicio por ID',
     description:
@@ -146,11 +158,13 @@ export class ServicesController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ServiceResponseDto> {
     return this.servicesService.findOne(id);
   }
 
   @Patch(':id')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Corregir la programación de un servicio',
@@ -177,8 +191,9 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateServiceDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.update(id, dto, actor);
+    return this.servicesService.update(id, dto, actor, ifMatch);
   }
 
   @Post(':id/assign-crew')
@@ -254,6 +269,7 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async assignmentConflicts(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: QueryAssignmentConflictsDto,
@@ -303,6 +319,7 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @Idempotent()
   async addDelayNotice(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateDelayNoticeDto,
@@ -328,6 +345,7 @@ export class ServicesController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findDelayNotices(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<DelayNoticeResponseDto[]> {
@@ -337,6 +355,7 @@ export class ServicesController {
   // ─── Ejecución ────────────────────────────────────
 
   @Post(':id/start')
+  @ApiETag({ ifMatch: true })
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
@@ -358,11 +377,13 @@ export class ServicesController {
   async start(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.start(id, actor);
+    return this.servicesService.start(id, actor, ifMatch);
   }
 
   @Post(':id/suspend')
+  @ApiETag({ ifMatch: true })
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
@@ -394,11 +415,13 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SuspendServiceDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.suspend(id, actor, dto.reason, dto.note);
+    return this.servicesService.suspend(id, actor, dto.reason, dto.note, ifMatch);
   }
 
   @Post(':id/resume')
+  @ApiETag({ ifMatch: true })
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
@@ -416,11 +439,13 @@ export class ServicesController {
   async resume(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.resume(id, actor);
+    return this.servicesService.resume(id, actor, ifMatch);
   }
 
   @Post(':id/complete')
+  @ApiETag({ ifMatch: true })
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
@@ -459,11 +484,13 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CompleteServiceDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.complete(id, dto, actor);
+    return this.servicesService.complete(id, dto, actor, ifMatch);
   }
 
   @Post(':id/cancel')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiBody({
@@ -494,11 +521,13 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StatusChangeDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.cancel(id, dto.reason, actor);
+    return this.servicesService.cancel(id, dto.reason, actor, ifMatch);
   }
 
   @Post(':id/reschedule')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiBody({
@@ -530,11 +559,13 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StatusChangeDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.reschedule(id, dto.reason, actor);
+    return this.servicesService.reschedule(id, dto.reason, actor, ifMatch);
   }
 
   @Post(':id/confirm-reschedule')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiBody({
@@ -570,8 +601,9 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ConfirmRescheduleDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.confirmReschedule(id, dto, actor);
+    return this.servicesService.confirmReschedule(id, dto, actor, ifMatch);
   }
 
   // ─── Resultado por zona ───────────────────────────
@@ -614,6 +646,7 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @Idempotent()
   async addZoneResult(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateZoneResultDto,
@@ -637,6 +670,7 @@ export class ServicesController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findZoneResults(@Param('id', ParseUUIDPipe) id: string): Promise<ZoneResultResponseDto[]> {
     return this.servicesService.findZoneResults(id);
   }
@@ -689,6 +723,7 @@ export class ServicesController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @Idempotent()
   async addCollectionRecord(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateCollectionRecordDto,
@@ -712,6 +747,7 @@ export class ServicesController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findCollectionRecords(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<CollectionRecordResponseDto[]> {

@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Body,
   Controller,
@@ -22,7 +23,12 @@ import {
   UpdateRouteDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
@@ -53,6 +59,7 @@ export class RoutesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @Idempotent()
   async create(
     @Body() dto: CreateRouteDto,
     @CurrentUser() actor: AuthenticatedUser,
@@ -70,6 +77,7 @@ export class RoutesController {
   @ApiPaginatedResponse(RouteResponseDto, 'Listado paginado de recorridos')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findAll(@Query() query: QueryRoutesDto) {
     return this.routesService.findAll(query);
   }
@@ -85,6 +93,7 @@ export class RoutesController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Recorrido no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<RouteResponseDto> {
     return this.routesService.findOne(id);
   }

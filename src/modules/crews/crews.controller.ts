@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Controller,
   Get,
@@ -30,7 +31,12 @@ import {
   CrewZoneAssignmentResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
@@ -103,6 +109,7 @@ export class CrewsController {
     description: 'M1 no responde y no se pudo validar a los usuarios; no se guardó nada',
     type: ErrorResponseDto,
   })
+  @Idempotent()
   async create(
     @Body() dto: CreateCrewDto,
     @CurrentUser() actor: AuthenticatedUser,
@@ -166,6 +173,7 @@ export class CrewsController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<CrewResponseDto> {
     return this.crewsService.findOne(id);
   }
@@ -460,6 +468,7 @@ export class CrewsController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async listZoneAssignments(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<CrewZoneAssignmentResponseDto[]> {

@@ -29,3 +29,17 @@ El backend aplica un límite global de 600 req/min por IP y por endpoint (`THROT
 
 - Backend local o de pruebas: arrancarlo con `THROTTLE_LIMIT=100000` (solo para la prueba).
 - Despliegue real: coordinarlo con el equipo antes; el límite protege producción y no se sube sin acordarlo.
+
+## Resultados (09/11/2026)
+
+Corrida de 5 min, 50 usuarios concurrentes, sobre la rama de integración (commit `6bd08f6`, el contenido que entra a `develop`). Salida completa en `resultados/2026-11-09/k6-completa.txt` y métricas en `resultados/2026-11-09/k6-summary-completa.json`.
+
+| Métrica | Resultado | Umbral |
+|---|---|---|
+| `http_req_duration` p(95) | **32,84 ms** | < 500 ms: cumple |
+| `http_req_failed` | **0,00 %** (0 de 14 850) | < 1 %: cumple |
+| Requests | 14 850 (49,1 por segundo) | — |
+| Promedio / mediana / p(90) / máximo | 14,97 / 11,11 / 23,95 / 441,21 ms | — |
+| Checks (`GET /services`, `/containers`, `/zones` con 200) | 100 % | — |
+
+**Cómo se midió (límites).** Todo en una sola máquina local (6 CPUs): backend, Postgres y RabbitMQ con `docker compose up`, y k6 con `docker run grafana/k6` en el mismo equipo. Base del seed de demo (673 servicios, 500 contenedores, 48 zonas). `THROTTLE_LIMIT=100000` en el backend (ver "Rate limit"); un token firmado con el `JWT_SECRET` del `.env` (`test/api/make-token.mjs admin`). Cada usuario hace una pausa de 1 s entre pedidos, con `pageSize=20`. **No mide el despliegue** (Render y Supabase, con red de por medio): la latencia allí va a ser mayor. Solo lectura: no se midieron escrituras.

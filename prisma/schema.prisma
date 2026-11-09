@@ -1201,3 +1201,26 @@ model DomainAuditLog {
   @@index([entityType, entityId, occurredAt])
   @@map("domain_audit_log")
 }
+
+enum IdempotencyStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+// Respuesta guardada de un POST de creacion que llego con `Idempotency-Key`
+// (ADR-013). `scope` = principal + metodo + ruta. Se purga a las 24 h.
+model IdempotencyRecord {
+  id             String            @id @default(uuid()) @db.Uuid
+  scope          String
+  key            String
+  // sha256 del cuerpo normalizado: misma clave con otro cuerpo es un error del cliente.
+  requestHash    String            @map("request_hash")
+  status         IdempotencyStatus @default(IN_PROGRESS)
+  responseStatus Int?              @map("response_status")
+  responseBody   Json?             @map("response_body")
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  @@unique([scope, key])
+  @@index([createdAt])
+  @@map("idempotency_record")
+}

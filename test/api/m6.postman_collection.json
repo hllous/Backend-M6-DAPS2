@@ -236,7 +236,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventId\": \"<string>\",\n  \"eventType\": \"<string>\",\n  \"data\": {},\n  \"eventVersion\": \"<string>\",\n  \"occurredAt\": \"<dateTime>\",\n  \"occuredAt\": \"<dateTime>\",\n  \"sourceModule\": \"GG0qGANMYG\",\n  \"correlationId\": \"<uuid>\",\n  \"causationId\": \"<uuid>\",\n  \"specVersion\": \"<string>\",\n  \"producer\": \"<string>\",\n  \"subject\": \"<string>\"\n}",
+              "raw": "{\n  \"eventId\": \"<string>\",\n  \"eventType\": \"<string>\",\n  \"data\": {},\n  \"eventVersion\": \"<string>\",\n  \"occurredAt\": \"<dateTime>\",\n  \"occuredAt\": \"<dateTime>\",\n  \"sourceModule\": \"2icY\",\n  \"correlationId\": \"<uuid>\",\n  \"causationId\": \"<uuid>\",\n  \"specVersion\": \"<string>\",\n  \"producer\": \"<string>\",\n  \"subject\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -295,7 +295,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventId\": \"<string>\",\n  \"eventType\": \"<string>\",\n  \"data\": {},\n  \"eventVersion\": \"<string>\",\n  \"occurredAt\": \"<dateTime>\",\n  \"occuredAt\": \"<dateTime>\",\n  \"sourceModule\": \"GG0qGANMYG\",\n  \"correlationId\": \"<uuid>\",\n  \"causationId\": \"<uuid>\",\n  \"specVersion\": \"<string>\",\n  \"producer\": \"<string>\",\n  \"subject\": \"<string>\"\n}",
+              "raw": "{\n  \"eventId\": \"<string>\",\n  \"eventType\": \"<string>\",\n  \"data\": {},\n  \"eventVersion\": \"<string>\",\n  \"occurredAt\": \"<dateTime>\",\n  \"occuredAt\": \"<dateTime>\",\n  \"sourceModule\": \"2icY\",\n  \"correlationId\": \"<uuid>\",\n  \"causationId\": \"<uuid>\",\n  \"specVersion\": \"<string>\",\n  \"producer\": \"<string>\",\n  \"subject\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -2129,7 +2129,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -2168,7 +2168,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -2214,7 +2214,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -2429,7 +2429,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -2470,7 +2470,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -2518,7 +2518,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -2551,6 +2551,52 @@
     {
       "name": "neighborhoods",
       "item": [
+        {
+          "name": "GET /neighborhoods - exito 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('es JSON', () => pm.response.to.be.json);",
+                  "pm.test('es un arreglo', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/neighborhoods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "neighborhoods"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {},
+            "description": "Listar los barrios del catálogo de M9"
+          }
+        },
         {
           "name": "GET /neighborhoods - 401 sin token",
           "event": [
@@ -2720,7 +2766,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"category\": \"GREEN_SPACES\",\n  \"mode\": \"ROUTE\",\n  \"requiresVehicle\": false,\n  \"active\": true\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"category\": \"TREES\",\n  \"mode\": \"ROUTE\",\n  \"requiresVehicle\": false,\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -2778,7 +2824,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"category\": \"GREEN_SPACES\",\n  \"mode\": \"ROUTE\",\n  \"requiresVehicle\": false,\n  \"active\": true\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"category\": \"TREES\",\n  \"mode\": \"ROUTE\",\n  \"requiresVehicle\": false,\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -3320,7 +3366,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -3359,7 +3405,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -3405,7 +3451,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -3475,7 +3521,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"siteType\": \"RECYCLING_PLANT\",\n  \"active\": true\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"siteType\": \"LANDFILL\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -3533,7 +3579,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"siteType\": \"RECYCLING_PLANT\",\n  \"active\": true\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"siteType\": \"LANDFILL\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -3929,7 +3975,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"siteType\": \"COMPOSTING_PLANT\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"siteType\": \"LANDFILL\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -3988,7 +4034,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"siteType\": \"COMPOSTING_PLANT\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"siteType\": \"LANDFILL\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -4075,7 +4121,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -4114,7 +4160,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -4160,7 +4206,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -4830,7 +4876,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -4869,7 +4915,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -4915,7 +4961,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -5610,7 +5656,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"weekdays\": [\n    \"<number>\",\n    \"<number>\"\n  ],\n  \"shift\": \"MORNING\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
+              "raw": "{\n  \"weekdays\": [\n    \"<number>\",\n    \"<number>\"\n  ],\n  \"shift\": \"AFTERNOON\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -5669,7 +5715,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"weekdays\": [\n    \"<number>\",\n    \"<number>\"\n  ],\n  \"shift\": \"MORNING\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
+              "raw": "{\n  \"weekdays\": [\n    \"<number>\",\n    \"<number>\"\n  ],\n  \"shift\": \"AFTERNOON\",\n  \"validFrom\": \"<date>\",\n  \"validTo\": \"<date>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -5756,7 +5802,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -5795,7 +5841,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -5841,7 +5887,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -5911,7 +5957,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"crewType\": \"CONTRACTOR\",\n  \"defaultShift\": \"NIGHT\",\n  \"specialty\": \"CLEANING\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"crewType\": \"COOPERATIVE\",\n  \"defaultShift\": \"AFTERNOON\",\n  \"specialty\": \"TREES\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -5969,7 +6015,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"crewType\": \"CONTRACTOR\",\n  \"defaultShift\": \"NIGHT\",\n  \"specialty\": \"CLEANING\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"crewType\": \"COOPERATIVE\",\n  \"defaultShift\": \"AFTERNOON\",\n  \"specialty\": \"TREES\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -6365,7 +6411,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"defaultShift\": \"MORNING\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"specialty\": \"RECYCLING\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"defaultShift\": \"MORNING\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"specialty\": \"SWEEPING\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -6424,7 +6470,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"defaultShift\": \"MORNING\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"specialty\": \"RECYCLING\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"defaultShift\": \"MORNING\",\n  \"leaderUserId\": \"<string>\",\n  \"organizationId\": \"<string>\",\n  \"leaderName\": \"<string>\",\n  \"organizationName\": \"<string>\",\n  \"specialty\": \"SWEEPING\",\n  \"homeZoneId\": \"<uuid>\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -6511,7 +6557,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -6550,7 +6596,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -6596,7 +6642,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -6811,7 +6857,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -6852,7 +6898,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -6900,7 +6946,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -6969,7 +7015,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"validFrom\": \"3622-92-70\",\n  \"validTo\": \"4837-96-61\"\n}",
+              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"validFrom\": \"4092-58-73\",\n  \"validTo\": \"9163-39-78\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -7029,7 +7075,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"validFrom\": \"3622-92-70\",\n  \"validTo\": \"4837-96-61\"\n}",
+              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"reason\": \"<string>\",\n  \"validFrom\": \"4092-58-73\",\n  \"validTo\": \"9163-39-78\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -7902,7 +7948,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -7941,7 +7987,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -7987,7 +8033,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -8057,7 +8103,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"containerType\": \"RECYCLABLE\",\n  \"zoneId\": \"<uuid>\",\n  \"capacityLiters\": \"<number>\",\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\"\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"containerType\": \"HOUSEHOLD\",\n  \"zoneId\": \"<uuid>\",\n  \"capacityLiters\": \"<number>\",\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -8115,7 +8161,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"containerType\": \"RECYCLABLE\",\n  \"zoneId\": \"<uuid>\",\n  \"capacityLiters\": \"<number>\",\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\"\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"containerType\": \"HOUSEHOLD\",\n  \"zoneId\": \"<uuid>\",\n  \"capacityLiters\": \"<number>\",\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -8971,7 +9017,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"damageType\": \"VANDALIZED\",\n  \"severity\": \"HIGH\",\n  \"requiresPublicWorks\": false,\n  \"observations\": \"<string>\"\n}",
+              "raw": "{\n  \"damageType\": \"MISSING\",\n  \"severity\": \"LOW\",\n  \"requiresPublicWorks\": false,\n  \"observations\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -9031,7 +9077,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"damageType\": \"VANDALIZED\",\n  \"severity\": \"HIGH\",\n  \"requiresPublicWorks\": false,\n  \"observations\": \"<string>\"\n}",
+              "raw": "{\n  \"damageType\": \"MISSING\",\n  \"severity\": \"LOW\",\n  \"requiresPublicWorks\": false,\n  \"observations\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -10576,7 +10622,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -10615,7 +10661,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -10661,7 +10707,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -10733,7 +10779,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"surveyedAt\": \"<dateTime>\",\n  \"healthStatus\": \"DEAD\",\n  \"riskLevel\": \"CRITICAL\",\n  \"riskType\": \"TRUNK_INSTABILITY\",\n  \"suggestedIntervention\": \"SAFETY_PRUNING\",\n  \"inspectorId\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"requiresPublicWorks\": false,\n  \"notes\": \"<string>\"\n}",
+              "raw": "{\n  \"surveyedAt\": \"<dateTime>\",\n  \"healthStatus\": \"DISEASED\",\n  \"riskLevel\": \"CRITICAL\",\n  \"riskType\": \"TRUNK_INSTABILITY\",\n  \"suggestedIntervention\": \"REMOVAL\",\n  \"inspectorId\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"requiresPublicWorks\": false,\n  \"notes\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -10793,7 +10839,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"surveyedAt\": \"<dateTime>\",\n  \"healthStatus\": \"DEAD\",\n  \"riskLevel\": \"CRITICAL\",\n  \"riskType\": \"TRUNK_INSTABILITY\",\n  \"suggestedIntervention\": \"SAFETY_PRUNING\",\n  \"inspectorId\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"requiresPublicWorks\": false,\n  \"notes\": \"<string>\"\n}",
+              "raw": "{\n  \"surveyedAt\": \"<dateTime>\",\n  \"healthStatus\": \"DISEASED\",\n  \"riskLevel\": \"CRITICAL\",\n  \"riskType\": \"TRUNK_INSTABILITY\",\n  \"suggestedIntervention\": \"REMOVAL\",\n  \"inspectorId\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"requiresPublicWorks\": false,\n  \"notes\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -11228,7 +11274,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"interventionType\": \"REMOVAL\",\n  \"treeIds\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"address\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"priority\": \"HIGH\",\n  \"justification\": \"<string>\"\n}",
+              "raw": "{\n  \"interventionType\": \"PLANTING\",\n  \"treeIds\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"address\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"priority\": \"LOW\",\n  \"justification\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -11286,7 +11332,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"interventionType\": \"REMOVAL\",\n  \"treeIds\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"address\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"priority\": \"HIGH\",\n  \"justification\": \"<string>\"\n}",
+              "raw": "{\n  \"interventionType\": \"PLANTING\",\n  \"treeIds\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"address\": \"<string>\",\n  \"requiresStreetClosure\": false,\n  \"priority\": \"LOW\",\n  \"justification\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -12292,7 +12338,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"spaceType\": \"PARK\",\n  \"zoneId\": \"<uuid>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"areaM2\": \"<number>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"spaceType\": \"SQUARE\",\n  \"zoneId\": \"<uuid>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"areaM2\": \"<number>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -12350,7 +12396,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"spaceType\": \"PARK\",\n  \"zoneId\": \"<uuid>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"areaM2\": \"<number>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"spaceType\": \"SQUARE\",\n  \"zoneId\": \"<uuid>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"areaM2\": \"<number>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -12892,7 +12938,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -12931,7 +12977,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -12977,7 +13023,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -13047,7 +13093,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"MIXED\",\n    \"MIXED\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"BULKY\",\n    \"BULKY\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -13105,7 +13151,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"MIXED\",\n    \"MIXED\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": true\n}",
+              "raw": "{\n  \"code\": \"<string>\",\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"BULKY\",\n    \"BULKY\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": true\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -13501,7 +13547,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"BULKY\",\n    \"MIXED\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"GREEN\",\n    \"BULKY\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -13560,7 +13606,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"BULKY\",\n    \"MIXED\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": \"<boolean>\"\n}",
+              "raw": "{\n  \"name\": \"<string>\",\n  \"zoneId\": \"<uuid>\",\n  \"wasteTypes\": [\n    \"GREEN\",\n    \"BULKY\"\n  ],\n  \"address\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"active\": \"<boolean>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -13647,7 +13693,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -13686,7 +13732,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -13732,7 +13778,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -13802,7 +13848,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"serviceTypeId\": \"<uuid>\",\n  \"scheduledDate\": \"<date>\",\n  \"origin\": \"PLANNED\",\n  \"routeId\": \"<uuid>\",\n  \"targetType\": \"GREEN_SPACE\",\n  \"targetId\": \"<uuid>\",\n  \"zoneId\": \"<uuid>\",\n  \"crewId\": \"<uuid>\",\n  \"vehicleId\": \"<uuid>\",\n  \"windowFrom\": \"<string>\",\n  \"windowTo\": \"<string>\",\n  \"ticketId\": \"<string>\",\n  \"inspectionId\": \"<uuid>\",\n  \"weatherAlertId\": \"<string>\",\n  \"notes\": \"<string>\",\n  \"overrideNote\": \"<string>\"\n}",
+              "raw": "{\n  \"serviceTypeId\": \"<uuid>\",\n  \"scheduledDate\": \"<date>\",\n  \"origin\": \"WEATHER_ALERT\",\n  \"routeId\": \"<uuid>\",\n  \"targetType\": \"GREEN_POINT\",\n  \"targetId\": \"<uuid>\",\n  \"zoneId\": \"<uuid>\",\n  \"crewId\": \"<uuid>\",\n  \"vehicleId\": \"<uuid>\",\n  \"windowFrom\": \"<string>\",\n  \"windowTo\": \"<string>\",\n  \"ticketId\": \"<string>\",\n  \"inspectionId\": \"<uuid>\",\n  \"weatherAlertId\": \"<string>\",\n  \"notes\": \"<string>\",\n  \"overrideNote\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -13860,7 +13906,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"serviceTypeId\": \"<uuid>\",\n  \"scheduledDate\": \"<date>\",\n  \"origin\": \"PLANNED\",\n  \"routeId\": \"<uuid>\",\n  \"targetType\": \"GREEN_SPACE\",\n  \"targetId\": \"<uuid>\",\n  \"zoneId\": \"<uuid>\",\n  \"crewId\": \"<uuid>\",\n  \"vehicleId\": \"<uuid>\",\n  \"windowFrom\": \"<string>\",\n  \"windowTo\": \"<string>\",\n  \"ticketId\": \"<string>\",\n  \"inspectionId\": \"<uuid>\",\n  \"weatherAlertId\": \"<string>\",\n  \"notes\": \"<string>\",\n  \"overrideNote\": \"<string>\"\n}",
+              "raw": "{\n  \"serviceTypeId\": \"<uuid>\",\n  \"scheduledDate\": \"<date>\",\n  \"origin\": \"WEATHER_ALERT\",\n  \"routeId\": \"<uuid>\",\n  \"targetType\": \"GREEN_POINT\",\n  \"targetId\": \"<uuid>\",\n  \"zoneId\": \"<uuid>\",\n  \"crewId\": \"<uuid>\",\n  \"vehicleId\": \"<uuid>\",\n  \"windowFrom\": \"<string>\",\n  \"windowTo\": \"<string>\",\n  \"ticketId\": \"<string>\",\n  \"inspectionId\": \"<uuid>\",\n  \"weatherAlertId\": \"<string>\",\n  \"notes\": \"<string>\",\n  \"overrideNote\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -14755,7 +14801,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"delayType\": \"START\",\n  \"delayMinutes\": \"<number>\",\n  \"reason\": \"<string>\",\n  \"newEstimatedEnd\": \"<dateTime>\",\n  \"detectedAt\": \"<dateTime>\"\n}",
+              "raw": "{\n  \"delayType\": \"DURATION\",\n  \"delayMinutes\": \"<number>\",\n  \"reason\": \"<string>\",\n  \"newEstimatedEnd\": \"<dateTime>\",\n  \"detectedAt\": \"<dateTime>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -14815,7 +14861,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"delayType\": \"START\",\n  \"delayMinutes\": \"<number>\",\n  \"reason\": \"<string>\",\n  \"newEstimatedEnd\": \"<dateTime>\",\n  \"detectedAt\": \"<dateTime>\"\n}",
+              "raw": "{\n  \"delayType\": \"DURATION\",\n  \"delayMinutes\": \"<number>\",\n  \"reason\": \"<string>\",\n  \"newEstimatedEnd\": \"<dateTime>\",\n  \"detectedAt\": \"<dateTime>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -16204,7 +16250,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"status\": \"SERVICED\",\n  \"reason\": \"EXCESS_VOLUME\",\n  \"proposedDate\": \"<date>\",\n  \"notes\": \"<string>\"\n}",
+              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"status\": \"PARTIAL\",\n  \"reason\": \"CREW_UNAVAILABLE\",\n  \"proposedDate\": \"<date>\",\n  \"notes\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -16264,7 +16310,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"status\": \"SERVICED\",\n  \"reason\": \"EXCESS_VOLUME\",\n  \"proposedDate\": \"<date>\",\n  \"notes\": \"<string>\"\n}",
+              "raw": "{\n  \"zoneId\": \"<uuid>\",\n  \"status\": \"PARTIAL\",\n  \"reason\": \"CREW_UNAVAILABLE\",\n  \"proposedDate\": \"<date>\",\n  \"notes\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -16534,7 +16580,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"wasteType\": \"RECYCLABLE\",\n  \"disposalSiteId\": \"<uuid>\",\n  \"zoneResultId\": \"<uuid>\",\n  \"volumeM3\": \"<number>\",\n  \"weightKg\": \"<number>\"\n}",
+              "raw": "{\n  \"wasteType\": \"MIXED\",\n  \"disposalSiteId\": \"<uuid>\",\n  \"zoneResultId\": \"<uuid>\",\n  \"volumeM3\": \"<number>\",\n  \"weightKg\": \"<number>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -16594,7 +16640,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"wasteType\": \"RECYCLABLE\",\n  \"disposalSiteId\": \"<uuid>\",\n  \"zoneResultId\": \"<uuid>\",\n  \"volumeM3\": \"<number>\",\n  \"weightKg\": \"<number>\"\n}",
+              "raw": "{\n  \"wasteType\": \"MIXED\",\n  \"disposalSiteId\": \"<uuid>\",\n  \"zoneResultId\": \"<uuid>\",\n  \"volumeM3\": \"<number>\",\n  \"weightKg\": \"<number>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -17282,7 +17328,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"inspectedAt\": \"<dateTime>\",\n  \"outcome\": \"INCONCLUSIVE\",\n  \"nextStep\": \"CASE_CLOSED\",\n  \"findings\": \"<string>\",\n  \"checklist\": [\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    },\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    }\n  ],\n  \"conclusion\": \"<string>\",\n  \"violationType\": \"NO_WASTE_MANAGEMENT\",\n  \"severity\": \"HIGH\",\n  \"suggestedAction\": \"WARNING\"\n}",
+              "raw": "{\n  \"inspectedAt\": \"<dateTime>\",\n  \"outcome\": \"NO_VIOLATION\",\n  \"nextStep\": \"CASE_CLOSED\",\n  \"findings\": \"<string>\",\n  \"checklist\": [\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    },\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    }\n  ],\n  \"conclusion\": \"<string>\",\n  \"violationType\": \"NOISE_LIMIT\",\n  \"severity\": \"MEDIUM\",\n  \"suggestedAction\": \"FORMAL_NOTICE\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -17342,7 +17388,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"inspectedAt\": \"<dateTime>\",\n  \"outcome\": \"INCONCLUSIVE\",\n  \"nextStep\": \"CASE_CLOSED\",\n  \"findings\": \"<string>\",\n  \"checklist\": [\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    },\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    }\n  ],\n  \"conclusion\": \"<string>\",\n  \"violationType\": \"NO_WASTE_MANAGEMENT\",\n  \"severity\": \"HIGH\",\n  \"suggestedAction\": \"WARNING\"\n}",
+              "raw": "{\n  \"inspectedAt\": \"<dateTime>\",\n  \"outcome\": \"NO_VIOLATION\",\n  \"nextStep\": \"CASE_CLOSED\",\n  \"findings\": \"<string>\",\n  \"checklist\": [\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    },\n    {\n      \"itemCode\": \"<string>\",\n      \"label\": \"<string>\",\n      \"result\": \"<boolean>\",\n      \"observations\": \"<string>\"\n    }\n  ],\n  \"conclusion\": \"<string>\",\n  \"violationType\": \"NOISE_LIMIT\",\n  \"severity\": \"MEDIUM\",\n  \"suggestedAction\": \"FORMAL_NOTICE\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -17453,7 +17499,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"violationType\": \"AIR_EMISSION\",\n  \"severity\": \"LOW\",\n  \"suggestedAction\": \"WARNING\",\n  \"establishmentId\": \"<string>\"\n}",
+              "raw": "{\n  \"violationType\": \"NO_WASTE_MANAGEMENT\",\n  \"severity\": \"MEDIUM\",\n  \"suggestedAction\": \"FINE\",\n  \"establishmentId\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -17513,7 +17559,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"violationType\": \"AIR_EMISSION\",\n  \"severity\": \"LOW\",\n  \"suggestedAction\": \"WARNING\",\n  \"establishmentId\": \"<string>\"\n}",
+              "raw": "{\n  \"violationType\": \"NO_WASTE_MANAGEMENT\",\n  \"severity\": \"MEDIUM\",\n  \"suggestedAction\": \"FINE\",\n  \"establishmentId\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -17712,7 +17758,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reportType\": \"ODOR\",\n  \"address\": \"<string>\",\n  \"description\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"ticketId\": \"<string>\",\n  \"priority\": \"CRITICAL\"\n}",
+              "raw": "{\n  \"reportType\": \"WATER_DISCHARGE\",\n  \"address\": \"<string>\",\n  \"description\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"ticketId\": \"<string>\",\n  \"priority\": \"CRITICAL\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -17770,7 +17816,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reportType\": \"ODOR\",\n  \"address\": \"<string>\",\n  \"description\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"ticketId\": \"<string>\",\n  \"priority\": \"CRITICAL\"\n}",
+              "raw": "{\n  \"reportType\": \"WATER_DISCHARGE\",\n  \"address\": \"<string>\",\n  \"description\": \"<string>\",\n  \"lat\": \"<number>\",\n  \"lng\": \"<number>\",\n  \"ticketId\": \"<string>\",\n  \"priority\": \"CRITICAL\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -18947,7 +18993,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"damageType\": \"DAMAGED_STRUCTURE\",\n  \"severity\": \"HIGH\",\n  \"publicSafetyRisk\": \"<boolean>\",\n  \"detectedInType\": \"SERVICE\",\n  \"detectedInId\": \"<uuid>\",\n  \"address\": \"<string>\"\n}",
+              "raw": "{\n  \"damageType\": \"BROKEN_STREETLIGHT\",\n  \"severity\": \"CRITICAL\",\n  \"publicSafetyRisk\": \"<boolean>\",\n  \"detectedInType\": \"SERVICE\",\n  \"detectedInId\": \"<uuid>\",\n  \"address\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -19005,7 +19051,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"damageType\": \"DAMAGED_STRUCTURE\",\n  \"severity\": \"HIGH\",\n  \"publicSafetyRisk\": \"<boolean>\",\n  \"detectedInType\": \"SERVICE\",\n  \"detectedInId\": \"<uuid>\",\n  \"address\": \"<string>\"\n}",
+              "raw": "{\n  \"damageType\": \"BROKEN_STREETLIGHT\",\n  \"severity\": \"CRITICAL\",\n  \"publicSafetyRisk\": \"<boolean>\",\n  \"detectedInType\": \"SERVICE\",\n  \"detectedInId\": \"<uuid>\",\n  \"address\": \"<string>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -20914,7 +20960,7 @@
                     "type": "text/plain"
                   },
                   "key": "ownerType",
-                  "value": "SERVICE",
+                  "value": "INSPECTION",
                   "type": "text"
                 },
                 {
@@ -21002,7 +21048,7 @@
                     "type": "text/plain"
                   },
                   "key": "ownerType",
-                  "value": "SERVICE",
+                  "value": "INSPECTION",
                   "type": "text"
                 },
                 {
@@ -21835,7 +21881,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"roles\": [\n    \"M6_CAMPO_CUADRILLA\",\n    \"M6_OFICINA_OPERACIONES\"\n  ]\n}",
+              "raw": "{\n  \"roles\": [\n    \"M6_ADMIN\",\n    \"M6_CAMPO_CUADRILLA\"\n  ]\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -21894,7 +21940,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"roles\": [\n    \"M6_CAMPO_CUADRILLA\",\n    \"M6_OFICINA_OPERACIONES\"\n  ]\n}",
+              "raw": "{\n  \"roles\": [\n    \"M6_ADMIN\",\n    \"M6_CAMPO_CUADRILLA\"\n  ]\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -21981,7 +22027,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -22020,7 +22066,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {
@@ -22066,7 +22112,7 @@
             "header": [
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/problem+json"
               }
             ],
             "url": {

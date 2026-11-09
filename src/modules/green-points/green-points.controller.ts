@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Body,
   Controller,
@@ -20,7 +21,7 @@ import {
   UpdateGreenPointDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles, ApiBadRequestParams } from '../../common/decorators';
 import { ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
@@ -55,6 +56,7 @@ export class GreenPointsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @Idempotent()
   async create(@Body() dto: CreateGreenPointDto): Promise<GreenPointResponseDto> {
     return this.greenPointsService.create(dto);
   }
@@ -69,6 +71,7 @@ export class GreenPointsController {
   @ApiPaginatedResponse(GreenPointResponseDto, 'Listado paginado de puntos verdes')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findAll(@Query() query: QueryGreenPointsDto) {
     return this.greenPointsService.findAll(query);
   }
@@ -84,6 +87,7 @@ export class GreenPointsController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Punto verde no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<GreenPointResponseDto> {
     return this.greenPointsService.findOne(id);
   }

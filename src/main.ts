@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { configureApp } from './configure-app';
-import { buildSwaggerConfig } from './swagger-config';
+import { createOpenApiDocument } from './swagger-config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -24,7 +24,10 @@ async function bootstrap() {
   // cierra un CSRF — no habia uno. Evita que un sitio cualquiera use la API
   // desde el navegador de un usuario nuestro.
   const corsOrigins = configService.get<string[]>('corsOrigins');
-  app.enableCors(corsOrigins?.length ? { origin: corsOrigins } : undefined);
+  // allowedHeaders sin definir: se refleja lo que pide el preflight, así que If-Match e Idempotency-Key ya pasan.
+  // ETag (ADR-012) e Idempotency-Replayed (ADR-013) se exponen para que el frontend, en otro origen, pueda leerlos.
+  const exposedHeaders = ['ETag', 'Idempotency-Replayed'];
+  app.enableCors({ ...(corsOrigins?.length ? { origin: corsOrigins } : {}), exposedHeaders });
   logger.log(
     corsOrigins?.length
       ? `CORS restringido a: ${corsOrigins.join(', ')}`
@@ -34,9 +37,7 @@ async function bootstrap() {
   // ─── Swagger ───────────────────────────────────
   // La configuración vive en swagger-config.ts porque el script que
   // genera docs/api/openapi.json usa exactamente la misma.
-  const config = buildSwaggerConfig();
-
-  const document = SwaggerModule.createDocument(app, config);
+  const document = createOpenApiDocument(app);
   SwaggerModule.setup('api/docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,

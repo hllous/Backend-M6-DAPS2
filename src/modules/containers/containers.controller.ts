@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Controller,
   Get,
@@ -9,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { ContainersService } from './containers.service';
@@ -22,13 +24,20 @@ import {
   ContainerStatusHistoryResponseDto,
 } from './dto';
 import { ErrorResponseDto, PaginationQueryDto } from '../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
+import { ApiETag, ETagInterceptor, IfMatch } from '../../common/etag';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_CUADRILLA, ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
 @ApiTags('containers')
 @ApiBearerAuth('JWT-auth')
+@UseInterceptors(ETagInterceptor)
 @Controller('containers')
 export class ContainersController {
   constructor(private readonly containersService: ContainersService) {}
@@ -72,6 +81,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @Idempotent()
   async create(
     @Body() dto: CreateContainerDto,
     @CurrentUser() actor: AuthenticatedUser,
@@ -97,12 +107,14 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findAll(@Query() query: QueryContainersDto) {
     return this.containersService.findAll(query);
   }
 
   @ApiAnyM6Role()
   @Get(':id')
+  @ApiETag()
   @ApiOperation({
     summary: 'Obtener un contenedor por ID',
     description:
@@ -133,6 +145,7 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ContainerResponseDto> {
     return this.containersService.findOne(id);
   }
@@ -165,11 +178,13 @@ export class ContainersController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findHistory(@Param('id', ParseUUIDPipe) id: string, @Query() query: PaginationQueryDto) {
     return this.containersService.findHistory(id, query);
   }
 
   @Patch(':id')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Actualizar datos de un contenedor',
@@ -209,13 +224,15 @@ export class ContainersController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateContainerDto,
+    @IfMatch() ifMatch?: string,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.update(id, dto);
+    return this.containersService.update(id, dto, ifMatch);
   }
 
   // ─── Transiciones de estado ────────────────────────
 
   @Post(':id/report-overflow')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -255,11 +272,13 @@ export class ContainersController {
   async reportOverflow(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.reportOverflow(id, actor);
+    return this.containersService.reportOverflow(id, actor, ifMatch);
   }
 
   @Post(':id/report-damage')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -306,11 +325,13 @@ export class ContainersController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReportDamageDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.reportDamage(id, dto, actor);
+    return this.containersService.reportDamage(id, dto, actor, ifMatch);
   }
 
   @Post(':id/empty')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -351,11 +372,13 @@ export class ContainersController {
   async empty(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.empty(id, actor);
+    return this.containersService.empty(id, actor, ifMatch);
   }
 
   @Post(':id/start-repair')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -396,11 +419,13 @@ export class ContainersController {
   async startRepair(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.startRepair(id, actor);
+    return this.containersService.startRepair(id, actor, ifMatch);
   }
 
   @Post(':id/complete-repair')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -441,11 +466,13 @@ export class ContainersController {
   async completeRepair(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.completeRepair(id, actor);
+    return this.containersService.completeRepair(id, actor, ifMatch);
   }
 
   @Post(':id/relocate')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -486,11 +513,13 @@ export class ContainersController {
   async relocate(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.relocate(id, actor);
+    return this.containersService.relocate(id, actor, ifMatch);
   }
 
   @Post(':id/confirm-relocation')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -537,11 +566,13 @@ export class ContainersController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ConfirmRelocationDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.confirmRelocation(id, dto, actor);
+    return this.containersService.confirmRelocation(id, dto, actor, ifMatch);
   }
 
   @Post(':id/remove')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -583,7 +614,8 @@ export class ContainersController {
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.remove(id, actor);
+    return this.containersService.remove(id, actor, ifMatch);
   }
 }

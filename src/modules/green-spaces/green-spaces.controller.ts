@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Controller,
   Get,
@@ -20,7 +21,7 @@ import {
   QueryGreenSpacesDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles, ApiBadRequestParams } from '../../common/decorators';
 import { ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
@@ -62,6 +63,7 @@ export class GreenSpacesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @Idempotent()
   async create(@Body() dto: CreateGreenSpaceDto): Promise<GreenSpaceResponseDto> {
     return this.greenSpacesService.create(dto);
   }
@@ -84,6 +86,7 @@ export class GreenSpacesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findAll(@Query() query: QueryGreenSpacesDto) {
     return this.greenSpacesService.findAll(query);
   }
@@ -119,6 +122,7 @@ export class GreenSpacesController {
     description: 'Error interno del servidor',
     type: ErrorResponseDto,
   })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<GreenSpaceResponseDto> {
     return this.greenSpacesService.findOne(id);
   }

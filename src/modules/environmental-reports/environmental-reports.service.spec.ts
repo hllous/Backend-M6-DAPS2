@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  PreconditionFailedException,
+} from '@nestjs/common';
 import {
   EnvironmentalReport,
   EnvironmentalReportStatus as S,
@@ -11,6 +16,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
 import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../common/audit/audit.service';
+import { etagOf } from '../../common/etag';
 import { EnvironmentalReportsService, REPORT_TRANSITIONS } from './environmental-reports.service';
 
 const ID = '11111111-1111-1111-1111-111111111111';
@@ -1144,6 +1150,48 @@ describe('EnvironmentalReportsService', () => {
         toStatus: S.NO_VIOLATION,
         actor: ACTOR,
       });
+    });
+  });
+
+  // ─── If-Match (ADR-012) ─────────────────────────────
+
+  describe('If-Match', () => {
+    const vigente = etagOf(expediente().updatedAt);
+
+    it('con un ETag viejo da 412 y no abre la transacción ni encola', async () => {
+      await expect(service.startReview(ID, ACTOR, 'W/"1"')).rejects.toBeInstanceOf(
+        PreconditionFailedException,
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(outbox.enqueueMany).not.toHaveBeenCalled();
+    });
+
+    it('con el vigente condiciona el UPDATE por updatedAt', async () => {
+      const { escrito } = await transicionar(S.RECEIVED, (s) => s.startReview(ID, ACTOR, vigente));
+      expect(escrito.where).toEqual({ id: ID, updatedAt: expediente().updatedAt });
+    });
+
+    it('sin If-Match el where no cambia', async () => {
+      const { escrito } = await transicionar(S.RECEIVED, (s) => s.startReview(ID, ACTOR));
+      expect(escrito.where).toEqual({ id: ID });
+    });
+
+    it('si otro request escribió en el medio (P2025) da 412', async () => {
+      prisma.environmentalReport.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5' }),
+      );
+      await expect(service.startReview(ID, ACTOR, vigente)).rejects.toBeInstanceOf(
+        PreconditionFailedException,
+      );
+    });
+
+    it('un P2025 sin If-Match no se enmascara como 412', async () => {
+      const err = new Prisma.PrismaClientKnownRequestError('x', {
+        code: 'P2025',
+        clientVersion: '5',
+      });
+      prisma.environmentalReport.update.mockRejectedValue(err);
+      await expect(service.startReview(ID, ACTOR)).rejects.toBe(err);
     });
   });
 });

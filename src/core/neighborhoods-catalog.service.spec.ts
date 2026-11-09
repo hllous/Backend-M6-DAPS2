@@ -1,3 +1,7 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { ConfigService } from '@nestjs/config';
 import { CoreClient } from './core.client';
 import { NeighborhoodsCatalogService } from './neighborhoods-catalog.service';
 
@@ -23,8 +27,11 @@ const BALVANERA = {
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
-function crear(request: jest.Mock, enabled = true) {
-  return new NeighborhoodsCatalogService({ enabled, request } as unknown as CoreClient);
+function crear(request: jest.Mock, enabled = true, archivo?: string) {
+  return new NeighborhoodsCatalogService(
+    { enabled, request } as unknown as CoreClient,
+    { get: () => archivo } as unknown as ConfigService,
+  );
 }
 
 describe('NeighborhoodsCatalogService', () => {
@@ -159,6 +166,31 @@ describe('NeighborhoodsCatalogService', () => {
     const logueado = warn.mock.calls.map((c) => String(c[0])).join(' ');
     expect(logueado).not.toMatch(/Bearer|secret=|accessToken/i);
     s.onModuleDestroy();
+  });
+
+  describe('catálogo local (NEIGHBORHOODS_CATALOG_FILE)', () => {
+    const escribir = (contenido: string) => {
+      const ruta = join(mkdtempSync(join(tmpdir(), 'barrios-')), 'barrios.json');
+      writeFileSync(ruta, contenido);
+      return ruta;
+    };
+
+    it('carga el archivo, queda disponible y no consulta al Core', () => {
+      const request = jest.fn();
+      const s = crear(request, true, escribir(JSON.stringify([PALERMO, { basura: 1 }])));
+      jest.spyOn(s['logger'], 'warn').mockImplementation();
+      s.onApplicationBootstrap();
+
+      expect(s.disponible).toBe(true);
+      expect(s.list().map((b) => b.codigo)).toEqual(['palermo']);
+      expect(request).not.toHaveBeenCalled();
+      s.onModuleDestroy();
+    });
+
+    it('un archivo sin barrios válidos corta el arranque', () => {
+      const s = crear(jest.fn(), true, escribir('[]'));
+      expect(() => s.onApplicationBootstrap()).toThrow(/sin barrios válidos/);
+    });
   });
 
   it('cerrada la app no vuelve a agendar', async () => {

@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Body,
   Controller,
@@ -29,7 +30,7 @@ import {
 } from './dto';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiNotAssigned, CurrentUser, Roles } from '../../common/decorators';
+import { ApiNotAssigned, CurrentUser, Roles, ApiBadRequestParams } from '../../common/decorators';
 import { ROLES_ACTA_LECTURA, ROLES_AMBIENTAL, ROLES_INSPECTOR } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
@@ -69,6 +70,7 @@ export class EnvironmentalInspectionsController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @Idempotent()
   async create(
     @Param('reportId', ParseUUIDPipe) reportId: string,
     @Body() dto: CreateInspectionDto,
@@ -92,6 +94,7 @@ export class EnvironmentalInspectionsController {
   @ApiResponse(AUTH)
   @ApiResponse({ status: 404, description: 'Expediente no encontrado', type: ErrorResponseDto })
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findByReport(
     @Param('reportId', ParseUUIDPipe) reportId: string,
   ): Promise<InspectionResponseDto[]> {
@@ -110,6 +113,7 @@ export class EnvironmentalInspectionsController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<InspectionResponseDto> {
     return this.inspectionsService.findOne(id);
   }
@@ -194,6 +198,7 @@ export class EnvironmentalInspectionsController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findNotice(
     @Param('id', ParseUUIDPipe) id: string,
     @Res({ passthrough: true }) res: Response,
