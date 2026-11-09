@@ -3,8 +3,8 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
-  HttpException,
 } from '@nestjs/common';
+import { ThrottlerException } from '@nestjs/throttler';
 import { Prisma } from '@prisma/client';
 import { HttpExceptionFilter } from './http-exception.filter';
 
@@ -157,12 +157,21 @@ describe('HttpExceptionFilter', () => {
     });
 
     it('429 (ThrottlerException) sale como problem+json', () => {
-      filter.catch(new HttpException('ThrottlerException: Too Many Requests', 429), host);
+      filter.catch(new ThrottlerException(), host);
       expect(captured()).toMatchObject({
         status: 429,
         title: 'Too Many Requests',
         statusCode: 429,
       });
+    });
+
+    it('un error de body-parser (413) conserva su status en vez de caer en 500', () => {
+      const err = Object.assign(new Error('request entity too large'), {
+        status: 413,
+        expose: true,
+      });
+      filter.catch(err, host);
+      expect(captured()).toMatchObject({ status: 413, title: 'Payload Too Large' });
     });
   });
 });

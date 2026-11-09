@@ -59,6 +59,18 @@ const PRISMA_STATUS: Record<string, { status: HttpStatus; message: string }> = {
   },
 };
 
+/** Error de http-errors (lo que lanza body-parser): `expose` marca que el mensaje es apto para el cliente. */
+function isBodyParserError(e: unknown): e is Error & { status: number } {
+  const x = e as { status?: unknown; expose?: unknown } | null;
+  return (
+    e instanceof Error &&
+    typeof x?.status === 'number' &&
+    x.status >= 400 &&
+    x.status < 500 &&
+    x.expose === true
+  );
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -100,6 +112,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const mapped = PRISMA_STATUS[exception.code];
       status = mapped.status;
       message = mapped.message;
+      error = reasonPhrase(status);
+    } else if (isBodyParserError(exception)) {
+      // Errores de body-parser (JSON roto, cuerpo sobre el límite) que ocurren antes
+      // del router: traen su propio status 4xx y un mensaje seguro de exponer.
+      status = exception.status;
+      message = exception.message;
       error = reasonPhrase(status);
     } else {
       // Error no controlado — loguear para debugging
