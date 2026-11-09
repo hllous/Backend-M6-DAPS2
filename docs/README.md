@@ -61,7 +61,7 @@ Cuatro familias, una por endpoint bajo `/indicators` — ver [api/endpoints.md](
 - [integracion/](integracion/README.md) — fichas por módulo (M1, M2, M3, M4, M7, M9), historial, resueltos, riesgos y mensajes enviados
 - [enumeraciones.md](enumeraciones.md) — catálogo de valores cerrados
 - [decisiones/](decisiones/) — ADRs (decisiones técnicas de arquitectura)
-- [QA/README.md](QA/README.md) — entregables de QA de la prueba del 10/11 (plan, matriz, casos, informe de ejecución, defectos, seguridad, declaración de IA, lecciones)
+- [QA/README.md](QA/README.md) — entregables de QA de la prueba del 10/11 (plan, matriz, casos, informe de ejecución, defectos, seguridad, lecciones)
 - [QA/manual-de-usuario.md](QA/manual-de-usuario.md) — manual para el usuario final (Oficina y Campo), clasificado según Diátaxis; capturas en `QA/img/`
 - [deploy.md](deploy.md) — despliegue, URLs, variables de entorno y estado operativo
 - [testing.md](testing.md) — tests unitarios y e2e contra Postgres: cómo correrlos y qué cubre cada suite

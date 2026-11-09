@@ -22,7 +22,6 @@ const INFORME = [
   '05-informe-ejecucion.md',
   '06-registro-defectos.md',
   '07-informe-seguridad.md',
-  '08-declaracion-ia.md',
   '09-lecciones-aprendidas.md',
 ];
 
