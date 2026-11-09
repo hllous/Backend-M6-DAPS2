@@ -158,6 +158,12 @@ export const envSchema = z
         .refine((v) => /^https?:\/\//i.test(v), 'CORE_API_URL debe empezar con http:// o https://')
         .optional(),
     ),
+    // Catálogo de barrios desde un JSON (local y CI, donde no hay M9). Vacía cuenta
+    // como ausente. Prohibida en producción: ahí el catálogo es el real o no hay.
+    NEIGHBORHOODS_CATALOG_FILE: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().min(1).optional(),
+    ),
     // URL de M1 para consultas de identidad (ADR-009). Opcional: sin ella el
     // cliente queda deshabilitado. Vacía cuenta como ausente. Va el Bearer del
     // Core, por eso en producción tiene que ser https.
@@ -250,6 +256,14 @@ export const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ['M1_BASE_URL'],
         message: 'En producción M1_BASE_URL tiene que ser https://',
+      });
+    }
+    if (env.NODE_ENV === 'production' && env.NEIGHBORHOODS_CATALOG_FILE) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['NEIGHBORHOODS_CATALOG_FILE'],
+        message:
+          'NEIGHBORHOODS_CATALOG_FILE es solo para local y CI: en producción el catálogo es el de M9',
       });
     }
     if (env.CORE_API_URL && !env.CORE_MODULE_SECRET) {

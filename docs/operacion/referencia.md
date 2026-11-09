@@ -95,6 +95,7 @@ Son las 34 claves de [`src/config/env.validation.ts`](../../src/config/env.valid
 | `CORE_MODULE_SECRET` | Secret de máquina que entrega M9 por privado | **Obligatoria si hay `CORE_API_URL`** (sin él la app no arranca). Secreta; no se loguea | Render, solo en el panel |
 | `CORE_SUBSCRIPTION_MAX_ATTEMPTS` | `4` (default, 1 a 10) | Opcional. Rige solo al crear la suscripción: cambiarla después no actualiza las ya registradas | Render |
 | `CORE_REGISTER_ON_BOOT` | `true` (default); acepta `true`/`false`/`1`/`0` sin distinguir mayúsculas | Opcional. Con más de una réplica conviene `false` y correr `npm run core:register` en el deploy | Render |
+| `NEIGHBORHOODS_CATALOG_FILE` | `prisma/data/m9-barrios.json` (ruta a un JSON con los barrios en el formato de M9) | Opcional, **solo local y CI** (donde no hay M9): el catálogo de barrios sale de ese archivo y no se consulta al Core. Con la ruta mal puesta o sin barrios válidos el arranque falla. **Con `NODE_ENV=production` la app no arranca**: en producción sin catálogo real sigue siendo 503 | No va en Render |
 | `M1_BASE_URL` | `https://ciudadanos-m1-backend.onrender.com` (sin credenciales, query ni hash; en producción `https://`) | Opcional: sin ella el cliente de M1 queda deshabilitado y la validación de cuadrillas no corre. Necesita `CORE_API_URL` y `CORE_MODULE_SECRET` ([ADR-009](../decisiones/adr-009-rest-m6-a-m1-consultas-de-identidad.md)) | Render |
 
 ### Cloudflare R2 (evidencia)

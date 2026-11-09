@@ -259,6 +259,21 @@ describe('configuration — Core', () => {
   });
 });
 
+describe('configuration — catálogo de barrios local', () => {
+  it('sin la variable (o vacía) no hay archivo', () => {
+    expect(config().neighborhoodsCatalogFile).toBeUndefined();
+    expect(config({ NEIGHBORHOODS_CATALOG_FILE: '' }).neighborhoodsCatalogFile).toBeUndefined();
+  });
+
+  it('se acepta fuera de producción y se rechaza en producción', () => {
+    const ruta = 'prisma/data/m9-barrios.json';
+    expect(config({ NEIGHBORHOODS_CATALOG_FILE: ruta }).neighborhoodsCatalogFile).toBe(ruta);
+    expect(() => config({ NODE_ENV: 'production', NEIGHBORHOODS_CATALOG_FILE: ruta })).toThrow(
+      /NEIGHBORHOODS_CATALOG_FILE/,
+    );
+  });
+});
+
 describe('configuration — M1', () => {
   it('M1_BASE_URL es opcional: ausente o vacía no hay cliente', () => {
     expect(config().m1.baseUrl).toBeUndefined();

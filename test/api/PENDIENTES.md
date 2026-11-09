@@ -1,7 +1,7 @@
 # Endpoints sin caso de éxito en la colección Postman
 
 Generado por `npm run api:collection`. Todos tienen caso de error (401/403/400/404 según corresponda);
-60 de 152 tienen además caso de éxito. Los 92 de abajo no, y por qué:
+61 de 152 tienen además caso de éxito. Los 91 de abajo no, y por qué:
 
 | Endpoint | Motivo |
 |---|---|
@@ -13,7 +13,6 @@ Generado por `npm run api:collection`. Todos tienen caso de error (401/403/400/4
 | `DELETE /zones/{id}` | escritura: necesita datos y estado de dominio |
 | `POST /zones/{id}/neighborhoods` | escritura: necesita datos y estado de dominio |
 | `DELETE /zones/{id}/neighborhoods/{neighborhoodId}` | escritura: necesita datos y estado de dominio |
-| `GET /neighborhoods` | depende del catalogo de M9 (503 sin acceso al Core) |
 | `POST /service-types` | escritura: necesita datos y estado de dominio |
 | `PATCH /service-types/{id}` | escritura: necesita datos y estado de dominio |
 | `DELETE /service-types/{id}` | escritura: necesita datos y estado de dominio |
@@ -103,4 +102,4 @@ Generado por `npm run api:collection`. Todos tienen caso de error (401/403/400/4
 Defectos reales del backend frente a `docs/api/openapi.json` (corrida local, solo GET, #572). No se arreglan en esta rama.
 
 - **H-1, 400 no declarado:** más de 40 GET devuelven un 400 del `ValidationPipe` (query o parámetro inválido, propiedad no declarada) que el OpenAPI no lista (ST103). Ejemplo: `GET /containers` documenta 200/401/403/500. Por eso `status_code_conformance` corre como step informativo en `api-tests.yml`.
-- **H-2, 503 en `GET /neighborhoods`:** sin acceso al catálogo de M9 responde 503 (ST101, error de servidor). Se excluye del step bloqueante con `--exclude-path /neighborhoods`.
+- **H-2, 503 en `GET /neighborhoods` (resuelto, #594):** el CI y el compose cargan el catálogo local `prisma/data/m9-barrios.json` con `NEIGHBORHOODS_CATALOG_FILE`; en producción sigue siendo 503 sin el catálogo real de M9.
