@@ -115,11 +115,8 @@ jobs:
             --max-examples 15 --workers 2 \
             --report junit --report-dir reports/schemathesis
 
-      # Hallazgo H-1: ~40 GET devuelven un 400 del ValidationPipe (query/parámetro
-      # inválido) que el OpenAPI no declara. Es un defecto real del contrato: el check
-      # corre y queda en el reporte, pero no frena el job hasta que se documente el 400.
-      - name: Schemathesis (status_code_conformance, informativo)
-        continue-on-error: true
+      # Bloqueante: todo GET con parámetros declara su 400 (H-1 resuelto, #593).
+      - name: Schemathesis (status_code_conformance)
         run: |
           docker run --rm --network host --user "$(id -u):$(id -g)" -v "$PWD:/w" -w /w schemathesis/schemathesis:4.33.1 \
             run docs/api/openapi.json --url http://localhost:3000 \

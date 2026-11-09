@@ -20,7 +20,7 @@ import {
   UpdateServiceFrequencyDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles, ApiBadRequestParams } from '../../common/decorators';
 import { ROLES_ADMIN } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
@@ -75,6 +75,7 @@ export class ServiceFrequenciesController {
   @ApiPaginatedResponse(ServiceFrequencyResponseDto, 'Listado paginado de frecuencias')
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findAll(@Query() query: QueryServiceFrequenciesDto) {
     return this.serviceFrequenciesService.findAll(query);
   }
@@ -94,6 +95,7 @@ export class ServiceFrequenciesController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Frecuencia no encontrada', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ServiceFrequencyResponseDto> {
     return this.serviceFrequenciesService.findOne(id);
   }

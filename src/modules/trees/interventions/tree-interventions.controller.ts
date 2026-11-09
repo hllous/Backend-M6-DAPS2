@@ -19,7 +19,12 @@ import {
   AssignInterventionServiceDto,
 } from './dto';
 import { ErrorResponseDto } from '../../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../../common/decorators';
 import { ROLES_OPERACIONES } from '../../../auth/role-groups';
 import { AuthenticatedUser } from '../../../auth/jwt.strategy';
 import { ApiAnyM6Role } from '../../../common/decorators/roles.decorator';
@@ -91,6 +96,7 @@ export class TreeInterventionsController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Intervención no encontrada', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<TreeInterventionResponseDto> {
     return this.treeInterventionsService.findOne(id);
   }

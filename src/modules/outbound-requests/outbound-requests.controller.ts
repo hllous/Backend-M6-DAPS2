@@ -23,7 +23,12 @@ import {
   StreetClosureRequestResponseDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ROLES_ADMIN, ROLES_OPERACIONES } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
@@ -84,6 +89,7 @@ export class RepairRequestsController {
   @ApiPaginatedResponse(RepairRequestResponseDto, 'Listado paginado')
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findAll(@Query() query: QueryRepairRequestsDto) {
     return this.service.findRepairRequests(query);
   }
@@ -99,6 +105,7 @@ export class RepairRequestsController {
   @ApiResponse(AUTH)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<RepairRequestResponseDto> {
     return this.service.findRepairRequest(id);
   }
@@ -199,6 +206,7 @@ export class StreetClosureRequestsController {
   @ApiPaginatedResponse(StreetClosureRequestResponseDto, 'Listado paginado')
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findAll(@Query() query: QueryStreetClosureRequestsDto) {
     return this.service.findClosureRequests(query);
   }
@@ -219,6 +227,7 @@ export class StreetClosureRequestsController {
   @ApiResponse(AUTH)
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada', type: ErrorResponseDto })
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<StreetClosureRequestResponseDto> {
     return this.service.findClosureRequest(id);
   }

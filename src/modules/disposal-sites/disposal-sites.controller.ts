@@ -20,7 +20,7 @@ import {
   UpdateDisposalSiteDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
-import { ApiPaginatedResponse, Roles } from '../../common/decorators';
+import { ApiPaginatedResponse, Roles, ApiBadRequestParams } from '../../common/decorators';
 import { ROLES_ADMIN } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
@@ -72,6 +72,7 @@ export class DisposalSitesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findAll(@Query() query: QueryDisposalSitesDto) {
     return this.disposalSitesService.findAll(query);
   }
@@ -99,6 +100,7 @@ export class DisposalSitesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<DisposalSiteResponseDto> {
     return this.disposalSitesService.findOne(id);
   }
