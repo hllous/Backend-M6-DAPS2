@@ -13,6 +13,7 @@ import { EventsModule } from './events/events.module';
 import { CoreModule } from './core/core.module';
 import { IdentityModule } from './identity/identity.module';
 import { AuditModule } from './common/audit/audit.module';
+import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { JwtAuthGuard, RolesGuard } from './common/guards';
 
 // Módulos de dominio
@@ -70,6 +71,7 @@ import { RoleAssignmentsModule } from './modules/role-assignments/role-assignmen
     CoreModule,
     IdentityModule,
     AuditModule,
+    IdempotencyModule,
 
     // ─── Dominios de negocio ────────────────────────
     ZonesModule,

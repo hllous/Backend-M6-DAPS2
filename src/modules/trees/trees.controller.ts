@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Controller,
   Get,
@@ -46,6 +47,7 @@ export class TreesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @Idempotent()
   async create(@Body() dto: CreateTreeDto): Promise<TreeResponseDto> {
     return this.treesService.create(dto);
   }

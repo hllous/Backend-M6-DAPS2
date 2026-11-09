@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Body,
   Controller,
@@ -69,6 +70,7 @@ export class EnvironmentalInspectionsController {
     type: ErrorResponseDto,
   })
   @ApiResponse(SERVER)
+  @Idempotent()
   async create(
     @Param('reportId', ParseUUIDPipe) reportId: string,
     @Body() dto: CreateInspectionDto,

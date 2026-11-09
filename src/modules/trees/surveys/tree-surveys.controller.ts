@@ -1,3 +1,4 @@
+import { Idempotent } from '../../../common/idempotency/idempotent.decorator';
 import { Controller, Get, Post, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { TreeSurveysService } from './tree-surveys.service';
@@ -34,6 +35,7 @@ export class TreeSurveysController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'Árbol no encontrado', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @Idempotent()
   async create(
     @Param('treeId', ParseUUIDPipe) treeId: string,
     @Body() dto: CreateTreeSurveyDto,

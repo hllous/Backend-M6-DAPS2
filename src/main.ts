@@ -24,7 +24,12 @@ async function bootstrap() {
   // cierra un CSRF — no habia uno. Evita que un sitio cualquiera use la API
   // desde el navegador de un usuario nuestro.
   const corsOrigins = configService.get<string[]>('corsOrigins');
-  app.enableCors(corsOrigins?.length ? { origin: corsOrigins } : undefined);
+  // Idempotency-Replayed se expone para que el frontend (otro origen) pueda leerlo (ADR-013).
+  app.enableCors({
+    ...(corsOrigins?.length ? { origin: corsOrigins } : {}),
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Idempotency-Key'],
+    exposedHeaders: ['Idempotency-Replayed'],
+  });
   logger.log(
     corsOrigins?.length
       ? `CORS restringido a: ${corsOrigins.join(', ')}`

@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Body,
   Controller,
@@ -61,6 +62,7 @@ export class ServiceFrequenciesController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
+  @Idempotent()
   async create(@Body() dto: CreateServiceFrequencyDto): Promise<ServiceFrequencyResponseDto> {
     return this.serviceFrequenciesService.create(dto);
   }

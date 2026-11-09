@@ -59,3 +59,9 @@ Equipo de trabajo, municipal o de cooperativa. `organizationId` es de M1: **las 
 ### `Vehicle`
 
 Camión, barredora, tanque o grúa. Se asigna al `Service` cuando el `ServiceType` lo exige.
+
+## Idempotencia
+
+### `IdempotencyRecord`
+
+Respuesta guardada de un POST de creación que llegó con `Idempotency-Key` ([ADR-013](../decisiones/adr-013-idempotency-key.md)). No es una entidad de dominio. Campos: `scope` (`sub|MÉTODO|ruta`), `key`, `requestHash` (sha256 del body), `status` (`IdempotencyStatus`: `IN_PROGRESS`/`COMPLETED`), `responseStatus?`, `responseBody?`, `createdAt`. Unique `(scope, key)`; se purga a las 24 h.

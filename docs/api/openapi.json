@@ -1100,7 +1100,19 @@
         "operationId": "ZonesController_create",
         "summary": "Crear una zona operativa",
         "description": "Registra una nueva zona operativa con un código único. La zona se crea activa por defecto y puede agrupar barrios del catálogo de M9.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1154,6 +1166,16 @@
           },
           "409": {
             "description": "Ya existe una zona con ese código",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -1947,7 +1969,19 @@
         "operationId": "ServiceTypesController_create",
         "summary": "Crear un tipo de servicio",
         "description": "Da de alta un tipo de servicio en el catálogo, con su código único, área operativa, modo de ejecución (ROUTE o POINT) y si exige vehículo. Es lo que después permite programar un Service.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -2001,6 +2035,16 @@
           },
           "409": {
             "description": "Ya existe un tipo de servicio con ese código",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -2430,7 +2474,19 @@
         "operationId": "DisposalSitesController_create",
         "summary": "Crear un sitio de disposición",
         "description": "Da de alta un destino final de residuos (relleno, estación de transferencia, planta de reciclado o de compostaje) con su código único.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -2484,6 +2540,16 @@
           },
           "409": {
             "description": "Ya existe un sitio de disposición con ese código",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -2897,7 +2963,19 @@
         "operationId": "RoutesController_create",
         "summary": "Crear un recorrido",
         "description": "Da de alta un recorrido con su código único. Se crea sin paradas: la secuencia de zonas se carga después con PUT /routes/:id/stops.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -2951,6 +3029,16 @@
           },
           "409": {
             "description": "Ya existe un recorrido con ese código",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -3458,7 +3546,19 @@
         "operationId": "ServiceFrequenciesController_create",
         "summary": "Crear una frecuencia de servicio",
         "description": "Da de alta la regla que genera los servicios planificados: \"tipo X sobre el recorrido R, martes y viernes, turno mañana, desde tal fecha\". El tipo de servicio tiene que ser de modo ROUTE. Los servicios que genera nacen con origin=PLANNED y no proyectan nada hacia M2.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -3522,6 +3622,16 @@
           },
           "409": {
             "description": "Ya existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -3968,7 +4078,19 @@
         "operationId": "CrewsController_create",
         "summary": "Crear una cuadrilla",
         "description": "Registra una nueva cuadrilla con su tipo, especialidad y turno por defecto, y opcionalmente zona base, líder y organización (con sus nombres, que se guardan como copia de M1). Se crea activa por defecto.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -4036,6 +4158,16 @@
           },
           "404": {
             "description": "La zona base no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso",
             "content": {
               "application/json": {
                 "schema": {
@@ -4949,7 +5081,19 @@
         "operationId": "VehiclesController_create",
         "summary": "Registrar un vehículo",
         "description": "Da de alta un vehículo con su patente (única), tipo y capacidad opcional. Se crea activo por defecto.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -5003,6 +5147,16 @@
           },
           "409": {
             "description": "Ya existe un vehículo con esa patente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -5417,7 +5571,19 @@
         "operationId": "ContainersController_create",
         "summary": "Registrar un contenedor",
         "description": "Da de alta un contenedor en el inventario urbano con su código único, tipo, zona, capacidad y ubicación. Se crea en estado ACTIVE.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -5481,6 +5647,16 @@
           },
           "409": {
             "description": "Ya existe un contenedor con ese código",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -6713,7 +6889,19 @@
         "operationId": "TreesController_create",
         "summary": "Registrar un árbol",
         "description": "Da de alta un árbol en el inventario de arbolado urbano con su código de relevamiento (único), especie, ubicación y datos dendrométricos.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -6777,6 +6965,16 @@
           },
           "409": {
             "description": "Ya existe un árbol con ese código de relevamiento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -7218,6 +7416,17 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
           }
         ],
         "requestBody": {
@@ -7273,6 +7482,26 @@
           },
           "404": {
             "description": "Árbol no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -7545,7 +7774,19 @@
         "operationId": "TreeInterventionsController_create",
         "summary": "Solicitar una intervención sobre árboles",
         "description": "Crea una solicitud de intervención (poda, extracción, plantación o tratamiento) sobre uno o más árboles. Se crea en estado REQUESTED y registra quién la solicitó (el usuario del token). Las extracciones (REMOVAL) requieren autorización adicional vía el endpoint submit-for-authorization.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -7599,6 +7840,26 @@
           },
           "404": {
             "description": "Uno o más árboles no encontrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -8274,7 +8535,19 @@
         "operationId": "GreenSpacesController_create",
         "summary": "Registrar un espacio verde",
         "description": "Da de alta un espacio verde (plaza, parque, cantero, rambla o promenade) en una zona operativa. El riego y corte de césped se programan como servicios sobre el espacio.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -8328,6 +8601,26 @@
           },
           "404": {
             "description": "Zona referenciada no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -8753,7 +9046,19 @@
         "operationId": "GreenPointsController_create",
         "summary": "Registrar un punto verde",
         "description": "Da de alta un punto verde de entrega voluntaria con su código único, zona, ubicación y los tipos de residuo que acepta. El vaciado y el mantenimiento se programan después como Service con mode=POINT.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -8817,6 +9122,16 @@
           },
           "409": {
             "description": "Ya existe un punto verde con ese código",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -9241,7 +9556,19 @@
         "operationId": "ServicesController_create",
         "summary": "Programar un servicio urbano",
         "description": "Agenda una unidad de trabajo: recolección, barrido, lavado, vaciado de contenedor, poda o riego. El modo de ejecución se copia del tipo de servicio, no se elige acá. Un servicio ROUTE exige recorrido y copia sus zonas como snapshot —editar el recorrido después no altera lo ya programado—; un servicio POINT se ubica por el bien del inventario sobre el que se ejecuta, o por una zona suelta. Nace en estado SCHEDULED.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -9320,6 +9647,16 @@
           },
           "409": {
             "description": "La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, o la cuadrilla no es de la zona o la especialidad del servicio, y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -10023,6 +10360,17 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
           }
         ],
         "requestBody": {
@@ -10098,6 +10446,16 @@
           },
           "409": {
             "description": "El servicio no está en SCHEDULED ni en IN_PROGRESS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -10986,6 +11344,17 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
           }
         ],
         "requestBody": {
@@ -11063,6 +11432,16 @@
           },
           "409": {
             "description": "El servicio no está en IN_PROGRESS, o la zona ya tiene resultado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -11187,6 +11566,17 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
           }
         ],
         "requestBody": {
@@ -11263,6 +11653,16 @@
           },
           "409": {
             "description": "El servicio todavía no arrancó",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -11387,6 +11787,17 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
           }
         ],
         "requestBody": {
@@ -11452,6 +11863,16 @@
           },
           "409": {
             "description": "El expediente no está en UNDER_REVIEW",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -11945,7 +12366,19 @@
         "operationId": "EnvironmentalReportsController_create",
         "summary": "Abrir un expediente ambiental",
         "description": "Registra una denuncia ambiental —ruidos, vertidos, microbasurales, emisiones— y abre el expediente en estado RECEIVED. Puede nacer de un reclamo de M2 (con ticketId) o de una detección de oficio del inspector, que es el camino que no depende de ningún otro módulo.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -12003,6 +12436,26 @@
           },
           "403": {
             "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL, M6_CAMPO_INSPECTOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -12928,7 +13381,19 @@
         "operationId": "RepairRequestsController_create",
         "summary": "Solicitar una reparación a Obras Públicas",
         "description": "Registra un daño de infraestructura que detectamos pero que no nos corresponde arreglar —pavimento roto, vereda hundida, luminaria caída, sumidero tapado— y publica infrastructureRepairRequested hacia M3. La solicitud existe para poder seguir el pedido: la respuesta de M3 vuelve asincrónica y hay que saber a qué solicitud contesta. Si el daño salió de un servicio nacido de un reclamo, el ticketId viaja en el evento. Lo mismo si salió de una inspección: viaja el ticketId de su expediente. Una inspección solo origina una reparación si cerró con un resultado distinto de NO_VIOLATION y el tipo de expediente admite daño de infraestructura (no ruidos, olores, plagas ni emisiones); no admite un segundo pedido abierto para el mismo origen y tipo de daño.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -12992,6 +13457,16 @@
           },
           "409": {
             "description": "Origen INSPECTION que no justifica una reparación (sin cerrar, NO_VIOLATION, o expediente de tipo NOISE, ODOR, PEST_INFESTATION o AIR_EMISSION), o ya hay una solicitud no cerrada para el mismo origen y tipo de daño",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {
@@ -13444,7 +13919,19 @@
         "operationId": "StreetClosureRequestsController_create",
         "summary": "Solicitar un corte de calle a Tránsito",
         "description": "Registra el corte que necesita un servicio o una poda y publica streetClosureRequested hacia M7, en el esquema unificado con la solicitud de M3. El sourceRef apunta al Service o a la TreeIntervention que lo origina: es lo que hace que la respuesta de M7 se pueda aplicar sobre el trabajo correcto. Exige al menos un tramo, porque affectedSections no puede viajar vacío.",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional. 1 a 255 caracteres imprimibles (se recomienda un UUID por intento de creación). Repetir la misma clave con el mismo cuerpo devuelve la respuesta original (mismo status y cuerpo, header Idempotency-Replayed: true) sin crear nada de nuevo. Misma clave con otro cuerpo: 422. Misma clave mientras la primera sigue en curso: 409. Solo se guardan respuestas 2xx; la clave vale 24 h. Clave con formato inválido: 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -13508,6 +13995,16 @@
           },
           "409": {
             "description": "La intervención de origen no está en estado AUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto",
             "content": {
               "application/json": {
                 "schema": {

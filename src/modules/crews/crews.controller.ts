@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Controller,
   Get,
@@ -103,6 +104,7 @@ export class CrewsController {
     description: 'M1 no responde y no se pudo validar a los usuarios; no se guardó nada',
     type: ErrorResponseDto,
   })
+  @Idempotent()
   async create(
     @Body() dto: CreateCrewDto,
     @CurrentUser() actor: AuthenticatedUser,

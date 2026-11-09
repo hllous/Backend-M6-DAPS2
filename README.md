@@ -101,7 +101,7 @@ Para orientarse en el repo, el punto de entrada recomendado es [`AGENTS.md`](AGE
 │   ├── common/              guards, filtros, interceptores y DTOs compartidos
 │   ├── events/              outbox, inbox, consumidores y publishers
 │   └── modules/             un módulo por recurso
-├── prisma/                  schema (43 modelos), migraciones y seed
+├── prisma/                  schema (44 modelos), migraciones y seed
 └── test/                    suites e2e contra Postgres real (ver docs/testing.md)
 ```
 
