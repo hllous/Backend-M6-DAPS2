@@ -138,6 +138,8 @@ Todo endpoint debe tener:
 
 ### 3.1 Códigos HTTP obligatorios
 
+> **429 transversal.** Cualquier endpoint puede devolver `429 Too Many Requests` por el límite global (`THROTTLE_LIMIT`, #568; ver [ADR-010](../decisiones/adr-010-rate-limit-global.md)). Se declara explícitamente solo donde hay un tope propio: `POST /events/inbox`, `POST /evidence` y `/public/*`. No se decoran el resto de los endpoints.
+
 Cada tipo de endpoint debe documentar como mínimo:
 
 | Tipo | Códigos obligatorios |
@@ -297,10 +299,15 @@ Documentar con un DTO genérico `PaginatedResponseDto<T>`.
 
 ### 5.3 Errores
 
-Todos los errores siguen este formato (lo genera el `ExceptionFilter` global):
+Todos los errores (400/401/403/404/409/422/429/5xx) se sirven como **Problem Details RFC 9457** (`Content-Type: application/problem+json`, ADR-011); los genera el `ExceptionFilter` global:
 
 ```json
 {
+  "type": "about:blank",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Container with id 123e4567-... not found",
+  "instance": "/containers/123e4567-e89b-12d3-a456-426614174000",
   "statusCode": 404,
   "message": "Container with id 123e4567-... not found",
   "error": "Not Found",
@@ -309,7 +316,9 @@ Todos los errores siguen este formato (lo genera el `ExceptionFilter` global):
 }
 ```
 
-Definir un DTO `ErrorResponseDto` y reutilizarlo en todos los `@ApiResponse` de error.
+- RFC 9457: `type` (`about:blank` mientras no haya un tipo propio), `title` (frase del status), `status`, `detail` y `instance` (ruta, con tokens de la query redactados).
+- Compatibilidad: se mantienen `statusCode`, `message`, `error`, `timestamp`, `path` y, en algunos errores, `code` (`ROLE_REQUIRED`, `NOT_ASSIGNED`). `detail` = `message` y `instance` = `path`. Un arreglo de validación de class-validator va unido con `; `.
+- Definir un DTO `ErrorResponseDto` y reutilizarlo en todos los `@ApiResponse` de error. No hace falta declarar el media type: `createOpenApiDocument()` (`src/swagger-config.ts`) reescribe `application/json` a `application/problem+json` en toda respuesta 4xx/5xx del documento.
 
 ---
 

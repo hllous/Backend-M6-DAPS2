@@ -1,14 +1,19 @@
-# 09 · Lecciones aprendidas: tres defectos que llegaron tarde
+# 09 · Lecciones aprendidas: defectos que llegaron tarde
 
-> Backend del Módulo 6 (Grupo 04). Borrador del 03/11/2026. **A validar con el equipo** antes de entregar: los hechos (fechas, issues, archivos) salen de GitHub y del código; el «por qué no se detectó antes» es una **interpretación** del QA a partir de los tests que existen, y quien participó de cada caso puede corregirla.
+> Backend del Módulo 6 (Grupo 04). Borrador del 03/11/2026, actualizado el 08/11/2026 con tres candidatos nuevos (4, 5 y 6) y **el 09/11/2026** con dos más (7 y 8). **La validación del equipo sigue pendiente**: nadie del equipo revisó este documento. Antes de entregar: los hechos (fechas, issues, archivos) salen de GitHub y del código; el «por qué no se detectó antes» es una **interpretación** del QA a partir de los tests que existen, y quien participó de cada caso puede corregirla.
 
-La cátedra pide tres defectos que se descubrieron tarde, por qué no se detectaron antes y qué prueba los habría atrapado. Se eligieron de los 55 issues `bug`, `security` y `fix` (todos cerrados): tres que **pasaron la revisión y los tests**, y que los encontró alguien o algo ajeno a la suite del backend.
+La cátedra pide tres defectos que se descubrieron tarde, por qué no se detectaron antes y qué prueba los habría atrapado. Los tres primeros (1 a 3) se eligieron el 03/11 de los issues `bug`, `security` y `fix` (entonces 55, todos cerrados): **pasaron la revisión y los tests**, y los encontró alguien o algo ajeno a la suite del backend. El 08/11 se sumaron tres candidatos de la semana de testing (4 a 6) y el 09/11 dos más (7 y 8). **El equipo elige cuáles tres presentar**; el QA propone mantener los tres primeros y usar los nuevos como reemplazo o respaldo. El 7 es el único de los nuevos con un test que lo atrapa hoy; el 8 es una observación abierta, sin causa investigada.
 
 | # | Defecto | Cuándo apareció | Quién o qué lo encontró |
 |---|---|---|---|
 | 1 | [#466](https://github.com/hllous/Backend-M6-DAPS2/issues/466): `GET /evidence` sin rol ni pertenencia | 29/10 | La revisión del frontend (FE #732), no un test |
 | 2 | [#314](https://github.com/hllous/Backend-M6-DAPS2/issues/314) y [#485](https://github.com/hllous/Backend-M6-DAPS2/issues/485): `updatedBy.id` que no era UUID | 20/10 y 02/11 | Un cambio de contrato de M2 (v1.78) y luego M1 |
 | 3 | [#470](https://github.com/hllous/Backend-M6-DAPS2/issues/470): el límite de tasa contaba la IP del BFF | 30/10 | La integración del portal ciudadano en el frontend (FE #743) |
+| 4 | [#567](https://github.com/hllous/Backend-M6-DAPS2/issues/567) / DEF-23: `rabbitmq-setup` fallaba en el primer `docker compose up` en frío | Compose de #555 (G1); hallado el 08/11 | Correr `docker compose up` desde cero con volúmenes nuevos |
+| 5 | [#569](https://github.com/hllous/Backend-M6-DAPS2/issues/569) / DEF-22: los logs registraban el `access_token` de la query | `LoggingInterceptor` anterior al 08/11; corregido el 08/11 | El PR de los tests de seguridad (#581) |
+| 6 | Secreto de juguete literal en `api-tests.yml` (#572 / P-1) | 08/11 | gitleaks en el CI, **antes de mergear** |
+| 7 | Los `400` declarados por #593 salían como `application/json` al integrarse con #590 (Problem Details) | 09/11, al integrar las cinco ramas de #597 | Integrar las ramas juntas y mirar el `openapi.json` regenerado; hoy lo atrapa un test del contrato |
+| 8 | Un e2e completo cayó por un timeout de 30 s en el arranque de una suite con la máquina cargada | 09/11 | Correr la suite completa con otras pruebas en paralelo; la causa no se investigó |
 
 ---
 
@@ -72,21 +77,97 @@ La cátedra pide tres defectos que se descubrieron tarde, por qué no se detecta
 1. Un test de integración del throttler con **dos IP distintas** en `X-Forwarded-For` y la clave del BFF, que afirme dos contadores independientes; y otro sin la clave, que afirme que se ignora el encabezado.
 2. Una prueba de humo contra el despliegue con dos clientes en paralelo (sirve también para la prueba de carga de la cátedra).
 
-**Qué cambió.** El límite cuenta la IP del vecino cuando el pedido viene del BFF con la clave, y ahora `src/modules/citizen-portal/client-tracker.spec.ts` prueba que dos vecinos por el BFF tienen claves distintas y que con una clave incorrecta se ignora `X-Forwarded-For`. Sigue sin haber un test que dispare el 429 (ver DEF-07).
+**Qué cambió.** El límite cuenta la IP del vecino cuando el pedido viene del BFF con la clave, y ahora `src/modules/citizen-portal/client-tracker.spec.ts` prueba que dos vecinos por el BFF tienen claves distintas y que con una clave incorrecta se ignora `X-Forwarded-For`. Desde el 08/11 existe `test/throttler.e2e-spec.ts`, que dispara el 429 del límite global (DEF-07, cerrado); el tope de 20 por minuto del portal sigue sin e2e propio.
 
 **Lección.** Los límites, las IP y los encabezados dependen de lo que hay entre el cliente y la app. Hay que probarlos en un entorno con la misma cadena de proxies que producción, no solo en la capa HTTP de Nest.
 
 ---
 
-## 4. Patrón común y reglas que adoptamos
+## 4. `docker compose up` en frío: `rabbitmq-setup` salía con `exit 7` (#567, DEF-23)
+
+**Qué pasó.** El compose de #555 (G1: levantar base, broker y backend con un comando) no se había corrido desde cero con volúmenes nuevos. En el primer arranque en frío, `rabbitmq-setup` llamaba a la API de management (puerto 15672) antes de que escuchara y salía con `exit 7`; el backend, que depende de `service_completed_successfully`, no levantaba. Se corrigió el 08/11 (PR #584, `c9a8dc7`) con `curl --retry 30 --retry-delay 2 --retry-connrefused`.
+
+**Por qué no se detectó antes** (interpretación):
+
+- El `healthcheck` de RabbitMQ da `healthy` antes de que la consola esté lista: «healthy» no significaba «listo para configurar».
+- **Nadie había corrido `docker compose up` desde cero con volúmenes nuevos**.
+- El CI no levanta el compose, así que ninguna prueba automática lo mira.
+
+**Qué prueba lo habría atrapado.** Un job de CI (o un script de humo) con `docker compose up -d --build --wait` sobre volúmenes nuevos y un `curl` a `/health/ready`. **Ese job no existe todavía**: el arreglo se verificó a mano (up en 35 s, `/health/ready` 200 a los 45 s, seed OK, 08/11).
+
+**Lección.** «Funciona en mi máquina» con estado previo no prueba el arranque en frío. Lo que se entrega para que otro lo levante hay que correrlo desde cero, con la misma orden que va a usar el otro.
+
+---
+
+## 5. El `access_token` de la query terminaba en los logs (#569, DEF-22)
+
+**Qué pasó.** El `LoggingInterceptor` escribía `request.url` sin filtrar, y el filtro de excepciones devolvía el `path` con toda la query en el cuerpo del error. Un token pasado como parámetro de la URL quedaba en los logs de Render y en cualquier proxy que registrara las respuestas. Se corrigió el 08/11 (PR #581, `a733f44`) con `redactUrl`. **No consta que ningún cliente enviara el token por la query**; el riesgo es que el log lo habría guardado si alguien lo hacía.
+
+**Por qué no se detectó antes** (interpretación):
+
+- Los tests de logs probaban método, URL y estado (`logging.interceptor.spec.ts`), pero **ninguno usaba una URL con token**: verificaban el formato, no la ausencia de secretos.
+- SEC-D01 figuraba «Cumple por código» y, el 03/11, NO VERIFICABLE para el log HTTP; esa duda estaba escrita en este mismo informe y quedó como pendiente en vez de transformarse en un test.
+
+**Qué prueba lo habría atrapado.** Un test del interceptor con `?access_token=SECRETO` y un `expect(log).not.toContain('SECRETO')`; hoy son `redact-url.spec.ts` (21 nombres sensibles redactados, 8 legítimos intactos) y `logging.interceptor.spec.ts`.
+
+**Lección.** Una propiedad negativa («nunca aparece X») se prueba con el dato prohibido adentro, no con el camino feliz. Y un «no verificable» en un informe es un test que falta.
+
+---
+
+## 6. Un secreto de juguete literal en un workflow, atrapado por gitleaks antes del merge (#572 / P-1)
+
+**Qué pasó.** El workflow `api-tests.yml` de #572 llevaba un secreto de juguete escrito en el archivo. El job `secrets` del CI (gitleaks sobre todo el historial) lo detectó: run [42505473347](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42505473347), commit `e07ad42`. No era una credencial real. Se reescribió la rama y el workflow genera ahora un secreto efímero; nunca llegó a `develop`.
+
+**Por qué importa aunque no «llegó tarde» a producción.** Es un casi-incidente: el defecto existió en una rama y se detectó recién en el CI, no al escribirlo. Lo atrapó una prueba que se agregó para otra cosa (#494).
+
+**Qué prueba lo habría atrapado antes.** Un hook `pre-commit` con gitleaks en la máquina de cada integrante. **No existe**; hoy el control está solo en el CI.
+
+**Lección.** El control que funcionó fue automático y estaba sobre el historial completo, no sobre el diff. Falta acercarlo al momento de escribir.
+
+---
+
+## 7. Los `400` declarados salían como `application/json` al integrar #593 con #590
+
+**Qué pasó.** El PR #597 reunió cinco ramas (#590 a #594). Por separado, cada una estaba en verde. #590 hizo que todo error saliera como `application/problem+json` y que el OpenAPI lo declarara así; #593 declaró el `400` en 41 `GET` con el helper `@ApiBadRequestParams()`. **Según quien integró las ramas (informado por el equipo, 09/11), al juntarlas los `400` de #593 quedaban declarados como `application/json`**, porque el OpenAPI se post-procesa recién al generarse (`createOpenApiDocument()` en `src/swagger-config.ts` reescribe el media type de las respuestas 4xx y 5xx) y la declaración nueva no pasaba por ese paso. Se corrigió antes del merge. Las ramas no se conservan (el PR entró como un squash), así que **no se pudo reproducir ni citar el commit intermedio**: el relato es del equipo y no está verificado por el QA.
+
+**Por qué no se detectó antes** (interpretación):
+
+- Cada rama probaba lo suyo: #590 comprobaba el formato del error en el filtro y en el e2e; #593 comprobaba que el `GET` declarara el `400`. Ninguna miraba el **media type de ese `400` en el documento generado**, que es donde se cruzan las dos.
+- El `openapi.json` se regenera y se compara con el código, pero esa comparación solo dice que el archivo está al día, no que sea correcto.
+- El efecto solo existe con las dos ramas juntas: ninguna rama aislada lo tenía.
+
+**Qué prueba lo habría atrapado.** Un caso del contrato que mire el documento generado: «toda respuesta de error se declara como `application/problem+json`». **Hoy existe**: `src/openapi-contract.spec.ts` › «toda respuesta de error se declara como application/problem+json (ADR-011)», junto con «todo GET con parámetros declara el 400 (DEF-20)». El hallazgo fue de la integración a mano; el test es la red para que no vuelva a pasar.
+
+**Lección.** Dos cambios correctos por separado pueden chocar en lo que generan juntos. Cuando varias ramas tocan el mismo artefacto generado (acá, el OpenAPI), hay que probar el artefacto resultante después de integrarlas, no solo cada rama.
+
+---
+
+## 8. Un e2e completo cayó por timeout de arranque con la máquina cargada
+
+**Qué pasó.** El 09/11, al verificar la rama de #592 por separado, la segunda corrida completa de `npm run test:e2e` falló en el `beforeAll` de `test/environmental-flow.e2e-spec.ts` por el timeout de 30 s de Jest en el arranque de la suite (15 tests caídos), mientras otros agentes corrían pruebas en la misma máquina; la primera corrida de esa rama había pasado (320 tests). Después, sobre la rama de integración y con la máquina libre, dos corridas completas dieron resultado idéntico (343 tests pasan, 4 saltados; 94 s y 100 s). El log de la corrida fallida existe solo en el directorio temporal de la sesión de pruebas y no está versionado.
+
+**Por qué importa** (interpretación):
+
+- Es otra señal, junto con #554 (DEF-24, cerrado por decisión del equipo el 09/11 sin causa confirmada), de que el e2e puede ser sensible al estado de la máquina o de la base. La causa de este caso **no se investigó**. **No es DEF-24:** cayó una suite distinta (`environmental-flow`) y por otra causa aparente (timeout de arranque bajo carga, no el constraint `e2e_no_active`); el nombre de la suite se leyó del log de esa corrida, que no está versionado.
+- El criterio de la cátedra («0 tests inestables») se evidencia con corridas repetidas en una máquina libre; una máquina cargada es justo donde el criterio se rompe.
+
+**Qué prueba lo habría atrapado.** Ninguna que exista hoy. Habría ayudado repetir la suite en el CI (runners limpios y sin otras cargas) y guardar el log de cada corrida fallida. Ambas cosas están **NO HECHAS**.
+
+**Lección.** Una corrida verde en una máquina libre no es evidencia de estabilidad bajo carga. Si una corrida falla, hay que guardar el log antes de repetirla; sin él no se puede investigar.
+
+---
+
+## 9. Patrón común y reglas que adoptamos
 
 | Patrón | Reglas |
 |---|---|
 | Los tres los encontró **alguien ajeno a la suite del backend**: una revisión del frontend, un cambio de contrato de otro módulo y la integración de otra capa. | Antes de cerrar una HU que toca un recurso con dueño, un contrato externo o la red, agregar el test de la **frontera** (lectura, contrato, proxy) y no solo el del camino feliz. |
 | Cada control se probó por **un solo lado** (la escritura, el schema local, la capa HTTP). | Para cada control, listar las puertas del mismo recurso y probar cada una. |
 | Los tests que habrían servido existían en forma parcial o se saltaban en el CI. | Un test saltado en el CI debe fallar o avisar de forma visible (DEF-11). |
+| Los tres de la semana del 08/11 los encontró una **prueba nueva o una ejecución desde cero** (el compose en frío, el test de logs con token, gitleaks): las propiedades negativas y el arranque limpio no tenían prueba. | Probar con el dato prohibido adentro, correr desde cero lo que se entrega y acercar los escaneos de secretos al commit. |
+| Los del 09/11 aparecieron al **integrar y al medir juntos** lo que estaba verde por separado (cinco ramas sobre el mismo OpenAPI; la suite completa bajo carga). | Probar el artefacto generado después de integrar y guardar el log de toda corrida fallida antes de repetirla. |
 
-## 5. Otros candidatos, por si el equipo prefiere cambiarlos
+## 10. Otros candidatos, por si el equipo prefiere cambiarlos
 
 | Issue | Defecto | Por qué llegó tarde (hipótesis, sin verificar) |
 |---|---|---|

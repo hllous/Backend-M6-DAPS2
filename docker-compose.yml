@@ -1,0 +1,122 @@
+# ═══════════════════════════════════════════════════════════════
+# M6 Ambiente, Higiene y Servicios Urbanos — backend en local
+#
+#   docker compose up --build      # un solo comando: base + broker + backend
+#   docker compose --profile seed run --rm seed   # (opcional) datos de demo
+#
+# SOLO PARA DESARROLLO LOCAL. Antes del primer arranque: cp .env.example .env
+# (las credenciales se leen de .env; si falta una, compose corta con el mensaje).
+# En Render van otras (ver docs/operacion/referencia.md).
+#
+# El Core de M9 no se levanta acá: RabbitMQ local hace de bus, con el mismo
+# exchange (muni.inbox, fanout) y la misma cola (q.ambiente) que crea el Core.
+# ═══════════════════════════════════════════════════════════════
+
+# Nombre del stack ("Módulo 6 - Ambiente"). Compose solo admite minúsculas, números,
+# guiones y guiones bajos: por eso va así y no con espacios ni mayúsculas.
+# Es el prefijo de contenedores, red y volúmenes, y lo que muestra Docker Desktop.
+name: modulo-6-ambiente
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-m6}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env (cp .env.example .env)}
+      POSTGRES_DB: ${POSTGRES_DB:-m6_ambiente}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-m6} -d ${POSTGRES_DB:-m6_ambiente}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Falta RABBITMQ_USER en .env (cp .env.example .env)}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env (cp .env.example .env)}
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672" # consola de administración: http://localhost:15672
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # Crea lo que en producción crea el Core: M6 solo verifica que la cola exista
+  # (checkQueue) y publica al exchange. Corre una vez y termina.
+  rabbitmq-setup:
+    image: curlimages/curl:8.10.1
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        api=http://rabbitmq:15672/api
+        auth=${RABBITMQ_USER:?Falta RABBITMQ_USER en .env (cp .env.example .env)}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env (cp .env.example .env)}
+        json='Content-Type: application/json'
+        # El healthcheck de rabbitmq da "healthy" antes de que escuche la consola (15672):
+        # sin reintentos, el primer `docker compose up` en frío fallaba con "exit 7".
+        retry='--retry 30 --retry-delay 2 --retry-connrefused'
+        curl -fsS $$retry -u $$auth -H "$$json" -X PUT  $$api/exchanges/%2F/muni.inbox -d '{"type":"fanout","durable":true}'
+        curl -fsS $$retry -u $$auth -H "$$json" -X PUT  $$api/queues/%2F/q.ambiente    -d '{"durable":true}'
+        curl -fsS $$retry -u $$auth -H "$$json" -X POST $$api/bindings/%2F/e/muni.inbox/q/q.ambiente -d '{"routing_key":""}'
+        echo "exchange muni.inbox y cola q.ambiente listos"
+
+  backend:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq-setup:
+        condition: service_completed_successfully
+    environment:
+      # La imagen trae NODE_ENV=production, que exige amqps y prohíbe estos valores.
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-m6}:${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env (cp .env.example .env)}@postgres:5432/${POSTGRES_DB:-m6_ambiente}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env (cp .env.example .env)}
+      # Sin M9 local, el catálogo de barrios sale del snapshot que trae la imagen (prisma/ se copia entera).
+      NEIGHBORHOODS_CATALOG_FILE: prisma/data/m9-barrios.json
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env (cp .env.example .env)}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env (cp .env.example .env)}@rabbitmq:5672/
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  # Opcional: carga los datos de demo (docs/seed.md). Usa la etapa "builder" de
+  # la imagen, que trae ts-node y el seed. La base es la del compose.
+  seed:
+    profiles: ["seed"]
+    build:
+      context: .
+      target: builder
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-m6}:${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env (cp .env.example .env)}@postgres:5432/${POSTGRES_DB:-m6_ambiente}?schema=public
+      SEED_CONFIRM_REMOTE: "1" # el seed solo corre contra localhost salvo que se confirme
+    volumes:
+      # El seed lee los barrios y comunas de CABA; docs/ no entra en la imagen (.dockerignore).
+      - ./docs/geojson:/app/docs/geojson:ro
+    command: ["npx", "prisma", "db", "seed"]
+
+volumes:
+  postgres-data:
+  rabbitmq-data:

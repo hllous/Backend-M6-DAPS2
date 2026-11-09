@@ -67,18 +67,18 @@ describe('TreeInterventionsController', () => {
 
   it('submitForAuthorization delega el id', async () => {
     await controller.submitForAuthorization(ID, USER);
-    expect(service.submitForAuthorization).toHaveBeenCalledWith(ID, USER);
+    expect(service.submitForAuthorization).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('authorize delega id, dto, el usuario y sus roles del token', async () => {
     const dto = {} as AuthorizeInterventionDto;
     await controller.authorize(ID, dto, USER);
-    expect(service.authorize).toHaveBeenCalledWith(ID, dto, USER);
+    expect(service.authorize).toHaveBeenCalledWith(ID, dto, USER, undefined);
   });
 
   it('reject delega el id y los roles del token', async () => {
     await controller.reject(ID, USER);
-    expect(service.reject).toHaveBeenCalledWith(ID, USER);
+    expect(service.reject).toHaveBeenCalledWith(ID, USER, undefined);
   });
 
   it('assignService delega id y dto', async () => {

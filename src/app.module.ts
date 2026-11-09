@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { crearGetTracker } from './modules/citizen-portal/client-tracker';
 import { APP_GUARD } from '@nestjs/core';
 import configuration from './config/configuration';
 
@@ -11,6 +13,7 @@ import { EventsModule } from './events/events.module';
 import { CoreModule } from './core/core.module';
 import { IdentityModule } from './identity/identity.module';
 import { AuditModule } from './common/audit/audit.module';
+import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { JwtAuthGuard, RolesGuard } from './common/guards';
 
 // Módulos de dominio
@@ -45,6 +48,21 @@ import { RoleAssignmentsModule } from './modules/role-assignments/role-assignmen
       load: [configuration],
     }),
 
+    // Límite global por IP. Mismo tracker que el portal: detrás del BFF, req.ip es la del BFF
+    // y sin esto todos los usuarios compartirían balde.
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [
+          {
+            ttl: config.getOrThrow<number>('throttle.ttl'),
+            limit: config.getOrThrow<number>('throttle.limit'),
+          },
+        ],
+        getTracker: crearGetTracker(config.get<string>('bffSharedKey')),
+      }),
+    }),
+
     // ─── Infraestructura ────────────────────────────
     PrismaModule,
     HealthModule,
@@ -53,6 +71,7 @@ import { RoleAssignmentsModule } from './modules/role-assignments/role-assignmen
     CoreModule,
     IdentityModule,
     AuditModule,
+    IdempotencyModule,
 
     // ─── Dominios de negocio ────────────────────────
     ZonesModule,
@@ -79,6 +98,8 @@ import { RoleAssignmentsModule } from './modules/role-assignments/role-assignmen
     RoleAssignmentsModule,
   ],
   providers: [
+    // Primero el límite de tasa: corta antes de gastar verificación de token en un abusador.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     // Todo endpoint exige JWT por defecto. Los publicos se marcan con @Public().
     // El orden importa: RolesGuard lee el usuario que deja JwtAuthGuard.
     { provide: APP_GUARD, useClass: JwtAuthGuard },

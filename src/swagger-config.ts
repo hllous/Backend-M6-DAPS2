@@ -1,4 +1,6 @@
-import { DocumentBuilder } from '@nestjs/swagger';
+import { INestApplication } from '@nestjs/common';
+import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
+import { ResponseObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
 /**
  * La configuración del documento OpenAPI, en un solo lugar.
@@ -76,4 +78,33 @@ export function buildSwaggerConfig() {
       .addTag('health', 'Health check y estado del servicio')
       .build()
   );
+}
+
+/**
+ * Crea el documento OpenAPI de la app. Lo usan main.ts, el generador de
+ * docs/api/openapi.json y openapi-contract.spec.ts: el post-proceso vive acá
+ * para que los tres vean exactamente el mismo documento.
+ */
+export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
+  const document = SwaggerModule.createDocument(app, buildSwaggerConfig());
+  declareProblemJson(document);
+  return document;
+}
+
+/**
+ * ADR-011: toda respuesta de error (4xx/5xx) se sirve como
+ * `application/problem+json`. Declararlo en cada @ApiResponse serían ~1000
+ * decoradores; se reescribe el media type acá, una sola vez.
+ */
+function declareProblemJson(document: OpenAPIObject): void {
+  for (const operaciones of Object.values(document.paths)) {
+    for (const op of Object.values(operaciones as Record<string, unknown>)) {
+      const responses = (op as { responses?: Record<string, ResponseObject> }).responses ?? {};
+      for (const [codigo, respuesta] of Object.entries(responses)) {
+        if (!/^[45]/.test(codigo) || !respuesta.content?.['application/json']) continue;
+        const { 'application/json': json, ...resto } = respuesta.content;
+        respuesta.content = { 'application/problem+json': json, ...resto };
+      }
+    }
+  }
 }

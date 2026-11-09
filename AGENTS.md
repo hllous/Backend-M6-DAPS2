@@ -41,11 +41,11 @@ Tres capas por recurso en `src/modules/<recurso>/`: `*.controller.ts` (HTTP + Sw
 
 ## Qué NO es `docs/`
 
-Documentación interna (equipo + IA que programe el módulo), no lo entregado a la cátedra ni lo que circula a otros grupos — eso es el pipeline de PDF en `fuentes/`, que vive en el repositorio de documentación (ver [LEEME.md](LEEME.md)). Ambos conjuntos pueden divergir un tiempo; no están unificados aún — mejora pendiente, no bug.
+Documentación interna (equipo + IA que programe el módulo), no lo entregado a la cátedra ni lo que circula a otros grupos — eso es el pipeline de PDF en `fuentes/`, que vive en el repositorio de documentación (ver [docs/README.md](docs/README.md#repositorio-de-documentación)). Ambos conjuntos pueden divergir un tiempo; no están unificados aún — mejora pendiente, no bug.
 
 ## PDFs en `docs/`
 
-`docs/*.pdf` (Documento de Alcance, Diagrama de Eventos, Acuerdo-Eventos-M6) son entregables compilados, no fuente — no leerlos para contexto. El contenido vive en Markdown editable: `Acuerdo-Eventos-M6.md`, el resto de `docs/`, y `fuentes/alcance-entregable.md` en el repositorio de documentación (ver [LEEME.md](LEEME.md) para el mapeo fuente → PDF). Abrir el PDF solo si se pide explícitamente verificar el entregable compilado tal cual se presentó.
+`docs/*.pdf` (Documento de Alcance, Diagrama de Eventos, Acuerdo-Eventos-M6) son entregables compilados, no fuente — no leerlos para contexto. El contenido vive en Markdown editable: `Acuerdo-Eventos-M6.md`, el resto de `docs/`, y `fuentes/alcance-entregable.md` en el repositorio de documentación (ver [docs/README.md](docs/README.md#repositorio-de-documentación) para el mapeo fuente → PDF). Abrir el PDF solo si se pide explícitamente verificar el entregable compilado tal cual se presentó.
 
 ## Convenciones
 

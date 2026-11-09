@@ -1,3 +1,4 @@
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import {
   Body,
   Controller,
@@ -8,8 +9,16 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { EnvironmentalReportsService } from './environmental-reports.service';
 import {
   CreateEnvironmentalReportDto,
@@ -19,8 +28,14 @@ import {
   RequestInformationDto,
 } from './dto';
 import { ErrorResponseDto } from '../../common/dto';
+import { ApiETag, ETagInterceptor, IfMatch } from '../../common/etag';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
-import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorators';
+import {
+  ApiPaginatedResponse,
+  CurrentUser,
+  Roles,
+  ApiBadRequestParams,
+} from '../../common/decorators';
 import { ROLES_AMBIENTAL, ROLES_EXPEDIENTE_ALTA } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
 
@@ -31,12 +46,30 @@ const SERVER = { status: 500, description: 'Error interno del servidor', type: E
 
 @ApiTags('environmental-reports')
 @ApiBearerAuth('JWT-auth')
+@UseInterceptors(ETagInterceptor)
 @Controller('environmental-reports')
 export class EnvironmentalReportsController {
   constructor(private readonly reportsService: EnvironmentalReportsService) {}
 
   @Post()
   @Roles(...ROLES_EXPEDIENTE_ALTA)
+  @ApiBody({
+    type: CreateEnvironmentalReportDto,
+    examples: {
+      ejemplo: {
+        summary: 'Basural a cielo abierto con reclamo de M2',
+        value: {
+          reportType: 'ILLEGAL_DUMPSITE',
+          address: 'Camino de Cintura 4500',
+          description: 'Acopio de escombros sobre la vereda, frente al número 4500.',
+          lat: -34.7,
+          lng: -58.5,
+          ticketId: 'TCK-2026-004821',
+          priority: 'HIGH',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Abrir un expediente ambiental',
     description:
@@ -55,6 +88,7 @@ export class EnvironmentalReportsController {
   })
   @ApiResponse(AUTH)
   @ApiResponse(SERVER)
+  @Idempotent()
   async create(
     @Body() dto: CreateEnvironmentalReportDto,
     @CurrentUser() actor: AuthenticatedUser,
@@ -84,6 +118,7 @@ export class EnvironmentalReportsController {
 
   @ApiAnyM6Role()
   @Get(':id')
+  @ApiETag()
   @ApiOperation({
     summary: 'Obtener un expediente por ID',
     description:
@@ -98,11 +133,13 @@ export class EnvironmentalReportsController {
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
   @ApiResponse(SERVER)
+  @ApiBadRequestParams()
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<EnvironmentalReportResponseDto> {
     return this.reportsService.findOne(id);
   }
 
   @Post(':id/start-review')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -122,13 +159,24 @@ export class EnvironmentalReportsController {
   async startReview(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.startReview(id, actor);
+    return this.reportsService.startReview(id, actor, ifMatch);
   }
 
   @Post(':id/forward')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: ReportStatusChangeDto,
+    examples: {
+      ejemplo: {
+        summary: 'Derivación a otra área',
+        value: { reason: 'El hecho denunciado corresponde a Obras Públicas, no a Ambiente.' },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Derivar: no es de nuestra competencia',
     description:
@@ -149,13 +197,24 @@ export class EnvironmentalReportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReportStatusChangeDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.forward(id, dto.reason, actor);
+    return this.reportsService.forward(id, dto.reason, actor, ifMatch);
   }
 
   @Post(':id/dismiss')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: ReportStatusChangeDto,
+    examples: {
+      ejemplo: {
+        summary: 'Desestimación de la denuncia',
+        value: { reason: 'La denuncia duplica el expediente ya abierto para la misma dirección.' },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Desestimar sin inspección',
     description: 'UNDER_REVIEW → DISMISSED. Hacia M2 sale como REJECTED.',
@@ -175,13 +234,27 @@ export class EnvironmentalReportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReportStatusChangeDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.dismiss(id, dto.reason, actor);
+    return this.reportsService.dismiss(id, dto.reason, actor, ifMatch);
   }
 
   @Post(':id/request-information')
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: RequestInformationDto,
+    examples: {
+      ejemplo: {
+        summary: 'Pedido de una foto adicional',
+        value: {
+          message: 'Necesitamos una foto más del frente del local, tomada de noche.',
+          requiredBy: '2027-03-20',
+          internalNote: 'La foto anterior salió movida.',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Pedirle información al vecino',
     description:
@@ -216,6 +289,7 @@ export class EnvironmentalReportsController {
   }
 
   @Post(':id/close')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -236,7 +310,8 @@ export class EnvironmentalReportsController {
   async close(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.close(id, actor);
+    return this.reportsService.close(id, actor, ifMatch);
   }
 }

@@ -8,19 +8,20 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
+import { redactUrl } from '../utils/redact-url';
 
 /**
  * Filtro global de excepciones HTTP.
  * Normaliza la respuesta de error al formato definido en
  * docs/api/estandar-swagger.md §5.3:
  *
+ * Problem Details RFC 9457 (`application/problem+json`, ADR-011) más los campos
+ * históricos, que se mantienen para no romper al frontend:
+ *
  * {
- *   statusCode: number,
- *   message: string,
- *   error: string,
- *   code?: string,   // solo en algunos errores (403 ROLE_REQUIRED)
- *   timestamp: string,
- *   path: string
+ *   type: 'about:blank', title, status, detail, instance,   // RFC 9457
+ *   statusCode, message, error, timestamp, path,            // históricos
+ *   code?: string   // solo en algunos errores (403 ROLE_REQUIRED)
  * }
  */
 
@@ -58,6 +59,18 @@ const PRISMA_STATUS: Record<string, { status: HttpStatus; message: string }> = {
   },
 };
 
+/** Error de http-errors (lo que lanza body-parser): `expose` marca que el mensaje es apto para el cliente. */
+function isBodyParserError(e: unknown): e is Error & { status: number } {
+  const x = e as { status?: unknown; expose?: unknown } | null;
+  return (
+    e instanceof Error &&
+    typeof x?.status === 'number' &&
+    x.status >= 400 &&
+    x.status < 500 &&
+    x.expose === true
+  );
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -84,7 +97,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
         // Código estable opcional (p. ej. ROLE_REQUIRED) para que el cliente no parsee el mensaje.
         if (typeof resp.code === 'string') code = resp.code;
 
-        // class-validator devuelve un array de mensajes
+        // class-validator devuelve un array de mensajes: se une en un string
+        // (message histórico y detail RFC 9457 son el mismo texto).
         if (Array.isArray(resp.message)) {
           message = (resp.message as string[]).join('; ');
         }
@@ -99,6 +113,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       status = mapped.status;
       message = mapped.message;
       error = reasonPhrase(status);
+    } else if (isBodyParserError(exception)) {
+      // Errores de body-parser (JSON roto, cuerpo sobre el límite) que ocurren antes
+      // del router: traen su propio status 4xx y un mensaje seguro de exponer.
+      status = exception.status;
+      message = exception.message;
+      error = reasonPhrase(status);
     } else {
       // Error no controlado — loguear para debugging
       this.logger.error(
@@ -107,13 +127,24 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
-    response.status(status).json({
-      statusCode: status,
-      message,
-      error,
-      ...(code && { code }),
-      timestamp: new Date().toISOString(),
-      path: request.url,
-    });
+    // La URL vuelve al cliente y a los logs de cualquier proxy: sin tokens de la query.
+    const path = redactUrl(request.url);
+
+    response
+      .status(status)
+      .type('application/problem+json')
+      .json({
+        type: 'about:blank',
+        title: error,
+        status,
+        detail: message,
+        instance: path,
+        statusCode: status,
+        message,
+        error,
+        ...(code && { code }),
+        timestamp: new Date().toISOString(),
+        path,
+      });
   }
 }
