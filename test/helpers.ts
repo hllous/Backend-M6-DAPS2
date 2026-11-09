@@ -205,10 +205,11 @@ export class Api {
       .send(body ?? {});
   }
 
-  patch(path: string, body?: unknown) {
+  patch(path: string, body?: unknown, headers: Record<string, string> = {}) {
     return request(this.app.getHttpServer())
       .patch(path)
       .set(this.auth('PATCH', path))
+      .set(headers)
       .send(body ?? {});
   }
 

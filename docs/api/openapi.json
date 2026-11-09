@@ -5763,6 +5763,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -5778,6 +5787,15 @@
         "responses": {
           "200": {
             "description": "Contenedor actualizado exitosamente",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -5818,6 +5836,16 @@
           },
           "404": {
             "description": "Contenedor o zona no encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {
@@ -10032,6 +10060,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -10047,6 +10084,15 @@
         "responses": {
           "200": {
             "description": "Servicio actualizado",
+            "headers": {
+              "ETag": {
+                "description": "Versión actual del recurso (débil, derivada de updatedAt). Mandarla en If-Match.",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"1760000000000\""
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -10097,6 +10143,16 @@
           },
           "409": {
             "description": "El servicio ya arrancó o cerró y no admite edición, o el vehículo o la ventana nuevos se solapan con otro servicio de la misma cuadrilla o vehículo y falta `overrideNote`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match no coincide con el ETag actual: el recurso cambió",
             "content": {
               "application/json": {
                 "schema": {

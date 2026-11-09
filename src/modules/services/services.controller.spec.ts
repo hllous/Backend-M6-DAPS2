@@ -102,7 +102,7 @@ describe('ServicesController', () => {
   it('update delega id y dto', async () => {
     const dto = { notes: 'x' } as UpdateServiceDto;
     await controller.update(ID, dto, USER);
-    expect(service.update).toHaveBeenCalledWith(ID, dto, USER);
+    expect(service.update).toHaveBeenCalledWith(ID, dto, USER, undefined);
   });
 
   it('assignCrew delega id, dto y userId opcional', async () => {

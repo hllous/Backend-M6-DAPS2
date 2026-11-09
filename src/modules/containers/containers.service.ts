@@ -184,12 +184,21 @@ export class ContainersService {
     );
   }
 
-  async update(id: string, dto: UpdateContainerDto): Promise<ContainerResponseDto> {
-    await this.ensureExists(id);
+  async update(
+    id: string,
+    dto: UpdateContainerDto,
+    ifMatch?: string,
+  ): Promise<ContainerResponseDto> {
+    const current = await this.prisma.container.findUnique({ where: { id } });
+    if (!current) {
+      throw new NotFoundException(`Contenedor con id '${id}' no encontrado`);
+    }
+    // ADR-012: con If-Match, updatedAt va en el where y el UPDATE es atómico con la lectura.
+    const stale = ifMatchWhere(ifMatch, current);
 
     try {
       const container = await this.prisma.container.update({
-        where: { id },
+        where: { id, ...stale },
         data: {
           ...(dto.zoneId !== undefined && { zoneId: dto.zoneId }),
           ...(dto.capacityLiters !== undefined && {
@@ -206,6 +215,13 @@ export class ContainersService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
         throw new NotFoundException(`Zona con id '${dto.zoneId}' no encontrada`);
+      }
+      if (
+        isConditional(ifMatch) &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw preconditionFailed();
       }
       throw error;
     }

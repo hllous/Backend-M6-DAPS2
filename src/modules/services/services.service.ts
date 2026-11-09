@@ -349,8 +349,14 @@ export class ServicesService {
     return this.toResponseDto(await this.getService(id));
   }
 
-  async update(id: string, dto: UpdateServiceDto, actor: AuditActor): Promise<ServiceResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateServiceDto,
+    actor: AuditActor,
+    ifMatch?: string,
+  ): Promise<ServiceResponseDto> {
     const current = await this.getService(id);
+    const stale = ifMatchWhere(ifMatch, current);
     this.assertEditable(current);
 
     if (dto.vehicleId) {
@@ -390,33 +396,45 @@ export class ServicesService {
     // La cuadrilla no cambia en un PATCH: no hay encaje de zona o especialidad que avisar.
     this.assertOverrideNote(conflictos, [], dto.overrideNote);
 
-    const service = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.service.update({
-        where: { id },
-        data: {
-          ...(conflictos.length > 0 &&
-            dto.overrideNote && {
-              assignmentOverrideNote: dto.overrideNote,
-              assignmentOverrideBy: actor.userId,
-              assignmentOverrideAt: new Date(),
-            }),
-          ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
-          ...(dto.windowFrom !== undefined && { windowFrom: toTime(dto.windowFrom) }),
-          ...(dto.windowTo !== undefined && { windowTo: toTime(dto.windowTo) }),
-          ...(dto.notes !== undefined && { notes: dto.notes }),
-        },
-        include: SERVICE_INCLUDE,
+    const service = await this.prisma
+      .$transaction(async (tx) => {
+        const row = await tx.service.update({
+          // Con If-Match, updatedAt en el where (ADR-012); sin él, como siempre.
+          where: { id, ...stale },
+          data: {
+            ...(conflictos.length > 0 &&
+              dto.overrideNote && {
+                assignmentOverrideNote: dto.overrideNote,
+                assignmentOverrideBy: actor.userId,
+                assignmentOverrideAt: new Date(),
+              }),
+            ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
+            ...(dto.windowFrom !== undefined && { windowFrom: toTime(dto.windowFrom) }),
+            ...(dto.windowTo !== undefined && { windowTo: toTime(dto.windowTo) }),
+            ...(dto.notes !== undefined && { notes: dto.notes }),
+          },
+          include: SERVICE_INCLUDE,
+        });
+        await this.audit.record(tx, {
+          entityType: 'SERVICE',
+          entityId: id,
+          action: 'UPDATE',
+          fromStatus: current.status,
+          toStatus: current.status,
+          actor,
+        });
+        return row;
+      })
+      .catch((error: unknown) => {
+        if (
+          isConditional(ifMatch) &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          throw preconditionFailed();
+        }
+        throw error;
       });
-      await this.audit.record(tx, {
-        entityType: 'SERVICE',
-        entityId: id,
-        action: 'UPDATE',
-        fromStatus: current.status,
-        toStatus: current.status,
-        actor,
-      });
-      return row;
-    });
 
     this.logger.log(`Servicio actualizado: ${service.id}`);
     return this.toResponseDto(service);

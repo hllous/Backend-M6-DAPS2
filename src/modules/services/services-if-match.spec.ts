@@ -89,4 +89,35 @@ describe('ServicesService — If-Match', () => {
       PreconditionFailedException,
     );
   });
+
+  describe('update (PATCH de edición)', () => {
+    beforeEach(() => {
+      prisma.service.findUnique.mockResolvedValue(row(S.SCHEDULED));
+    });
+
+    it('con un ETag viejo da 412 y no escribe', async () => {
+      await expect(service.update(ID, { notes: 'x' }, ACTOR, 'W/"1"')).rejects.toBeInstanceOf(
+        PreconditionFailedException,
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('con el vigente condiciona el UPDATE por updatedAt', async () => {
+      await service.update(ID, { notes: 'x' }, ACTOR, vigente);
+      expect(prisma.service.update.mock.calls[0][0].where).toEqual({ id: ID, updatedAt });
+    });
+
+    it('sin If-Match el where es solo el id; P2025 con If-Match da 412', async () => {
+      await service.update(ID, { notes: 'x' }, ACTOR);
+      expect(prisma.service.update.mock.calls[0][0].where).toEqual({ id: ID });
+
+      prisma.service.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '5' }),
+      );
+      await expect(service.update(ID, { notes: 'x' }, ACTOR, vigente)).rejects.toBeInstanceOf(
+        PreconditionFailedException,
+      );
+    });
+  });
 });

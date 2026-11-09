@@ -155,6 +155,7 @@ export class ServicesController {
   }
 
   @Patch(':id')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Corregir la programación de un servicio',
@@ -181,8 +182,9 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateServiceDto,
     @CurrentUser() actor: AuthenticatedUser,
+    @IfMatch() ifMatch?: string,
   ): Promise<ServiceResponseDto> {
-    return this.servicesService.update(id, dto, actor);
+    return this.servicesService.update(id, dto, actor, ifMatch);
   }
 
   @Post(':id/assign-crew')

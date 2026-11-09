@@ -618,6 +618,32 @@ describe('ContainersService', () => {
       );
     });
 
+    it('con un ETag viejo da 412 y no escribe', async () => {
+      await expect(service.update(ID, { address: 'X' } as any, 'W/"1"')).rejects.toBeInstanceOf(
+        PreconditionFailedException,
+      );
+      expect(prisma.container.update).not.toHaveBeenCalled();
+    });
+
+    it('con el vigente condiciona el UPDATE por updatedAt; P2025 da 412', async () => {
+      const vigente = etagOf(contenedor().updatedAt);
+      await service.update(ID, { address: 'X' } as any, vigente);
+      expect(prisma.container.update.mock.calls[0][0].where).toEqual({
+        id: ID,
+        updatedAt: contenedor().updatedAt,
+      });
+
+      prisma.container.update.mockRejectedValue(prismaError('P2025'));
+      await expect(service.update(ID, {} as any, vigente)).rejects.toBeInstanceOf(
+        PreconditionFailedException,
+      );
+    });
+
+    it('sin If-Match el where es solo el id', async () => {
+      await service.update(ID, { address: 'X' } as any);
+      expect(prisma.container.update.mock.calls[0][0].where).toEqual({ id: ID });
+    });
+
     it('actualizar un contenedor inexistente da 404', async () => {
       prisma.container.findUnique.mockResolvedValue(null);
 

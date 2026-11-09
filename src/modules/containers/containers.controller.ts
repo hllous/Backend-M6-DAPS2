@@ -174,6 +174,7 @@ export class ContainersController {
   }
 
   @Patch(':id')
+  @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @ApiOperation({
     summary: 'Actualizar datos de un contenedor',
@@ -213,8 +214,9 @@ export class ContainersController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateContainerDto,
+    @IfMatch() ifMatch?: string,
   ): Promise<ContainerResponseDto> {
-    return this.containersService.update(id, dto);
+    return this.containersService.update(id, dto, ifMatch);
   }
 
   // ─── Transiciones de estado ────────────────────────

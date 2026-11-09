@@ -64,7 +64,7 @@ describe('ContainersController', () => {
   it('update delega id y dto', async () => {
     const dto = {} as UpdateContainerDto;
     await controller.update(ID, dto);
-    expect(service.update).toHaveBeenCalledWith(ID, dto);
+    expect(service.update).toHaveBeenCalledWith(ID, dto, undefined);
   });
 
   it('reportOverflow pasa el If-Match al service', async () => {
