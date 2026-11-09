@@ -79,7 +79,8 @@ jobs:
           # THROTTLE_LIMIT alto: el ThrottlerGuard global (#568, 600 req/min por IP) devolvería
           # 429 a Newman y sobre todo a Schemathesis (miles de casos desde una sola IP).
           # Inocuo si la variable todavía no existe.
-          THROTTLE_LIMIT=100000 node dist/main > reports/backend.log 2>&1 &
+          # NEIGHBORHOODS_CATALOG_FILE: no hay M9 en el CI; el catálogo de barrios sale del snapshot versionado (#594).
+          NEIGHBORHOODS_CATALOG_FILE=prisma/data/m9-barrios.json THROTTLE_LIMIT=100000 node dist/main > reports/backend.log 2>&1 &
           for i in $(seq 1 60); do
             curl -sf http://localhost:3000/health && exit 0
             sleep 2
@@ -103,15 +104,13 @@ jobs:
       # max-examples acotado para entrar en < 8 min. Solo GET: con datos al azar las
       # escrituras mutarían la base que Newman ya usó y no aportan al contrato.
       # Bloqueante: conformidad de esquema + sin 500/503.
-      # Hallazgo H-2: GET /neighborhoods responde 503 sin acceso al catálogo de M9
-      # (no existe en el CI); se excluye hasta que haya un mock o un seed de barrios.
       - name: Schemathesis (esquema y errores de servidor)
         run: |
           docker run --rm --network host --user "$(id -u):$(id -g)" -v "$PWD:/w" -w /w schemathesis/schemathesis:4.33.1 \
             run docs/api/openapi.json --url http://localhost:3000 \
             -H "Authorization: Bearer $ADMIN_TOKEN" \
             --checks response_schema_conformance,not_a_server_error \
-            --include-method GET --exclude-path /neighborhoods \
+            --include-method GET \
             --max-examples 15 --workers 2 \
             --report junit --report-dir reports/schemathesis
 
@@ -122,7 +121,7 @@ jobs:
             run docs/api/openapi.json --url http://localhost:3000 \
             -H "Authorization: Bearer $ADMIN_TOKEN" \
             --checks status_code_conformance \
-            --include-method GET --exclude-path /neighborhoods \
+            --include-method GET \
             --max-examples 15 --workers 2 \
             --report junit --report-dir reports/schemathesis-status
 

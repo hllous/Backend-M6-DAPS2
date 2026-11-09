@@ -87,6 +87,8 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-m6}:${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env (cp .env.example .env)}@postgres:5432/${POSTGRES_DB:-m6_ambiente}?schema=public
       JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env (cp .env.example .env)}
+      # Sin M9 local, el catálogo de barrios sale del snapshot que trae la imagen (prisma/ se copia entera).
+      NEIGHBORHOODS_CATALOG_FILE: prisma/data/m9-barrios.json
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env (cp .env.example .env)}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env (cp .env.example .env)}@rabbitmq:5672/
     ports:
       - "3000:3000"

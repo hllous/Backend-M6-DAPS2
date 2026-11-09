@@ -46,9 +46,6 @@ const sinAdmin = new Set();
 for (const m of readFileSync('docs/api/endpoints.md', 'utf8').matchAll(/^\| (GET|POST|PUT|PATCH|DELETE) \| `([^`]+)` \| ([^|]+) \|$/gm)) {
   if (m[3].includes('M6_') && !m[3].includes('M6_ADMIN')) sinAdmin.add(`${m[1]} ${m[2].replace(/:(\w+)/g, '{$1}')}`);
 }
-// Dependen de otro módulo que no existe en el entorno de CI: sin red hacia M9/Core responden 503.
-const EXTERNOS = new Set(['GET /neighborhoods']);
-
 const FAKE = '00000000-0000-4000-8000-000000000000';
 const ref = (s) => (s?.$ref ? spec.components.schemas[s.$ref.split('/').pop()] : s);
 const getOps = (p) => spec.paths[p]?.get;
@@ -129,9 +126,7 @@ for (const [path, ops] of Object.entries(spec.paths)) {
     };
 
     // --- éxito (solo GET: las escrituras necesitan estado de dominio, ver PENDIENTES.md)
-    if (!escritura && EXTERNOS.has(clave)) {
-      pendientes.push([clave, 'depende del catalogo de M9 (503 sin acceso al Core)']);
-    } else if (!escritura) {
+    if (!escritura) {
       const prefijos = [];
       let resoluble = true;
       params.forEach((p, i) => {
@@ -250,7 +245,7 @@ ${pendientes.map(([e, m]) => `| \`${e}\` | ${m} |`).join('\n')}
 Defectos reales del backend frente a \`docs/api/openapi.json\` (corrida local, solo GET, #572). No se arreglan en esta rama.
 
 - **H-1, 400 no declarado (resuelto, #593):** los GET con parámetros declaran el 400 con \`@ApiBadRequestParams()\`, lo exige \`openapi-contract.spec\` y el step \`status_code_conformance\` de \`api-tests.yml\` es bloqueante.
-- **H-2, 503 en \`GET /neighborhoods\`:** sin acceso al catálogo de M9 responde 503 (ST101, error de servidor). Se excluye del step bloqueante con \`--exclude-path /neighborhoods\`.
+- **H-2, 503 en \`GET /neighborhoods\` (resuelto, #594):** el CI y el compose cargan el catálogo local \`prisma/data/m9-barrios.json\` con \`NEIGHBORHOODS_CATALOG_FILE\`; en producción sigue siendo 503 sin el catálogo real de M9.
 `,
 );
 console.log(`${casos} casos; éxito en ${conExito.size}/${total}; pendientes ${pendientes.length}`);
