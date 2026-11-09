@@ -1,6 +1,6 @@
 # QA — Entregables de la prueba del TP (Clase 15, 10/11/2026)
 
-> Índice de los documentos de QA del Módulo 6 «Ambiente e Higiene» (Grupo 04), según los *Criterios de Testing y Aseguramiento de Calidad* de la cátedra (estructura de ISO/IEC/IEEE 29119-3). Origen: Issue [#494](https://github.com/hllous/Backend-M6-DAPS2/issues/494). **Actualizado el 09/11/2026** sobre `develop` @ `142e1a3`, el merge de [#597](https://github.com/hllous/Backend-M6-DAPS2/pull/597) (Issue [#598](https://github.com/hllous/Backend-M6-DAPS2/issues/598); la anterior fue la [#588](https://github.com/hllous/Backend-M6-DAPS2/issues/588), sobre `1d600d2`).
+> Índice de los documentos de QA del Módulo 6 «Ambiente e Higiene» (Grupo 04), según los *Criterios de Testing y Aseguramiento de Calidad* de la cátedra (estructura de ISO/IEC/IEEE 29119-3). Origen: Issue [#494](https://github.com/hllous/Backend-M6-DAPS2/issues/494). **Actualizado el 09/11/2026** sobre `develop` @ `142e1a3`, el merge de [#597](https://github.com/hllous/Backend-M6-DAPS2/pull/597) (Issue [#598](https://github.com/hllous/Backend-M6-DAPS2/issues/598); la anterior fue la [#588](https://github.com/hllous/Backend-M6-DAPS2/issues/588), sobre `1d600d2`). **Versión entregada:** `main` @ `6333ecb`, con el tag `v1.0-testing` (promoción del 09/11, PR [#602](https://github.com/hllous/Backend-M6-DAPS2/pull/602) y [#603](https://github.com/hllous/Backend-M6-DAPS2/pull/603)). Desde `142e1a3` hasta ese commit solo entraron documentación, el README y `.env.example` (#599 y #601): el código es el mismo y las cifras medidas siguen valiendo.
 >
 > **El Markdown de esta carpeta es la fuente.** El PDF que se entrega se regenera a partir de él; no se edita a mano.
 
@@ -52,7 +52,7 @@ El script falla si falta alguno de los `01` a `09`, para no entregar un PDF inco
 
 | Tema | Estado al 09/11 | Responsable |
 |---|---|---|
-| **Tag `v1.0-testing`** en `main`, backend y frontend, antes de las 13:30 del 10/11 | **NO HECHO** | Equipo (DevOps: Bautista Canteli Castro, según el rol del plan). Se propone hacerlo el 09/11 |
+| **Tag `v1.0-testing`** en `main`, backend y frontend, antes de las 13:30 del 10/11 | **HECHO** (09/11, ~19:06 UTC) | Backend: `6333ecb`, [CI en verde](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42679401568). Frontend: `c59e756`, [CI en verde](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/42668828421). Tags anotados, creados con el mail institucional de Benjamin Martinez. Detalle en `05-informe-ejecucion.md` |
 | **SonarCloud y Quality Gate** | **NO HECHO**: pide un administrador del repositorio (`hllous`) | Administrador del repositorio |
 | **Job `e2e` obligatorio** en la protección de ramas | **NO HECHO**: pide administrador; el e2e corre y pasa en el CI pero no bloquea (DEF-14) | Administrador del repositorio |
 | **Prueba de carga con k6** | **Hecha en local el 09/11** (p(95) 32,84 ms, 0,00 % de error, 50 usuarios, 5 min, solo lecturas). **No se midió el despliegue en Render y Supabase.** Resultados en `test/perf/resultados/2026-11-09/` | Benjamin Martinez (Dev Backend) |

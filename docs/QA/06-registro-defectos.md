@@ -188,7 +188,6 @@ La regla G9 pide no omitir nada conocido. Estas pruebas **no se hicieron** (esta
 
 | Verificación | Estado | Motivo |
 |---|---|---|
-| Tag `v1.0-testing` en `main` | NO HECHO | Pendiente del equipo (antes de las 13:30 del 10/11, backend y frontend) |
 | Quality Gate de SonarCloud | NO HECHO | Pide un administrador de `hllous`; no hay cuenta ni `sonar-project.properties` |
 | Job `e2e` obligatorio en la protección de ramas | NO HECHO | Idem: pide admin. El e2e corre y pasa en el CI, pero la regla exige solo `build` y `test` (DEF-14) |
 | Prueba de carga con 50 usuarios | **HECHO en local, NO en el despliegue** (09/11) | k6, 50 usuarios, 5 min, solo lecturas: p(95) 32,84 ms, 0,00 % de error. No se midió Render ni Supabase ni ninguna escritura (detalle en `05-informe-ejecucion.md`) |

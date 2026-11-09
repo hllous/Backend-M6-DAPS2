@@ -165,6 +165,18 @@ El workflow `API tests` (Newman y Schemathesis, con `status_code_conformance` bl
 
 Las 3 corridas más recientes del workflow `CI` en `develop` (09/11 14:11, 09/11 12:52 y 08/11 19:01 UTC) terminaron en `success`. Del 08/11 (`1d600d2`, run 42508633321): 1 min 32 s.
 
+**Estado de `main` al 09/11 (versión entregada).**
+
+| Repo | Commit de `main` | Cómo llegó | CI | Tag |
+|---|---|---|---|---|
+| Backend | `6333ecb` (árbol idéntico a `develop` @ `031d3a0`) | PR [#602](https://github.com/hllous/Backend-M6-DAPS2/pull/602) (`develop → test`, 19:00 UTC) y [#603](https://github.com/hllous/Backend-M6-DAPS2/pull/603) (`test → main`, 19:01 UTC) | `CI` [42679401568](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42679401568), `API tests` [42679401997](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42679401997) y `CodeQL` [42679402043](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42679402043): `success` | `v1.0-testing` (anotado) |
+| Frontend | `c59e756` (árbol idéntico a su `develop`) | PR [#903](https://github.com/hllous/Frontend-M6-DAPS2/pull/903) y [#904](https://github.com/hllous/Frontend-M6-DAPS2/pull/904) | `CI` [42668828421](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/42668828421): `success` con 22 jobs, **al cuarto intento** | `v1.0-testing` (anotado) |
+
+- **Qué cambió respecto de `142e1a3`:** solo documentación, README y `.env.example` (`git diff --stat 142e1a3 6333ecb -- src prisma test package.json docker-compose.yml Dockerfile .github` da vacío). Las cifras de este informe siguen siendo las de ese código.
+- **Los intentos fallidos del CI del frontend en `main` no fueron del código.** El primero falló en `unit shard 4/4` por timeouts de 5 s (el shard tardó 1084 s contra ~2 min en el run verde del 06/11) y los siguientes quedaron con jobs `abandoned` mientras GitHub Actions informaba una caída parcial (`major`, githubstatus.com, 09/11 18:30 UTC). El mismo árbol había pasado el CI completo en `develop`, en `test` y en el PR #904. Es una observación; no se midió la causa del runner lento.
+- **Render, 09/11 ~19:06 UTC:** `/health/ready` responde 200 con `database: up` y `broker: connected`, y un `GET /services` sin token responde 401 como `application/problem+json` con los headers `x-ratelimit-*` (límite 600): el despliegue sirve el código nuevo. **No se verificó** que la migración `20261109120000_idempotency_record` quedara aplicada (haría falta una escritura con `Idempotency-Key` contra esa base).
+- **gitleaks sobre el historial del tag (09/11, local):** v8.30.1 (`zricethezav/gitleaks`), con el [`.gitleaks.toml`](../../.gitleaks.toml) del repo, sobre un clon completo en `v1.0-testing`: **327 commits escaneados, 0 hallazgos**. Un primer intento sobre un `git worktree` escaneó 0 commits (el `.git` quedaba fuera del contenedor) y se descartó.
+
 **Límite de la cátedra: 15 minutos. Cumple, con mucho margen.** Datos del 03/11 (históricos): 1 min 45 s a 1 min 57 s por run; `main` 1 min 52 s con `deploy` incluido.
 
 El job `e2e` **no es check obligatorio** de la protección de ramas (`.github/branch-protection-rules.json` exige solo `build` y `test`); ver DEF-14. Cambiarlo pide permisos de administrador sobre el repositorio: **no hecho**.
@@ -259,7 +271,7 @@ Estado de las acciones que figuraban el 03/11 y de las que quedan, al 09/11.
 | 10 | Ensayo de caída y vuelta del broker con RabbitMQ real | **Hecho a medias**: e2e que corta conexiones (#579); apagar el broker queda para la demo |
 | 11 | Newman en el CI | **Hecho** (#583) |
 | 12 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); ZAP y Trivy **NO HECHOS** |
-| 13 | Tag `v1.0-testing` en `main` y en el frontend, antes de las 13:30 del 10/11 | **Pendiente del equipo** |
+| 13 | Tag `v1.0-testing` en `main` y en el frontend, antes de las 13:30 del 10/11 | **Hecho** (09/11, ~19:06 UTC): ver «Estado de `main` al 09/11» |
 | 14 | Declarar el 400 en los `GET` con entrada y volver bloqueante el paso de Schemathesis (DEF-20) | **Hecho** (#593, PR #597) |
 | 15 | Catálogo de barrios local para el compose y el CI (DEF-21) | **Hecho** (#594, PR #597) |
 | 16 | Errores en Problem Details RFC 9457 (DEF-10) | **Hecho** (#590, PR #597); falta el id de correlación y que el frontend adapte su parser (Frontend #898) |

@@ -138,6 +138,7 @@ docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 git /repo --redact 
 | Sin configuración propia (03/11) | **9 hallazgos**, todos reglas `generic-api-key`, que se reducen a **2 valores** (ver abajo) |
 | Con [`.gitleaks.toml`](../../.gitleaks.toml) (03/11) | **0 hallazgos** (`no leaks found`) |
 | CI de `develop` (08/11) | Job `secrets` en verde |
+| Local sobre el historial del tag `v1.0-testing` (`main` @ `6333ecb`, 09/11), gitleaks v8.30.1 con `.gitleaks.toml` | **0 hallazgos** (`no leaks found`, 327 commits escaneados). Un primer intento sobre un `git worktree` escaneó 0 commits y se descartó; esta corrida es sobre un clon completo |
 
 Los 2 valores marcados, ambos verificados a mano:
 
