@@ -1,56 +1,123 @@
-# ADR-XXX: [Título breve de la decisión]
+# ADR-XXX: [Título de la decisión]
 
-## Estado
+## Metadata
 
-**[Propuesto | Aceptado | Rechazado | Deprecado | Reemplazado por ADR-YYY | Reemplazado parcialmente por ADR-YYY]** — YYYY-MM-DD
+- **Status:** Proposed
+- **Date:** YYYY-MM-DD
+- **Deciders:** [Personas o roles que participan]
+- **Owner:** [Responsable del ADR]
+- **Related Issues:** [#123]
+- **Related ADRs:** [ADR-0XX]
 
-Si la decisión sigue vigente pero una parte quedó superada, se deja **Aceptado** y se agrega debajo una nota fechada (`> Nota del AAAA-MM-DD: …`), como en ADR-001 y ADR-002.
+---
 
-## Contexto
+## 1. Context and Problem Statement
 
-¿Qué situación motivó esta decisión? Describir el problema, las restricciones (técnicas, de negocio, de tiempo), y qué necesitábamos resolver.
+### Context
 
-Un contexto bien escrito hace que alguien que llega 6 meses después entienda por qué esto era una decisión y no algo obvio.
+Describir la situación actual del sistema y el problema que motiva la necesidad de tomar una decisión arquitectónica.
 
-## Decisión
+### Problem
 
-¿Qué decidimos hacer? Enunciar la decisión de forma directa, en una o dos oraciones. Después el detalle si hace falta.
+¿Cuál es el problema concreto que necesitamos resolver?
 
-## Alternativas consideradas
+---
 
-Listar las opciones que se evaluaron y por qué se descartaron. Sin esto un ADR no vale mucho — muestra que la decisión fue razonada, no un default.
+## 2. Decision Drivers
 
-- **Opción A**: descripción corta y por qué se descartó.
-- **Opción B**: descripción corta y por qué se descartó.
-- **Opción C** (la elegida): descripción y por qué se prefirió.
+Factores que condicionan la elección (los motivos, no los efectos: esos van en *Consequences*).
 
-## Consecuencias
+- Requerimientos funcionales.
+- Performance y escalabilidad.
+- Seguridad.
+- Mantenibilidad.
+- Complejidad de implementación.
+- Costos operativos.
+- Compatibilidad con la arquitectura existente.
 
-### Positivas
+---
 
-- Qué ganamos con esta decisión.
-- Qué queda resuelto que antes era incierto.
+## 3. Considered Options
 
-### Negativas
+### Option A: [Nombre de la alternativa]
 
-- Qué costos o riesgos aceptamos.
-- Qué queda pendiente o requiere más trabajo.
+Descripción breve.
 
-### Neutras
+**Pros:**
+- Ventaja 1.
 
-- Cambios que hay que hacer sí o sí como resultado de la decisión, pero que no son buenos ni malos.
+**Cons:**
+- Desventaja 1.
 
-## Referencias
+### Option B: [Nombre de la alternativa]
 
-- Enlaces a documentación, artículos, conversaciones o issues que fundamentan la decisión.
-- Enlaces a ADRs relacionados.
+Descripción breve.
+
+**Pros:**
+- Ventaja 1.
+
+**Cons:**
+- Desventaja 1.
+
+---
+
+## 4. Decision Outcome
+
+**Chosen Option:** [Alternativa seleccionada]
+
+### Rationale
+
+Por qué se eligió y cómo responde a los *Decision Drivers*.
+
+---
+
+## 5. Consequences
+
+### Positive Consequences
+
+- Beneficio 1.
+
+### Negative Consequences
+
+- Limitación, costo o riesgo asumido.
+
+### Technical Implications
+
+- Componentes afectados, cambios necesarios, dependencias o integraciones, impacto en infraestructura.
+
+---
+
+## 6. Implementation and Validation
+
+Cómo se implementa y cómo se verifica que el código respeta la decisión.
+
+- [ ] Tarea de implementación.
+- [ ] Tests o validaciones necesarias.
+- [ ] Documentación actualizada.
+
+---
+
+## 7. References
+
+- Documentación técnica, issues, PR y ADRs relacionados.
 
 ---
 
 ## Cómo usar esta plantilla
 
-1. Copiá este archivo como `adr-NNN-titulo-corto.md` (numeración correlativa).
-2. Reemplazá `XXX` en el título por el número.
-3. Completá cada sección. Si alguna no aplica, ponla en blanco pero no la borres — mantiene el formato consistente entre ADRs.
-4. Al principio el estado es **Propuesto**. Cuando el equipo lo acepta en una reunión, pasa a **Aceptado** con la fecha de aceptación.
-5. Un ADR aceptado no se edita. Si la decisión cambia, se escribe un ADR nuevo que marca al viejo como **Reemplazado por ADR-YYY**.
+Formato [MADR](https://adr.github.io/madr/) (Markdown Architectural Decision Records).
+
+1. Copiá este archivo como `adr-NNN-titulo-corto.md` (numeración correlativa de tres dígitos) y reemplazá `XXX`.
+2. Completá cada sección. Si alguna no aplica, dejala en blanco pero no la borres, para mantener el formato entre ADRs.
+3. **Status** (valores en inglés, como el resto de la plantilla):
+
+   | Status | Significado |
+   |---|---|
+   | Proposed | Propuesta, pendiente de revisión |
+   | Accepted | Aprobada |
+   | Rejected | Evaluada y no adoptada |
+   | Deprecated | Ya no se recomienda |
+   | Superseded | La reemplazó una decisión posterior (indicar `by ADR-YYY`) |
+
+4. Un ADR aceptado es un registro histórico inmutable: si la decisión cambia, se escribe un ADR nuevo y el viejo pasa a *Superseded*. Lo único que se agrega a uno aceptado es una nota fechada (`> Nota del AAAA-MM-DD: …`).
+5. Los ADR 001 a 013 usan la plantilla anterior (Estado, Contexto, Decisión, Alternativas, Consecuencias, Referencias) y no se reescriben, justamente por ser registros históricos. Desde el 014 se usa esta.
