@@ -142,6 +142,7 @@ export class TreeInterventionsController {
   }
 
   @Post(':id/authorize')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   // Arriba de @Roles: Swagger se queda con el último decorador aplicado por status.
   @ApiResponse({
@@ -177,6 +178,7 @@ export class TreeInterventionsController {
   }
 
   @Post(':id/reject')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   // Arriba de @Roles: Swagger se queda con el último decorador aplicado por status.
   @ApiResponse({
