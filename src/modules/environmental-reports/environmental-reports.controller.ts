@@ -139,6 +139,7 @@ export class EnvironmentalReportsController {
   }
 
   @Post(':id/start-review')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
@@ -289,6 +290,7 @@ export class EnvironmentalReportsController {
   }
 
   @Post(':id/close')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)

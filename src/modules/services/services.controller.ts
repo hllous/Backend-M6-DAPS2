@@ -355,6 +355,7 @@ export class ServicesController {
   // ─── Ejecución ────────────────────────────────────
 
   @Post(':id/start')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
@@ -421,6 +422,7 @@ export class ServicesController {
   }
 
   @Post(':id/resume')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @ApiNotAssigned('la cuadrilla del servicio')
   @Roles(...ROLES_CUADRILLA)
