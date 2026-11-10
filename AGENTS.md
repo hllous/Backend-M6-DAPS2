@@ -73,7 +73,7 @@ Flujo: `main ← test ← develop ← feature/*|fix/*|docs/*|refactor/*|tests/*|
 
 ### Issue tracker
 
-GitHub Issues (repo: `hllous/Backend-M6-DAPS2`), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+GitHub Issues (repo: `hllous/Backend-M6-DAPS2`), via the `gh` CLI. See `docs/agents/issue-tracker.md`. Todo issue nuevo usa una plantilla de `.github/ISSUE_TEMPLATE/` (`bug`, `feature`, `tarea`, `contrato`, `docs`): con `gh issue create` leer la plantilla y respetar sus secciones; título descriptivo del objetivo, sin prefijos.
 
 ### Cross-repo changes
 
