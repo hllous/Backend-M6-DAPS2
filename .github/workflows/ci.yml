@@ -194,7 +194,7 @@ jobs:
         run: npm run test:e2e -- --testPathIgnorePatterns rabbitmq-real
 
       - name: Run e2e tests (RabbitMQ real)
-        run: npm run test:e2e -- rabbitmq-real
+        run: npm run test:e2e -- rabbitmq-real --runInBand
         env:
           RABBITMQ_URL: amqp://guest:guest@localhost:5672
 
