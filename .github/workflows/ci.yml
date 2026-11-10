@@ -119,8 +119,9 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-      # Para test/rabbitmq-real.e2e-spec.ts (#575). La imagen -management trae
-      # la API HTTP (15672) con la que el test le cierra la conexión al consumer.
+      # Para test/rabbitmq-real.e2e-spec.ts (#575) y test/outbox-rabbitmq-real.e2e-spec.ts
+      # (#618). La imagen -management trae la API HTTP (15672) con la que los
+      # tests le cierran la conexión al consumer y al publisher.
       rabbitmq:
         image: rabbitmq:3-management
         ports:

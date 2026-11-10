@@ -200,7 +200,7 @@ El job `e2e` **no es check obligatorio** de la protección de ramas (`.github/br
 | Trivy | **NO HECHO** | No se corrió |
 | Mutation score del dominio completo (y actualizado) | **NO HECHO** | Solo `outbound-requests`, sin re-medir |
 | Éxito por endpoint en los 91 endpoints restantes | **NO HECHO** | `test/api/PENDIENTES.md` |
-| Integración con broker real (Testcontainers) | **Parcial** | Postgres y RabbitMQ reales como contenedores de servicio del CI y en local. El consumer se prueba contra RabbitMQ real; la publicación del outbox contra un broker real no tiene test |
+| Integración con broker real (Testcontainers) | **Parcial** | Postgres y RabbitMQ reales como contenedores de servicio del CI y en local. El consumer y la publicación del outbox (también con el broker inalcanzable y su reenvío) se prueban contra RabbitMQ real (#618) |
 | `--detectOpenHandles` | **NO HECHO** | No se corrió |
 
 ## 9. Plan de acciones
