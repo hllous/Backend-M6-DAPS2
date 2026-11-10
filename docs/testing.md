@@ -73,6 +73,10 @@ Los datos se arman por caso con los helpers, **no con `prisma/seed.ts`**: el see
 
 El `OutboxDispatcher` se reemplaza por un stub sin `@Interval`. Si no, barre la cola cada 10 s —justo lo que las suites verifican— y deja un timer abierto.
 
+## Cobertura en Windows: "coverage data not found"
+
+Si `npm run test:cov` desde Git Bash avisa `Coverage data for ... was not found` para los archivos con umbral propio (`coverageThreshold`), no falta cobertura: Jest compara por prefijo el cwd (`c:\Users\...`, unidad en minúscula en Git Bash) con las rutas del mapa de cobertura (`C:\Users\...`) y no coinciden. Los archivos sí se miden y suman al total. Correr desde PowerShell o CMD, o con el cwd en mayúscula, hace desaparecer el aviso (#622). En Linux y en el CI no ocurre.
+
 ## En el CI
 
 El job `e2e` de `.github/workflows/ci.yml` levanta `postgres:16` y `rabbitmq:3-management` con `services:` y corre `npm run test:e2e` (la suite de RabbitMQ en un paso aparte, con `RABBITMQ_URL`, para no activar el consumer en las demás); las migraciones las aplica `global-setup.ts`, igual que en local.
