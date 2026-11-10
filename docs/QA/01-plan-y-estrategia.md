@@ -80,7 +80,7 @@
 | HU del alcance ejecutadas | 100 % | Las HU con test del backend sí; 9 criterios solo-FE y 6 huecos no ([`03`](03-matriz-trazabilidad.md)) | **Parcial** |
 | Criterios de aceptación pasados | ≥ 95 %, sin fallos en HU `MUST` | 160 de 175 con test del backend pasan; 0 fallados; 15 sin ejecutar | **Parcial** |
 | Casos negativos o de borde | ≥ 40 % | 67,5 % (251 de 372) | **Sí** |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores con workaround | 0, 0 y **3 Mayores** (DEF-08, DEF-09 y DEF-13); DEF-09 sin workaround | **Sí, en el límite** |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores con workaround | 0, 0 y **2 Mayores** (DEF-09 y DEF-13); DEF-09 sin workaround | **Sí** |
 | Tests flaky | 0 (3 corridas idénticas) | 3 corridas idénticas en local y repetidas en el CI | **Sí** |
 | Pipeline | ≤ 15 min | 1 min 44 s (CI de `develop`) | **Sí** |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` en cada PR | **Cumple** |
@@ -104,7 +104,7 @@ Escala: probabilidad (P) e impacto (I) de 1 a 3; prioridad = P × I. Se listan l
 | R8 | Regresión de contrato con otros módulos (payload o routing key) | 2 | 3 | 6 | **Cubierto.** `openapi-contract.spec`, `payloads.spec` (ajv), el CI exige `openapi.json` al día |
 | R10 | Archivo malicioso o con metadatos personales en la evidencia | 2 | 2 | 4 | **Cubierto.** `attachments.service.spec` (firma de bytes, tamaño, EXIF), `crew-ownership.e2e-spec` |
 | R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | **Parcial.** 3 corridas idénticas; Stryker solo en `outbound-requests`; DEF-24 cerrado sin causa confirmada |
-| R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | **Parcial.** `npm audit fix` (0 críticas, 6 altas aceptadas), job `audit` informativo, Dependabot (#578); sin Trivy (DEF-08, DEF-13) |
+| R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | **Parcial.** `npm audit fix` (#566) y `overrides` (#619): 0 críticas y 0 altas, 8 moderadas a NestJS 12 (#628); job `audit` informativo, Dependabot (#578); sin Trivy (DEF-13) |
 | R17 | El primer `docker compose up` en frío falla | 2 | 2 | 4 | **Cubierto a mano.** Falló una vez (DEF-23) y se corrigió en #584; el CI no levanta el compose |
 | R21 | Un cliente sin `If-Match` o sin parser de `application/problem+json` pierde la protección o rompe al leer errores | 2 | 2 | 4 | **Parcial.** Backend cubierto (`etag-if-match`, `problem-details`); el frontend va en [Frontend #898](https://github.com/hllous/Frontend-M6-DAPS2/issues/898) |
 

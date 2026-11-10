@@ -15,12 +15,12 @@
 | Estado | Controles de la Clase 11 (10) | Pruebas de seguridad generales (20 filas) |
 |---|---|---|
 | CUMPLE | 6 (W01, W02, W04, W06, D01, I01) | 10 (BOLA, BFLA, JWT, mass assignment, inyección SQL, rate limiting, CORS, errores sin stack, logs, datos minimizados) |
-| Mixto: CUMPLE en una parte, NO CUMPLE o NO VERIFICABLE en otra | 2 (W03, I02) | 3 (XSS, cabeceras y CSP, TLS del broker y del HTTP) |
-| NO CUMPLE | 2 (W05, D02) | 1 (dependencias) |
+| Mixto: CUMPLE en una parte, NO CUMPLE o NO VERIFICABLE en otra | 2 (W03, I02) | 4 (XSS, cabeceras y CSP, TLS del broker y del HTTP, dependencias: CUMPLE con salvedad) |
+| NO CUMPLE | 2 (W05, D02) | 0 |
 | NO VERIFICABLE | 0 | 1 (ZAP) |
 | N/A | 0 | 5 (NoSQL, XXE, fuerza bruta en login, cookies, hash de contraseñas) |
 
-Hallazgos mayores abiertos: **dependencias con 6 altas aceptadas como riesgo, sin análisis de explotabilidad** (DEF-08), **sin auditoría de lecturas Tier 2** (DEF-09), **errores 500 sin id de correlación** (SEC-W05; el formato RFC 9457 ya está hecho: DEF-10), **sin ZAP ni Trivy** (DEF-13). Cerrados: **rate limiting** (DEF-07, #580), **logs con `access_token`** (DEF-22, #581), **errores en Problem Details** (DEF-10, #590; no cambia el veredicto de SEC-W05 por el id de correlación), **ETag con 412** (DEF-05, #591) e **`Idempotency-Key`** (DEF-06, #592). No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06-registro-defectos.md`](06-registro-defectos.md).
+Hallazgos mayores abiertos: **sin auditoría de lecturas Tier 2** (DEF-09), **errores 500 sin id de correlación** (SEC-W05; el formato RFC 9457 ya está hecho: DEF-10), **sin ZAP ni Trivy** (DEF-13). Cerrados: **dependencias sin altas ni críticas** (DEF-08, #619; quedan 8 moderadas en #628), **rate limiting** (DEF-07, #580), **logs con `access_token`** (DEF-22, #581), **errores en Problem Details** (DEF-10, #590; no cambia el veredicto de SEC-W05 por el id de correlación), **ETag con 412** (DEF-05, #591) e **`Idempotency-Key`** (DEF-06, #592). No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06-registro-defectos.md`](06-registro-defectos.md).
 
 ## 3. Controles de la Clase 11 (SEC-W01 a SEC-D02)
 
@@ -73,7 +73,7 @@ Por control: qué decía la matriz de Trello, qué hay hoy, con qué corrección
 | **Fuerza bruta sobre el login** | 429 | **N/A** | M6 no tiene login: el JWT lo emite M1 |
 | **Rate limiting** de la API | 429 | **CUMPLE** (DEF-07, cerrado por #568 · PR #580) | `ThrottlerGuard` global (primer `APP_GUARD`, `src/app.module.ts:100`): 600 por minuto por IP y por endpoint (`THROTTLE_LIMIT`, `THROTTLE_TTL_MS`), `POST /events/inbox` 300 por minuto, `POST /evidence` 30 por minuto, `/health` excluido. e2e en `test/throttler.e2e-spec.ts` (corre en el CI). Decisión en [ADR-010](../decisiones/adr-010-rate-limit-global.md). El 429 sale en Problem Details (`test/problem-details.e2e-spec.ts`). **Límites:** los contadores están en memoria, valen para **una** instancia; y detrás del BFF el límite solo cuenta por vecino si el BFF manda `X-M6-BFF-Key` y sobrescribe `X-Forwarded-For`. `BFF_SHARED_KEY` está configurada en Render y en Vercel (verificado por el equipo); que la variable exista no prueba que el BFF la mande ni que sobrescriba `X-Forwarded-For`, y ese contrato con el frontend sigue **sin verificarse** (el issue [Frontend #898](https://github.com/hllous/Frontend-M6-DAPS2/issues/898) cubre el formato de error, ETag e `Idempotency-Key`). Para la prueba de carga en local se subió `THROTTLE_LIMIT` a 100000; en el despliegue el límite sigue en 600 por minuto |
 | **OWASP ZAP** (baseline y activo autenticado) | 0 alertas High | **NO VERIFICABLE: NO HECHO** | No hay configuración ni ejecución (DEF-13) |
-| **Dependencias** (SCA) | 0 CVE críticas o altas sin mitigación | **NO CUMPLE** (riesgo aceptado, sin mitigación analizada) | `npm audit --omit=dev`: 13 vulnerabilidades en producción, **0 críticas, 6 altas, 7 moderadas**. Las 6 altas están aceptadas sin análisis de explotabilidad. Ver sección 5.1 |
+| **Dependencias** (SCA) | 0 CVE críticas o altas sin mitigación | **CUMPLE con salvedad** | `npm audit --omit=dev` tras #619: 8 vulnerabilidades en producción, **0 críticas, 0 altas, 8 moderadas**. **Salvedad:** las moderadas siguen abiertas (exigen NestJS 12, #628), con 343 e2e en verde con los overrides (la suite de RabbitMQ real no se corrió). Ver sección 5.1 |
 | **Cabeceras de seguridad** | CSP, HSTS y `X-Content-Type-Options` | **CUMPLE** salvo `/api/docs` | `src/common/middleware/security-headers.middleware.ts` pone `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` en toda ruta **salvo `/api/docs`** (Swagger UI la necesita), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: same-site` y HSTS solo si `NODE_ENV=production`. Probado en `security-headers.middleware.spec.ts` (`:21`, `:45`), `services-lifecycle.e2e-spec.ts:67` y `test/security-input.e2e-spec.ts` (CSP presente; ausente en `/api/docs`). `X-Powered-By` está deshabilitado (`configure-app.ts:26`). `/api/docs` sin CSP queda en DEF-19. No hay helmet ni `Permissions-Policy` |
 | **CORS** sin comodín con credenciales | Sin `*` con credenciales | **CUMPLE** | `src/main.ts:18-34`: sin `CORS_ORIGINS` se acepta cualquier origen, pero **sin `credentials`**, que es la combinación peligrosa. `CORS_ORIGINS` está cargada en Render (DEF-18 sigue abierto solo porque la variable es opcional). El CORS expone los headers `ETag` e `Idempotency-Replayed` y deja pasar `If-Match` e `Idempotency-Key` en el preflight (ADR-012 y ADR-013) |
 | **Cookies** (`Secure`, `HttpOnly`, `SameSite`) | — | **N/A** | El backend no emite cookies: el JWT va en el header |
@@ -92,22 +92,23 @@ Por control: qué decía la matriz de Trello, qué hay hoy, con qué corrección
 | Severidad | Paquete | Directa | Qué reporta | Corrección |
 |---|---|---|---|---|
 | Crítica | `proxy-addr` | No (Express) | Suplantación de IP vía subred de IPv6 mapeada a IPv4 (GHSA-jqcg-44mw-7w3h) | **Resuelta** con `npm audit fix` (#566, PR #576) |
-| Alta | `@nestjs/platform-express` | Sí | Arrastra `body-parser` y `multer` | Subir a NestJS 12 (cambio mayor) |
-| Alta | `body-parser` | No | DoS por un `limit` inválido y por bytes sobrantes tras un cuerpo comprimido | NestJS 12 |
-| Alta | `multer` | No | DoS por un `fileFilter` asíncrono pendiente tras cerrar el pedido (GHSA-q7qp-rjg7-q26m) | NestJS 12 |
-| Alta | `js-yaml` | No (Swagger) | Contaminación de prototipo y DoS por claves de fusión | `@nestjs/swagger` 12 |
-| Alta | `lodash` | No | Inyección de código en `_.template` y contaminación de prototipo | `@nestjs/swagger` o `@nestjs/config` 12 |
-| Alta | `zod` | Sí | Agotamiento de memoria al validar colecciones enormes (GHSA-mrhx-c7xc-m3w5) | `zod` 4.6.7 (cambio mayor) |
-| Moderadas | `@nestjs/common`, `@nestjs/config`, `@nestjs/core`, `@nestjs/schedule`, `@nestjs/swagger`, `file-type`, `qs`, `uuid` | Mixto | DoS y neutralización incorrecta de caracteres especiales | `npm audit fix` resolvió `file-type`, `qs` y `@nestjs/common`; el resto, cambio mayor |
+| Alta | `@nestjs/platform-express` | Sí | Arrastra `body-parser` y `multer` | Ya no figura como alta tras #619; queda moderada (NestJS 12, #628) |
+| Alta | `body-parser` | No | DoS por un `limit` inválido y por bytes sobrantes tras un cuerpo comprimido | **Resuelta** (#619): override a 1.20.9 |
+| Alta | `multer` | No | DoS por un `fileFilter` asíncrono pendiente tras cerrar el pedido (GHSA-q7qp-rjg7-q26m) | **Resuelta** (#619): override, 2.5.0 |
+| Alta | `js-yaml` | No (Swagger) | Contaminación de prototipo y DoS por claves de fusión | **Resuelta** (#619): override a 4.3.2 |
+| Alta | `lodash` | No | Inyección de código en `_.template` y contaminación de prototipo | **Resuelta** (#619): override a 4.18.1 |
+| Alta | `zod` | Sí | Agotamiento de memoria al validar colecciones enormes (GHSA-mrhx-c7xc-m3w5) | **Resuelta** (#619): `zod` 4.6.7 |
+| Moderadas | `@nestjs/common`, `@nestjs/config`, `@nestjs/core`, `@nestjs/schedule`, `@nestjs/swagger`, `file-type`, `qs`, `uuid` | Mixto | DoS y neutralización incorrecta de caracteres especiales | Tras #619 siguen 8 moderadas (`@nestjs/core`, `file-type`, `qs`, `uuid` y dependientes `@nestjs/common`, `@nestjs/platform-express` y `@nestjs/schedule`); exigen NestJS 12 (#628) |
 
 **Lo que se hizo (DEF-08):**
 
 1. `npm audit fix` sin `--force` (#566, PR #576). Resultado en producción: **13 vulnerabilidades, 0 críticas, 6 altas, 7 moderadas**. Build, lint y tests siguieron en verde.
 2. Job `audit` en el CI (#578): corre `npm audit --omit=dev --audit-level=high` y es **informativo**: si hay altas, termina en verde con un aviso (`::warning`) y no bloquea el merge.
 3. Dependabot semanal (`.github/dependabot.yml`), sin los majors de `@nestjs/*` ni de `zod`.
-4. El salto mayor (NestJS 12, zod 4) queda fuera de este corte para no cambiar la plataforma a días de la prueba.
+4. #619 (10/11/2026): `overrides` de `body-parser` ^1.20.9, `lodash` ^4.18.1, `js-yaml` ^4.3.2 y `multer` ^2.4.0, y `zod` ^4.6.7. Resultado: **8 vulnerabilidades en producción, 0 críticas, 0 altas, 8 moderadas**. Build, lint (0 errores) y 2855 tests unitarios y 343 e2e en verde (la suite de RabbitMQ real no se corrió).
+5. El salto mayor (NestJS 12, Prisma 7, Jest 30) queda en el issue #628.
 
-Lo que se pudo comprobar en el código sobre las 6 altas restantes:
+Lo que se comprobó en el código sobre las 6 altas, **antes** de #619 (hoy ya no figuran):
 
 | Alta restante | Qué se comprobó | Qué NO se analizó |
 |---|---|---|
@@ -115,7 +116,7 @@ Lo que se pudo comprobar en el código sobre las 6 altas restantes:
 | `@nestjs/platform-express`, `body-parser`, `multer` | La subida de archivos exige token válido y rol (ver `attachments.service.ts` y el límite de 10 MB) | Explotabilidad real del DoS de `multer` y de `body-parser` |
 | `@nestjs/swagger`, `js-yaml`, `lodash`, `@nestjs/config` | — | Explotabilidad: no se analizó |
 
-**Estado unificado:** el criterio de dependencias es **NO CUMPLE**, con las 6 altas como **riesgo aceptado y abierto, sin mitigación analizada**. No se puede declarar CUMPLE hasta analizar la explotabilidad, correr un segundo SCA (Trivy, **NO HECHO**) y decidir el salto a NestJS 12.
+**Estado unificado:** el criterio de dependencias es **CUMPLE con salvedad**: 0 críticas y 0 altas en producción. Salvedades: las 8 moderadas siguen abiertas hasta NestJS 12 (#628; `qs`, `uuid` y `@nestjs/core` sin analizar), la suite e2e de RabbitMQ real no se corrió con los overrides y no hay segundo SCA (Trivy, **NO HECHO**, DEF-13).
 
 ### 5.2 OWASP ZAP y Trivy
 
@@ -161,7 +162,7 @@ Limitación: gitleaks no analiza el contenido de los PDF ni de los binarios.
 
 | # | Hallazgo | Severidad propuesta | Tratamiento | Registro |
 |---|---|---|---|---|
-| 1 | 6 altas en dependencias de producción (la crítica se resolvió) | Mayor (sube a Crítica si hay explotabilidad) | `npm audit fix` hecho (#566), job `audit` informativo y Dependabot hechos (#578); pendiente: análisis de explotabilidad, Trivy y salto a NestJS 12 | DEF-08 |
+| 1 | Dependencias de producción: la crítica y las 6 altas se resolvieron; quedan 8 moderadas | Mayor (cerrado) | **Cerrado por mitigación** (#619): `npm audit fix` (#566), `overrides` y `zod` 4, job `audit` informativo y Dependabot (#578). Residual: moderadas y salto a NestJS 12 en #628; Trivy en DEF-13 | DEF-08 (cerrado) |
 | 2 | Sin rate limiting fuera del portal público | Mayor | **Cerrado** (#568, PR #580) | DEF-07 |
 | 3 | Sin auditoría de lecturas Tier 2 (SEC-D02) | Mayor | Interceptor de lectura sobre los `GET` de denuncias y actas (sin hacer) | DEF-09 |
 | 4 | Sin ZAP ni Trivy (SCA informativo, Dependabot, CodeQL y gitleaks sí) | Mayor | `zap-baseline` manual (sin hacer) | DEF-13 |

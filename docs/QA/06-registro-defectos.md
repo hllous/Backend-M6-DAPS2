@@ -19,7 +19,7 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 
 | | Cantidad |
 |---|---|
-| Defectos y brechas registrados | 22 (DEF-01 a DEF-24, sin DEF-04 ni DEF-11). **Abiertos: 7. Cerrados: 15** |
+| Defectos y brechas registrados | 22 (DEF-01 a DEF-24, sin DEF-04 ni DEF-11). **Abiertos: 6. Cerrados: 16** |
 | Issues con etiqueta `bug`, `security` o `fix` | Todos cerrados en GitHub (`gh issue list --state all`) |
 | Verificaciones no realizadas (no son defectos) | 8, en la sección 5 |
 
@@ -27,11 +27,11 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 |---|---|---|
 | Bloqueante | 0 | Sí |
 | Crítica | 0 | Sí |
-| Mayor | **3** (DEF-08, DEF-09 y DEF-13) | Sí (máximo 3) |
+| Mayor | **2** (DEF-09 y DEF-13) | Sí (máximo 3) |
 | Menor | 4 (DEF-14, DEF-15, DEF-18 y DEF-19) | Sí |
-| **Total abierto** | **7** | |
+| **Total abierto** | **6** | |
 
-**Lectura honesta:** el criterio de salida **se cumple en cantidad, sin margen**: hay 3 Mayores abiertas contra un máximo de 3. Falta que cada Mayor tenga un workaround documentado, y DEF-09 dice «ninguno». La severidad de las Mayores es una **propuesta**: el equipo y el PO la validan antes de la entrega.
+**Lectura honesta:** el criterio de salida **se cumple en cantidad**: hay 2 Mayores abiertas contra un máximo de 3 (DEF-08 se cerró por mitigación con #619). Falta que cada Mayor tenga un workaround documentado, y DEF-09 dice «ninguno». La severidad de las Mayores es una **propuesta**: el equipo y el PO la validan antes de la entrega.
 
 ## 3. Defectos y brechas abiertos
 
@@ -41,21 +41,30 @@ Ninguna abierta.
 
 ### Mayores
 
-#### DEF-08 · Dependencias de producción con vulnerabilidades conocidas
+#### DEF-08 · Dependencias de producción con vulnerabilidades conocidas (cerrado, mitigado por #619)
 
 | Campo | Detalle |
 |---|---|
-| ID | sin issue (corrección parcial: [#566](https://github.com/hllous/Backend-M6-DAPS2/issues/566), PR #576) |
+| ID | sin issue (corrección parcial: [#566](https://github.com/hllous/Backend-M6-DAPS2/issues/566), PR #576; mitigación: [#619](https://github.com/hllous/Backend-M6-DAPS2/issues/619); residual: [#628](https://github.com/hllous/Backend-M6-DAPS2/issues/628)) |
 | Severidad / prioridad | Mayor (propuesta) / Alta |
 | HU | HU-31 |
 | Pasos | `npm audit --omit=dev` |
 | Esperado | 0 CVE críticas o altas sin mitigación documentada |
-| Obtenido | Tras `npm audit fix`: **13 en producción: 0 críticas, 6 altas, 7 moderadas** (antes, 15 con 1 crítica). Altas restantes: `@nestjs/platform-express`, `body-parser`, `multer`, `js-yaml`, `lodash` y `zod`; todas exigen un salto mayor (NestJS 12, zod 4) |
+| Obtenido | Historia: tras `npm audit fix` (#566) quedaban 13 en producción (0 críticas, 6 altas, 7 moderadas; antes, 15 con 1 crítica). Con los `overrides` de #619 (`body-parser` ^1.20.9, `lodash` ^4.18.1, `js-yaml` ^4.3.2 y `multer` ^2.4.0) y `zod` ^4.6.7: **8 en producción: 0 críticas, 0 altas, 8 moderadas** (`@nestjs/core`, `file-type`, `qs`, `uuid` y dependientes `@nestjs/common`, `@nestjs/platform-express` y `@nestjs/schedule`). Versiones resueltas: body-parser 1.20.9, lodash 4.18.1, js-yaml 4.3.2, zod 4.6.7, multer 2.5.0 |
 | Evidencia | `npm audit --omit=dev` (detalle en [`07-informe-seguridad.md`](07-informe-seguridad.md), sección 5.1); job `audit` de `.github/workflows/ci.yml` |
-| Estado | **Riesgo aceptado y abierto.** Las 6 altas están aceptadas **sin análisis de explotabilidad**; sin Trivy no hay segundo SCA |
-| Workaround | El job `audit` corre `npm audit --omit=dev --audit-level=high` y es **informativo** (termina en verde con un `::warning`). Dependabot semanal, sin majors de `@nestjs/*` ni `zod` |
+| Estado | **Cerrado por mitigación (#619, 10/11/2026).** Sin altas ni críticas en producción. **Riesgo residual:** las 8 moderadas exigen NestJS 12 y quedan en [#628](https://github.com/hllous/Backend-M6-DAPS2/issues/628) (NestJS 12, Prisma 7, Jest 30). Build, lint (0 errores) y 2855 tests unitarios y 343 e2e en verde (23 suites, Postgres 16 local; la de RabbitMQ real se saltea sin `RABBITMQ_URL`). Sin Trivy no hay segundo SCA (DEF-13) |
+| Workaround | El job `audit` corre `npm audit --omit=dev --audit-level=high` y es **informativo**. Dependabot semanal, sin majors de `@nestjs/*`. Los `overrides` de `package.json` fijan las versiones corregidas |
 
-Queda en Mayor hasta confirmar si alguna es explotable en M6; si lo es, pasa a Crítica.
+**Triage de explotabilidad (#619, 10/11/2026).** `npm audit fix` sin `--force` solo actualizó dependencias de desarrollo (`typescript-eslint`) y no bajó ninguna CVE de producción (seguían 13: 6 altas, 7 moderadas); las bajó subir esas dependencias por `overrides` y pasar `zod` a 4. El análisis de abajo describe el estado **previo** a ese cambio.
+
+| Paquete | Versión previa / quién lo trae | ¿Recibe input del cliente? | Veredicto |
+|---|---|---|---|
+| `body-parser` | 1.20.4, vía `@nestjs/platform-express` | **Sí**: corre como middleware global, antes de los guards | `main.ts` no configura `limit` ni `bodyParser`, así que usa el default y el CVE del `limit` inválido **no aplicaba**. El de bytes sobrantes tras un cuerpo comprimido **era alcanzable** por un anónimo (POST con `Content-Encoding`, antes de `JwtAuthGuard`): DoS, sin fuga de datos ni ejecución de código. **Mitigado:** el `override` lo sube a 1.20.9 y el audit ya no lo lista |
+| `lodash` | 4.17.21, vía `@nestjs/config` y `@nestjs/swagger` | No: lo usan las librerías sobre la configuración del servidor y la spec generada; no se auditó cada llamada interna | No explotable en M6; además subido a 4.18.1 |
+| `js-yaml` | 4.1.0, vía `@nestjs/swagger` | No: no se sirve el documento YAML (no hay `yamlDocumentUrl`) y no se parsea YAML ajeno | No explotable en M6; además subido a 4.3.2 |
+| `zod` | 3.25.76, directa | Solo la respuesta de M1 (`m1-identity.client.ts`) y las variables de entorno | Los esquemas no usan colecciones (`z.array`, `z.record`, `z.set`, `z.map`), que es el caso del CVE: no explotable; además subido a 4.6.7 |
+
+**Otras:** `multer` está en 2.5.0 por el `override`; `file-type` (moderada) no se importa en `src/` (el MIME se valida con `sniffMime`); `qs`, `uuid` y `@nestjs/core` (moderadas) siguen **sin analizar** y se resuelven con #628. Como defensa adicional, el `ThrottlerGuard` global (600 por minuto por IP) acota la frecuencia, aunque corre después del parseo y sus contadores están en memoria (ADR-010). La hipótesis del issue (solo `body-parser` tenía superficie) se confirmó por lectura del código; **no se probó con un request real**.
 
 #### DEF-09 · Auditoría de lectura de datos Tier 2 no implementada
 
@@ -107,6 +116,7 @@ El detalle (causa raíz, PR, commit y CI) está en los issues cerrados del repos
 | DEF-05 | Sin control de concurrencia optimista: ahora `ETag` e `If-Match` con 412 (ADR-012; alcance parcial) | [#591](https://github.com/hllous/Backend-M6-DAPS2/issues/591) |
 | DEF-06 | Sin `Idempotency-Key` en las altas: ahora en 21 `POST` (ADR-013; guardado no atómico) | [#592](https://github.com/hllous/Backend-M6-DAPS2/issues/592) |
 | DEF-07 | Rate limiting solo en el portal ciudadano: ahora global (ADR-010) | [#568](https://github.com/hllous/Backend-M6-DAPS2/issues/568) |
+| DEF-08 | Dependencias de producción con CVE: 0 críticas y 0 altas tras los `overrides` y `zod` 4 (detalle en la sección 3); quedan 8 moderadas a NestJS 12 ([#628](https://github.com/hllous/Backend-M6-DAPS2/issues/628)) | [#619](https://github.com/hllous/Backend-M6-DAPS2/issues/619) |
 | DEF-10 | Errores sin formato Problem Details RFC 9457 (ADR-011; sin id de correlación en los 500) | [#590](https://github.com/hllous/Backend-M6-DAPS2/issues/590) |
 | DEF-12 | `streetClosureRequested` con el contrato final de cortes de M7 | [#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447) |
 | DEF-16 y DEF-17 | `AGENTS.md` y `bloqueantes.md` desactualizados respecto del código | sin issue |
