@@ -4,7 +4,10 @@ import { OutboxEventStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { connect, ChannelModel, Channel, ConsumeMessage } from 'amqplib';
 import { MAX_ATTEMPTS, OutboxDispatcher } from '../src/events/outbox/outbox-dispatcher.service';
-import { RabbitMqEventPublisher } from '../src/events/publishers/rabbitmq.publisher';
+import {
+  PUBLISHER_CONNECTION_NAME,
+  RabbitMqEventPublisher,
+} from '../src/events/publishers/rabbitmq.publisher';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { createTestApp, truncateAll } from './helpers';
 
@@ -207,8 +210,8 @@ describeReal('Outbox -> RabbitMQ con broker real (e2e)', () => {
 
   // El broker no se apaga en el CI, pero la API de management cierra la
   // conexión del publisher: al dispatcher le llega lo mismo que ante una caída.
-  // Solo se cierra la conexión que el publisher abrió (la que aparece de más
-  // tras su primer envío), no las ajenas.
+  // Se cierran las conexiones del publisher, identificadas por su nombre
+  // (PUBLISHER_CONNECTION_NAME); las ajenas no se tocan.
   it('un publisher con conexión viva que pierde el broker se recupera y reenvía sin pérdida ni duplicados', async () => {
     const u = new URL(url!);
     const mgmt = process.env.RABBITMQ_MGMT_URL ?? `http://${u.hostname}:15672`;
@@ -226,27 +229,31 @@ describeReal('Outbox -> RabbitMQ con broker real (e2e)', () => {
         client_properties?: { connection_name?: string };
       }[];
     };
-    const ajenas = async () =>
-      (await conexiones()).filter((c) => c.client_properties?.connection_name !== NOMBRE_TEST);
+    const delPublisher = async () =>
+      (await conexiones()).filter(
+        (c) => c.client_properties?.connection_name === PUBLISHER_CONNECTION_NAME,
+      );
 
-    const previas = new Set((await ajenas()).map((c) => c.name));
     const vivo = dispatcherCon(url!);
     const [a] = await encolar(1);
     await vivo.dispatchPending();
     expect((await estado([a]))[0].status).toBe(OutboxEventStatus.SENT);
 
-    // Management refresca cada ~5 s: la conexión nueva tarda en aparecer.
-    let propia: { name: string }[] = [];
+    // Management refresca cada ~5 s: la conexión tarda en aparecer. Se cierran
+    // todas las del publisher (nombre propio): ninguna es ajena a esta suite.
+    let propias: { name: string }[] = [];
     const limite = Date.now() + 20_000;
-    while (!propia.length && Date.now() < limite) {
-      propia = (await ajenas()).filter((c) => !previas.has(c.name));
-      if (!propia.length) await new Promise((r) => setTimeout(r, 250));
+    while (!propias.length && Date.now() < limite) {
+      propias = await delPublisher();
+      if (!propias.length) await new Promise((r) => setTimeout(r, 250));
     }
-    expect(propia).toHaveLength(1);
-    await fetch(`${mgmt}/api/connections/${encodeURIComponent(propia[0].name)}`, {
-      method: 'DELETE',
-      headers: { Authorization: auth },
-    });
+    expect(propias.length).toBeGreaterThan(0);
+    for (const c of propias) {
+      await fetch(`${mgmt}/api/connections/${encodeURIComponent(c.name)}`, {
+        method: 'DELETE',
+        headers: { Authorization: auth },
+      });
+    }
 
     const nuevos = await encolar(2);
     const todos = [a, ...nuevos];

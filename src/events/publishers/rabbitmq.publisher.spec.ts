@@ -73,7 +73,10 @@ describe('RabbitMqEventPublisher', () => {
     await publisher.publish(envelope);
 
     expect(connectMock).toHaveBeenCalledTimes(1);
-    expect(connectMock).toHaveBeenCalledWith(config.url, { timeout: 10_000 });
+    expect(connectMock).toHaveBeenCalledWith(config.url, {
+      timeout: 10_000,
+      clientProperties: { connection_name: 'm6-outbox-publisher' },
+    });
     expect(channel.checkExchange).toHaveBeenCalledWith('muni.inbox');
     expect(channel.publish).toHaveBeenCalledTimes(2);
 
