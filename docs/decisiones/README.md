@@ -10,7 +10,7 @@ Los ADRs no se reescriben una vez aceptados. Si una decisión cambia, se escribe
 
 ## Formato
 
-Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeración correlativa: `adr-001-*.md`, `adr-002-*.md`, etc.
+Cada ADR nuevo sigue la plantilla [MADR](https://adr.github.io/madr/) de [`_template-adr.md`](_template-adr.md) (desde el ADR-014). Los ADR 001 a 013 conservan la plantilla anterior, porque un ADR aceptado no se reescribe. Numeración correlativa: `adr-001-*.md`, `adr-002-*.md`, etc.
 
 ## Índice
 
