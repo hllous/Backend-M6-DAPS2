@@ -5,6 +5,7 @@ import { InboxService, REDACTED_PAYLOAD } from './inbox.service';
 import { InboundEnvelope } from '../envelope';
 import { OutboxService } from '../outbox/outbox.service';
 import { AggregateType, EventType } from '../event-types';
+import type { Mock } from 'vitest';
 
 describe('InboxService', () => {
   const MESSAGE_ID = '646d19f5-5670-4a7b-9442-30e13b02ba11';
@@ -36,18 +37,18 @@ describe('InboxService', () => {
   beforeEach(() => {
     prisma = {
       inboxEvent: {
-        create: jest.fn().mockResolvedValue({}),
-        update: jest.fn().mockResolvedValue({}),
+        create: vi.fn().mockResolvedValue({}),
+        update: vi.fn().mockResolvedValue({}),
         // Por defecto, un messageId repetido ya está procesado: no hay fila que tomar.
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-        findUniqueOrThrow: jest.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        findUniqueOrThrow: vi.fn(),
       },
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
   });
 
   it('procesa el evento y lo marca como procesado', async () => {
-    const handler = jest.fn().mockResolvedValue(undefined);
+    const handler = vi.fn().mockResolvedValue(undefined);
     inbox.register('streetClosureApproved', handler);
 
     const result = await inbox.ingest(sobre());
@@ -60,7 +61,7 @@ describe('InboxService', () => {
 
   // #270: el handler ordena con occurredAt, y el reintento lo lee de la fila.
   it('guarda el occurredAt del sobre en la fila', async () => {
-    inbox.register('streetClosureApproved', jest.fn());
+    inbox.register('streetClosureApproved', vi.fn());
 
     await inbox.ingest(sobre());
 
@@ -70,7 +71,7 @@ describe('InboxService', () => {
   it.each([undefined, 'no-es-fecha'])(
     'sin un occurredAt legible (%s) el handler recibe null',
     async (occurredAt) => {
-      const handler = jest.fn().mockResolvedValue(undefined);
+      const handler = vi.fn().mockResolvedValue(undefined);
       inbox.register('streetClosureApproved', handler);
 
       await inbox.ingest(sobre({ occurredAt }));
@@ -82,8 +83,8 @@ describe('InboxService', () => {
 
   // `eventId` es un string libre de un tercero: no puede partir ni falsificar una línea de log.
   it('un eventId con saltos de línea y ESC no llega crudo a los logs', async () => {
-    inbox.register('streetClosureApproved', jest.fn().mockResolvedValue(undefined));
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    inbox.register('streetClosureApproved', vi.fn().mockResolvedValue(undefined));
+    const log = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 
     await inbox.ingest(sobre({ eventId: 'ev\n[ERROR] falso\u001b[31m' }));
 
@@ -96,9 +97,9 @@ describe('InboxService', () => {
 
   // Una fecha futura congelaría la marca de orden: se trata como ausente.
   it('un occurredAt en el futuro llega como null, no se guarda y se avisa', async () => {
-    const handler = jest.fn().mockResolvedValue(undefined);
+    const handler = vi.fn().mockResolvedValue(undefined);
     inbox.register('streetClosureApproved', handler);
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     await inbox.ingest(sobre({ occurredAt: '2999-01-01T00:00:00.000Z' }));
 
@@ -109,7 +110,7 @@ describe('InboxService', () => {
   });
 
   it('un occurredAt adelantado dentro de la tolerancia se usa para ordenar', async () => {
-    const handler = jest.fn().mockResolvedValue(undefined);
+    const handler = vi.fn().mockResolvedValue(undefined);
     inbox.register('streetClosureApproved', handler);
     const adelantado = new Date(Date.now() + 60_000);
 
@@ -120,7 +121,7 @@ describe('InboxService', () => {
 
   // El criterio central: la regla 1 del enunciado.
   it('un messageId ya procesado NO vuelve a aplicar el efecto', async () => {
-    const handler = jest.fn();
+    const handler = vi.fn();
     inbox.register('streetClosureApproved', handler);
     prisma.inboxEvent.create.mockRejectedValue(duplicado());
 
@@ -145,7 +146,7 @@ describe('InboxService', () => {
     });
 
     it('toma la fila con un update condicional y corre el handler con lo guardado', async () => {
-      const handler = jest.fn().mockResolvedValue(undefined);
+      const handler = vi.fn().mockResolvedValue(undefined);
       inbox.register('streetClosureApproved', handler);
 
       const result = await inbox.ingest(sobre({ data: { closureRequestId: 'otro' } }));
@@ -171,7 +172,7 @@ describe('InboxService', () => {
     it('el error guardado y devuelto es solo la primera línea (los errores de Prisma traen valores del payload)', async () => {
       inbox.register(
         'streetClosureApproved',
-        jest
+        vi
           .fn()
           .mockRejectedValue(new Error('Unique constraint failed\nvalor: Juan Perez, 30111222')),
       );
@@ -184,7 +185,7 @@ describe('InboxService', () => {
     });
 
     it('si vuelve a fallar, sigue failed y sin processedAt', async () => {
-      inbox.register('streetClosureApproved', jest.fn().mockRejectedValue(new Error('otra vez')));
+      inbox.register('streetClosureApproved', vi.fn().mockRejectedValue(new Error('otra vez')));
 
       const result = await inbox.ingest(sobre());
 
@@ -195,7 +196,7 @@ describe('InboxService', () => {
 
     it('dos entregas solapadas del mismo eventId corren el handler una sola vez', async () => {
       let liberar!: () => void;
-      const handler = jest.fn(() => new Promise<void>((r) => (liberar = r)));
+      const handler = vi.fn(() => new Promise<void>((r) => (liberar = r)));
       inbox.register('streetClosureApproved', handler);
       // La base deja que solo uno de los dos updates tome la fila.
       prisma.inboxEvent.updateMany
@@ -212,7 +213,7 @@ describe('InboxService', () => {
     });
 
     it('una fila en curso, con otro eventType o ya procesada sale duplicate sin correr nada', async () => {
-      const handler = jest.fn();
+      const handler = vi.fn();
       inbox.register('streetClosureApproved', handler);
       inbox.register('workOrderCompleted', handler);
       prisma.inboxEvent.updateMany.mockResolvedValue({ count: 0 });
@@ -229,7 +230,7 @@ describe('InboxService', () => {
     });
 
     it('si la fila quedó redactada, reintenta con el data del sobre', async () => {
-      const handler = jest.fn().mockResolvedValue(undefined);
+      const handler = vi.fn().mockResolvedValue(undefined);
       inbox.register('streetClosureApproved', handler);
       prisma.inboxEvent.findUniqueOrThrow.mockResolvedValue({
         payload: REDACTED_PAYLOAD,
@@ -243,7 +244,7 @@ describe('InboxService', () => {
   });
 
   it('la idempotencia la decide el unique de la base, no una consulta previa', async () => {
-    inbox.register('streetClosureApproved', jest.fn());
+    inbox.register('streetClosureApproved', vi.fn());
 
     await inbox.ingest(sobre());
 
@@ -264,7 +265,7 @@ describe('InboxService', () => {
   });
 
   it('un handler que falla deja la fila SIN procesar y con el error', async () => {
-    inbox.register('streetClosureApproved', jest.fn().mockRejectedValue(new Error('boom')));
+    inbox.register('streetClosureApproved', vi.fn().mockRejectedValue(new Error('boom')));
 
     const result = await inbox.ingest(sobre());
 
@@ -275,10 +276,7 @@ describe('InboxService', () => {
   });
 
   it('recorta el error largo para que entre en la columna', async () => {
-    inbox.register(
-      'streetClosureApproved',
-      jest.fn().mockRejectedValue(new Error('x'.repeat(900))),
-    );
+    inbox.register('streetClosureApproved', vi.fn().mockRejectedValue(new Error('x'.repeat(900))));
 
     await inbox.ingest(sobre());
 
@@ -287,20 +285,20 @@ describe('InboxService', () => {
   });
 
   it('no deja registrar dos handlers para el mismo tipo', () => {
-    inbox.register('streetClosureApproved', jest.fn());
+    inbox.register('streetClosureApproved', vi.fn());
 
-    expect(() => inbox.register('streetClosureApproved', jest.fn())).toThrow();
+    expect(() => inbox.register('streetClosureApproved', vi.fn())).toThrow();
   });
 
   it('lista los tipos registrados, ordenados', () => {
-    inbox.register('workOrderCompleted', jest.fn());
-    inbox.register('streetClosureApproved', jest.fn());
+    inbox.register('workOrderCompleted', vi.fn());
+    inbox.register('streetClosureApproved', vi.fn());
 
     expect(inbox.registeredTypes()).toEqual(['streetClosureApproved', 'workOrderCompleted']);
   });
 
   it('un error que no es P2002 se propaga: no es un duplicado', async () => {
-    inbox.register('streetClosureApproved', jest.fn());
+    inbox.register('streetClosureApproved', vi.fn());
     prisma.inboxEvent.create.mockRejectedValue(new Error('la base se cayó'));
 
     await expect(inbox.ingest(sobre())).rejects.toThrow('la base se cayó');
@@ -321,7 +319,7 @@ describe('InboxService', () => {
     });
 
     it('con persistPayload en false: redacta pero igual ejecuta el handler', async () => {
-      const handler = jest.fn().mockResolvedValue(undefined);
+      const handler = vi.fn().mockResolvedValue(undefined);
       inbox.register('ticketUpdated', handler, { persistPayload: () => false });
 
       const result = await inbox.ingest(sobre({ eventType: 'ticketUpdated' }));
@@ -333,7 +331,7 @@ describe('InboxService', () => {
     });
 
     it('con persistPayload en true: conserva el payload completo', async () => {
-      inbox.register('ticketUpdated', jest.fn(), { persistPayload: () => true });
+      inbox.register('ticketUpdated', vi.fn(), { persistPayload: () => true });
 
       await inbox.ingest(sobre({ eventType: 'ticketUpdated' }));
 
@@ -341,7 +339,7 @@ describe('InboxService', () => {
     });
 
     it('persistPayload en true y handler que falla: payload completo, sin processedAt y failed', async () => {
-      inbox.register('ticketUpdated', jest.fn().mockRejectedValue(new Error('boom')), {
+      inbox.register('ticketUpdated', vi.fn().mockRejectedValue(new Error('boom')), {
         persistPayload: () => true,
       });
 
@@ -354,7 +352,7 @@ describe('InboxService', () => {
     });
 
     it('si persistPayload lanza, redacta y el ingest sigue', async () => {
-      const handler = jest.fn().mockResolvedValue(undefined);
+      const handler = vi.fn().mockResolvedValue(undefined);
       inbox.register('ticketUpdated', handler, {
         persistPayload: () => {
           throw new Error('regla rota');
@@ -373,7 +371,7 @@ describe('InboxService', () => {
     });
 
     it('sin la opción conserva el payload', async () => {
-      inbox.register('streetClosureApproved', jest.fn());
+      inbox.register('streetClosureApproved', vi.fn());
 
       await inbox.ingest(sobre());
 
@@ -381,7 +379,7 @@ describe('InboxService', () => {
     });
 
     it('un duplicado redactado sigue dando duplicate', async () => {
-      inbox.register('ticketUpdated', jest.fn(), { persistPayload: () => false });
+      inbox.register('ticketUpdated', vi.fn(), { persistPayload: () => false });
       prisma.inboxEvent.create.mockRejectedValue(duplicado());
 
       const result = await inbox.ingest(sobre({ eventType: 'ticketUpdated' }));
@@ -399,11 +397,11 @@ describe('InboxService', () => {
     const CORRELATION = '8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5';
     const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    let tx: { outboxEvent: { create: jest.Mock; createMany: jest.Mock } };
+    let tx: { outboxEvent: { create: Mock; createMany: Mock } };
 
     beforeEach(() => {
-      tx = { outboxEvent: { create: jest.fn(), createMany: jest.fn() } };
-      prisma.$transaction = jest.fn(async (fn: (t: unknown) => Promise<void>) => {
+      tx = { outboxEvent: { create: vi.fn(), createMany: vi.fn() } };
+      prisma.$transaction = vi.fn(async (fn: (t: unknown) => Promise<void>) => {
         await new Promise((r) => setImmediate(r));
         return fn(tx);
       });

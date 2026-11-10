@@ -1,20 +1,21 @@
 import { IndicatorsController } from './indicators.controller';
 import { IndicatorsService } from './indicators.service';
 import { PeriodQueryDto, ServicePeriodQueryDto } from './dto';
+import type { Mocked } from 'vitest';
 
 const RESULT = { total: 1 };
 
 describe('IndicatorsController', () => {
-  let service: jest.Mocked<IndicatorsService>;
+  let service: Mocked<IndicatorsService>;
   let controller: IndicatorsController;
 
   beforeEach(() => {
     service = {
-      coverage: jest.fn().mockResolvedValue(RESULT),
-      compliance: jest.fn().mockResolvedValue(RESULT),
-      incidents: jest.fn().mockResolvedValue(RESULT),
-      waste: jest.fn().mockResolvedValue(RESULT),
-    } as unknown as jest.Mocked<IndicatorsService>;
+      coverage: vi.fn().mockResolvedValue(RESULT),
+      compliance: vi.fn().mockResolvedValue(RESULT),
+      incidents: vi.fn().mockResolvedValue(RESULT),
+      waste: vi.fn().mockResolvedValue(RESULT),
+    } as unknown as Mocked<IndicatorsService>;
     controller = new IndicatorsController(service);
   });
 

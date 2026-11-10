@@ -73,7 +73,7 @@ describe('ServicesService', () => {
   beforeEach(() => {
     prisma = {
       serviceType: {
-        findUnique: jest.fn().mockResolvedValue({
+        findUnique: vi.fn().mockResolvedValue({
           id: TYPE_ID,
           code: 'REC-DOM',
           mode: ServiceMode.ROUTE,
@@ -82,7 +82,7 @@ describe('ServicesService', () => {
         }),
       },
       route: {
-        findUnique: jest.fn().mockResolvedValue({
+        findUnique: vi.fn().mockResolvedValue({
           id: ROUTE_ID,
           code: 'R-01',
           active: true,
@@ -92,19 +92,19 @@ describe('ServicesService', () => {
           ],
         }),
       },
-      zone: { findUnique: jest.fn().mockResolvedValue({ id: ZONE_A }) },
+      zone: { findUnique: vi.fn().mockResolvedValue({ id: ZONE_A }) },
       container: {
-        findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_B }),
-        update: jest.fn(async (args: unknown) => args),
+        findUnique: vi.fn().mockResolvedValue({ zoneId: ZONE_B }),
+        update: vi.fn(async (args: unknown) => args),
       },
-      containerStatusHistory: { create: jest.fn().mockResolvedValue(undefined) },
-      tree: { findUnique: jest.fn() },
-      greenSpace: { findUnique: jest.fn() },
-      greenPoint: { findUnique: jest.fn() },
+      containerStatusHistory: { create: vi.fn().mockResolvedValue(undefined) },
+      tree: { findUnique: vi.fn() },
+      greenSpace: { findUnique: vi.fn() },
+      greenPoint: { findUnique: vi.fn() },
       crew: {
-        count: jest.fn().mockResolvedValue(1),
+        count: vi.fn().mockResolvedValue(1),
         // Sin zona ni especialidad cargadas: no hay avisos de encaje (#455).
-        findUnique: jest.fn().mockResolvedValue({
+        findUnique: vi.fn().mockResolvedValue({
           id: CREW_ID,
           active: true,
           name: 'Norte',
@@ -114,34 +114,34 @@ describe('ServicesService', () => {
         }),
       },
       vehicle: {
-        findUnique: jest.fn().mockResolvedValue({ id: VEHICLE_ID, active: true, plate: 'AA123BB' }),
+        findUnique: vi.fn().mockResolvedValue({ id: VEHICLE_ID, active: true, plate: 'AA123BB' }),
       },
       disposalSite: {
-        findUnique: jest.fn().mockResolvedValue({ id: SITE_ID, code: 'DS-1', active: true }),
+        findUnique: vi.fn().mockResolvedValue({ id: SITE_ID, code: 'DS-1', active: true }),
       },
       service: {
-        create: jest.fn().mockResolvedValue(serviceRow()),
-        findUnique: jest.fn().mockResolvedValue(serviceRow()),
-        update: jest.fn().mockResolvedValue(serviceRow()),
-        findMany: jest.fn().mockResolvedValue([]),
-        count: jest.fn().mockResolvedValue(0),
+        create: vi.fn().mockResolvedValue(serviceRow()),
+        findUnique: vi.fn().mockResolvedValue(serviceRow()),
+        update: vi.fn().mockResolvedValue(serviceRow()),
+        findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
       },
-      outboxEvent: { create: jest.fn(), createMany: jest.fn() },
+      outboxEvent: { create: vi.fn(), createMany: vi.fn() },
       // Estado del ticket en M2 (#303): sin dato por defecto.
-      ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
+      ticketM2State: { findUnique: vi.fn().mockResolvedValue(null) },
       environmentalInspection: {
-        findUnique: jest.fn().mockResolvedValue({ serviceId: null, outcome: null }),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: vi.fn().mockResolvedValue({ serviceId: null, outcome: null }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       // El $transaction real acepta un array de operaciones o un callback.
-      $transaction: jest.fn((arg: unknown) =>
+      $transaction: vi.fn((arg: unknown) =>
         typeof arg === 'function'
           ? (arg as (tx: unknown) => unknown)(prisma)
           : Promise.all(arg as Promise<unknown>[]),
       ),
-      zoneResult: { create: jest.fn().mockResolvedValue({ id: 'zr1', zoneId: ZONE_A }) },
+      zoneResult: { create: vi.fn().mockResolvedValue({ id: 'zr1', zoneId: ZONE_A }) },
       collectionRecord: {
-        create: jest.fn().mockResolvedValue({
+        create: vi.fn().mockResolvedValue({
           id: 'cr1',
           wasteType: WasteType.HOUSEHOLD,
           disposalSiteId: SITE_ID,
@@ -151,7 +151,7 @@ describe('ServicesService', () => {
         }),
       },
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
     // La regla del vínculo vive en el módulo de inspecciones: se usa la real
     // sobre el mismo prisma mockeado; reports y config no se tocan en el alta.
     const inspections = new EnvironmentalInspectionsService(
@@ -161,7 +161,7 @@ describe('ServicesService', () => {
       {} as never,
       {} as never,
     );
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     service = new ServicesService(
       prisma as unknown as PrismaService,
       outbox,
@@ -1385,7 +1385,7 @@ describe('ServicesService', () => {
 
     it('el estado se lee con el cliente de la transacción', async () => {
       conTicketEn('ROUTED');
-      const tx = { ...prisma, ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) } };
+      const tx = { ...prisma, ticketM2State: { findUnique: vi.fn().mockResolvedValue(null) } };
       prisma.$transaction.mockImplementationOnce((fn: (t: unknown) => unknown) => fn(tx));
 
       await service.create(ticketDto, ACTOR);

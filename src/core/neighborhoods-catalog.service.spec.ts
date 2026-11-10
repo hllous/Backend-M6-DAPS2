@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { ConfigService } from '@nestjs/config';
 import { CoreClient } from './core.client';
 import { NeighborhoodsCatalogService } from './neighborhoods-catalog.service';
+import type { Mock } from 'vitest';
 
 // Fixtures con el formato de M9 (GET /api/v1/catalogos/barrios); ids inventados.
 const PALERMO = {
@@ -27,7 +28,7 @@ const BALVANERA = {
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
-function crear(request: jest.Mock, enabled = true, archivo?: string) {
+function crear(request: Mock, enabled = true, archivo?: string) {
   return new NeighborhoodsCatalogService(
     { enabled, request } as unknown as CoreClient,
     { get: () => archivo } as unknown as ConfigService,
@@ -35,14 +36,14 @@ function crear(request: jest.Mock, enabled = true, archivo?: string) {
 }
 
 describe('NeighborhoodsCatalogService', () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('lee el catálogo al arrancar y filtra por activo, comuna y texto', async () => {
-    const request = jest.fn().mockResolvedValue(json([PALERMO, BALVANERA, { basura: 1 }]));
+    const request = vi.fn().mockResolvedValue(json([PALERMO, BALVANERA, { basura: 1 }]));
     const s = crear(request);
     s.onApplicationBootstrap();
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
 
     expect(request).toHaveBeenCalledWith('/api/v1/catalogos/barrios');
     expect(s.disponible).toBe(true);
@@ -56,14 +57,14 @@ describe('NeighborhoodsCatalogService', () => {
   });
 
   it('acepta la respuesta envuelta en { data }', async () => {
-    const s = crear(jest.fn().mockResolvedValue(json({ data: [PALERMO] })));
+    const s = crear(vi.fn().mockResolvedValue(json({ data: [PALERMO] })));
     await s.refrescar();
     expect(s.list()).toEqual([PALERMO]);
     s.onModuleDestroy();
   });
 
   it('sin CORE_API_URL no pide nada y queda no disponible', () => {
-    const request = jest.fn();
+    const request = vi.fn();
     const s = crear(request, false);
     s.onApplicationBootstrap();
 
@@ -74,7 +75,7 @@ describe('NeighborhoodsCatalogService', () => {
   });
 
   it('si el Core falla no tira la app y reintenta al minuto', async () => {
-    const request = jest
+    const request = vi
       .fn()
       .mockResolvedValueOnce(json({}, 503))
       .mockRejectedValueOnce(new Error('red'))
@@ -82,19 +83,19 @@ describe('NeighborhoodsCatalogService', () => {
       .mockResolvedValue(json([PALERMO]));
     const s = crear(request);
     s.onApplicationBootstrap();
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
     expect(s.disponible).toBe(false);
 
-    await jest.advanceTimersByTimeAsync(60_000);
-    await jest.advanceTimersByTimeAsync(60_000);
-    await jest.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     expect(request).toHaveBeenCalledTimes(4);
     expect(s.disponible).toBe(true);
     s.onModuleDestroy();
   });
 
   it('una renovación fallida conserva el catálogo anterior', async () => {
-    const request = jest
+    const request = vi
       .fn()
       .mockResolvedValueOnce(json([PALERMO]))
       .mockResolvedValue(json({}, 500));
@@ -107,7 +108,7 @@ describe('NeighborhoodsCatalogService', () => {
   });
 
   it('una lista vacía o toda descartada cuenta como fallo y conserva el catálogo', async () => {
-    const request = jest
+    const request = vi
       .fn()
       .mockResolvedValueOnce(json([PALERMO]))
       .mockResolvedValueOnce(json([]))
@@ -122,7 +123,7 @@ describe('NeighborhoodsCatalogService', () => {
   });
 
   it('sin catálogo previo, una lista vacía deja disponible=false', async () => {
-    const s = crear(jest.fn().mockResolvedValue(json([])));
+    const s = crear(vi.fn().mockResolvedValue(json([])));
     await s.refrescar();
 
     expect(s.disponible).toBe(false);
@@ -132,8 +133,8 @@ describe('NeighborhoodsCatalogService', () => {
   it('cuenta los ítems descartados, incluidos los sin zona o zonaNombre', async () => {
     const sinZona = { ...BALVANERA, zona: undefined };
     const sinNombre = { ...BALVANERA, zonaNombre: undefined };
-    const s = crear(jest.fn().mockResolvedValue(json([PALERMO, sinZona, sinNombre])));
-    const warn = jest.spyOn(s['logger'], 'warn').mockImplementation();
+    const s = crear(vi.fn().mockResolvedValue(json([PALERMO, sinZona, sinNombre])));
+    const warn = vi.spyOn(s['logger'], 'warn').mockImplementation(() => undefined);
     await s.refrescar();
 
     expect(s.list()).toEqual([PALERMO]);
@@ -146,8 +147,8 @@ describe('NeighborhoodsCatalogService', () => {
     ['total', { data: [PALERMO], total: 48 }],
     ['meta.total', { data: [PALERMO], meta: { total: 48 } }],
   ])('avisa de posible truncado por %s', async (_n, body) => {
-    const s = crear(jest.fn().mockResolvedValue(json(body)));
-    const warn = jest.spyOn(s['logger'], 'warn').mockImplementation();
+    const s = crear(vi.fn().mockResolvedValue(json(body)));
+    const warn = vi.spyOn(s['logger'], 'warn').mockImplementation(() => undefined);
     await s.refrescar();
 
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('paginada'));
@@ -156,11 +157,11 @@ describe('NeighborhoodsCatalogService', () => {
   });
 
   it('los warnings no filtran token ni secret', async () => {
-    const request = jest
+    const request = vi
       .fn()
       .mockRejectedValue(new Error('El Core rechazó el pedido de token de módulo (HTTP 401)'));
     const s = crear(request);
-    const warn = jest.spyOn(s['logger'], 'warn').mockImplementation();
+    const warn = vi.spyOn(s['logger'], 'warn').mockImplementation(() => undefined);
     await s.refrescar();
 
     const logueado = warn.mock.calls.map((c) => String(c[0])).join(' ');
@@ -176,9 +177,9 @@ describe('NeighborhoodsCatalogService', () => {
     };
 
     it('carga el archivo, queda disponible y no consulta al Core', () => {
-      const request = jest.fn();
+      const request = vi.fn();
       const s = crear(request, true, escribir(JSON.stringify([PALERMO, { basura: 1 }])));
-      jest.spyOn(s['logger'], 'warn').mockImplementation();
+      vi.spyOn(s['logger'], 'warn').mockImplementation(() => undefined);
       s.onApplicationBootstrap();
 
       expect(s.disponible).toBe(true);
@@ -188,17 +189,17 @@ describe('NeighborhoodsCatalogService', () => {
     });
 
     it('un archivo sin barrios válidos corta el arranque', () => {
-      const s = crear(jest.fn(), true, escribir('[]'));
+      const s = crear(vi.fn(), true, escribir('[]'));
       expect(() => s.onApplicationBootstrap()).toThrow(/sin barrios válidos/);
     });
   });
 
   it('cerrada la app no vuelve a agendar', async () => {
-    const request = jest.fn().mockResolvedValue(json([PALERMO]));
+    const request = vi.fn().mockResolvedValue(json([PALERMO]));
     const s = crear(request);
     s.onModuleDestroy();
     await s.refrescar();
-    await jest.advanceTimersByTimeAsync(7 * 3600_000);
+    await vi.advanceTimersByTimeAsync(7 * 3600_000);
 
     expect(request).toHaveBeenCalledTimes(1);
   });

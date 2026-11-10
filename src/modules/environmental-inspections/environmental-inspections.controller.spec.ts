@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { EnvironmentalInspectionsController } from './environmental-inspections.controller';
 import { EnvironmentalInspectionsService } from './environmental-inspections.service';
 import { CompleteInspectionDto, CreateInspectionDto, IssueViolationNoticeDto } from './dto';
+import type { Mocked } from 'vitest';
 
 const USER = { userId: 'user-7', roles: [] } as unknown as AuthenticatedUser;
 
@@ -11,18 +12,18 @@ const REPORT_ID = '22222222-2222-2222-2222-222222222222';
 const RESULT = { id: ID };
 
 describe('EnvironmentalInspectionsController', () => {
-  let service: jest.Mocked<EnvironmentalInspectionsService>;
+  let service: Mocked<EnvironmentalInspectionsService>;
   let controller: EnvironmentalInspectionsController;
 
   beforeEach(() => {
     service = {
-      create: jest.fn().mockResolvedValue(RESULT),
-      findByReport: jest.fn().mockResolvedValue([RESULT]),
-      findOne: jest.fn().mockResolvedValue(RESULT),
-      complete: jest.fn().mockResolvedValue(RESULT),
-      issueNotice: jest.fn().mockResolvedValue(RESULT),
-      findNotice: jest.fn().mockResolvedValue(RESULT),
-    } as unknown as jest.Mocked<EnvironmentalInspectionsService>;
+      create: vi.fn().mockResolvedValue(RESULT),
+      findByReport: vi.fn().mockResolvedValue([RESULT]),
+      findOne: vi.fn().mockResolvedValue(RESULT),
+      complete: vi.fn().mockResolvedValue(RESULT),
+      issueNotice: vi.fn().mockResolvedValue(RESULT),
+      findNotice: vi.fn().mockResolvedValue(RESULT),
+    } as unknown as Mocked<EnvironmentalInspectionsService>;
     controller = new EnvironmentalInspectionsController(service);
   });
 
@@ -55,7 +56,7 @@ describe('EnvironmentalInspectionsController', () => {
   });
 
   it('findNotice delega el id', async () => {
-    const res = { type: jest.fn() } as unknown as Response;
+    const res = { type: vi.fn() } as unknown as Response;
     await expect(controller.findNotice(ID, res)).resolves.toBe(RESULT);
     expect(service.findNotice).toHaveBeenCalledWith(ID);
     expect(res.type).not.toHaveBeenCalled();
@@ -63,7 +64,7 @@ describe('EnvironmentalInspectionsController', () => {
 
   it('findNotice sin acta responde el literal JSON null', async () => {
     service.findNotice.mockResolvedValue(null);
-    const res = { type: jest.fn() } as unknown as Response;
+    const res = { type: vi.fn() } as unknown as Response;
     await expect(controller.findNotice(ID, res)).resolves.toBe('null');
     expect(res.type).toHaveBeenCalledWith('application/json');
   });

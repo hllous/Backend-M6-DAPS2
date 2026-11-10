@@ -127,8 +127,8 @@ Cualquier integrante puede responder sobre cualquier test o defecto.
 
 | Uso | Herramienta | Estado |
 |---|---|---|
-| Unitarios y cobertura (backend) | Jest | En uso |
-| e2e de API | Jest + supertest + Postgres 16 | En uso |
+| Unitarios y cobertura (backend) | Vitest (Jest hasta #628) | En uso |
+| e2e de API | Vitest + supertest + Postgres 16 | En uso |
 | Unitarios (frontend) | Vitest | En uso |
 | E2E de navegador y accesibilidad | Playwright + axe | En uso |
 | Análisis estático | ESLint, `tsc` | En uso (0 errores, 305 warnings). **SonarCloud: NO HECHO** |

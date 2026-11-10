@@ -2,13 +2,14 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma, WasteType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GreenPointsService } from './green-points.service';
+import type { Mock } from 'vitest';
 
 describe('GreenPointsService', () => {
   const id = '77777777-7777-7777-7777-777777777777';
   const zoneId = '88888888-8888-8888-8888-888888888888';
 
   let prisma: {
-    greenPoint: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
+    greenPoint: { create: Mock; findUnique: Mock; update: Mock };
   };
   let service: GreenPointsService;
 
@@ -39,9 +40,9 @@ describe('GreenPointsService', () => {
   beforeEach(() => {
     prisma = {
       greenPoint: {
-        create: jest.fn().mockResolvedValue(row),
-        findUnique: jest.fn().mockResolvedValue(row),
-        update: jest.fn().mockResolvedValue(row),
+        create: vi.fn().mockResolvedValue(row),
+        findUnique: vi.fn().mockResolvedValue(row),
+        update: vi.fn().mockResolvedValue(row),
       },
     };
     service = new GreenPointsService(prisma as unknown as PrismaService);
@@ -126,10 +127,10 @@ describe('GreenPointsService — listado y detalle', () => {
   beforeEach(() => {
     prisma = {
       greenPoint: {
-        findUnique: jest.fn().mockResolvedValue(punto()),
-        findMany: jest.fn().mockResolvedValue([punto()]),
-        count: jest.fn().mockResolvedValue(1),
-        update: jest.fn().mockResolvedValue(punto()),
+        findUnique: vi.fn().mockResolvedValue(punto()),
+        findMany: vi.fn().mockResolvedValue([punto()]),
+        count: vi.fn().mockResolvedValue(1),
+        update: vi.fn().mockResolvedValue(punto()),
       },
     };
     service = new GreenPointsService(prisma as unknown as PrismaService);

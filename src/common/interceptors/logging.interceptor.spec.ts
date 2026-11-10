@@ -1,12 +1,13 @@
 import { lastValueFrom, of } from 'rxjs';
 import { CallHandler, ExecutionContext, Logger } from '@nestjs/common';
 import { LoggingInterceptor } from './logging.interceptor';
+import type { MockInstance } from 'vitest';
 
 describe('LoggingInterceptor', () => {
-  let logSpy: jest.SpyInstance;
+  let logSpy: MockInstance;
 
   beforeEach(() => {
-    logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

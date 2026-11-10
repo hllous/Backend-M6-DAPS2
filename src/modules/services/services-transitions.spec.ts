@@ -38,15 +38,15 @@ describe('ServicesService — transiciones inválidas (409)', () => {
 
   beforeEach(() => {
     prisma = {
-      service: { findUnique: jest.fn(), update: jest.fn() },
+      service: { findUnique: vi.fn(), update: vi.fn() },
       serviceType: {
-        findUnique: jest.fn().mockResolvedValue({ code: 'X', requiresVehicle: false }),
+        findUnique: vi.fn().mockResolvedValue({ code: 'X', requiresVehicle: false }),
       },
-      crew: { count: jest.fn().mockResolvedValue(1) },
-      $transaction: jest.fn(),
+      crew: { count: vi.fn().mockResolvedValue(1) },
+      $transaction: vi.fn(),
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    audit = { record: jest.fn() };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
+    audit = { record: vi.fn() };
     service = new ServicesService(
       prisma as unknown as PrismaService,
       outbox,

@@ -3,21 +3,22 @@ import { InboxService } from './inbox.service';
 import { InboxAdminService } from './inbox-admin.service';
 import { QueryInboxDto } from './inbox-admin.dto';
 import { IngestEventDto } from './ingest-event.dto';
+import type { Mocked } from 'vitest';
 
 describe('InboxController', () => {
-  let service: jest.Mocked<InboxService>;
-  let admin: jest.Mocked<InboxAdminService>;
+  let service: Mocked<InboxService>;
+  let admin: Mocked<InboxAdminService>;
   let controller: InboxController;
 
   beforeEach(() => {
     service = {
-      ingest: jest.fn().mockResolvedValue({ status: 'processed' }),
-      registeredTypes: jest.fn().mockReturnValue(['tipoA', 'tipoB']),
-    } as unknown as jest.Mocked<InboxService>;
+      ingest: vi.fn().mockResolvedValue({ status: 'processed' }),
+      registeredTypes: vi.fn().mockReturnValue(['tipoA', 'tipoB']),
+    } as unknown as Mocked<InboxService>;
     admin = {
-      findAll: jest.fn().mockResolvedValue('lista'),
-      findOne: jest.fn().mockResolvedValue('detalle'),
-    } as unknown as jest.Mocked<InboxAdminService>;
+      findAll: vi.fn().mockResolvedValue('lista'),
+      findOne: vi.fn().mockResolvedValue('detalle'),
+    } as unknown as Mocked<InboxAdminService>;
     controller = new InboxController(service, admin);
   });
 

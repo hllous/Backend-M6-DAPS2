@@ -106,7 +106,7 @@ Por control: qué decía la matriz de Trello, qué hay hoy, con qué corrección
 2. Job `audit` en el CI (#578): corre `npm audit --omit=dev --audit-level=high` y es **informativo**: si hay altas, termina en verde con un aviso (`::warning`) y no bloquea el merge.
 3. Dependabot semanal (`.github/dependabot.yml`), sin los majors de `@nestjs/*` ni de `zod`.
 4. #619 (10/11/2026): `overrides` de `body-parser` ^1.20.9, `lodash` ^4.18.1, `js-yaml` ^4.3.2 y `multer` ^2.4.0, y `zod` ^4.6.7. Resultado: **8 vulnerabilidades en producción, 0 críticas, 0 altas, 8 moderadas**. Build, lint (0 errores) y 2855 tests unitarios y 343 e2e en verde (la suite de RabbitMQ real no se corrió).
-5. El salto mayor (NestJS 12, Prisma 7, Jest 30) queda en el issue #628.
+5. El salto mayor (NestJS 12, Prisma 7) queda en el issue #628. Jest 30 se descartó: NestJS 12 es solo-ESM y Jest no carga sus paquetes, así que los tests pasaron a Vitest (#628).
 
 Lo que se comprobó en el código sobre las 6 altas, **antes** de #619 (hoy ya no figuran):
 
@@ -178,16 +178,16 @@ Limitación: gitleaks no analiza el contenido de los PDF ni de los binarios.
 
 | Prueba | Comando o archivo |
 |---|---|
-| Rechazo de JWT (16 casos) | `npx jest src/auth/jwt.strategy.spec.ts` |
-| Roles por endpoint | `npx jest src/auth/route-roles.spec.ts` y `npm run test:e2e -- auth-roles` (con una base descartable; ver `docs/testing.md`) |
+| Rechazo de JWT (16 casos) | `npx vitest run src/auth/jwt.strategy.spec.ts` |
+| Roles por endpoint | `npx vitest run src/auth/route-roles.spec.ts` y `npm run test:e2e -- auth-roles` (con una base descartable; ver `docs/testing.md`) |
 | Pertenencia de Campo | `npm run test:e2e -- crew-ownership` |
 | Mass assignment, SQL, XSS, 413 y CSP | `npm run test:e2e -- security-input` |
 | Cabeceras | `npm run test:e2e -- services-lifecycle` |
 | Rate limiting (429) | `npm run test:e2e -- throttler` |
-| Logs sin token | `npx jest src/common/utils/redact-url.spec.ts src/common/interceptors/logging.interceptor.spec.ts` |
+| Logs sin token | `npx vitest run src/common/utils/redact-url.spec.ts src/common/interceptors/logging.interceptor.spec.ts` |
 | Idempotencia del inbox | `npm run test:e2e -- inbox` |
-| Errores en Problem Details | `npm run test:e2e -- problem-details` y `npx jest src/common/filters/http-exception.filter.spec.ts` |
-| ETag e `If-Match` (412) | `npm run test:e2e -- etag-if-match` y `npx jest src/common/etag.spec.ts src/modules/services/services-if-match.spec.ts` |
-| `Idempotency-Key` | `npm run test:e2e -- idempotency` y `npx jest src/common/idempotency` |
+| Errores en Problem Details | `npm run test:e2e -- problem-details` y `npx vitest run src/common/filters/http-exception.filter.spec.ts` |
+| ETag e `If-Match` (412) | `npm run test:e2e -- etag-if-match` y `npx vitest run src/common/etag.spec.ts src/modules/services/services-if-match.spec.ts` |
+| `Idempotency-Key` | `npm run test:e2e -- idempotency` y `npx vitest run src/common/idempotency` |
 | Consumer contra RabbitMQ real | `npm run test:e2e -- rabbitmq-real` (con `RABBITMQ_URL` local; ver `docs/testing.md`) |
 | Dependencias | `npm audit --omit=dev` |

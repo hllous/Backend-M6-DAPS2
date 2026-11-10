@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { CoreClient } from '../core/core.client';
 import { IdentityUnavailableError } from './identity.port';
 import { M1IdentityClient } from './m1-identity.client';
+import type { Mock } from 'vitest';
 
 const TOKEN = 'module-token-secreto';
 const BASE = 'https://m1.test';
@@ -21,8 +22,8 @@ function json(body: unknown, status = 200): Response {
 
 describe('M1IdentityClient', () => {
   const fetchOriginal = global.fetch;
-  let fetchMock: jest.Mock;
-  let core: { getToken: jest.Mock };
+  let fetchMock: Mock;
+  let core: { getToken: Mock };
 
   const cliente = (baseUrl?: string) =>
     new M1IdentityClient(
@@ -31,9 +32,9 @@ describe('M1IdentityClient', () => {
     );
 
   beforeEach(() => {
-    fetchMock = jest.fn();
+    fetchMock = vi.fn();
     global.fetch = fetchMock;
-    core = { getToken: jest.fn().mockResolvedValue(TOKEN) };
+    core = { getToken: vi.fn().mockResolvedValue(TOKEN) };
   });
   afterAll(() => {
     global.fetch = fetchOriginal;

@@ -8,6 +8,7 @@ import {
   startUpdate,
   textoProgramacion,
 } from './ticket-state';
+import type { Mock } from 'vitest';
 
 const fecha = new Date('2026-10-21T00:00:00.000Z');
 const hora = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
@@ -116,10 +117,10 @@ describe('ticket-state', () => {
   });
 
   describe('persistencia', () => {
-    let db: { ticketM2State: { findUnique: jest.Mock; upsert: jest.Mock } };
+    let db: { ticketM2State: { findUnique: Mock; upsert: Mock } };
 
     beforeEach(() => {
-      db = { ticketM2State: { findUnique: jest.fn(), upsert: jest.fn() } };
+      db = { ticketM2State: { findUnique: vi.fn(), upsert: vi.fn() } };
     });
 
     it('leerEstado devuelve el status o null', async () => {

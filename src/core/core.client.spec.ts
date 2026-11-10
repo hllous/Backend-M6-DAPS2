@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { CoreClient } from './core.client';
+import type { Mock } from 'vitest';
 
 const SECRET = 'secreto-de-maquina-m6';
 const TOKEN_URL = 'https://core.test/api/v1/auth/module-token';
@@ -25,25 +26,25 @@ function token(accessToken: string, expiresIn = 900): Response {
 }
 
 /** Los pedidos de token que llegaron al Core. */
-function pedidosDeToken(fetchMock: jest.Mock): unknown[] {
+function pedidosDeToken(fetchMock: Mock): unknown[] {
   return fetchMock.mock.calls.filter(([url]) => url === TOKEN_URL);
 }
 
 describe('CoreClient', () => {
   const fetchOriginal = global.fetch;
-  let fetchMock: jest.Mock;
+  let fetchMock: Mock;
 
   afterAll(() => {
     global.fetch = fetchOriginal;
   });
 
   beforeEach(() => {
-    fetchMock = jest.fn();
+    fetchMock = vi.fn();
     global.fetch = fetchMock;
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('pide el token con el módulo y el secret, y lo cachea', async () => {
@@ -75,14 +76,14 @@ describe('CoreClient', () => {
 
   /** Sin refresh: se pide otro un minuto antes de que venza. */
   it('renueva el token un minuto antes del vencimiento', async () => {
-    jest.useFakeTimers({ now: 0 });
+    vi.useFakeTimers({ now: 0 });
     fetchMock.mockResolvedValueOnce(token('t1')).mockResolvedValueOnce(token('t2'));
     const core = cliente();
 
     expect(await core.getToken()).toBe('t1');
-    jest.setSystemTime(13 * 60_000);
+    vi.setSystemTime(13 * 60_000);
     expect(await core.getToken()).toBe('t1');
-    jest.setSystemTime(14 * 60_000);
+    vi.setSystemTime(14 * 60_000);
     expect(await core.getToken()).toBe('t2');
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -206,12 +207,12 @@ describe('CoreClient', () => {
     });
 
     it('acota expiresIn: uno enorme no deja el token más de una hora', async () => {
-      jest.useFakeTimers({ now: 0 });
+      vi.useFakeTimers({ now: 0 });
       fetchMock.mockResolvedValueOnce(token('t1', 1e9)).mockResolvedValueOnce(token('t2'));
       const core = cliente();
 
       expect(await core.getToken()).toBe('t1');
-      jest.setSystemTime(59 * 60_000);
+      vi.setSystemTime(59 * 60_000);
       expect(await core.getToken()).toBe('t2');
     });
 

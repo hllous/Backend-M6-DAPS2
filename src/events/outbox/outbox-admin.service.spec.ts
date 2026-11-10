@@ -32,13 +32,13 @@ describe('OutboxAdminService', () => {
   beforeEach(() => {
     prisma = {
       outboxEvent: {
-        findMany: jest.fn().mockResolvedValue([]),
-        findUnique: jest.fn(),
-        count: jest.fn().mockResolvedValue(0),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findMany: vi.fn().mockResolvedValue([]),
+        findUnique: vi.fn(),
+        count: vi.fn().mockResolvedValue(0),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
-      outboxRetryAudit: { create: jest.fn(), createMany: jest.fn() },
-      $transaction: jest.fn((fn) => fn(prisma)),
+      outboxRetryAudit: { create: vi.fn(), createMany: vi.fn() },
+      $transaction: vi.fn((fn) => fn(prisma)),
     };
     service = new OutboxAdminService(prisma);
   });
