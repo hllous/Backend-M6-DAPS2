@@ -97,4 +97,6 @@ Workflow aparte, `.github/workflows/api-tests.yml` (no es check obligatorio): le
 
 `npm run test:mutation` (config en `stryker.config.json`, ~15 min en local) muta `outbound-requests.transitions.ts` y `street-closure-expiry.sweeper.ts`; umbral `break: 60`. Reporte en `reports/mutation/` (ignorado por git). El workflow `.github/workflows/mutation.yml` corre solo a mano o semanal, no en cada push.
 
+En el workflow, el modo incremental de Stryker se conserva entre corridas con `actions/cache` (`reports/mutation/incremental.json`, una clave por run y se restaura la más reciente): la corrida semanal solo re-prueba los mutantes de lo que cambió. La primera corrida con el alcance ampliado del #617 es completa.
+
 Primera medición: transitions 100 %, sweeper 79,07 % (total 84,21 %). Los 9 mutantes sobrevivientes del sweeper eran todos del contador y el log final (`expired -= 1`, la condición `expired > 0`, el texto del log, y `return false`/`return true` de `expireOne` en las líneas 88 y 103), porque ningún test miraba el log. Se cerraron afirmando en el spec el log `1 corte/s ...` cuando vence uno y su ausencia cuando la carrera con `streetClosureEnded` deja `count: 0`. Remedición solo del sweeper: 100 %, 0 sobrevivientes.

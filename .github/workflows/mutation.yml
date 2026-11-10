@@ -21,7 +21,30 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+
+      # Modo incremental (#617): Stryker solo re-prueba los mutantes de lo que
+      # cambió desde la última corrida. Los caches son inmutables, así que se
+      # guarda uno nuevo por corrida y se restaura el más reciente por prefijo.
+      # El cron corre sobre la rama por defecto; un workflow_dispatch en otra
+      # rama también puede leer ese cache.
+      - name: Restaurar el incremental de Stryker
+        uses: actions/cache/restore@v4
+        with:
+          path: reports/mutation/incremental.json
+          key: stryker-incremental-${{ github.run_id }}
+          restore-keys: stryker-incremental-
+
       - run: npm run test:mutation
+
+      # Siempre, aunque el umbral `break` haga fallar el paso anterior: el
+      # resultado de los mutantes vale igual para la próxima corrida.
+      - name: Guardar el incremental de Stryker
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: reports/mutation/incremental.json
+          key: stryker-incremental-${{ github.run_id }}
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
