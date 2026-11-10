@@ -1,0 +1,23 @@
+{
+  "eventId": "9b414111-ae1a-43ce-849a-2ed3447746dc",
+  "eventType": "ticketUpdated",
+  "eventVersion": "1.0",
+  "occurredAt": "2026-10-09T15:00:02-03:00",
+  "sourceModule": "atencion-ciudadana",
+  "correlationId": "c23cf001-e494-43f8-9642-d8042ee059a2",
+  "causationId": null,
+  "data": {
+    "ticketId": "550e8400-e29b-41d4-a716-446655440000",
+    "publicId": "TK-2026-000123",
+    "citizenId": "8f14e45f-ea5e-4e5d-bd3f-1c71f4f6a001",
+    "isAnonymous": false,
+    "responsibleAreaId": "M3",
+    "updateType": "PROGRESS",
+    "currentStatus": "IN_PROGRESS",
+    "currentPriority": "HIGH",
+    "progress": 40,
+    "publicMessage": "La reparación avanza: ya se retiró el material dañado.",
+    "details": null,
+    "updatedAt": "2026-10-09T15:00:00-03:00"
+  }
+}

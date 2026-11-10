@@ -1,0 +1,26 @@
+{
+  "eventId": "8a1a5cdf-30c7-46c9-9145-373c85950d3d",
+  "eventType": "ticketUpdated",
+  "eventVersion": "1.0",
+  "occurredAt": "2026-10-12T14:02:02-03:00",
+  "sourceModule": "atencion-ciudadana",
+  "correlationId": "de092caa-97ca-4e06-9b8a-74a4156dc5cf",
+  "causationId": null,
+  "data": {
+    "ticketId": "550e8400-e29b-41d4-a716-446655440000",
+    "publicId": "TK-2026-000123",
+    "citizenId": "8f14e45f-ea5e-4e5d-bd3f-1c71f4f6a001",
+    "isAnonymous": false,
+    "responsibleAreaId": "M3",
+    "updateType": "CANCELLED",
+    "currentStatus": "CANCELLED",
+    "currentPriority": "MEDIUM",
+    "publicMessage": "El ticket fue cancelado porque no recibimos la información solicitada a tiempo.",
+    "details": {
+      "cancellation": {
+        "reasonCode": "INFO_TIMEOUT"
+      }
+    },
+    "updatedAt": "2026-10-12T14:02:00-03:00"
+  }
+}

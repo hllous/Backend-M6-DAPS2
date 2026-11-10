@@ -22,7 +22,7 @@ const INFORME = [
   '05-informe-ejecucion.md',
   '06-registro-defectos.md',
   '07-informe-seguridad.md',
-  '09-lecciones-aprendidas.md',
+  '08-lecciones-aprendidas.md',
 ];
 
 const DOCS = [
@@ -31,6 +31,7 @@ const DOCS = [
     title: 'Criterios de Testing y Aseguramiento de Calidad',
     subtitle: 'Prueba del sistema — Clase 15',
     files: INFORME,
+    toc: true,
   },
   {
     out: 'Manual-de-usuario-M6',
@@ -40,7 +41,7 @@ const DOCS = [
   },
 ];
 
-// Además del integrado, un PDF por cada documento 01..09 (build/individuales/).
+// Además del integrado, un PDF por cada documento 01..08 (build/individuales/).
 for (const f of INFORME) {
   const p = join(qaDir, f);
   if (!existsSync(p)) continue; // el integrado ya avisa o falla si falta
@@ -85,7 +86,33 @@ function cover({ title, subtitle }) {
 `;
 }
 
-function build({ out, title, subtitle, files }) {
+// Páginas de un PDF de Chrome: el /Count mayor es el del nodo raíz /Pages.
+const pageCount = (pdf) =>
+  Math.max(0, ...[...readFileSync(pdf).toString('latin1').matchAll(/\/Count (\d+)/g)].map((m) => Number(m[1])));
+
+// Índice del integrado: cada parte arranca en página nueva; portada = 1, índice = 1.
+function tocHtml(files) {
+  let page = 3;
+  const rows = files.map((f) => {
+    const h1 = readFileSync(join(qaDir, f), 'utf8').match(/^#\s+(.+)$/m);
+    const n = existsSync(join(buildDir, 'individuales', f.replace(/\.md$/, '.pdf')))
+      ? pageCount(join(buildDir, 'individuales', f.replace(/\.md$/, '.pdf'))) - 1 // el h1 inicial deja una página en blanco
+      : 0;
+    const row = `<tr><td>${h1 ? h1[1] : f}</td><td class="pg">${page}</td></tr>`;
+    page += n;
+    return row;
+  });
+  return `<div class="toc">
+<p class="toc-title">Índice</p>
+<table><thead><tr><th>Documento</th><th>Pág.</th></tr></thead><tbody>
+${rows.join('')}
+</tbody></table>
+</div>
+
+`;
+}
+
+function build({ out, title, subtitle, files, toc }) {
   const parts = [];
   for (const f of files) {
     const p = join(qaDir, f);
@@ -101,7 +128,7 @@ function build({ out, title, subtitle, files }) {
   mkdirSync(dirname(join(buildDir, out)), { recursive: true });
   const mdPath = join(buildDir, `${out}.md`);
   const pdfPath = join(buildDir, `${out}.pdf`);
-  writeFileSync(mdPath, cover({ title, subtitle }) + parts.join('\n\n'), 'utf8');
+  writeFileSync(mdPath, cover({ title, subtitle }) + (toc ? tocHtml(files) : '') + parts.join('\n\n'), 'utf8');
 
   const configPath = join(buildDir, 'md-to-pdf.config.json');
   writeFileSync(
@@ -135,7 +162,12 @@ function build({ out, title, subtitle, files }) {
   console.log(`  -> ${relative(root, pdfPath)}`);
 }
 
+// Orden: individuales -> integrado (necesita sus páginas) -> manual.
+const rank = (d) => (d.toc ? 1 : d.out.startsWith('individuales') ? 0 : 2);
+DOCS.sort((a, b) => rank(a) - rank(b));
+const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
 for (const d of DOCS) {
+  if (only && !d.out.includes(only)) continue;
   console.log(d.out);
   build(d);
 }
