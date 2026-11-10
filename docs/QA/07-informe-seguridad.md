@@ -106,7 +106,7 @@ Por control: qué decía la matriz de Trello, qué hay hoy, con qué corrección
 2. Job `audit` en el CI (#578): corre `npm audit --omit=dev --audit-level=high` y es **informativo**: si hay altas, termina en verde con un aviso (`::warning`) y no bloquea el merge.
 3. Dependabot semanal (`.github/dependabot.yml`), sin los majors de `@nestjs/*` ni de `zod`.
 4. #619 (10/11/2026): `overrides` de `body-parser` ^1.20.9, `lodash` ^4.18.1, `js-yaml` ^4.3.2 y `multer` ^2.4.0, y `zod` ^4.6.7. Resultado: **8 vulnerabilidades en producción, 0 críticas, 0 altas, 8 moderadas**. Build, lint (0 errores) y 2855 tests unitarios y 343 e2e en verde (la suite de RabbitMQ real no se corrió).
-5. El salto mayor (NestJS 12, Prisma 7, Jest 30) queda en el issue #628.
+5. El salto mayor (NestJS 12, Prisma 7) queda en el issue #628. Jest 30 se descartó: NestJS 12 es solo-ESM y Jest no carga sus paquetes, así que los tests pasaron a Vitest (#628).
 
 Lo que se comprobó en el código sobre las 6 altas, **antes** de #619 (hoy ya no figuran):
 
