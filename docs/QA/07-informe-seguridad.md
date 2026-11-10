@@ -178,16 +178,16 @@ Limitación: gitleaks no analiza el contenido de los PDF ni de los binarios.
 
 | Prueba | Comando o archivo |
 |---|---|
-| Rechazo de JWT (16 casos) | `npx jest src/auth/jwt.strategy.spec.ts` |
-| Roles por endpoint | `npx jest src/auth/route-roles.spec.ts` y `npm run test:e2e -- auth-roles` (con una base descartable; ver `docs/testing.md`) |
+| Rechazo de JWT (16 casos) | `npx vitest run src/auth/jwt.strategy.spec.ts` |
+| Roles por endpoint | `npx vitest run src/auth/route-roles.spec.ts` y `npm run test:e2e -- auth-roles` (con una base descartable; ver `docs/testing.md`) |
 | Pertenencia de Campo | `npm run test:e2e -- crew-ownership` |
 | Mass assignment, SQL, XSS, 413 y CSP | `npm run test:e2e -- security-input` |
 | Cabeceras | `npm run test:e2e -- services-lifecycle` |
 | Rate limiting (429) | `npm run test:e2e -- throttler` |
-| Logs sin token | `npx jest src/common/utils/redact-url.spec.ts src/common/interceptors/logging.interceptor.spec.ts` |
+| Logs sin token | `npx vitest run src/common/utils/redact-url.spec.ts src/common/interceptors/logging.interceptor.spec.ts` |
 | Idempotencia del inbox | `npm run test:e2e -- inbox` |
-| Errores en Problem Details | `npm run test:e2e -- problem-details` y `npx jest src/common/filters/http-exception.filter.spec.ts` |
-| ETag e `If-Match` (412) | `npm run test:e2e -- etag-if-match` y `npx jest src/common/etag.spec.ts src/modules/services/services-if-match.spec.ts` |
-| `Idempotency-Key` | `npm run test:e2e -- idempotency` y `npx jest src/common/idempotency` |
+| Errores en Problem Details | `npm run test:e2e -- problem-details` y `npx vitest run src/common/filters/http-exception.filter.spec.ts` |
+| ETag e `If-Match` (412) | `npm run test:e2e -- etag-if-match` y `npx vitest run src/common/etag.spec.ts src/modules/services/services-if-match.spec.ts` |
+| `Idempotency-Key` | `npm run test:e2e -- idempotency` y `npx vitest run src/common/idempotency` |
 | Consumer contra RabbitMQ real | `npm run test:e2e -- rabbitmq-real` (con `RABBITMQ_URL` local; ver `docs/testing.md`) |
 | Dependencias | `npm audit --omit=dev` |

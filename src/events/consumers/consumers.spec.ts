@@ -16,6 +16,7 @@ import { OutboundResponsesConsumer } from './outbound-responses.consumer';
 import { SanctionsConsumer } from './sanctions.consumer';
 import { TicketsConsumer } from './tickets.consumer';
 import { WeatherConsumer } from './weather.consumer';
+import type { Mock, MockInstance } from 'vitest';
 
 type Handler = (d: Record<string, unknown>, occurredAt?: Date | null) => Promise<void>;
 
@@ -30,41 +31,41 @@ describe('consumidores de eventos', () => {
   const ID = '11111111-1111-1111-1111-111111111111';
   let prisma: any;
   let inbox: InboxService;
-  let audit: { record: jest.Mock };
+  let audit: { record: Mock };
 
   beforeEach(() => {
     prisma = {
       repairRequest: {
-        findUnique: jest.fn(),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       streetClosureRequest: {
-        findUnique: jest.fn(),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       service: {
-        findMany: jest.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findMany: vi.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
-      violationNotice: { findUnique: jest.fn() },
+      violationNotice: { findUnique: vi.fn() },
       environmentalReport: {
-        findUnique: jest.fn(),
-        findFirst: jest.fn(),
-        findMany: jest.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
-        create: jest.fn().mockResolvedValue({ id: ID, reportType: 'NOISE' }),
-        update: jest.fn(),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: vi.fn(),
+        findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
+        create: vi.fn().mockResolvedValue({ id: ID, reportType: 'NOISE' }),
+        update: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
-      sanctionOutcome: { create: jest.fn().mockResolvedValue({ id: 'out-1' }) },
+      sanctionOutcome: { create: vi.fn().mockResolvedValue({ id: 'out-1' }) },
       // Estado del ticket en M2 (#303): sin dato por defecto.
       ticketM2State: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        upsert: jest.fn().mockResolvedValue({}),
+        findUnique: vi.fn().mockResolvedValue(null),
+        upsert: vi.fn().mockResolvedValue({}),
       },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
-    audit = { record: jest.fn() };
+    audit = { record: vi.fn() };
   });
 
   describe('respuestas de M3 y M7', () => {
@@ -182,7 +183,7 @@ describe('consumidores de eventos', () => {
           sourceType: 'OTHER',
         });
         prisma[model].updateMany.mockResolvedValue({ count: 0 });
-        const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+        const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
         await h(ev)(data);
 
@@ -277,7 +278,7 @@ describe('consumidores de eventos', () => {
     it('workOrderScheduled tardío o repetido (ya no REQUESTED) se descarta con log, sin fallar', async () => {
       prisma.repairRequest.findUnique.mockResolvedValue({ id: ID, status: 'CLOSED' });
       prisma.repairRequest.updateMany.mockResolvedValue({ count: 0 });
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
       await expect(h('workOrderScheduled')({ sourceRequestId: ID })).resolves.toBeUndefined();
 
@@ -288,7 +289,7 @@ describe('consumidores de eventos', () => {
     it('workOrderCompleted solo aplica desde REQUESTED o IN_PROGRESS; un cierre repetido se descarta', async () => {
       prisma.repairRequest.findUnique.mockResolvedValue({ id: ID, status: 'CLOSED' });
       prisma.repairRequest.updateMany.mockResolvedValue({ count: 0 });
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
       await expect(h('workOrderCompleted')({ sourceRequestId: ID })).resolves.toBeUndefined();
 
@@ -378,7 +379,7 @@ describe('consumidores de eventos', () => {
     it('un reintento de Approved sobre un corte ya APPROVED no pisa la ventana', async () => {
       prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, status: 'APPROVED' });
       prisma.streetClosureRequest.updateMany.mockResolvedValue({ count: 0 });
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
       await h('streetClosureApproved')({ closureRequestId: ID, endDate: '2031-01-01T00:00:00Z' });
 
@@ -420,7 +421,7 @@ describe('consumidores de eventos', () => {
     it('un aprobado tardío sobre un corte ya rechazado o terminado se descarta sin fallar', async () => {
       prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, status: 'REJECTED' });
       prisma.streetClosureRequest.updateMany.mockResolvedValue({ count: 0 });
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
       await expect(h('streetClosureApproved')({ closureRequestId: ID })).resolves.toBeUndefined();
 
@@ -436,7 +437,7 @@ describe('consumidores de eventos', () => {
         sourceId: 'srv-1',
       });
       prisma.streetClosureRequest.updateMany.mockResolvedValue({ count: 0 });
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
       await expect(h('streetClosureRejected')({ closureRequestId: ID })).resolves.toBeUndefined();
 
@@ -447,7 +448,7 @@ describe('consumidores de eventos', () => {
     it('streetClosureEnded sobre un corte REJECTED o ENDED se descarta; REQUESTED, APPROVED y EXPIRED se aceptan', async () => {
       prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, status: 'ENDED' });
       prisma.streetClosureRequest.updateMany.mockResolvedValue({ count: 0 });
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
       await expect(h('streetClosureEnded')({ closureRequestId: ID })).resolves.toBeUndefined();
 
@@ -489,7 +490,7 @@ describe('consumidores de eventos', () => {
       // Ahora el corte está ENDED: el Approved rezagado no matchea el filtro.
       prisma.streetClosureRequest.findUnique.mockResolvedValue({ id: ID, status: 'ENDED' });
       prisma.streetClosureRequest.updateMany.mockResolvedValue({ count: 0 });
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
       await expect(h('streetClosureApproved')({ closureRequestId: ID })).resolves.toBeUndefined();
 
@@ -514,7 +515,7 @@ describe('consumidores de eventos', () => {
       // La transacción se revierte entera: simulamos el rollback con un estado
       // que solo se confirma si el callback termina sin error.
       let corte = 'REQUESTED';
-      prisma.$transaction = jest.fn(async (cb: (tx: unknown) => unknown) => {
+      prisma.$transaction = vi.fn(async (cb: (tx: unknown) => unknown) => {
         const antes = corte;
         try {
           return await cb(prisma);
@@ -637,7 +638,7 @@ describe('consumidores de eventos', () => {
         sourceId: 'srv-1',
       });
       prisma.service.updateMany.mockResolvedValue({ count: 0 });
-      const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 
       await expect(h('streetClosureRejected')({ closureRequestId: ID })).resolves.toBeUndefined();
 
@@ -797,10 +798,10 @@ describe('consumidores de eventos', () => {
 
   describe('ticketUpdated de M2', () => {
     let h: Handler;
-    let outbox: { enqueue: jest.Mock };
+    let outbox: { enqueue: Mock };
 
     beforeEach(() => {
-      outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
+      outbox = { enqueue: vi.fn().mockResolvedValue(undefined) };
       h = registrar(
         new TicketsConsumer(
           prisma as unknown as PrismaService,
@@ -816,8 +817,8 @@ describe('consumidores de eventos', () => {
     describe('qué payload guarda el inbox', () => {
       const ingerir = async (data: Record<string, unknown>) => {
         prisma.inboxEvent = {
-          create: jest.fn().mockResolvedValue({}),
-          update: jest.fn().mockResolvedValue({}),
+          create: vi.fn().mockResolvedValue({}),
+          update: vi.fn().mockResolvedValue({}),
         };
         await inbox.ingest({
           specVersion: '1.0',
@@ -1030,7 +1031,7 @@ describe('consumidores de eventos', () => {
       it.each(['BASURA', 'X'.repeat(5000), 'IN_PROGRESS\nFALSO'])(
         'un currentStatus fuera de la lista de M2 (%.20s) no se persiste y no rompe el handler',
         async (valor) => {
-          const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+          const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
           await expect(
             h({ ...nuestro, updateType: 'CLOSED', currentStatus: valor }),
@@ -1182,10 +1183,10 @@ describe('consumidores de eventos', () => {
           const EVENT_ID = '646d19f5-5670-4a7b-9442-30e13b02ba11';
           const CORRELATION = '5b0c0d39-8c1d-4c8a-9c50-0a8d3f1c6e11';
           prisma.inboxEvent = {
-            create: jest.fn().mockResolvedValue({}),
-            update: jest.fn().mockResolvedValue({}),
+            create: vi.fn().mockResolvedValue({}),
+            update: vi.fn().mockResolvedValue({}),
           };
-          prisma.outboxEvent = { create: jest.fn() };
+          prisma.outboxEvent = { create: vi.fn() };
           // Un inbox propio: el de la suite ya tiene registrado su handler.
           const inboxReal = new InboxService(prisma as unknown as PrismaService);
           new TicketsConsumer(
@@ -1958,7 +1959,7 @@ describe('consumidores de eventos', () => {
       const T2 = new Date('2026-10-01T10:05:00.000Z');
       let fila: Record<string, unknown>;
       let existe: boolean;
-      let warn: jest.SpyInstance;
+      let warn: MockInstance;
 
       /**
        * El expediente en memoria, con un `updateMany` que evalúa el `where`
@@ -2003,7 +2004,7 @@ describe('consumidores de eventos', () => {
             return { count: 1 };
           },
         );
-        warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+        warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
       });
 
       afterEach(() => warn.mockRestore());
@@ -2276,10 +2277,10 @@ describe('consumidores de eventos', () => {
 
           beforeEach(() => {
             prisma.inboxEvent = {
-              create: jest.fn().mockResolvedValue({}),
-              update: jest.fn().mockResolvedValue({}),
-              updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-              findUniqueOrThrow: jest.fn(),
+              create: vi.fn().mockResolvedValue({}),
+              update: vi.fn().mockResolvedValue({}),
+              updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+              findUniqueOrThrow: vi.fn(),
             };
           });
 
@@ -2404,8 +2405,8 @@ describe('consumidores de eventos', () => {
       it('por el inbox, un occurredAt en el futuro se aplica sin ordenar y no deja marca', async () => {
         fila.priorityChangedAt = T2;
         prisma.inboxEvent = {
-          create: jest.fn().mockResolvedValue({}),
-          update: jest.fn().mockResolvedValue({}),
+          create: vi.fn().mockResolvedValue({}),
+          update: vi.fn().mockResolvedValue({}),
         };
 
         await inbox.ingest({
@@ -2422,8 +2423,8 @@ describe('consumidores de eventos', () => {
       it('por el inbox, el atrasado sale processed: reintentarlo no lo haría más nuevo', async () => {
         fila.escalationChangedAt = T2;
         prisma.inboxEvent = {
-          create: jest.fn().mockResolvedValue({}),
-          update: jest.fn().mockResolvedValue({}),
+          create: vi.fn().mockResolvedValue({}),
+          update: vi.fn().mockResolvedValue({}),
         };
 
         const { status } = await inbox.ingest({

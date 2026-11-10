@@ -60,21 +60,21 @@ const count = {
 function mkPrisma(communes: unknown[] = [], zones: unknown[] = []) {
   const prisma = {
     commune: {
-      findMany: jest.fn().mockResolvedValue(communes),
-      create: jest
+      findMany: vi.fn().mockResolvedValue(communes),
+      create: vi
         .fn()
         .mockImplementation(({ data }: { data: { code: string } }) =>
           Promise.resolve({ id: `c-${data.code}` }),
         ),
-      update: jest.fn().mockResolvedValue({}),
+      update: vi.fn().mockResolvedValue({}),
     },
     zone: {
-      findMany: jest.fn().mockResolvedValue(zones),
-      create: jest.fn().mockResolvedValue({}),
-      update: jest.fn().mockResolvedValue({}),
+      findMany: vi.fn().mockResolvedValue(zones),
+      create: vi.fn().mockResolvedValue({}),
+      update: vi.fn().mockResolvedValue({}),
     },
-    zoneNeighborhood: { delete: jest.fn().mockResolvedValue({}) },
-    $transaction: jest.fn(),
+    zoneNeighborhood: { delete: vi.fn().mockResolvedValue({}) },
+    $transaction: vi.fn(),
   };
   prisma.$transaction.mockImplementation((cb: (tx: unknown) => unknown) => cb(prisma));
   return prisma;
@@ -316,7 +316,7 @@ describe('cargarDesdeCore', () => {
   const resp = (body: unknown, ok = true) =>
     Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) });
   const core = (fn: (p: string) => Promise<unknown>) =>
-    ({ request: jest.fn(fn) }) as unknown as CoreClient;
+    ({ request: vi.fn(fn) }) as unknown as CoreClient;
   const c = catalogo();
 
   it('lee barrios y zonas, en lista o en { data }', async () => {
@@ -433,7 +433,7 @@ describe('cargarDesdeCore: marcas de paginación', () => {
     [{ hasMore: true }],
   ])('aborta con %j', async (marca) => {
     const core = {
-      request: jest.fn().mockResolvedValue({
+      request: vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
         json: () => Promise.resolve({ data: catalogo().barrios, ...marca }),

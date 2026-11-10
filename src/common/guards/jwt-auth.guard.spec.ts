@@ -2,9 +2,10 @@ import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@ne
 import { Reflector } from '@nestjs/core';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import type { Mock } from 'vitest';
 
 describe('JwtAuthGuard', () => {
-  let reflector: { getAllAndOverride: jest.Mock };
+  let reflector: { getAllAndOverride: Mock };
   let guard: JwtAuthGuard;
   let context: ExecutionContext;
 
@@ -12,7 +13,7 @@ describe('JwtAuthGuard', () => {
   class DummyController {}
 
   beforeEach(() => {
-    reflector = { getAllAndOverride: jest.fn() };
+    reflector = { getAllAndOverride: vi.fn() };
     guard = new JwtAuthGuard(reflector as unknown as Reflector);
     context = {
       getHandler: () => handler,
@@ -33,7 +34,7 @@ describe('JwtAuthGuard', () => {
   it('delega en passport cuando el endpoint no es publico', () => {
     reflector.getAllAndOverride.mockReturnValue(undefined);
     // El prototipo de arriba es el AuthGuard('jwt') del que hereda JwtAuthGuard.
-    const passportCanActivate = jest
+    const passportCanActivate = vi
       .spyOn(Object.getPrototypeOf(JwtAuthGuard.prototype), 'canActivate')
       .mockReturnValue(true);
 

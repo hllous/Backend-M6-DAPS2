@@ -7,7 +7,7 @@ import { assertBaseLocal } from './guard-database-url';
  * Estaba documentado como un `npx prisma migrate deploy` a mano antes de correr
  * los e2e, y ese paso quedaba fuera del guard: el CLI de Prisma lee el `.env` del
  * repo por su cuenta, así que olvidarse del `export` aplicaba migraciones contra
- * la base desplegada. Acá corre dentro de jest y con la misma validación.
+ * la base desplegada. Acá corre dentro de vitest y con la misma validación.
  */
 export default function globalSetup(): void {
   const databaseUrl = assertBaseLocal(process.env.DATABASE_URL);

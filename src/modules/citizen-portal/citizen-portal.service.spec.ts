@@ -21,13 +21,13 @@ describe('CitizenPortalService', () => {
 
   beforeEach(() => {
     prisma = {
-      environmentalReport: { findFirst: jest.fn().mockResolvedValue(expediente()) },
-      service: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) },
+      environmentalReport: { findFirst: vi.fn().mockResolvedValue(expediente()) },
+      service: { findMany: vi.fn().mockResolvedValue([]), count: vi.fn().mockResolvedValue(0) },
       greenPoint: {
-        findMany: jest.fn().mockResolvedValue([]),
-        count: jest.fn().mockResolvedValue(0),
+        findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
       },
-      zone: { findMany: jest.fn().mockResolvedValue([]) },
+      zone: { findMany: vi.fn().mockResolvedValue([]) },
     };
     portal = new CitizenPortalService(prisma as unknown as PrismaService);
   });
@@ -132,11 +132,11 @@ describe('CitizenPortalService', () => {
     });
 
     it('sin from arranca hoy en Argentina aunque en UTC ya sea mañana', async () => {
-      jest.useFakeTimers({ now: new Date('2026-09-20T01:00:00.000Z') }); // 22:00 ART del 19
+      vi.useFakeTimers({ now: new Date('2026-09-20T01:00:00.000Z') }); // 22:00 ART del 19
       try {
         await portal.findServices({ page: 1, pageSize: 20 } as any);
       } finally {
-        jest.useRealTimers();
+        vi.useRealTimers();
       }
 
       const { scheduledDate } = prisma.service.findMany.mock.calls[0][0].where;

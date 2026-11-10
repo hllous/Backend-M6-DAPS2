@@ -34,18 +34,18 @@ describe('ServicesService — pertenencia de la cuadrilla', () => {
 
   beforeEach(() => {
     prisma = {
-      service: { findUnique: jest.fn().mockResolvedValue(serviceRow()), update: jest.fn() },
-      crew: { count: jest.fn().mockResolvedValue(0) },
-      zoneResult: { create: jest.fn() },
-      collectionRecord: { create: jest.fn() },
-      serviceDelayNotice: { create: jest.fn(), findFirst: jest.fn() },
-      $transaction: jest.fn(),
+      service: { findUnique: vi.fn().mockResolvedValue(serviceRow()), update: vi.fn() },
+      crew: { count: vi.fn().mockResolvedValue(0) },
+      zoneResult: { create: vi.fn() },
+      collectionRecord: { create: vi.fn() },
+      serviceDelayNotice: { create: vi.fn(), findFirst: vi.fn() },
+      $transaction: vi.fn(),
     };
     service = new ServicesService(
       prisma as unknown as PrismaService,
-      { enqueue: jest.fn(), enqueueMany: jest.fn() } as never,
+      { enqueue: vi.fn(), enqueueMany: vi.fn() } as never,
       {} as never,
-      { record: jest.fn() } as never,
+      { record: vi.fn() } as never,
     );
   });
 

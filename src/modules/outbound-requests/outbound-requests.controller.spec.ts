@@ -13,6 +13,7 @@ import {
   RejectClosureDto,
   StartRepairDto,
 } from './dto';
+import type { Mocked } from 'vitest';
 
 const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
@@ -20,17 +21,17 @@ const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
 
 describe('RepairRequestsController', () => {
-  let service: jest.Mocked<OutboundRequestsService>;
+  let service: Mocked<OutboundRequestsService>;
   let controller: RepairRequestsController;
 
   beforeEach(() => {
     service = {
-      createRepairRequest: jest.fn().mockResolvedValue(RESULT),
-      findRepairRequests: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findRepairRequest: jest.fn().mockResolvedValue(RESULT),
-      startRepair: jest.fn().mockResolvedValue(RESULT),
-      closeRepair: jest.fn().mockResolvedValue(RESULT),
-    } as unknown as jest.Mocked<OutboundRequestsService>;
+      createRepairRequest: vi.fn().mockResolvedValue(RESULT),
+      findRepairRequests: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findRepairRequest: vi.fn().mockResolvedValue(RESULT),
+      startRepair: vi.fn().mockResolvedValue(RESULT),
+      closeRepair: vi.fn().mockResolvedValue(RESULT),
+    } as unknown as Mocked<OutboundRequestsService>;
     controller = new RepairRequestsController(service);
   });
 
@@ -64,18 +65,18 @@ describe('RepairRequestsController', () => {
 });
 
 describe('StreetClosureRequestsController', () => {
-  let service: jest.Mocked<OutboundRequestsService>;
+  let service: Mocked<OutboundRequestsService>;
   let controller: StreetClosureRequestsController;
 
   beforeEach(() => {
     service = {
-      createClosureRequest: jest.fn().mockResolvedValue(RESULT),
-      findClosureRequests: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findClosureRequest: jest.fn().mockResolvedValue(RESULT),
-      approveClosure: jest.fn().mockResolvedValue(RESULT),
-      rejectClosure: jest.fn().mockResolvedValue(RESULT),
-      endClosure: jest.fn().mockResolvedValue(RESULT),
-    } as unknown as jest.Mocked<OutboundRequestsService>;
+      createClosureRequest: vi.fn().mockResolvedValue(RESULT),
+      findClosureRequests: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findClosureRequest: vi.fn().mockResolvedValue(RESULT),
+      approveClosure: vi.fn().mockResolvedValue(RESULT),
+      rejectClosure: vi.fn().mockResolvedValue(RESULT),
+      endClosure: vi.fn().mockResolvedValue(RESULT),
+    } as unknown as Mocked<OutboundRequestsService>;
     controller = new StreetClosureRequestsController(service);
   });
 

@@ -38,13 +38,13 @@ describe('TreesService', () => {
   beforeEach(() => {
     prisma = {
       tree: {
-        create: jest.fn().mockResolvedValue(arbol()),
-        findUnique: jest.fn().mockResolvedValue(arbol()),
-        findMany: jest.fn().mockResolvedValue([arbol()]),
-        count: jest.fn().mockResolvedValue(1),
-        update: jest.fn().mockResolvedValue(arbol()),
+        create: vi.fn().mockResolvedValue(arbol()),
+        findUnique: vi.fn().mockResolvedValue(arbol()),
+        findMany: vi.fn().mockResolvedValue([arbol()]),
+        count: vi.fn().mockResolvedValue(1),
+        update: vi.fn().mockResolvedValue(arbol()),
       },
-      $queryRaw: jest.fn().mockResolvedValue([]),
+      $queryRaw: vi.fn().mockResolvedValue([]),
     };
     service = new TreesService(prisma as unknown as PrismaService);
   });

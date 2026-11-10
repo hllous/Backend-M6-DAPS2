@@ -39,14 +39,14 @@ describe('ServicesService — If-Match', () => {
   beforeEach(() => {
     prisma = {
       service: {
-        findUnique: jest.fn().mockResolvedValue(row(S.IN_PROGRESS)),
-        update: jest.fn().mockResolvedValue(row(S.SUSPENDED)),
+        findUnique: vi.fn().mockResolvedValue(row(S.IN_PROGRESS)),
+        update: vi.fn().mockResolvedValue(row(S.SUSPENDED)),
       },
-      crew: { count: jest.fn().mockResolvedValue(1) },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      crew: { count: vi.fn().mockResolvedValue(1) },
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    audit = { record: jest.fn() };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
+    audit = { record: vi.fn() };
     service = new ServicesService(
       prisma as unknown as PrismaService,
       outbox,

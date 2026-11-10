@@ -8,7 +8,7 @@ describe('ReportDeadlineSweeper', () => {
 
   beforeEach(() => {
     prisma = {
-      environmentalReport: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
+      environmentalReport: { updateMany: vi.fn().mockResolvedValue({ count: 2 }) },
     };
     sweeper = new ReportDeadlineSweeper(prisma as unknown as PrismaService);
   });

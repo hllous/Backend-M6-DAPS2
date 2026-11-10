@@ -2,6 +2,7 @@ import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { VehiclesController } from './vehicles.controller';
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto, QueryVehiclesDto, UpdateVehicleDto } from './dto';
+import type { Mocked } from 'vitest';
 
 const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
@@ -9,17 +10,17 @@ const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
 
 describe('VehiclesController', () => {
-  let service: jest.Mocked<VehiclesService>;
+  let service: Mocked<VehiclesService>;
   let controller: VehiclesController;
 
   beforeEach(() => {
     service = {
-      create: jest.fn().mockResolvedValue(RESULT),
-      findAll: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findOne: jest.fn().mockResolvedValue(RESULT),
-      update: jest.fn().mockResolvedValue(RESULT),
-      remove: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<VehiclesService>;
+      create: vi.fn().mockResolvedValue(RESULT),
+      findAll: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findOne: vi.fn().mockResolvedValue(RESULT),
+      update: vi.fn().mockResolvedValue(RESULT),
+      remove: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Mocked<VehiclesService>;
     controller = new VehiclesController(service);
   });
 

@@ -18,9 +18,10 @@ import {
   SuspendServiceDto,
   UpdateServiceDto,
 } from './dto';
+import type { Mocked } from 'vitest';
 
 describe('ServicesController', () => {
-  let service: jest.Mocked<ServicesService>;
+  let service: Mocked<ServicesService>;
   let controller: ServicesController;
 
   const RESULT = { id: 'svc-1' };
@@ -30,26 +31,26 @@ describe('ServicesController', () => {
 
   beforeEach(() => {
     service = {
-      create: jest.fn().mockResolvedValue(RESULT),
-      findAll: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findOne: jest.fn().mockResolvedValue(RESULT),
-      update: jest.fn().mockResolvedValue(RESULT),
-      assignCrew: jest.fn().mockResolvedValue(RESULT),
-      getAssignmentConflicts: jest.fn().mockResolvedValue({ conflicts: [] }),
-      addDelayNotice: jest.fn().mockResolvedValue(RESULT),
-      findDelayNotices: jest.fn().mockResolvedValue([RESULT]),
-      start: jest.fn().mockResolvedValue(RESULT),
-      suspend: jest.fn().mockResolvedValue(RESULT),
-      resume: jest.fn().mockResolvedValue(RESULT),
-      complete: jest.fn().mockResolvedValue(RESULT),
-      cancel: jest.fn().mockResolvedValue(RESULT),
-      reschedule: jest.fn().mockResolvedValue(RESULT),
-      confirmReschedule: jest.fn().mockResolvedValue(RESULT),
-      addZoneResult: jest.fn().mockResolvedValue(RESULT),
-      findZoneResults: jest.fn().mockResolvedValue([RESULT]),
-      addCollectionRecord: jest.fn().mockResolvedValue(RESULT),
-      findCollectionRecords: jest.fn().mockResolvedValue([RESULT]),
-    } as unknown as jest.Mocked<ServicesService>;
+      create: vi.fn().mockResolvedValue(RESULT),
+      findAll: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findOne: vi.fn().mockResolvedValue(RESULT),
+      update: vi.fn().mockResolvedValue(RESULT),
+      assignCrew: vi.fn().mockResolvedValue(RESULT),
+      getAssignmentConflicts: vi.fn().mockResolvedValue({ conflicts: [] }),
+      addDelayNotice: vi.fn().mockResolvedValue(RESULT),
+      findDelayNotices: vi.fn().mockResolvedValue([RESULT]),
+      start: vi.fn().mockResolvedValue(RESULT),
+      suspend: vi.fn().mockResolvedValue(RESULT),
+      resume: vi.fn().mockResolvedValue(RESULT),
+      complete: vi.fn().mockResolvedValue(RESULT),
+      cancel: vi.fn().mockResolvedValue(RESULT),
+      reschedule: vi.fn().mockResolvedValue(RESULT),
+      confirmReschedule: vi.fn().mockResolvedValue(RESULT),
+      addZoneResult: vi.fn().mockResolvedValue(RESULT),
+      findZoneResults: vi.fn().mockResolvedValue([RESULT]),
+      addCollectionRecord: vi.fn().mockResolvedValue(RESULT),
+      findCollectionRecords: vi.fn().mockResolvedValue([RESULT]),
+    } as unknown as Mocked<ServicesService>;
     controller = new ServicesController(service);
   });
 

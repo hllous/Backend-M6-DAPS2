@@ -9,7 +9,7 @@ describe('securityHeaders', () => {
         headers[k] = v;
       },
     } as unknown as Response;
-    const next = jest.fn();
+    const next = vi.fn();
     securityHeaders({ path } as Request, res, next);
     return { headers, next };
   };

@@ -5,6 +5,7 @@ import { ACTOR } from '../../common/audit/audit-test-actor';
 import { AuditService } from '../../common/audit/audit.service';
 import { ZonesService } from './zones.service';
 import { NeighborhoodsCatalogService } from '../../core/neighborhoods-catalog.service';
+import type { Mock } from 'vitest';
 
 const ID = '33333333-3333-3333-3333-333333333333';
 const COMUNA = '44444444-4444-4444-4444-444444444444';
@@ -13,9 +14,9 @@ const B2 = 'ffffffff-7425-40de-944b-e07fc1f90ae7';
 
 describe('ZonesService', () => {
   let prisma: any;
-  let audit: { record: jest.Mock };
+  let audit: { record: Mock };
   let service: ZonesService;
-  let catalog: { disponible: boolean; existe: jest.Mock; list: jest.Mock };
+  let catalog: { disponible: boolean; existe: Mock; list: Mock };
 
   const zona = (over: Record<string, unknown> = {}) => ({
     id: ID,
@@ -31,27 +32,27 @@ describe('ZonesService', () => {
 
   beforeEach(() => {
     prisma = {
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
       zone: {
-        create: jest.fn().mockResolvedValue(zona()),
-        findUnique: jest.fn().mockResolvedValue(zona({ neighborhoods: [] })),
-        findMany: jest.fn().mockResolvedValue([zona()]),
-        count: jest.fn().mockResolvedValue(1),
-        update: jest.fn().mockResolvedValue(zona()),
+        create: vi.fn().mockResolvedValue(zona()),
+        findUnique: vi.fn().mockResolvedValue(zona({ neighborhoods: [] })),
+        findMany: vi.fn().mockResolvedValue([zona()]),
+        count: vi.fn().mockResolvedValue(1),
+        update: vi.fn().mockResolvedValue(zona()),
       },
-      commune: { findUnique: jest.fn().mockResolvedValue({ id: COMUNA }) },
+      commune: { findUnique: vi.fn().mockResolvedValue({ id: COMUNA }) },
       zoneNeighborhood: {
-        createMany: jest.fn().mockResolvedValue({ count: 2 }),
-        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        createMany: vi.fn().mockResolvedValue({ count: 2 }),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     };
     // Por defecto sin catálogo: es lo que pasa sin CORE_API_URL.
     catalog = {
       disponible: false,
-      existe: jest.fn((id: string) => id.startsWith('b-')),
-      list: jest.fn().mockReturnValue([]),
+      existe: vi.fn((id: string) => id.startsWith('b-')),
+      list: vi.fn().mockReturnValue([]),
     };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     service = new ZonesService(
       prisma as unknown as PrismaService,
       catalog as unknown as NeighborhoodsCatalogService,

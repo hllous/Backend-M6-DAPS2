@@ -8,14 +8,14 @@ const ID = '3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b';
 
 describe('AuditService', () => {
   const prisma = {
-    domainAuditLog: { findMany: jest.fn(), count: jest.fn() },
+    domainAuditLog: { findMany: vi.fn(), count: vi.fn() },
   };
   const service = new AuditService(prisma as unknown as PrismaService);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('record escribe en el tx con el actor del token y nulos donde no hay estado', async () => {
-    const tx = { domainAuditLog: { create: jest.fn() } };
+    const tx = { domainAuditLog: { create: vi.fn() } };
     await service.record(tx as never, {
       entityType: 'CREW',
       entityId: ID,
@@ -38,7 +38,7 @@ describe('AuditService', () => {
   });
 
   it('record guarda estados y recorta la nota', async () => {
-    const tx = { domainAuditLog: { create: jest.fn() } };
+    const tx = { domainAuditLog: { create: vi.fn() } };
     await service.record(tx as never, {
       entityType: 'CONTAINER',
       entityId: ID,

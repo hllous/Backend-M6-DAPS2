@@ -11,7 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { M6Role, OutboxEventStatus } from '@prisma/client';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { listRoutes, RouteRoles } from '../src/auth/route-roles';
 import { configureApp } from '../src/configure-app';
@@ -52,8 +52,8 @@ export function bearer(token: string): { Authorization: string } {
 
 /**
  * El dispatcher real barre el outbox cada 10 s con `@Interval`. En un e2e eso
- * son consultas contra la base durante toda la corrida y un timer que Jest ve
- * como handle abierto, además de vaciar la cola que las suites verifican.
+ * son consultas contra la base durante toda la corrida y un timer que deja el
+ * proceso abierto, además de vaciar la cola que las suites verifican.
  */
 const outboxDispatcherStub: Pick<OutboxDispatcher, 'dispatchPending' | 'dispatchOne' | 'stats'> = {
   dispatchPending: async () => undefined,

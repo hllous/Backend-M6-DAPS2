@@ -7,6 +7,7 @@ import { globalPipes } from '../../configure-app';
 import { InboxService } from '../inbox/inbox.service';
 import { IngestEventDto } from '../inbox/ingest-event.dto';
 import { TicketsConsumer } from './tickets.consumer';
+import type { Mock } from 'vitest';
 
 /**
  * El otro sentido del contrato con M2: sobres de ejemplo (copiados del paquete
@@ -29,47 +30,47 @@ describe('ejemplos de M2 v1.78 contra nuestro inbox', () => {
   const ticketCreated = archivos('ticketCreated');
   let prisma: any;
   let inbox: InboxService;
-  let outbox: { enqueue: jest.Mock; enqueueMany: jest.Mock };
+  let outbox: { enqueue: Mock; enqueueMany: Mock };
 
   beforeAll(() => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   });
-  afterAll(() => jest.restoreAllMocks());
+  afterAll(() => vi.restoreAllMocks());
 
   beforeEach(() => {
     prisma = {
       environmentalReport: {
-        findFirst: jest.fn().mockResolvedValue(null),
-        findMany: jest.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
-        create: jest.fn().mockResolvedValue({ id: 'r1', reportType: 'OTHER' }),
-        update: jest.fn().mockResolvedValue({}),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
+        create: vi.fn().mockResolvedValue({ id: 'r1', reportType: 'OTHER' }),
+        update: vi.fn().mockResolvedValue({}),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       service: {
-        findMany: jest.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findMany: vi.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
       ticketM2State: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        upsert: jest.fn().mockResolvedValue({}),
+        findUnique: vi.fn().mockResolvedValue(null),
+        upsert: vi.fn().mockResolvedValue({}),
       },
       inboxEvent: {
-        create: jest.fn().mockResolvedValue({}),
-        update: jest.fn().mockResolvedValue({}),
+        create: vi.fn().mockResolvedValue({}),
+        update: vi.fn().mockResolvedValue({}),
       },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
     outbox = {
-      enqueue: jest.fn().mockResolvedValue(undefined),
-      enqueueMany: jest.fn().mockResolvedValue(undefined),
+      enqueue: vi.fn().mockResolvedValue(undefined),
+      enqueueMany: vi.fn().mockResolvedValue(undefined),
     };
     new TicketsConsumer(
       prisma as unknown as PrismaService,
       inbox,
       outbox as never,
-      { record: jest.fn() } as unknown as AuditService,
+      { record: vi.fn() } as unknown as AuditService,
     ).onModuleInit();
   });
 

@@ -75,8 +75,8 @@ describe('validación del payload en el inbox', () => {
   beforeEach(() => {
     prisma = {
       inboxEvent: {
-        create: jest.fn().mockResolvedValue({}),
-        update: jest.fn().mockResolvedValue({}),
+        create: vi.fn().mockResolvedValue({}),
+        update: vi.fn().mockResolvedValue({}),
       },
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
@@ -84,17 +84,17 @@ describe('validación del payload en el inbox', () => {
     // Los handlers reales no se ejecutan acá: se reemplazan por stubs que
     // conservan la validación registrada.
     for (const c of [
-      new TicketsConsumer(p, inbox, {} as never, { record: jest.fn() } as unknown as AuditService),
-      new OutboundResponsesConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
-      new SanctionsConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
-      new WeatherConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
+      new TicketsConsumer(p, inbox, {} as never, { record: vi.fn() } as unknown as AuditService),
+      new OutboundResponsesConsumer(p, inbox, { record: vi.fn() } as unknown as AuditService),
+      new SanctionsConsumer(p, inbox, { record: vi.fn() } as unknown as AuditService),
+      new WeatherConsumer(p, inbox, { record: vi.fn() } as unknown as AuditService),
     ]) {
       c.onModuleInit();
     }
     (inbox as unknown as { handlers: Map<string, unknown> }).handlers.forEach((_, k) =>
       (inbox as unknown as { handlers: Map<string, unknown> }).handlers.set(
         k,
-        jest.fn().mockResolvedValue(undefined),
+        vi.fn().mockResolvedValue(undefined),
       ),
     );
   });
@@ -201,8 +201,8 @@ describe('validación del payload en el inbox', () => {
   });
 
   it('si validate lanza, el evento se procesa y queda el log de error', async () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
-    const handler = jest.fn().mockResolvedValue(undefined);
+    const error = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const handler = vi.fn().mockResolvedValue(undefined);
     inbox.register('eventoRoto', handler, {
       validate: () => {
         throw new Error('bug del validador');

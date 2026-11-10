@@ -10,6 +10,7 @@ import {
   ReportStatusChangeDto,
   RequestInformationDto,
 } from './dto';
+import type { Mocked } from 'vitest';
 
 const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
@@ -19,20 +20,20 @@ const USER = {
 } as unknown as AuthenticatedUser;
 
 describe('EnvironmentalReportsController', () => {
-  let service: jest.Mocked<EnvironmentalReportsService>;
+  let service: Mocked<EnvironmentalReportsService>;
   let controller: EnvironmentalReportsController;
 
   beforeEach(() => {
     service = {
-      create: jest.fn().mockResolvedValue(RESULT),
-      findAll: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findOne: jest.fn().mockResolvedValue(RESULT),
-      startReview: jest.fn().mockResolvedValue(RESULT),
-      forward: jest.fn().mockResolvedValue(RESULT),
-      dismiss: jest.fn().mockResolvedValue(RESULT),
-      close: jest.fn().mockResolvedValue(RESULT),
-      requestInformation: jest.fn().mockResolvedValue(RESULT),
-    } as unknown as jest.Mocked<EnvironmentalReportsService>;
+      create: vi.fn().mockResolvedValue(RESULT),
+      findAll: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findOne: vi.fn().mockResolvedValue(RESULT),
+      startReview: vi.fn().mockResolvedValue(RESULT),
+      forward: vi.fn().mockResolvedValue(RESULT),
+      dismiss: vi.fn().mockResolvedValue(RESULT),
+      close: vi.fn().mockResolvedValue(RESULT),
+      requestInformation: vi.fn().mockResolvedValue(RESULT),
+    } as unknown as Mocked<EnvironmentalReportsService>;
     controller = new EnvironmentalReportsController(service);
   });
 

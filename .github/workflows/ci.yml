@@ -102,9 +102,14 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
+      # ts-jest chequeaba los tipos de los specs al correrlos; SWC (Vitest) no.
+      # Este paso conserva ese chequeo (#628).
+      - name: Typecheck specs
+        run: npm run typecheck
+
       # Con cobertura: el DoD exige >= 85% en los archivos tocados y hasta #152
-      # no lo verificaba nadie. Los umbrales viven en jest.coverageThreshold
-      # (package.json); si la cobertura baja, este paso falla y no se deploya.
+      # no lo verificaba nadie. Los umbrales viven en coverage.thresholds
+      # (vitest.config.ts); si la cobertura baja, este paso falla y no se deploya.
       - name: Run tests
         run: npm run test:cov
 
@@ -191,10 +196,10 @@ jobs:
       # Mezclar los dos reportes es una mejora posterior, no un requisito.
       # Sin RABBITMQ_URL en este paso: activaría el consumer en todas las suites.
       - name: Run e2e tests
-        run: npm run test:e2e -- --testPathIgnorePatterns rabbitmq-real
+        run: npm run test:e2e -- --exclude '**/*rabbitmq-real*'
 
       - name: Run e2e tests (RabbitMQ real)
-        run: npm run test:e2e -- rabbitmq-real --runInBand
+        run: npm run test:e2e -- rabbitmq-real --no-file-parallelism
         env:
           RABBITMQ_URL: amqp://guest:guest@localhost:5672
 

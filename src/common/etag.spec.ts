@@ -32,7 +32,7 @@ describe('etag', () => {
 
   describe('ETagInterceptor', () => {
     const run = async (body: unknown, params: Record<string, string>) => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const ctx = {
         switchToHttp: () => ({
           getRequest: () => ({ params }),

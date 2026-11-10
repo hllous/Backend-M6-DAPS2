@@ -3,6 +3,7 @@ import { ServiceMode, Shift } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ServiceFrequenciesService } from './service-frequencies.service';
 import { QueryServiceFrequenciesDto } from './dto/query-service-frequencies.dto';
+import type { Mock } from 'vitest';
 
 describe('ServiceFrequenciesService', () => {
   const id = '44444444-4444-4444-4444-444444444444';
@@ -11,15 +12,15 @@ describe('ServiceFrequenciesService', () => {
 
   let prisma: {
     serviceFrequency: {
-      create: jest.Mock;
-      findUnique: jest.Mock;
-      update: jest.Mock;
-      findMany: jest.Mock;
-      count: jest.Mock;
-      findFirst: jest.Mock;
+      create: Mock;
+      findUnique: Mock;
+      update: Mock;
+      findMany: Mock;
+      count: Mock;
+      findFirst: Mock;
     };
-    serviceType: { findUnique: jest.Mock };
-    route: { findUnique: jest.Mock };
+    serviceType: { findUnique: Mock };
+    route: { findUnique: Mock };
   };
   let service: ServiceFrequenciesService;
 
@@ -39,17 +40,17 @@ describe('ServiceFrequenciesService', () => {
   beforeEach(() => {
     prisma = {
       serviceFrequency: {
-        create: jest.fn().mockResolvedValue(row()),
-        findUnique: jest.fn().mockResolvedValue(row()),
-        update: jest.fn().mockResolvedValue(row()),
-        findMany: jest.fn().mockResolvedValue([row()]),
-        count: jest.fn().mockResolvedValue(1),
-        findFirst: jest.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue(row()),
+        findUnique: vi.fn().mockResolvedValue(row()),
+        update: vi.fn().mockResolvedValue(row()),
+        findMany: vi.fn().mockResolvedValue([row()]),
+        count: vi.fn().mockResolvedValue(1),
+        findFirst: vi.fn().mockResolvedValue(null),
       },
       serviceType: {
-        findUnique: jest.fn().mockResolvedValue({ id: serviceTypeId, mode: ServiceMode.ROUTE }),
+        findUnique: vi.fn().mockResolvedValue({ id: serviceTypeId, mode: ServiceMode.ROUTE }),
       },
-      route: { findUnique: jest.fn().mockResolvedValue({ id: routeId }) },
+      route: { findUnique: vi.fn().mockResolvedValue({ id: routeId }) },
     };
     service = new ServiceFrequenciesService(prisma as unknown as PrismaService);
   });
@@ -91,11 +92,11 @@ describe('ServiceFrequenciesService', () => {
   });
 
   it('la baja cierra la vigencia hoy argentino, no borra el registro', async () => {
-    jest.useFakeTimers({ now: new Date('2026-09-20T01:00:00.000Z') }); // 22:00 ART del 19
+    vi.useFakeTimers({ now: new Date('2026-09-20T01:00:00.000Z') }); // 22:00 ART del 19
     try {
       await service.remove(id);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
 
     const [[args]] = prisma.serviceFrequency.update.mock.calls;

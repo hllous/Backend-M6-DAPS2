@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ACTOR } from '../../common/audit/audit-test-actor';
 import { AuditService } from '../../common/audit/audit.service';
 import { RoutesService } from './routes.service';
+import type { Mock } from 'vitest';
 
 describe('RoutesService — secuencia de paradas', () => {
   const routeId = '33333333-3333-3333-3333-333333333333';
@@ -11,18 +12,18 @@ describe('RoutesService — secuencia de paradas', () => {
   const zoneB = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
   let prisma: {
-    route: { findUnique: jest.Mock; update: jest.Mock };
-    zone: { findMany: jest.Mock };
-    routeStop: { deleteMany: jest.Mock; createMany: jest.Mock };
-    $transaction: jest.Mock;
+    route: { findUnique: Mock; update: Mock };
+    zone: { findMany: Mock };
+    routeStop: { deleteMany: Mock; createMany: Mock };
+    $transaction: Mock;
   };
-  let audit: { record: jest.Mock };
+  let audit: { record: Mock };
   let service: RoutesService;
 
   beforeEach(() => {
     prisma = {
       route: {
-        findUnique: jest.fn().mockResolvedValue({
+        findUnique: vi.fn().mockResolvedValue({
           id: routeId,
           code: 'R-03',
           name: 'Troncal',
@@ -31,19 +32,19 @@ describe('RoutesService — secuencia de paradas', () => {
           updatedAt: new Date(),
           stops: [],
         }),
-        update: jest.fn().mockReturnValue('touch-op'),
+        update: vi.fn().mockReturnValue('touch-op'),
       },
       zone: {
         // Se comporta como el findMany real: devuelve solo los ids del `in`.
-        findMany: jest.fn(async (args) => args.where.id.in.map((id: string) => ({ id }))),
+        findMany: vi.fn(async (args) => args.where.id.in.map((id: string) => ({ id }))),
       },
       routeStop: {
-        deleteMany: jest.fn().mockReturnValue('delete-op'),
-        createMany: jest.fn().mockReturnValue('create-op'),
+        deleteMany: vi.fn().mockReturnValue('delete-op'),
+        createMany: vi.fn().mockReturnValue('create-op'),
       },
-      $transaction: jest.fn().mockResolvedValue([]),
+      $transaction: vi.fn().mockResolvedValue([]),
     };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     service = new RoutesService(
       prisma as unknown as PrismaService,
       audit as unknown as AuditService,
@@ -126,7 +127,7 @@ describe('RoutesService — CRUD', () => {
   const ID = '33333333-3333-3333-3333-333333333333';
 
   let prisma: any;
-  let audit: { record: jest.Mock };
+  let audit: { record: Mock };
   let service: RoutesService;
 
   const recorrido = (over: Record<string, unknown> = {}) => ({
@@ -141,16 +142,16 @@ describe('RoutesService — CRUD', () => {
 
   beforeEach(() => {
     prisma = {
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
       route: {
-        create: jest.fn().mockResolvedValue(recorrido()),
-        findUnique: jest.fn().mockResolvedValue(recorrido({ stops: [] })),
-        findMany: jest.fn().mockResolvedValue([recorrido()]),
-        count: jest.fn().mockResolvedValue(1),
-        update: jest.fn().mockResolvedValue(recorrido()),
+        create: vi.fn().mockResolvedValue(recorrido()),
+        findUnique: vi.fn().mockResolvedValue(recorrido({ stops: [] })),
+        findMany: vi.fn().mockResolvedValue([recorrido()]),
+        count: vi.fn().mockResolvedValue(1),
+        update: vi.fn().mockResolvedValue(recorrido()),
       },
     };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     service = new RoutesService(
       prisma as unknown as PrismaService,
       audit as unknown as AuditService,
