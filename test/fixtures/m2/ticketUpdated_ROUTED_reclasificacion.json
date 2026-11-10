@@ -1,0 +1,58 @@
+{
+  "eventId": "eb7d8b28-4d60-48ee-b7b0-d24d0321a760",
+  "eventType": "ticketUpdated",
+  "eventVersion": "1.0",
+  "occurredAt": "2026-10-08T11:10:02-03:00",
+  "sourceModule": "atencion-ciudadana",
+  "correlationId": "f80baa55-02b2-4cb0-bd51-d97c0c54e948",
+  "causationId": null,
+  "data": {
+    "ticketId": "550e8400-e29b-41d4-a716-446655440000",
+    "publicId": "TK-2026-000123",
+    "citizenId": "8f14e45f-ea5e-4e5d-bd3f-1c71f4f6a001",
+    "isAnonymous": false,
+    "responsibleAreaId": "M3",
+    "updateType": "ROUTED",
+    "currentStatus": "ROUTED",
+    "currentPriority": "HIGH",
+    "publicMessage": "El ticket fue derivado al área responsable.",
+    "details": {
+      "routing": {
+        "requestType": "Informar un bache",
+        "ticketType": "COMPLAINT",
+        "summary": "Bache profundo en la calzada",
+        "description": "Hay un bache de unos 40 cm de ancho frente al kiosco; los autos lo esquivan y es peligroso para motos.",
+        "formData": {
+          "profundidadCm": 12,
+          "afectaCarril": true,
+          "hayHerida": null
+        },
+        "location": {
+          "addressLine": "Av. Libertad 1240",
+          "street": "Av. Libertad",
+          "streetNumber": "1240",
+          "neighborhoodId": "d9428888-122b-4f4f-a8a4-78c1f23c6d01",
+          "reference": "Frente al kiosco, sobre la senda peatonal"
+        },
+        "resolutionDueAt": "2026-10-19T16:00:00-03:00",
+        "escalation": {
+          "active": false,
+          "reasonCode": null,
+          "escalatedAt": null
+        },
+        "category": "Calles, veredas e infraestructura urbana",
+        "subcategory": "Calles y Pavimento",
+        "reassignment": true
+      }
+    },
+    "attachments": [
+      {
+        "fileName": "bache.jpg",
+        "contentType": "image/jpeg",
+        "url": "https://help-center.municipalidad-uade.example/files/9a10?token=abc120",
+        "sizeBytes": 284510
+      }
+    ],
+    "updatedAt": "2026-10-08T11:10:00-03:00"
+  }
+}

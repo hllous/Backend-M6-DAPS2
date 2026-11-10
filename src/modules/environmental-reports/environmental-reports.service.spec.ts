@@ -11,7 +11,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { QueryEnvironmentalReportsDto, RequestInformationDto } from './dto';
-import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from '../../events/m2-contract.testing';
+import { erroresUpdateTicketStatus } from '../../events/update-ticket-status-schema.testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
 import { ConfigService } from '@nestjs/config';
@@ -926,7 +926,6 @@ describe('EnvironmentalReportsService', () => {
   // ─── Pedir información al vecino (#169) ─────────────
 
   describe('requestInformation', () => {
-    const itM2 = PAQUETE_M2_PRESENTE ? it : it.skip;
     const pedido = (over: Partial<RequestInformationDto> = {}): RequestInformationDto =>
       ({ message: 'Necesito una foto más del frente.', ...over }) as RequestInformationDto;
     const enRevision = (over: Partial<EnvironmentalReport> = {}) =>
@@ -1017,14 +1016,14 @@ describe('EnvironmentalReportsService', () => {
       expect(eventos[0].payload).not.toHaveProperty('internalMessage');
     });
 
-    itM2('con nota en blanco el payload sigue validando contra M2 v1.78', async () => {
+    it('con nota en blanco el payload sigue validando contra el schema', async () => {
       prisma.environmentalReport.findUnique.mockResolvedValue(
         enRevision({ ticketId: '550e8400-e29b-41d4-a716-446655440000' }),
       );
       await service.requestInformation(ID, pedido({ internalNote: '' }), ACTOR);
 
       const [, eventos] = outbox.enqueueMany.mock.calls[0];
-      expect(erroresM2UpdateTicketStatus(eventos[0].payload)).toEqual([]);
+      expect(erroresUpdateTicketStatus(eventos[0].payload)).toEqual([]);
     });
 
     it('404 si el expediente no existe', async () => {
@@ -1082,8 +1081,8 @@ describe('EnvironmentalReportsService', () => {
       await expect(service.requestInformation(ID, pedido(), ACTOR)).resolves.toBeDefined();
     });
 
-    itM2('el payload valida contra el paquete de M2 v1.78', async () => {
-      // M2 exige UUID de verdad en ticketId; el de los demás casos es un código de fantasía.
+    it('el payload valida contra el schema de updateTicketStatus', async () => {
+      // Con un ticketId con forma de UUID, el real de M2. Nuestro schema declara ticketId como string: no lo verifica.
       prisma.environmentalReport.findUnique.mockResolvedValue(
         enRevision({ ticketId: '550e8400-e29b-41d4-a716-446655440000' }),
       );
@@ -1093,7 +1092,7 @@ describe('EnvironmentalReportsService', () => {
         ACTOR,
       );
       const [, eventos] = outbox.enqueueMany.mock.calls[0];
-      expect(erroresM2UpdateTicketStatus(eventos[0].payload)).toEqual([]);
+      expect(erroresUpdateTicketStatus(eventos[0].payload)).toEqual([]);
     });
   });
 

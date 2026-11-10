@@ -1,6 +1,6 @@
 # Manual de usuario — Módulo 6: Ambiente e Higiene
 
-> Versión 0.5, revisión del 07/11/2026 (nombres y capturas de la interfaz actual, Issue BE #528) para la prueba del TP del 10/11. Parte del manual v0.1 (`docs/manual-de-usuario.md`, 20/10) y lo reorganiza **por tareas**: cada tarea se puede hacer siguiendo solo su sección. Se guarda en el repo de backend y se espeja en el de frontend (Issue FE #818, cerrado).
+> Versión 2.0 · 10/11/2026. Organizado **por tareas**: cada tarea se puede hacer siguiendo solo su sección. Se guarda en el repo de backend y se espeja en el de frontend (Issue FE #818, cerrado).
 >
 > **Marcas de verificación.** Los nombres de menús, botones y mensajes se contrastaron el 03/11/2026 con la aplicación **desplegada** (`https://m6-ambiente-higiene.vercel.app`), ingresando con el login real de M1 con siete cuentas: administración (10000), Oficina de Operaciones (10002), Oficina Ambiental (10004), auditoría (10007), responsable de cuadrilla (10009), integrante de cuadrilla (10010) e inspector (10011; solo se vio su lista de servicios). Qué se pudo y qué no se pudo verificar está en la sección 5. Las acciones que modifican datos (guardar, confirmar, iniciar, cancelar) **no se ejecutaron** durante esa verificación para no alterar los datos compartidos: de ellas se verificaron el botón, el formulario y sus textos, pero no el mensaje de éxito. Las capturas son de esa misma sesión (datos de demostración, sin contraseñas).
 

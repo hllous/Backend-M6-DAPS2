@@ -122,7 +122,7 @@
       "!main.ts",
       "!configure-app.ts",
       "!config/**",
-      "!events/m2-contract.testing.ts",
+      "!events/update-ticket-status-schema.testing.ts",
       "!prisma/**"
     ],
     "coverageThreshold": {

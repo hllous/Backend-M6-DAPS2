@@ -1,0 +1,45 @@
+{
+  "eventId": "c8e40e62-291b-4bbd-b9af-54659129f600",
+  "eventType": "ticketCreated",
+  "eventVersion": "1.0",
+  "occurredAt": "2026-10-06T18:40:02-03:00",
+  "sourceModule": "atencion-ciudadana",
+  "correlationId": "c3a8dd7c-8d58-47cd-bb58-fa66c74e462d",
+  "causationId": null,
+  "data": {
+    "ticketId": "3b241101-e2bb-4255-8caf-4136c566a962",
+    "publicId": "TK-2026-000131",
+    "citizenId": "8f14e45f-ea5e-4e5d-bd3f-1c71f4f6a001",
+    "isAnonymous": false,
+    "requestType": "Pozo con riesgo de colapso",
+    "category": "Infraestructura vial",
+    "subcategory": "Calzadas",
+    "ticketType": "COMPLAINT",
+    "summary": "Hundimiento de calzada junto a escuela",
+    "description": "Se hundió parte de la calzada en la puerta de la escuela; hay un hueco de más de un metro.",
+    "formData": {},
+    "status": "REGISTERED",
+    "priority": "CRITICAL",
+    "responsibleAreaId": "M3",
+    "location": {
+      "addressLine": "Mitre y San Martín",
+      "neighborhoodId": "d9428888-122b-4f4f-a8a4-78c1f23c6d01"
+    },
+    "resolutionDueAt": "2026-10-08T12:00:00-03:00",
+    "attachments": [
+      {
+        "fileName": "hundimiento-1.jpg",
+        "contentType": "image/jpeg",
+        "url": "https://help-center.municipalidad-uade.example/files/9a1f?token=abc123",
+        "sizeBytes": 412880
+      },
+      {
+        "fileName": "hundimiento-2.jpg",
+        "contentType": "image/jpeg",
+        "url": "https://help-center.municipalidad-uade.example/files/9a20?token=abc124",
+        "sizeBytes": 398113
+      }
+    ],
+    "createdAt": "2026-10-06T18:40:00-03:00"
+  }
+}

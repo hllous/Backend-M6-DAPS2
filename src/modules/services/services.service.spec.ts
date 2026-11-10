@@ -17,7 +17,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ServicesService } from './services.service';
 import { EnvironmentalInspectionsService } from '../environmental-inspections/environmental-inspections.service';
 import { ServiceTargetType } from './dto';
-import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from '../../events/m2-contract.testing';
+import { erroresUpdateTicketStatus } from '../../events/update-ticket-status-schema.testing';
 
 const USER_ID = '4242';
 
@@ -1372,15 +1372,14 @@ describe('ServicesService', () => {
       expect(hacia()[0]).not.toHaveProperty('details');
     });
 
-    // Se saltea con aviso si el paquete de M2 no está (no está versionado).
-    (PAQUETE_M2_PRESENTE ? it.each : it.skip.each)(['ROUTED', 'IN_PROGRESS'])(
-      'el aviso con el ticket en %s valida contra el paquete de M2 v1.78',
+    it.each(['ROUTED', 'IN_PROGRESS'])(
+      'el aviso con el ticket en %s valida contra el schema de updateTicketStatus',
       async (estado) => {
         conTicketEn(estado);
 
         await service.create(ticketDto, ACTOR);
 
-        expect(erroresM2UpdateTicketStatus(hacia()[0])).toEqual([]);
+        expect(erroresUpdateTicketStatus(hacia()[0])).toEqual([]);
       },
     );
 
