@@ -4,19 +4,29 @@ about: Algo no funciona como debería
 labels: bug
 ---
 
-## Qué pasa
+## Descripción del problema
 
-## Cómo reproducirlo
+<!-- Qué falla, en una o dos frases. El título debe decir el objetivo (ej. "Impedir registrar usuarios sin email"). -->
+
+## Comportamiento actual
+
+## Comportamiento esperado
+
+## Pasos para reproducir
 
 1.
 2.
+3.
 
-## Qué esperabas que pasara
+## Criterios de aceptación
+
+- [ ]
+- [ ]
 
 ## Entorno
 
 <!-- Local, Render o Vercel; rama o commit; rol con el que probaste. -->
 
-## Evidencia
+## Evidencia / Referencias
 
-<!-- Respuesta HTTP, logs (sin tokens ni secretos) o captura. -->
+<!-- Respuesta HTTP, logs (sin tokens ni secretos), capturas o enlaces. -->
