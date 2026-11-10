@@ -25,7 +25,7 @@
   "jsonReporter": {
     "fileName": "reports/mutation/mutation.json"
   },
-  "ignorePatterns": [".claude", ".playwright-mcp", ".agents", "reports", "docs"],
+  "ignorePatterns": [".claude", ".playwright-mcp", ".agents", "reports"],
   "concurrency": 3,
   "timeoutMS": 10000,
   "incremental": true,
