@@ -6,7 +6,7 @@ M6 gestiona los servicios urbanos y el control ambiental de la ciudad: recolecci
 
 ## Stack
 
-- **NestJS** + TypeScript + Node 22 LTS
+- **NestJS 12** + TypeScript 6 + Node 22 LTS
 - **PostgreSQL** + Prisma como ORM
 - **RabbitMQ** para eventos asincrónicos (el bus del Core, vía el exchange `muni.inbox`)
 - **Vitest** + Supertest para testing (cobertura mínima 85%)
@@ -100,7 +100,7 @@ npm run start:dev
 
 Requisitos:
 
-- Node.js 22 LTS o superior
+- Node.js 22.22.3 o superior (o 24.15+): el CLI de NestJS 12 (`nest build`, `nest start`) no arranca en releases anteriores de la 22. `engines` exige ese piso; el `dist/` ya compilado correría desde 22.12
 - PostgreSQL 15+ (o base gestionada tipo Neon)
 - RabbitMQ (el bus del Core, vía el exchange `muni.inbox`)
 

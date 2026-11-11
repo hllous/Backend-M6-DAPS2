@@ -75,11 +75,6 @@ export class InboxController {
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({
-    status: 403,
-    description: 'Solo M6_ADMIN puede inyectar eventos a mano',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 429,
     description: 'Demasiados eventos desde la misma dirección en el último minuto',
     type: ErrorResponseDto,
@@ -108,11 +103,6 @@ export class InboxController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Solo M6_ADMIN y M6_AUDITOR pueden ver el inbox',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findAll(
     @Query() query: QueryInboxDto,
@@ -139,11 +129,6 @@ export class InboxController {
     type: ErrorResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Solo M6_ADMIN puede ver el payload',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({ status: 404, description: 'No existe ese evento', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   async findOne(@Param('messageId') messageId: string): Promise<InboxEventDetailResponseDto> {

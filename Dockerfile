@@ -6,6 +6,9 @@
 # ─── Etapa 1: builder (compilación) ───────────────────────────
 FROM node:22-alpine AS builder
 
+# Sin telemetría de @scarf/scarf (postinstall de swagger-ui-dist).
+ENV SCARF_ANALYTICS=false
+
 WORKDIR /app
 
 # OpenSSL es requerido por el query engine de Prisma en Alpine (musl).
@@ -36,6 +39,7 @@ WORKDIR /app
 
 # Entorno de producción
 ENV NODE_ENV=production
+ENV SCARF_ANALYTICS=false
 
 # OpenSSL requerido por el query engine de Prisma en runtime.
 RUN apk add --no-cache openssl
