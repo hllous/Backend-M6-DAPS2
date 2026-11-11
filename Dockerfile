@@ -4,7 +4,7 @@
 # ──────────────────────────────────────────────────────────────
 
 # ─── Etapa 1: builder (compilación) ───────────────────────────
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Sin telemetría de @scarf/scarf (postinstall de swagger-ui-dist).
 ENV SCARF_ANALYTICS=false
@@ -33,7 +33,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # ─── Etapa 2: runner (imagen final, liviana) ──────────────────
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 
 WORKDIR /app
 

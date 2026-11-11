@@ -17,7 +17,7 @@ TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal d
 
 ## Comandos
 
-Node 22 (`.nvmrc`). Antes de dar algo por terminado: build, lint y tests en verde.
+Node 24 (`.nvmrc`). Antes de dar algo por terminado: build, lint y tests en verde.
 
 | Qué | Comando |
 |---|---|
