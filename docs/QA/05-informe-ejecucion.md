@@ -17,7 +17,7 @@
 | Compose en frío | `docker compose up -d --build` con volúmenes nuevos | Ver 2 |
 | CI de `develop` | Run de `CI` del commit `142e1a3` | [42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201) |
 | Newman y Schemathesis en el CI | Workflow `API tests`, job `api (newman + schemathesis)` | [42632174625](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174625) (push) y [42631657018](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42631657018) (PR) |
-| Mutation | Stryker (`npm run test:mutation`); línea base en el CI (2 h 26 min) y remedición local de 5 archivos (44 min), ambas **posteriores a R09** (ver 5.1) | 26 archivos de dominio: 71,22 % de línea base |
+| Mutation | Stryker (`npm run test:mutation`); línea base en el CI (2 h 26 min), remedición local de 5 archivos (44 min) y corrida en el CI tras el refuerzo (57 min), todas **posteriores a R09** (ver 5.1) | 26 archivos de dominio: 75,39 % en el CI (71,22 % antes del refuerzo) |
 | e2e con RabbitMQ real | `rabbitmq-real` en el job `e2e` del CI | En local se saltea sin `RABBITMQ_URL`; última corrida local: R08 (4 de 4) |
 
 Los **e2e se corrieron en local** contra una base descartable. Los logs no incluyen números por caso, solo los totales de Jest.
@@ -34,7 +34,7 @@ R09 salvo que se diga otra cosa. «Saltados» son tests que Jest no ejecutó; «
 | Newman (`test/api/`) | — | 455 requests | 763 assertions | 0 | — | Corre en el CI (job `api`: 2 min 27 s con Schemathesis) |
 | Schemathesis: esquema y sin 5xx | — | 4388 casos | 4388 | 0 | — | — |
 | Schemathesis: `status_code_conformance` (**bloqueante**) | — | 4384 casos | 3913 | 0 (exit 0) | 471 | — |
-| Mutation (Stryker, #617) | — | 26 archivos de dominio (5182 mutantes, 2142 no compilan y no cuentan) | 71,22 % global en el CI (2165 detectados) | — | — | 2 h 26 min en el CI; medición del 10-11/11/2026, **no es R09** (5.1) |
+| Mutation (Stryker, #617) | — | 26 archivos de dominio (5182 mutantes, 2142 no compilan y no cuentan) | 75,39 % global en el CI tras el refuerzo (2292 detectados); 71,22 % antes (2165) | — | — | 57 min 16 s en el CI con incremental (2 h 26 min la primera, sin cache); medición de noviembre de 2026, **no es R09** (5.1) |
 | Carga (k6) | — | 14 850 requests | p(95) 32,84 ms; 0,00 % de error | 0 | — | 5 min; ver 2.2 |
 | Seguridad dinámica (ZAP) | — | — | — | — | — | **No realizado** |
 | Seguridad estática: Trivy | — | — | — | — | — | **No realizado** |
@@ -156,7 +156,7 @@ El job `e2e` **no es check obligatorio** de la protección de ramas (`.github/br
 
 **Aserciones débiles.** `src/modules/services/services.service.spec.ts:875` verifica «se puede cancelar desde %s» solo con `resolves.toBeDefined()`: un `cancel()` que devolviera cualquier cosa pasaría. **No se corrigió.** Hay 25 usos de `toBeDefined()` o `toBeTruthy()` en los specs; solo revisamos el de la línea 875.
 
-**Mutation score (Stryker, #577 y #617).** `stryker.config.json` muta los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules`, con umbral `break: 60`. **Línea base en CI: 71,22 % global** (cumple el criterio de 60 %). Se reforzaron 5 archivos y 4 llegaron a 100 %; el detalle, la clasificación de lo que queda y las reglas que protegen los tests nuevos están en 5.1. El workflow `mutation.yml` corre a mano o los lunes.
+**Mutation score (Stryker, #577 y #617).** `stryker.config.json` muta los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules`, con umbral `break: 60`. **Score global vigente en CI: 75,39 %** (línea base previa al refuerzo: 71,22 %; cumple el criterio de 60 %). Se reforzaron 5 archivos y 4 llegaron a 100 %; el detalle, la clasificación de lo que queda y las reglas que protegen los tests nuevos están en 5.1. El workflow `mutation.yml` corre a mano o los lunes.
 
 **Mocks.** No encontramos por muestreo tests que mockeen la clase bajo prueba. Los unitarios mockean Prisma, así que prueban llamadas más que comportamiento de base; el comportamiento real lo cubren los 343 e2e.
 
@@ -197,15 +197,15 @@ Score por archivo de la línea base, de menor a mayor («No detectados» = Survi
 | `outbound-requests/street-closure-expiry.sweeper.ts` | 100,0 % | 43 | 0 | 0 | 43 |
 | `outbound-requests/outbound-requests.transitions.ts` | 100,0 % | 14 | 0 | 0 | 14 |
 
-**Qué se reforzó.** Los cinco archivos con peor score o más sobrevivientes (333 de los 875 no detectados; `services.service.ts` solo, 210). Cada uno se re-midió solo, en local (Windows, Node 24, Vitest, `concurrency: 5`, 44 min 44 s en total, sin incremental). **No es el score del CI:** Linux puede dar *Timeout* donde la máquina local da *Killed*; las cifras de abajo son comparables entre sí, no contra el 71,22 %. El global se confirma con una corrida en el CI tras el merge (pendiente).
+**Qué se reforzó.** Los cinco archivos con peor score o más sobrevivientes (333 de los 875 no detectados; `services.service.ts` solo, 210). Cada uno se re-midió solo, en local (Windows, Node 24, Vitest, `concurrency: 5`, 44 min 44 s en total, sin incremental). Después se corrió `mutation.yml` en el CI sobre `develop` con el refuerzo (run 43047378274, Linux, Node 24, 57 min 16 s con el cache incremental estrenado): **75,39 % global es el score vigente**; 71,22 % es el de antes del refuerzo (run 42913181516). Sobre 5182 mutantes: 2291 Killed, 1 Timeout, 697 Survived, 51 NoCoverage y 2142 CompileError (no cuentan); (2291 + 1) / (2291 + 1 + 697 + 51) = 75,39 %. La columna local y la del CI solo difieren en `services.service.ts`: en local 4 mutantes terminaron en *Timeout* (cuentan como detectados) y en el CI esos mismos 4 figuran como *Survived* (154 → 158 sobrevivientes); en los otros cuatro archivos coinciden exactamente.
 
-| Archivo | Antes (CI) | Después (local) | No detectados antes → después |
-|---|---:|---:|---:|
-| `environmental-reports/report-deadline.sweeper.ts` | 40,0 % | **100 %** (15 killed) | 9 → 0 |
-| `green-points/green-points.service.ts` | 52,6 % | **94,74 %** (90 killed, 5 survived) | 45 → 5 |
-| `citizen-portal/citizen-portal.service.ts` | 55,0 % | **100 %** (60 killed) | 27 → 0 |
-| `trees/trees.service.ts` | 60,7 % | **95,33 %** (102 killed, 5 survived) | 42 → 5 |
-| `services/services.service.ts` | 65,8 % | **74,27 %** (452 killed, 4 timeout, 154 survived, 4 nocoverage) | 210 → 158 |
+| Archivo | Antes (CI) | Después (local) | Después (CI) | No detectados antes → después |
+|---|---:|---:|---:|---:|
+| `environmental-reports/report-deadline.sweeper.ts` | 40,0 % | **100 %** (15 killed) | 100 % | 9 → 0 |
+| `green-points/green-points.service.ts` | 52,6 % | **94,74 %** (90 killed, 5 survived) | 94,74 % | 45 → 5 |
+| `citizen-portal/citizen-portal.service.ts` | 55,0 % | **100 %** (60 killed) | 100 % | 27 → 0 |
+| `trees/trees.service.ts` | 60,7 % | **95,33 %** (102 killed, 5 survived) | 95,33 % | 42 → 5 |
+| `services/services.service.ts` | 65,8 % | **74,27 %** (452 killed, 4 timeout, 154 survived, 4 nocoverage) | 73,62 % (452 killed, 158 survived, 4 nocoverage) | 210 → 158 |
 
 Los cinco juntos: **81,14 %** (723 de 891). Los cuatro archivos chicos se re-midieron después de recortar sus specs (14 min 7 s): los 10 sobrevivientes de `green-points` y `trees` son 6 textos de log de alta, cambio y baja y 4 `select: { id: true }` de la verificación de existencia, las dos categorías aceptadas de la tabla de abajo; antes del recorte los mataban tests que solo afirmaban esos textos. Los 154 sobrevivientes de `services.service.ts` son, por mutador: `StringLiteral` 66, `ConditionalExpression` 40, `ObjectLiteral` 20, `LogicalOperator` 8, `EqualityOperator` 6, `BlockStatement` 5, `BooleanLiteral` 5, `ArrayDeclaration` 4 y 1 de `ArithmeticOperator`, `ArrowFunction`, `MethodExpression` y `CallExpression`.
 
@@ -281,7 +281,7 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 |---|---|---|---|
 | Cobertura de líneas en dominio | ≥ 80 % | 99,16 % global; mínimo en `src/modules/*`: 95,77 % | **Sí** |
 | Cobertura de ramas en dominio | ≥ 70 % | 93,63 % global; mínimo en `src/modules/*`: 82,92 % | **Sí** |
-| Mutation score en dominio | ≥ 60 % | 71,22 % global en los 26 archivos de dominio (línea base en CI, #617; ver 5.1) | **Sí** |
+| Mutation score en dominio | ≥ 60 % | 75,39 % global en los 26 archivos de dominio (CI tras el refuerzo, #617, #647; antes 71,22 %; ver 5.1) | **Sí** |
 | Tests flaky | 0 (3 corridas idénticas) | 3 corridas idénticas en local (R08) y repetidas en el CI (ver 2.1) | **Sí** |
 | Pipeline | ≤ 15 min | 1 min 44 s; `API tests` 2 min 27 s | **Sí** |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` (23 más `rabbitmq-real`); los E2E de navegador viven en el repo del frontend | **Sí** |
@@ -311,7 +311,7 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 | 2 | Script k6 con 50 usuarios, 5 minutos y 3 `GET` críticos | **Hecho** (#585, #574): local, despliegue y escrituras |
 | 3 | Schemathesis contra `openapi.json` en el CI | **Hecho** (#583), solo `GET`; bloqueante desde #593 |
 | 4 | SonarCloud y Quality Gate | **NO HECHO** (pide admin) |
-| 5 | Stryker sobre el dominio completo | **Hecho** (#577, #617): línea base 71,22 %; quedan 21 archivos sin reforzar |
+| 5 | Stryker sobre el dominio completo | **Hecho** (#577, #617): 71,22 % → 75,39 % confirmado en el CI tras el refuerzo; quedan 21 archivos sin reforzar |
 | 6 | Correr la suite 3 veces seguidas | **Hecho** en local y en el CI; falta `--detectOpenHandles` |
 | 7 | Reemplazar las aserciones débiles (`services.service.spec.ts:875` y el resto) | **Sin hacer** |
 | 8 | Hacer obligatorio el job `e2e` en la protección de ramas | **NO HECHO** (pide admin; DEF-14) |

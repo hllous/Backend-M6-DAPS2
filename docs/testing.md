@@ -103,7 +103,7 @@ Workflow aparte, `.github/workflows/api-tests.yml` (no es check obligatorio): le
 
 ## Mutation testing (Stryker, #573, #577 y #617)
 
-`npm run test:mutation` (config en `stryker.config.json`, runner `@stryker-mutator/vitest-runner` con `vitest.config.ts`, checker TypeScript) muta los 26 `src/modules/**/*.service.ts`, `*.transitions.ts` y `*.sweeper.ts`; umbral `break: 60`. Reporte en `reports/mutation/` (ignorado por git). Duración: **2 h 26 min** completo en el CI (Linux, `concurrency: 3`); en local, 5 archivos tardaron 44 min. El workflow `.github/workflows/mutation.yml` corre solo a mano o semanal, no en cada push.
+`npm run test:mutation` (config en `stryker.config.json`, runner `@stryker-mutator/vitest-runner` con `vitest.config.ts`, checker TypeScript) muta los 26 `src/modules/**/*.service.ts`, `*.transitions.ts` y `*.sweeper.ts`; umbral `break: 60`. Reporte en `reports/mutation/` (ignorado por git). Duración en el CI (Linux, `concurrency: 3`): **57 min** con el cache incremental (corrida del 75,39 %); la primera, sin cache, tardó **2 h 26 min**. En local, 5 archivos tardaron 44 min. El workflow `.github/workflows/mutation.yml` corre solo a mano o semanal, no en cada push.
 
 En el workflow, el modo incremental de Stryker se conserva entre corridas con `actions/cache` (`reports/mutation/incremental.json`, una clave por run y se restaura la más reciente): la corrida semanal solo re-prueba los mutantes de lo que cambió.
 
@@ -111,4 +111,4 @@ En el workflow, el modo incremental de Stryker se conserva entre corridas con `a
 
 **Windows:** si Stryker termina con «No tests were executed», el `vitest.related` por defecto del runner no encontró los tests relacionados; se corre con `"vitest": { "configFile": "vitest.config.ts", "related": false }` en una copia de la config fuera del repo (`-c <copia>`). El CI de Linux no lo necesita.
 
-Resultados (línea base de CI 71,22 %, score por archivo, antes y después de los 5 archivos reforzados, lo que queda sin cubrir y por qué): [`QA/05-informe-ejecucion.md`](QA/05-informe-ejecucion.md) §5.1. Antecedente (#577): `outbound-requests.transitions.ts` y `street-closure-expiry.sweeper.ts` fueron los primeros en medirse, con 100 % tras sumar aserciones al log del sweeper.
+Resultados (global en CI 71,22 % → 75,39 % tras el refuerzo, score por archivo, antes y después de los 5 archivos reforzados, lo que queda sin cubrir y por qué): [`QA/05-informe-ejecucion.md`](QA/05-informe-ejecucion.md) §5.1. Antecedente (#577): `outbound-requests.transitions.ts` y `street-closure-expiry.sweeper.ts` fueron los primeros en medirse, con 100 % tras sumar aserciones al log del sweeper.

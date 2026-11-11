@@ -132,6 +132,6 @@ No omitimos nada conocido: estas pruebas **no se hicieron** y no se presentan co
 | OWASP ZAP baseline y activo autenticado | NO HECHO | No se corrió |
 | Trivy | NO HECHO | No se corrió |
 | Éxito por endpoint en los 91 endpoints restantes | NO HECHO | Hay caso de éxito en 61 de 152 operaciones; el resto está en `test/api/PENDIENTES.md` |
-| Mutation score: refuerzo de los 21 archivos restantes y confirmación del global en el CI | PARCIAL | Línea base de los 26 archivos de dominio: 71,22 % (cumple el 60 %); 5 archivos reforzados. Ver [`05`](05-informe-ejecucion.md) §5.1 |
+| Mutation score: refuerzo de los 21 archivos restantes | PARCIAL | Global de los 26 archivos de dominio confirmado en el CI: 71,22 % → 75,39 % tras reforzar 5 archivos (cumple el 60 %); quedan 21 sin reforzar. Ver [`05`](05-informe-ejecucion.md) §5.1 |
 
 El escaneo de secretos se hace con gitleaks (en cada PR y push, y sobre el historial del tag).
