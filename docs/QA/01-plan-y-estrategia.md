@@ -77,10 +77,10 @@
 | Cobertura de líneas en dominio | ≥ 80 % | 99,16 % global; mínimo en `src/modules/*`: 95,77 % | **Sí** |
 | Cobertura de ramas en dominio | ≥ 70 % | 93,63 % global; mínimo en `src/modules/*`: 82,92 % | **Sí** |
 | Mutation score en dominio | ≥ 60 % | 71,22 % global en los 26 archivos de dominio (línea base en CI, #617) | **Sí** |
-| HU del alcance ejecutadas | 100 % | Las HU con test del backend sí; 9 criterios solo-FE y 6 huecos no ([`03`](03-matriz-trazabilidad.md)) | **Parcial** |
-| Criterios de aceptación pasados | ≥ 95 %, sin fallos en HU `MUST` | 160 de 175 con test del backend pasan; 0 fallados; 15 sin ejecutar | **Parcial** |
+| HU del alcance ejecutadas | 100 % | Las HU con test del backend sí; 9 criterios solo-FE y 5 huecos no ([`03`](03-matriz-trazabilidad.md)) | **Parcial** |
+| Criterios de aceptación pasados | ≥ 95 %, sin fallos en HU `MUST` | 161 de 175 con test del backend pasan; 0 fallados; 14 sin ejecutar | **Parcial** |
 | Casos negativos o de borde | ≥ 40 % | 67,5 % (251 de 372) | **Sí** |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores con workaround | 0, 0 y **2 Mayores** (DEF-09 y DEF-13); DEF-09 sin workaround | **Sí** |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores con workaround | 0, 0 y **1 Mayor** (DEF-13, parcial: ZAP y Trivy sin hacer) | **Sí** |
 | Tests flaky | 0 (3 corridas idénticas) | 3 corridas idénticas en local y repetidas en el CI | **Sí** |
 | Pipeline | ≤ 15 min | 1 min 44 s (CI de `develop`) | **Sí** |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` en cada PR | **Cumple** |

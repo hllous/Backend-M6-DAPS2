@@ -372,7 +372,7 @@
     },
     "/events/inbox/{messageId}": {
       "get": {
-        "description": "Devuelve el evento tal como se guardó, con el payload recibido. Solo admin, porque el payload es de terceros y puede incluir datos personales.",
+        "description": "Devuelve el evento tal como se guardó, con el payload recibido. Solo admin, porque el payload es de terceros y puede incluir datos personales. Los payloads con datos Tier 2 (ADR-005: `ticketUpdated` con la identidad del denunciante, `commercialFineGenerated` y `closureUpdate` con la resolución de M4) dejan una fila READ en GET /audit con el actor del token: sobre el expediente o la resolución si existen, si no sobre el evento (`INBOX_EVENT`). Si esa fila no se puede escribir responde 500 y no entrega el payload.",
         "operationId": "InboxController_findOne",
         "parameters": [
           {
@@ -677,7 +677,7 @@
     },
     "/events/outbox/{id}": {
       "get": {
-        "description": "Devuelve el evento completo: el payload tal como se publica y los reintentos manuales que se le hicieron (quién, cuándo y cómo estaba antes). Solo admin, porque el payload puede incluir datos personales.",
+        "description": "Devuelve el evento completo: el payload tal como se publica y los reintentos manuales que se le hicieron (quién, cuándo y cómo estaba antes). Solo admin, porque el payload puede incluir datos personales. El de `environmentalViolationDetected` es el acta (dato Tier 2, ADR-005): esa lectura deja una fila READ sobre el acta en GET /audit con el actor del token y, si no se puede escribir, responde 500 sin entregar el payload.",
         "operationId": "OutboxController_findOne",
         "parameters": [
           {
@@ -1001,7 +1001,8 @@
                 "ZONE",
                 "VEHICLE",
                 "ROUTE",
-                "SANCTION_OUTCOME"
+                "SANCTION_OUTCOME",
+                "INBOX_EVENT"
               ]
             }
           },
@@ -13296,7 +13297,7 @@
         ]
       },
       "get": {
-        "description": "El acta emitida, con su número correlativo y el conteo de reincidencia. Si la inspección existe pero todavía no tiene acta responde 200 con el JSON literal null, no 404.",
+        "description": "El acta emitida, con su número correlativo y el conteo de reincidencia. Si la inspección existe pero todavía no tiene acta responde 200 con el JSON literal null, no 404. Acta y resolución son datos Tier 2 (ADR-005): cada lectura que las entrega deja una fila READ por recurso en GET /audit, con el actor del token y sin contenido. Si esa fila no se puede escribir responde 500 y no entrega el acta.",
         "operationId": "EnvironmentalInspectionsController_findNotice",
         "parameters": [
           {
@@ -18244,7 +18245,8 @@
               "ZONE",
               "VEHICLE",
               "ROUTE",
-              "SANCTION_OUTCOME"
+              "SANCTION_OUTCOME",
+              "INBOX_EVENT"
             ],
             "example": "CONTAINER"
           },

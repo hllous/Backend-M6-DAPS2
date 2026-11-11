@@ -328,7 +328,7 @@
 | **CA-HU31-7** (Alternativo) llega por segunda vez → se registra como duplicate, sin volver a aplicar el efecto | CP-272 | `inbox.e2e-spec.ts` › «descarta el mismo eventId sin volver a aplicarlo» | Pasó | — |
 | **CA-HU31-8** (Error) llega al inbox → 400 con qué corregir, sin efecto ni fila; la DLQ es del Core (decisión documentada) | CP-273 | `inbox.e2e-spec.ts` › «rechaza con 400 el payload inválido y no guarda la fila»<br>`inbox-validation.spec.ts` › «el 400 no vuelca el contenido recibido» | Pasó | — |
 | **CA-HU31-9** (Error) se procesa con éxito o falla → ningún log contiene el token, secretos ni datos personales en claro; el LoggingInterceptor registra solo método, URL, estado y duración | CP-274, CP-347 | `logging.interceptor.spec.ts` › «deja pasar la respuesta y loguea método, url y status»<br>`roles.guard.spec.ts` › «loguea la denegación con usuario, ruta y roles requeridos, sin token»<br>(+2 más) | Pasó | DEF-22 (cerrado, #581): los logs registraban el `access_token` de la query |
-| **CA-HU31-10** (Error) las lee → se registra quién, cuándo y qué recurso consultó, sin copiar el contenido | CP-275 | **HUECO** sin test: NO CUMPLE: la tabla de auditoría (GET /audit) registra escrituras y transiciones; no audita lecturas (docs/api/endpoints.md, sección audit). Requerimiento de producción en ADR-005. | No ejecutado (sin test automatizado) | Limitación conocida: no se auditan las lecturas de datos Tier 2 (Trello SEC-D02, ADR-005); DEF-09 (abierto) |
+| **CA-HU31-10** (Error) las lee → se registra quién, cuándo y qué recurso consultó, sin copiar el contenido | CP-275 | `src/common/audit/audit.service.spec.ts` › «recordRead deja una fila READ por recurso, sin estados ni nota»<br>`src/common/audit/audit.service.spec.ts` › «recordRead propaga la falla: sin auditoría no hay lectura»<br>`environmental-inspections.service.spec.ts` › «findNotice falla cerrado si no se puede auditar la lectura»<br>`outbox-admin.service.spec.ts` › «environmentalViolationDetected audita la lectura sobre el acta del payload (#643)»<br>`inbox-admin.service.spec.ts` › «un evento de M4 se audita sobre la resolución del acta»<br>`environmental-flow.e2e-spec.ts` › «leer el acta con su resolución deja una fila READ por recurso, con el actor y sin contenido (#643)» | Pasó | Cerrado con #643 (DEF-09): `AuditService.recordRead` en los tres `GET` con datos Tier 2; `GET /audit` no se audita a sí mismo (riesgo aceptado, `entidades/auditoria.md`) |
 | **CA-HU31-11** (Falla externa) corre el dispatcher → la fila queda FAILED con lastError y deja de barrerse, y solo M6_ADMIN la reencola con retry, con auditoría del actor; la DLQ y el backoff del reintento de entrada s… | CP-276 | `outbox-dispatcher.service.spec.ts` › «al agotar los intentos la marca FAILED y deja de tomarla»<br>`outbox-retry.e2e-spec.ts` › «FAILED → retry → PENDING → el dispatcher lo publica → SENT, y queda auditado» | Pasó (corregido: ACT-11) | — |
 | **CA-HU31-12** (Alternativo) se ejecuta → queda una fila de auditoría de solo agregado con el actor del token, el estado de origen y destino y el motivo que el flujo ya pedía, en la misma transacción; una transición … | CP-331, CP-332, CP-333, CP-334 | `audit.e2e-spec.ts` › «cada transición del contenedor deja una fila con el actor del token»<br>`audit.service.spec.ts` › «record guarda estados y recorta la nota»<br>(+3 más) | Pasó (corregido: ACT-12) | — |
 
@@ -356,10 +356,10 @@ Contado con un script que lee las filas de esta matriz (un criterio cuenta como 
 
 - HU con criterios: 33. Criterios: 175. Casos: 372 (334 iniciales, CP-335 a CP-348 y CP-349 a CP-372, estos últimos sin criterio propio; ver [04-especificacion-casos.md](04-especificacion-casos.md)). Los 348 anteriores cubren los 175 criterios; los 24 nuevos no cambian ese conteo.
 - Todas las HU y todos los criterios tienen al menos un caso (175 de 175).
-- Criterios con al menos un test automatizado del backend verificado: **160** (91,4 %). Dos de ellos son **parciales** (CA-HU24-1, solo el consumo contra RabbitMQ real; ver «Cobertura parcial declarada»).
+- Criterios con al menos un test automatizado del backend verificado: **161** (92,0 %). Dos de ellos son **parciales** (CA-HU24-1, solo el consumo contra RabbitMQ real; ver «Cobertura parcial declarada»).
 - Criterios cubiertos solo por un test del frontend (sin verificar su contenido): **9** (5,1 %).
-- Criterios sin test automatizado (**huecos**): **6** (3,4 %): CA-HU01-3, CA-HU10-2, CA-HU24-2, CA-HU31-10, CA-HU33-1 y CA-HU33-4. Los dos últimos se midieron a mano (ver su resultado) pero no son un test.
-- **Resultado:** de los 160 criterios con test del backend, los 160 tienen el resultado **Pasó** (los tests citados existen por nombre y la corrida completa no tuvo ningún fallo). No hay criterios fallados ni bloqueados. Los 9 «solo FE» y los 6 huecos no se ejecutaron en esta corrida.
+- Criterios sin test automatizado (**huecos**): **5** (2,9 %): CA-HU01-3, CA-HU10-2, CA-HU24-2, CA-HU33-1 y CA-HU33-4. Los dos últimos se midieron a mano (ver su resultado) pero no son un test.
+- **Resultado:** de los 161 criterios con test del backend, los 161 tienen el resultado **Pasó** (los tests citados existen por nombre y la corrida completa no tuvo ningún fallo). No hay criterios fallados ni bloqueados. Los 9 «solo FE» y los 5 huecos no se ejecutaron en esta corrida.
 
 | HU | Criterios | Con test del backend | Solo FE | Huecos |
 |---|---|---|---|---|
@@ -393,10 +393,10 @@ Contado con un script que lee las filas de esta matriz (un criterio cuenta como 
 | HU-28 | 6 | 6 | 0 | 0 |
 | HU-29 | 7 | 7 | 0 | 0 |
 | HU-30 | 4 | 2 | 2 | 0 |
-| HU-31 | 12 | 11 | 0 | 1 |
+| HU-31 | 12 | 12 | 0 | 0 |
 | HU-32 | 4 | 3 | 1 | 0 |
 | HU-33 | 4 | 2 | 0 | 2 |
-| **Total** | **175** | **160** | **9** | **6** |
+| **Total** | **175** | **161** | **9** | **5** |
 
 ## Correcciones posteriores a las HU
 
@@ -481,7 +481,6 @@ Criterios contados como cubiertos por tener al menos un test del backend, pero c
 | CA-HU26-3 | Solo FE | se muestra el día de Argentina (UTC-3), no el de UTC | Verificar el contenido del test del frontend o sumar uno de backend |
 | CA-HU30-3 | Solo FE | el BFF reintenta una vez con refresh y, si falla, redirige al login con el aviso de sesión vencida | Verificar el contenido del test del frontend o sumar uno de backend |
 | CA-HU30-4 | Solo FE | Fail closed de FE #800 pendiente. | Verificar el contenido del test del frontend o sumar uno de backend |
-| CA-HU31-10 | Hueco | NO CUMPLE: la tabla de auditoría (GET /audit) registra escrituras y transiciones; no audita lecturas (docs/api/endpoints.md, sección audit). Requerimiento de producción en ADR-005. DEF-09 abierto | Documentar como limitación conocida en el registro de defectos |
 | CA-HU32-1 | Solo FE | no hay violaciones críticas de accesibilidad | Verificar el contenido del test del frontend o sumar uno de backend |
 | CA-HU33-1 | Hueco, medido a mano | Es la propia ejecución del job `e2e` del CI. Se corrió `npm run test:e2e` en local (312 tests pasan, 3 corridas). No es un test | Aceptar como medición manual con evidencia |
 | CA-HU33-4 | Hueco, medido a mano | Tres corridas seguidas idénticas de `npm test` y `npm run test:e2e`, en local y repetidas en el CI (ver [05-informe-ejecucion.md](05-informe-ejecucion.md), sección 2.1). El DEF-24 ([#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554), e2e intermitente) se cerró por decisión del equipo sin causa confirmada, y tres corridas iguales no prueban que no exista | Reabrir DEF-24 si vuelve a aparecer |

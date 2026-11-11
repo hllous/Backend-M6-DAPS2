@@ -431,7 +431,7 @@ Existe para que el listado se pueda pintar por riesgo sin pedir los relevamiento
 | POST   | `/events/inbox`    | Recibe un sobre y lo despacha al handler que corresponda. Devuelve `processed`, `duplicate`, `ignored` o `failed`. Acepta `occuredAt` (typo de M1 v3.0) como alias deprecado de `occurredAt`: si vienen los dos manda `occurredAt`, y el alias también debe ser ISO 8601. 400 si `occurredAt` no es ISO 8601 (o `occuredAt`), si `correlationId` o `causationId` (este puede ir `null`) no son UUID, si `eventId`, `eventType`, `sourceModule` o `eventVersion` pasan su tope, si `sourceModule` trae algo que no sea letras, números, `-` o `_`, o si el `data` de un evento con handler no trae sus campos obligatorios (no se guarda; ver [consumidos](../eventos/consumidos/README.md)) |
 | GET    | `/events/handlers` | Los tipos de evento con handler registrado                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | GET    | `/events/inbox`    | Listado paginado de lo recibido (`M6_ADMIN`, `M6_AUDITOR`), del más reciente al más viejo por `receivedAt`, para la pantalla Eventos (pestaña Eventos recibidos). Filtros: `status` (`processed`: con `processedAt`; `failed`: sin `processedAt` y con `error`; `pending`: ninguno de los dos), `eventType`, `sourceModule`, `from`/`to` (días argentinos inclusivos sobre `receivedAt`; 400 si `from` > `to`). Trae `messageId`, `eventType`, `sourceModule`, `status`, fechas, `correlationId` y `error` (máx. 500 caracteres). **No trae el `payload`**: es de terceros y puede incluir datos personales |
-| GET    | `/events/inbox/:messageId` | Detalle con el `payload` recibido (`M6_ADMIN`). 404 si no existe |
+| GET    | `/events/inbox/:messageId` | Detalle con el `payload` recibido (`M6_ADMIN`). 404 si no existe. Dato Tier 2 (#643): leer un `ticketUpdated` no redactado (identidad del denunciante) o un `commercialFineGenerated`/`closureUpdate` (resolución de M4) deja una fila `READ` en `GET /audit`: `ENVIRONMENTAL_REPORT` del ticket o `SANCTION_OUTCOME` del acta si existen, si no `INBOX_EVENT` con el `id` UUID de la fila del inbox (no el `messageId`); si no se puede auditar, `500` y no se entrega |
 
 **La idempotencia es por `eventId`** y vive en el inbox, no en cada handler: un mensaje ya procesado (o en curso) se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. La decide el `@unique` de `InboxEvent.messageId`, no una consulta previa que podría correr en paralelo con otra igual.
 
@@ -450,7 +450,7 @@ Contraparte de `POST /events/inbox`: sin entrar a la base se ve qué salió, qu�
 | Método | Ruta                          | Roles                | Qué hace |
 | ------ | ----------------------------- | -------------------- | -------- |
 | GET    | `/events/outbox`              | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más nuevo al más viejo. Filtros: `status` (`PENDING`/`SENT`/`FAILED`), `eventType`, `from`/`to` (días argentinos inclusivos sobre `occurredAt`; 400 si `from` > `to`). **No trae el `payload`**: puede incluir datos del vecino |
-| GET    | `/events/outbox/:id`          | `M6_ADMIN`           | Detalle con el `payload` y los reintentos manuales que se le hicieron. 404 si no existe |
+| GET    | `/events/outbox/:id`          | `M6_ADMIN`           | Detalle con el `payload` y los reintentos manuales que se le hicieron. 404 si no existe. Dato Tier 2 (#643): leer un `environmentalViolationDetected` (el acta) deja una fila `READ` `VIOLATION_NOTICE` con el `violationId` del payload; si no se puede auditar, `500` y no se entrega |
 | POST   | `/events/outbox/:id/retry`    | `M6_ADMIN`           | `FAILED` → `PENDING` con `attempts = 0`; el dispatcher lo reenvía en la próxima barrida (cada 10 s). 409 si no está en `FAILED` (un `SENT` no se reenvía; un `PENDING` ya está en cola) |
 | POST   | `/events/outbox/retry-failed` | `M6_ADMIN`           | Lo mismo en lote. Body `{ "confirm": true, "limit": 20 }`: `confirm` obligatorio (solo el booleano `true` o la cadena `"true"`; cualquier otra cosa da 400), `limit` opcional (1 a 100, por omisión 100), los más viejos primero. Devuelve `{ requeued, remainingFailed }`; 409 si otro reintento concurrente tocó eventos de la tanda (no se reencola ni audita nada: repetir el pedido) |
 
@@ -464,7 +464,7 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 
 | Método | Ruta     | Roles                    | Qué hace |
 | ------ | -------- | ------------------------ | -------- |
-| GET    | `/audit` | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más reciente al más antiguo. Filtros opcionales `entityType` (valor cerrado: `CONTAINER`, `ENVIRONMENTAL_REPORT`, `ENVIRONMENTAL_INSPECTION`, `VIOLATION_NOTICE`, `REPAIR_REQUEST`, `STREET_CLOSURE_REQUEST`, `TREE_INTERVENTION`, `SERVICE`, `CREW`, `ZONE`, `VEHICLE`, `ROUTE`, `SANCTION_OUTCOME`) y `entityId` (UUID); 400 si alguno es inválido. Cada fila trae `action`, `fromStatus`/`toStatus`, `actorUserId` y `actorRoles` (del token, nunca del body), `note` (solo el motivo que el flujo ya pedía) y `occurredAt` |
+| GET    | `/audit` | `M6_ADMIN`, `M6_AUDITOR` | Listado paginado, del más reciente al más antiguo. Filtros opcionales `entityType` (valor cerrado: `CONTAINER`, `ENVIRONMENTAL_REPORT`, `ENVIRONMENTAL_INSPECTION`, `VIOLATION_NOTICE`, `REPAIR_REQUEST`, `STREET_CLOSURE_REQUEST`, `TREE_INTERVENTION`, `SERVICE`, `CREW`, `ZONE`, `VEHICLE`, `ROUTE`, `SANCTION_OUTCOME`, `INBOX_EVENT`) y `entityId` (UUID); 400 si alguno es inválido. Cada fila trae `action`, `fromStatus`/`toStatus`, `actorUserId` y `actorRoles` (del token, nunca del body), `note` (solo el motivo que el flujo ya pedía) y `occurredAt`. `action: READ` es una lectura de datos Tier 2 (acta, resolución o identidad del denunciante, #643), sin estados ni nota |
 
 **Query params de `GET /audit`** (todos opcionales; un valor fuera de rango o con formato inválido da 400):
 
@@ -472,7 +472,7 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 | ----- | ---- | ------- |
 | `page` | entero | 1 a 10.000.000, default 1 |
 | `pageSize` | entero | 1 a 100, default 20 |
-| `entityType` | enum | Uno de los 12 valores de arriba; cualquier otro da 400 |
+| `entityType` | enum | Uno de los valores de arriba; cualquier otro da 400 |
 | `entityId` | UUID | Id de la entidad; se combina con `entityType` (AND). Sin filtros devuelve toda la tabla |
 
 **Respuesta 200:** `{ data: [...], meta: { total, page, pageSize, totalPages } }`, ordenada por `occurredAt` descendente y, a igual instante, por `id` descendente. Cada elemento (`AuditLogResponseDto`):
@@ -497,18 +497,19 @@ Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas,
 | `entityType` | `action` |
 | ------------ | -------- |
 | `CONTAINER` | `CREATE`, `REPORT_OVERFLOW`, `EMPTY`, `REPORT_DAMAGE`, `START_REPAIR`, `COMPLETE_REPAIR`, `RELOCATE`, `CONFIRM_RELOCATION`, `REMOVE`, `COMPLETE_SERVICE` |
-| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REQUEST_INFORMATION`, `STATUS_CHANGE`, y las del sistema por evento de M2: `REACTIVATE`, `REOPEN`, `PRIORITY_CHANGE`, `INFORMATION_PROVIDED`, `CANCEL_INFORMATION_REQUEST`, `ESCALATION_CHANGE` |
+| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REQUEST_INFORMATION`, `STATUS_CHANGE`, y las del sistema por evento de M2: `REACTIVATE`, `REOPEN`, `PRIORITY_CHANGE`, `INFORMATION_PROVIDED`, `CANCEL_INFORMATION_REQUEST`, `ESCALATION_CHANGE`; `READ` (lectura del `ticketUpdated` en `GET /events/inbox/:messageId`) |
 | `ENVIRONMENTAL_INSPECTION` | `SCHEDULE`, `COMPLETE` |
-| `VIOLATION_NOTICE` | `ISSUE` |
+| `VIOLATION_NOTICE` | `ISSUE`, `READ` (lectura del acta o de su `environmentalViolationDetected`) |
 | `REPAIR_REQUEST` | `CREATE`, `START`, `CLOSE` |
 | `STREET_CLOSURE_REQUEST` | `CREATE`, `APPROVE`, `REJECT`, `END` |
 | `TREE_INTERVENTION` | `CREATE`, `SUBMIT_FOR_AUTHORIZATION`, `AUTHORIZE`, `REJECT`, `ASSIGN_SERVICE` |
 | `SERVICE` | `CREATE`, `UPDATE`, `ASSIGN_CREW`, `START`, `SUSPEND`, `RESUME`, `COMPLETE`, `CANCEL`, `RESCHEDULE`, `CONFIRM_RESCHEDULE` |
 | `CREW` | `CREATE`, `ACTIVATE`, `DEACTIVATE`, `ADD_MEMBERS`, `REMOVE_MEMBER`, `REASSIGN_ZONE` |
 | `ZONE`, `VEHICLE`, `ROUTE` | `CREATE`, `ACTIVATE`, `DEACTIVATE` |
-| `SANCTION_OUTCOME` | `RECORD_OUTCOME` |
+| `SANCTION_OUTCOME` | `RECORD_OUTCOME`, `READ` (lectura junto con el acta o del evento de M4) |
+| `INBOX_EVENT` | `READ` (un evento entrante con datos Tier 2 que no se pudo atar a un expediente o resolución; `entityId` es el `id` UUID de la fila del inbox, no el `messageId`) |
 
-La tabla es de solo agregado (un trigger rechaza modificar, borrar y vaciar) y no se purga. No audita lecturas ni las transiciones de otros consumidores de eventos y barridos. Las respuestas de M3 y M7 (`workOrder*`, `streetClosure*`) sí, con `actorUserId` `system:m3` / `system:m7` y `actorRoles` vacío, y solo si cambiaron el estado.
+La tabla es de solo agregado (un trigger rechaza modificar, borrar y vaciar) y no se purga. De las lecturas, solo audita las de datos Tier 2 (ver [auditoria.md](../entidades/auditoria.md)); no audita las transiciones de otros consumidores de eventos y barridos. Las respuestas de M3 y M7 (`workOrder*`, `streetClosure*`) sí, con `actorUserId` `system:m3` / `system:m7` y `actorRoles` vacío, y solo si cambiaron el estado.
 
 ## `repair-requests` — reparaciones derivadas a M3
 
@@ -569,7 +570,7 @@ El expediente de una denuncia ambiental —ruidos, vertidos, microbasurales, emi
 | GET    | `/environmental-inspections/:id`                  | Detalle con checklist y hallazgos, más `reportType`, `address`, `lat` y `lng` del expediente (solo lectura) y `allowedActions` (`repair`, `notice`, `suggestedViolationType`: la matriz por tipo de expediente cruzada con el resultado; también en el listado por expediente)                                                                                                                                                                                                                            |
 | POST   | `/environmental-inspections/:id/complete`         | Cierra con su `outcome`. Lleva el expediente a `INSPECTED` y de ahí, en la misma operación, a `NO_VIOLATION` o `VIOLATION_FOUND`. Un `INCONCLUSIVE` lo deja en `INSPECTED`. 400 si `inspectedAt` está en el futuro o si `VIOLATION_FOUND` no trae `nextStep` |
 | POST   | `/environmental-inspections/:id/violation-notice` | **Emitir el acta.** Solo sobre una inspección `VIOLATION_FOUND`                                                                                                                                                                                              |
-| GET    | `/environmental-inspections/:id/violation-notice` | El acta emitida (`noticeNumber` es el número del acta de M6; el de la multa o clausura es `sanctionOutcome.externalRef`, el de M4; `sanctionOutcome` es `null` hasta que M4 resuelve y también viene en el `POST`); `200` con `null` (JSON literal) si la inspección no tiene acta, `404` solo si no existe                                                                                                                                                     |
+| GET    | `/environmental-inspections/:id/violation-notice` | El acta emitida (`noticeNumber` es el número del acta de M6; el de la multa o clausura es `sanctionOutcome.externalRef`, el de M4; `sanctionOutcome` es `null` hasta que M4 resuelve y también viene en el `POST`); `200` con `null` (JSON literal) si la inspección no tiene acta, `404` solo si no existe. Dato Tier 2: cada lectura que entrega el acta deja una fila `READ` en `GET /audit` por el acta y otra por la resolución si la hay (#643); si no se puede auditar, `500` y no se entrega                                                                                                                                                     |
 
 **`checklist[]`, `findings`, `conclusion`, `inspectorId` y `completedByUserId` son internos: nunca salen hacia M2.** `inspectorId` es la asignación opcional de Oficina al programar (id numérico de M1; debe tener `M6_CAMPO_INSPECTOR`, si no 400). `completedByUserId` lo llena `complete` siempre desde el token y no pisa al asignado.
 

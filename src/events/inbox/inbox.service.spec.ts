@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { InboxService, REDACTED_PAYLOAD } from './inbox.service';
+import { esRedactado, InboxService, REDACTED_PAYLOAD } from './inbox.service';
 import { InboundEnvelope } from '../envelope';
 import { OutboxService } from '../outbox/outbox.service';
 import { AggregateType, EventType } from '../event-types';
@@ -520,5 +520,16 @@ describe('InboxService', () => {
 
       expect(encolado().correlationId).toBe(CORRELATION);
     });
+  });
+});
+
+describe('esRedactado', () => {
+  it('solo reconoce el marcador exacto', () => {
+    expect(esRedactado({ ...REDACTED_PAYLOAD })).toBe(true);
+    expect(esRedactado({ redacted: 'contenido no persistido', citizenId: 'x' })).toBe(false);
+    expect(esRedactado({ redacted: 'otra cosa' })).toBe(false);
+    expect(esRedactado(null)).toBe(false);
+    expect(esRedactado([REDACTED_PAYLOAD.redacted])).toBe(false);
+    expect(esRedactado('contenido no persistido')).toBe(false);
   });
 });
