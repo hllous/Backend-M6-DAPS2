@@ -36,7 +36,7 @@ Secuencia ordenada de zonas. Un `Service` con `mode = ROUTE` copia `zoneIds[]` d
 
 ### `ServiceFrequency`
 
-La regla que genera los servicios planificados (`origin = PLANNED`), del tipo "recolección domiciliaria en la ruta R-03, martes y viernes, turno mañana". Estos servicios **no tienen `ticketId` y no proyectan nada hacia M2**.
+La regla que declara la programación semanal de un tipo de servicio sobre un recorrido ("recolección domiciliaria en la ruta R-03, martes y viernes, turno mañana"), con su vigencia. **El backend no genera servicios a partir de ella**: no hay cron ni generador; el alta solo valida (tipo de modo `ROUTE`, vigencia coherente, sin superposición con otra regla del mismo recorrido, tipo y turno) y guarda la regla. Los servicios planificados (`origin = PLANNED`) se cargan por `POST /services` o los crea el seed; no tienen `ticketId` y no proyectan nada hacia M2.
 
 ## Recursos
 

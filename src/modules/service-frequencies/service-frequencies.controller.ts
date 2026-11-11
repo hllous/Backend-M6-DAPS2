@@ -36,7 +36,7 @@ export class ServiceFrequenciesController {
   @ApiOperation({
     summary: 'Crear una frecuencia de servicio',
     description:
-      'Da de alta la regla que genera los servicios planificados: "tipo X sobre el recorrido R, martes y viernes, turno mañana, desde tal fecha". El tipo de servicio tiene que ser de modo ROUTE. Los servicios que genera nacen con origin=PLANNED y no proyectan nada hacia M2.',
+      'Da de alta la regla de programación semanal: "tipo X sobre el recorrido R, martes y viernes, turno mañana, desde tal fecha". No genera servicios: el backend no tiene generador, solo valida y guarda la regla. El tipo de servicio tiene que ser de modo ROUTE y la regla no puede superponerse con otra del mismo recorrido, tipo y turno que comparta algún día y vigencia.',
   })
   @ApiResponse({
     status: 201,
@@ -142,7 +142,7 @@ export class ServiceFrequenciesController {
   @ApiOperation({
     summary: 'Cerrar la vigencia de una frecuencia',
     description:
-      'La regla deja de generar servicios a partir de hoy. No borra el registro: la baja se expresa con validTo, que es el mecanismo que ya define el dominio, en vez de un campo de estado aparte. Si la regla todavía no empezó a regir, se cierra en su fecha de inicio.',
+      'La regla deja de regir a partir de hoy. No borra el registro: la baja se expresa con validTo, que es el mecanismo que ya define el dominio, en vez de un campo de estado aparte. Si la regla todavía no empezó a regir, se cierra en su fecha de inicio.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la frecuencia', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Vigencia cerrada exitosamente' })

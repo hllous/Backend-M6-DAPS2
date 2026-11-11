@@ -38,7 +38,7 @@ export function buildSwaggerConfig() {
       .addTag('neighborhoods', 'Catálogo de barrios de M9 (caché de solo lectura)')
       .addTag('communes', 'Comunas: agrupación de barrios y zonas (solo lectura)')
       .addTag('routes', 'Recorridos y su secuencia de paradas')
-      .addTag('service-frequencies', 'Reglas que generan los servicios planificados')
+      .addTag('service-frequencies', 'Reglas de programación semanal de los recorridos')
       .addTag('service-types', 'Catálogo de tipos de servicio')
       .addTag('disposal-sites', 'Sitios de disposición final de residuos')
       // ─── Recursos ─────────────────────────────────
