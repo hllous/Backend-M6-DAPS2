@@ -78,7 +78,9 @@ Qué cargar, dónde, de dónde sale cada valor y en qué orden, antes de promove
 | `CORE_MODULE_SECRET` | El secret de máquina de M9 | Pide el token de módulo al Core; obligatoria si hay `CORE_API_URL` | Al PO de M6: ficha privada de M9 | Cuando llegue la ficha | **Sí** |
 | `M1_BASE_URL` | `https://ciudadanos-m1-backend.onrender.com` | Consultas de identidad a M1 con el module-token del Core (ADR-009); sin ella la validación de cuadrillas no corre | No hace falta pedirla | Con el deploy de #495 | No |
 | `R2_*` (las cinco) | Datos de Cloudflare R2 (bucket `m6-evidence`) | Subida de evidencia; sin ellas `POST /evidence` responde 503 | A quien tenga la cuenta de Cloudflare | Si todavía no están | Las dos claves |
-| `DATABASE_URL`, `CORS_ORIGINS`, `NODE_ENV=production` | Supabase (puerto 5432, `?schema=public`), URL del frontend, `production` | Ya deberían estar | – | Solo verificar | `DATABASE_URL` |
+| `DATABASE_URL`, `CORS_ORIGINS`, `NODE_ENV=production` | Supabase (puerto 5432, `?schema=public`), URL del frontend, `production` | Ya deberían estar. `CORS_ORIGINS` va con formato exacto: cada origen `https://host[:puerto]`, sin path ni barra final, separados por coma (ni `*` ni `null`). Con `NODE_ENV=production` y sin `CORS_ORIGINS`, o con una entrada fuera de formato, **el servicio no arranca** (#642) | – | Solo verificar | `DATABASE_URL` |
+
+> **Antes del deploy**, verificar en Render que `CORS_ORIGINS` cumpla el formato (por ejemplo `https://m6-ambiente-higiene.vercel.app`, sin `/` al final): desde #642 un valor fuera de formato hace que el servicio no arranque.
 
 **Borrar de Render** (overrides viejos que hacen que el broker responda 404): `RABBITMQ_EXCHANGE`, `RABBITMQ_QUEUE`, `RABBITMQ_EXCHANGE_TYPE`, `RABBITMQ_DEAD_LETTER_EXCHANGE`, `KAFKA_*` y `JWT_EXPIRATION`.
 

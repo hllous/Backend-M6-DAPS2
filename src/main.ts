@@ -16,9 +16,9 @@ async function bootstrap() {
   configureApp(app);
 
   // ─── CORS ──────────────────────────────────────
-  // Sin CORS_ORIGINS se aceptan todos, que es lo que hace falta en desarrollo
-  // y lo que veniamos haciendo. En el entorno desplegado se carga la URL del
-  // frontend.
+  // Sin CORS_ORIGINS se aceptan todos, que es lo que hace falta en desarrollo.
+  // En producción la validación de entorno no deja arrancar sin la URL del
+  // frontend (#642), así que el caso abierto queda para local y test.
   //
   // Alcance: el JWT viaja en un header y no en una cookie, asi que esto no
   // cierra un CSRF — no habia uno. Evita que un sitio cualquiera use la API

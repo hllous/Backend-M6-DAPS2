@@ -13,7 +13,7 @@
 | 2. Matriz de trazabilidad | `03-matriz-trazabilidad.md` | 175 criterios: 160 con test del backend, 9 solo FE y 6 huecos |
 | 3. Especificación de casos | `04-especificacion-casos.md` | 372 casos, 67,5 % negativos o de borde |
 | 4. Informe de ejecución | `05-informe-ejecucion.md` | Cifras medidas en la corrida R09 (2854 unitarios, cobertura 98,58 % de sentencias); **Quality Gate NO HECHO** |
-| 5. Registro de defectos | `06-registro-defectos.md` | 22 defectos, 6 abiertos (2 Mayores: DEF-09 y DEF-13) |
+| 5. Registro de defectos | `06-registro-defectos.md` | 22 defectos, 4 abiertos (2 Mayores: DEF-09 y DEF-13; DEF-15 y DEF-18 cerrados con #642) |
 | 6. Informe de seguridad | `07-informe-seguridad.md` | **ZAP y Trivy NO HECHOS**; el resto con evidencia |
 | 7. Declaración y plan de IA | Gobernanza de IA (Clase 14), `Clase14_Grupo4_Ambiente_IA.pdf`: entregado y aprobado, no versionado en este repo | No se mantiene un documento propio en QA |
 | 8. Lecciones aprendidas | `08-lecciones-aprendidas.md` | Ocho casos; proponemos presentar los tres primeros |

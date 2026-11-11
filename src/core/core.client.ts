@@ -3,7 +3,12 @@ import { ConfigService } from '@nestjs/config';
 
 /** Pedimos otro token un minuto antes de que venza, no cuando ya venció. */
 const MARGEN_RENOVACION_MS = 60_000;
-const TIMEOUT_MS = 10_000;
+/**
+ * Corte de cada pedido al Core (DEF-15, #642). No todo es segundo plano: el alta, la
+ * edición y el alta de integrantes de cuadrillas validan contra M1 y piden antes el token de módulo, así que sin
+ * token en caché el operador espera este tiempo si el Core no responde.
+ */
+const TIMEOUT_MS = 5_000;
 /** Lo que aceptamos de `expiresIn` (segundos): ni un token eterno ni uno ya vencido. */
 const EXPIRES_IN_MIN = 60;
 const EXPIRES_IN_MAX = 3600;

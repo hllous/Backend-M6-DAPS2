@@ -95,7 +95,7 @@ Escala: probabilidad (P) e impacto (I) de 1 a 3; prioridad = P × I. Se listan l
 
 | ID | Riesgo | P | I | Prio. | Cobertura por pruebas |
 |---|---|---|---|---|---|
-| R2 | El Core o un externo no responde: el cliente espera 10 s (referencia: 5 s) y no hay circuit breaker | 2 | 2 | 4 | **Parcial.** `core.client.spec.ts` (error de red y timeout sin filtrar el secreto); ningún test dispara un timeout real (DEF-15) |
+| R2 | El Core o un externo no responde: el cliente al Core espera 5 s (antes 10 s) y no hay circuit breaker | 2 | 2 | 4 | **Parcial.** `core.client.spec.ts` (error de red y timeout sin filtrar el secreto); ningún test dispara un timeout real. DEF-15 se corrigió con [#642](https://github.com/hllous/Backend-M6-DAPS2/issues/642): el corte al Core pasó a 5 s. Lo espera un usuario solo al dar de alta o editar una cuadrilla, o al sumarle integrantes, sin token de módulo en caché |
 | R3 | M1 devuelve 401: el secreto de firma de Render no coincide con el de M1, o el token no trae los claims esperados | 3 | 3 | 9 | **Parcial.** `jwt.strategy.spec.ts` y `auth-roles.e2e-spec`; la coincidencia del secreto en Render se verifica a mano con login real y `GET /me` |
 | R4 | Una transición de estado inválida acepta una acción que debería dar 409 | 2 | 3 | 6 | **Cubierto.** 114 tests parametrizados (#582), `containers.service.spec.ts` (`it.each`), Stryker en `outbound-requests` |
 | R5 | BOLA/BFLA: un rol o una cuadrilla ajena ejecuta lo que no le corresponde | 2 | 3 | 6 | **Cubierto.** `route-roles.spec.ts`, `auth-roles.e2e-spec`, `crew-ownership.e2e-spec`. Las lecturas por id son compartidas por diseño |
