@@ -10,7 +10,7 @@
 - **Tipos de criterio:** Feliz (camino principal), Alternativo (otra variante válida o un borde), Error (entrada o estado inválido) y Falla externa (cae un sistema del que depende: M1, M2, M3, M4, M7, M9, el bus, el Core, el almacenamiento).
 - **† = criterio propuesto por nosotros, a validar con el PO.** Los que vienen de Trello (HU de R2 y tarjetas SEC de la Clase 11) no llevan marca; algunos se adaptaron al comportamiento real del código. Los criterios agregados por una corrección posterior (ACT-nn, ver [03-matriz-trazabilidad.md](03-matriz-trazabilidad.md)) también son propuestos y se numeran a continuación del último de la HU.
 - **MoSCoW:** el de Trello cuando figura (R2 MUST, R3 COULD); las HU del MVP entregado se consideran Must; para las de R2 sin prioridad en Trello propusimos una.
-- **Regla de cierre:** ningún criterio de una HU Must puede fallar al cierre. Las HU Must con trabajo abierto son HU-20, HU-24 y HU-30, y HU-31 tiene un criterio (SEC-D02) que no se cumple (ver «Riesgos» al final).
+- **Regla de cierre:** ningún criterio de una HU Must puede fallar al cierre. Las HU Must con trabajo abierto son HU-20, HU-24 y HU-30 (ver «Riesgos» al final); el criterio SEC-D02 de HU-31 se cerró con #643.
 
 ## Resumen
 
@@ -448,4 +448,3 @@ Propuestas de alcance del tablero, a validar por el PO. No tienen criterios ni c
 | HU-20 | Paraguas del contrato definitivo de M9 | BE #257 |
 | HU-24 | Prueba pasiva desde Render y suscripción pruebaConexionM6; procedimiento local con el Core | BE #299, #442 |
 | HU-30 | Cargar el secreto vigente de M1 en Render y retirar el modo backend-development del BFF | BE #488, FE #800 |
-| HU-31 | SEC-D02: auditoría de lectura de datos Tier 2 | Trello SEC-D02, ADR-005 |

@@ -19,7 +19,7 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 
 | | Cantidad |
 |---|---|
-| Defectos y brechas registrados | 22 (DEF-01 a DEF-24, sin DEF-04 ni DEF-11). **Abiertos: 4. Cerrados: 18** |
+| Defectos y brechas registrados | 22 (DEF-01 a DEF-24, sin DEF-04 ni DEF-11). **Abiertos: 3. Cerrados: 19** |
 | Issues con etiqueta `bug`, `security` o `fix` | Todos cerrados en GitHub (`gh issue list --state all`) |
 | Verificaciones no realizadas (no son defectos) | 8, en la sección 5 |
 
@@ -27,11 +27,11 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 |---|---|---|
 | Bloqueante | 0 | Sí |
 | Crítica | 0 | Sí |
-| Mayor | **2** (DEF-09 y DEF-13) | Sí (máximo 3) |
+| Mayor | **1** (DEF-13) | Sí (máximo 3) |
 | Menor | 2 (DEF-14 y DEF-19) | Sí |
-| **Total abierto** | **4** | |
+| **Total abierto** | **3** | |
 
-**Lectura honesta:** el criterio de salida **se cumple en cantidad**: hay 2 Mayores abiertas contra un máximo de 3 (DEF-08 se cerró por mitigación con #619). Falta que cada Mayor tenga un workaround documentado, y DEF-09 dice «ninguno». La severidad de las Mayores es una **propuesta**: el equipo y el PO la validan antes de la entrega.
+**Lectura honesta:** el criterio de salida **se cumple en cantidad**: hay 1 Mayor abierta (DEF-13) contra un máximo de 3 (DEF-08 se cerró por mitigación con #619 y DEF-09 con #643). La severidad de las Mayores es una **propuesta**: el equipo y el PO la validan antes de la entrega.
 
 ## 3. Defectos y brechas abiertos
 
@@ -65,20 +65,6 @@ Ninguna abierta.
 | `zod` | 3.25.76, directa | Solo la respuesta de M1 (`m1-identity.client.ts`) y las variables de entorno | Los esquemas no usan colecciones (`z.array`, `z.record`, `z.set`, `z.map`), que es el caso del CVE: no explotable; además subido a 4.6.7 |
 
 **Otras:** `multer` está en 2.5.0 por el `override`; `file-type` (moderada) no se importa en `src/` (el MIME se valida con `sniffMime`); `qs`, `uuid` y `@nestjs/core` (moderadas) siguen **sin analizar** y se resuelven con #628. Como defensa adicional, el `ThrottlerGuard` global (600 por minuto por IP) acota la frecuencia, aunque corre después del parseo y sus contadores están en memoria (ADR-010). La hipótesis del issue (solo `body-parser` tenía superficie) se confirmó por lectura del código; **no se probó con un request real**.
-
-#### DEF-09 · Auditoría de lectura de datos Tier 2 no implementada
-
-| Campo | Detalle |
-|---|---|
-| ID | sin issue (quedó pendiente al cerrar [#90](https://github.com/hllous/Backend-M6-DAPS2/issues/90)) |
-| Severidad / prioridad | Mayor / Media |
-| HU | HU-31 (SEC-D02) |
-| Pasos | Consultar `GET /environmental-reports/:id` o un acta y buscar la fila de auditoría |
-| Esperado | Se registra quién, cuándo y qué recurso leyó, sin copiar el contenido |
-| Obtenido | `src/common/audit` registra solo cambios de estado (#460); no hay interceptor de lecturas |
-| Evidencia | `docs/decisiones/adr-005-alineacion-frontend-sesion-y-seguridad.md:22` y `:46` lo exigen para producción |
-| Estado | Abierto |
-| Workaround | Ninguno; la identidad del denunciante solo la ve personal de M6 con rol |
 
 #### DEF-13 · Análisis de seguridad en el CI: parcial, faltan ZAP y Trivy
 
@@ -115,6 +101,7 @@ El detalle (causa raíz, PR, commit y CI) está en los issues cerrados del repos
 | DEF-06 | Sin `Idempotency-Key` en las altas: ahora en 21 `POST` (ADR-013; guardado no atómico) | [#592](https://github.com/hllous/Backend-M6-DAPS2/issues/592) |
 | DEF-07 | Rate limiting solo en el portal ciudadano: ahora global (ADR-010) | [#568](https://github.com/hllous/Backend-M6-DAPS2/issues/568) |
 | DEF-08 | Dependencias de producción con CVE: 0 críticas y 0 altas tras los `overrides` y `zod` 4 (detalle en la sección 3); las 8 moderadas, con NestJS 12: `npm audit --omit=dev` da 0 | [#619](https://github.com/hllous/Backend-M6-DAPS2/issues/619), [#628](https://github.com/hllous/Backend-M6-DAPS2/issues/628) |
+| DEF-09 | Auditoría de lectura de datos Tier 2 no implementada: ahora `AuditService.recordRead` registra una fila `READ` (actor del token, sin contenido) en las lecturas exitosas de `GET /environmental-inspections/:id/violation-notice`, `GET /events/inbox/:messageId` y `GET /events/outbox/:id`; falla cerrado (500 sin entregar el dato) y 401/403/404 no registran. `GET /audit` no se audita a sí mismo (riesgo aceptado, ver `entidades/auditoria.md`) | [#643](https://github.com/hllous/Backend-M6-DAPS2/issues/643) |
 | DEF-10 | Errores sin formato Problem Details RFC 9457 (ADR-011; sin id de correlación en los 500) | [#590](https://github.com/hllous/Backend-M6-DAPS2/issues/590) |
 | DEF-12 | `streetClosureRequested` con el contrato final de cortes de M7 | [#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447) |
 | DEF-15 | Timeout de 10 s del cliente al Core contra una referencia de 5 s. **Corregido:** `TIMEOUT_MS` de `src/core/core.client.ts` pasó a 5 s, con un test que lo fija. La mayoría de las llamadas al Core son en segundo plano (registro de suscripciones al arrancar, refresco del catálogo de barrios, ambos sin `await`), pero una sí la espera un usuario: el alta y la edición de cuadrillas y el alta de integrantes (`POST /crews`, `PATCH /crews/:id`, `POST /crews/:id/members`) validan contra M1 (`crews.service.ts` → `m1-identity.client.ts`) y antes piden el token de módulo al Core; sin token en caché (primer pedido tras arrancar o token vencido), un Core caído demoraba esos requests hasta 10 s. Sin circuit breaker, por decisión: el token se cachea y el caso es acotado. El pedido a M1 que sigue al token mantiene sus 10 s a propósito: M1 corre en Render free y sus arranques en frío llegaron a 78 s (ver `integracion/historial.md`, 2/11), así que con 5 s el alta de cuadrillas fallaría cada vez que M1 esté dormido | [#642](https://github.com/hllous/Backend-M6-DAPS2/issues/642) |
