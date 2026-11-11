@@ -174,5 +174,7 @@ describe('contrato OpenAPI', () => {
       }
     }
     expect([...faltan].sort()).toEqual([]);
-  });
+    // Importa todos los DTO: ~2,3 s en solitario y más de 5 s (el timeout por
+    // defecto) con la suite completa en paralelo y la máquina cargada.
+  }, 30_000);
 });
