@@ -50,10 +50,10 @@ Ninguna abierta.
 | HU | HU-31 |
 | Pasos | `npm audit --omit=dev` |
 | Esperado | 0 CVE críticas o altas sin mitigación documentada |
-| Obtenido | Historia: tras `npm audit fix` (#566) quedaban 13 en producción (0 críticas, 6 altas, 7 moderadas; antes, 15 con 1 crítica). Con los `overrides` de #619 (`body-parser` ^1.20.9, `lodash` ^4.18.1, `js-yaml` ^4.3.2 y `multer` ^2.4.0) y `zod` ^4.6.7: **8 en producción: 0 críticas, 0 altas, 8 moderadas** (`@nestjs/core`, `file-type`, `qs`, `uuid` y dependientes `@nestjs/common`, `@nestjs/platform-express` y `@nestjs/schedule`). Versiones resueltas: body-parser 1.20.9, lodash 4.18.1, js-yaml 4.3.2, zod 4.6.7, multer 2.5.0 |
+| Obtenido | Historia: tras `npm audit fix` (#566) quedaban 13 en producción (0 críticas, 6 altas, 7 moderadas; antes, 15 con 1 crítica). Con los `overrides` de #619 (`body-parser` ^1.20.9, `lodash` ^4.18.1, `js-yaml` ^4.3.2 y `multer` ^2.4.0) y `zod` ^4.6.7: **8 en producción: 0 críticas, 0 altas, 8 moderadas** (`@nestjs/core`, `file-type`, `qs`, `uuid` y dependientes `@nestjs/common`, `@nestjs/platform-express` y `@nestjs/schedule`). Versiones resueltas: body-parser 1.20.9, lodash 4.18.1, js-yaml 4.3.2, zod 4.6.7, multer 2.5.0. **Con NestJS 12 (#628): 0 en producción**, sin `overrides` (body-parser 2.4.0, js-yaml 5.5.0, multer 2.5.0; lodash ya no está en el árbol) |
 | Evidencia | `npm audit --omit=dev` (detalle en [`07-informe-seguridad.md`](07-informe-seguridad.md), sección 5.1); job `audit` de `.github/workflows/ci.yml` |
-| Estado | **Cerrado por mitigación (#619, 10/11/2026).** Sin altas ni críticas en producción. **Riesgo residual:** las 8 moderadas exigen NestJS 12 y quedan en [#628](https://github.com/hllous/Backend-M6-DAPS2/issues/628) (NestJS 12 y Prisma 7; los tests pasaron de Jest a Vitest). Build, lint (0 errores) y 2855 tests unitarios y 343 e2e en verde (23 suites, Postgres 16 local; la de RabbitMQ real se saltea sin `RABBITMQ_URL`). Sin Trivy no hay segundo SCA (DEF-13) |
-| Workaround | El job `audit` corre `npm audit --omit=dev --audit-level=high` y es **informativo**. Dependabot semanal, sin majors de `@nestjs/*`. Los `overrides` de `package.json` fijan las versiones corregidas |
+| Estado | **Cerrado (#619 y [#628](https://github.com/hllous/Backend-M6-DAPS2/issues/628), 10/11/2026).** #619 dejó 0 altas y 0 críticas; NestJS 12 con TypeScript 6.0.3 (#628) resolvió las 8 moderadas: `npm audit --omit=dev` da 0. Build, lint (0 errores), 2855 tests unitarios, 343 e2e (23 suites, Postgres 16 local) y las 8 de RabbitMQ real (2 suites, 3 corridas) en verde. Sin Trivy no hay segundo SCA (DEF-13) |
+| Workaround | El job `audit` corre `npm audit --omit=dev --audit-level=high` y, desde #628, es **gate** (antes informativo). Dependabot semanal, sin majors de `@nestjs/*`. Los `overrides` de #619 se quitaron en #628 |
 
 **Triage de explotabilidad (#619, 10/11/2026).** `npm audit fix` sin `--force` solo actualizó dependencias de desarrollo (`typescript-eslint`) y no bajó ninguna CVE de producción (seguían 13: 6 altas, 7 moderadas); las bajó subir esas dependencias por `overrides` y pasar `zod` a 4. El análisis de abajo describe el estado **previo** a ese cambio.
 
@@ -89,7 +89,7 @@ Ninguna abierta.
 | HU | HU-31 |
 | Pasos | Revisar `.github/workflows/` y `.github/dependabot.yml` |
 | Esperado | Escaneo de dependencias, de secretos y análisis dinámico |
-| Obtenido | **Hecho:** `npm audit` informativo (job `audit`, #571), Dependabot semanal, CodeQL (`codeql.yml`), gitleaks sobre el historial completo (job `secrets`, #494). **No hecho:** OWASP ZAP y Trivy. No revisamos las alertas de CodeQL (el workflow termina en `success`) |
+| Obtenido | **Hecho:** `npm audit` (job `audit`, #571; gate desde #628), Dependabot semanal, CodeQL (`codeql.yml`), gitleaks sobre el historial completo (job `secrets`, #494). **No hecho:** OWASP ZAP y Trivy. No revisamos las alertas de CodeQL (el workflow termina en `success`) |
 | Evidencia | `.github/workflows/ci.yml` (jobs `audit` y `secrets`), `.github/workflows/codeql.yml`, `.github/dependabot.yml` |
 | Estado | Abierto, **parcial** |
 
@@ -116,7 +116,7 @@ El detalle (causa raíz, PR, commit y CI) está en los issues cerrados del repos
 | DEF-05 | Sin control de concurrencia optimista: ahora `ETag` e `If-Match` con 412 (ADR-012; alcance parcial) | [#591](https://github.com/hllous/Backend-M6-DAPS2/issues/591) |
 | DEF-06 | Sin `Idempotency-Key` en las altas: ahora en 21 `POST` (ADR-013; guardado no atómico) | [#592](https://github.com/hllous/Backend-M6-DAPS2/issues/592) |
 | DEF-07 | Rate limiting solo en el portal ciudadano: ahora global (ADR-010) | [#568](https://github.com/hllous/Backend-M6-DAPS2/issues/568) |
-| DEF-08 | Dependencias de producción con CVE: 0 críticas y 0 altas tras los `overrides` y `zod` 4 (detalle en la sección 3); quedan 8 moderadas a NestJS 12 ([#628](https://github.com/hllous/Backend-M6-DAPS2/issues/628)) | [#619](https://github.com/hllous/Backend-M6-DAPS2/issues/619) |
+| DEF-08 | Dependencias de producción con CVE: 0 críticas y 0 altas tras los `overrides` y `zod` 4 (detalle en la sección 3); las 8 moderadas, con NestJS 12: `npm audit --omit=dev` da 0 | [#619](https://github.com/hllous/Backend-M6-DAPS2/issues/619), [#628](https://github.com/hllous/Backend-M6-DAPS2/issues/628) |
 | DEF-10 | Errores sin formato Problem Details RFC 9457 (ADR-011; sin id de correlación en los 500) | [#590](https://github.com/hllous/Backend-M6-DAPS2/issues/590) |
 | DEF-12 | `streetClosureRequested` con el contrato final de cortes de M7 | [#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447) |
 | DEF-16 y DEF-17 | `AGENTS.md` y `bloqueantes.md` desactualizados respecto del código | sin issue |

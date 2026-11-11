@@ -193,7 +193,11 @@ export class EnvironmentalInspectionsController {
   @ApiResponse({
     status: 200,
     description: 'Acta encontrada, o null si la inspección aún no tiene acta',
-    schema: { nullable: true, allOf: [{ $ref: getSchemaPath(ViolationNoticeResponseDto) }] },
+    schema: {
+      type: 'object',
+      nullable: true,
+      allOf: [{ $ref: getSchemaPath(ViolationNoticeResponseDto) }],
+    },
   })
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)

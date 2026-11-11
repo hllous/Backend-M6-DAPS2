@@ -497,8 +497,8 @@ Defectos del [registro](06-registro-defectos.md) que no cuelgan de un criterio c
 | Errores sin formato Problem Details | DEF-10 (también colgado de CA-HU31-5); CP-349 a CP-353; `src/common/filters/http-exception.filter.spec.ts`, `test/problem-details.e2e-spec.ts` (9 tests) | **Cerrado** (#590, PR #597), [ADR-011](../decisiones/adr-011-errores-problem-details-rfc-9457.md). Sigue sin id de correlación en el 500. Pasó en R09 |
 | Hallazgo H-1 de Schemathesis: los `GET` con entrada no declaran el 400 | DEF-20; CP-370; `src/openapi-contract.spec.ts` | **Cerrado** (#593, PR #597). `status_code_conformance` es bloqueante en el CI. Pasó en R09 |
 | Hallazgo H-2 de Schemathesis: `GET /neighborhoods` da 503 sin M9 | DEF-21; CP-371 y CP-372; `test/neighborhoods-catalog.e2e-spec.ts` | **Cerrado** (#594, PR #597). Pasó en R09 |
-| Dependencias de producción con vulnerabilidades (8, 0 críticas, 0 altas, 8 moderadas) | DEF-08 | Cerrado por mitigación (#619); moderadas abiertas en #628 |
-| Sin ZAP ni Trivy; SCA informativo, Dependabot, CodeQL y gitleaks sí | DEF-13 | Abierto, parcial |
+| Dependencias de producción con vulnerabilidades (tras #619: 0 críticas, 0 altas, 8 moderadas; tras #628: 0) | DEF-08 | Cerrado (#619, #628) |
+| Sin ZAP ni Trivy; SCA en el CI (gate desde #628), Dependabot, CodeQL y gitleaks sí | DEF-13 | Abierto, parcial |
 | `CORS_ORIGINS` opcional; `CORS_ORIGINS` y `BFF_SHARED_KEY` cargadas en Render | DEF-18 | Abierto |
 | Primer `docker compose up` en frío fallaba por `rabbitmq-setup` | DEF-23 | Cerrado (#584) |
 | Inyección SQL y XSS almacenado en campos de texto | CP-348, `test/security-input.e2e-spec.ts` (9 tests: 3 payloads × zona, expediente y servicio). La API guarda los payloads como texto y los devuelve idénticos; no los rechaza ni los escapa | Pasó en R08 |

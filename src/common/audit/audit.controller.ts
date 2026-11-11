@@ -22,11 +22,6 @@ export class AuditController {
   @ApiPaginatedResponse(AuditLogResponseDto, 'Listado paginado de la auditoría')
   @ApiResponse({ status: 400, description: 'Parámetros inválidos', type: ErrorResponseDto })
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 403,
-    description: 'Requiere M6_ADMIN o M6_AUDITOR',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   findAll(@Query() query: QueryAuditDto) {
     return this.audit.findAll(query);

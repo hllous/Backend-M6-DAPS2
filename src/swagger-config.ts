@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
-import { ResponseObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import { ResponseObject } from '@nestjs/swagger';
 
 /**
  * La configuración del documento OpenAPI, en un solo lugar.

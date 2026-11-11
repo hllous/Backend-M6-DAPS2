@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { DECORATORS } from '@nestjs/swagger/dist/constants';
+import { DECORATORS } from '@nestjs/swagger';
 import { getMetadataStorage } from 'class-validator';
 import { Test } from '@nestjs/testing';
 import { AppModule } from './app.module';
