@@ -338,7 +338,13 @@ export class EnvironmentalInspectionsService {
 
   // Una inspección sin acta es el estado normal (el acta solo existe tras VIOLATION_FOUND),
   // por eso devuelve null; el 404 queda para la inspección inexistente.
-  async findNotice(inspectionId: string): Promise<ViolationNoticeResponseDto | null> {
+  // Acta y resolución son datos Tier 2 (ADR-005, #643): la lectura queda auditada antes
+  // de responder, igual que los detalles de inbox y outbox que también los entregan.
+  // El null no entrega nada, no se audita.
+  async findNotice(
+    inspectionId: string,
+    actor: AuditActor,
+  ): Promise<ViolationNoticeResponseDto | null> {
     const notice = await this.prisma.violationNotice.findUnique({
       where: { inspectionId },
       include: { sanctionOutcome: true },
@@ -347,6 +353,15 @@ export class EnvironmentalInspectionsService {
       await this.getInspection(inspectionId);
       return null;
     }
+    await this.audit.recordRead(
+      [
+        { entityType: 'VIOLATION_NOTICE', entityId: notice.id },
+        ...(notice.sanctionOutcome
+          ? [{ entityType: 'SANCTION_OUTCOME' as const, entityId: notice.sanctionOutcome.id }]
+          : []),
+      ],
+      actor,
+    );
     return this.toNoticeDto(notice);
   }
 

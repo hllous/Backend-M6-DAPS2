@@ -14,6 +14,7 @@ import { ApiPaginatedResponse, CurrentUser, Roles } from '../../common/decorator
 import { ErrorResponseDto, PaginatedResponseDto } from '../../common/dto';
 import { ROLES_ADMIN, ROLES_OUTBOX_LECTURA } from '../../auth/role-groups';
 import { OutboxAdminService } from './outbox-admin.service';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import {
   OutboxEventDetailResponseDto,
   OutboxEventResponseDto,
@@ -58,7 +59,7 @@ export class OutboxController {
   @ApiOperation({
     summary: 'Detalle de un evento saliente, con su payload',
     description:
-      'Devuelve el evento completo: el payload tal como se publica y los reintentos manuales que se le hicieron (quién, cuándo y cómo estaba antes). Solo admin, porque el payload puede incluir datos personales.',
+      'Devuelve el evento completo: el payload tal como se publica y los reintentos manuales que se le hicieron (quién, cuándo y cómo estaba antes). Solo admin, porque el payload puede incluir datos personales. El de `environmentalViolationDetected` es el acta (dato Tier 2, ADR-005): esa lectura deja una fila READ sobre el acta en GET /audit con el actor del token y, si no se puede escribir, responde 500 sin entregar el payload.',
   })
   @ApiParam({ name: 'id', description: 'Id del evento del outbox', format: 'uuid' })
   @ApiResponse({
@@ -70,8 +71,11 @@ export class OutboxController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'No existe ese evento', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<OutboxEventDetailResponseDto> {
-    return this.outbox.findOne(id);
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<OutboxEventDetailResponseDto> {
+    return this.outbox.findOne(id, actor);
   }
 
   // Declarada antes que `:id/retry` por claridad; no chocan (distinto número de segmentos).

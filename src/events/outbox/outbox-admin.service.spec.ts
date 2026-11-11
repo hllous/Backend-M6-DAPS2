@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { OutboxEventStatus } from '@prisma/client';
 import { OutboxAdminService } from './outbox-admin.service';
 import { QueryOutboxDto, RetryFailedOutboxDto } from './dto';
+import { ACTOR as LECTOR } from '../../common/audit/audit-test-actor';
 
 const ID = '11111111-1111-4111-8111-111111111111';
 const ACTOR = 'usr-admin';
@@ -28,6 +29,7 @@ const query = (over: Partial<QueryOutboxDto> = {}): QueryOutboxDto =>
 describe('OutboxAdminService', () => {
   let prisma: any;
   let service: OutboxAdminService;
+  let audit: { recordRead: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     prisma = {
@@ -40,7 +42,8 @@ describe('OutboxAdminService', () => {
       outboxRetryAudit: { create: vi.fn(), createMany: vi.fn() },
       $transaction: vi.fn((fn) => fn(prisma)),
     };
-    service = new OutboxAdminService(prisma);
+    audit = { recordRead: vi.fn().mockResolvedValue(undefined) };
+    service = new OutboxAdminService(prisma, audit as never);
   });
 
   describe('findAll', () => {
@@ -106,9 +109,11 @@ describe('OutboxAdminService', () => {
         ],
       });
 
-      const res = await service.findOne(ID);
+      const res = await service.findOne(ID, LECTOR);
 
       expect(res.payload).toEqual({ containerId: 'c-1' });
+      // containerDamaged no trae datos Tier 2.
+      expect(audit.recordRead).not.toHaveBeenCalled();
       expect(res.retries).toEqual([
         { id: 'r1', actorUserId: ACTOR, at, previousAttempts: 5, previousError: 'x' },
       ]);
@@ -116,7 +121,59 @@ describe('OutboxAdminService', () => {
 
     it('404 si no existe', async () => {
       prisma.outboxEvent.findUnique.mockResolvedValue(null);
-      await expect(service.findOne(ID)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(ID, LECTOR)).rejects.toThrow(NotFoundException);
+      expect(audit.recordRead).not.toHaveBeenCalled();
+    });
+
+    const acta = (payload: Record<string, unknown>) => ({
+      ...fila({
+        eventType: 'environmentalViolationDetected',
+        aggregateType: 'VIOLATION_NOTICE',
+        payload,
+      }),
+      retries: [],
+    });
+
+    it('environmentalViolationDetected audita la lectura sobre el acta del payload (#643)', async () => {
+      prisma.outboxEvent.findUnique.mockResolvedValue(acta({ violationId: 'vn-1' }));
+
+      const res = await service.findOne(ID, LECTOR);
+
+      expect(res.payload).toEqual({ violationId: 'vn-1' });
+      expect(audit.recordRead).toHaveBeenCalledWith(
+        [{ entityType: 'VIOLATION_NOTICE', entityId: 'vn-1' }],
+        LECTOR,
+      );
+    });
+
+    it('sin violationId en el payload cae en el aggregateId (el mismo id del acta)', async () => {
+      prisma.outboxEvent.findUnique.mockResolvedValue(acta({}));
+      await service.findOne(ID, LECTOR);
+      expect(audit.recordRead).toHaveBeenCalledWith(
+        [{ entityType: 'VIOLATION_NOTICE', entityId: '22222222-2222-4222-8222-222222222222' }],
+        LECTOR,
+      );
+    });
+
+    it.each([null, ['vn-1']])(
+      'con payload que no es objeto (%j) no explota y cae en el aggregateId',
+      async (payload) => {
+        prisma.outboxEvent.findUnique.mockResolvedValue({
+          ...acta({}),
+          payload,
+        });
+        await service.findOne(ID, LECTOR);
+        expect(audit.recordRead).toHaveBeenCalledWith(
+          [{ entityType: 'VIOLATION_NOTICE', entityId: '22222222-2222-4222-8222-222222222222' }],
+          LECTOR,
+        );
+      },
+    );
+
+    it('falla cerrado: si no se puede auditar, no entrega el acta', async () => {
+      prisma.outboxEvent.findUnique.mockResolvedValue(acta({ violationId: 'vn-1' }));
+      audit.recordRead.mockRejectedValueOnce(new Error('db caída'));
+      await expect(service.findOne(ID, LECTOR)).rejects.toThrow('db caída');
     });
   });
 

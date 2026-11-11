@@ -4,6 +4,9 @@ import { InboxAdminService } from './inbox-admin.service';
 import { QueryInboxDto } from './inbox-admin.dto';
 import { IngestEventDto } from './ingest-event.dto';
 import type { Mocked } from 'vitest';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
+
+const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
 describe('InboxController', () => {
   let service: Mocked<InboxService>;
@@ -25,9 +28,10 @@ describe('InboxController', () => {
   it('el listado y el detalle delegan en el service de consulta', async () => {
     const q = new QueryInboxDto();
     await expect(controller.findAll(q)).resolves.toBe('lista');
-    await expect(controller.findOne('ev-1')).resolves.toBe('detalle');
+    await expect(controller.findOne('ev-1', USER)).resolves.toBe('detalle');
     expect(admin.findAll).toHaveBeenCalledWith(q);
-    expect(admin.findOne).toHaveBeenCalledWith('ev-1');
+    // El actor de la auditoría de lectura sale del token.
+    expect(admin.findOne).toHaveBeenCalledWith('ev-1', USER);
   });
 
   it('ingest arma el sobre a partir del dto y delega en el service', async () => {
@@ -47,7 +51,7 @@ describe('InboxController', () => {
   });
 
   it('el detalle rechaza un messageId demasiado largo sin consultar', async () => {
-    await expect(controller.findOne('x'.repeat(101))).rejects.toThrow('excede');
+    await expect(controller.findOne('x'.repeat(101), USER)).rejects.toThrow('excede');
     expect(admin.findOne).not.toHaveBeenCalled();
   });
 

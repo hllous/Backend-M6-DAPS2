@@ -55,17 +55,17 @@ describe('EnvironmentalInspectionsController', () => {
     expect(service.issueNotice).toHaveBeenCalledWith(ID, dto, USER);
   });
 
-  it('findNotice delega el id', async () => {
+  it('findNotice delega el id y el actor (auditoría de lectura)', async () => {
     const res = { type: vi.fn() } as unknown as Response;
-    await expect(controller.findNotice(ID, res)).resolves.toBe(RESULT);
-    expect(service.findNotice).toHaveBeenCalledWith(ID);
+    await expect(controller.findNotice(ID, USER, res)).resolves.toBe(RESULT);
+    expect(service.findNotice).toHaveBeenCalledWith(ID, USER);
     expect(res.type).not.toHaveBeenCalled();
   });
 
   it('findNotice sin acta responde el literal JSON null', async () => {
     service.findNotice.mockResolvedValue(null);
     const res = { type: vi.fn() } as unknown as Response;
-    await expect(controller.findNotice(ID, res)).resolves.toBe('null');
+    await expect(controller.findNotice(ID, USER, res)).resolves.toBe('null');
     expect(res.type).toHaveBeenCalledWith('application/json');
   });
 });

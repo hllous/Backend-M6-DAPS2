@@ -14,7 +14,19 @@ Tabla `domain_audit_log`, índice `(entity_type, entity_id, occurred_at)`.
 - **El actor sale del token** (`req.user`: `userId` y los roles de M6 efectivos al momento), nunca del body.
 - **Solo agregado.** Un trigger de la base rechaza `UPDATE`, `DELETE` y `TRUNCATE`, igual que en `role_assignment_audit`. **No se purga**: la retención es indefinida. Un superusuario puede saltarlo (`session_replication_role = replica`); los e2e lo hacen en su limpieza y el usuario de la aplicación no debería ser superusuario. Los vaciados de la base (ver [seed.md](../seed.md)) deben dejarla afuera, como a `role_assignment_audit`.
 - **Sin datos personales por diseño.** Se guardan ids, estados y, en `note`, el motivo que el flujo ya pide, tal cual lo escribió el usuario (texto libre, tope de 500 caracteres): quien lo escribe no debe poner nombres ni documentos, porque el registro no se purga. Ejemplos: cancelar, suspender, reprogramar, reubicar una cuadrilla. No se copian payloads ni el contenido del acta ni los mensajes al vecino.
-- **No se audita la lectura** de datos sensibles (el acta identifica al infractor) en esta etapa.
+- **Lectura de datos Tier 2** ([ADR-005](../decisiones/adr-005-alineacion-frontend-sesion-y-seguridad.md), [#643](https://github.com/hllous/Backend-M6-DAPS2/issues/643)). Cada lectura exitosa deja una fila `READ` por recurso entregado, con el actor del token, sin estados ni `note` ni contenido. La escribe `AuditService.recordRead`, sin transacción (no hay cambio que acompañar) y en un solo `createMany`. Tres GET entregan datos de nivel 2:
+
+  | Endpoint | Qué entrega | Fila `READ` |
+  |---|---|---|
+  | `GET /environmental-inspections/:id/violation-notice` | El acta y, si M4 ya resolvió, la resolución | `VIOLATION_NOTICE` con el id del acta y, si hay, `SANCTION_OUTCOME` con el de la resolución |
+  | `GET /events/inbox/:messageId` (solo admin) | `ticketUpdated`: la identidad del denunciante (`citizenId`, salvo anónimo). `commercialFineGenerated`/`closureUpdate`: la resolución de M4 | `ENVIRONMENTAL_REPORT` del `ticketId` o `SANCTION_OUTCOME` del acta (`sourceViolationId`). Si todavía no existen (el handler falló, el acta no es nuestra), `INBOX_EVENT` con el `id` UUID de la fila del inbox (no el `messageId`, que no siempre es UUID): el dato igual sale en el payload y colgarlo de un id que no es de esa entidad confundiría el filtro |
+  | `GET /events/outbox/:id` (solo admin) | `environmentalViolationDetected`: el acta | `VIOLATION_NOTICE` con el `violationId` del payload |
+
+  Qué eventos son Tier 2 está en un solo lugar por lado: `TIER2_INBOX_EVENTS` (`inbox-admin.service.ts`) y el chequeo de `environmentalViolationDetected` en `outbox-admin.service.ts`. Los demás tipos no auditan, y un `ticketUpdated` redactado (ticket de otro módulo) tampoco, porque no entrega nada.
+  - **Falla cerrado:** si la fila no se puede escribir, el GET responde 500 y no entrega el acta. La auditoría es obligatoria para estos datos.
+  - Una lectura que no entrega el dato no registra: 401, 403, 400, 404, ni el `null` de una inspección sin acta.
+  - La identidad del denunciante sale solo en el payload crudo de `ticketUpdated` (detalle del inbox, auditado). `EnvironmentalReport.reporterSnapshot` no lo devuelve ningún endpoint de dominio; si uno lo expone, tiene que pasar por `recordRead` (`ENVIRONMENTAL_REPORT`). Los listados de inbox y outbox no traen payload; si aparece un listado con datos Tier 2, el criterio es una fila por recurso devuelto.
+  - **Riesgo aceptado: `GET /audit` no se audita a sí mismo.** Lo leen solo `M6_ADMIN` y `M6_AUDITOR`, y de Tier 2 muestra únicamente el enum de la decisión de sanción (`toStatus`/`note` de `RECORD_OUTCOME`), sin `externalRef`. Auditar la lectura de la auditoría sería recursivo: cada consulta agregaría filas a lo que se está consultando.
 
 ## Qué queda registrado
 
@@ -23,16 +35,17 @@ Tabla `domain_audit_log`, índice `(entity_type, entity_id, occurred_at)`.
 | `entityType` | Acciones |
 |---|---|
 | `CONTAINER` | `CREATE`, `REPORT_OVERFLOW`, `EMPTY`, `REPORT_DAMAGE`, `START_REPAIR`, `COMPLETE_REPAIR`, `RELOCATE`, `CONFIRM_RELOCATION`, `REMOVE`, y `COMPLETE_SERVICE` cuando lo mueve el cierre de un servicio |
-| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REACTIVATE`, `REOPEN`, `PRIORITY_CHANGE`, `INFORMATION_PROVIDED`, `CANCEL_INFORMATION_REQUEST`, `ESCALATION_CHANGE`, `REQUEST_INFORMATION` (sin el mensaje) y `STATUS_CHANGE` para lo que dispara la inspección o el acta |
+| `ENVIRONMENTAL_REPORT` | `CREATE`, `START_REVIEW`, `FORWARD`, `DISMISS`, `CLOSE`, `REACTIVATE`, `REOPEN`, `PRIORITY_CHANGE`, `INFORMATION_PROVIDED`, `CANCEL_INFORMATION_REQUEST`, `ESCALATION_CHANGE`, `REQUEST_INFORMATION` (sin el mensaje), `STATUS_CHANGE` para lo que dispara la inspección o el acta, y `READ` (lectura del `ticketUpdated` del expediente en el inbox) |
 | `ENVIRONMENTAL_INSPECTION` | `SCHEDULE`, `COMPLETE` |
-| `VIOLATION_NOTICE` | `ISSUE` (la nota dice si se derivó a M4) |
+| `VIOLATION_NOTICE` | `ISSUE` (la nota dice si se derivó a M4), `READ` (lectura del acta o de su `environmentalViolationDetected`) |
 | `REPAIR_REQUEST` | `CREATE`, `START`, `CLOSE` |
 | `STREET_CLOSURE_REQUEST` | `CREATE`, `APPROVE`, `REJECT`, `END` |
 | `TREE_INTERVENTION` | `CREATE`, `SUBMIT_FOR_AUTHORIZATION`, `AUTHORIZE`, `REJECT`, `ASSIGN_SERVICE` |
 | `SERVICE` | `CREATE`, `UPDATE`, `ASSIGN_CREW`, `START`, `SUSPEND`, `RESUME`, `COMPLETE`, `CANCEL`, `RESCHEDULE`, `CONFIRM_RESCHEDULE` |
 | `CREW` | `CREATE`, `ACTIVATE`/`DEACTIVATE`, `ADD_MEMBERS`, `REMOVE_MEMBER`, `REASSIGN_ZONE` |
 | `ZONE`, `VEHICLE`, `ROUTE` | `CREATE`, `ACTIVATE`/`DEACTIVATE` |
-| `SANCTION_OUTCOME` | `RECORD_OUTCOME` (`toStatus` y `note` son la decisión de M4; solo lo escribe el consumidor de M4) |
+| `SANCTION_OUTCOME` | `RECORD_OUTCOME` (`toStatus` y `note` son la decisión de M4; solo lo escribe el consumidor de M4), `READ` (lectura de la resolución junto con el acta, o del evento de M4 en el inbox) |
+| `INBOX_EVENT` | `READ` (evento entrante con datos Tier 2 que todavía no se ata a un expediente o resolución; `entityId` es el `id` UUID de la fila del inbox, no el `messageId`) |
 
 ### Respuestas de M3 y M7
 

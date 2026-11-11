@@ -187,7 +187,7 @@ export class EnvironmentalInspectionsController {
   @ApiOperation({
     summary: 'Obtener el acta de una inspección',
     description:
-      'El acta emitida, con su número correlativo y el conteo de reincidencia. Si la inspección existe pero todavía no tiene acta responde 200 con el JSON literal null, no 404.',
+      'El acta emitida, con su número correlativo y el conteo de reincidencia. Si la inspección existe pero todavía no tiene acta responde 200 con el JSON literal null, no 404. Acta y resolución son datos Tier 2 (ADR-005): cada lectura que las entrega deja una fila READ por recurso en GET /audit, con el actor del token y sin contenido. Si esa fila no se puede escribir responde 500 y no entrega el acta.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la inspección', format: 'uuid' })
   @ApiResponse({
@@ -205,9 +205,10 @@ export class EnvironmentalInspectionsController {
   @ApiBadRequestParams()
   async findNotice(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
   ): Promise<ViolationNoticeResponseDto | string> {
-    const notice = await this.inspectionsService.findNotice(id);
+    const notice = await this.inspectionsService.findNotice(id, actor);
     if (notice) return notice;
     // Nest manda un cuerpo vacío para null, y res.json() del cliente falla con eso.
     // Devolver el texto 'null' con Content-Type JSON da el literal sin tocar otros endpoints.

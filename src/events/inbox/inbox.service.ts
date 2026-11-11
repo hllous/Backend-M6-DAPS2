@@ -43,11 +43,16 @@ export interface InboxHandlerOptions {
 /** Lo que queda en la columna (NO nula) cuando no corresponde guardar el payload. */
 export const REDACTED_PAYLOAD = Object.freeze({ redacted: 'contenido no persistido' });
 
-function esRedactado(payload: Prisma.JsonValue): boolean {
+/**
+ * Solo el marcador exacto: un payload que trae `redacted` junto a otros campos
+ * (un emisor que lo arma a propósito) tiene contenido y no se trata como vacío.
+ */
+export function esRedactado(payload: Prisma.JsonValue): boolean {
   return (
     typeof payload === 'object' &&
     payload !== null &&
     !Array.isArray(payload) &&
+    Object.keys(payload).length === 1 &&
     payload.redacted === REDACTED_PAYLOAD.redacted
   );
 }

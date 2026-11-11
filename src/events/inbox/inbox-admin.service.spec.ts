@@ -1,9 +1,14 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { InboxAdminService } from './inbox-admin.service';
 import { QueryInboxDto } from './inbox-admin.dto';
+import { REDACTED_PAYLOAD } from './inbox.service';
+import { ACTOR } from '../../common/audit/audit-test-actor';
+
+const VIOLATION_ID = '22222222-2222-4222-8222-222222222222';
+const FILA_ID = '11111111-1111-4111-8111-111111111111';
 
 const fila = (over: Record<string, unknown> = {}) => ({
-  id: '11111111-1111-4111-8111-111111111111',
+  id: FILA_ID,
   messageId: 'ev-1',
   eventType: 'ticketUpdated',
   payload: { dni: '30111222' },
@@ -22,6 +27,7 @@ const query = (over: Partial<QueryInboxDto> = {}): QueryInboxDto =>
 describe('InboxAdminService', () => {
   let prisma: any;
   let service: InboxAdminService;
+  let audit: { recordRead: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     prisma = {
@@ -30,8 +36,11 @@ describe('InboxAdminService', () => {
         findUnique: vi.fn(),
         count: vi.fn().mockResolvedValue(0),
       },
+      environmentalReport: { findFirst: vi.fn().mockResolvedValue(null) },
+      sanctionOutcome: { findUnique: vi.fn().mockResolvedValue(null) },
     };
-    service = new InboxAdminService(prisma);
+    audit = { recordRead: vi.fn().mockResolvedValue(undefined) };
+    service = new InboxAdminService(prisma, audit as never);
   });
 
   describe('findAll', () => {
@@ -119,7 +128,7 @@ describe('InboxAdminService', () => {
   describe('findOne', () => {
     it('devuelve el detalle con el payload', async () => {
       prisma.inboxEvent.findUnique.mockResolvedValue(fila({ error: 'boom' }));
-      const res = await service.findOne('ev-1');
+      const res = await service.findOne('ev-1', ACTOR);
       expect(prisma.inboxEvent.findUnique).toHaveBeenCalledWith({ where: { messageId: 'ev-1' } });
       expect(res).toMatchObject({
         messageId: 'ev-1',
@@ -130,7 +139,134 @@ describe('InboxAdminService', () => {
 
     it('404 si no existe', async () => {
       prisma.inboxEvent.findUnique.mockResolvedValue(null);
-      await expect(service.findOne('nada')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('nada', ACTOR)).rejects.toThrow(NotFoundException);
+      expect(audit.recordRead).not.toHaveBeenCalled();
+    });
+
+    describe('auditoría de lectura Tier 2 (#643)', () => {
+      it('ticketUpdated se audita sobre el expediente del ticket', async () => {
+        prisma.inboxEvent.findUnique.mockResolvedValue(
+          fila({ payload: { ticketId: 'TK-1', citizenId: 'c-9', isAnonymous: false } }),
+        );
+        prisma.environmentalReport.findFirst.mockResolvedValue({ id: 'rep-1' });
+
+        await service.findOne('ev-1', ACTOR);
+
+        expect(prisma.environmentalReport.findFirst).toHaveBeenCalledWith({
+          where: { ticketId: 'TK-1' },
+          select: { id: true },
+        });
+        expect(audit.recordRead).toHaveBeenCalledWith(
+          [{ entityType: 'ENVIRONMENTAL_REPORT', entityId: 'rep-1' }],
+          ACTOR,
+        );
+      });
+
+      it('ticketUpdated sin expediente se audita sobre el propio evento', async () => {
+        prisma.inboxEvent.findUnique.mockResolvedValue(fila({ payload: { ticketId: 'TK-1' } }));
+
+        await service.findOne('ev-1', ACTOR);
+
+        expect(audit.recordRead).toHaveBeenCalledWith(
+          [{ entityType: 'INBOX_EVENT', entityId: FILA_ID }],
+          ACTOR,
+        );
+      });
+
+      it('un evento de M4 se audita sobre la resolución del acta', async () => {
+        prisma.inboxEvent.findUnique.mockResolvedValue(
+          fila({ eventType: 'closureUpdate', payload: { sourceViolationId: VIOLATION_ID } }),
+        );
+        prisma.sanctionOutcome.findUnique.mockResolvedValue({ id: 'so-1' });
+
+        await service.findOne('ev-1', ACTOR);
+
+        expect(prisma.sanctionOutcome.findUnique).toHaveBeenCalledWith({
+          where: { violationNoticeId: VIOLATION_ID },
+          select: { id: true },
+        });
+        expect(audit.recordRead).toHaveBeenCalledWith(
+          [{ entityType: 'SANCTION_OUTCOME', entityId: 'so-1' }],
+          ACTOR,
+        );
+      });
+
+      it('un evento de M4 sin resolución (o con id inválido) se audita sobre el evento', async () => {
+        prisma.inboxEvent.findUnique.mockResolvedValue(
+          fila({ eventType: 'commercialFineGenerated', payload: { violationId: 'no-uuid' } }),
+        );
+
+        await service.findOne('ev-1', ACTOR);
+
+        expect(prisma.sanctionOutcome.findUnique).not.toHaveBeenCalled();
+        expect(audit.recordRead).toHaveBeenCalledWith(
+          [{ entityType: 'INBOX_EVENT', entityId: FILA_ID }],
+          ACTOR,
+        );
+      });
+
+      it.each([{}, { ticketId: 5 }])(
+        'ticketUpdated con ticketId que no es string (%j) va al respaldo sin buscar expediente',
+        async (payload) => {
+          prisma.inboxEvent.findUnique.mockResolvedValue(fila({ payload }));
+
+          await service.findOne('ev-1', ACTOR);
+
+          expect(prisma.environmentalReport.findFirst).not.toHaveBeenCalled();
+          expect(audit.recordRead).toHaveBeenCalledWith(
+            [{ entityType: 'INBOX_EVENT', entityId: FILA_ID }],
+            ACTOR,
+          );
+        },
+      );
+
+      it.each([
+        ['ticketUpdated', null],
+        ['ticketUpdated', ['x']],
+        ['closureUpdate', null],
+        ['commercialFineGenerated', [VIOLATION_ID]],
+      ])('%s con payload que no es objeto (%j) va al respaldo', async (eventType, payload) => {
+        prisma.inboxEvent.findUnique.mockResolvedValue(fila({ eventType, payload }));
+
+        await service.findOne('ev-1', ACTOR);
+
+        expect(prisma.environmentalReport.findFirst).not.toHaveBeenCalled();
+        expect(prisma.sanctionOutcome.findUnique).not.toHaveBeenCalled();
+        expect(audit.recordRead).toHaveBeenCalledWith(
+          [{ entityType: 'INBOX_EVENT', entityId: FILA_ID }],
+          ACTOR,
+        );
+      });
+
+      it('un payload con `redacted` y otros campos no cuenta como redactado: se audita', async () => {
+        prisma.inboxEvent.findUnique.mockResolvedValue(
+          fila({ payload: { ...REDACTED_PAYLOAD, citizenId: 'x' } }),
+        );
+        const res = await service.findOne('ev-1', ACTOR);
+        expect(audit.recordRead).toHaveBeenCalledWith(
+          [{ entityType: 'INBOX_EVENT', entityId: FILA_ID }],
+          ACTOR,
+        );
+        expect(res.payload).toEqual({ redacted: 'contenido no persistido', citizenId: 'x' });
+      });
+
+      it('otro tipo de evento no se audita', async () => {
+        prisma.inboxEvent.findUnique.mockResolvedValue(fila({ eventType: 'weatherAlertIssued' }));
+        await service.findOne('ev-1', ACTOR);
+        expect(audit.recordRead).not.toHaveBeenCalled();
+      });
+
+      it('un payload redactado no entrega nada y no se audita', async () => {
+        prisma.inboxEvent.findUnique.mockResolvedValue(fila({ payload: REDACTED_PAYLOAD }));
+        await service.findOne('ev-1', ACTOR);
+        expect(audit.recordRead).not.toHaveBeenCalled();
+      });
+
+      it('falla cerrado: si no se puede auditar, no entrega el payload', async () => {
+        prisma.inboxEvent.findUnique.mockResolvedValue(fila());
+        audit.recordRead.mockRejectedValueOnce(new Error('db caída'));
+        await expect(service.findOne('ev-1', ACTOR)).rejects.toThrow('db caída');
+      });
     });
   });
 });

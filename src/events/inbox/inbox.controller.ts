@@ -31,6 +31,7 @@ import {
 } from '../../common/decorators';
 import { ROLES_ADMIN, ROLES_OUTBOX_LECTURA } from '../../auth/role-groups';
 import { ApiAnyM6Role } from '../../common/decorators/roles.decorator';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
 
 /**
  * Entrada manual de eventos.
@@ -115,7 +116,7 @@ export class InboxController {
   @ApiOperation({
     summary: 'Detalle de un evento entrante, con su payload',
     description:
-      'Devuelve el evento tal como se guardó, con el payload recibido. Solo admin, porque el payload es de terceros y puede incluir datos personales.',
+      'Devuelve el evento tal como se guardó, con el payload recibido. Solo admin, porque el payload es de terceros y puede incluir datos personales. Los payloads con datos Tier 2 (ADR-005: `ticketUpdated` con la identidad del denunciante, `commercialFineGenerated` y `closureUpdate` con la resolución de M4) dejan una fila READ en GET /audit con el actor del token: sobre el expediente o la resolución si existen, si no sobre el evento (`INBOX_EVENT`). Si esa fila no se puede escribir responde 500 y no entrega el payload.',
   })
   @ApiParam({ name: 'messageId', description: 'eventId del sobre', example: 'ev-0001' })
   @ApiResponse({
@@ -131,11 +132,14 @@ export class InboxController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido o ausente', type: ErrorResponseDto })
   @ApiResponse({ status: 404, description: 'No existe ese evento', type: ErrorResponseDto })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
-  async findOne(@Param('messageId') messageId: string): Promise<InboxEventDetailResponseDto> {
+  async findOne(
+    @Param('messageId') messageId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<InboxEventDetailResponseDto> {
     if (messageId.length > MAX_EXTERNAL_ID_LENGTH) {
       throw new BadRequestException(`messageId excede ${MAX_EXTERNAL_ID_LENGTH} caracteres`);
     }
-    return this.inboxAdmin.findOne(messageId);
+    return this.inboxAdmin.findOne(messageId, actor);
   }
 
   @ApiAnyM6Role()

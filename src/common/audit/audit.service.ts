@@ -26,6 +26,12 @@ export interface AuditEntry {
   note?: string | null;
 }
 
+/** Un recurso Tier 2 entregado en una lectura (`recordRead`). */
+export interface AuditTarget {
+  entityType: AuditEntityType;
+  entityId: string;
+}
+
 const MAX_NOTE = 500;
 
 /** El "estado" de los catálogos con baja lógica, para fromStatus/toStatus. */
@@ -34,6 +40,7 @@ export const activeState = (active: boolean): string => (active ? 'ACTIVE' : 'IN
 /**
  * Lado de escritura de la auditoría de dominio. Como el outbox, `record` exige el
  * cliente de la transacción: la fila y el cambio caen juntos o no caen.
+ * `recordRead` va sin transacción a propósito: una lectura no tiene cambio que acompañar.
  */
 @Injectable()
 export class AuditService {
@@ -51,6 +58,24 @@ export class AuditService {
         actorRoles: entry.actor.roles,
         note: entry.note ? entry.note.slice(0, MAX_NOTE) : null,
       },
+    });
+  }
+
+  /**
+   * Lectura de datos Tier 2 (ADR-005, #643): una fila `READ` por recurso entregado,
+   * sin contenido. No hay transacción que acompañar, va directo; un solo
+   * `createMany` para que caigan todas o ninguna. Si falla, el error sube y la
+   * lectura da 500 sin entregar los datos: la auditoría es obligatoria.
+   */
+  async recordRead(targets: AuditTarget[], actor: AuditActor): Promise<void> {
+    await this.prisma.domainAuditLog.createMany({
+      data: targets.map((t) => ({
+        entityType: t.entityType,
+        entityId: t.entityId,
+        action: 'READ',
+        actorUserId: actor.userId,
+        actorRoles: actor.roles,
+      })),
     });
   }
 
