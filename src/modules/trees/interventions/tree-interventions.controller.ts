@@ -144,11 +144,11 @@ export class TreeInterventionsController {
   @Post(':id/authorize')
   @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
-  // Arriba de @Roles: Swagger se queda con el último decorador aplicado por status.
+  // Swagger concatena este texto al 403 de @Roles: solo agrega la regla por tipo.
   @ApiResponse({
     status: 403,
     description:
-      'Falta el rol de M6 (code ROLE_REQUIRED). Una extracción (REMOVAL) requiere M6_ADMIN; las podas, cualquiera de los roles de operaciones',
+      'Además, una extracción (REMOVAL) requiere M6_ADMIN (code ROLE_REQUIRED); las podas, cualquiera de esos roles',
     type: ErrorResponseDto,
   })
   @Roles(...ROLES_OPERACIONES)
@@ -180,11 +180,11 @@ export class TreeInterventionsController {
   @Post(':id/reject')
   @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
-  // Arriba de @Roles: Swagger se queda con el último decorador aplicado por status.
+  // Swagger concatena este texto al 403 de @Roles: solo agrega la regla por tipo.
   @ApiResponse({
     status: 403,
     description:
-      'Falta el rol de M6 (code ROLE_REQUIRED). Una extracción (REMOVAL) requiere M6_ADMIN; las podas, cualquiera de los roles de operaciones',
+      'Además, una extracción (REMOVAL) requiere M6_ADMIN (code ROLE_REQUIRED); las podas, cualquiera de esos roles',
     type: ErrorResponseDto,
   })
   @Roles(...ROLES_OPERACIONES)

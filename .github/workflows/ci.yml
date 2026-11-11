@@ -230,11 +230,10 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   # audit — Vulnerabilidades de dependencias de producción.
   #
-  # Hoy `npm audit` falla: quedan 6 altas cuyo arreglo exige NestJS 12 / zod 4,
-  # aceptadas como riesgo (informe QA 07 §5.1). En vez de `continue-on-error`
-  # (que deja el check en rojo aunque no bloquee), el paso termina en verde y
-  # deja un aviso (warning) visible en el run. Para volverlo gate al migrar a
-  # NestJS 12 / zod 4: quitar el `if/else` y dejar solo el comando.
+  # Gate: una vulnerabilidad alta o crítica en producción pone el CI en rojo.
+  # Fue informativo (un `if/else` con warning) mientras hubo altas que solo
+  # arreglaba NestJS 12 / zod 4; con NestJS 12 (#628) el audit de producción
+  # da 0 (informe QA 07 §5.1).
   # ──────────────────────────────────────────────────────────────
   audit:
     name: audit
@@ -253,12 +252,7 @@ jobs:
           cache: npm
 
       - name: npm audit (producción, severidad alta)
-        run: |
-          if npm audit --omit=dev --audit-level=high; then
-            echo "Sin vulnerabilidades altas ni críticas en producción."
-          else
-            echo "::warning title=npm audit::Hay vulnerabilidades altas o críticas en producción. Riesgo aceptado y abierto, ver docs/QA/07-informe-seguridad.md sección 5.1."
-          fi
+        run: npm audit --omit=dev --audit-level=high
 
   # ──────────────────────────────────────────────────────────────
   # deploy — Dispara el deploy en Render (solo push a main).
@@ -266,7 +260,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   deploy:
     name: deploy
-    needs: [build, test]
+    needs: [build, test, audit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 3

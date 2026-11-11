@@ -3,9 +3,8 @@
   "paths": {
     "/health": {
       "get": {
-        "operationId": "HealthController_check",
-        "summary": "Health check (liveness)",
         "description": "Devuelve OK si el proceso está corriendo. No consulta la base: para eso está /health/ready.",
+        "operationId": "HealthController_check",
         "parameters": [],
         "responses": {
           "200": {
@@ -19,6 +18,7 @@
             }
           }
         },
+        "summary": "Health check (liveness)",
         "tags": [
           "health"
         ]
@@ -26,9 +26,8 @@
     },
     "/health/ready": {
       "get": {
-        "operationId": "HealthController_ready",
-        "summary": "Readiness: verifica la conexión a la base",
         "description": "Ejecuta un SELECT 1 con un timeout de 3 s. Responde 503 si la base no contesta; es el endpoint para monitoreo. Informa también el estado del bus (`broker`), pero un bus caído no cambia el código: la API sigue sirviendo.",
+        "operationId": "HealthController_ready",
         "parameters": [],
         "responses": {
           "200": {
@@ -52,6 +51,7 @@
             }
           }
         },
+        "summary": "Readiness: verifica la conexión a la base",
         "tags": [
           "health"
         ]
@@ -59,9 +59,8 @@
     },
     "/me": {
       "get": {
-        "operationId": "MeController_me",
-        "summary": "Quién soy y qué puedo hacer",
         "description": "Devuelve la identidad del token, los roles de M6 efectivos (asignaciones locales ∩ lo que permite el rol de M1), las cuadrillas de la persona (id, nombre y si es responsable o integrante) y si es inspector. Se calcula en cada request: un cambio de asignación rige en la próxima llamada. El frontend usa esto en vez de deducir permisos del token.",
+        "operationId": "MeController_me",
         "parameters": [],
         "responses": {
           "200": {
@@ -105,21 +104,21 @@
             }
           }
         },
-        "tags": [
-          "auth"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Quién soy y qué puedo hacer",
+        "tags": [
+          "auth"
         ]
       }
     },
     "/events/inbox": {
       "post": {
-        "operationId": "InboxController_ingest",
-        "summary": "Ingerir un evento entrante",
         "description": "Recibe un sobre y lo despacha al handler que corresponda. La idempotencia es por eventId: un mensaje ya procesado se descarta sin volver a aplicar el efecto, que es lo que exige la regla 1 del enunciado. Un evento sin handler se registra y se descarta sin romper. Si el handler falla, la fila queda sin procesar y con el error registrado, y reenviar el mismo eventId vuelve a correr el handler con el payload guardado en la primera entrega (es lo que hace el reintento del Core por el bus). Un reenvío con otro eventType, o mientras el intento anterior sigue en curso, sale duplicate.",
+        "operationId": "InboxController_ingest",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -193,19 +192,19 @@
             }
           }
         },
-        "tags": [
-          "events"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Ingerir un evento entrante",
+        "tags": [
+          "events"
         ]
       },
       "get": {
-        "operationId": "InboxController_findAll",
-        "summary": "Listar los eventos entrantes recibidos",
         "description": "Listado paginado para el Monitor de integración, del más reciente al más viejo por `receivedAt`, con estado derivado (`processed`, `failed`, `pending`) y error acotado. Filtra por `status`, `eventType`, `sourceModule` y rango de `receivedAt` (días argentinos, inclusivos). No incluye el payload, que es de terceros y puede traer datos personales: está en el detalle, solo para admin.",
+        "operationId": "InboxController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -238,12 +237,12 @@
             "description": "Estado derivado: `processed` (efecto aplicado), `failed` (el handler falló y quedó con error, reintentable) o `pending` (guardado, sin procesar ni error: en curso)",
             "schema": {
               "example": "failed",
+              "type": "string",
               "enum": [
                 "processed",
                 "failed",
                 "pending"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -360,21 +359,21 @@
             }
           }
         },
-        "tags": [
-          "events"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar los eventos entrantes recibidos",
+        "tags": [
+          "events"
         ]
       }
     },
     "/events/inbox/{messageId}": {
       "get": {
-        "operationId": "InboxController_findOne",
-        "summary": "Detalle de un evento entrante, con su payload",
         "description": "Devuelve el evento tal como se guardó, con el payload recibido. Solo admin, porque el payload es de terceros y puede incluir datos personales.",
+        "operationId": "InboxController_findOne",
         "parameters": [
           {
             "name": "messageId",
@@ -449,21 +448,21 @@
             }
           }
         },
-        "tags": [
-          "events"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Detalle de un evento entrante, con su payload",
+        "tags": [
+          "events"
         ]
       }
     },
     "/events/handlers": {
       "get": {
-        "operationId": "InboxController_handlers",
-        "summary": "Listar los eventos que M6 sabe procesar",
         "description": "Los tipos con handler registrado. Sirve para verificar qué está conectado sin leer el código.",
+        "operationId": "InboxController_handlers",
         "parameters": [],
         "responses": {
           "200": {
@@ -507,21 +506,21 @@
             }
           }
         },
-        "tags": [
-          "events"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar los eventos que M6 sabe procesar",
+        "tags": [
+          "events"
         ]
       }
     },
     "/events/outbox": {
       "get": {
-        "operationId": "OutboxController_findAll",
-        "summary": "Listar los eventos salientes del outbox",
         "description": "Listado paginado, del más nuevo al más viejo, con estado, intentos y último error. Filtra por `status`, `eventType` y rango de `occurredAt` (días argentinos, inclusivos). No incluye el payload, que puede traer datos del vecino: está en el detalle, solo para admin.",
+        "operationId": "OutboxController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -554,12 +553,12 @@
             "description": "Filtrar por estado del envío",
             "schema": {
               "example": "FAILED",
+              "type": "string",
               "enum": [
                 "PENDING",
                 "SENT",
                 "FAILED"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -665,21 +664,21 @@
             }
           }
         },
-        "tags": [
-          "outbox"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar los eventos salientes del outbox",
+        "tags": [
+          "outbox"
         ]
       }
     },
     "/events/outbox/{id}": {
       "get": {
-        "operationId": "OutboxController_findOne",
-        "summary": "Detalle de un evento saliente, con su payload",
         "description": "Devuelve el evento completo: el payload tal como se publica y los reintentos manuales que se le hicieron (quién, cuándo y cómo estaba antes). Solo admin, porque el payload puede incluir datos personales.",
+        "operationId": "OutboxController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -754,21 +753,21 @@
             }
           }
         },
-        "tags": [
-          "outbox"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Detalle de un evento saliente, con su payload",
+        "tags": [
+          "outbox"
         ]
       }
     },
     "/events/outbox/retry-failed": {
       "post": {
-        "operationId": "OutboxController_retryFailed",
-        "summary": "Reencolar en lote los eventos FAILED",
         "description": "Pasa a PENDING (attempts = 0) los FAILED más viejos, hasta `limit` (tope 100 por pedido), y audita cada uno con el usuario del token. Exige `confirm: true` (solo el booleano `true` o la cadena \"true\"). Mismas salvedades que el reintento individual sobre el `eventId`. 409 si otro reintento concurrente tocó eventos de la tanda (no se reencola nada). Devuelve cuántos reencoló y cuántos FAILED quedan; repetir el pedido sigue con la tanda siguiente. Con el receptor todavía caído los eventos vuelven a FAILED tras 5 intentos.",
+        "operationId": "OutboxController_retryFailed",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -842,21 +841,21 @@
             }
           }
         },
-        "tags": [
-          "outbox"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Reencolar en lote los eventos FAILED",
+        "tags": [
+          "outbox"
         ]
       }
     },
     "/events/outbox/{id}/retry": {
       "post": {
-        "operationId": "OutboxController_retry",
-        "summary": "Reintentar un evento FAILED",
         "description": "Pasa un evento FAILED a PENDING con attempts = 0 para que el dispatcher lo reenvíe en la próxima barrida (cada 10 s). Queda auditado quién lo reencoló, cuándo y con qué intentos y error previos. Republica con el mismo `eventId`: los módulos receptores deduplican por él, pero el Core de M9 puede no redistribuir un `eventId` ya registrado, así que si el motivo del FAILED fue un payload rechazado el reintento no lo arregla. Un evento PENDING o SENT no se reenvía: 409.",
+        "operationId": "OutboxController_retry",
         "parameters": [
           {
             "name": "id",
@@ -941,21 +940,21 @@
             }
           }
         },
-        "tags": [
-          "outbox"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Reintentar un evento FAILED",
+        "tags": [
+          "outbox"
         ]
       }
     },
     "/audit": {
       "get": {
-        "operationId": "AuditController_findAll",
-        "summary": "Consultar la auditoría de dominio",
         "description": "Quién hizo qué y cuándo sobre contenedores, expedientes, inspecciones, actas, derivaciones, intervenciones, servicios y catálogos: acción, estado anterior y nuevo, actor (tomado del token) y fecha. Paginado, del más reciente al más antiguo. Filtra por `entityType` y `entityId`. Es de solo agregado: no se edita ni se purga.",
+        "operationId": "AuditController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -988,6 +987,7 @@
             "description": "Tipo de entidad auditada",
             "schema": {
               "example": "CONTAINER",
+              "type": "string",
               "enum": [
                 "CONTAINER",
                 "ENVIRONMENTAL_REPORT",
@@ -1002,8 +1002,7 @@
                 "VEHICLE",
                 "ROUTE",
                 "SANCTION_OUTCOME"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -1085,21 +1084,21 @@
             }
           }
         },
-        "tags": [
-          "audit"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Consultar la auditoría de dominio",
+        "tags": [
+          "audit"
         ]
       }
     },
     "/zones": {
       "post": {
-        "operationId": "ZonesController_create",
-        "summary": "Crear una zona operativa",
         "description": "Registra una nueva zona operativa con un código único. La zona se crea activa por defecto y puede agrupar barrios del catálogo de M9.",
+        "operationId": "ZonesController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1165,7 +1164,7 @@
             }
           },
           "409": {
-            "description": "Ya existe una zona con ese código",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nYa existe una zona con ese código",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1195,19 +1194,19 @@
             }
           }
         },
-        "tags": [
-          "zones"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Crear una zona operativa",
+        "tags": [
+          "zones"
         ]
       },
       "get": {
-        "operationId": "ZonesController_findAll",
-        "summary": "Listar zonas operativas",
         "description": "Retorna un listado paginado de zonas operativas. Se puede filtrar por estado activo/inactivo y buscar por nombre o por comuna (`communeId`). Cada zona incluye su `commune` y su `neighborhood` (uno solo: el primero por id si la zona tiene varios).",
+        "operationId": "ZonesController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -1333,21 +1332,21 @@
             }
           }
         },
-        "tags": [
-          "zones"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar zonas operativas",
+        "tags": [
+          "zones"
         ]
       }
     },
     "/zones/{id}": {
       "get": {
-        "operationId": "ZonesController_findOne",
-        "summary": "Obtener una zona por ID",
         "description": "Retorna el detalle de una zona operativa incluyendo los barrios asignados.",
+        "operationId": "ZonesController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -1422,19 +1421,19 @@
             }
           }
         },
-        "tags": [
-          "zones"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener una zona por ID",
+        "tags": [
+          "zones"
         ]
       },
       "patch": {
-        "operationId": "ZonesController_update",
-        "summary": "Actualizar una zona operativa",
         "description": "Actualiza los campos mutables de una zona (nombre, estado). El código no se puede cambiar después de la creación.",
+        "operationId": "ZonesController_update",
         "parameters": [
           {
             "name": "id",
@@ -1519,19 +1518,19 @@
             }
           }
         },
-        "tags": [
-          "zones"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar una zona operativa",
+        "tags": [
+          "zones"
         ]
       },
       "delete": {
-        "operationId": "ZonesController_remove",
-        "summary": "Desactivar una zona operativa",
         "description": "Soft-delete: marca la zona como inactiva. No elimina el registro para preservar la integridad referencial con servicios, contenedores y otros recursos asociados.",
+        "operationId": "ZonesController_remove",
         "parameters": [
           {
             "name": "id",
@@ -1589,21 +1588,21 @@
             }
           }
         },
-        "tags": [
-          "zones"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Desactivar una zona operativa",
+        "tags": [
+          "zones"
         ]
       }
     },
     "/zones/{id}/neighborhoods": {
       "post": {
-        "operationId": "ZonesController_addNeighborhoods",
-        "summary": "Asignar barrios a una zona",
         "description": "Vincula uno o más barrios del catálogo de M9 a esta zona operativa. Los barrios duplicados se ignoran silenciosamente. Retorna la zona actualizada con todos sus barrios.",
+        "operationId": "ZonesController_addNeighborhoods",
         "parameters": [
           {
             "name": "id",
@@ -1688,21 +1687,21 @@
             }
           }
         },
-        "tags": [
-          "zones"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Asignar barrios a una zona",
+        "tags": [
+          "zones"
         ]
       }
     },
     "/zones/{id}/neighborhoods/{neighborhoodId}": {
       "delete": {
-        "operationId": "ZonesController_removeNeighborhood",
-        "summary": "Quitar un barrio de una zona",
         "description": "Desvincula un barrio específico de esta zona operativa.",
+        "operationId": "ZonesController_removeNeighborhood",
         "parameters": [
           {
             "name": "id",
@@ -1769,21 +1768,21 @@
             }
           }
         },
-        "tags": [
-          "zones"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Quitar un barrio de una zona",
+        "tags": [
+          "zones"
         ]
       }
     },
     "/neighborhoods": {
       "get": {
-        "operationId": "NeighborhoodsController_findAll",
-        "summary": "Listar los barrios del catálogo de M9",
         "description": "Devuelve el catálogo de barrios de M9 que M6 mantiene en caché (se lee del Core al arrancar y se renueva cada 6 horas), para que el frontend arme selectores sin hablar con el Core. Los `id` son los que se mandan al asignar barrios a una zona. Sin paginar: son unas decenas de barrios.",
+        "operationId": "NeighborhoodsController_findAll",
         "parameters": [
           {
             "name": "soloActivos",
@@ -1882,21 +1881,21 @@
             }
           }
         },
-        "tags": [
-          "neighborhoods"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar los barrios del catálogo de M9",
+        "tags": [
+          "neighborhoods"
         ]
       }
     },
     "/communes": {
       "get": {
-        "operationId": "CommunesController_findAll",
-        "summary": "Listar las comunas con sus zonas y barrios",
         "description": "Devuelve cada comuna (agrupación de barrios de M9) con las zonas operativas que agrupa y los barrios de cada zona, para armar selectores y mapas. Ordenadas por número de comuna. Sin paginar: son pocas comunas, igual que el catálogo de barrios.",
+        "operationId": "CommunesController_findAll",
         "parameters": [
           {
             "name": "active",
@@ -1964,21 +1963,21 @@
             }
           }
         },
-        "tags": [
-          "communes"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar las comunas con sus zonas y barrios",
+        "tags": [
+          "communes"
         ]
       }
     },
     "/service-types": {
       "post": {
-        "operationId": "ServiceTypesController_create",
-        "summary": "Crear un tipo de servicio",
         "description": "Da de alta un tipo de servicio en el catálogo, con su código único, área operativa, modo de ejecución (ROUTE o POINT) y si exige vehículo. Es lo que después permite programar un Service.",
+        "operationId": "ServiceTypesController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -2044,7 +2043,7 @@
             }
           },
           "409": {
-            "description": "Ya existe un tipo de servicio con ese código",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nYa existe un tipo de servicio con ese código",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2074,19 +2073,19 @@
             }
           }
         },
-        "tags": [
-          "service-types"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Crear un tipo de servicio",
+        "tags": [
+          "service-types"
         ]
       },
       "get": {
-        "operationId": "ServiceTypesController_findAll",
-        "summary": "Listar tipos de servicio",
         "description": "Retorna un listado paginado del catálogo. Se puede filtrar por estado, área operativa y modo, y buscar por nombre.",
+        "operationId": "ServiceTypesController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -2129,6 +2128,7 @@
             "description": "Filtrar por área operativa",
             "schema": {
               "example": "WASTE_COLLECTION",
+              "type": "string",
               "enum": [
                 "WASTE_COLLECTION",
                 "STREET_CLEANING",
@@ -2136,8 +2136,7 @@
                 "TREES",
                 "GREEN_SPACES",
                 "ENVIRONMENTAL_CONTROL"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -2147,11 +2146,11 @@
             "description": "Filtrar por modo de ejecución",
             "schema": {
               "example": "ROUTE",
+              "type": "string",
               "enum": [
                 "ROUTE",
                 "POINT"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -2233,21 +2232,21 @@
             }
           }
         },
-        "tags": [
-          "service-types"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar tipos de servicio",
+        "tags": [
+          "service-types"
         ]
       }
     },
     "/service-types/{id}": {
       "get": {
-        "operationId": "ServiceTypesController_findOne",
-        "summary": "Obtener un tipo de servicio por ID",
         "description": "Retorna el detalle completo de un tipo de servicio del catálogo.",
+        "operationId": "ServiceTypesController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -2322,19 +2321,19 @@
             }
           }
         },
-        "tags": [
-          "service-types"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un tipo de servicio por ID",
+        "tags": [
+          "service-types"
         ]
       },
       "patch": {
-        "operationId": "ServiceTypesController_update",
-        "summary": "Actualizar un tipo de servicio",
         "description": "Actualiza los campos mutables (nombre, si exige vehículo, estado). El código, el área y el modo no se pueden cambiar: hay servicios ya programados que los copiaron.",
+        "operationId": "ServiceTypesController_update",
         "parameters": [
           {
             "name": "id",
@@ -2419,19 +2418,19 @@
             }
           }
         },
-        "tags": [
-          "service-types"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar un tipo de servicio",
+        "tags": [
+          "service-types"
         ]
       },
       "delete": {
-        "operationId": "ServiceTypesController_remove",
-        "summary": "Desactivar un tipo de servicio",
         "description": "Soft-delete: lo saca del catálogo de programación sin eliminar el registro, para no romper los servicios y las frecuencias que ya lo referencian.",
+        "operationId": "ServiceTypesController_remove",
         "parameters": [
           {
             "name": "id",
@@ -2489,21 +2488,21 @@
             }
           }
         },
-        "tags": [
-          "service-types"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Desactivar un tipo de servicio",
+        "tags": [
+          "service-types"
         ]
       }
     },
     "/disposal-sites": {
       "post": {
-        "operationId": "DisposalSitesController_create",
-        "summary": "Crear un sitio de disposición",
         "description": "Da de alta un destino final de residuos (relleno, estación de transferencia, planta de reciclado o de compostaje) con su código único.",
+        "operationId": "DisposalSitesController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -2569,7 +2568,7 @@
             }
           },
           "409": {
-            "description": "Ya existe un sitio de disposición con ese código",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nYa existe un sitio de disposición con ese código",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2599,19 +2598,19 @@
             }
           }
         },
-        "tags": [
-          "disposal-sites"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Crear un sitio de disposición",
+        "tags": [
+          "disposal-sites"
         ]
       },
       "get": {
-        "operationId": "DisposalSitesController_findAll",
-        "summary": "Listar sitios de disposición",
         "description": "Retorna un listado paginado. Se puede filtrar por estado operativo y tipo de destino, y buscar por nombre.",
+        "operationId": "DisposalSitesController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -2654,13 +2653,13 @@
             "description": "Filtrar por tipo de destino final",
             "schema": {
               "example": "RECYCLING_PLANT",
+              "type": "string",
               "enum": [
                 "LANDFILL",
                 "TRANSFER_STATION",
                 "RECYCLING_PLANT",
                 "COMPOSTING_PLANT"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -2742,21 +2741,21 @@
             }
           }
         },
-        "tags": [
-          "disposal-sites"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar sitios de disposición",
+        "tags": [
+          "disposal-sites"
         ]
       }
     },
     "/disposal-sites/{id}": {
       "get": {
-        "operationId": "DisposalSitesController_findOne",
-        "summary": "Obtener un sitio de disposición por ID",
         "description": "Retorna el detalle completo de un sitio de disposición.",
+        "operationId": "DisposalSitesController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -2831,19 +2830,19 @@
             }
           }
         },
-        "tags": [
-          "disposal-sites"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un sitio de disposición por ID",
+        "tags": [
+          "disposal-sites"
         ]
       },
       "patch": {
-        "operationId": "DisposalSitesController_update",
-        "summary": "Actualizar un sitio de disposición",
         "description": "Actualiza nombre, tipo de destino y estado operativo. El código no se puede cambiar: identifica al sitio en los registros de recolección ya cargados.",
+        "operationId": "DisposalSitesController_update",
         "parameters": [
           {
             "name": "id",
@@ -2928,19 +2927,19 @@
             }
           }
         },
-        "tags": [
-          "disposal-sites"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar un sitio de disposición",
+        "tags": [
+          "disposal-sites"
         ]
       },
       "delete": {
-        "operationId": "DisposalSitesController_remove",
-        "summary": "Desactivar un sitio de disposición",
         "description": "Soft-delete: lo saca del catálogo sin eliminar el registro. Los registros de recolección ya cargados apuntan al sitio, y el borrado físico rompería el histórico de destino final.",
+        "operationId": "DisposalSitesController_remove",
         "parameters": [
           {
             "name": "id",
@@ -2998,21 +2997,21 @@
             }
           }
         },
-        "tags": [
-          "disposal-sites"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Desactivar un sitio de disposición",
+        "tags": [
+          "disposal-sites"
         ]
       }
     },
     "/routes": {
       "post": {
-        "operationId": "RoutesController_create",
-        "summary": "Crear un recorrido",
         "description": "Da de alta un recorrido con su código único. Se crea sin paradas: la secuencia de zonas se carga después con PUT /routes/:id/stops.",
+        "operationId": "RoutesController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -3078,7 +3077,7 @@
             }
           },
           "409": {
-            "description": "Ya existe un recorrido con ese código",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nYa existe un recorrido con ese código",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3108,19 +3107,19 @@
             }
           }
         },
-        "tags": [
-          "routes"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Crear un recorrido",
+        "tags": [
+          "routes"
         ]
       },
       "get": {
-        "operationId": "RoutesController_findAll",
-        "summary": "Listar recorridos",
         "description": "Retorna un listado paginado. Se puede filtrar por estado, por zona por la que pasa el recorrido, y buscar por nombre. Cada recorrido incluye sus paradas en orden, con el mismo formato que el GET por ID.",
+        "operationId": "RoutesController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -3246,21 +3245,21 @@
             }
           }
         },
-        "tags": [
-          "routes"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar recorridos",
+        "tags": [
+          "routes"
         ]
       }
     },
     "/routes/{id}": {
       "get": {
-        "operationId": "RoutesController_findOne",
-        "summary": "Obtener un recorrido por ID",
         "description": "Retorna el recorrido con su secuencia completa de paradas, en orden.",
+        "operationId": "RoutesController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -3335,19 +3334,19 @@
             }
           }
         },
-        "tags": [
-          "routes"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un recorrido por ID",
+        "tags": [
+          "routes"
         ]
       },
       "patch": {
-        "operationId": "RoutesController_update",
-        "summary": "Actualizar un recorrido",
         "description": "Actualiza nombre y estado. El código no se puede cambiar, y las paradas se editan con PUT /routes/:id/stops.",
+        "operationId": "RoutesController_update",
         "parameters": [
           {
             "name": "id",
@@ -3432,19 +3431,19 @@
             }
           }
         },
-        "tags": [
-          "routes"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar un recorrido",
+        "tags": [
+          "routes"
         ]
       },
       "delete": {
-        "operationId": "RoutesController_remove",
-        "summary": "Desactivar un recorrido",
         "description": "Soft-delete: lo saca del catálogo sin eliminar el registro. Los servicios ya programados guardan su routeId, y el borrado físico rompería el histórico.",
+        "operationId": "RoutesController_remove",
         "parameters": [
           {
             "name": "id",
@@ -3502,21 +3501,21 @@
             }
           }
         },
-        "tags": [
-          "routes"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Desactivar un recorrido",
+        "tags": [
+          "routes"
         ]
       }
     },
     "/routes/{id}/stops": {
       "put": {
-        "operationId": "RoutesController_setStops",
-        "summary": "Definir la secuencia de paradas de un recorrido",
         "description": "Reemplaza la secuencia completa. El orden del array es el orden del recorrido. Un solo endpoint cubre alta, baja y reordenamiento de paradas, de forma atómica: mover paradas de a una chocaría con la restricción de unicidad de la posición. Enviar un array vacío deja el recorrido sin paradas. Una zona no puede repetirse.",
+        "operationId": "RoutesController_setStops",
         "parameters": [
           {
             "name": "id",
@@ -3601,21 +3600,21 @@
             }
           }
         },
-        "tags": [
-          "routes"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Definir la secuencia de paradas de un recorrido",
+        "tags": [
+          "routes"
         ]
       }
     },
     "/service-frequencies": {
       "post": {
-        "operationId": "ServiceFrequenciesController_create",
-        "summary": "Crear una frecuencia de servicio",
         "description": "Da de alta la regla que genera los servicios planificados: \"tipo X sobre el recorrido R, martes y viernes, turno mañana, desde tal fecha\". El tipo de servicio tiene que ser de modo ROUTE. Los servicios que genera nacen con origin=PLANNED y no proyectan nada hacia M2.",
+        "operationId": "ServiceFrequenciesController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -3691,7 +3690,7 @@
             }
           },
           "409": {
-            "description": "Ya existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nYa existe una frecuencia superpuesta (mismo recorrido, tipo, turno, día y vigencia)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3721,19 +3720,19 @@
             }
           }
         },
-        "tags": [
-          "service-frequencies"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Crear una frecuencia de servicio",
+        "tags": [
+          "service-frequencies"
         ]
       },
       "get": {
-        "operationId": "ServiceFrequenciesController_findAll",
-        "summary": "Listar frecuencias de servicio",
         "description": "Retorna un listado paginado. Se puede filtrar por tipo de servicio, recorrido, turno, día de la semana, y por vigencia en una fecha dada con validOn.",
+        "operationId": "ServiceFrequenciesController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -3788,12 +3787,12 @@
             "description": "Filtrar por turno",
             "schema": {
               "example": "MORNING",
+              "type": "string",
               "enum": [
                 "MORNING",
                 "AFTERNOON",
                 "NIGHT"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -3887,21 +3886,21 @@
             }
           }
         },
-        "tags": [
-          "service-frequencies"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar frecuencias de servicio",
+        "tags": [
+          "service-frequencies"
         ]
       }
     },
     "/service-frequencies/{id}": {
       "get": {
-        "operationId": "ServiceFrequenciesController_findOne",
-        "summary": "Obtener una frecuencia por ID",
         "description": "Retorna el detalle completo de la regla, con sus días de la semana.",
+        "operationId": "ServiceFrequenciesController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -3976,19 +3975,19 @@
             }
           }
         },
-        "tags": [
-          "service-frequencies"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener una frecuencia por ID",
+        "tags": [
+          "service-frequencies"
         ]
       },
       "patch": {
-        "operationId": "ServiceFrequenciesController_update",
-        "summary": "Actualizar una frecuencia",
         "description": "Actualiza días, turno y vigencia. El array de días reemplaza el conjunto completo. El tipo de servicio y el recorrido no se pueden cambiar: eso sería otra regla, y corresponde cerrar esta y crear una nueva.",
+        "operationId": "ServiceFrequenciesController_update",
         "parameters": [
           {
             "name": "id",
@@ -4083,19 +4082,19 @@
             }
           }
         },
-        "tags": [
-          "service-frequencies"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar una frecuencia",
+        "tags": [
+          "service-frequencies"
         ]
       },
       "delete": {
-        "operationId": "ServiceFrequenciesController_remove",
-        "summary": "Cerrar la vigencia de una frecuencia",
         "description": "La regla deja de generar servicios a partir de hoy. No borra el registro: la baja se expresa con validTo, que es el mecanismo que ya define el dominio, en vez de un campo de estado aparte. Si la regla todavía no empezó a regir, se cierra en su fecha de inicio.",
+        "operationId": "ServiceFrequenciesController_remove",
         "parameters": [
           {
             "name": "id",
@@ -4153,21 +4152,21 @@
             }
           }
         },
-        "tags": [
-          "service-frequencies"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Cerrar la vigencia de una frecuencia",
+        "tags": [
+          "service-frequencies"
         ]
       }
     },
     "/crews": {
       "post": {
-        "operationId": "CrewsController_create",
-        "summary": "Crear una cuadrilla",
         "description": "Registra una nueva cuadrilla con su tipo, especialidad y turno por defecto, y opcionalmente zona base, líder y organización (con sus nombres, que se guardan como copia de M1). Se crea activa por defecto.",
+        "operationId": "CrewsController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -4267,7 +4266,7 @@
             }
           },
           "422": {
-            "description": "Algún id de usuario no existe en M1 o no es un empleado activo (el mensaje los lista)",
+            "description": "La Idempotency-Key ya se usó con un cuerpo distinto\n\nAlgún id de usuario no existe en M1 o no es un empleado activo (el mensaje los lista)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4297,19 +4296,19 @@
             }
           }
         },
-        "tags": [
-          "crews"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Crear una cuadrilla",
+        "tags": [
+          "crews"
         ]
       },
       "get": {
-        "operationId": "CrewsController_findAll",
-        "summary": "Listar cuadrillas",
         "description": "Retorna un listado paginado de cuadrillas con su cantidad de integrantes y su zona efectiva hoy. Se puede filtrar por estado activo/inactivo, tipo, turno, especialidad y zona efectiva hoy (`zoneId`: la reubicación vigente o, si no hay, la zona base).",
+        "operationId": "CrewsController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -4352,12 +4351,12 @@
             "description": "Filtrar por tipo de cuadrilla",
             "schema": {
               "example": "MUNICIPAL",
+              "type": "string",
               "enum": [
                 "MUNICIPAL",
                 "COOPERATIVE",
                 "CONTRACTOR"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -4367,12 +4366,12 @@
             "description": "Filtrar por turno por defecto",
             "schema": {
               "example": "MORNING",
+              "type": "string",
               "enum": [
                 "MORNING",
                 "AFTERNOON",
                 "NIGHT"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -4382,6 +4381,7 @@
             "description": "Filtrar por especialidad",
             "schema": {
               "example": "COLLECTION",
+              "type": "string",
               "enum": [
                 "COLLECTION",
                 "SWEEPING",
@@ -4390,8 +4390,7 @@
                 "TREES",
                 "GREEN_SPACES",
                 "INSPECTION"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -4473,21 +4472,21 @@
             }
           }
         },
-        "tags": [
-          "crews"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar cuadrillas",
+        "tags": [
+          "crews"
         ]
       }
     },
     "/crews/{id}": {
       "get": {
-        "operationId": "CrewsController_findOne",
-        "summary": "Obtener una cuadrilla por ID",
         "description": "Retorna el detalle de una cuadrilla incluyendo la lista de miembros asignados, con sus nombres.",
+        "operationId": "CrewsController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -4562,19 +4561,19 @@
             }
           }
         },
-        "tags": [
-          "crews"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener una cuadrilla por ID",
+        "tags": [
+          "crews"
         ]
       },
       "patch": {
-        "operationId": "CrewsController_update",
-        "summary": "Actualizar una cuadrilla",
         "description": "Actualiza los campos mutables de una cuadrilla (nombre, turno, especialidad, zona base, líder, organización, sus nombres y estado). El tipo de cuadrilla no se puede cambiar después de la creación.",
+        "operationId": "CrewsController_update",
         "parameters": [
           {
             "name": "id",
@@ -4679,19 +4678,19 @@
             }
           }
         },
-        "tags": [
-          "crews"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar una cuadrilla",
+        "tags": [
+          "crews"
         ]
       },
       "delete": {
-        "operationId": "CrewsController_remove",
-        "summary": "Desactivar una cuadrilla",
         "description": "Soft-delete: marca la cuadrilla como inactiva. No elimina el registro para preservar el historial de servicios asignados.",
+        "operationId": "CrewsController_remove",
         "parameters": [
           {
             "name": "id",
@@ -4749,21 +4748,21 @@
             }
           }
         },
-        "tags": [
-          "crews"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Desactivar una cuadrilla",
+        "tags": [
+          "crews"
         ]
       }
     },
     "/crews/{id}/members": {
       "post": {
-        "operationId": "CrewsController_addMembers",
-        "summary": "Agregar miembros a una cuadrilla",
         "description": "Asigna uno o más usuarios internos de M6 como miembros de la cuadrilla. Se envían en `members` (id de M1 y nombre opcional) o, por compatibilidad, en `userIds` (solo ids). Si un integrante ya estaba, se lo ignora salvo que traiga nombre: ahí se actualiza. Retorna la cuadrilla actualizada con todos sus miembros.",
+        "operationId": "CrewsController_addMembers",
         "parameters": [
           {
             "name": "id",
@@ -4885,21 +4884,21 @@
             }
           }
         },
-        "tags": [
-          "crews"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Agregar miembros a una cuadrilla",
+        "tags": [
+          "crews"
         ]
       }
     },
     "/crews/{id}/members/{userId}": {
       "delete": {
-        "operationId": "CrewsController_removeMember",
-        "summary": "Quitar un miembro de una cuadrilla",
         "description": "Desvincula un usuario específico de esta cuadrilla.",
+        "operationId": "CrewsController_removeMember",
         "parameters": [
           {
             "name": "id",
@@ -4966,21 +4965,21 @@
             }
           }
         },
-        "tags": [
-          "crews"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Quitar un miembro de una cuadrilla",
+        "tags": [
+          "crews"
         ]
       }
     },
     "/crews/{id}/zone-assignments": {
       "post": {
-        "operationId": "CrewsController_createZoneAssignment",
-        "summary": "Reubicar una cuadrilla en otra zona por un período",
         "description": "Registra que la cuadrilla trabaja en otra zona entre `validFrom` y `validTo` (inclusive; sin `validTo`, hasta nuevo aviso). No cambia la zona base: al vencer, la cuadrilla vuelve a ella. Una cuadrilla no puede tener dos reubicaciones que se superpongan. Quien la carga queda registrado a partir del token.",
+        "operationId": "CrewsController_createZoneAssignment",
         "parameters": [
           {
             "name": "id",
@@ -5086,19 +5085,19 @@
             }
           }
         },
-        "tags": [
-          "crews"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Reubicar una cuadrilla en otra zona por un período",
+        "tags": [
+          "crews"
         ]
       },
       "get": {
-        "operationId": "CrewsController_listZoneAssignments",
-        "summary": "Listar las reubicaciones de una cuadrilla",
         "description": "Historial de reubicaciones de zona de la cuadrilla, la más reciente primero: vigentes, futuras y vencidas.",
+        "operationId": "CrewsController_listZoneAssignments",
         "parameters": [
           {
             "name": "id",
@@ -5176,21 +5175,21 @@
             }
           }
         },
-        "tags": [
-          "crews"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar las reubicaciones de una cuadrilla",
+        "tags": [
+          "crews"
         ]
       }
     },
     "/vehicles": {
       "post": {
-        "operationId": "VehiclesController_create",
-        "summary": "Registrar un vehículo",
         "description": "Da de alta un vehículo con su patente (única), tipo y capacidad opcional. Se crea activo por defecto.",
+        "operationId": "VehiclesController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -5256,7 +5255,7 @@
             }
           },
           "409": {
-            "description": "Ya existe un vehículo con esa patente",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nYa existe un vehículo con esa patente",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5286,19 +5285,19 @@
             }
           }
         },
-        "tags": [
-          "vehicles"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar un vehículo",
+        "tags": [
+          "vehicles"
         ]
       },
       "get": {
-        "operationId": "VehiclesController_findAll",
-        "summary": "Listar vehículos",
         "description": "Retorna un listado paginado de vehículos. Se puede filtrar por estado activo/inactivo y por tipo de vehículo.",
+        "operationId": "VehiclesController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -5341,6 +5340,7 @@
             "description": "Filtrar por tipo de vehículo",
             "schema": {
               "example": "COMPACTOR_TRUCK",
+              "type": "string",
               "enum": [
                 "COMPACTOR_TRUCK",
                 "DUMP_TRUCK",
@@ -5348,8 +5348,7 @@
                 "WATER_TANKER",
                 "CRANE_TRUCK",
                 "VAN"
-              ],
-              "type": "string"
+              ]
             }
           }
         ],
@@ -5420,21 +5419,21 @@
             }
           }
         },
-        "tags": [
-          "vehicles"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar vehículos",
+        "tags": [
+          "vehicles"
         ]
       }
     },
     "/vehicles/{id}": {
       "get": {
-        "operationId": "VehiclesController_findOne",
-        "summary": "Obtener un vehículo por ID",
         "description": "Retorna el detalle completo de un vehículo.",
+        "operationId": "VehiclesController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -5509,19 +5508,19 @@
             }
           }
         },
-        "tags": [
-          "vehicles"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un vehículo por ID",
+        "tags": [
+          "vehicles"
         ]
       },
       "patch": {
-        "operationId": "VehiclesController_update",
-        "summary": "Actualizar un vehículo",
         "description": "Actualiza los campos mutables de un vehículo (patente, capacidad, estado activo). El tipo de vehículo no se puede cambiar después de la creación.",
+        "operationId": "VehiclesController_update",
         "parameters": [
           {
             "name": "id",
@@ -5616,19 +5615,19 @@
             }
           }
         },
-        "tags": [
-          "vehicles"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar un vehículo",
+        "tags": [
+          "vehicles"
         ]
       },
       "delete": {
-        "operationId": "VehiclesController_remove",
-        "summary": "Desactivar un vehículo",
         "description": "Soft-delete: marca el vehículo como inactivo. No elimina el registro para preservar el historial de servicios asociados.",
+        "operationId": "VehiclesController_remove",
         "parameters": [
           {
             "name": "id",
@@ -5686,21 +5685,21 @@
             }
           }
         },
-        "tags": [
-          "vehicles"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Desactivar un vehículo",
+        "tags": [
+          "vehicles"
         ]
       }
     },
     "/containers": {
       "post": {
-        "operationId": "ContainersController_create",
-        "summary": "Registrar un contenedor",
         "description": "Da de alta un contenedor en el inventario urbano con su código único, tipo, zona, capacidad y ubicación. Se crea en estado ACTIVE.",
+        "operationId": "ContainersController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -5776,7 +5775,7 @@
             }
           },
           "409": {
-            "description": "Ya existe un contenedor con ese código",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nYa existe un contenedor con ese código",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5806,19 +5805,19 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar un contenedor",
+        "tags": [
+          "containers"
         ]
       },
       "get": {
-        "operationId": "ContainersController_findAll",
-        "summary": "Listar contenedores",
         "description": "Retorna un listado paginado de contenedores. Se puede filtrar por estado, tipo, zona y buscar por dirección.",
+        "operationId": "ContainersController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -5851,6 +5850,7 @@
             "description": "Filtrar por estado del contenedor",
             "schema": {
               "example": "ACTIVE",
+              "type": "string",
               "enum": [
                 "ACTIVE",
                 "OVERFLOWED",
@@ -5858,8 +5858,7 @@
                 "UNDER_REPAIR",
                 "RELOCATING",
                 "REMOVED"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -5869,13 +5868,13 @@
             "description": "Filtrar por tipo de contenedor",
             "schema": {
               "example": "HOUSEHOLD",
+              "type": "string",
               "enum": [
                 "HOUSEHOLD",
                 "RECYCLABLE",
                 "BULKY",
                 "GREEN"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -5968,21 +5967,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar contenedores",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/containers/{id}": {
       "get": {
-        "operationId": "ContainersController_findOne",
-        "summary": "Obtener un contenedor por ID",
         "description": "Retorna el detalle completo de un contenedor incluyendo su zona, estado actual y datos de daño si aplica.",
+        "operationId": "ContainersController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -6066,19 +6065,19 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un contenedor por ID",
+        "tags": [
+          "containers"
         ]
       },
       "patch": {
-        "operationId": "ContainersController_update",
-        "summary": "Actualizar datos de un contenedor",
         "description": "Actualiza campos mutables (zona, capacidad, ubicación). El código y tipo no se pueden cambiar. Para cambios de estado, usar los endpoints específicos de transición.",
+        "operationId": "ContainersController_update",
         "parameters": [
           {
             "name": "id",
@@ -6096,7 +6095,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -6191,21 +6191,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar datos de un contenedor",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/containers/{id}/history": {
       "get": {
-        "operationId": "ContainersController_findHistory",
-        "summary": "Historial de estados de un contenedor",
         "description": "Retorna, paginado y del más reciente al más antiguo, cada alta y cada cambio de estado del contenedor (origen, destino e instante). El alta tiene origen nulo.",
+        "operationId": "ContainersController_findHistory",
         "parameters": [
           {
             "name": "id",
@@ -6319,21 +6319,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Historial de estados de un contenedor",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/containers/{id}/report-overflow": {
       "post": {
-        "operationId": "ContainersController_reportOverflow",
-        "summary": "Reportar desborde de un contenedor",
         "description": "Transición ACTIVE → OVERFLOWED. Registra que el contenedor está desbordado.",
+        "operationId": "ContainersController_reportOverflow",
         "parameters": [
           {
             "name": "id",
@@ -6351,7 +6351,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -6446,21 +6447,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Reportar desborde de un contenedor",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/containers/{id}/report-damage": {
       "post": {
-        "operationId": "ContainersController_reportDamage",
-        "summary": "Reportar daño en un contenedor",
         "description": "Transición ACTIVE → DAMAGED. Registra el tipo de daño, severidad, observaciones opcionales (dato interno, no viajan a M3) y si requiere derivación a Obras Públicas (M3). Un contenedor con requiresPublicWorks=true genera el evento containerDamaged hacia M3.",
+        "operationId": "ContainersController_reportDamage",
         "parameters": [
           {
             "name": "id",
@@ -6478,7 +6479,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -6583,21 +6585,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Reportar daño en un contenedor",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/containers/{id}/empty": {
       "post": {
-        "operationId": "ContainersController_empty",
-        "summary": "Registrar vaciado de un contenedor",
         "description": "Transición OVERFLOWED → ACTIVE. Indica que el contenedor fue vaciado y vuelve a estar operativo.",
+        "operationId": "ContainersController_empty",
         "parameters": [
           {
             "name": "id",
@@ -6615,7 +6617,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -6710,21 +6713,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar vaciado de un contenedor",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/containers/{id}/start-repair": {
       "post": {
-        "operationId": "ContainersController_startRepair",
-        "summary": "Enviar un contenedor a reparación",
         "description": "Transición DAMAGED → UNDER_REPAIR. Indica que el contenedor fue retirado para reparación.",
+        "operationId": "ContainersController_startRepair",
         "parameters": [
           {
             "name": "id",
@@ -6742,7 +6745,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -6837,21 +6841,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Enviar un contenedor a reparación",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/containers/{id}/complete-repair": {
       "post": {
-        "operationId": "ContainersController_completeRepair",
-        "summary": "Completar reparación de un contenedor",
         "description": "Transición UNDER_REPAIR → ACTIVE. Indica que la reparación finalizó y el contenedor vuelve a servicio. Limpia los campos de daño y las observaciones.",
+        "operationId": "ContainersController_completeRepair",
         "parameters": [
           {
             "name": "id",
@@ -6869,7 +6873,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -6964,21 +6969,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Completar reparación de un contenedor",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/containers/{id}/relocate": {
       "post": {
-        "operationId": "ContainersController_relocate",
-        "summary": "Iniciar reubicación de un contenedor",
         "description": "Transición ACTIVE → RELOCATING. Indica que el contenedor está siendo trasladado a una nueva ubicación.",
+        "operationId": "ContainersController_relocate",
         "parameters": [
           {
             "name": "id",
@@ -6996,7 +7001,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -7091,21 +7097,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Iniciar reubicación de un contenedor",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/containers/{id}/confirm-relocation": {
       "post": {
-        "operationId": "ContainersController_confirmRelocation",
-        "summary": "Confirmar reubicación de un contenedor",
         "description": "Transición RELOCATING → ACTIVE. Confirma la nueva ubicación del contenedor y lo vuelve a poner en servicio.",
+        "operationId": "ContainersController_confirmRelocation",
         "parameters": [
           {
             "name": "id",
@@ -7123,7 +7129,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -7228,21 +7235,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Confirmar reubicación de un contenedor",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/containers/{id}/remove": {
       "post": {
-        "operationId": "ContainersController_remove",
-        "summary": "Retirar un contenedor definitivamente",
         "description": "Transición DAMAGED → REMOVED, para el daño que no admite reparación. Un contenedor ACTIVE no se retira directamente: primero se reporta el daño. Estado terminal: no admite más transiciones.",
+        "operationId": "ContainersController_remove",
         "parameters": [
           {
             "name": "id",
@@ -7260,7 +7267,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -7355,21 +7363,21 @@
             }
           }
         },
-        "tags": [
-          "containers"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Retirar un contenedor definitivamente",
+        "tags": [
+          "containers"
         ]
       }
     },
     "/trees": {
       "post": {
-        "operationId": "TreesController_create",
-        "summary": "Registrar un árbol",
         "description": "Da de alta un árbol en el inventario de arbolado urbano con su código de relevamiento (único), especie, ubicación y datos dendrométricos.",
+        "operationId": "TreesController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -7445,7 +7453,7 @@
             }
           },
           "409": {
-            "description": "Ya existe un árbol con ese código de relevamiento",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nYa existe un árbol con ese código de relevamiento",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -7475,19 +7483,19 @@
             }
           }
         },
-        "tags": [
-          "trees"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar un árbol",
+        "tags": [
+          "trees"
         ]
       },
       "get": {
-        "operationId": "TreesController_findAll",
-        "summary": "Listar árboles del inventario",
         "description": "Retorna un listado paginado de árboles. Se puede filtrar por estado, zona y nivel de riesgo (`riskLevel`, del último relevamiento) y buscar por especie o dirección.",
+        "operationId": "TreesController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -7538,14 +7546,14 @@
             "in": "query",
             "description": "Filtrar por nivel de riesgo del último relevamiento (el mismo criterio que `indicators/incidents` → `trees.byRiskLevel`). Los árboles sin relevamiento no coinciden con ningún nivel",
             "schema": {
+              "type": "string",
               "enum": [
                 "NONE",
                 "LOW",
                 "MEDIUM",
                 "HIGH",
                 "CRITICAL"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -7626,21 +7634,21 @@
             }
           }
         },
-        "tags": [
-          "trees"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar árboles del inventario",
+        "tags": [
+          "trees"
         ]
       }
     },
     "/trees/{id}": {
       "get": {
-        "operationId": "TreesController_findOne",
-        "summary": "Obtener un árbol por ID",
         "description": "Retorna el detalle completo de un árbol del inventario.",
+        "operationId": "TreesController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -7715,19 +7723,19 @@
             }
           }
         },
-        "tags": [
-          "trees"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un árbol por ID",
+        "tags": [
+          "trees"
         ]
       },
       "patch": {
-        "operationId": "TreesController_update",
-        "summary": "Actualizar datos de un árbol",
         "description": "Actualiza los campos mutables. El código de relevamiento no se puede cambiar.",
+        "operationId": "TreesController_update",
         "parameters": [
           {
             "name": "id",
@@ -7812,19 +7820,19 @@
             }
           }
         },
-        "tags": [
-          "trees"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar datos de un árbol",
+        "tags": [
+          "trees"
         ]
       },
       "delete": {
-        "operationId": "TreesController_remove",
-        "summary": "Desactivar un árbol del inventario",
         "description": "Soft-delete: marca el árbol como inactivo. No elimina el registro.",
+        "operationId": "TreesController_remove",
         "parameters": [
           {
             "name": "id",
@@ -7882,21 +7890,21 @@
             }
           }
         },
-        "tags": [
-          "trees"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Desactivar un árbol del inventario",
+        "tags": [
+          "trees"
         ]
       }
     },
     "/trees/{treeId}/surveys": {
       "post": {
-        "operationId": "TreeSurveysController_create",
-        "summary": "Registrar un relevamiento fitosanitario",
         "description": "Crea un nuevo registro de inspección fitosanitaria para un árbol. El relevamiento es inmutable: una vez registrado, no se puede modificar ni eliminar. Si riskLevel es HIGH o CRITICAL, el sistema puede generar el evento treeRiskDetected hacia M3/M5.",
+        "operationId": "TreeSurveysController_create",
         "parameters": [
           {
             "name": "treeId",
@@ -8012,19 +8020,19 @@
             }
           }
         },
-        "tags": [
-          "tree-surveys"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar un relevamiento fitosanitario",
+        "tags": [
+          "tree-surveys"
         ]
       },
       "get": {
-        "operationId": "TreeSurveysController_findAll",
-        "summary": "Listar relevamientos de un árbol",
         "description": "Retorna un listado paginado de relevamientos fitosanitarios, ordenados del más reciente al más antiguo.",
+        "operationId": "TreeSurveysController_findAll",
         "parameters": [
           {
             "name": "treeId",
@@ -8067,13 +8075,13 @@
             "description": "Filtrar por estado sanitario",
             "schema": {
               "example": "DISEASED",
+              "type": "string",
               "enum": [
                 "HEALTHY",
                 "WEAKENED",
                 "DISEASED",
                 "DEAD"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -8083,14 +8091,14 @@
             "description": "Filtrar por nivel de riesgo",
             "schema": {
               "example": "HIGH",
+              "type": "string",
               "enum": [
                 "NONE",
                 "LOW",
                 "MEDIUM",
                 "HIGH",
                 "CRITICAL"
-              ],
-              "type": "string"
+              ]
             }
           }
         ],
@@ -8171,21 +8179,21 @@
             }
           }
         },
-        "tags": [
-          "tree-surveys"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar relevamientos de un árbol",
+        "tags": [
+          "tree-surveys"
         ]
       }
     },
     "/trees/{treeId}/surveys/{surveyId}": {
       "get": {
-        "operationId": "TreeSurveysController_findOne",
-        "summary": "Obtener un relevamiento por ID",
         "description": "Retorna el detalle completo de un relevamiento fitosanitario específico.",
+        "operationId": "TreeSurveysController_findOne",
         "parameters": [
           {
             "name": "treeId",
@@ -8270,21 +8278,21 @@
             }
           }
         },
-        "tags": [
-          "tree-surveys"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un relevamiento por ID",
+        "tags": [
+          "tree-surveys"
         ]
       }
     },
     "/tree-interventions": {
       "post": {
-        "operationId": "TreeInterventionsController_create",
-        "summary": "Solicitar una intervención sobre árboles",
         "description": "Crea una solicitud de intervención (poda, extracción, plantación o tratamiento) sobre uno o más árboles. Se crea en estado REQUESTED y registra quién la solicitó (el usuario del token). Las extracciones (REMOVAL) requieren autorización adicional vía el endpoint submit-for-authorization.",
+        "operationId": "TreeInterventionsController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -8390,19 +8398,19 @@
             }
           }
         },
-        "tags": [
-          "tree-interventions"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Solicitar una intervención sobre árboles",
+        "tags": [
+          "tree-interventions"
         ]
       },
       "get": {
-        "operationId": "TreeInterventionsController_findAll",
-        "summary": "Listar intervenciones sobre árboles",
         "description": "Retorna un listado paginado de intervenciones. Se puede filtrar por tipo, estado, prioridad y por árbol: con treeId vienen solo las intervenciones que incluyen ese árbol, para armar su ficha.",
+        "operationId": "TreeInterventionsController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -8435,14 +8443,14 @@
             "description": "Filtrar por tipo de intervención",
             "schema": {
               "example": "SAFETY_PRUNING",
+              "type": "string",
               "enum": [
                 "FORMATION_PRUNING",
                 "SAFETY_PRUNING",
                 "REMOVAL",
                 "PLANTING",
                 "TREATMENT"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -8452,13 +8460,13 @@
             "description": "Filtrar por estado de la intervención",
             "schema": {
               "example": "REQUESTED",
+              "type": "string",
               "enum": [
                 "REQUESTED",
                 "PENDING_AUTHORIZATION",
                 "AUTHORIZED",
                 "REJECTED"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -8468,13 +8476,13 @@
             "description": "Filtrar por prioridad de la intervención (LOW, MEDIUM, HIGH, CRITICAL)",
             "schema": {
               "example": "HIGH",
+              "type": "string",
               "enum": [
                 "LOW",
                 "MEDIUM",
                 "HIGH",
                 "CRITICAL"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -8556,21 +8564,21 @@
             }
           }
         },
-        "tags": [
-          "tree-interventions"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar intervenciones sobre árboles",
+        "tags": [
+          "tree-interventions"
         ]
       }
     },
     "/tree-interventions/{id}": {
       "get": {
-        "operationId": "TreeInterventionsController_findOne",
-        "summary": "Obtener una intervención por ID",
         "description": "Retorna el detalle de una intervención incluyendo los árboles afectados.",
+        "operationId": "TreeInterventionsController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -8654,21 +8662,21 @@
             }
           }
         },
-        "tags": [
-          "tree-interventions"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener una intervención por ID",
+        "tags": [
+          "tree-interventions"
         ]
       }
     },
     "/tree-interventions/{id}/submit-for-authorization": {
       "post": {
-        "operationId": "TreeInterventionsController_submitForAuthorization",
-        "summary": "Enviar extracción a autorización",
         "description": "Transición REQUESTED → PENDING_AUTHORIZATION. Solo para intervenciones de tipo REMOVAL. Las podas no requieren este paso.",
+        "operationId": "TreeInterventionsController_submitForAuthorization",
         "parameters": [
           {
             "name": "id",
@@ -8686,7 +8694,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -8781,21 +8790,21 @@
             }
           }
         },
-        "tags": [
-          "tree-interventions"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Enviar extracción a autorización",
+        "tags": [
+          "tree-interventions"
         ]
       }
     },
     "/tree-interventions/{id}/authorize": {
       "post": {
-        "operationId": "TreeInterventionsController_authorize",
-        "summary": "Autorizar una intervención",
         "description": "Transición PENDING_AUTHORIZATION → AUTHORIZED (para REMOVAL) o REQUESTED → AUTHORIZED (para podas). Registra quién autorizó (el usuario del token) y cuándo. Autorizar una extracción (REMOVAL) exige M6_ADMIN, aunque la solicite otro; un M6_ADMIN puede autorizar lo que él mismo solicitó y ambos ids quedan registrados. Las podas no requieren autorización.",
+        "operationId": "TreeInterventionsController_authorize",
         "parameters": [
           {
             "name": "id",
@@ -8813,7 +8822,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -8868,7 +8878,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6 (code ROLE_REQUIRED). Una extracción (REMOVAL) requiere M6_ADMIN; las podas, cualquiera de los roles de operaciones",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nAdemás, una extracción (REMOVAL) requiere M6_ADMIN (code ROLE_REQUIRED); las podas, cualquiera de esos roles",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -8918,21 +8928,21 @@
             }
           }
         },
-        "tags": [
-          "tree-interventions"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Autorizar una intervención",
+        "tags": [
+          "tree-interventions"
         ]
       }
     },
     "/tree-interventions/{id}/reject": {
       "post": {
-        "operationId": "TreeInterventionsController_reject",
-        "summary": "Rechazar una intervención",
         "description": "Transición PENDING_AUTHORIZATION → REJECTED. Estado terminal. Rechazar una extracción (REMOVAL) exige M6_ADMIN, igual que autorizarla.",
+        "operationId": "TreeInterventionsController_reject",
         "parameters": [
           {
             "name": "id",
@@ -8950,7 +8960,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -8995,7 +9006,7 @@
             }
           },
           "403": {
-            "description": "Falta el rol de M6 (code ROLE_REQUIRED). Una extracción (REMOVAL) requiere M6_ADMIN; las podas, cualquiera de los roles de operaciones",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nAdemás, una extracción (REMOVAL) requiere M6_ADMIN (code ROLE_REQUIRED); las podas, cualquiera de esos roles",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -9045,21 +9056,21 @@
             }
           }
         },
-        "tags": [
-          "tree-interventions"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Rechazar una intervención",
+        "tags": [
+          "tree-interventions"
         ]
       }
     },
     "/tree-interventions/{id}/assign-service": {
       "post": {
-        "operationId": "TreeInterventionsController_assignService",
-        "summary": "Asociar la intervención al servicio que la ejecuta",
         "description": "La intervención guarda qué hay que hacer; el servicio, cuándo, con qué cuadrilla y cómo terminó. Solo se programa una intervención AUTHORIZED, contra un servicio de modo POINT que no esté ya ejecutando otra intervención.",
+        "operationId": "TreeInterventionsController_assignService",
         "parameters": [
           {
             "name": "id",
@@ -9154,21 +9165,21 @@
             }
           }
         },
-        "tags": [
-          "tree-interventions"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Asociar la intervención al servicio que la ejecuta",
+        "tags": [
+          "tree-interventions"
         ]
       }
     },
     "/green-spaces": {
       "post": {
-        "operationId": "GreenSpacesController_create",
-        "summary": "Registrar un espacio verde",
         "description": "Da de alta un espacio verde (plaza, parque, cantero, rambla o promenade) en una zona operativa. El riego y corte de césped se programan como servicios sobre el espacio.",
+        "operationId": "GreenSpacesController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -9274,19 +9285,19 @@
             }
           }
         },
-        "tags": [
-          "green-spaces"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar un espacio verde",
+        "tags": [
+          "green-spaces"
         ]
       },
       "get": {
-        "operationId": "GreenSpacesController_findAll",
-        "summary": "Listar espacios verdes",
         "description": "Retorna un listado paginado de espacios verdes. Se puede filtrar por estado, tipo, zona y buscar por nombre.",
+        "operationId": "GreenSpacesController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -9329,14 +9340,14 @@
             "description": "Filtrar por tipo de espacio verde",
             "schema": {
               "example": "PARK",
+              "type": "string",
               "enum": [
                 "SQUARE",
                 "PARK",
                 "PLANTER",
                 "MEDIAN",
                 "PROMENADE"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -9429,21 +9440,21 @@
             }
           }
         },
-        "tags": [
-          "green-spaces"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar espacios verdes",
+        "tags": [
+          "green-spaces"
         ]
       }
     },
     "/green-spaces/{id}": {
       "get": {
-        "operationId": "GreenSpacesController_findOne",
-        "summary": "Obtener un espacio verde por ID",
         "description": "Retorna el detalle completo de un espacio verde.",
+        "operationId": "GreenSpacesController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -9518,19 +9529,19 @@
             }
           }
         },
-        "tags": [
-          "green-spaces"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un espacio verde por ID",
+        "tags": [
+          "green-spaces"
         ]
       },
       "patch": {
-        "operationId": "GreenSpacesController_update",
-        "summary": "Actualizar un espacio verde",
         "description": "Actualiza los campos mutables de un espacio verde (nombre, zona, superficie, estado). El tipo de espacio no se puede cambiar después de la creación.",
+        "operationId": "GreenSpacesController_update",
         "parameters": [
           {
             "name": "id",
@@ -9615,19 +9626,19 @@
             }
           }
         },
-        "tags": [
-          "green-spaces"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar un espacio verde",
+        "tags": [
+          "green-spaces"
         ]
       },
       "delete": {
-        "operationId": "GreenSpacesController_remove",
-        "summary": "Desactivar un espacio verde",
         "description": "Soft-delete: marca el espacio verde como inactivo. No elimina el registro para preservar el historial de servicios realizados.",
+        "operationId": "GreenSpacesController_remove",
         "parameters": [
           {
             "name": "id",
@@ -9685,21 +9696,21 @@
             }
           }
         },
-        "tags": [
-          "green-spaces"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Desactivar un espacio verde",
+        "tags": [
+          "green-spaces"
         ]
       }
     },
     "/green-points": {
       "post": {
-        "operationId": "GreenPointsController_create",
-        "summary": "Registrar un punto verde",
         "description": "Da de alta un punto verde de entrega voluntaria con su código único, zona, ubicación y los tipos de residuo que acepta. El vaciado y el mantenimiento se programan después como Service con mode=POINT.",
+        "operationId": "GreenPointsController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -9775,7 +9786,7 @@
             }
           },
           "409": {
-            "description": "Ya existe un punto verde con ese código",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nYa existe un punto verde con ese código",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -9805,19 +9816,19 @@
             }
           }
         },
-        "tags": [
-          "green-points"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar un punto verde",
+        "tags": [
+          "green-points"
         ]
       },
       "get": {
-        "operationId": "GreenPointsController_findAll",
-        "summary": "Listar puntos verdes",
         "description": "Retorna un listado paginado. Se puede filtrar por estado, zona y tipo de residuo aceptado, y buscar por nombre o dirección.",
+        "operationId": "GreenPointsController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -9870,14 +9881,14 @@
             "description": "Filtrar los que aceptan un tipo de residuo",
             "schema": {
               "example": "RECYCLABLE",
+              "type": "string",
               "enum": [
                 "HOUSEHOLD",
                 "RECYCLABLE",
                 "BULKY",
                 "GREEN",
                 "MIXED"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -9959,21 +9970,21 @@
             }
           }
         },
-        "tags": [
-          "green-points"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar puntos verdes",
+        "tags": [
+          "green-points"
         ]
       }
     },
     "/green-points/{id}": {
       "get": {
-        "operationId": "GreenPointsController_findOne",
-        "summary": "Obtener un punto verde por ID",
         "description": "Retorna el detalle completo, incluyendo los tipos de residuo que acepta.",
+        "operationId": "GreenPointsController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -10048,19 +10059,19 @@
             }
           }
         },
-        "tags": [
-          "green-points"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un punto verde por ID",
+        "tags": [
+          "green-points"
         ]
       },
       "patch": {
-        "operationId": "GreenPointsController_update",
-        "summary": "Actualizar un punto verde",
         "description": "Actualiza los campos mutables. El array de tipos de residuo reemplaza el conjunto completo. El código no se puede cambiar: identifica al punto verde en la vía pública.",
+        "operationId": "GreenPointsController_update",
         "parameters": [
           {
             "name": "id",
@@ -10145,19 +10156,19 @@
             }
           }
         },
-        "tags": [
-          "green-points"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Actualizar un punto verde",
+        "tags": [
+          "green-points"
         ]
       },
       "delete": {
-        "operationId": "GreenPointsController_remove",
-        "summary": "Deshabilitar un punto verde",
         "description": "Soft-delete: lo saca de servicio sin eliminar el registro, para no perder el histórico del emplazamiento.",
+        "operationId": "GreenPointsController_remove",
         "parameters": [
           {
             "name": "id",
@@ -10215,21 +10226,21 @@
             }
           }
         },
-        "tags": [
-          "green-points"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Deshabilitar un punto verde",
+        "tags": [
+          "green-points"
         ]
       }
     },
     "/services": {
       "post": {
-        "operationId": "ServicesController_create",
-        "summary": "Programar un servicio urbano",
         "description": "Agenda una unidad de trabajo: recolección, barrido, lavado, vaciado de contenedor, poda o riego. El modo de ejecución se copia del tipo de servicio, no se elige acá. Un servicio ROUTE exige recorrido y copia sus zonas como snapshot —editar el recorrido después no altera lo ya programado—; un servicio POINT se ubica por el bien del inventario sobre el que se ejecuta, o por una zona suelta. Nace en estado SCHEDULED.",
+        "operationId": "ServicesController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -10320,7 +10331,7 @@
             }
           },
           "409": {
-            "description": "La cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, o la cuadrilla no es de la zona o la especialidad del servicio, y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nLa cuadrilla o el vehículo ya están tomados ese día en una franja que se pisa, o la cuadrilla no es de la zona o la especialidad del servicio, y falta `overrideNote`; o la inspección de `inspectionId` ya tiene un servicio asignado o ya fue cerrada",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10350,19 +10361,19 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Programar un servicio urbano",
+        "tags": [
+          "services"
         ]
       },
       "get": {
-        "operationId": "ServicesController_findAll",
-        "summary": "Listar servicios",
         "description": "Listado paginado. Filtros por estado, tipo, modo, origen, cuadrilla, vehículo, zona cubierta, bien objetivo (targetType/targetId, p. ej. los servicios de un árbol), reclamo de M2 y rango de fechas agendadas.",
+        "operationId": "ServicesController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -10395,6 +10406,7 @@
             "description": "Filtrar por estado",
             "schema": {
               "example": "SCHEDULED",
+              "type": "string",
               "enum": [
                 "SCHEDULED",
                 "RESCHEDULED",
@@ -10403,8 +10415,7 @@
                 "COMPLETED",
                 "PARTIALLY_COMPLETED",
                 "CANCELLED"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -10424,11 +10435,11 @@
             "description": "Filtrar por modo de ejecución",
             "schema": {
               "example": "ROUTE",
+              "type": "string",
               "enum": [
                 "ROUTE",
                 "POINT"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -10438,14 +10449,14 @@
             "description": "Filtrar por origen de la programación",
             "schema": {
               "example": "TICKET",
+              "type": "string",
               "enum": [
                 "PLANNED",
                 "TICKET",
                 "WEATHER_ALERT",
                 "INSPECTION",
                 "MANUAL"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -10485,13 +10496,13 @@
             "description": "Filtrar por tipo del bien sobre el que se ejecuta (servicios POINT)",
             "schema": {
               "example": "TREE",
+              "type": "string",
               "enum": [
                 "CONTAINER",
                 "TREE",
                 "GREEN_SPACE",
                 "GREEN_POINT"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -10606,21 +10617,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar servicios",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}": {
       "get": {
-        "operationId": "ServicesController_findOne",
-        "summary": "Obtener un servicio por ID",
         "description": "Detalle completo, con las zonas cubiertas, el resultado informado por zona y los registros de recolección.",
+        "operationId": "ServicesController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -10704,19 +10715,19 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un servicio por ID",
+        "tags": [
+          "services"
         ]
       },
       "patch": {
-        "operationId": "ServicesController_update",
-        "summary": "Corregir la programación de un servicio",
         "description": "Actualiza vehículo, ventana horaria y notas, solo mientras el servicio no arrancó. Si el cambio de vehículo o ventana lo solapa con otro servicio de la misma cuadrilla o vehículo ese día, avisa con 409 y hace falta `overrideNote` (10 a 500 caracteres), igual que en assign-crew. El tipo, el modo, el recorrido, el objetivo y las zonas quedan fijos al programar. La fecha se mueve con reschedule y confirm-reschedule, que dejan rastro del motivo.",
+        "operationId": "ServicesController_update",
         "parameters": [
           {
             "name": "id",
@@ -10734,7 +10745,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -10839,21 +10851,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Corregir la programación de un servicio",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/assign-crew": {
       "post": {
-        "operationId": "ServicesController_assignCrew",
-        "summary": "Asignar cuadrilla a un servicio",
         "description": "La cuadrilla es opcional al programar y obligatoria para iniciar. Permite asignar el vehículo en la misma operación. Avisa, sin bloquear, si la cuadrilla no es la de la zona del servicio o su especialidad no corresponde al tipo de servicio: igual que un solapamiento, exige `overrideNote`.",
+        "operationId": "ServicesController_assignCrew",
         "parameters": [
           {
             "name": "id",
@@ -10957,21 +10969,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Asignar cuadrilla a un servicio",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/assignment-conflicts": {
       "get": {
-        "operationId": "ServicesController_assignmentConflicts",
-        "summary": "Con qué se solapa asignar estos recursos",
         "description": "Los servicios del mismo día cuya franja horaria se pisa con la de este y que ya tienen tomada la cuadrilla o el vehículo. Existe para poder **avisar antes de enviar**: sin esta consulta, el planificador se enteraría por un 409. Sin `crewId` ni `vehicleId` evalúa los que el servicio ya tiene asignados. Una franja horaria ausente se trata como todo el día. Además informa en `warnings` si la cuadrilla no trabaja en la zona del servicio ese día o su especialidad no corresponde al tipo de servicio; esos avisos también exigen `overrideNote`.",
+        "operationId": "ServicesController_assignmentConflicts",
         "parameters": [
           {
             "name": "id",
@@ -11066,21 +11078,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Con qué se solapa asignar estos recursos",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/delay-notices": {
       "post": {
-        "operationId": "ServicesController_addDelayNotice",
-        "summary": "Avisar que el servicio se demora",
         "description": "**No cambia el estado del servicio.** `DELAYED` no es un estado: el servicio sigue en `SCHEDULED` o `IN_PROGRESS` mientras se demora. El tipo tiene que coincidir con el momento — `START` antes de arrancar, `DURATION` con la cuadrilla trabajando. Un aviso nuevo reemplaza al vigente; el anterior queda en el historial y no se borra. Si el servicio nació de un reclamo y ya arrancó (`IN_PROGRESS`), sale hacia M2 como `updateTicketStatus / PROGRESS`: el motivo viaja como mensaje interno, no se le muestra al vecino. Una demora en `SCHEDULED` no se proyecta, porque M2 solo acepta `PROGRESS` con el ticket en gestión.",
+        "operationId": "ServicesController_addDelayNotice",
         "parameters": [
           {
             "name": "id",
@@ -11156,7 +11168,7 @@
             }
           },
           "403": {
-            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nTambién 403 con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11176,7 +11188,7 @@
             }
           },
           "409": {
-            "description": "El servicio no está en SCHEDULED ni en IN_PROGRESS",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nEl servicio no está en SCHEDULED ni en IN_PROGRESS",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11206,19 +11218,19 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Avisar que el servicio se demora",
+        "tags": [
+          "services"
         ]
       },
       "get": {
-        "operationId": "ServicesController_findDelayNotices",
-        "summary": "Historial de avisos de demora",
         "description": "Del más reciente al más viejo. El vigente es el que tiene `active: true`; los demás fueron reemplazados por uno posterior.",
+        "operationId": "ServicesController_findDelayNotices",
         "parameters": [
           {
             "name": "id",
@@ -11296,21 +11308,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Historial de avisos de demora",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/start": {
       "post": {
-        "operationId": "ServicesController_start",
-        "summary": "Iniciar la ejecución",
         "description": "SCHEDULED → IN_PROGRESS. Solo la cuadrilla del servicio (integrante o líder); un servicio sin cuadrilla da 403 NOT_ASSIGNED. Exige vehículo si el tipo de servicio lo pide.",
+        "operationId": "ServicesController_start",
         "parameters": [
           {
             "name": "id",
@@ -11328,7 +11340,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -11373,7 +11386,7 @@
             }
           },
           "403": {
-            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nTambién 403 con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11423,21 +11436,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Iniciar la ejecución",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/suspend": {
       "post": {
-        "operationId": "ServicesController_suspend",
-        "summary": "Suspender la ejecución",
         "description": "IN_PROGRESS → SUSPENDED. El motivo queda en statusReason; la nota opcional, en statusNote.",
+        "operationId": "ServicesController_suspend",
         "parameters": [
           {
             "name": "id",
@@ -11455,7 +11468,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -11519,7 +11533,7 @@
             }
           },
           "403": {
-            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nTambién 403 con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11569,21 +11583,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Suspender la ejecución",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/resume": {
       "post": {
-        "operationId": "ServicesController_resume",
-        "summary": "Reanudar la ejecución",
         "description": "SUSPENDED → IN_PROGRESS. Limpia el motivo y la nota de la suspensión (statusNote solo vive mientras el servicio está SUSPENDED).",
+        "operationId": "ServicesController_resume",
         "parameters": [
           {
             "name": "id",
@@ -11601,7 +11615,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -11646,7 +11661,7 @@
             }
           },
           "403": {
-            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nTambién 403 con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11696,21 +11711,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Reanudar la ejecución",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/complete": {
       "post": {
-        "operationId": "ServicesController_complete",
-        "summary": "Cerrar el servicio",
         "description": "IN_PROGRESS → COMPLETED o PARTIALLY_COMPLETED. El estado final no se elige: se calcula a partir de los resultados por zona. Si alguna zona quedó NOT_SERVICED o PARTIAL, el cierre es parcial. Todas las zonas del servicio tienen que tener resultado informado. Si el servicio actúa sobre un contenedor y cierra COMPLETED, **el contenedor transiciona en la misma operación**: OVERFLOWED o UNDER_REPAIR vuelven a ACTIVE sin datos extra, y RELOCATING vuelve a ACTIVE exigiendo `containerLocation` en el body. Las dos escrituras son atómicas. Un cierre parcial no transiciona el contenedor: el trabajo no se hizo.",
+        "operationId": "ServicesController_complete",
         "parameters": [
           {
             "name": "id",
@@ -11728,7 +11743,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -11789,7 +11805,7 @@
             }
           },
           "403": {
-            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nTambién 403 con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11839,21 +11855,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Cerrar el servicio",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/cancel": {
       "post": {
-        "operationId": "ServicesController_cancel",
-        "summary": "Cancelar el servicio",
         "description": "SCHEDULED, RESCHEDULED o SUSPENDED → CANCELLED. El motivo queda registrado. Un servicio RESCHEDULED se cancela directo: no hace falta confirmar antes una fecha nueva. IN_PROGRESS no se cancela — hay que suspenderlo o cerrarlo. Solo acepta reason: enviar note da 400 (la nota existe solo en suspend) y limpia statusNote.",
+        "operationId": "ServicesController_cancel",
         "parameters": [
           {
             "name": "id",
@@ -11871,7 +11887,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -11984,21 +12001,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Cancelar el servicio",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/reschedule": {
       "post": {
-        "operationId": "ServicesController_reschedule",
-        "summary": "Marcar el servicio para reprogramar",
         "description": "SCHEDULED → RESCHEDULED. Deja el servicio a la espera de fecha nueva, con el motivo registrado. Es el estado en el que caen los servicios ante una alerta meteorológica o el rechazo de un corte de calle. La fecha se fija con confirm-reschedule. Solo acepta reason: enviar note da 400 (la nota existe solo en suspend).",
+        "operationId": "ServicesController_reschedule",
         "parameters": [
           {
             "name": "id",
@@ -12016,7 +12033,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -12129,21 +12147,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Marcar el servicio para reprogramar",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/confirm-reschedule": {
       "post": {
-        "operationId": "ServicesController_confirmReschedule",
-        "summary": "Confirmar la nueva fecha",
         "description": "RESCHEDULED → SCHEDULED con la fecha y la ventana horaria nuevas. Si el servicio nació de un reclamo (ticketId), le informa la nueva fecha y franja a M2 como texto para el vecino, salvo que el ticket no admita el aviso (pendiente de información o terminado).",
+        "operationId": "ServicesController_confirmReschedule",
         "parameters": [
           {
             "name": "id",
@@ -12161,7 +12179,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -12276,21 +12295,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Confirmar la nueva fecha",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/zone-results": {
       "post": {
-        "operationId": "ServicesController_addZoneResult",
-        "summary": "Informar el resultado de una zona",
         "description": "Registra cómo quedó una zona del servicio. Solo con el servicio en IN_PROGRESS, una vez por zona, y sobre una zona que forme parte del servicio. El motivo es obligatorio si la zona no quedó SERVICED: es lo que alimenta el ranking de zonas no atendidas del tablero.",
+        "operationId": "ServicesController_addZoneResult",
         "parameters": [
           {
             "name": "id",
@@ -12368,7 +12387,7 @@
             }
           },
           "403": {
-            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nTambién 403 con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12388,7 +12407,7 @@
             }
           },
           "409": {
-            "description": "El servicio no está en IN_PROGRESS, o la zona ya tiene resultado",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nEl servicio no está en IN_PROGRESS, o la zona ya tiene resultado",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12418,19 +12437,19 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Informar el resultado de una zona",
+        "tags": [
+          "services"
         ]
       },
       "get": {
-        "operationId": "ServicesController_findZoneResults",
-        "summary": "Listar los resultados por zona",
         "description": "Resultados informados para el servicio, en orden de registro.",
+        "operationId": "ServicesController_findZoneResults",
         "parameters": [
           {
             "name": "id",
@@ -12508,21 +12527,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar los resultados por zona",
+        "tags": [
+          "services"
         ]
       }
     },
     "/services/{id}/collection-records": {
       "post": {
-        "operationId": "ServicesController_addCollectionRecord",
-        "summary": "Registrar residuos recolectados",
         "description": "Volumen, peso, tipo de residuo y destino final. Es lo que alimenta los indicadores de toneladas y de desvío a reciclaje. Solo sobre servicios iniciados o cerrados, y contra un sitio de disposición activo.",
+        "operationId": "ServicesController_addCollectionRecord",
         "parameters": [
           {
             "name": "id",
@@ -12599,7 +12618,7 @@
             }
           },
           "403": {
-            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nTambién 403 con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (no se revela de quién es)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12619,7 +12638,7 @@
             }
           },
           "409": {
-            "description": "El servicio todavía no arrancó",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nEl servicio todavía no arrancó",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12649,19 +12668,19 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar residuos recolectados",
+        "tags": [
+          "services"
         ]
       },
       "get": {
-        "operationId": "ServicesController_findCollectionRecords",
-        "summary": "Listar los registros de recolección",
         "description": "Residuos registrados para el servicio, con volumen, peso y destino final.",
+        "operationId": "ServicesController_findCollectionRecords",
         "parameters": [
           {
             "name": "id",
@@ -12739,21 +12758,21 @@
             }
           }
         },
-        "tags": [
-          "services"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar los registros de recolección",
+        "tags": [
+          "services"
         ]
       }
     },
     "/environmental-reports/{reportId}/inspections": {
       "post": {
-        "operationId": "EnvironmentalInspectionsController_create",
-        "summary": "Programar la inspección de un expediente",
         "description": "Lleva el expediente a INSPECTION_SCHEDULED. La inspección guarda qué se va a buscar; el Service asociado, cuándo y con qué cuadrilla — el mismo patrón que TreeIntervention. Ese paso no se publica al bus: environmentalInspectionScheduled fue descartado por no tener consumidor.",
+        "operationId": "EnvironmentalInspectionsController_create",
         "parameters": [
           {
             "name": "reportId",
@@ -12839,7 +12858,7 @@
             }
           },
           "409": {
-            "description": "El expediente no está en UNDER_REVIEW",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nEl expediente no está en UNDER_REVIEW",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12869,19 +12888,19 @@
             }
           }
         },
-        "tags": [
-          "environmental-inspections"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Programar la inspección de un expediente",
+        "tags": [
+          "environmental-inspections"
         ]
       },
       "get": {
-        "operationId": "EnvironmentalInspectionsController_findByReport",
-        "summary": "Listar las inspecciones de un expediente",
         "description": "Incluye el checklist relevado, que es información interna.",
+        "operationId": "EnvironmentalInspectionsController_findByReport",
         "parameters": [
           {
             "name": "reportId",
@@ -12959,21 +12978,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-inspections"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar las inspecciones de un expediente",
+        "tags": [
+          "environmental-inspections"
         ]
       }
     },
     "/environmental-inspections/{id}": {
       "get": {
-        "operationId": "EnvironmentalInspectionsController_findOne",
-        "summary": "Obtener una inspección por ID",
         "description": "Detalle completo con el checklist y los hallazgos. **Todo esto es interno y nunca sale hacia M2**: lo que el vecino ve es la proyección pública, sin identidad del inspector ni contenido del acta.",
+        "operationId": "EnvironmentalInspectionsController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -13048,21 +13067,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-inspections"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener una inspección por ID",
+        "tags": [
+          "environmental-inspections"
         ]
       }
     },
     "/environmental-inspections/{id}/complete": {
       "post": {
-        "operationId": "EnvironmentalInspectionsController_complete",
-        "summary": "Cerrar la inspección con su resultado",
         "description": "Si la inspección tiene inspector asignado, solo él puede cerrarla (403 NOT_ASSIGNED para otro inspector); sin asignado, cualquier inspector, y queda registrado el del token como `completedByUserId`. Lleva el expediente a INSPECTED y de ahí, en la misma operación, a NO_VIOLATION o VIOLATION_FOUND según el outcome. Un INCONCLUSIVE lo deja en INSPECTED, a la espera de otra inspección. El checklist y los hallazgos son internos.",
+        "operationId": "EnvironmentalInspectionsController_complete",
         "parameters": [
           {
             "name": "id",
@@ -13117,7 +13136,7 @@
             }
           },
           "403": {
-            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es el inspector asignado (no se revela de quién es)",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_INSPECTOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nTambién 403 con code NOT_ASSIGNED si el usuario no es el inspector asignado (no se revela de quién es)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -13157,21 +13176,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-inspections"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Cerrar la inspección con su resultado",
+        "tags": [
+          "environmental-inspections"
         ]
       }
     },
     "/environmental-inspections/{id}/violation-notice": {
       "post": {
-        "operationId": "EnvironmentalInspectionsController_issueNotice",
-        "summary": "Emitir el acta de constatación",
         "description": "Emite el acta sobre una inspección con resultado VIOLATION_FOUND y lleva el expediente a NOTICE_ISSUED. **El acta es inmutable**: no hay PATCH ni DELETE, si hay un error se emite otra. Sin establishmentId el acta se registra pero **no se deriva a M4** —es lo único sobre lo que pueden actuar— y el expediente cierra de nuestro lado. Con establishmentId se publica environmentalViolationDetected, con el conteo de actas previas del mismo establecimiento.",
+        "operationId": "EnvironmentalInspectionsController_issueNotice",
         "parameters": [
           {
             "name": "id",
@@ -13266,19 +13285,19 @@
             }
           }
         },
-        "tags": [
-          "environmental-inspections"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Emitir el acta de constatación",
+        "tags": [
+          "environmental-inspections"
         ]
       },
       "get": {
-        "operationId": "EnvironmentalInspectionsController_findNotice",
-        "summary": "Obtener el acta de una inspección",
         "description": "El acta emitida, con su número correlativo y el conteo de reincidencia. Si la inspección existe pero todavía no tiene acta responde 200 con el JSON literal null, no 404.",
+        "operationId": "EnvironmentalInspectionsController_findNotice",
         "parameters": [
           {
             "name": "id",
@@ -13297,6 +13316,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "object",
                   "nullable": true,
                   "allOf": [
                     {
@@ -13358,21 +13378,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-inspections"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener el acta de una inspección",
+        "tags": [
+          "environmental-inspections"
         ]
       }
     },
     "/environmental-reports": {
       "post": {
-        "operationId": "EnvironmentalReportsController_create",
-        "summary": "Abrir un expediente ambiental",
         "description": "Registra una denuncia ambiental —ruidos, vertidos, microbasurales, emisiones— y abre el expediente en estado RECEIVED. Puede nacer de un reclamo de M2 (con ticketId) o de una detección de oficio del inspector, que es el camino que no depende de ningún otro módulo.",
+        "operationId": "EnvironmentalReportsController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -13482,19 +13502,19 @@
             }
           }
         },
-        "tags": [
-          "environmental-reports"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Abrir un expediente ambiental",
+        "tags": [
+          "environmental-reports"
         ]
       },
       "get": {
-        "operationId": "EnvironmentalReportsController_findAll",
-        "summary": "Listar expedientes ambientales",
         "description": "Listado paginado. Filtros por estado, tipo de denuncia, prioridad, reclamo de origen, cuadrilla (crewId: expedientes con alguna inspección cuyo servicio no cancelado tenga esa cuadrilla, filtrado en la base para que la página y meta.total sean consistentes) y búsqueda por dirección. Rango de fechas from/to (YYYY-MM-DD, inclusivo, día argentino) sobre la fecha de última actualización; meta.total refleja el filtro.",
+        "operationId": "EnvironmentalReportsController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -13555,6 +13575,7 @@
             "in": "query",
             "description": "Filtrar por tipo",
             "schema": {
+              "type": "string",
               "enum": [
                 "NOISE",
                 "DUMPING",
@@ -13564,8 +13585,7 @@
                 "ODOR",
                 "PEST_INFESTATION",
                 "OTHER"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -13574,13 +13594,13 @@
             "in": "query",
             "description": "Filtrar por prioridad",
             "schema": {
+              "type": "string",
               "enum": [
                 "LOW",
                 "MEDIUM",
                 "HIGH",
                 "CRITICAL"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -13763,21 +13783,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-reports"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar expedientes ambientales",
+        "tags": [
+          "environmental-reports"
         ]
       }
     },
     "/environmental-reports/{id}": {
       "get": {
-        "operationId": "EnvironmentalReportsController_findOne",
-        "summary": "Obtener un expediente por ID",
         "description": "Detalle del expediente, con su estado, su plazo de vencimiento si lo tiene y la cuadrilla asignada a su inspección más reciente con servicio no cancelado (assignedCrewId).",
+        "operationId": "EnvironmentalReportsController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -13861,21 +13881,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-reports"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener un expediente por ID",
+        "tags": [
+          "environmental-reports"
         ]
       }
     },
     "/environmental-reports/{id}/start-review": {
       "post": {
-        "operationId": "EnvironmentalReportsController_startReview",
-        "summary": "Tomar el expediente para análisis",
         "description": "RECEIVED → UNDER_REVIEW. Si nació de un reclamo, se le avisa a M2.",
+        "operationId": "EnvironmentalReportsController_startReview",
         "parameters": [
           {
             "name": "id",
@@ -13893,7 +13913,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -13988,21 +14009,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-reports"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Tomar el expediente para análisis",
+        "tags": [
+          "environmental-reports"
         ]
       }
     },
     "/environmental-reports/{id}/forward": {
       "post": {
-        "operationId": "EnvironmentalReportsController_forward",
-        "summary": "Derivar: no es de nuestra competencia",
         "description": "UNDER_REVIEW → FORWARDED. Hacia M2 sale como RETURNED, no como REJECTED: devolver un reclamo que no es de nuestra área es distinto de desestimarlo.",
+        "operationId": "EnvironmentalReportsController_forward",
         "parameters": [
           {
             "name": "id",
@@ -14020,7 +14041,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -14133,21 +14155,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-reports"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Derivar: no es de nuestra competencia",
+        "tags": [
+          "environmental-reports"
         ]
       }
     },
     "/environmental-reports/{id}/dismiss": {
       "post": {
-        "operationId": "EnvironmentalReportsController_dismiss",
-        "summary": "Desestimar sin inspección",
         "description": "UNDER_REVIEW → DISMISSED. Hacia M2 sale como REJECTED.",
+        "operationId": "EnvironmentalReportsController_dismiss",
         "parameters": [
           {
             "name": "id",
@@ -14165,7 +14187,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -14278,21 +14301,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-reports"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Desestimar sin inspección",
+        "tags": [
+          "environmental-reports"
         ]
       }
     },
     "/environmental-reports/{id}/request-information": {
       "post": {
-        "operationId": "EnvironmentalReportsController_requestInformation",
-        "summary": "Pedirle información al vecino",
         "description": "Durante la revisión (UNDER_REVIEW, con reclamo de M2) le pide al vecino algo más, por ejemplo una foto. Hacia M2 sale como INFORMATION_REQUIRED y el ticket pasa a PENDING_INFORMATION. El expediente sigue en UNDER_REVIEW con la solicitud pendiente (informationRequestPending) hasta que M2 avisa la respuesta, que queda en citizenResponse. Solo puede haber una solicitud pendiente por reclamo.",
+        "operationId": "EnvironmentalReportsController_requestInformation",
         "parameters": [
           {
             "name": "id",
@@ -14397,21 +14420,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-reports"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Pedirle información al vecino",
+        "tags": [
+          "environmental-reports"
         ]
       }
     },
     "/environmental-reports/{id}/close": {
       "post": {
-        "operationId": "EnvironmentalReportsController_close",
-        "summary": "Cerrar el expediente",
         "description": "Cierra desde FORWARDED, DISMISSED, NO_VIOLATION, SANCTIONED o NOTICE_ISSUED. El cierre por vencimiento del plazo de M4 lo hace el sistema solo, sin pasar por acá.",
+        "operationId": "EnvironmentalReportsController_close",
         "parameters": [
           {
             "name": "id",
@@ -14429,7 +14452,8 @@
             "description": "ETag que el cliente leyó (o `*`). Si no coincide con el actual responde 412 y no escribe nada. Sin el header, la acción se aplica como siempre.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "W/\"1760000000000\""
             }
           }
         ],
@@ -14524,21 +14548,21 @@
             }
           }
         },
-        "tags": [
-          "environmental-reports"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Cerrar el expediente",
+        "tags": [
+          "environmental-reports"
         ]
       }
     },
     "/repair-requests": {
       "post": {
-        "operationId": "RepairRequestsController_create",
-        "summary": "Solicitar una reparación a Obras Públicas",
         "description": "Registra un daño de infraestructura que detectamos pero que no nos corresponde arreglar —pavimento roto, vereda hundida, luminaria caída, sumidero tapado— y publica infrastructureRepairRequested hacia M3. La solicitud existe para poder seguir el pedido: la respuesta de M3 vuelve asincrónica y hay que saber a qué solicitud contesta. Si el daño salió de un servicio nacido de un reclamo, el ticketId viaja en el evento. Lo mismo si salió de una inspección: viaja el ticketId de su expediente. Una inspección solo origina una reparación si cerró con un resultado distinto de NO_VIOLATION y el tipo de expediente admite daño de infraestructura (no ruidos, olores, plagas ni emisiones); no admite un segundo pedido abierto para el mismo origen y tipo de daño.",
+        "operationId": "RepairRequestsController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -14614,7 +14638,7 @@
             }
           },
           "409": {
-            "description": "Origen INSPECTION que no justifica una reparación (sin cerrar, NO_VIOLATION, o expediente de tipo NOISE, ODOR, PEST_INFESTATION o AIR_EMISSION), o ya hay una solicitud no cerrada para el mismo origen y tipo de daño",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nOrigen INSPECTION que no justifica una reparación (sin cerrar, NO_VIOLATION, o expediente de tipo NOISE, ODOR, PEST_INFESTATION o AIR_EMISSION), o ya hay una solicitud no cerrada para el mismo origen y tipo de daño",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -14644,19 +14668,19 @@
             }
           }
         },
-        "tags": [
-          "repair-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Solicitar una reparación a Obras Públicas",
+        "tags": [
+          "repair-requests"
         ]
       },
       "get": {
-        "operationId": "RepairRequestsController_findAll",
-        "summary": "Listar solicitudes de reparación",
         "description": "Listado paginado. Filtros por estado, tipo de daño, gravedad y origen.",
+        "operationId": "RepairRequestsController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -14688,12 +14712,12 @@
             "in": "query",
             "description": "Filtrar por estado",
             "schema": {
+              "type": "string",
               "enum": [
                 "REQUESTED",
                 "IN_PROGRESS",
                 "CLOSED"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -14702,14 +14726,14 @@
             "in": "query",
             "description": "Filtrar por tipo de daño",
             "schema": {
+              "type": "string",
               "enum": [
                 "BROKEN_PAVEMENT",
                 "BROKEN_SIDEWALK",
                 "BROKEN_STREETLIGHT",
                 "BLOCKED_DRAIN",
                 "DAMAGED_STRUCTURE"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -14718,13 +14742,13 @@
             "in": "query",
             "description": "Filtrar por gravedad",
             "schema": {
+              "type": "string",
               "enum": [
                 "LOW",
                 "MEDIUM",
                 "HIGH",
                 "CRITICAL"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -14805,21 +14829,21 @@
             }
           }
         },
-        "tags": [
-          "repair-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar solicitudes de reparación",
+        "tags": [
+          "repair-requests"
         ]
       }
     },
     "/repair-requests/{id}": {
       "get": {
-        "operationId": "RepairRequestsController_findOne",
-        "summary": "Obtener una solicitud de reparación",
         "description": "Detalle con su estado y la orden de trabajo de M3, si la informaron.",
+        "operationId": "RepairRequestsController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -14894,21 +14918,21 @@
             }
           }
         },
-        "tags": [
-          "repair-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener una solicitud de reparación",
+        "tags": [
+          "repair-requests"
         ]
       }
     },
     "/repair-requests/{id}/start": {
       "post": {
-        "operationId": "RepairRequestsController_start",
-        "summary": "Marcar la reparación como en curso",
         "description": "Pasa a IN_PROGRESS y registra la orden de trabajo de M3. **Normalmente lo dispara el evento workOrderScheduled de M3** (Fase 6); este endpoint existe para operación manual y para poder demostrar el circuito mientras no haya bus.",
+        "operationId": "RepairRequestsController_start",
         "parameters": [
           {
             "name": "id",
@@ -15003,21 +15027,21 @@
             }
           }
         },
-        "tags": [
-          "repair-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Marcar la reparación como en curso",
+        "tags": [
+          "repair-requests"
         ]
       }
     },
     "/repair-requests/{id}/close": {
       "post": {
-        "operationId": "RepairRequestsController_close",
-        "summary": "Cerrar la solicitud de reparación",
         "description": "Pasa a CLOSED. **Normalmente lo dispara workOrderCompleted de M3** (Fase 6). Tres estados, no una máquina: pedida, en curso, cerrada — por eso no consumimos workOrderUpdated.",
+        "operationId": "RepairRequestsController_close",
         "parameters": [
           {
             "name": "id",
@@ -15102,21 +15126,21 @@
             }
           }
         },
-        "tags": [
-          "repair-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Cerrar la solicitud de reparación",
+        "tags": [
+          "repair-requests"
         ]
       }
     },
     "/street-closure-requests": {
       "post": {
-        "operationId": "StreetClosureRequestsController_create",
-        "summary": "Solicitar un corte de calle a Tránsito",
         "description": "Registra el corte que necesita un servicio o una poda y publica streetClosureRequested hacia M7, en el esquema unificado con la solicitud de M3. El sourceRef apunta al Service o a la TreeIntervention que lo origina: es lo que hace que la respuesta de M7 se pueda aplicar sobre el trabajo correcto. Exige al menos un tramo, porque affectedSections no puede viajar vacío.",
+        "operationId": "StreetClosureRequestsController_create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -15192,7 +15216,7 @@
             }
           },
           "409": {
-            "description": "La intervención de origen no está en estado AUTHORIZED",
+            "description": "Conflicto de estado o duplicado; con Idempotency-Key, también si la primera solicitud sigue en curso\n\nLa intervención de origen no está en estado AUTHORIZED",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -15222,19 +15246,19 @@
             }
           }
         },
-        "tags": [
-          "street-closure-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Solicitar un corte de calle a Tránsito",
+        "tags": [
+          "street-closure-requests"
         ]
       },
       "get": {
-        "operationId": "StreetClosureRequestsController_findAll",
-        "summary": "Listar solicitudes de corte",
         "description": "Listado paginado. Filtros por estado y por el trabajo que las origina.",
+        "operationId": "StreetClosureRequestsController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -15266,14 +15290,14 @@
             "in": "query",
             "description": "Filtrar por estado",
             "schema": {
+              "type": "string",
               "enum": [
                 "REQUESTED",
                 "APPROVED",
                 "REJECTED",
                 "ENDED",
                 "EXPIRED"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -15354,21 +15378,21 @@
             }
           }
         },
-        "tags": [
-          "street-closure-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar solicitudes de corte",
+        "tags": [
+          "street-closure-requests"
         ]
       }
     },
     "/street-closure-requests/{id}": {
       "get": {
-        "operationId": "StreetClosureRequestsController_findOne",
-        "summary": "Obtener una solicitud de corte",
         "description": "Detalle con sus tramos y el identificador de corte que asignó M7, si respondieron.",
+        "operationId": "StreetClosureRequestsController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -15443,21 +15467,21 @@
             }
           }
         },
-        "tags": [
-          "street-closure-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Obtener una solicitud de corte",
+        "tags": [
+          "street-closure-requests"
         ]
       }
     },
     "/street-closure-requests/{id}/approve": {
       "post": {
-        "operationId": "StreetClosureRequestsController_approve",
-        "summary": "Registrar la aprobación del corte",
         "description": "Pasa a APPROVED y guarda el identificador de corte de M7, que habilita la ejecución del servicio bloqueado. **Normalmente lo dispara streetClosureApproved** (Fase 6); este endpoint existe para operación manual y para demostrarlo sin bus.",
+        "operationId": "StreetClosureRequestsController_approve",
         "parameters": [
           {
             "name": "id",
@@ -15552,21 +15576,21 @@
             }
           }
         },
-        "tags": [
-          "street-closure-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar la aprobación del corte",
+        "tags": [
+          "street-closure-requests"
         ]
       }
     },
     "/street-closure-requests/{id}/reject": {
       "post": {
-        "operationId": "StreetClosureRequestsController_reject",
-        "summary": "Registrar el rechazo del corte",
         "description": "Pasa a REJECTED. El servicio dependiente se reprograma o se cancela. **Normalmente lo dispara streetClosureRejected** (Fase 6).",
+        "operationId": "StreetClosureRequestsController_reject",
         "parameters": [
           {
             "name": "id",
@@ -15661,21 +15685,21 @@
             }
           }
         },
-        "tags": [
-          "street-closure-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar el rechazo del corte",
+        "tags": [
+          "street-closure-requests"
         ]
       }
     },
     "/street-closure-requests/{id}/end": {
       "post": {
-        "operationId": "StreetClosureRequestsController_end",
-        "summary": "Registrar el fin del corte",
         "description": "Pasa a ENDED y libera la dependencia. Se admite desde REQUESTED, APPROVED y EXPIRED (un corte vencido por el barrido igual puede terminar). **Normalmente lo dispara streetClosureEnded** (Fase 6), que desde el 30/08 ya trae el closureRequestId para poder correlacionarlo.",
+        "operationId": "StreetClosureRequestsController_end",
         "parameters": [
           {
             "name": "id",
@@ -15760,21 +15784,21 @@
             }
           }
         },
-        "tags": [
-          "street-closure-requests"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Registrar el fin del corte",
+        "tags": [
+          "street-closure-requests"
         ]
       }
     },
     "/public/reports/{ticketId}": {
       "get": {
-        "operationId": "CitizenPortalController_findReport",
-        "summary": "Seguir una denuncia ambiental por número de reclamo",
         "description": "Estado del trámite para el vecino, buscado por el `ticketId` (UUID) del reclamo de Atención Ciudadana (M2). Devuelve la etapa del trámite, no el estado interno del expediente, y nunca la identidad del inspector, los hallazgos, el checklist ni el contenido del acta. No acepta el `publicId` (TK-…): es correlativo y el contrato de M2 prohíbe usarlo como credencial, así que buscar por él en un endpoint público permitiría recorrer denuncias ajenas.",
+        "operationId": "CitizenPortalController_findReport",
         "parameters": [
           {
             "name": "ticketId",
@@ -15839,6 +15863,7 @@
             }
           }
         },
+        "summary": "Seguir una denuncia ambiental por número de reclamo",
         "tags": [
           "citizen-portal"
         ]
@@ -15846,9 +15871,8 @@
     },
     "/public/services": {
       "get": {
-        "operationId": "CitizenPortalController_findServices",
-        "summary": "Consultar cuándo pasa el servicio",
         "description": "Listado paginado de servicios programados, por zona y tipo. Sin `from` ni `to` devuelve los próximos 30 días. No expone cuadrilla, vehículo, notas ni el motivo interno de una reprogramación.",
+        "operationId": "CitizenPortalController_findServices",
         "parameters": [
           {
             "name": "page",
@@ -15972,6 +15996,7 @@
             }
           }
         },
+        "summary": "Consultar cuándo pasa el servicio",
         "tags": [
           "citizen-portal"
         ]
@@ -15979,9 +16004,8 @@
     },
     "/public/green-points": {
       "get": {
-        "operationId": "CitizenPortalController_findGreenPoints",
-        "summary": "Consultar puntos verdes",
         "description": "Listado paginado de puntos verdes activos, con su ubicación y qué tipos de residuo recibe cada uno.",
+        "operationId": "CitizenPortalController_findGreenPoints",
         "parameters": [
           {
             "name": "page",
@@ -16075,6 +16099,7 @@
             }
           }
         },
+        "summary": "Consultar puntos verdes",
         "tags": [
           "citizen-portal"
         ]
@@ -16082,9 +16107,8 @@
     },
     "/public/zones": {
       "get": {
-        "operationId": "CitizenPortalController_findZones",
-        "summary": "Listar zonas operativas",
         "description": "Las zonas activas, para poder ofrecer el filtro de los otros dos listados. Sin paginar: son pocas y el frontend las carga una vez.",
+        "operationId": "CitizenPortalController_findZones",
         "parameters": [],
         "responses": {
           "200": {
@@ -16121,6 +16145,7 @@
             }
           }
         },
+        "summary": "Listar zonas operativas",
         "tags": [
           "citizen-portal"
         ]
@@ -16128,9 +16153,8 @@
     },
     "/evidence": {
       "post": {
-        "operationId": "AttachmentsController_upload",
-        "summary": "Subir evidencia (foto/PDF) para un recurso existente",
         "description": "Endpoint genérico de evidencia — un archivo por llamada, atado a un ownerType/ownerId que ya debe existir (Container, Service, ZoneResult o EnvironmentalInspection). Requiere el header Idempotency-Key para identificar reintentos.",
+        "operationId": "AttachmentsController_upload",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -16210,7 +16234,7 @@
             }
           },
           "403": {
-            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION) (no se revela de quién es)",
+            "description": "Falta el rol de M6: se requiere alguno de M6_CAMPO_CUADRILLA, M6_CAMPO_INSPECTOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nTambién 403 con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION) (no se revela de quién es)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -16231,6 +16255,16 @@
           },
           "413": {
             "description": "El archivo supera los 10 MB (lo corta multer antes de terminar de recibirlo)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "El cuerpo es multipart pero no multipart/form-data",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -16270,19 +16304,19 @@
             }
           }
         },
-        "tags": [
-          "evidence"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Subir evidencia (foto/PDF) para un recurso existente",
+        "tags": [
+          "evidence"
         ]
       },
       "get": {
-        "operationId": "AttachmentsController_findByOwner",
-        "summary": "Listar evidencia de un recurso",
         "description": "Retorna toda la evidencia asociada a un ownerType/ownerId, ordenada por fecha. Campo solo ve la de lo suyo (cuadrilla del servicio, inspector asignado); Oficina, Admin y Auditoría ven cualquiera.",
+        "operationId": "AttachmentsController_findByOwner",
         "parameters": [
           {
             "name": "ownerType",
@@ -16291,13 +16325,13 @@
             "description": "Tipo de recurso dueño de la evidencia",
             "schema": {
               "example": "CONTAINER",
+              "type": "string",
               "enum": [
                 "SERVICE",
                 "ZONE_RESULT",
                 "INSPECTION",
                 "CONTAINER"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -16347,7 +16381,7 @@
             }
           },
           "403": {
-            "description": "403 con code ROLE_REQUIRED si falta el rol de Campo, o con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION) (no se revela de quién es)",
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_OPERACIONES, M6_OFICINA_AMBIENTAL, M6_AUDITOR, M6_CAMPO_CUADRILLA, M6_CAMPO_INSPECTOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal\n\nTambién 403 con code NOT_ASSIGNED si el usuario no es la cuadrilla del servicio (SERVICE, ZONE_RESULT) o el inspector asignado (INSPECTION) (no se revela de quién es)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -16377,21 +16411,21 @@
             }
           }
         },
-        "tags": [
-          "evidence"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar evidencia de un recurso",
+        "tags": [
+          "evidence"
         ]
       }
     },
     "/indicators/coverage": {
       "get": {
-        "operationId": "IndicatorsController_coverage",
-        "summary": "Cobertura del servicio",
         "description": "Objetivos atendidos sobre programados, con desglose por zona operativa y por tipo de servicio. La unidad es el par servicio/zona: un recorrido que pasa por cuatro zonas y atiende tres cuenta como tres objetivos cumplidos y uno no. Los servicios cancelados no cuentan: dejaron de ser un objetivo. Solo cuentan los objetivos con fecha vencida (hoy o antes): lo programado a futuro va aparte en `upcoming`. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido.",
+        "operationId": "IndicatorsController_coverage",
         "parameters": [
           {
             "name": "from",
@@ -16419,12 +16453,12 @@
             "in": "query",
             "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
             "schema": {
+              "type": "string",
               "enum": [
                 "day",
                 "week",
                 "month"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -16433,10 +16467,10 @@
             "in": "query",
             "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
             "schema": {
+              "type": "string",
               "enum": [
                 "previous"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -16512,21 +16546,21 @@
             }
           }
         },
-        "tags": [
-          "indicators"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Cobertura del servicio",
+        "tags": [
+          "indicators"
         ]
       }
     },
     "/indicators/compliance": {
       "get": {
-        "operationId": "IndicatorsController_compliance",
-        "summary": "Cumplimiento y zonas no atendidas",
         "description": "Servicios finalizados en término contra demorados, y el ranking de zonas que quedaron sin atender con los motivos que reportó la cuadrilla. \"En término\" se mide con el último resultado de campo cargado contra la fecha programada. El desvío de programación son los servicios reprogramados o con aviso de demora sobre los del período. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido.",
+        "operationId": "IndicatorsController_compliance",
         "parameters": [
           {
             "name": "from",
@@ -16554,12 +16588,12 @@
             "in": "query",
             "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
             "schema": {
+              "type": "string",
               "enum": [
                 "day",
                 "week",
                 "month"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -16568,10 +16602,10 @@
             "in": "query",
             "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
             "schema": {
+              "type": "string",
               "enum": [
                 "previous"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -16647,21 +16681,21 @@
             }
           }
         },
-        "tags": [
-          "indicators"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Cumplimiento y zonas no atendidas",
+        "tags": [
+          "indicators"
         ]
       }
     },
     "/indicators/incidents": {
       "get": {
-        "operationId": "IndicatorsController_incidents",
-        "summary": "Incidencias del inventario y de las denuncias",
         "description": "Contenedores por estado y zona (foto del estado actual), árboles por nivel de riesgo según su último relevamiento, y denuncias por tipo y estado con el tiempo medio de resolución. Desde el historial de estados suma los incidentes de desborde y de daño del período y los daños pendientes al final (`containers.history`, con `trackingSince`: antes de esa fecha no hay datos y los pendientes son null). De las denuncias suma las resueltas dentro del plazo objetivo (`reports.withinDeadline`) y los vencidos (`reports.overdue`, una foto de hoy de lo creado en el período). El plazo objetivo es de M6, único para todos los tipos y en días hábiles (lunes a viernes, sin feriados). El tiempo de resolución se informa en días corridos y en días hábiles; su meta es en días hábiles. Con `bucket` suma `series` (denuncias y contenedores del intervalo; los vencidos no tienen serie); con `compare=previous`, `previous` y `delta` (los vencidos no se comparan). `targets` trae cada meta con su sentido: las de desbordados y daños pendientes son de tendencia descendente (`down`) y no tienen valor numérico.",
+        "operationId": "IndicatorsController_incidents",
         "parameters": [
           {
             "name": "from",
@@ -16689,12 +16723,12 @@
             "in": "query",
             "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
             "schema": {
+              "type": "string",
               "enum": [
                 "day",
                 "week",
                 "month"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -16703,10 +16737,10 @@
             "in": "query",
             "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
             "schema": {
+              "type": "string",
               "enum": [
                 "previous"
-              ],
-              "type": "string"
+              ]
             }
           }
         ],
@@ -16762,21 +16796,21 @@
             }
           }
         },
-        "tags": [
-          "indicators"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Incidencias del inventario y de las denuncias",
+        "tags": [
+          "indicators"
         ]
       }
     },
     "/indicators/waste": {
       "get": {
-        "operationId": "IndicatorsController_waste",
-        "summary": "Residuos recolectados y destino final",
         "description": "Kilos y metros cúbicos por tipo de residuo y por sitio de disposición, y el porcentaje desviado del relleno hacia planta de reciclado o de compostaje. La fecha del residuo es la del servicio que lo recolectó. Con `bucket` suma `series`; con `compare=previous`, `previous` y `delta`. `targets` trae la meta con su sentido. La meta del desvío del relleno es null mientras el equipo no la defina.",
+        "operationId": "IndicatorsController_waste",
         "parameters": [
           {
             "name": "from",
@@ -16804,12 +16838,12 @@
             "in": "query",
             "description": "Agrupa el período en intervalos y suma `series`. `week` va de lunes a domingo y `month` es mes calendario; el primero y el último se recortan al período. Máximo 90 puntos: si el rango y el bucket lo superan, 400. Los intervalos son días argentinos (UTC-3)",
             "schema": {
+              "type": "string",
               "enum": [
                 "day",
                 "week",
                 "month"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -16818,10 +16852,10 @@
             "in": "query",
             "description": "Suma `previous` (el período inmediatamente anterior, de igual duración) y `delta` (la diferencia, en puntos porcentuales o en días). Sin este parámetro la respuesta no cambia",
             "schema": {
+              "type": "string",
               "enum": [
                 "previous"
-              ],
-              "type": "string"
+              ]
             }
           }
         ],
@@ -16877,21 +16911,21 @@
             }
           }
         },
-        "tags": [
-          "indicators"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Residuos recolectados y destino final",
+        "tags": [
+          "indicators"
         ]
       }
     },
     "/role-assignments": {
       "get": {
-        "operationId": "RoleAssignmentsController_findAll",
-        "summary": "Listar usuarios con roles de M6 asignados",
         "description": "Listado paginado de usuarios que tienen al menos un rol asignado, ordenado por id como texto (\"10\" antes que \"2\"; el id de M1 no se ordena numéricamente). Son los roles asignados, no los efectivos.",
+        "operationId": "RoleAssignmentsController_findAll",
         "parameters": [
           {
             "name": "page",
@@ -16985,21 +17019,21 @@
             }
           }
         },
-        "tags": [
-          "role-assignments"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Listar usuarios con roles de M6 asignados",
+        "tags": [
+          "role-assignments"
         ]
       }
     },
     "/role-assignments/{userId}": {
       "get": {
-        "operationId": "RoleAssignmentsController_findOne",
-        "summary": "Roles de M6 asignados a un usuario",
         "description": "Devuelve los roles ASIGNADOS al usuario (lista vacía si no tiene), en el orden del enum. No dice si son efectivos: eso depende del rol que el usuario tenga en M1, y lo que rige para quien llama se ve en GET /me. La UI de administración debería mostrar ambos.",
+        "operationId": "RoleAssignmentsController_findOne",
         "parameters": [
           {
             "name": "userId",
@@ -17064,19 +17098,19 @@
             }
           }
         },
-        "tags": [
-          "role-assignments"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Roles de M6 asignados a un usuario",
+        "tags": [
+          "role-assignments"
         ]
       },
       "put": {
-        "operationId": "RoleAssignmentsController_replace",
-        "summary": "Reemplazar los roles de M6 de un usuario",
         "description": "Fija el conjunto completo de roles del usuario y audita cada alta y baja en la misma transacción. Oficina (M6_ADMIN, M6_OFICINA_*) y Campo (M6_CAMPO_*) son excluyentes, y un admin de bootstrap no admite roles de Campo. No valida contra el rol de M1 del destinatario (M6 no lo conoce): un rol que su rol de M1 no permite queda asignado pero no es efectivo. No se puede quitar el último M6_ADMIN si no hay admins de bootstrap.",
+        "operationId": "RoleAssignmentsController_replace",
         "parameters": [
           {
             "name": "userId",
@@ -17161,19 +17195,19 @@
             }
           }
         },
-        "tags": [
-          "role-assignments"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Reemplazar los roles de M6 de un usuario",
+        "tags": [
+          "role-assignments"
         ]
       },
       "delete": {
-        "operationId": "RoleAssignmentsController_remove",
-        "summary": "Quitar todos los roles de M6 de un usuario",
         "description": "Equivale a PUT con la lista vacía: audita cada baja. Es idempotente. No se puede quitar el último M6_ADMIN si no hay admins de bootstrap.",
+        "operationId": "RoleAssignmentsController_remove",
         "parameters": [
           {
             "name": "userId",
@@ -17241,13 +17275,14 @@
             }
           }
         },
-        "tags": [
-          "role-assignments"
-        ],
         "security": [
           {
             "JWT-auth": []
           }
+        ],
+        "summary": "Quitar todos los roles de M6 de un usuario",
+        "tags": [
+          "role-assignments"
         ]
       }
     }
@@ -18412,6 +18447,7 @@
           "commune": {
             "description": "Comuna que agrupa a la zona; null si todavía no se la asignó",
             "nullable": true,
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/CommuneRefDto"
@@ -18421,6 +18457,7 @@
           "neighborhood": {
             "description": "Barrio de la zona (una zona es un barrio); null si no tiene barrio con id UUID. Si la zona tiene varios barrios, es uno solo (el primero por id) y `neighborhoods` (detalle) trae todos. Codigo y nombre salen del catálogo cacheado de M9",
             "nullable": true,
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/NeighborhoodRefDto"
@@ -20372,6 +20409,7 @@
           "lastSurvey": {
             "description": "Resumen del último relevamiento. `null` si el árbol todavía no fue relevado, que es un estado real y no un error: se censa el arbolado antes de poder recorrerlo entero.",
             "nullable": true,
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/TreeLastSurveyDto"
@@ -22711,6 +22749,7 @@
           "sanctionOutcome": {
             "description": "Resolución de M4 (multa o clausura). Null mientras M4 no resolvió. Solo lectura: se espeja desde el bus.",
             "nullable": true,
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SanctionOutcomeResponseDto"
@@ -25131,6 +25170,7 @@
           "landfillDiversionPct": {
             "nullable": true,
             "description": "Meta de `totals.divertedPct`. **Null mientras el equipo no la defina**: no hay meta acordada para el desvío del relleno",
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/TargetDto"

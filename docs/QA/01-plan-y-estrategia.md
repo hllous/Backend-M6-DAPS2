@@ -52,7 +52,7 @@
 |---|---|---|
 | **Local** | Desarrollo, unitarios y e2e | `npm run prisma:seed` para demo; los e2e **truncan** las tablas: usar una base descartable (`docs/testing.md`) |
 | **Local con `docker compose`** | Base, broker y backend con un comando (`docker compose up -d --build`) | `docker compose --profile seed run --rm seed` para el seed; credenciales en `.env` (`cp .env.example .env`; el arranque corta si faltan). Postgres y RabbitMQ solo en `127.0.0.1` |
-| **CI (GitHub Actions)** | `build` (docs:check, build, lint, OpenAPI al día), `test`, `e2e`, `secrets` (gitleaks), `audit` (informativo); workflows `API tests`, `CodeQL Advanced` y `Mutation testing` | Solo `build` y `test` son checks obligatorios de la protección de ramas; `e2e` corre y pasa pero no bloquea (DEF-14) |
+| **CI (GitHub Actions)** | `build` (docs:check, build, lint, OpenAPI al día), `test`, `e2e`, `secrets` (gitleaks), `audit` (gate de altas y críticas); workflows `API tests`, `CodeQL Advanced` y `Mutation testing` | Solo `build` y `test` son checks obligatorios de la protección de ramas; `e2e` corre y pasa pero no bloquea (DEF-14) |
 | **Render + Supabase** | Backend desplegado de la demo | El plan gratuito se duerme (riesgo R7) |
 | **Vercel** | Frontend desplegado de la demo | Contra el backend de Render |
 | **Core de M9** | Bus real (`muni.inbox`, cola `q.ambiente`) | Compartido por todos los grupos: avisar antes de publicar |
@@ -104,7 +104,7 @@ Escala: probabilidad (P) e impacto (I) de 1 a 3; prioridad = P × I. Se listan l
 | R8 | Regresión de contrato con otros módulos (payload o routing key) | 2 | 3 | 6 | **Cubierto.** `openapi-contract.spec`, `payloads.spec` (ajv), el CI exige `openapi.json` al día |
 | R10 | Archivo malicioso o con metadatos personales en la evidencia | 2 | 2 | 4 | **Cubierto.** `attachments.service.spec` (firma de bytes, tamaño, EXIF), `crew-ownership.e2e-spec` |
 | R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | **Parcial.** 3 corridas idénticas; Stryker solo en `outbound-requests`; DEF-24 cerrado sin causa confirmada |
-| R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | **Parcial.** `npm audit fix` (#566) y `overrides` (#619): 0 críticas y 0 altas, 8 moderadas a NestJS 12 (#628); job `audit` informativo, Dependabot (#578); sin Trivy (DEF-13) |
+| R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | **Parcial.** `npm audit fix` (#566), `overrides` (#619) y NestJS 12 (#628): 0 vulnerabilidades en producción; job `audit` gate, Dependabot (#578); sin Trivy (DEF-13) |
 | R17 | El primer `docker compose up` en frío falla | 2 | 2 | 4 | **Cubierto a mano.** Falló una vez (DEF-23) y se corrigió en #584; el CI no levanta el compose |
 | R21 | Un cliente sin `If-Match` o sin parser de `application/problem+json` pierde la protección o rompe al leer errores | 2 | 2 | 4 | **Parcial.** Backend cubierto (`etag-if-match`, `problem-details`); el frontend va en [Frontend #898](https://github.com/hllous/Frontend-M6-DAPS2/issues/898) |
 
