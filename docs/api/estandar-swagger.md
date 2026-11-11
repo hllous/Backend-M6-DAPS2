@@ -36,7 +36,7 @@ async function bootstrap() {
     // Configuración y planificación
     .addTag('zones', 'Zonas operativas y los barrios que agrupan')
     .addTag('routes', 'Recorridos y su secuencia de paradas')
-    .addTag('service-frequencies', 'Reglas que generan los servicios planificados')
+    .addTag('service-frequencies', 'Reglas de programación semanal de los recorridos')
     .addTag('service-types', 'Catálogo de tipos de servicio')
     .addTag('disposal-sites', 'Sitios de disposición final de residuos')
     // Recursos
@@ -91,7 +91,7 @@ Un endpoint pertenece a **un solo tag**. Los tags deben coincidir exactamente co
 |---|---|---|
 | Configuración | `zones` | Zonas operativas y los barrios que agrupan |
 | | `routes` | Recorridos y su secuencia de paradas |
-| | `service-frequencies` | Reglas que generan los servicios planificados |
+| | `service-frequencies` | Reglas de programación semanal de los recorridos |
 | | `service-types` | Catálogo de tipos de servicio |
 | | `disposal-sites` | Sitios de disposición final de residuos |
 | Recursos | `crews` | Cuadrillas y su disponibilidad |
