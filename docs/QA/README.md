@@ -57,7 +57,7 @@ El script falla si falta alguno de los `01` a `08`, para no entregar un PDF inco
 | **ZAP y Trivy** | **NO HECHOS** (DEF-13) | Benjamin Martinez (seguridad) |
 | **Contrato del BFF y formato de error con el frontend** | Issue abierto: [Frontend #898](https://github.com/hllous/Frontend-M6-DAPS2/issues/898) (parser de Problem Details, `Content-Type`, ETag, `Idempotency-Key`) | Benjamin Martinez |
 | **Éxito en los 91 endpoints restantes** de la colección Newman | `test/api/PENDIENTES.md` | Equipo |
-| **Mutation score global** | **Parcial**: línea base de los 26 archivos de dominio 71,22 % (cumple el 60 %), 5 archivos reforzados; quedan 21 y confirmar el global en el CI. Ver `05-informe-ejecucion.md` §5.1 | Benjamin Martinez |
+| **Mutation score global** | **Parcial**: global de los 26 archivos de dominio 71,22 % → 75,39 % confirmado en el CI tras reforzar 5 archivos (cumple el 60 %); quedan 21 sin reforzar. Ver `05-informe-ejecucion.md` §5.1 | Benjamin Martinez |
 
 ## Fuentes técnicas relacionadas
 
