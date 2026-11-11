@@ -100,7 +100,7 @@ npm run start:dev
 
 Requisitos:
 
-- Node.js 22.22.3 o superior (o 24.15+): el CLI de NestJS 12 (`nest build`, `nest start`) no arranca en releases anteriores de la 22. `engines` exige ese piso; el `dist/` ya compilado correría desde 22.12
+- Node.js 24.15 o superior (`engines`; el CLI de NestJS 12 lo exige). `.nvmrc` fija 24
 - PostgreSQL 15+ (o base gestionada tipo Neon)
 - RabbitMQ (el bus del Core, vía el exchange `muni.inbox`)
 
