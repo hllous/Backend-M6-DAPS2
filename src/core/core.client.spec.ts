@@ -157,6 +157,17 @@ describe('CoreClient', () => {
     expect(error.message).not.toContain(SECRET);
   });
 
+  it('corta cada pedido al Core a los 5 s (DEF-15)', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    fetchMock.mockResolvedValueOnce(token('t1')).mockResolvedValueOnce(json({ ok: true }));
+
+    await cliente().request('/api/v1/subscriptions');
+
+    expect(timeout).toHaveBeenCalledTimes(2);
+    expect(timeout.mock.calls.every(([ms]) => ms === 5_000)).toBe(true);
+    timeout.mockRestore();
+  });
+
   it('rechaza una respuesta sin accessToken', async () => {
     fetchMock.mockResolvedValueOnce(json({ expiresIn: 900 }));
 

@@ -43,8 +43,9 @@ export const envSchema = z
 
     // Origenes que pueden llamar a la API desde un navegador, separados por
     // coma. Sin la variable se aceptan todos, que es lo que hace falta en
-    // desarrollo. El JWT viaja en un header y no en una cookie, asi que esto no
-    // cierra un CSRF: es higiene, no un limite de seguridad.
+    // desarrollo; en producción es obligatoria (#642). El JWT viaja en un header
+    // y no en una cookie, asi que esto no cierra un CSRF: es higiene, no un
+    // limite de seguridad.
     CORS_ORIGINS: z.string().optional(),
 
     // JWT de M1: HMAC (HS256, HS384 o HS512) con la clave simétrica compartida (`APP_JWT_SECRET` de M1),
@@ -257,6 +258,52 @@ export const envSchema = z
         path: ['M1_BASE_URL'],
         message: 'En producción M1_BASE_URL tiene que ser https://',
       });
+    }
+    // Sin lista el CORS queda abierto a cualquier origen, y eso solo avisaba en
+    // un log. Vacía o solo comas (" , ") es lo mismo que ausente: configuration.ts
+    // descarta los orígenes vacíos y no queda ninguno.
+    if (
+      env.NODE_ENV === 'production' &&
+      !(env.CORS_ORIGINS ?? '').split(',').some((o) => o.trim())
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['CORS_ORIGINS'],
+        message:
+          'En producción CORS_ORIGINS es obligatoria: los orígenes del frontend, separados por coma',
+      });
+    }
+    // El navegador compara el header Origin byte a byte: una barra final, un path
+    // o un esquema faltante no rompen el arranque pero dejan al frontend afuera
+    // sin ningún aviso. `*` y `null` abrirían justo lo que la lista quiere cerrar.
+    // Se valida en todos los entornos porque nada del repo carga valores raros;
+    // el https: solo en producción, porque en local el frontend es http://localhost.
+    for (const origen of (env.CORS_ORIGINS ?? '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean)) {
+      let normalizado: string | undefined;
+      try {
+        normalizado = new URL(origen).origin;
+      } catch {
+        // no es una URL: queda sin normalizar
+      }
+      if (normalizado !== origen) {
+        // Mayúsculas o `:443` parsean bien pero el navegador manda la forma normalizada.
+        const pista =
+          normalizado && normalizado !== 'null' ? ` (¿quisiste decir ${normalizado}?)` : '';
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['CORS_ORIGINS'],
+          message: `CORS_ORIGINS tiene una entrada inválida (${origen}): cada origen va exacto, esquema + host + puerto opcional, sin path ni barra final (ej. https://m6.vercel.app)${pista}`,
+        });
+      } else if (env.NODE_ENV === 'production' && !origen.startsWith('https:')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['CORS_ORIGINS'],
+          message: `En producción CORS_ORIGINS solo acepta orígenes https://, y ${origen} no lo es`,
+        });
+      }
     }
     if (env.NODE_ENV === 'production' && env.NEIGHBORHOODS_CATALOG_FILE) {
       ctx.addIssue({

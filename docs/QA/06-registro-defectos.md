@@ -19,7 +19,7 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 
 | | Cantidad |
 |---|---|
-| Defectos y brechas registrados | 22 (DEF-01 a DEF-24, sin DEF-04 ni DEF-11). **Abiertos: 6. Cerrados: 16** |
+| Defectos y brechas registrados | 22 (DEF-01 a DEF-24, sin DEF-04 ni DEF-11). **Abiertos: 4. Cerrados: 18** |
 | Issues con etiqueta `bug`, `security` o `fix` | Todos cerrados en GitHub (`gh issue list --state all`) |
 | Verificaciones no realizadas (no son defectos) | 8, en la sección 5 |
 
@@ -28,8 +28,8 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 | Bloqueante | 0 | Sí |
 | Crítica | 0 | Sí |
 | Mayor | **2** (DEF-09 y DEF-13) | Sí (máximo 3) |
-| Menor | 4 (DEF-14, DEF-15, DEF-18 y DEF-19) | Sí |
-| **Total abierto** | **6** | |
+| Menor | 2 (DEF-14 y DEF-19) | Sí |
+| **Total abierto** | **4** | |
 
 **Lectura honesta:** el criterio de salida **se cumple en cantidad**: hay 2 Mayores abiertas contra un máximo de 3 (DEF-08 se cerró por mitigación con #619). Falta que cada Mayor tenga un workaround documentado, y DEF-09 dice «ninguno». La severidad de las Mayores es una **propuesta**: el equipo y el PO la validan antes de la entrega.
 
@@ -98,8 +98,6 @@ Ninguna abierta.
 | ID | Hallazgo | Evidencia | HU / estado |
 |---|---|---|---|
 | DEF-14 | El job `e2e` corre en cada PR y pasa, pero no es check obligatorio de la rama: un rojo no frena el merge. Exigirlo pide permisos de admin sobre `hllous/Backend-M6-DAPS2` (NO HECHO) | `.github/branch-protection-rules.json:17-19` (exige solo `build` y `test`) | Transversal · abierto. Esperado: merge bloqueado con un e2e roto; obtenido: habilitado |
-| DEF-15 | El timeout del cliente al Core es de 10 s y el valor de referencia es 5 s. No hay circuit breaker ni test que dispare el timeout real | `src/core/core.client.ts:6` y `:150-151` | HU-24 · abierto. Esperado: corte a los 5 s; obtenido: a los 10 s |
-| DEF-18 | `CORS_ORIGINS` es opcional: si falta, la API acepta cualquier origen (sin `credentials`). **`CORS_ORIGINS` y `BFF_SHARED_KEY` están cargadas en Render** | `src/main.ts:18-34` | HU-31 · abierto por diseño (variable opcional). Esperado sin `CORS_ORIGINS`: rechazo del `Origin` ajeno; obtenido: se acepta, sin `credentials` |
 | DEF-19 | Swagger UI queda publicado en `/api/docs` también en producción; los 500 no llevan id de correlación y `path` incluye la query (con los parámetros sensibles redactados desde #581); la evidencia se sirve por URL pública del bucket (key UUID aleatoria) y los PDF conservan sus metadatos; `/api/docs` es la única ruta sin CSP | `src/main.ts:41`; `src/common/filters/http-exception.filter.ts:131-141`; `src/modules/attachments/storage/r2-evidence.storage.ts:66` | HU-31 · abierto. Hallazgos de revisión de código, sin reproducción en vivo |
 
 Un test débil, `services.service.spec.ts:875` (`resolves.toBeDefined()` como única aserción), se registra en [`05-informe-ejecucion.md`](05-informe-ejecucion.md).
@@ -119,7 +117,9 @@ El detalle (causa raíz, PR, commit y CI) está en los issues cerrados del repos
 | DEF-08 | Dependencias de producción con CVE: 0 críticas y 0 altas tras los `overrides` y `zod` 4 (detalle en la sección 3); las 8 moderadas, con NestJS 12: `npm audit --omit=dev` da 0 | [#619](https://github.com/hllous/Backend-M6-DAPS2/issues/619), [#628](https://github.com/hllous/Backend-M6-DAPS2/issues/628) |
 | DEF-10 | Errores sin formato Problem Details RFC 9457 (ADR-011; sin id de correlación en los 500) | [#590](https://github.com/hllous/Backend-M6-DAPS2/issues/590) |
 | DEF-12 | `streetClosureRequested` con el contrato final de cortes de M7 | [#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447) |
+| DEF-15 | Timeout de 10 s del cliente al Core contra una referencia de 5 s. **Corregido:** `TIMEOUT_MS` de `src/core/core.client.ts` pasó a 5 s, con un test que lo fija. La mayoría de las llamadas al Core son en segundo plano (registro de suscripciones al arrancar, refresco del catálogo de barrios, ambos sin `await`), pero una sí la espera un usuario: el alta y la edición de cuadrillas y el alta de integrantes (`POST /crews`, `PATCH /crews/:id`, `POST /crews/:id/members`) validan contra M1 (`crews.service.ts` → `m1-identity.client.ts`) y antes piden el token de módulo al Core; sin token en caché (primer pedido tras arrancar o token vencido), un Core caído demoraba esos requests hasta 10 s. Sin circuit breaker, por decisión: el token se cachea y el caso es acotado. El pedido a M1 que sigue al token mantiene sus 10 s a propósito: M1 corre en Render free y sus arranques en frío llegaron a 78 s (ver `integracion/historial.md`, 2/11), así que con 5 s el alta de cuadrillas fallaría cada vez que M1 esté dormido | [#642](https://github.com/hllous/Backend-M6-DAPS2/issues/642) |
 | DEF-16 y DEF-17 | `AGENTS.md` y `bloqueantes.md` desactualizados respecto del código | sin issue |
+| DEF-18 | Sin `CORS_ORIGINS` la API aceptaba cualquier origen también en producción: ahora la validación de entorno la exige con `NODE_ENV=production` (vacía o solo comas cuenta como ausente), valida en todos los entornos que cada entrada sea un origen exacto (sin path, barra final, `*` ni `null`; `https://` en producción) y el arranque falla nombrando la variable y la entrada | [#642](https://github.com/hllous/Backend-M6-DAPS2/issues/642) |
 | DEF-20 | Los `GET` con parámetros devolvían 400 sin declararlo en el OpenAPI | [#586](https://github.com/hllous/Backend-M6-DAPS2/issues/586), [#593](https://github.com/hllous/Backend-M6-DAPS2/issues/593) |
 | DEF-21 | `GET /neighborhoods` daba 503 sin M9 en el CI y en el compose | [#594](https://github.com/hllous/Backend-M6-DAPS2/issues/594) |
 | DEF-22 | Los logs registraban el `access_token` de la query | [#569](https://github.com/hllous/Backend-M6-DAPS2/issues/569) |
