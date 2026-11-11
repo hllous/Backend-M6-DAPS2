@@ -45,8 +45,8 @@ El deploy está enlazado a la rama `main` de cada repo. Lo que se mergea a `deve
 ```
 git push origin main   (el release develop → test → main)
     ↓
-GitHub Actions corre build + test (CI)
-    ↓  si ambos pasan
+GitHub Actions corre build + test + audit (CI)
+    ↓  si los tres pasan (audit: `npm audit --omit=dev`, frena el deploy, no el merge)
 Job "deploy" dispara el Deploy Hook de Render (con el commit exacto)
     ↓
 Render buildea Docker y deploya (el CMD corre `prisma migrate deploy` y arranca)
