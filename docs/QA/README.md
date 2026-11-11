@@ -23,7 +23,7 @@ Los PDF van en `docs/QA/build/` y **no se versionan** (están en `.gitignore`).
 
 ## Cómo regenerar el PDF
 
-Requiere Node 22 y conexión a internet la primera vez (`md-to-pdf` baja un Chromium; la versión está fija en el script).
+Requiere Node 24 y conexión a internet la primera vez (`md-to-pdf` baja un Chromium; la versión está fija en el script).
 
 ```bash
 npm run qa:pdf

@@ -6,7 +6,7 @@ M6 gestiona los servicios urbanos y el control ambiental de la ciudad: recolecci
 
 ## Stack
 
-- **NestJS 12** + TypeScript 6 + Node 22 LTS
+- **NestJS 12** + TypeScript 6 + Node 24 LTS
 - **PostgreSQL** + Prisma como ORM
 - **RabbitMQ** para eventos asincrónicos (el bus del Core, vía el exchange `muni.inbox`)
 - **Vitest** + Supertest para testing (cobertura mínima 85%)
@@ -82,7 +82,7 @@ Abrí `http://localhost:3001/login` y entrá con una cuenta del M1 falso (la cla
 
 Sin `M6_AUTH_MODE=real-m1` el frontend arranca en modo `mock` (datos de ejemplo del propio frontend) y **no llama al backend**: sirve para ver la interfaz, no para probar la integración. Más detalle del M1 falso en el repositorio del frontend: `docs/agents/real-m1-development.md`.
 
-Sin las variables de Cloudflare R2, `POST /evidence` responde 503; el resto funciona. `docker compose down -v` borra la base y la cola. El Core de M9 no se levanta: RabbitMQ local hace de bus.
+Sin las variables de Cloudflare R2, `POST /evidence` responde 503; el resto funciona. `docker compose down -v` borra la base y la cola. El Core de M9 no se levanta: RabbitMQ local hace de bus. Si el volumen de RabbitMQ es de la imagen 3.13 (anterior a #628) y el contenedor `rabbitmq` se reinicia en loop por *feature flags*, borrá solo ese volumen: `docker compose down` y `docker volume rm <proyecto>_rabbitmq-data` (`down -v` también borra la base). La cola y el exchange los vuelve a crear `rabbitmq-setup`.
 
 ### Despliegue (login real contra M1)
 
