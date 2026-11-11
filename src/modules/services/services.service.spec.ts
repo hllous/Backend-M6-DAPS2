@@ -821,28 +821,6 @@ describe('ServicesService', () => {
       expect(data.scheduledDate.toISOString().slice(0, 10)).toBe('2099-09-22');
     });
 
-    it('confirmar con una fecha pasada da 400 y no transiciona', async () => {
-      prisma.service.findUnique.mockResolvedValue(
-        serviceRow({ status: ServiceStatus.RESCHEDULED }),
-      );
-
-      await expect(
-        service.confirmReschedule(SERVICE_ID, { scheduledDate: '2020-01-01' }, ACTOR),
-      ).rejects.toThrow(BadRequestException);
-      expect(prisma.service.update).not.toHaveBeenCalled();
-    });
-
-    it('confirmar con la fecha de hoy (Argentina) es válido', async () => {
-      prisma.service.findUnique.mockResolvedValue(
-        serviceRow({ status: ServiceStatus.RESCHEDULED }),
-      );
-      const hoy = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10);
-
-      await service.confirmReschedule(SERVICE_ID, { scheduledDate: hoy }, ACTOR);
-
-      expect(prisma.service.update).toHaveBeenCalled();
-    });
-
     /**
      * El sistema mete servicios en RESCHEDULED solo: lo hacen el rechazo de un
      * corte de M7 y la alerta meteorológica. Si el motivo es definitivo,
@@ -1115,28 +1093,15 @@ describe('ServicesService', () => {
       );
     });
 
-    it('exige motivo cuando la zona no quedo SERVICED', async () => {
+    it.each<[ZoneResultStatus, string | undefined, string]>([
+      [ZoneResultStatus.SERVICED, 'WEATHER', 'una zona atendida no lleva motivo'],
+      [ZoneResultStatus.NOT_SERVICED, undefined, 'una zona no atendida exige motivo'],
+      [ZoneResultStatus.PARTIAL, undefined, 'una zona parcial exige motivo'],
+    ])('%s con motivo %s: %s', async (status, reason) => {
       await expect(
         service.addZoneResult(
           SERVICE_ID,
-          {
-            zoneId: ZONE_A,
-            status: ZoneResultStatus.NOT_SERVICED,
-          },
-          USER_ID,
-        ),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('rechaza motivo cuando la zona quedo SERVICED', async () => {
-      await expect(
-        service.addZoneResult(
-          SERVICE_ID,
-          {
-            zoneId: ZONE_A,
-            status: ZoneResultStatus.SERVICED,
-            reason: 'WEATHER' as never,
-          },
+          { zoneId: ZONE_A, status, reason: reason as never },
           USER_ID,
         ),
       ).rejects.toThrow(BadRequestException);

@@ -17,7 +17,7 @@
 | Compose en frío | `docker compose up -d --build` con volúmenes nuevos | Ver 2 |
 | CI de `develop` | Run de `CI` del commit `142e1a3` | [42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201) |
 | Newman y Schemathesis en el CI | Workflow `API tests`, job `api (newman + schemathesis)` | [42632174625](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174625) (push) y [42631657018](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42631657018) (PR) |
-| Mutation | Stryker (`npm run test:mutation`), 14 min 26 s | Módulo `outbound-requests`; **no se re-midió** |
+| Mutation | Stryker (`npm run test:mutation`); línea base en el CI (2 h 26 min) y remedición local de 5 archivos (44 min), ambas **posteriores a R09** (ver 5.1) | 26 archivos de dominio: 71,22 % de línea base |
 | e2e con RabbitMQ real | `rabbitmq-real` en el job `e2e` del CI | En local se saltea sin `RABBITMQ_URL`; última corrida local: R08 (4 de 4) |
 
 Los **e2e se corrieron en local** contra una base descartable. Los logs no incluyen números por caso, solo los totales de Jest.
@@ -34,7 +34,7 @@ R09 salvo que se diga otra cosa. «Saltados» son tests que Jest no ejecutó; «
 | Newman (`test/api/`) | — | 455 requests | 763 assertions | 0 | — | Corre en el CI (job `api`: 2 min 27 s con Schemathesis) |
 | Schemathesis: esquema y sin 5xx | — | 4388 casos | 4388 | 0 | — | — |
 | Schemathesis: `status_code_conformance` (**bloqueante**) | — | 4384 casos | 3913 | 0 (exit 0) | 471 | — |
-| Mutation (Stryker) | — | `outbound-requests` solamente | 84,21 % total | — | — | 14 min 26 s (**sin re-medir**) |
+| Mutation (Stryker, #617) | — | 26 archivos de dominio (5182 mutantes, 2142 no compilan y no cuentan) | 71,22 % global en el CI (2165 detectados) | — | — | 2 h 26 min en el CI; medición del 10-11/11/2026, **no es R09** (5.1) |
 | Carga (k6) | — | 14 850 requests | p(95) 32,84 ms; 0,00 % de error | 0 | — | 5 min; ver 2.2 |
 | Seguridad dinámica (ZAP) | — | — | — | — | — | **No realizado** |
 | Seguridad estática: Trivy | — | — | — | — | — | **No realizado** |
@@ -156,9 +156,109 @@ El job `e2e` **no es check obligatorio** de la protección de ramas (`.github/br
 
 **Aserciones débiles.** `src/modules/services/services.service.spec.ts:875` verifica «se puede cancelar desde %s» solo con `resolves.toBeDefined()`: un `cancel()` que devolviera cualquier cosa pasaría. **No se corrigió.** Hay 25 usos de `toBeDefined()` o `toBeTruthy()` en los specs; solo revisamos el de la línea 875.
 
-**Mutation score (Stryker, #577).** `stryker.config.json` cubre `outbound-requests.transitions.ts` y `street-closure-expiry.sweeper.ts`, con umbral `break: 60`. Medición completa local (14 min 26 s): **84,21 % total**, **transiciones 100 %**; el sweeper llegó a **100 % tras sumar 2 aserciones** (re-medido solo el sweeper; el total no se re-midió). El workflow `mutation.yml` corre a mano o los lunes. **Cumple el umbral de 60 % solo en este módulo;** el dominio completo no se midió.
+**Mutation score (Stryker, #577 y #617).** `stryker.config.json` muta los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules`, con umbral `break: 60`. **Línea base en CI: 71,22 % global** (cumple el criterio de 60 %). Se reforzaron 5 archivos y 4 llegaron a 100 %; el detalle, la clasificación de lo que queda y las reglas que protegen los tests nuevos están en 5.1. El workflow `mutation.yml` corre a mano o los lunes.
 
 **Mocks.** No encontramos por muestreo tests que mockeen la clase bajo prueba. Los unitarios mockean Prisma, así que prueban llamadas más que comportamiento de base; el comportamiento real lo cubren los 343 e2e.
+
+### 5.1 Mutation testing del dominio (#617)
+
+**Esta medición es posterior a R09 y no se hizo sobre la misma base:** es del 10 y 11/11/2026, sobre la rama `tests/617-mutation-score` con `develop` @ `8daa52d` o posterior (Vitest, NestJS 12, Node 24). No reemplaza ni reescribe las cifras de R09 de las secciones 2 y 3. Cómo repetirla: [`docs/testing.md`](../testing.md), sección «Mutation testing».
+
+**Alcance y línea base.** Stryker 9 con `@stryker-mutator/vitest-runner`, checker TypeScript y `coverageAnalysis: perTest`, sobre `src/modules/**/*.service.ts`, `*.transitions.ts` y `*.sweeper.ts`: 26 archivos. Corrida en GitHub Actions (Linux, run **42913181516**, `concurrency: 3`, `timeoutMS: 10000`), **2 h 26 min**, sin incremental previo. 5182 mutantes: 2044 Killed, 121 Timeout, **801 Survived**, **74 NoCoverage** y 2142 CompileError (no cuentan). **Score global = (2044 + 121) / (2044 + 121 + 801 + 74) = 71,22 %**; el umbral del issue y el `break` son 60 %. Un mutante *Survived* es un cambio que ningún test notó; *NoCoverage*, un cambio en una línea que ningún test ejecuta.
+
+Score por archivo de la línea base, de menor a mayor («No detectados» = Survived + NoCoverage):
+
+| Archivo (bajo `src/modules/`) | Score | Detectados | Survived | NoCoverage | Total |
+|---|---:|---:|---:|---:|---:|
+| `environmental-reports/report-deadline.sweeper.ts` | 40,0 % | 6 | 9 | 0 | 15 |
+| `green-points/green-points.service.ts` | 52,6 % | 50 | 35 | 10 | 95 |
+| `citizen-portal/citizen-portal.service.ts` | 55,0 % | 33 | 27 | 0 | 60 |
+| `trees/trees.service.ts` | 60,7 % | 65 | 37 | 5 | 107 |
+| `green-spaces/green-spaces.service.ts` | 62,3 % | 48 | 27 | 2 | 77 |
+| `containers/containers.service.ts` | 64,6 % | 93 | 47 | 4 | 144 |
+| `services/services.service.ts` | 65,8 % | 404 | 198 | 12 | 614 |
+| `vehicles/vehicles.service.ts` | 67,6 % | 46 | 21 | 1 | 68 |
+| `outbound-requests/outbound-requests.service.ts` | 68,5 % | 63 | 26 | 3 | 92 |
+| `trees/interventions/tree-interventions.service.ts` | 68,9 % | 91 | 40 | 1 | 132 |
+| `crews/crews.service.ts` | 71,3 % | 149 | 56 | 4 | 209 |
+| `environmental-inspections/environmental-inspections.service.ts` | 71,5 % | 103 | 41 | 0 | 144 |
+| `zones/zones.service.ts` | 71,6 % | 73 | 28 | 1 | 102 |
+| `service-frequencies/service-frequencies.service.ts` | 72,2 % | 65 | 25 | 0 | 90 |
+| `service-types/service-types.service.ts` | 72,2 % | 39 | 15 | 0 | 54 |
+| `routes/routes.service.ts` | 74,7 % | 74 | 22 | 3 | 99 |
+| `attachments/attachments.service.ts` | 75,0 % | 57 | 19 | 0 | 76 |
+| `communes/communes.service.ts` | 75,0 % | 6 | 2 | 0 | 8 |
+| `disposal-sites/disposal-sites.service.ts` | 77,6 % | 38 | 11 | 0 | 49 |
+| `trees/surveys/tree-surveys.service.ts` | 78,4 % | 40 | 11 | 0 | 51 |
+| `indicators/indicators.service.ts` | 80,6 % | 295 | 48 | 23 | 366 |
+| `role-assignments/role-assignments.service.ts` | 81,2 % | 69 | 15 | 1 | 85 |
+| `environmental-reports/environmental-reports.service.ts` | 81,7 % | 196 | 40 | 4 | 240 |
+| `neighborhoods/neighborhoods.service.ts` | 83,3 % | 5 | 1 | 0 | 6 |
+| `outbound-requests/street-closure-expiry.sweeper.ts` | 100,0 % | 43 | 0 | 0 | 43 |
+| `outbound-requests/outbound-requests.transitions.ts` | 100,0 % | 14 | 0 | 0 | 14 |
+
+**Qué se reforzó.** Los cinco archivos con peor score o más sobrevivientes (333 de los 875 no detectados; `services.service.ts` solo, 210). Cada uno se re-midió solo, en local (Windows, Node 24, Vitest, `concurrency: 5`, 44 min 44 s en total, sin incremental). **No es el score del CI:** Linux puede dar *Timeout* donde la máquina local da *Killed*; las cifras de abajo son comparables entre sí, no contra el 71,22 %. El global se confirma con una corrida en el CI tras el merge (pendiente).
+
+| Archivo | Antes (CI) | Después (local) | No detectados antes → después |
+|---|---:|---:|---:|
+| `environmental-reports/report-deadline.sweeper.ts` | 40,0 % | **100 %** (15 killed) | 9 → 0 |
+| `green-points/green-points.service.ts` | 52,6 % | **94,74 %** (90 killed, 5 survived) | 45 → 5 |
+| `citizen-portal/citizen-portal.service.ts` | 55,0 % | **100 %** (60 killed) | 27 → 0 |
+| `trees/trees.service.ts` | 60,7 % | **95,33 %** (102 killed, 5 survived) | 42 → 5 |
+| `services/services.service.ts` | 65,8 % | **74,27 %** (452 killed, 4 timeout, 154 survived, 4 nocoverage) | 210 → 158 |
+
+Los cinco juntos: **81,14 %** (723 de 891). Los cuatro archivos chicos se re-midieron después de recortar sus specs (14 min 7 s): los 10 sobrevivientes de `green-points` y `trees` son 6 textos de log de alta, cambio y baja y 4 `select: { id: true }` de la verificación de existencia, las dos categorías aceptadas de la tabla de abajo; antes del recorte los mataban tests que solo afirmaban esos textos. Los 154 sobrevivientes de `services.service.ts` son, por mutador: `StringLiteral` 66, `ConditionalExpression` 40, `ObjectLiteral` 20, `LogicalOperator` 8, `EqualityOperator` 6, `BlockStatement` 5, `BooleanLiteral` 5, `ArrayDeclaration` 4 y 1 de `ArithmeticOperator`, `ArrowFunction`, `MethodExpression` y `CallExpression`.
+
+**Verificación de validez.** Cada mutante muerto lo mata un test del spec de su propio archivo, nunca uno ajeno. Tests distintos que matan: `green-points` 20, `citizen-portal` 20, `services` 142, sweeper 5, `trees` 19; ningún test mata más de 26 mutantes, así que no hay un test «comodín» que explique el score.
+
+**Qué no se cubrió, y por qué.** Los otros 21 archivos (542 de los 875 no detectados) no se trabajaron: el criterio numérico ya se cumplía y el issue pide cubrir «los relevantes» y justificar el resto. La clasificación se hizo por mutador y línea (script sobre `mutation.json`), no mutante por mutante; las cantidades son aproximadas y son de la línea base completa (875).
+
+| Categoría | Cant. | Ejemplo | Veredicto |
+|---|---:|---|---|
+| **Texto de log** (`StringLiteral` en `this.logger.*`) | ~70 | `containers.service.ts:96` «Contenedor registrado: …» | **Justificado.** No hay contrato de log. En los cinco archivos trabajados se cubrió solo donde el log lleva un dato útil para operar |
+| **Texto de mensaje de error sin contrato** | ~210 | `attachments.service.ts:49` «Falta el archivo (campo "file")» | **Parcialmente justificado.** El código HTTP es contrato y está cubierto; el texto lo lee una persona. Se cubrió donde el frontend o un criterio Gherkin lo citan |
+| **Mutantes equivalentes o casi** | ~25 | `containers.service.ts:413` y `tree-interventions.service.ts:352` (`CONTAINER_TRANSITIONS[x] ?? []`, tabla con todas las claves); `indicators.service.ts:159,535` (`+= 1` ↔ `-= 1` sobre un contador no observable) | **Justificado.** No hay comportamiento observable que cambie. Entra la rama inalcanzable de `resolveContainerOutcome` (`services.service.ts` ~914-918): se probó una vez parcheando `CONTAINER_TRANSITIONS`, el test se borró y el mutante queda **aceptado** |
+| **`select: { id: true }` → `false` y similares** | ~31 | `crews.service.ts:400`, `disposal-sites.service.ts:117` | **Justificado con reparo.** Con Prisma mockeado la selección no cambia el resultado; el e2e contra Postgres real la cubre indirectamente |
+| **Patrón PATCH parcial** (`dto.x !== undefined && {…}`) | ~35 | `containers.service.ts:203-208` | **Pendiente, no justificado.** Mismo hueco que se cerró en `green-points`, `trees` y `services`; la receta (`toStrictEqual` sobre un PATCH vacío, que no debe mandar ninguna clave, y sobre uno parcial con valores falsy válidos) aplica tal cual |
+| **`assertTransition` sin test que lo detecte** | 3 | `environmental-inspections.service.ts:72,144,230` | **Pendiente, real.** Borrar la llamada no rompe ningún test: la máquina de estados del expediente queda sin protección en esos tres pasos |
+| **Orden y paginación** (`orderBy`, `skip`, `take`) | ~60 | `attachments.service.ts:150`, `communes.service.ts:20` | **Pendiente, bajo riesgo.** Se cerró en los cinco archivos trabajados |
+
+**Los tests nuevos de `services.service.ts`, regla por regla.** El spec `services-rules-mutation.spec.ts` (50 tests) más las tablas `it.each` sumadas a `services.service.spec.ts` y `services-container-close.spec.ts`. Cada regla se explica en una frase y es la que queda sin red si se borra el test:
+
+1. Un rango de fechas de un solo día (desde == hasta) es válido.
+2. Volumen y peso salen como número, o `null` si no se midió (nunca un Decimal como texto).
+3. No se programa contra un tipo o recorrido inexistente (404) o dado de baja (400); el error nombra cuál.
+4. Un servicio es de recorrido o puntual: `ROUTE` descarta el objetivo puntual, `POINT` deja `routeId` en `null`; se guarda quién lo programó.
+5. Una franja exige inicio estrictamente anterior al fin, también al editar una sola punta y al confirmar una reprogramación.
+6. Solo un ETag concreto convierte el conflicto de versión en 412; sin `If-Match` o con `*` no hay control optimista (ADR-012).
+7. Solo el «registro no encontrado» (P2025) se traduce en 409/412; cualquier otro error de base sale tal cual.
+8. Un servicio en curso no cambia de cuadrilla (409).
+9. Asignar cuadrilla sin mandar vehículo no borra el vehículo que ya tenía.
+10. El conflicto de recursos le da al operador recurso, nombre (patente, o id), servicio, estado, tipo, día y franja.
+11. Para el encaje cuenta la reubicación de zona vigente el día del servicio, no la de hoy.
+12. Toda operación (CREATE, UPDATE, ASSIGN_CREW, START, SUSPEND, RESUME, CANCEL, RESCHEDULE, CONFIRM_RESCHEDULE, COMPLETE) deja auditoría con acción y estados, en la misma transacción.
+13. Cada aviso al reclamo de M2 (create/start STARTED, cancel REJECTED con motivo, complete RESOLVED, confirmReschedule STARTED, demora PROGRESS) se encola en el outbox dentro de la transacción, con el tipo correcto.
+14. No se reprograma a una fecha anterior a hoy en Argentina; hoy vale, también a las 02:00 UTC.
+15. Confirmar la reprogramación no pisa la punta de la franja que no se mandó.
+16. Al reubicar un contenedor sin coordenadas nuevas se borran las viejas.
+17. La fecha propuesta de vuelta a una zona es un día, sin hora.
+18. La recolección en el sitio de disposición se puede registrar con el servicio `COMPLETED` o `PARTIALLY_COMPLETED`.
+19. Quien no es de la cuadrilla recibe 403 antes de cualquier regla de estado.
+
+Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueuedInTx`, que distingue el cliente de la transacción: ningún otro spec detecta un outbox o una auditoría escritos fuera de la transacción (reglas 12 y 13).
+
+**Tests generados con IA: se recortaron.** El primer `services-rules-mutation.spec.ts` salió con 2345 líneas y 139 tests. La revisión (`m6-revisor`) clasificó cada uno: el 80 % repetía otros 7 specs de la carpeta o afirmaba textos de log y formas de `select`. Quedó en **753 líneas y 50 tests** (las 19 reglas). Lo recortado se fusionó en `it.each` de `services-container-close.spec.ts` y `services.service.spec.ts`; de este último además se borraron dos tests no deterministas con `Date.now() - 3 h`; la regla 14 los reemplaza con una fecha fija y fake timers. Con el mismo criterio se recortaron los specs agregados a los otros cuatro archivos (de 112 a 79 tests): se fusionaron los «el 404/409 nombra X» en el test del mismo caso, se borraron los que solo afirmaban textos de log y los `it.each` de «PATCH con solo un campo» (los reemplaza `toStrictEqual` sobre un PATCH vacío), y quedó una sola factory por entidad. Lo que protegen, por archivo:
+
+- **`report-deadline.sweeper`** (5): cierra solo los `NOTICE_ISSUED` vencidos a la hora actual; barre al arrancar; si la base falla al arrancar no tumba la aplicación y deja la causa en el log; informa cuántos cerró y no loguea si no hubo ninguno (en un cron el log es el único efecto observable).
+- **`citizen-portal`** (23): la vista pública es una lista blanca (campos de respuesta y `select` de Prisma exactos: nunca denunciante, inspector, hallazgos, cuadrilla, vehículo ni notas); los 11 estados internos del expediente colapsan en 7 etapas y los 7 del servicio en 4, cada etapa con frase propia; el calendario mira 30 días desde «hoy» en Argentina, trunca las fechas al día y excluye cancelados; un reclamo sin expediente da 404 sin revelar si existe en M2.
+- **`green-points`** (24) y **`trees`** (27): defaults al crear (`null` y activo) y respeto de los valores dados; 409 y 404 que nombran el código o la zona; solo los errores conocidos de Prisma se traducen a HTTP, el resto se propaga; un PATCH manda solo los campos presentes, incluidos los falsy válidos (`active=false`, `lat=0`, una medida de 0 cm), y uno vacío no manda ninguna clave; la baja es lógica y sobre un id inexistente da 404 sin escribir; los Decimal salen como número o `null`. En `trees`, además, el filtro por riesgo usa el último relevamiento y el relevamiento publicado es un resumen sin inspector ni notas.
+
+**Hallazgos al medir.**
+
+- **Test intermitente, corregido (P-3 de [`06`](06-registro-defectos.md)).** `src/openapi-contract.spec.ts`, «todo campo con @Min/@Max… declara minimum/maximum», importa todos los DTO (~2,3 s solo) y superaba el timeout por defecto de Vitest (5 s) con la suite en paralelo y la máquina cargada: era el «1 fallo en 6 corridas tras `npm ci`». Se le dio un timeout propio de 30 s. No es DEF-24 (ese es un e2e por `e2e_no_active`).
+- **Vitest no chequea tipos.** Los specs generados tenían 2 errores de tipo (`it.each` con una columna de descripción no declarada) que ni Vitest ni `nest build` (excluye los specs) ven; los detectó el checker TypeScript de Stryker y el job «Typecheck specs» del CI los habría frenado. Se tiparon las tablas (`it.each<[A, string]>`).
+- **Windows.** El `vitest.related` por defecto del runner no encontró los tests relacionados («No tests were executed»); la remedición local se hizo con `vitest.related: false` en una config aparte, fuera del repo. El CI de Linux no lo necesita.
+- **Observación de producto, no es defecto confirmado.** `start()` acepta un servicio `SUSPENDED` (`VALID_TRANSITIONS.SUSPENDED` incluye `IN_PROGRESS`) sin limpiar `statusReason` ni `statusNote` como hace `resume`. Ningún test lo fija; decisión de producto.
 
 ## 6. Contrato y API
 
@@ -181,7 +281,7 @@ El job `e2e` **no es check obligatorio** de la protección de ramas (`.github/br
 |---|---|---|---|
 | Cobertura de líneas en dominio | ≥ 80 % | 99,16 % global; mínimo en `src/modules/*`: 95,77 % | **Sí** |
 | Cobertura de ramas en dominio | ≥ 70 % | 93,63 % global; mínimo en `src/modules/*`: 82,92 % | **Sí** |
-| Mutation score en dominio | ≥ 60 % | 84,21 % solo en `outbound-requests` | **Parcial** |
+| Mutation score en dominio | ≥ 60 % | 71,22 % global en los 26 archivos de dominio (línea base en CI, #617; ver 5.1) | **Sí** |
 | Tests flaky | 0 (3 corridas idénticas) | 3 corridas idénticas en local (R08) y repetidas en el CI (ver 2.1) | **Sí** |
 | Pipeline | ≤ 15 min | 1 min 44 s; `API tests` 2 min 27 s | **Sí** |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` (23 más `rabbitmq-real`); los E2E de navegador viven en el repo del frontend | **Sí** |
@@ -198,7 +298,7 @@ El job `e2e` **no es check obligatorio** de la protección de ramas (`.github/br
 | Quality Gate (SonarCloud) y su captura | **NO HECHO** | Pide administrador del repositorio; no hay configuración |
 | OWASP ZAP | **NO HECHO** | No se corrió |
 | Trivy | **NO HECHO** | No se corrió |
-| Mutation score del dominio completo (y actualizado) | **NO HECHO** | Solo `outbound-requests`, sin re-medir |
+| Mutation score: reforzar los 21 archivos restantes y confirmar el global en el CI | **Parcial** | Línea base del dominio completo medida y 5 archivos reforzados (5.1); el score global tras el refuerzo se confirma con una corrida en el CI luego del merge |
 | Éxito por endpoint en los 91 endpoints restantes | **NO HECHO** | `test/api/PENDIENTES.md` |
 | Integración con broker real (Testcontainers) | **Parcial** | Postgres y RabbitMQ reales como contenedores de servicio del CI y en local. El consumer y la publicación del outbox (también con el broker inalcanzable y su reenvío) se prueban contra RabbitMQ real (#618) |
 | `--detectOpenHandles` | **NO HECHO** | No se corrió |
@@ -211,7 +311,7 @@ El job `e2e` **no es check obligatorio** de la protección de ramas (`.github/br
 | 2 | Script k6 con 50 usuarios, 5 minutos y 3 `GET` críticos | **Hecho** (#585, #574): local, despliegue y escrituras |
 | 3 | Schemathesis contra `openapi.json` en el CI | **Hecho** (#583), solo `GET`; bloqueante desde #593 |
 | 4 | SonarCloud y Quality Gate | **NO HECHO** (pide admin) |
-| 5 | Stryker acotado a transiciones y sweeper | **Hecho** (#577); medición global **NO HECHA** |
+| 5 | Stryker sobre el dominio completo | **Hecho** (#577, #617): línea base 71,22 %; quedan 21 archivos sin reforzar |
 | 6 | Correr la suite 3 veces seguidas | **Hecho** en local y en el CI; falta `--detectOpenHandles` |
 | 7 | Reemplazar las aserciones débiles (`services.service.spec.ts:875` y el resto) | **Sin hacer** |
 | 8 | Hacer obligatorio el job `e2e` en la protección de ramas | **NO HECHO** (pide admin; DEF-14) |

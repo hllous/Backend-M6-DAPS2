@@ -73,3 +73,6 @@ schema-coverage.html
 # Stryker (npm run test:mutation)
 reports/
 .stryker-tmp/
+
+# Salida local de reporters de Vitest
+.vitest/

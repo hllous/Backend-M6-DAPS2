@@ -154,26 +154,24 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
     expect(prisma.container.findUnique).not.toHaveBeenCalled();
   });
 
-  it('un contenedor ACTIVE no transiciona: no habia trabajo pendiente', async () => {
-    prisma.container.findUnique.mockResolvedValue(container(ContainerStatus.ACTIVE));
+  it.each<[ContainerStatus, string]>([
+    [ContainerStatus.ACTIVE, 'no había trabajo pendiente'],
+    [ContainerStatus.DAMAGED, 'falta pasar por start-repair'],
+    [ContainerStatus.REMOVED, 'ya no está en la calle'],
+  ])('un contenedor %s no transiciona: %s', async (status) => {
+    prisma.container.findUnique.mockResolvedValue(container(status));
 
     await service.complete(SERVICE_ID, {}, ACTOR);
 
     expect(prisma.container.update).not.toHaveBeenCalled();
   });
 
-  it('un contenedor DAMAGED no transiciona: falta pasar por start-repair', async () => {
-    prisma.container.findUnique.mockResolvedValue(container(ContainerStatus.DAMAGED));
-
-    await service.complete(SERVICE_ID, {}, ACTOR);
-
-    expect(prisma.container.update).not.toHaveBeenCalled();
-  });
-
-  it('un servicio ROUTE no mira contenedores', async () => {
-    prisma.service.findUnique.mockResolvedValue(
-      serviceRow({ mode: ServiceMode.ROUTE, targetType: null, targetId: null }),
-    );
+  it.each([
+    ['ROUTE', { mode: ServiceMode.ROUTE, targetType: null, targetId: null }],
+    ['que apunta a un árbol', { targetType: ServiceTargetType.TREE }],
+    ['POINT sin targetId', { targetId: null }],
+  ])('un servicio %s no mira contenedores', async (_caso, over) => {
+    prisma.service.findUnique.mockResolvedValue(serviceRow(over));
 
     await service.complete(SERVICE_ID, {}, ACTOR);
 

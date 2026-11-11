@@ -32,7 +32,7 @@
 | Nivel | Qué existe | Qué falta |
 |---|---|---|
 | **Unitario** (backend) | 124 suites; R09: 2854 tests pasan, 0 saltados, 0 fallan. Cobertura 98,58 % sentencias, 93,63 % ramas, 99,16 % líneas; umbral de 85 % global y por archivo en 7 servicios críticos. Incluye 114 tests de transiciones inválidas (#582) | Algunos tests prueban llamadas a mocks más que comportamiento; aserción débil en `services.service.spec.ts:875` |
-| **Mutation testing** | Stryker (#577) sobre `outbound-requests.transitions.ts` y `street-closure-expiry.sweeper.ts`: 84,21 % total; workflow `mutation.yml` manual o semanal | Medición del dominio completo |
+| **Mutation testing** | Stryker sobre los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules` (#577, #617): línea base en CI **71,22 %**; 5 archivos reforzados con tests (81,14 % entre los cinco, medido en local); workflow `mutation.yml` manual o semanal. Detalle en [`05`](05-informe-ejecucion.md) §5.1 | 21 archivos sin reforzar; confirmar el score global en el CI tras el merge |
 | **Unitario** (frontend) | Vitest en el CI | Sin cobertura ni umbral |
 | **Integración / e2e** (backend) | 24 suites en `test/` contra `postgres:16` (R09: 343 pasan, 4 saltados) y `rabbitmq-real` contra RabbitMQ real en el CI; job `e2e` del CI (**no** es check obligatorio); guard que impide apuntar a una base no local | Testcontainers; publicación del outbox contra un broker real |
 | **E2E de usuario** (frontend) | 58 specs Playwright en 10 shards en el CI | Viewports 360 y 768 px (hoy 390 y 1280) |
@@ -76,7 +76,7 @@
 |---|---|---|---|
 | Cobertura de líneas en dominio | ≥ 80 % | 99,16 % global; mínimo en `src/modules/*`: 95,77 % | **Sí** |
 | Cobertura de ramas en dominio | ≥ 70 % | 93,63 % global; mínimo en `src/modules/*`: 82,92 % | **Sí** |
-| Mutation score en dominio | ≥ 60 % | 84,21 % solo en `outbound-requests` | **Parcial** |
+| Mutation score en dominio | ≥ 60 % | 71,22 % global en los 26 archivos de dominio (línea base en CI, #617) | **Sí** |
 | HU del alcance ejecutadas | 100 % | Las HU con test del backend sí; 9 criterios solo-FE y 6 huecos no ([`03`](03-matriz-trazabilidad.md)) | **Parcial** |
 | Criterios de aceptación pasados | ≥ 95 %, sin fallos en HU `MUST` | 160 de 175 con test del backend pasan; 0 fallados; 15 sin ejecutar | **Parcial** |
 | Casos negativos o de borde | ≥ 40 % | 67,5 % (251 de 372) | **Sí** |
@@ -103,7 +103,7 @@ Escala: probabilidad (P) e impacto (I) de 1 a 3; prioridad = P × I. Se listan l
 | R7 | Cold start de Render o de M1 durante la demo en vivo | 3 | 3 | 9 | **Sin cobertura automática.** Mitigación: despertar `/health` antes, ensayar, plan B local (`docs/testing.md`) |
 | R8 | Regresión de contrato con otros módulos (payload o routing key) | 2 | 3 | 6 | **Cubierto.** `openapi-contract.spec`, `payloads.spec` (ajv), el CI exige `openapi.json` al día |
 | R10 | Archivo malicioso o con metadatos personales en la evidencia | 2 | 2 | 4 | **Cubierto.** `attachments.service.spec` (firma de bytes, tamaño, EXIF), `crew-ownership.e2e-spec` |
-| R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | **Parcial.** 3 corridas idénticas; Stryker solo en `outbound-requests`; DEF-24 cerrado sin causa confirmada |
+| R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | **Parcial.** 3 corridas idénticas; Stryker en los 26 archivos de dominio (71,22 %), 21 sin reforzar; un test intermitente de `openapi-contract.spec.ts` corregido (P-3); DEF-24 cerrado sin causa confirmada |
 | R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | **Parcial.** `npm audit fix` (#566), `overrides` (#619) y NestJS 12 (#628): 0 vulnerabilidades en producción; job `audit` gate, Dependabot (#578); sin Trivy (DEF-13) |
 | R17 | El primer `docker compose up` en frío falla | 2 | 2 | 4 | **Cubierto a mano.** Falló una vez (DEF-23) y se corrigió en #584; el CI no levanta el compose |
 | R21 | Un cliente sin `If-Match` o sin parser de `application/problem+json` pierde la protección o rompe al leer errores | 2 | 2 | 4 | **Parcial.** Backend cubierto (`etag-if-match`, `problem-details`); el frontend va en [Frontend #898](https://github.com/hllous/Frontend-M6-DAPS2/issues/898) |
@@ -135,7 +135,7 @@ Cualquier integrante puede responder sobre cualquier test o defecto.
 | Contrato OpenAPI | `openapi:generate` + `git diff` en CI, Schemathesis | En uso (solo `GET`; pasos bloqueantes desde #593) |
 | API | Newman (colección en `test/api/`) | En uso, en el CI (#583) |
 | Contrato de eventos | ajv contra `.schema.json` | En uso |
-| Mutation testing | Stryker | En uso, acotado a `outbound-requests` (#577) |
+| Mutation testing | Stryker + `@stryker-mutator/vitest-runner` | En uso sobre los servicios, transiciones y sweepers de `src/modules` (#577, #617) |
 | Carga | k6 | En uso (#585) |
 | Seguridad | `npm audit`, Dependabot, CodeQL, gitleaks | En el CI; **ZAP y Trivy: NO HECHOS** |
 | Gestión de casos y defectos | GitHub Issues y tablero de Trello (reemplazan a Jira) | En uso |

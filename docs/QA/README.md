@@ -1,6 +1,6 @@
 # QA — Entregables de la prueba del TP (Clase 15)
 
-> Versión 2.0 · 10/11/2026. Índice de los documentos de QA del Módulo 6 «Ambiente e Higiene» (Grupo 04), según los *Criterios de Testing y Aseguramiento de Calidad* (estructura de ISO/IEC/IEEE 29119-3). Origen: Issue [#494](https://github.com/hllous/Backend-M6-DAPS2/issues/494). Medido sobre `develop` @ `142e1a3`, el merge de [#597](https://github.com/hllous/Backend-M6-DAPS2/pull/597). **Versión entregada:** `main` @ `6333ecb`, con el tag `v1.0-testing` (PR [#602](https://github.com/hllous/Backend-M6-DAPS2/pull/602) y [#603](https://github.com/hllous/Backend-M6-DAPS2/pull/603)); desde `142e1a3` hasta ese commit solo entraron documentación, el README y `.env.example`, así que las cifras medidas siguen valiendo.
+> Versión 2.0 · 10/11/2026. Índice de los documentos de QA del Módulo 6 «Ambiente e Higiene» (Grupo 04), según los *Criterios de Testing y Aseguramiento de Calidad* (estructura de ISO/IEC/IEEE 29119-3). Origen: Issue [#494](https://github.com/hllous/Backend-M6-DAPS2/issues/494). Medido sobre `develop` @ `142e1a3`, el merge de [#597](https://github.com/hllous/Backend-M6-DAPS2/pull/597). **Versión entregada:** `main` @ `6333ecb`, con el tag `v1.0-testing` (PR [#602](https://github.com/hllous/Backend-M6-DAPS2/pull/602) y [#603](https://github.com/hllous/Backend-M6-DAPS2/pull/603)); desde `142e1a3` hasta ese commit solo entraron documentación, el README y `.env.example`, así que las cifras medidas siguen valiendo. La medición de mutation testing es posterior (10-11/11/2026, #617, sobre otra base: Vitest, NestJS 12, Node 24); ver `05-informe-ejecucion.md` §5.1.
 >
 > **El Markdown de esta carpeta es la fuente.** El PDF que se entrega se regenera a partir de él; no se edita a mano.
 
@@ -57,7 +57,7 @@ El script falla si falta alguno de los `01` a `08`, para no entregar un PDF inco
 | **ZAP y Trivy** | **NO HECHOS** (DEF-13) | Benjamin Martinez (seguridad) |
 | **Contrato del BFF y formato de error con el frontend** | Issue abierto: [Frontend #898](https://github.com/hllous/Frontend-M6-DAPS2/issues/898) (parser de Problem Details, `Content-Type`, ETag, `Idempotency-Key`) | Benjamin Martinez |
 | **Éxito en los 91 endpoints restantes** de la colección Newman | `test/api/PENDIENTES.md` | Equipo |
-| **Mutation score global** | **NO HECHO**: Stryker solo mide `outbound-requests` (84,21 %) | Benjamin Martinez |
+| **Mutation score global** | **Parcial**: línea base de los 26 archivos de dominio 71,22 % (cumple el 60 %), 5 archivos reforzados; quedan 21 y confirmar el global en el CI. Ver `05-informe-ejecucion.md` §5.1 | Benjamin Martinez |
 
 ## Fuentes técnicas relacionadas
 

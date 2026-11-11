@@ -83,18 +83,6 @@ describe('CitizenPortalService', () => {
       expect(result.closed).toBe(false);
     });
 
-    it.each([S.CLOSED, S.DISMISSED, S.NO_VIOLATION])(
-      '%s se muestra como cerrada',
-      async (status) => {
-        prisma.environmentalReport.findFirst.mockResolvedValue(expediente({ status }));
-
-        const result = await portal.findReportByTicket('TCK-1');
-
-        expect(result.stage).toBe(PublicReportStage.CERRADA);
-        expect(result.closed).toBe(true);
-      },
-    );
-
     it('publica la fecha de inspección pero nunca quién inspeccionó', async () => {
       const result = await portal.findReportByTicket('TCK-1');
 
@@ -113,8 +101,11 @@ describe('CitizenPortalService', () => {
     it('un reclamo sin expediente da 404 sin decir si el ticket existe en M2', async () => {
       prisma.environmentalReport.findFirst.mockResolvedValue(null);
 
-      await expect(portal.findReportByTicket('TCK-AJENO')).rejects.toBeInstanceOf(
-        NotFoundException,
+      const pedido = portal.findReportByTicket('TCK-AJENO');
+
+      await expect(pedido).rejects.toBeInstanceOf(NotFoundException);
+      await expect(pedido).rejects.toThrow(
+        "No hay una denuncia ambiental para el reclamo 'TCK-AJENO'",
       );
     });
   });
@@ -163,19 +154,22 @@ describe('CitizenPortalService', () => {
           windowTo: new Date('1970-01-01T10:30:00.000Z'),
           status: ServiceStatus.PARTIALLY_COMPLETED,
           serviceType: { name: 'Recolección domiciliaria', category: 'WASTE_COLLECTION' },
-          zones: [{ zone: { name: 'Centro' } }],
+          zones: [{ zone: { name: 'Centro' } }, { zone: { name: 'Norte' } }],
         },
       ]);
       prisma.service.count.mockResolvedValue(1);
 
       const { data } = await portal.findServices({ page: 1, pageSize: 20 } as any);
 
-      expect(data[0]).toMatchObject({
+      expect(data[0]).toEqual({
+        id: 'srv-1',
         serviceTypeName: 'Recolección domiciliaria',
+        category: 'WASTE_COLLECTION',
+        scheduledDate: new Date('2026-09-15T00:00:00.000Z'),
         windowFrom: '06:00',
         windowTo: '10:30',
         stage: 'REALIZADO',
-        zones: ['Centro'],
+        zones: ['Centro', 'Norte'],
       });
     });
   });
@@ -217,10 +211,13 @@ describe('CitizenPortalService', () => {
         serviceTypeId: 'st-1',
         zoneId: 'z-1',
       } as any);
+      await portal.findServices({ page: 1, pageSize: 20 } as any);
 
-      const { where } = prisma.service.findMany.mock.calls[0][0];
+      const [[{ where }], [sinFiltros]] = prisma.service.findMany.mock.calls;
       expect(where.serviceTypeId).toBe('st-1');
       expect(where.zones).toEqual({ some: { zoneId: 'z-1' } });
+      expect(sinFiltros.where).not.toHaveProperty('serviceTypeId');
+      expect(sinFiltros.where).not.toHaveProperty('zones');
     });
 
     it('un servicio sin ventana horaria la publica nula, no rompe', async () => {
@@ -244,13 +241,25 @@ describe('CitizenPortalService', () => {
   });
 
   describe('puntos verdes', () => {
-    it('filtra por zona cuando se la pide', async () => {
+    it('filtra por zona cuando se la pide, ordena por nombre y proyecta solo lo público', async () => {
       await portal.findGreenPoints({ page: 1, pageSize: 20, zoneId: 'z-1' } as any);
+      await portal.findGreenPoints({ page: 1, pageSize: 20 } as any);
 
-      expect(prisma.greenPoint.findMany.mock.calls[0][0].where).toEqual({
-        active: true,
-        zoneId: 'z-1',
+      const [[con], [sin]] = prisma.greenPoint.findMany.mock.calls;
+      expect(con.where).toEqual({ active: true, zoneId: 'z-1' });
+      expect(sin.where).toStrictEqual({ active: true });
+      expect(con.orderBy).toEqual({ name: 'asc' });
+      expect(con.select).toEqual({
+        id: true,
+        code: true,
+        name: true,
+        address: true,
+        lat: true,
+        lng: true,
+        zone: { select: { name: true } },
+        wasteTypes: { select: { wasteType: true } },
       });
+      expect(prisma.greenPoint.count).toHaveBeenCalledWith({ where: con.where });
     });
 
     it('solo los activos, con los residuos que recibe cada uno', async () => {
@@ -265,8 +274,18 @@ describe('CitizenPortalService', () => {
           zone: { name: 'Centro' },
           wasteTypes: [{ wasteType: 'RECYCLABLE' }, { wasteType: 'GREEN' }],
         },
+        {
+          id: 'gp-2',
+          code: 'PV-015',
+          name: 'Punto Verde Norte',
+          address: 'Calle 1',
+          lat: null,
+          lng: new Prisma.Decimal('-58.3816'),
+          zone: { name: 'Norte' },
+          wasteTypes: [],
+        },
       ]);
-      prisma.greenPoint.count.mockResolvedValue(1);
+      prisma.greenPoint.count.mockResolvedValue(2);
 
       const { data } = await portal.findGreenPoints({ page: 1, pageSize: 20 } as any);
 
@@ -281,6 +300,7 @@ describe('CitizenPortalService', () => {
         zoneName: 'Centro',
         wasteTypes: ['RECYCLABLE', 'GREEN'],
       });
+      expect(data[1]).toMatchObject({ lat: null, lng: -58.3816 });
     });
   });
 
@@ -289,6 +309,125 @@ describe('CitizenPortalService', () => {
 
     const [[args]] = prisma.zone.findMany.mock.calls;
     expect(args.where).toEqual({ active: true });
+    expect(args.orderBy).toEqual({ name: 'asc' });
     expect(args.select).toEqual({ id: true, code: true, name: true });
+  });
+
+  // Regla: los once estados internos se colapsan a siete etapas públicas.
+  it.each([
+    [S.RECEIVED, PublicReportStage.RECIBIDA],
+    [S.UNDER_REVIEW, PublicReportStage.EN_ANALISIS],
+    [S.INSPECTION_SCHEDULED, PublicReportStage.INSPECCION_PROGRAMADA],
+    [S.INSPECTED, PublicReportStage.INSPECCIONADA],
+    [S.VIOLATION_FOUND, PublicReportStage.EN_TRAMITE_SANCIONATORIO],
+    [S.NOTICE_ISSUED, PublicReportStage.EN_TRAMITE_SANCIONATORIO],
+    [S.SANCTIONED, PublicReportStage.EN_TRAMITE_SANCIONATORIO],
+    [S.FORWARDED, PublicReportStage.DERIVADA],
+    [S.DISMISSED, PublicReportStage.CERRADA],
+    [S.NO_VIOLATION, PublicReportStage.CERRADA],
+    [S.CLOSED, PublicReportStage.CERRADA],
+  ])('el estado %s se publica como la etapa %s', async (status, etapa) => {
+    prisma.environmentalReport.findFirst.mockResolvedValue(expediente({ status }));
+
+    const result = await portal.findReportByTicket('TCK-1');
+
+    expect(result.stage).toBe(etapa);
+    expect(result.closed).toBe(etapa === PublicReportStage.CERRADA);
+  });
+
+  // El vecino lee este texto tal cual: ninguna etapa puede salir vacía ni
+  // repetir la frase de otra.
+  it('cada etapa pública tiene su propia frase para el vecino', async () => {
+    const estados = [
+      S.RECEIVED,
+      S.UNDER_REVIEW,
+      S.INSPECTION_SCHEDULED,
+      S.INSPECTED,
+      S.VIOLATION_FOUND,
+      S.FORWARDED,
+      S.CLOSED,
+    ];
+    const frases = new Set<string>();
+    for (const status of estados) {
+      prisma.environmentalReport.findFirst.mockResolvedValue(expediente({ status }));
+      const { stageLabel } = await portal.findReportByTicket('TCK-1');
+      expect(stageLabel.trim()).not.toBe('');
+      frases.add(stageLabel);
+    }
+    expect(frases.size).toBe(estados.length);
+  });
+
+  it('busca el expediente más reciente del reclamo y pide solo la última inspección hecha', async () => {
+    await portal.findReportByTicket('TCK-1');
+
+    const [[args]] = prisma.environmentalReport.findFirst.mock.calls;
+    expect(args.where).toEqual({ ticketId: 'TCK-1' });
+    expect(args.orderBy).toEqual({ createdAt: 'desc' });
+    expect(args.select.inspections).toEqual({
+      where: { inspectedAt: { not: null } },
+      orderBy: { inspectedAt: 'desc' },
+      take: 1,
+      select: { inspectedAt: true },
+    });
+  });
+
+  // Los siete estados operativos se ven en cuatro etapas.
+  it.each([
+    [ServiceStatus.SCHEDULED, 'PROGRAMADO'],
+    [ServiceStatus.RESCHEDULED, 'REPROGRAMADO'],
+    [ServiceStatus.IN_PROGRESS, 'EN_CURSO'],
+    [ServiceStatus.SUSPENDED, 'EN_CURSO'],
+    [ServiceStatus.COMPLETED, 'REALIZADO'],
+    [ServiceStatus.PARTIALLY_COMPLETED, 'REALIZADO'],
+    [ServiceStatus.CANCELLED, 'CANCELADO'],
+  ])('el servicio %s se publica como %s', async (status, etapa) => {
+    prisma.service.findMany.mockResolvedValue([
+      {
+        id: 'sv-1',
+        scheduledDate: new Date('2026-09-20T00:00:00.000Z'),
+        windowFrom: null,
+        windowTo: null,
+        status,
+        serviceType: { name: 'X', category: 'COLLECTION' },
+        zones: [],
+      },
+    ]);
+
+    const { data } = await portal.findServices({ page: 1, pageSize: 20 } as any);
+
+    expect(data[0].stage).toBe(etapa);
+  });
+
+  it('el listado de servicios ordena por fecha y ventana, pagina y proyecta solo lo público', async () => {
+    await portal.findServices({
+      page: 2,
+      pageSize: 5,
+      skip: 5,
+      take: 5,
+      from: '2026-09-01',
+      to: '2026-09-10',
+    } as any);
+
+    const [[args]] = prisma.service.findMany.mock.calls;
+    expect(args.skip).toBe(5);
+    expect(args.take).toBe(5);
+    expect(args.orderBy).toEqual([{ scheduledDate: 'asc' }, { windowFrom: 'asc' }]);
+    expect(args.select).toEqual({
+      id: true,
+      scheduledDate: true,
+      windowFrom: true,
+      windowTo: true,
+      status: true,
+      serviceType: { select: { name: true, category: true } },
+      zones: { orderBy: { sequence: 'asc' }, select: { zone: { select: { name: true } } } },
+    });
+    expect(prisma.service.count).toHaveBeenCalledWith({ where: args.where });
+  });
+
+  it('con solo from, el tope es 30 días después de ese from', async () => {
+    await portal.findServices({ page: 1, pageSize: 20, from: '2026-09-01' } as any);
+
+    const { scheduledDate } = prisma.service.findMany.mock.calls[0][0].where;
+    expect(scheduledDate.lte).toEqual(new Date('2026-10-01T00:00:00.000Z'));
   });
 });

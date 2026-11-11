@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, Logger, NotFoundException } from '@nestjs/common';
 import {
   Prisma,
   RiskLevel,
@@ -10,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { TreesService } from './trees.service';
 
 const ID = '55555555-5555-5555-5555-555555555555';
+const ULTIMO = { surveys: { orderBy: { surveyedAt: 'desc' }, take: 1 } };
 
 function prismaError(code: string) {
   return new Prisma.PrismaClientKnownRequestError('x', { code, clientVersion: '5.22.0' });
@@ -47,42 +48,96 @@ describe('TreesService', () => {
       $queryRaw: vi.fn().mockResolvedValue([]),
     };
     service = new TreesService(prisma as unknown as PrismaService);
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
   });
+  afterEach(() => vi.restoreAllMocks());
 
   describe('create', () => {
-    it('los opcionales ausentes se guardan como null', async () => {
+    // Regla: un árbol nuevo nace activo y con los opcionales en null.
+    it('sin opcionales los guarda como null, lo deja activo y pide el último relevamiento', async () => {
       await service.create({ surveyCode: 'AR-9', zoneId: 'z' } as any);
 
-      expect(prisma.tree.create.mock.calls[0][0].data).toMatchObject({
-        species: null,
-        address: null,
-        lat: null,
-        lng: null,
-        heightM: null,
-        diameterCm: null,
+      expect(prisma.tree.create).toHaveBeenCalledWith({
+        data: {
+          surveyCode: 'AR-9',
+          zoneId: 'z',
+          species: null,
+          address: null,
+          lat: null,
+          lng: null,
+          heightM: null,
+          diameterCm: null,
+          active: true,
+        },
+        include: ULTIMO,
       });
     });
 
-    it('un código de censo repetido da 409', async () => {
-      prisma.tree.create.mockRejectedValue(prismaError('P2002'));
+    it('respeta los valores dados, incluido active=false', async () => {
+      await service.create({
+        surveyCode: 'AR-9',
+        zoneId: 'z',
+        species: 'Tala',
+        lat: -34.5,
+        lng: -58.4,
+        heightM: 7,
+        diameterCm: 30,
+        active: false,
+      } as any);
 
-      await expect(service.create({ surveyCode: 'AR-0001' } as any)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      expect(prisma.tree.create.mock.calls[0][0].data).toMatchObject({
+        species: 'Tala',
+        lat: -34.5,
+        lng: -58.4,
+        heightM: 7,
+        diameterCm: 30,
+        active: false,
+      });
     });
 
-    it('una zona inexistente da 404', async () => {
+    it('un código de censo repetido da 409 y nombra el código', async () => {
+      prisma.tree.create.mockRejectedValue(prismaError('P2002'));
+
+      const pedido = service.create({ surveyCode: 'AR-0001' } as any);
+
+      await expect(pedido).rejects.toBeInstanceOf(ConflictException);
+      await expect(pedido).rejects.toThrow("Ya existe un árbol con el código 'AR-0001'");
+    });
+
+    it('una zona inexistente da 404 y nombra la zona', async () => {
       prisma.tree.create.mockRejectedValue(prismaError('P2003'));
 
-      await expect(service.create({ zoneId: 'no-existe' } as any)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      const pedido = service.create({ zoneId: 'no-existe' } as any);
+
+      await expect(pedido).rejects.toBeInstanceOf(NotFoundException);
+      await expect(pedido).rejects.toThrow("Zona con id 'no-existe' no encontrada");
     });
 
     it('un error ajeno a Prisma se propaga', async () => {
       prisma.tree.create.mockRejectedValue(new Error('la base se cayó'));
 
       await expect(service.create({} as any)).rejects.toThrow('la base se cayó');
+    });
+
+    // Solo los errores conocidos de Prisma se traducen: uno común con code P2003
+    // no es una FK rota, y un código de Prisma distinto no es ni 409 ni 404.
+    it('propaga un error ajeno con code P2003 y los de Prisma con otro código', async () => {
+      const ajeno = Object.assign(new Error('socket'), { code: 'P2003' });
+      prisma.tree.create.mockRejectedValueOnce(ajeno);
+      await expect(service.create({ surveyCode: 'AR-9', zoneId: 'z' } as any)).rejects.toBe(ajeno);
+
+      prisma.tree.update.mockRejectedValueOnce(ajeno);
+      await expect(service.update(ID, { zoneId: 'z' })).rejects.toBe(ajeno);
+
+      const otroCreate = prismaError('P2024');
+      prisma.tree.create.mockRejectedValueOnce(otroCreate);
+      await expect(service.create({ surveyCode: 'AR-9', zoneId: 'z' } as any)).rejects.toBe(
+        otroCreate,
+      );
+
+      const otroUpdate = prismaError('P2002');
+      prisma.tree.update.mockRejectedValueOnce(otroUpdate);
+      await expect(service.update(ID, { species: 'X' })).rejects.toBe(otroUpdate);
     });
   });
 
@@ -121,6 +176,19 @@ describe('TreesService', () => {
 
       expect(prisma.tree.findMany.mock.calls[0][0].orderBy).toEqual({ surveyCode: 'asc' });
     });
+
+    it('sin filtros no impone where, pagina y no consulta relevamientos crudos', async () => {
+      prisma.tree.count.mockResolvedValue(30);
+
+      const res = await service.findAll({ page: 2, pageSize: 10, skip: 10, take: 10 } as any);
+
+      const args = prisma.tree.findMany.mock.calls[0][0];
+      expect(args.where).toStrictEqual({});
+      expect(args).toMatchObject({ skip: 10, take: 10, include: ULTIMO });
+      expect(prisma.tree.count).toHaveBeenCalledWith({ where: {} });
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      expect(res.meta).toMatchObject({ total: 30, page: 2, pageSize: 10 });
+    });
   });
 
   describe('update', () => {
@@ -128,21 +196,53 @@ describe('TreesService', () => {
     it('el código de censo es inmutable', async () => {
       await service.update(ID, { surveyCode: 'OTRO', species: 'Tipa' } as any);
 
-      expect(prisma.tree.update.mock.calls[0][0].data).toEqual({ species: 'Tipa' });
+      expect(prisma.tree.update.mock.calls[0][0].data).toStrictEqual({ species: 'Tipa' });
     });
 
-    it('mover el árbol a una zona inexistente da 404', async () => {
+    it('mover el árbol a una zona inexistente da 404 y nombra la zona', async () => {
       prisma.tree.update.mockRejectedValue(prismaError('P2003'));
 
-      await expect(service.update(ID, { zoneId: 'no-existe' } as any)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      const pedido = service.update(ID, { zoneId: 'z-x' } as any);
+
+      await expect(pedido).rejects.toBeInstanceOf(NotFoundException);
+      await expect(pedido).rejects.toThrow("Zona con id 'z-x' no encontrada");
     });
 
-    it('un árbol inexistente da 404', async () => {
+    it('un árbol inexistente da 404 con el id y no escribe', async () => {
       prisma.tree.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(ID, {} as any)).rejects.toBeInstanceOf(NotFoundException);
+      const pedido = service.update(ID, { species: 'X' });
+
+      await expect(pedido).rejects.toBeInstanceOf(NotFoundException);
+      await expect(pedido).rejects.toThrow(`Árbol con id '${ID}' no encontrado`);
+      expect(prisma.tree.update).not.toHaveBeenCalled();
+    });
+
+    // Regla de PATCH: solo viaja lo que vino; 0 y false son valores válidos.
+    it('envía únicamente los campos presentes, incluidos 0 y false', async () => {
+      await service.update(ID, { heightM: 0, diameterCm: 0, active: false } as any);
+
+      const args = prisma.tree.update.mock.calls[0][0];
+      expect(args.where).toEqual({ id: ID });
+      expect(args.include).toEqual(ULTIMO);
+      expect(args.data).toStrictEqual({ heightM: 0, diameterCm: 0, active: false });
+    });
+
+    it('envía cada campo con su valor', async () => {
+      const dto = {
+        zoneId: 'z-2',
+        species: 'Tala',
+        address: 'Calle 3',
+        lat: 1,
+        lng: 2,
+        heightM: 3,
+        diameterCm: 4,
+        active: true,
+      };
+
+      await service.update(ID, dto as any);
+
+      expect(prisma.tree.update.mock.calls[0][0].data).toStrictEqual(dto);
     });
   });
 
@@ -156,13 +256,20 @@ describe('TreesService', () => {
         data: { active: false },
       });
     });
+
+    it('sobre un árbol inexistente da 404 y no escribe', async () => {
+      prisma.tree.findUnique.mockResolvedValue(null);
+
+      await expect(service.remove(ID)).rejects.toThrow(`Árbol con id '${ID}' no encontrado`);
+      expect(prisma.tree.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('medidas en la respuesta', () => {
     it('las convierte a número', async () => {
       const dto = await service.findOne(ID);
 
-      expect(dto).toMatchObject({ lat: -34.6037, heightM: 8.5, diameterCm: 42 });
+      expect(dto).toMatchObject({ lat: -34.6037, lng: -58.3816, heightM: 8.5, diameterCm: 42 });
     });
 
     it('las que faltan viajan como null', async () => {
@@ -187,10 +294,14 @@ describe('TreesService', () => {
       expect(dto.diameterCm).toBe(0);
     });
 
-    it('findOne da 404 si no está', async () => {
-      prisma.tree.findUnique.mockResolvedValue(null);
+    it('findOne consulta por id con el último relevamiento y el 404 nombra el id', async () => {
+      await service.findOne(ID);
+      expect(prisma.tree.findUnique).toHaveBeenCalledWith({ where: { id: ID }, include: ULTIMO });
 
-      await expect(service.findOne(ID)).rejects.toBeInstanceOf(NotFoundException);
+      prisma.tree.findUnique.mockResolvedValue(null);
+      const pedido = service.findOne(ID);
+      await expect(pedido).rejects.toBeInstanceOf(NotFoundException);
+      await expect(pedido).rejects.toThrow(`Árbol con id '${ID}' no encontrado`);
     });
   });
 
@@ -245,14 +356,6 @@ describe('TreesService', () => {
       prisma.tree.findUnique.mockResolvedValue(arbol({ surveys: [] }));
 
       expect((await service.findOne(ID)).lastSurvey).toBeNull();
-    });
-
-    it('pide el más reciente, y uno solo', async () => {
-      await service.findAll({ skip: 0, take: 20, page: 1, pageSize: 20 } as any);
-
-      expect(prisma.tree.findMany.mock.calls[0][0].include).toEqual({
-        surveys: { orderBy: { surveyedAt: 'desc' }, take: 1 },
-      });
     });
 
     /**

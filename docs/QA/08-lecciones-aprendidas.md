@@ -148,7 +148,7 @@ Tres defectos que descubrimos tarde, por qué no los detectamos antes y qué pru
 
 **Por qué importa** (interpretación):
 
-- Es otra señal, junto con #554 (DEF-24, cerrado por decisión del equipo sin causa confirmada), de que el e2e puede ser sensible al estado de la máquina o de la base. La causa de este caso **no se investigó**. **No es DEF-24:** cayó una suite distinta (`environmental-flow`) y por otra causa aparente (timeout de arranque bajo carga, no el constraint `e2e_no_active`); el nombre de la suite se leyó del log de esa corrida, que no está versionado.
+- Es otra señal, junto con #554 (DEF-24, cerrado por decisión del equipo sin causa confirmada), de que el e2e puede ser sensible al estado de la máquina o de la base. La causa de este caso **no se investigó**. Un patrón parecido en los unitarios sí se investigó: un test de `openapi-contract.spec.ts` superaba los 5 s de Vitest con la máquina cargada y se corrigió con un timeout propio de 30 s (P-3 de [`06`](06-registro-defectos.md)). **No es DEF-24:** cayó una suite distinta (`environmental-flow`) y por otra causa aparente (timeout de arranque bajo carga, no el constraint `e2e_no_active`); el nombre de la suite se leyó del log de esa corrida, que no está versionado.
 - El criterio «0 tests inestables» se evidencia con corridas repetidas en una máquina libre; una máquina cargada es justo donde el criterio se rompe.
 
 **Qué prueba lo habría atrapado.** Ninguna que exista hoy. Habría ayudado repetir la suite en el CI (runners limpios y sin otras cargas) y guardar el log de cada corrida fallida. Ambas cosas están **NO HECHAS**.

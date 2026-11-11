@@ -132,6 +132,7 @@ El detalle (causa raíz, PR, commit y CI) está en los issues cerrados del repos
 |---|---|---|
 | P-1 | Secreto de juguete literal en `api-tests.yml` (#572). El job `secrets` (gitleaks) lo detectó en el CI, run [42505473347](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42505473347); no era una credencial real. Se reescribió la rama antes de mergear y el workflow genera ahora un secreto efímero | Cerrado. Nunca llegó a `develop` |
 | P-2 | Dos commits publicados con autor `scratch <scratch@local>` (`5c8c78b` y `a06b33b`, ramas de #583 y #584) por una configuración local mal puesta. Con squash, el autor en `develop` es Benjamin Martinez y `scratch` aparece solo como `Co-authored-by` | **Abierto, sin reescribir.** El alias no corresponde a ningún integrante; pendiente de decisión del equipo |
+| P-3 | Test intermitente de `src/openapi-contract.spec.ts` («todo campo con @Min/@Max… declara minimum/maximum»): importa todos los DTO (~2,3 s) y superaba el timeout por defecto de Vitest (5 s) con la suite en paralelo y la máquina cargada; 1 fallo en 6 corridas tras `npm ci`, hallado al medir mutation (#617). **No es DEF-24** (ese es un e2e por `e2e_no_active`) | Cerrado: timeout propio de 30 s en ese test |
 
 ## 5. Verificaciones no realizadas (no son defectos)
 
@@ -144,6 +145,6 @@ No omitimos nada conocido: estas pruebas **no se hicieron** y no se presentan co
 | OWASP ZAP baseline y activo autenticado | NO HECHO | No se corrió |
 | Trivy | NO HECHO | No se corrió |
 | Éxito por endpoint en los 91 endpoints restantes | NO HECHO | Hay caso de éxito en 61 de 152 operaciones; el resto está en `test/api/PENDIENTES.md` |
-| Mutation score global | NO HECHO | Medido solo en `outbound-requests` (84,21 %) |
+| Mutation score: refuerzo de los 21 archivos restantes y confirmación del global en el CI | PARCIAL | Línea base de los 26 archivos de dominio: 71,22 % (cumple el 60 %); 5 archivos reforzados. Ver [`05`](05-informe-ejecucion.md) §5.1 |
 
 El escaneo de secretos se hace con gitleaks (en cada PR y push, y sobre el historial del tag).
