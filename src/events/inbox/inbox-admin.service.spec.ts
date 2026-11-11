@@ -26,9 +26,9 @@ describe('InboxAdminService', () => {
   beforeEach(() => {
     prisma = {
       inboxEvent: {
-        findMany: jest.fn().mockResolvedValue([]),
-        findUnique: jest.fn(),
-        count: jest.fn().mockResolvedValue(0),
+        findMany: vi.fn().mockResolvedValue([]),
+        findUnique: vi.fn(),
+        count: vi.fn().mockResolvedValue(0),
       },
     };
     service = new InboxAdminService(prisma);

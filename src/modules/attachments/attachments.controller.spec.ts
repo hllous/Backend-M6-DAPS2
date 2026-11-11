@@ -2,19 +2,20 @@ import { M6Role } from '@prisma/client';
 import { AttachmentsController } from './attachments.controller';
 import { AttachmentsService } from './attachments.service';
 import { QueryEvidenceDto, UploadEvidenceDto } from './dto';
+import type { Mocked } from 'vitest';
 
 const RESULT = { id: 'ev-1' };
 const ROLES = [M6Role.M6_CAMPO_CUADRILLA];
 
 describe('AttachmentsController', () => {
-  let service: jest.Mocked<AttachmentsService>;
+  let service: Mocked<AttachmentsService>;
   let controller: AttachmentsController;
 
   beforeEach(() => {
     service = {
-      upload: jest.fn().mockResolvedValue(RESULT),
-      findByOwner: jest.fn().mockResolvedValue([RESULT]),
-    } as unknown as jest.Mocked<AttachmentsService>;
+      upload: vi.fn().mockResolvedValue(RESULT),
+      findByOwner: vi.fn().mockResolvedValue([RESULT]),
+    } as unknown as Mocked<AttachmentsService>;
     controller = new AttachmentsController(service);
   });
 

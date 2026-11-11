@@ -1,12 +1,13 @@
 import { Logger } from '@nestjs/common';
 import { EventEnvelope } from '../envelope';
 import { LoggingEventPublisher } from './logging.publisher';
+import type { MockInstance } from 'vitest';
 
 describe('LoggingEventPublisher', () => {
-  let logSpy: jest.SpyInstance;
+  let logSpy: MockInstance;
 
   beforeEach(() => {
-    logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

@@ -7,15 +7,16 @@ import { EventEnvelope } from '../envelope';
 import { RabbitMqConfig } from '../rabbitmq';
 import { createEventPublisher } from '../events.module';
 import { LoggingEventPublisher } from './logging.publisher';
+import type { Mock } from 'vitest';
 
-jest.mock('amqplib', () => ({ connect: jest.fn() }));
+vi.mock('amqplib', () => ({ connect: vi.fn() }));
 
 type ConfirmCallback = (err: unknown) => void;
 
 function fakeChannel() {
   const channel = Object.assign(new EventEmitter(), {
-    checkExchange: jest.fn().mockResolvedValue(undefined),
-    publish: jest.fn(
+    checkExchange: vi.fn().mockResolvedValue(undefined),
+    publish: vi.fn(
       (_ex: string, _rk: string, _body: Buffer, _opts: unknown, cb: ConfirmCallback) => {
         cb(null);
         return true;
@@ -27,8 +28,8 @@ function fakeChannel() {
 
 function fakeConnection(channel: ReturnType<typeof fakeChannel>) {
   return Object.assign(new EventEmitter(), {
-    createConfirmChannel: jest.fn().mockResolvedValue(channel),
-    close: jest.fn().mockResolvedValue(undefined),
+    createConfirmChannel: vi.fn().mockResolvedValue(channel),
+    close: vi.fn().mockResolvedValue(undefined),
   });
 }
 
@@ -52,7 +53,7 @@ describe('RabbitMqEventPublisher', () => {
 
   let channel: ReturnType<typeof fakeChannel>;
   let connection: ReturnType<typeof fakeConnection>;
-  const connectMock = connect as jest.Mock;
+  const connectMock = connect as Mock;
 
   beforeEach(() => {
     channel = fakeChannel();
@@ -73,7 +74,10 @@ describe('RabbitMqEventPublisher', () => {
     await publisher.publish(envelope);
 
     expect(connectMock).toHaveBeenCalledTimes(1);
-    expect(connectMock).toHaveBeenCalledWith(config.url, { timeout: 10_000 });
+    expect(connectMock).toHaveBeenCalledWith(config.url, {
+      timeout: 10_000,
+      clientProperties: { connection_name: 'm6-outbox-publisher' },
+    });
     expect(channel.checkExchange).toHaveBeenCalledWith('muni.inbox');
     expect(channel.publish).toHaveBeenCalledTimes(2);
 
@@ -233,7 +237,7 @@ describe('RabbitMqEventPublisher', () => {
 
 describe('createEventPublisher', () => {
   const conConfig = (rabbitmq: Partial<RabbitMqConfig>) =>
-    ({ get: jest.fn(() => rabbitmq) }) as unknown as ConfigService;
+    ({ get: vi.fn(() => rabbitmq) }) as unknown as ConfigService;
 
   it('sin RABBITMQ_URL usa el de log', () => {
     expect(createEventPublisher(conConfig({ exchange: 'x' }))).toBeInstanceOf(
@@ -242,7 +246,7 @@ describe('createEventPublisher', () => {
   });
 
   it('con RABBITMQ_URL usa RabbitMQ, sin conectar todavía', () => {
-    (connect as jest.Mock).mockClear();
+    (connect as Mock).mockClear();
     const publisher = createEventPublisher(
       conConfig({ url: 'amqp://u:p@broker:5672', exchange: 'x' }),
     );
@@ -251,10 +255,10 @@ describe('createEventPublisher', () => {
   });
 
   it('avisa si el usuario de la URL no es el CORE_MODULE_ID, y no si coincide', () => {
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     const conModulo = (user: string) =>
       ({
-        get: jest.fn((k: string) =>
+        get: vi.fn((k: string) =>
           k === 'core.moduleId'
             ? 'ambiente'
             : { url: `amqp://${user}:p@broker:5672`, exchange: 'x' },

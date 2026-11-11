@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { M6Role } from '@prisma/client';
-import * as request from 'supertest';
+import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
   ACTORES,

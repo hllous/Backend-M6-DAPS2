@@ -3,20 +3,21 @@ import { plainToInstance } from 'class-transformer';
 import { OutboxController } from './outbox.controller';
 import { OutboxAdminService } from './outbox-admin.service';
 import { QueryOutboxDto, RetryFailedOutboxDto } from './dto';
+import type { Mocked } from 'vitest';
 
 const ID = '11111111-1111-4111-8111-111111111111';
 
 describe('OutboxController', () => {
-  let service: jest.Mocked<OutboxAdminService>;
+  let service: Mocked<OutboxAdminService>;
   let controller: OutboxController;
 
   beforeEach(() => {
     service = {
-      findAll: jest.fn().mockResolvedValue('lista'),
-      findOne: jest.fn().mockResolvedValue('detalle'),
-      retry: jest.fn().mockResolvedValue('reintento'),
-      retryFailed: jest.fn().mockResolvedValue('lote'),
-    } as unknown as jest.Mocked<OutboxAdminService>;
+      findAll: vi.fn().mockResolvedValue('lista'),
+      findOne: vi.fn().mockResolvedValue('detalle'),
+      retry: vi.fn().mockResolvedValue('reintento'),
+      retryFailed: vi.fn().mockResolvedValue('lote'),
+    } as unknown as Mocked<OutboxAdminService>;
     controller = new OutboxController(service);
   });
 

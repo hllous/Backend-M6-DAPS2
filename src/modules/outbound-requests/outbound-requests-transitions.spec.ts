@@ -24,12 +24,12 @@ describe('OutboundRequestsService — transiciones inválidas (409)', () => {
 
   beforeEach(() => {
     prisma = {
-      repairRequest: { findUnique: jest.fn(), update: jest.fn() },
-      streetClosureRequest: { findUnique: jest.fn(), update: jest.fn() },
-      $transaction: jest.fn(),
+      repairRequest: { findUnique: vi.fn(), update: vi.fn() },
+      streetClosureRequest: { findUnique: vi.fn(), update: vi.fn() },
+      $transaction: vi.fn(),
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    audit = { record: jest.fn() };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
+    audit = { record: vi.fn() };
     service = new OutboundRequestsService(
       prisma as unknown as PrismaService,
       outbox,

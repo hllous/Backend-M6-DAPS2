@@ -12,6 +12,9 @@ import { brokerHost, brokerUser, CONNECT_TIMEOUT_MS, RabbitMqConfig } from '../r
  * enruta nada —el Core decide el destino leyendo las suscripciones—. Se manda
  * el `eventType` igual, porque no cuesta nada y se lee en el panel del broker.
  */
+/** Nombre de la conexión del publisher en RabbitMQ (client_properties.connection_name). */
+export const PUBLISHER_CONNECTION_NAME = 'm6-outbox-publisher';
+
 @Injectable()
 export class RabbitMqEventPublisher extends EventPublisher implements OnModuleDestroy {
   readonly transport = 'rabbitmq';
@@ -93,7 +96,11 @@ export class RabbitMqEventPublisher extends EventPublisher implements OnModuleDe
     this.connecting ??= (async () => {
       let connection: ChannelModel | undefined;
       try {
-        connection = await connect(this.config.url, { timeout: CONNECT_TIMEOUT_MS });
+        // Con nombre, la conexión se distingue en la UI de management y en los e2e.
+        connection = await connect(this.config.url, {
+          timeout: CONNECT_TIMEOUT_MS,
+          clientProperties: { connection_name: PUBLISHER_CONNECTION_NAME },
+        });
         // Sin listener de 'error', un corte del broker es una excepción no
         // capturada que tira el proceso. El 'close' que le sigue resetea.
         connection.on('error', (err: Error) =>

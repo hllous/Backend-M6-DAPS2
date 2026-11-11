@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ACTOR } from '../../common/audit/audit-test-actor';
 import { AuditService } from '../../common/audit/audit.service';
 import { VehiclesService } from './vehicles.service';
+import type { Mock } from 'vitest';
 
 const ID = '77777777-7777-7777-7777-777777777777';
 
@@ -13,7 +14,7 @@ function prismaError(code: string) {
 
 describe('VehiclesService', () => {
   let prisma: any;
-  let audit: { record: jest.Mock };
+  let audit: { record: Mock };
   let service: VehiclesService;
 
   const vehiculo = (over: Record<string, unknown> = {}) => ({
@@ -29,16 +30,16 @@ describe('VehiclesService', () => {
 
   beforeEach(() => {
     prisma = {
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
       vehicle: {
-        create: jest.fn().mockResolvedValue(vehiculo()),
-        findUnique: jest.fn().mockResolvedValue(vehiculo()),
-        findMany: jest.fn().mockResolvedValue([vehiculo()]),
-        count: jest.fn().mockResolvedValue(1),
-        update: jest.fn().mockResolvedValue(vehiculo()),
+        create: vi.fn().mockResolvedValue(vehiculo()),
+        findUnique: vi.fn().mockResolvedValue(vehiculo()),
+        findMany: vi.fn().mockResolvedValue([vehiculo()]),
+        count: vi.fn().mockResolvedValue(1),
+        update: vi.fn().mockResolvedValue(vehiculo()),
       },
     };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     service = new VehiclesService(
       prisma as unknown as PrismaService,
       audit as unknown as AuditService,

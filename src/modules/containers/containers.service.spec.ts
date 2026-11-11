@@ -43,22 +43,22 @@ describe('ContainersService', () => {
   beforeEach(() => {
     prisma = {
       container: {
-        create: jest.fn().mockResolvedValue(contenedor()),
-        findUnique: jest.fn().mockResolvedValue(contenedor()),
-        findMany: jest.fn().mockResolvedValue([contenedor()]),
-        count: jest.fn().mockResolvedValue(1),
-        update: jest.fn().mockImplementation(({ data }: any) => Promise.resolve(contenedor(data))),
+        create: vi.fn().mockResolvedValue(contenedor()),
+        findUnique: vi.fn().mockResolvedValue(contenedor()),
+        findMany: vi.fn().mockResolvedValue([contenedor()]),
+        count: vi.fn().mockResolvedValue(1),
+        update: vi.fn().mockImplementation(({ data }: any) => Promise.resolve(contenedor(data))),
       },
       containerStatusHistory: {
-        create: jest.fn().mockResolvedValue(undefined),
-        findMany: jest.fn().mockResolvedValue([]),
-        count: jest.fn().mockResolvedValue(0),
+        create: vi.fn().mockResolvedValue(undefined),
+        findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
       },
-      zoneNeighborhood: { findMany: jest.fn().mockResolvedValue([]) },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      zoneNeighborhood: { findMany: vi.fn().mockResolvedValue([]) },
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
-    outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    outbox = { enqueue: vi.fn().mockResolvedValue(undefined) };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     service = new ContainersService(
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,

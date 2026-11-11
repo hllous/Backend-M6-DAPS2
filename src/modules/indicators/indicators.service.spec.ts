@@ -79,19 +79,19 @@ describe('IndicatorsService', () => {
   beforeEach(() => {
     cfg = structuredClone(CONFIG_BASE);
     prisma = {
-      service: { findMany: jest.fn().mockResolvedValue([]) },
-      container: { groupBy: jest.fn().mockResolvedValue([]) },
+      service: { findMany: vi.fn().mockResolvedValue([]) },
+      container: { groupBy: vi.fn().mockResolvedValue([]) },
       containerStatusHistory: {
-        findMany: jest.fn().mockResolvedValue([]),
-        aggregate: jest.fn().mockResolvedValue({ _min: { changedAt: null } }),
+        findMany: vi.fn().mockResolvedValue([]),
+        aggregate: vi.fn().mockResolvedValue({ _min: { changedAt: null } }),
       },
-      zone: { findMany: jest.fn().mockResolvedValue([]) },
+      zone: { findMany: vi.fn().mockResolvedValue([]) },
       environmentalReport: {
-        groupBy: jest.fn().mockResolvedValue([]),
-        findMany: jest.fn().mockResolvedValue([]),
+        groupBy: vi.fn().mockResolvedValue([]),
+        findMany: vi.fn().mockResolvedValue([]),
       },
-      collectionRecord: { findMany: jest.fn().mockResolvedValue([]) },
-      $queryRaw: jest.fn().mockResolvedValue([]),
+      collectionRecord: { findMany: vi.fn().mockResolvedValue([]) },
+      $queryRaw: vi.fn().mockResolvedValue([]),
     };
     const config = { get: (key: string) => (key === 'indicators' ? cfg : undefined) };
     indicators = new IndicatorsService(
@@ -162,13 +162,13 @@ describe('IndicatorsService', () => {
     });
 
     it('sin to, el período termina hoy en Argentina aunque en UTC ya sea mañana', async () => {
-      jest.useFakeTimers({ now: new Date('2026-09-20T01:00:00.000Z') }); // 22:00 ART del 19
+      vi.useFakeTimers({ now: new Date('2026-09-20T01:00:00.000Z') }); // 22:00 ART del 19
       try {
         const result = await indicators.coverage({});
 
         expect(result.period.to).toBe('2026-09-19');
       } finally {
-        jest.useRealTimers();
+        vi.useRealTimers();
       }
     });
 
@@ -293,7 +293,7 @@ describe('IndicatorsService', () => {
       });
 
       it('un servicio a futuro cae en su día como upcoming, no como programado', async () => {
-        jest.useFakeTimers({ now: new Date('2026-08-10T15:00:00.000Z') });
+        vi.useFakeTimers({ now: new Date('2026-08-10T15:00:00.000Z') });
         try {
           conServicios([en('2026-08-10'), en('2026-08-12', { zoneResults: [] })]);
 
@@ -309,7 +309,7 @@ describe('IndicatorsService', () => {
             [0, 2],
           ]);
         } finally {
-          jest.useRealTimers();
+          vi.useRealTimers();
         }
       });
 
@@ -467,7 +467,7 @@ describe('IndicatorsService', () => {
       });
 
       it('lo programado a futuro no cuenta como programado ni como pendiente', async () => {
-        jest.useFakeTimers({ now: new Date('2026-08-10T15:00:00.000Z') });
+        vi.useFakeTimers({ now: new Date('2026-08-10T15:00:00.000Z') });
         try {
           prisma.service.findMany.mockResolvedValue([
             servicio(), // hoy: 2 pares, 1 atendido
@@ -490,12 +490,12 @@ describe('IndicatorsService', () => {
             upcoming: 1,
           });
         } finally {
-          jest.useRealTimers();
+          vi.useRealTimers();
         }
       });
 
       it('hoy ya venció aunque en UTC sea mañana: el día es el argentino', async () => {
-        jest.useFakeTimers({ now: new Date('2026-08-11T01:00:00.000Z') }); // 22:00 ART del 10
+        vi.useFakeTimers({ now: new Date('2026-08-11T01:00:00.000Z') }); // 22:00 ART del 10
         try {
           prisma.service.findMany.mockResolvedValue([servicio({ zoneResults: [] })]);
 
@@ -503,7 +503,7 @@ describe('IndicatorsService', () => {
 
           expect(result.totals).toMatchObject({ scheduled: 2, pending: 2, upcoming: 0 });
         } finally {
-          jest.useRealTimers();
+          vi.useRealTimers();
         }
       });
     });
@@ -825,7 +825,7 @@ describe('IndicatorsService', () => {
     });
 
     describe('vencidas por zona', () => {
-      afterEach(() => jest.useRealTimers());
+      afterEach(() => vi.useRealTimers());
       const conZona = (zonas: string[] | null, creada: string) => ({
         createdAt: new Date(creada),
         status: 'RECEIVED',
@@ -833,7 +833,7 @@ describe('IndicatorsService', () => {
       });
 
       it('agrupa por zona derivada y deja las sin zona (o multizona) en null', async () => {
-        jest.useFakeTimers({ now: new Date('2026-08-24T15:00:00.000Z') }); // lunes 24
+        vi.useFakeTimers({ now: new Date('2026-08-24T15:00:00.000Z') }); // lunes 24
         // lunes 10 vence (10 hábiles); lunes 24 no.
         prisma.environmentalReport.findMany.mockResolvedValue([
           conZona(['z-centro'], '2026-08-10T15:00:00.000Z'),
@@ -1270,8 +1270,8 @@ describe('IndicatorsService', () => {
       /** Jueves 20/8/2026, mediodía argentino: el plazo por defecto es de 5 días hábiles. */
       const AHORA = new Date('2026-08-20T15:00:00.000Z');
 
-      beforeEach(() => jest.useFakeTimers({ now: AHORA }));
-      afterEach(() => jest.useRealTimers());
+      beforeEach(() => vi.useFakeTimers({ now: AHORA }));
+      afterEach(() => vi.useRealTimers());
 
       function conDenuncias(todas: ReturnType<typeof denuncia>[]) {
         prisma.environmentalReport.findMany.mockImplementation(({ where }: any) =>
@@ -1386,7 +1386,7 @@ describe('IndicatorsService', () => {
       });
 
       it('hoy es el día argentino: a las 22:00 ART del jueves todavía es jueves', async () => {
-        jest.setSystemTime(new Date('2026-08-21T01:00:00.000Z')); // viernes en UTC, jueves en ART
+        vi.setSystemTime(new Date('2026-08-21T01:00:00.000Z')); // viernes en UTC, jueves en ART
         conDenuncias([
           denuncia('2026-08-13T15:00:00.000Z', '2026-08-13T15:00:00.000Z', 'UNDER_REVIEW'), // jue 13 → jue 20: 5
         ]);

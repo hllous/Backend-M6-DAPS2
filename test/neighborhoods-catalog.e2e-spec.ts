@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import * as request from 'supertest';
+import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { bearer, createTestApp, seedActores, tokenDe, truncateAll } from './helpers';
 

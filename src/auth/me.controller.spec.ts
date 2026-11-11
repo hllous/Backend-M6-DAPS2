@@ -5,7 +5,7 @@ import { M6Role } from './m6-role';
 import { PrismaService } from '../prisma/prisma.service';
 
 describe('MeController', () => {
-  const findMany = jest.fn();
+  const findMany = vi.fn();
   const controller = new MeController(
     new MeService({ crew: { findMany } } as unknown as PrismaService),
   );
@@ -17,7 +17,9 @@ describe('MeController', () => {
     roles,
   });
 
-  beforeEach(() => findMany.mockReset());
+  beforeEach(() => {
+    findMany.mockReset();
+  });
 
   it('Oficina: identidad y roles, sin cuadrillas ni inspector', async () => {
     findMany.mockResolvedValue([]);

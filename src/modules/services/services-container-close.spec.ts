@@ -62,26 +62,26 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
   beforeEach(() => {
     prisma = {
       service: {
-        findUnique: jest.fn().mockResolvedValue(serviceRow()),
-        update: jest.fn(async () => serviceRow()),
+        findUnique: vi.fn().mockResolvedValue(serviceRow()),
+        update: vi.fn(async () => serviceRow()),
       },
       // La pertenencia (#365) se cumple por defecto: es el usuario de la cuadrilla.
-      crew: { count: jest.fn().mockResolvedValue(1) },
+      crew: { count: vi.fn().mockResolvedValue(1) },
       container: {
-        findUnique: jest.fn().mockResolvedValue(container(ContainerStatus.OVERFLOWED)),
-        update: jest.fn(async (args: unknown) => args),
+        findUnique: vi.fn().mockResolvedValue(container(ContainerStatus.OVERFLOWED)),
+        update: vi.fn(async (args: unknown) => args),
       },
-      containerStatusHistory: { create: jest.fn().mockResolvedValue(undefined) },
-      outboxEvent: { create: jest.fn(), createMany: jest.fn() },
+      containerStatusHistory: { create: vi.fn().mockResolvedValue(undefined) },
+      outboxEvent: { create: vi.fn(), createMany: vi.fn() },
       // complete() usa la forma de callback; otros metodos, la de array.
-      $transaction: jest.fn((arg: unknown) =>
+      $transaction: vi.fn((arg: unknown) =>
         typeof arg === 'function'
           ? (arg as (tx: unknown) => unknown)(prisma)
           : Promise.all(arg as Promise<unknown>[]),
       ),
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    audit = { record: jest.fn() };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
+    audit = { record: vi.fn() };
     service = new ServicesService(
       prisma as unknown as PrismaService,
       outbox,

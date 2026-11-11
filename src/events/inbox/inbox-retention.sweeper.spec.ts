@@ -7,11 +7,11 @@ describe('InboxRetentionSweeper', () => {
   const build = (days?: number) =>
     new InboxRetentionSweeper(
       prisma as unknown as PrismaService,
-      { get: jest.fn(() => days) } as unknown as ConfigService,
+      { get: vi.fn(() => days) } as unknown as ConfigService,
     );
 
   beforeEach(() => {
-    prisma = { inboxEvent: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) } };
+    prisma = { inboxEvent: { deleteMany: vi.fn().mockResolvedValue({ count: 3 }) } };
   });
 
   it('borra solo procesadas recibidas antes del corte', async () => {

@@ -89,30 +89,30 @@ describe('EnvironmentalInspectionsService', () => {
   beforeEach(() => {
     prisma = {
       environmentalInspection: {
-        findUnique: jest.fn().mockResolvedValue(inspection()),
-        findMany: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
+        findUnique: vi.fn().mockResolvedValue(inspection()),
+        findMany: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
       },
       environmentalReport: {
-        findUnique: jest.fn().mockResolvedValue(report()),
-        update: jest.fn(),
+        findUnique: vi.fn().mockResolvedValue(report()),
+        update: vi.fn(),
       },
       violationNotice: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        count: jest.fn().mockResolvedValue(2),
-        create: jest.fn((args) => ({ ...args.data, id: 'notice-1', createdAt: new Date() })),
+        findUnique: vi.fn().mockResolvedValue(null),
+        count: vi.fn().mockResolvedValue(2),
+        create: vi.fn((args) => ({ ...args.data, id: 'notice-1', createdAt: new Date() })),
       },
       service: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'svc-1', mode: ServiceMode.POINT }),
+        findUnique: vi.fn().mockResolvedValue({ id: 'svc-1', mode: ServiceMode.POINT }),
       },
-      userRoleAssignment: { findFirst: jest.fn().mockResolvedValue({ id: 'fila-1' }) },
-      attachment: { findMany: jest.fn().mockResolvedValue([]) },
-      ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      userRoleAssignment: { findFirst: vi.fn().mockResolvedValue({ id: 'fila-1' }) },
+      attachment: { findMany: vi.fn().mockResolvedValue([]) },
+      ticketM2State: { findUnique: vi.fn().mockResolvedValue(null) },
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     reports = new EnvironmentalReportsService(
       prisma as unknown as PrismaService,
       outbox,

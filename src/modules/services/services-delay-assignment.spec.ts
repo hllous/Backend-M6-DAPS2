@@ -69,26 +69,26 @@ describe('ServicesService — demora y doble reserva', () => {
   beforeEach(() => {
     prisma = {
       service: {
-        findUnique: jest.fn().mockResolvedValue(servicio()),
-        findMany: jest.fn().mockResolvedValue([]),
-        update: jest.fn(({ data }: any) => Promise.resolve(servicio(data))),
+        findUnique: vi.fn().mockResolvedValue(servicio()),
+        findMany: vi.fn().mockResolvedValue([]),
+        update: vi.fn(({ data }: any) => Promise.resolve(servicio(data))),
       },
       crew: {
-        count: jest.fn().mockResolvedValue(1),
+        count: vi.fn().mockResolvedValue(1),
         // Sin zona ni especialidad cargadas: no hay avisos de encaje (#455).
-        findUnique: jest.fn().mockResolvedValue(crewRow()),
+        findUnique: vi.fn().mockResolvedValue(crewRow()),
       },
-      serviceType: { findUnique: jest.fn().mockResolvedValue({ code: 'REC-DOM' }) },
+      serviceType: { findUnique: vi.fn().mockResolvedValue({ code: 'REC-DOM' }) },
       vehicle: {
-        findUnique: jest.fn().mockResolvedValue({ id: VEHICLE, active: true, plate: 'AB123CD' }),
+        findUnique: vi.fn().mockResolvedValue({ id: VEHICLE, active: true, plate: 'AB123CD' }),
       },
       // Sin intervención de arbolado vinculada (#324).
-      treeIntervention: { findUnique: jest.fn().mockResolvedValue(null) },
-      ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
+      treeIntervention: { findUnique: vi.fn().mockResolvedValue(null) },
+      ticketM2State: { findUnique: vi.fn().mockResolvedValue(null) },
       serviceDelayNotice: {
-        findFirst: jest.fn().mockResolvedValue(null),
-        findMany: jest.fn().mockResolvedValue([]),
-        create: jest.fn(({ data }: any) =>
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+        create: vi.fn(({ data }: any) =>
           Promise.resolve({
             id: 'aviso-1',
             supersededById: null,
@@ -96,16 +96,16 @@ describe('ServicesService — demora y doble reserva', () => {
             ...data,
           }),
         ),
-        update: jest.fn(),
+        update: vi.fn(),
       },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
     service = new ServicesService(
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,
       {} as never,
-      { record: jest.fn() } as never,
+      { record: vi.fn() } as never,
     );
   });
 

@@ -2,20 +2,21 @@ import { BadRequestException, ParseUUIDPipe } from '@nestjs/common';
 import { CitizenPortalController } from './citizen-portal.controller';
 import { CitizenPortalService } from './citizen-portal.service';
 import { QueryPublicGreenPointsDto, QueryPublicServicesDto } from './dto';
+import type { Mocked } from 'vitest';
 
 const RESULT = { id: '1' };
 
 describe('CitizenPortalController', () => {
-  let service: jest.Mocked<CitizenPortalService>;
+  let service: Mocked<CitizenPortalService>;
   let controller: CitizenPortalController;
 
   beforeEach(() => {
     service = {
-      findReportByTicket: jest.fn().mockResolvedValue(RESULT),
-      findServices: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findGreenPoints: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findZones: jest.fn().mockResolvedValue([RESULT]),
-    } as unknown as jest.Mocked<CitizenPortalService>;
+      findReportByTicket: vi.fn().mockResolvedValue(RESULT),
+      findServices: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findGreenPoints: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findZones: vi.fn().mockResolvedValue([RESULT]),
+    } as unknown as Mocked<CitizenPortalService>;
     controller = new CitizenPortalController(service);
   });
 

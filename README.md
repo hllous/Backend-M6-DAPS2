@@ -9,7 +9,7 @@ M6 gestiona los servicios urbanos y el control ambiental de la ciudad: recolecci
 - **NestJS** + TypeScript + Node 22 LTS
 - **PostgreSQL** + Prisma como ORM
 - **RabbitMQ** para eventos asincrónicos (el bus del Core, vía el exchange `muni.inbox`)
-- **Jest** + Supertest para testing (cobertura mínima 85%)
+- **Vitest** + Supertest para testing (cobertura mínima 85%)
 - Deploy en **Vercel** (frontend) + **Render** (backend) + **Supabase** (PostgreSQL)
 
 Ver decisiones detalladas en [`docs/decisiones/`](docs/decisiones/).
