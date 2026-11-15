@@ -113,6 +113,52 @@ jobs:
       - name: Run tests
         run: npm run test:cov
 
+      # lcov para el job `sonar`: así no se vuelven a correr los tests (#657).
+      - name: Subir cobertura (lcov)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────
+  # sonar — Análisis en SonarCloud con la cobertura del job `test` (#657).
+  #
+  # Paso 1 de la opción C de #656: el gate NO bloquea (qualitygate.wait=false)
+  # y el job no es check obligatorio de la branch protection. Se saltea sin
+  # SONAR_TOKEN (PRs de forks, que no reciben secrets). Configuración del
+  # proyecto en sonar-project.properties.
+  # ──────────────────────────────────────────────────────────────
+  sonar:
+    name: sonar
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Checkout (historial completo, lo pide Sonar para atribuir código nuevo)
+        if: env.SONAR_TOKEN != ''
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Descargar cobertura (lcov)
+        if: env.SONAR_TOKEN != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage
+
+      - name: SonarCloud
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v8.5.0
+        with:
+          args: -Dsonar.qualitygate.wait=false
+
   # ──────────────────────────────────────────────────────────────
   # e2e — La app completa contra un Postgres de verdad.
   #
