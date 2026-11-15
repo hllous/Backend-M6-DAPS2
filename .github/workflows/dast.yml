@@ -22,6 +22,8 @@ name: dast
 
 on:
   workflow_dispatch:
+  push:
+    branches: [chore/659-zap] # TEMPORAL: solo para la corrida de prueba, se quita antes del PR
   schedule:
     # Lunes 06:00 UTC.
     - cron: '0 6 * * 1'
