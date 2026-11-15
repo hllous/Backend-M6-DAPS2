@@ -18,6 +18,8 @@ on:
     branches: [develop, test, main]
   push:
     branches: [develop, test, main]
+  # Solo para el job `sonar` (ver más abajo); el resto corre igual.
+  workflow_dispatch:
 
 jobs:
   build:
@@ -133,6 +135,11 @@ jobs:
   sonar:
     name: sonar
     needs: test
+    # El plan Free de SonarQube Cloud solo analiza la rama principal (`main`) y
+    # los PRs: https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/branch-analysis/branch-analysis
+    # Por eso no corre en push a develop/test. `workflow_dispatch` sube un
+    # análisis manual de la rama principal (ver args del paso SonarCloud).
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -157,7 +164,9 @@ jobs:
         if: env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
         with:
-          args: -Dsonar.qualitygate.wait=false
+          # En el disparo manual el scanner vería la rama de trabajo como una rama
+          # más (el plan Free la rechaza): se fuerza `main` solo ahí.
+          args: -Dsonar.qualitygate.wait=false ${{ github.event_name == 'workflow_dispatch' && '-Dsonar.branch.name=main' || '' }}
 
   # ──────────────────────────────────────────────────────────────
   # e2e — La app completa contra un Postgres de verdad.
