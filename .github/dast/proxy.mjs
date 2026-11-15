@@ -9,7 +9,7 @@ const [listen, target, logFile] = process.argv.slice(2);
 
 createServer((req, res) => {
   const up = request(
-    { host: '127.0.0.1', port: Number(target), method: req.method, path: req.url, headers: req.headers },
+    { host: 'localhost', port: Number(target), method: req.method, path: req.url, headers: req.headers },
     (r) => {
       const auth = req.headers.authorization ?? '';
       // Solo el esquema y el largo: nunca el token.
@@ -25,4 +25,4 @@ createServer((req, res) => {
     res.writeHead(502).end();
   });
   req.pipe(up);
-}).listen(Number(listen), '127.0.0.1');
+}).listen(Number(listen)); // sin host: escucha en IPv4 e IPv6 (localhost puede resolver a ::1)
