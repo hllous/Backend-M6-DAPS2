@@ -1,0 +1,34 @@
+name: scratch-compose
+on:
+  pull_request:
+    branches: [develop]
+permissions:
+  contents: read
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      POSTGRES_USER: m6
+      POSTGRES_PASSWORD: scratchpass
+      POSTGRES_DB: m6_scratch
+      RABBITMQ_USER: m6
+      RABBITMQ_PASSWORD: scratchpass
+    steps:
+      - run: echo "JWT_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v7
+      - run: docker compose up --build -d
+      - name: health
+        run: |
+          for i in $(seq 1 60); do
+            c=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health/ready || true)
+            echo "intento $i: $c"; [ "$c" = 200 ] && break; sleep 5
+          done
+          [ "$c" = 200 ]
+      - name: usuario y migraciones
+        run: |
+          docker compose exec -T backend id
+          docker compose logs backend | grep -i "migration" | head -20
+          docker compose exec -T postgres psql -U m6 -d m6_scratch -tc "select count(*) as migraciones_aplicadas from _prisma_migrations where finished_at is not null"
+      - if: failure()
+        run: docker compose logs --tail=100
