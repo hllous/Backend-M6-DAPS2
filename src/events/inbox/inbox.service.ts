@@ -114,7 +114,7 @@ export class InboxService {
   }
 
   registeredTypes(): string[] {
-    return [...this.handlers.keys()].sort();
+    return [...this.handlers.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   }
 
   /**
