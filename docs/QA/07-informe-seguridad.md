@@ -123,6 +123,8 @@ Lo que se comprobó en el código sobre las 6 altas, **antes** de #619 (hoy ya n
 
 **ZAP: NO HECHO.** No hay configuración ni ejecución. **Trivy: NO HECHO.** Plan: `zap-baseline.py` contra el despliegue (1 a 2 h), archivar el reporte y justificar cada alerta Media.
 
+**Alerta High *Vulnerable JS Library* (DOMPurify, #668, DEF-25).** El baseline de ZAP contra Render reportó DOMPurify 3.1.4 en el `swagger-ui-bundle.js` de `/api/docs`. Es la versión que trae `swagger-ui-dist` 5.17.14, la de `main` (`@nestjs/swagger` 7.4.2). `develop` ya usa `swagger-ui-dist` 5.34.1 (#628), cuyo bundle trae **DOMPurify 3.4.17** (verificado en `node_modules/swagger-ui-dist/swagger-ui-bundle.js`); el `swagger-ui-dist` 5.35.0, el último, trae la misma. No existe una versión con DOMPurify 3.4.18, que corrige un aviso de severidad media (GHSA-qm7q-q8h9-jg8q) aún presente en 3.4.17; las altas y la crítica de DOMPurify se corrigieron en 3.4.5 y 3.4.17. No se mitigó ocultando `/api/docs`: la corrección es el despliegue. El baseline queda en 0 High recién cuando `develop` llegue a `main` y Render despliegue; hay que volver a correr el workflow `dast` para confirmarlo.
+
 ### 5.3 CodeQL
 
 El workflow `codeql.yml` corre en el CI y el del commit `142e1a3` terminó en `success` ([run 42632174330](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174330)).
