@@ -7,7 +7,7 @@
 - Cada control se **reverificó contra el código y los tests actuales**. Los veredictos originales de las tarjetas SEC de Trello quedaron viejos: se citan solo para mostrar qué cambió.
 - **Regla de evidencia:** un CUMPLE sin test ejecutado ni evidencia se toma como NO VERIFICABLE. Por eso un CUMPLE acá siempre cita un test que corrió (**R08**: 2746 unitarios y 312 e2e pasan, 4 de 4 en RabbitMQ real, 0 fallos; **R09**: 2854 unitarios y 343 e2e pasan, 0 fallos; CI de `develop` en verde, run [42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201)) o una prueba observable. No repetimos el cotejo test por test de cada CUMPLE en R09: siguen citando la evidencia de R08.
 - La revisión de código sola, sin test, deja el control en NO VERIFICABLE.
-- Las pruebas de entrada (SQL, XSS, mass assignment, 413, CSP) se ejecutaron **contra la aplicación levantada en el e2e local y en el CI**, no contra el despliegue de Render. No ejecutamos ataques en vivo contra el despliegue ni corrimos ZAP ni Trivy. Lo que depende de eso figura como NO VERIFICABLE o NO HECHO.
+- Las pruebas de entrada (SQL, XSS, mass assignment, 413, CSP) se ejecutaron **contra la aplicación levantada en el e2e local y en el CI**, no contra el despliegue de Render. No ejecutamos ataques en vivo contra el despliegue: el escaneo activo de ZAP corre contra un entorno efímero y contra Render solo corre el baseline pasivo (5.2). Trivy no se corrió. Lo que depende de eso figura como NO VERIFICABLE o NO HECHO.
 - Estados: **CUMPLE**, **NO CUMPLE**, **NO VERIFICABLE**, **N/A** (no aplica a este módulo). **Mixto** agrupa los controles con una parte en cada estado.
 
 ## 2. Resumen
@@ -17,10 +17,10 @@
 | CUMPLE | 6 (W01, W02, W04, W06, D01, I01) | 10 (BOLA, BFLA, JWT, mass assignment, inyección SQL, rate limiting, CORS, errores sin stack, logs, datos minimizados) |
 | Mixto: CUMPLE en una parte, NO CUMPLE o NO VERIFICABLE en otra | 2 (W03, I02) | 4 (XSS, cabeceras y CSP, TLS del broker y del HTTP, dependencias: CUMPLE con salvedad) |
 | NO CUMPLE | 2 (W05, D02) | 0 |
-| NO VERIFICABLE | 0 | 1 (ZAP) |
+| NO VERIFICABLE | 0 | 0 |
 | N/A | 0 | 5 (NoSQL, XXE, fuerza bruta en login, cookies, hash de contraseñas) |
 
-Hallazgos mayores abiertos: **errores 500 sin id de correlación** (SEC-W05; el formato RFC 9457 ya está hecho: DEF-10), **sin ZAP ni Trivy** (DEF-13). Cerrados: **auditoría de lecturas Tier 2** (DEF-09, SEC-D02, #643), **dependencias sin altas ni críticas** (DEF-08, #619; las 8 moderadas restantes se cerraron con NestJS 12, #628), **rate limiting** (DEF-07, #580), **logs con `access_token`** (DEF-22, #581), **errores en Problem Details** (DEF-10, #590; no cambia el veredicto de SEC-W05 por el id de correlación), **ETag con 412** (DEF-05, #591) e **`Idempotency-Key`** (DEF-06, #592). No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06-registro-defectos.md`](06-registro-defectos.md).
+Hallazgos mayores abiertos: **errores 500 sin id de correlación** (SEC-W05; el formato RFC 9457 ya está hecho: DEF-10), **sin Trivy** (DEF-13) y **1 alerta High de ZAP** (DOMPurify 3.1.4 en el Swagger UI, #668; severidad a decidir por el líder). Cerrados: **auditoría de lecturas Tier 2** (DEF-09, SEC-D02, #643), **dependencias sin altas ni críticas** (DEF-08, #619; las 8 moderadas restantes se cerraron con NestJS 12, #628), **rate limiting** (DEF-07, #580), **logs con `access_token`** (DEF-22, #581), **errores en Problem Details** (DEF-10, #590; no cambia el veredicto de SEC-W05 por el id de correlación), **ETag con 412** (DEF-05, #591) e **`Idempotency-Key`** (DEF-06, #592). No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06-registro-defectos.md`](06-registro-defectos.md).
 
 ## 3. Controles de la Clase 11 (SEC-W01 a SEC-D02)
 
@@ -72,7 +72,7 @@ Por control: qué decía la matriz de Trello, qué hay hoy, con qué corrección
 | **XXE** en SOAP | Rechazado | **N/A** | M6 no tiene canal SOAP |
 | **Fuerza bruta sobre el login** | 429 | **N/A** | M6 no tiene login: el JWT lo emite M1 |
 | **Rate limiting** de la API | 429 | **CUMPLE** (DEF-07, cerrado por #568 · PR #580) | `ThrottlerGuard` global (primer `APP_GUARD`, `src/app.module.ts:100`): 600 por minuto por IP y por endpoint (`THROTTLE_LIMIT`, `THROTTLE_TTL_MS`), `POST /events/inbox` 300 por minuto, `POST /evidence` 30 por minuto, `/health` excluido. e2e en `test/throttler.e2e-spec.ts` (corre en el CI). Decisión en [ADR-010](../decisiones/adr-010-rate-limit-global.md). El 429 sale en Problem Details (`test/problem-details.e2e-spec.ts`). **Límites:** los contadores están en memoria, valen para **una** instancia; y detrás del BFF el límite solo cuenta por vecino si el BFF manda `X-M6-BFF-Key` y sobrescribe `X-Forwarded-For`. `BFF_SHARED_KEY` está configurada en Render y en Vercel (verificado por el equipo); que la variable exista no prueba que el BFF la mande ni que sobrescriba `X-Forwarded-For`, y ese contrato con el frontend sigue **sin verificarse** (el issue [Frontend #898](https://github.com/hllous/Frontend-M6-DAPS2/issues/898) cubre el formato de error, ETag e `Idempotency-Key`). Para la prueba de carga en local se subió `THROTTLE_LIMIT` a 100000; en el despliegue el límite sigue en 600 por minuto |
-| **OWASP ZAP** (baseline y activo autenticado) | 0 alertas High | **NO VERIFICABLE: NO HECHO** | No hay configuración ni ejecución (DEF-13) |
+| **OWASP ZAP** (baseline y activo autenticado) | 0 alertas High | **NO CUMPLE: 1 High en el baseline** | Activo: 0 High. Baseline sobre Render: 1 High (*Vulnerable JS Library*, DOMPurify 3.1.4 del Swagger UI, #668). Ver 5.2 |
 | **Dependencias** (SCA) | 0 CVE críticas o altas sin mitigación | **CUMPLE** | `npm audit --omit=dev` tras NestJS 12 (#628, 10/11/2026): **0 vulnerabilidades en producción** (tras #619 quedaban 8 moderadas). Sin `overrides`. 2855 unitarios, 343 e2e y las 8 de RabbitMQ real (3 corridas) en verde. Sin segundo SCA (Trivy, DEF-13). Ver sección 5.1 |
 | **Cabeceras de seguridad** | CSP, HSTS y `X-Content-Type-Options` | **CUMPLE** salvo `/api/docs` | `src/common/middleware/security-headers.middleware.ts` pone `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` en toda ruta **salvo `/api/docs`** (Swagger UI la necesita), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: same-site` y HSTS solo si `NODE_ENV=production`. Probado en `security-headers.middleware.spec.ts` (`:21`, `:45`), `services-lifecycle.e2e-spec.ts:67` y `test/security-input.e2e-spec.ts` (CSP presente; ausente en `/api/docs`). `X-Powered-By` está deshabilitado (`configure-app.ts:26`). `/api/docs` sin CSP queda en DEF-19. No hay helmet ni `Permissions-Policy` |
 | **CORS** sin comodín con credenciales | Sin `*` con credenciales | **CUMPLE** | `src/main.ts:18-34`: sin `CORS_ORIGINS` se acepta cualquier origen, pero **sin `credentials`**, que es la combinación peligrosa. `CORS_ORIGINS` está cargada en Render y desde #642 es obligatoria en producción: sin ella el backend no arranca (DEF-18 cerrado). El CORS expone los headers `ETag` e `Idempotency-Replayed` y deja pasar `If-Match` e `Idempotency-Key` en el preflight (ADR-012 y ADR-013) |
@@ -119,9 +119,44 @@ Lo que se comprobó en el código sobre las 6 altas, **antes** de #619 (hoy ya n
 
 **Estado unificado:** el criterio de dependencias **CUMPLE**: 0 vulnerabilidades en producción tras NestJS 12 (#628) y el job `audit` frena el deploy si aparece una alta o crítica (no frena el merge). Queda sin segundo SCA (Trivy, **NO HECHO**, DEF-13).
 
-### 5.2 OWASP ZAP y Trivy
+### 5.2 OWASP ZAP
 
-**ZAP: NO HECHO.** No hay configuración ni ejecución. **Trivy: NO HECHO.** Plan: `zap-baseline.py` contra el despliegue (1 a 2 h), archivar el reporte y justificar cada alerta Media.
+**HECHO el 15/11/2026** (#659). Workflow [`dast.yml`](../../.github/workflows/dast.yml), a demanda y una vez por semana, sin engancharse al deploy. Corrida de referencia: [run 43764318178](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43764318178), sobre la rama `chore/659-zap` (con un disparo temporal por `push`, quitado antes del PR: `workflow_dispatch` exige el workflow en `main`). Reportes archivados en [`evidencia/zap-2026-11-15/`](evidencia/zap-2026-11-15/). **La corrida final, sobre el tag, queda por hacer** y reemplaza a esta.
+
+Sin reglas ignoradas: no hay archivo de reglas. El workflow falla ante cualquier High.
+
+| | Baseline (pasivo) | Activo (API scan) |
+|---|---|---|
+| Objetivo | Render, `/api/docs` (sin autenticar) | `docker compose` efímero (base y broker descartables, `JWT_SECRET` de prueba, seed de demo) con `docs/api/openapi.json` |
+| Resultado | **1 High**, 1 Medium, 5 Low, 8 Informational | **0 High**, 1 Medium, 0 Low, 7 Informational |
+| Autenticación | no aplica | token de rol admin (`test/api/make-token.mjs`) puesto como `Authorization` en todos los pedidos con el replacer de ZAP |
+
+**El activo no va contra Render** (escribe datos, choca con el límite de 600 req/min y publicaría al bus del Core). Cambio solo en el entorno efímero: `THROTTLE_LIMIT=1000000` (`.github/dast/compose.dast.yml`); la configuración de producción no cambia. Aun así quedan 429 de los límites fijos de `/public/*` y `POST /evidence`, que son parte del diseño.
+
+**Prueba de que el activo llegó autenticado.** Un proxy de registro delante del backend (`.github/dast/proxy.mjs`) contó cada pedido de ZAP: **46 577 pedidos, los 46 577 con `Authorization: Bearer`**. Códigos: 400 ×17 560 (mutaciones de ZAP rechazadas por la validación), 403 ×4095 (reglas de rol y de pertenencia a cuadrilla: `complete` de inspecciones, `surveys`, `zone-results`, `collection-records`), 422 ×2229 (validación de negocio), 404 ×1174, 429 ×549 (límites fijos de `POST /evidence` y `/public/*`), 2xx ×82 (200 ×12, 201 ×68, 204 ×2, en 76 rutas distintas) y 409 ×5. **Cero 401.** Tabla completa en `evidencia/zap-2026-11-15/activo-efimero/pedidos-por-codigo.txt`.
+
+Limitación: ZAP arma los pedidos con los ejemplos del OpenAPI; la mayoría de los ids no existen o los cuerpos no pasan la validación, así que el grueso de las respuestas es 4xx y la cobertura de escrituras exitosas es baja. No se presenta como prueba de ausencia de fallas en la lógica de negocio.
+
+*Primeras corridas, descartadas:* con `-z "-config replacer..."` la action parte la línea por espacios y descarta las comillas, y el escaneo no llevaba el header; se pasó a `ZAP_AUTH_HEADER_VALUE`, la vía soportada por el contenedor de ZAP.
+
+#### Alertas del baseline (Render)
+
+| Riesgo | Alerta | Estado y justificación |
+|---|---|---|
+| **High** | *Vulnerable JS Library*: DOMPurify 3.1.4 en `swagger-ui-bundle.js` | **Abierta**, issue [#668](https://github.com/hllous/Backend-M6-DAPS2/issues/668). No es una dependencia declarada: viene embebida en `swagger-ui-dist`, por eso `npm audit` no la ve. Severidad propuesta Mayor (el UI solo renderiza el OpenAPI propio), a decidir por el líder; comentario en #659 |
+| Medium | *Content Security Policy (CSP) Header Not Set*, 1 instancia: `/api/docs` | **Aceptada y documentada** (DEF-19, hallazgo 7 de la sección 6). Es deliberado: `security-headers.middleware.ts` pone `default-src 'none'` en toda ruta menos `/api/docs`, porque el Swagger UI carga scripts y estilos en línea y se rompería. Las rutas de la API (JSON) sí llevan la CSP. Mitigar ocultando `/api/docs` en producción o con una CSP con hashes queda en #668 |
+| Low | Cross-Origin-Embedder/Opener/Resource-Policy, Permissions Policy, Timestamp Disclosure | Informativas para una API que solo devuelve JSON y un Swagger UI; no se cambian. La Cross-Origin-Resource-Policy de la API ya vale `same-site` (a propósito: el frontend es otro dominio) |
+| Informational | Sec-Fetch-\*, Base64 Disclosure, cachés, Modern Web Application | Sin acción: son observaciones sobre los archivos del Swagger UI |
+
+#### Alertas del activo (entorno efímero)
+
+| Riesgo | Alerta | Estado y justificación |
+|---|---|---|
+| Medium | *Cross-Domain Misconfiguration*, 5 instancias (`access-control-allow-origin: *`) | **Artefacto del entorno efímero, no de producción.** El compose corre con `NODE_ENV=development` y sin `CORS_ORIGINS`, que acepta cualquier origen (`src/main.ts`). En producción la validación de entorno exige `CORS_ORIGINS` con orígenes exactos (#642). Verificado contra Render el 15/11 con `Origin: https://evil.example`: la respuesta **no** trae `access-control-allow-origin`. No se modificó el entorno efímero para esconder la alerta |
+| Informational | *Sensitive Information in URL* (`ticketId` en la query de `GET /environmental-reports` y `GET /services`) | Falso positivo del patrón: es un id de ticket usado como filtro, no una credencial |
+| Informational | Client Error (415), Non-Storable Content, Sec-Fetch-\* | Sin acción: es el ruido esperado de un escaneo activo |
+
+**Trivy: NO HECHO** (DEF-13).
 
 ### 5.3 CodeQL
 
@@ -166,7 +201,7 @@ Limitación: gitleaks no analiza el contenido de los PDF ni de los binarios.
 | 1 | Dependencias de producción: la crítica, las 6 altas y las 8 moderadas se resolvieron | Mayor (cerrado) | **Cerrado** (#619 y #628): `npm audit fix` (#566), `overrides` y `zod` 4, después NestJS 12 sin `overrides`; job `audit` gate y Dependabot (#578). Trivy en DEF-13 | DEF-08 (cerrado) |
 | 2 | Sin rate limiting fuera del portal público | Mayor | **Cerrado** (#568, PR #580) | DEF-07 |
 | 3 | Sin auditoría de lecturas Tier 2 (SEC-D02) | Mayor (cerrado) | **Cerrado** (#643): `AuditService.recordRead` sobre los tres `GET` con datos Tier 2 | DEF-09 (cerrado) |
-| 4 | Sin ZAP ni Trivy (SCA en el CI como gate desde #628, Dependabot, CodeQL y gitleaks sí) | Mayor | `zap-baseline` manual (sin hacer) | DEF-13 |
+| 4 | ZAP hecho (#659) con 1 High abierta en el baseline: DOMPurify del Swagger UI (#668); sin Trivy (SCA en el CI como gate desde #628, Dependabot, CodeQL y gitleaks sí) | Mayor (propuesta) | ZAP: workflow `dast`, corrida del 15/11; corrección de la High en #668. Trivy sin hacer | DEF-13 |
 | 5 | Errores 500 sin id de correlación (SEC-W05); el formato RFC 9457 ya está | Mayor | Agregar el id de correlación al filtro y al log (sin hacer). El formato se **cerró** (#590, PR #597) | DEF-10 (cerrado) |
 | 6 | CORS abierto si falta `CORS_ORIGINS`; ambas variables cargadas en Render | Menor (cerrado) | **Cerrado** (#642): en producción la validación de entorno exige `CORS_ORIGINS` | DEF-18 |
 | 7 | Swagger UI público y sin CSP en producción | Menor | Decisión documentada por Swagger UI; ocultarlo o aceptarlo | DEF-19 |
