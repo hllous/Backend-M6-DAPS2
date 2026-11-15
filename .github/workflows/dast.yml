@@ -125,13 +125,15 @@ jobs:
           echo "GET /me con el token → $codigo"
           [ "$codigo" = "200" ] || { echo "::error::El token de prueba no autentica ($codigo)"; exit 1; }
 
-      # Evidencia de que el escaneo llega autenticado: filas insertadas por la API (pg_stat)
-      # antes y después. Un 401 generalizado no insertaría nada.
-      - name: Filas insertadas antes del escaneo
+      # Proxy de registro delante del backend: deja una línea por pedido de ZAP con su código
+      # de respuesta y si llevó Authorization (evidencia de #659; ZAP no la entrega).
+      - name: Proxy de registro
         run: |
-          $COMPOSE exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc \
-            "select coalesce(sum(n_tup_ins),0) from pg_stat_user_tables where relname not like '\_prisma%'" > ins_antes.txt
-          cat ins_antes.txt
+          node .github/dast/proxy.mjs 3001 3000 zap-requests.log > proxy.out 2>&1 &
+          sleep 2
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3001/me)
+          [ "$codigo" = "200" ] || { echo "::error::El proxy no reenvía bien ($codigo)"; cat proxy.out; exit 1; }
+          : > zap-requests.log
 
       # El replacer de ZAP reemplaza el header Authorization en TODOS los pedidos del escaneo.
       - name: ZAP API scan activo
@@ -143,7 +145,7 @@ jobs:
           fail_action: false
           artifact_name: zap-active
           cmd_options: >-
-            -O http://localhost:3000 -a
+            -O http://localhost:3001 -a
             -z "-config replacer.full_list(0).description=auth
             -config replacer.full_list(0).enabled=true
             -config replacer.full_list(0).matchtype=REQ_HEADER
@@ -151,17 +153,15 @@ jobs:
             -config replacer.full_list(0).regex=false
             -config replacer.full_list(0).replacement=Bearer ${{ env.ADMIN_TOKEN }}"
 
-      - name: Evidencia de autenticación (filas insertadas y códigos 4xx)
+      - name: Evidencia de autenticación (códigos de respuesta del escaneo)
         if: always()
         run: |
-          antes=$(cat ins_antes.txt)
-          despues=$($COMPOSE exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc \
-            "select coalesce(sum(n_tup_ins),0) from pg_stat_user_tables where relname not like '\_prisma%'")
           {
-            echo "### Autenticación del escaneo activo"
-            echo "- Filas insertadas por la API durante el escaneo: $((despues - antes)) (antes $antes, después $despues)"
-            echo "- Códigos 4xx que ZAP registró en alertas (evidence):"
-            jq -r '.site[].alerts[] | select(.name|test("Client Error")) | .instances[].evidence' report_json.json | sort | uniq -c | sed 's/^/    /'
+            echo "### Respuestas del backend al escaneo activo"
+            echo "- Pedidos totales: $(wc -l < zap-requests.log)"
+            echo "- Con header Authorization: $(grep -c 'auth=Bearer' zap-requests.log || true)"
+            echo "- Por código:"
+            awk '{print $3}' zap-requests.log | sort | uniq -c | sort -rn | sed 's/^/    /'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Gate High
@@ -181,7 +181,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zap-active-backend-log
-          path: backend.log
+          path: |
+            backend.log
+            zap-requests.log
           if-no-files-found: ignore
 
       - name: Bajar el stack
