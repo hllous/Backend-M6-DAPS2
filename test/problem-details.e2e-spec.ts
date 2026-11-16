@@ -76,9 +76,9 @@ describe('Errores en Problem Details RFC 9457 (e2e)', () => {
 
   it('instance y path no llevan la query (ni el token), DEF-19', async () => {
     const ruta = '/zones/00000000-0000-4000-8000-000000000000';
-    const res = await api.get(`${ruta}?access_token=abc`);
+    const res = await api.get(`${ruta}?access_token=TOKEN-SECRETO-QA`);
     esProblema(res, 404, ruta);
-    expect(JSON.stringify(res.body)).not.toContain('abc');
+    expect(JSON.stringify(res.body)).not.toContain('TOKEN-SECRETO-QA');
   });
 
   // Errores que ocurren antes del router de Nest (body-parser).

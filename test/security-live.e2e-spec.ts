@@ -254,7 +254,8 @@ describe('Seguridad en vivo (e2e)', () => {
       expect(res.status).toBe(403);
       expect(res.body.code).toBe('NOT_ASSIGNED');
       sinFiltraciones(res);
-      const texto = JSON.stringify(res.body);
+      // Sin el traceId: un UUID al azar puede contener "9004".
+      const texto = JSON.stringify({ ...res.body, traceId: undefined });
       for (const dato of [cuadrillaA, INTEGRANTE_A, evidenciaUrlA])
         expect(texto).not.toContain(dato);
     };
