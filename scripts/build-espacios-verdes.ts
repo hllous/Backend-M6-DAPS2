@@ -13,7 +13,7 @@
  * Falla si algún barrio del dataset no empareja con el catálogo de M9.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { GeometriaPoligonal, puntoInterior } from '../src/common/utils/geo';
 
 export const CLASIFICACIONES = [
@@ -136,9 +136,20 @@ export function construir(
   return salida.sort((a, b) => a.id - b.id);
 }
 
+/** El GeoJSON de entrada debe ser un `.geojson` dentro del repositorio. */
+export function entradaSegura(raiz: string, arg?: string): string {
+  if (!arg) return join(raiz, 'docs/geojson/espacio_verde_publico.geojson');
+  const ruta = resolve(raiz, arg);
+  const rel = relative(raiz, ruta);
+  if (rel.startsWith('..') || isAbsolute(rel) || !ruta.endsWith('.geojson')) {
+    throw new Error(`La entrada debe ser un .geojson dentro del repositorio: ${arg}`);
+  }
+  return ruta;
+}
+
 function main(): void {
   const raiz = join(__dirname, '..');
-  const entrada = process.argv[2] ?? join(raiz, 'docs/geojson/espacio_verde_publico.geojson');
+  const entrada = entradaSegura(raiz, process.argv[2]);
   const barrios = JSON.parse(readFileSync(join(raiz, 'prisma/data/m9-barrios.json'), 'utf8')) as {
     codigo: string;
     zona: string;

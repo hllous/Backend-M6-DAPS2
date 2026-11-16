@@ -151,12 +151,15 @@ function build({ out, title, subtitle, files, toc }) {
     'utf8',
   );
 
-  // shell:true: en Windows npx es un .cmd y Node 22 no lo ejecuta sin shell.
-  execFileSync('npx', ['--yes', MD_TO_PDF, `"${mdPath}"`, '--config-file', `"${configPath}"`], {
-    stdio: 'inherit',
-    shell: true,
-    cwd: root,
-  });
+  // Se corre con el npm que lanzó este script (`npm run qa:pdf`) y el node actual:
+  // no se busca nada en el PATH ni hace falta un shell (en Windows npx es un .cmd).
+  const npm = process.env.npm_execpath;
+  if (!npm) throw new Error('Correr con `npm run qa:pdf` (falta npm_execpath).');
+  execFileSync(
+    process.execPath,
+    [npm, 'exec', '--yes', `--package=${MD_TO_PDF}`, '--', 'md-to-pdf', mdPath, '--config-file', configPath],
+    { stdio: 'inherit', cwd: root },
+  );
   rmSync(mdPath);
   rmSync(configPath);
   console.log(`  -> ${relative(root, pdfPath)}`);

@@ -60,14 +60,14 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Generate Prisma Client
-        run: npx prisma generate
+        run: npm run prisma:generate
 
       - name: Migrar y sembrar el seed de demo
         run: |
-          npx prisma migrate deploy
+          npm run prisma:migrate:deploy
           npm run prisma:seed
 
       - name: Build

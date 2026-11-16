@@ -19,8 +19,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
-      - run: npx prisma generate
+      - run: npm ci --ignore-scripts
+      - run: npm run prisma:generate
 
       # Modo incremental (#617): Stryker solo re-prueba los mutantes de lo que
       # cambió desde la última corrida. Los caches son inmutables, así que se

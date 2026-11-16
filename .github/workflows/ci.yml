@@ -53,10 +53,10 @@ jobs:
 
       - name: Install dependencies
         if: steps.deps.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Generate Prisma Client
-        run: npx prisma generate
+        run: npm run prisma:generate
 
       - name: Build
         run: npm run build
@@ -99,10 +99,10 @@ jobs:
 
       - name: Install dependencies
         if: steps.deps.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Generate Prisma Client
-        run: npx prisma generate
+        run: npm run prisma:generate
 
       # ts-jest chequeaba los tipos de los specs al correrlos; SWC (Vitest) no.
       # Este paso conserva ese chequeo (#628).
@@ -241,10 +241,10 @@ jobs:
 
       - name: Install dependencies
         if: steps.deps.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Generate Prisma Client
-        run: npx prisma generate
+        run: npm run prisma:generate
 
       # Las migraciones las aplica test/global-setup.ts, después del guard.
       # Sin cobertura: el 85% del DoD se mide con los unitarios (job "test").
