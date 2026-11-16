@@ -35,7 +35,7 @@ npm run qa:pdf
 | `Manual-de-usuario-M6.pdf` | Solo el manual de usuario |
 | `individuales/01-….pdf` a `08-….pdf` | Un PDF por documento |
 
-El script falla si falta alguno de los `01` a `08`; `npm run qa:pdf -- --partial` genera con lo que haya. Estilo en `pdf.css`; script en `scripts/build-qa-pdf.mjs`.
+El script falla si falta alguno de los `01` a `08`; `npm run qa:pdf -- --partial` genera con lo que haya. Estilo en `pdf.css` (más `pdf.js`, que evita que se partan los ID y los identificadores en las tablas); script en `scripts/build-qa-pdf.mjs`.
 
 ## Decisiones
 
