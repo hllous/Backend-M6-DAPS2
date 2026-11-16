@@ -37,7 +37,7 @@ R09 salvo que se diga otra cosa. «Saltados» son tests que Jest no ejecutó; «
 | Mutation (Stryker, #617) | — | 26 archivos de dominio (5182 mutantes, 2142 no compilan y no cuentan) | 75,39 % global en el CI tras el refuerzo (2292 detectados); 71,22 % antes (2165) | — | — | 57 min 16 s en el CI con incremental (2 h 26 min la primera, sin cache); medición de noviembre de 2026, **no es R09** (5.1) |
 | Carga (k6) | — | 14 850 requests | p(95) 32,84 ms; 0,00 % de error | 0 | — | 5 min; ver 2.2 |
 | Seguridad dinámica (ZAP) | — | — | — | — | — | **No realizado** |
-| Seguridad estática: Trivy | — | — | — | — | — | **No realizado** |
+| Seguridad estática: Trivy (#658) | — | 3 pasadas: `fs`, `image`, `config` | `fs`: 0 vulnerabilidades | `image`: 6 HIGH con fix; `config`: 1 HIGH (DS-0002) | — | Job `trivy` del CI ([run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43762807669)); hallazgos en #665 y #666; prueba en rojo en 07 §5.2 |
 | Compose en frío | — | 1 | 1 | 0 | — | up en 46 s; `/health/ready` 200 a los 55 s; seed OK; `GET /neighborhoods` 200 |
 
 Notas:
@@ -297,7 +297,7 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 |---|---|---|
 | Captura del Quality Gate en verde | **NO HECHO** | El análisis corre en el CI desde #657 (gate no bloqueante), pero el gate no está en verde: ver la fila del criterio arriba |
 | OWASP ZAP | **NO HECHO** | No se corrió |
-| Trivy | **NO HECHO** | No se corrió |
+| Trivy | **Hecho, con hallazgos abiertos** | `fs` limpio; `image` y `config` en rojo por 6 HIGH del npm embebido (#665) y DS-0002 (#666), ambos con fix. Ver 07 §5.2 |
 | Mutation score: reforzar los 21 archivos restantes y confirmar el global en el CI | **Parcial** | Línea base del dominio completo medida y 5 archivos reforzados (5.1); el score global tras el refuerzo se confirma con una corrida en el CI luego del merge |
 | Éxito por endpoint en los 91 endpoints restantes | **NO HECHO** | `test/api/PENDIENTES.md` |
 | Integración con broker real (Testcontainers) | **Parcial** | Postgres y RabbitMQ reales como contenedores de servicio del CI y en local. El consumer y la publicación del outbox (también con el broker inalcanzable y su reenvío) se prueban contra RabbitMQ real (#618) |
@@ -316,7 +316,7 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 | 7 | Reemplazar las aserciones débiles (`services.service.spec.ts:875` y el resto) | **Sin hacer** |
 | 8 | Hacer obligatorio el job `e2e` en la protección de ramas | **NO HECHO** (pide admin; DEF-14) |
 | 9 | Newman en el CI | **Hecho** (#583) |
-| 10 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); ZAP y Trivy **NO HECHOS** |
+| 10 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); Trivy **hecho** (#658, con 2 hallazgos abiertos: #665 y #666); ZAP **NO HECHO** |
 | 11 | Tag `v1.0-testing` en `main` y en el frontend | **Hecho**: ver «Versión entregada» |
 | 12 | 400 declarado en los `GET` con entrada y Schemathesis bloqueante (DEF-20) | **Hecho** (#593, PR #597) |
 | 13 | Catálogo de barrios local para el compose y el CI (DEF-21) | **Hecho** (#594, PR #597) |

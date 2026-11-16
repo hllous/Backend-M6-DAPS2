@@ -310,12 +310,142 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
   # ──────────────────────────────────────────────────────────────
+  # trivy — Segundo SCA, independiente de `npm audit` (#658, spec #656).
+  #
+  # Tres pasadas: fs (lockfile + secretos), image (la imagen del Dockerfile) y
+  # config (Dockerfile y docker-compose.yml). Cada una hace dos cosas:
+  #   1. REPORTE: SARIF a Code Scanning, con HIGH/CRITICAL incluidas las que
+  #      todavía no tienen fix (la cátedra pide "mitigación documentada", no
+  #      "ignoradas"). No falla nunca.
+  #   2. GATE: tabla en el log y falla con HIGH/CRITICAL que SÍ tengan fix
+  #      (ignore-unfixed solo acá). Las sin fix se documentan en .trivyignore
+  #      y en docs/QA/07-informe-seguridad.md.
+  #
+  # Como `audit`: frena el deploy (needs de `deploy`), no el merge; no está en
+  # la branch protection. security-events: write solo en este job.
+  # trivy-action va fijada por SHA del commit (tag v0.36.0).
+  # ──────────────────────────────────────────────────────────────
+  trivy:
+    name: trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    env:
+      # Los PRs de forks y de Dependabot reciben un token sin security-events:
+      # ahí se corre el gate pero no se sube el SARIF.
+      CAN_UPLOAD: ${{ !(github.event.pull_request.head.repo.fork == true || github.actor == 'dependabot[bot]') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build de la imagen
+        run: docker build -t m6-backend:ci .
+
+      # ── Reporte (SARIF, incluye las sin fix) ──
+      - name: Reporte fs (dependencias y secretos)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          trivyignores: .trivyignore
+          format: sarif
+          output: trivy-fs.sarif
+          exit-code: '0'
+
+      - name: Reporte image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: m6-backend:ci
+          severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          trivyignores: .trivyignore
+          format: sarif
+          output: trivy-image.sarif
+          exit-code: '0'
+
+      - name: Reporte config (Dockerfile y compose)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          trivyignores: .trivyignore
+          format: sarif
+          output: trivy-config.sarif
+          exit-code: '0'
+
+      - name: Subir fs a Code Scanning
+        if: always() && env.CAN_UPLOAD == 'true'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+      - name: Subir image a Code Scanning
+        if: always() && env.CAN_UPLOAD == 'true'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+      - name: Subir config a Code Scanning
+        if: always() && env.CAN_UPLOAD == 'true'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-config.sarif
+          category: trivy-config
+
+      # ── Gate (HIGH/CRITICAL con fix) ──
+      - name: Gate fs
+        if: always()
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+          format: table
+          exit-code: '1'
+
+      - name: Gate image
+        if: always()
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: m6-backend:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+          format: table
+          exit-code: '1'
+
+      - name: Gate config
+        if: always()
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          trivyignores: .trivyignore
+          format: table
+          exit-code: '1'
+
+  # ──────────────────────────────────────────────────────────────
   # deploy — Dispara el deploy en Render (solo push a main).
-  # Depende de build+test: si el CI falla, no se deploya.
+  # Depende de build+test y de los gates audit y trivy: si el CI falla, no se deploya.
   # ──────────────────────────────────────────────────────────────
   deploy:
     name: deploy
-    needs: [build, test, audit]
+    needs: [build, test, audit, trivy]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 3

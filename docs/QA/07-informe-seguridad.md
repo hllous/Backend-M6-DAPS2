@@ -7,7 +7,7 @@
 - Cada control se **reverificó contra el código y los tests actuales**. Los veredictos originales de las tarjetas SEC de Trello quedaron viejos: se citan solo para mostrar qué cambió.
 - **Regla de evidencia:** un CUMPLE sin test ejecutado ni evidencia se toma como NO VERIFICABLE. Por eso un CUMPLE acá siempre cita un test que corrió (**R08**: 2746 unitarios y 312 e2e pasan, 4 de 4 en RabbitMQ real, 0 fallos; **R09**: 2854 unitarios y 343 e2e pasan, 0 fallos; CI de `develop` en verde, run [42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201)) o una prueba observable. No repetimos el cotejo test por test de cada CUMPLE en R09: siguen citando la evidencia de R08.
 - La revisión de código sola, sin test, deja el control en NO VERIFICABLE.
-- Las pruebas de entrada (SQL, XSS, mass assignment, 413, CSP) se ejecutaron **contra la aplicación levantada en el e2e local y en el CI**, no contra el despliegue de Render. No ejecutamos ataques en vivo contra el despliegue ni corrimos ZAP ni Trivy. Lo que depende de eso figura como NO VERIFICABLE o NO HECHO.
+- Las pruebas de entrada (SQL, XSS, mass assignment, 413, CSP) se ejecutaron **contra la aplicación levantada en el e2e local y en el CI**, no contra el despliegue de Render. No ejecutamos ataques en vivo contra el despliegue ni corrimos ZAP; Trivy corre en el CI (5.2). Lo que depende de eso figura como NO VERIFICABLE o NO HECHO.
 - Estados: **CUMPLE**, **NO CUMPLE**, **NO VERIFICABLE**, **N/A** (no aplica a este módulo). **Mixto** agrupa los controles con una parte en cada estado.
 
 ## 2. Resumen
@@ -20,7 +20,7 @@
 | NO VERIFICABLE | 0 | 1 (ZAP) |
 | N/A | 0 | 5 (NoSQL, XXE, fuerza bruta en login, cookies, hash de contraseñas) |
 
-Hallazgos mayores abiertos: **errores 500 sin id de correlación** (SEC-W05; el formato RFC 9457 ya está hecho: DEF-10), **sin ZAP ni Trivy** (DEF-13). Cerrados: **auditoría de lecturas Tier 2** (DEF-09, SEC-D02, #643), **dependencias sin altas ni críticas** (DEF-08, #619; las 8 moderadas restantes se cerraron con NestJS 12, #628), **rate limiting** (DEF-07, #580), **logs con `access_token`** (DEF-22, #581), **errores en Problem Details** (DEF-10, #590; no cambia el veredicto de SEC-W05 por el id de correlación), **ETag con 412** (DEF-05, #591) e **`Idempotency-Key`** (DEF-06, #592). No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06-registro-defectos.md`](06-registro-defectos.md).
+Hallazgos mayores abiertos: **errores 500 sin id de correlación** (SEC-W05; el formato RFC 9457 ya está hecho: DEF-10), **sin ZAP** y con **2 hallazgos de Trivy abiertos** (#665, #666; DEF-13). Cerrados: **auditoría de lecturas Tier 2** (DEF-09, SEC-D02, #643), **dependencias sin altas ni críticas** (DEF-08, #619; las 8 moderadas restantes se cerraron con NestJS 12, #628), **rate limiting** (DEF-07, #580), **logs con `access_token`** (DEF-22, #581), **errores en Problem Details** (DEF-10, #590; no cambia el veredicto de SEC-W05 por el id de correlación), **ETag con 412** (DEF-05, #591) e **`Idempotency-Key`** (DEF-06, #592). No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06-registro-defectos.md`](06-registro-defectos.md).
 
 ## 3. Controles de la Clase 11 (SEC-W01 a SEC-D02)
 
@@ -74,7 +74,7 @@ Por control: qué decía la matriz de Trello, qué hay hoy, con qué corrección
 | **Rate limiting** de la API | 429 | **CUMPLE** (DEF-07, cerrado por #568 · PR #580) | `ThrottlerGuard` global (primer `APP_GUARD`, `src/app.module.ts:100`): 600 por minuto por IP y por endpoint (`THROTTLE_LIMIT`, `THROTTLE_TTL_MS`), `POST /events/inbox` 300 por minuto, `POST /evidence` 30 por minuto, `/health` excluido. e2e en `test/throttler.e2e-spec.ts` (corre en el CI). Decisión en [ADR-010](../decisiones/adr-010-rate-limit-global.md). El 429 sale en Problem Details (`test/problem-details.e2e-spec.ts`). **Límites:** los contadores están en memoria, valen para **una** instancia; y detrás del BFF el límite solo cuenta por vecino si el BFF manda `X-M6-BFF-Key` y sobrescribe `X-Forwarded-For`. `BFF_SHARED_KEY` está configurada en Render y en Vercel (verificado por el equipo); que la variable exista no prueba que el BFF la mande ni que sobrescriba `X-Forwarded-For`, y ese contrato con el frontend sigue **sin verificarse** (el issue [Frontend #898](https://github.com/hllous/Frontend-M6-DAPS2/issues/898) cubre el formato de error, ETag e `Idempotency-Key`). Para la prueba de carga en local se subió `THROTTLE_LIMIT` a 100000; en el despliegue el límite sigue en 600 por minuto |
 | **SonarCloud** (Quality Gate) | 0 bugs Blocker/Critical, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % hotspots revisados | **NO CUMPLE** (medido; triaje en curso) | análisis de SonarCloud del 15/11/2026 (código del PR #662, 57 454 líneas, con la configuración del proyecto): **5 bugs** (4 Critical `S2871` y 1 Major `S9383`), **22 vulnerabilidades** (3 Blocker `S6698`, 1 Critical `S8689`, 18 entre Major y Minor), duplicación **1,2 %**, confiabilidad **D**, seguridad **E**, mantenibilidad **A**, hotspots **0** (100 % revisados), cobertura **97,3 %** (líneas 98,8 %; 52 líneas sin cubrir, igual que Vitest). Cumple duplicación y hotspots; no cumple bugs, vulnerabilidades ni ratings. Los Blocker son contraseñas de mentira de `scripts/` y los Critical son `.sort()` sobre strings y un log de host y base; propuesta de veredicto en [#657](https://github.com/hllous/Backend-M6-DAPS2/issues/657), la severidad la deciden el líder y el QA.  Triaje de los 27: 0 Blocker/Critical reales; 2 reales a corregir (`S9383` y `S6471`) y el resto falsos positivos o aceptables a marcar por un humano en Sonar |
 | **OWASP ZAP** (baseline y activo autenticado) | 0 alertas High | **NO VERIFICABLE: NO HECHO** | No hay configuración ni ejecución (DEF-13) |
-| **Dependencias** (SCA) | 0 CVE críticas o altas sin mitigación | **CUMPLE** | `npm audit --omit=dev` tras NestJS 12 (#628, 10/11/2026): **0 vulnerabilidades en producción** (tras #619 quedaban 8 moderadas). Sin `overrides`. 2855 unitarios, 343 e2e y las 8 de RabbitMQ real (3 corridas) en verde. Sin segundo SCA (Trivy, DEF-13). Ver sección 5.1 |
+| **Dependencias** (SCA) | 0 CVE críticas o altas sin mitigación | **CUMPLE** | `npm audit --omit=dev` tras NestJS 12 (#628, 10/11/2026): **0 vulnerabilidades en producción** (tras #619 quedaban 8 moderadas). Sin `overrides`. 2855 unitarios, 343 e2e y las 8 de RabbitMQ real (3 corridas) en verde. Segundo SCA: Trivy, ver 5.2. Ver sección 5.1 |
 | **Cabeceras de seguridad** | CSP, HSTS y `X-Content-Type-Options` | **CUMPLE** salvo `/api/docs` | `src/common/middleware/security-headers.middleware.ts` pone `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` en toda ruta **salvo `/api/docs`** (Swagger UI la necesita), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: same-site` y HSTS solo si `NODE_ENV=production`. Probado en `security-headers.middleware.spec.ts` (`:21`, `:45`), `services-lifecycle.e2e-spec.ts:67` y `test/security-input.e2e-spec.ts` (CSP presente; ausente en `/api/docs`). `X-Powered-By` está deshabilitado (`configure-app.ts:26`). `/api/docs` sin CSP queda en DEF-19. No hay helmet ni `Permissions-Policy` |
 | **CORS** sin comodín con credenciales | Sin `*` con credenciales | **CUMPLE** | `src/main.ts:18-34`: sin `CORS_ORIGINS` se acepta cualquier origen, pero **sin `credentials`**, que es la combinación peligrosa. `CORS_ORIGINS` está cargada en Render y desde #642 es obligatoria en producción: sin ella el backend no arranca (DEF-18 cerrado). El CORS expone los headers `ETag` e `Idempotency-Replayed` y deja pasar `If-Match` e `Idempotency-Key` en el preflight (ADR-012 y ADR-013) |
 | **Cookies** (`Secure`, `HttpOnly`, `SameSite`) | — | **N/A** | El backend no emite cookies: el JWT va en el header |
@@ -118,11 +118,29 @@ Lo que se comprobó en el código sobre las 6 altas, **antes** de #619 (hoy ya n
 | `@nestjs/platform-express`, `body-parser`, `multer` | La subida de archivos exige token válido y rol (ver `attachments.service.ts` y el límite de 10 MB) | Explotabilidad real del DoS de `multer` y de `body-parser` |
 | `@nestjs/swagger`, `js-yaml`, `lodash`, `@nestjs/config` | — | Explotabilidad: no se analizó |
 
-**Estado unificado:** el criterio de dependencias **CUMPLE**: 0 vulnerabilidades en producción tras NestJS 12 (#628) y el job `audit` frena el deploy si aparece una alta o crítica (no frena el merge). Queda sin segundo SCA (Trivy, **NO HECHO**, DEF-13).
+**Estado unificado:** el criterio de dependencias **CUMPLE**: 0 vulnerabilidades en producción tras NestJS 12 (#628) y el job `audit` frena el deploy si aparece una alta o crítica (no frena el merge). Segundo SCA: Trivy (job `trivy`, sección 5.2).
 
 ### 5.2 OWASP ZAP y Trivy
 
-**ZAP: NO HECHO.** No hay configuración ni ejecución. **Trivy: NO HECHO.** Plan: `zap-baseline.py` contra el despliegue (1 a 2 h), archivar el reporte y justificar cada alerta Media.
+**ZAP: NO HECHO.** No hay configuración ni ejecución. Plan: `zap-baseline.py` contra el despliegue (1 a 2 h), archivar el reporte y justificar cada alerta Media.
+
+**Trivy: HECHO (#658).** Job `trivy` del CI, con tres pasadas (`fs` con lockfile y secretos, `image` con la imagen del `Dockerfile` y `config` con `Dockerfile` y `docker-compose.yml`). Cada una sube su SARIF a Code Scanning (categorías `trivy-fs`, `trivy-image`, `trivy-config`, HIGH y CRITICAL, incluidas las sin fix) y después corre un gate que falla con HIGH/CRITICAL **con fix**. El job frena el deploy (`deploy` depende de él), no el merge.
+
+| Pasada | Resultado en la primera corrida ([run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43762807669)) |
+|---|---|
+| `fs` (lockfile y secretos) | 0 vulnerabilidades, 0 secretos. Gate en verde |
+| `image` | Gate **en rojo**: 6 HIGH con fix, todas en el `npm` que trae `node:24-alpine` (brace-expansion 5.0.9 y undici 6.28.0). Alpine 3.24.4 y las dependencias de la app: 0. Issue #665 |
+| `config` | Gate **en rojo**: DS-0002 (HIGH), el contenedor corre como root. Issue #666 |
+
+Los hallazgos tienen fix: no se ignoran. Se corrigen en `fix/` aparte y el gate queda en rojo hasta entonces (frena el deploy, no el merge). Severidad propuesta (la deciden el líder y el QA): #665 Menor/Mayor bajo; #666 Mayor.
+
+**Tabla de HIGH/CRITICAL sin fix (`.trivyignore`):**
+
+| CVE | Paquete | Justificación | Mitigación |
+|---|---|---|---|
+| — | — | La primera corrida no encontró ninguna HIGH/CRITICAL sin fix; `.trivyignore` está vacío | — |
+
+**Prueba en rojo (una vez):** con `lodash@4.17.15` (CVE-2020-8203, CVE-2021-23337 y CVE-2026-4800, todas HIGH con fix) en un PR descartable (#664, cerrado sin mergear), los tres gates fallaron: [run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43763092974). El gate de `fs` listó las 3 CVE de lodash (4 HIGH en total) y el de `image` las encontró también en la imagen.
 
 **Alerta High *Vulnerable JS Library* (DOMPurify, #668, DEF-25).** El baseline de ZAP contra Render reportó DOMPurify 3.1.4 en el `swagger-ui-bundle.js` de `/api/docs`. Es la versión que trae `swagger-ui-dist` 5.17.14, la de `main` (`@nestjs/swagger` 7.4.2). `develop` ya usa `swagger-ui-dist` 5.34.1 (#628), cuyo bundle trae **DOMPurify 3.4.17** (verificado en `node_modules/swagger-ui-dist/swagger-ui-bundle.js`); el `swagger-ui-dist` 5.35.0, el último, trae la misma. No existe una versión con DOMPurify 3.4.18, que corrige un aviso de severidad media (GHSA-qm7q-q8h9-jg8q) aún presente en 3.4.17; las altas y la crítica de DOMPurify se corrigieron en 3.4.5 y 3.4.17. No se mitigó ocultando `/api/docs`: la corrección es el despliegue. El baseline queda en 0 High recién cuando `develop` llegue a `main` y Render despliegue; hay que volver a correr el workflow `dast` para confirmarlo.
 
@@ -169,7 +187,7 @@ Limitación: gitleaks no analiza el contenido de los PDF ni de los binarios.
 | 1 | Dependencias de producción: la crítica, las 6 altas y las 8 moderadas se resolvieron | Mayor (cerrado) | **Cerrado** (#619 y #628): `npm audit fix` (#566), `overrides` y `zod` 4, después NestJS 12 sin `overrides`; job `audit` gate y Dependabot (#578). Trivy en DEF-13 | DEF-08 (cerrado) |
 | 2 | Sin rate limiting fuera del portal público | Mayor | **Cerrado** (#568, PR #580) | DEF-07 |
 | 3 | Sin auditoría de lecturas Tier 2 (SEC-D02) | Mayor (cerrado) | **Cerrado** (#643): `AuditService.recordRead` sobre los tres `GET` con datos Tier 2 | DEF-09 (cerrado) |
-| 4 | Sin ZAP ni Trivy (SCA en el CI como gate desde #628, Dependabot, CodeQL y gitleaks sí) | Mayor | `zap-baseline` manual (sin hacer) | DEF-13 |
+| 4 | Sin ZAP (Trivy hecho en #658, con #665 y #666 abiertos; SCA en el CI como gate desde #628, Dependabot, CodeQL y gitleaks sí) | Mayor | `zap-baseline` manual (sin hacer) | DEF-13 |
 | 5 | Errores 500 sin id de correlación (SEC-W05); el formato RFC 9457 ya está | Mayor | Agregar el id de correlación al filtro y al log (sin hacer). El formato se **cerró** (#590, PR #597) | DEF-10 (cerrado) |
 | 6 | CORS abierto si falta `CORS_ORIGINS`; ambas variables cargadas en Render | Menor (cerrado) | **Cerrado** (#642): en producción la validación de entorno exige `CORS_ORIGINS` | DEF-18 |
 | 7 | Swagger UI público y sin CSP en producción | Menor | Decisión documentada por Swagger UI; ocultarlo o aceptarlo | DEF-19 |
