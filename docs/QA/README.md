@@ -2,7 +2,7 @@
 
 > Versión 2.2 · 16/11/2026, cierre de la Entrega 4. Índice de los documentos de QA del Módulo 6 «Ambiente e Higiene» (Grupo 04), según los *Criterios de Testing y Aseguramiento de Calidad* (estructura de ISO/IEC/IEEE 29119-3). Origen: Issue [#494](https://github.com/hllous/Backend-M6-DAPS2/issues/494). **Base del cierre:** `develop` @ `50cfff7` del Backend (CI [run 43908234945](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43908234945)) y `develop` del Frontend del 16/11. Las mediciones anteriores siguen citadas con su base: R09 sobre `develop` @ `142e1a3` (10/11, tag `v1.0-testing` en `main` @ `6333ecb`), mutation testing del 10-11/11 (#617) y SonarCloud, Trivy y ZAP sobre `main` @ `78bf714` (16/11).
 >
-> **PR del Frontend pendientes de merge al cierre** (CI en verde): FE #977 (límite de intentos de login), #978 (`If-Match` y timeout de 5 s), #979 (criterios solo-FE y recorrido responsive y de accesibilidad) y #980 (tests inestables). Lo que depende de ellos está marcado en cada documento.
+> **PR del Frontend al cierre:** FE #972 (gate de Sonar bloqueante), #977 (límite de intentos de login) y #978 (`If-Match` y timeout de 5 s) están **mergeados** a `develop` el 16/11; **pendientes de merge** (CI en verde): FE #979 (criterios solo-FE y recorrido responsive y de accesibilidad) y #980 (tests inestables). Lo que depende de estos dos está marcado en cada documento.
 >
 > **El Markdown de esta carpeta es la fuente.** El PDF que se entrega se regenera a partir de él; no se edita a mano.
 
@@ -15,7 +15,7 @@
 | 2. Matriz de trazabilidad | `03-matriz-trazabilidad.md` | 175 criterios: 161 con test del backend, 10 con test del frontend ejecutado (Eje A) y 4 huecos de backend declarados (CA-HU10-2, CA-HU24-2, CA-HU33-1, CA-HU33-4). **171 de 175 pasan (97,7 %, umbral 95 %)** |
 | 3. Especificación de casos | `04-especificacion-casos.md` | 383 casos, 68,1 % negativos o de borde |
 | 4. Informe de ejecución | `05-informe-ejecucion.md` | Cierre del 16/11: 3010 unitarios y 404 e2e en verde; cobertura del backend 97,98 % de sentencias con **umbral de 90 %**; Newman con éxito en 151/152 operaciones y error en 149/152 (excepciones justificadas); 58 pruebas de seguridad en vivo; G1 en 149 s; G6 en 0; gates bloqueantes. **PENDIENTE:** cobertura y mutation del frontend y 3 corridas del CI del frontend |
-| 5. Registro de defectos | `06-registro-defectos.md` | 38 defectos (DEF-01 a DEF-40), **12 abiertos: 0 Bloqueantes, 0 Críticos, 1 Mayor (DEF-32, con workaround y corregido en FE #978, pendiente de merge) y 11 Menores**. DEF-14 y DEF-19 cerrados el 16/11 |
+| 5. Registro de defectos | `06-registro-defectos.md` | 38 defectos (DEF-01 a DEF-40), **10 abiertos: 0 Bloqueantes, 0 Críticos, 0 Mayores y 10 Menores**. DEF-14, DEF-19, DEF-32 y DEF-33 cerrados el 16/11 |
 | 6. Informe de seguridad | `07-informe-seguridad.md` | Clase 11: 8 CUMPLE y 2 mixtos, ninguno NO CUMPLE. Pruebas en vivo (JWT, BFLA, BOLA, mass assignment, inyección, cabeceras, CORS, errores), fuerza bruta en el login (429), Trivy 0 HIGH/CRITICAL, ZAP 0 High, secretos en 0. Declara la decisión de diseño de los `GET` de servicios (ADR-008) |
 | 7. Declaración y plan de IA | Gobernanza de IA (Clase 14), `Clase14_Grupo4_Ambiente_IA.pdf`, no versionada en este repo. 8.1 (uso de IA en testing) y 8.2 (plan de IA) se actualizan en el documento de Drive (lo hace el líder). **8.3 (IA integrada en el sistema): no aplica**, el sistema no incorpora funcionalidad de IA | Se entrega en Teams junto con este paquete |
 | 8. Lecciones aprendidas | `08-lecciones-aprendidas.md` | Once casos; proponemos presentar los tres primeros |
@@ -58,11 +58,11 @@ El script falla si falta alguno de los `01` a `08`, para no entregar un PDF inco
 
 | Tema | Estado | Responsable |
 |---|---|---|
-| **Merge de los PR del Frontend** #977, #978, #979 y #980 | **PENDIENTE**: CI en verde; de ellos dependen DEF-29 a DEF-33, la fuerza bruta en el login y 6 de los 10 criterios del Eje A | Líder del repositorio del Frontend |
+| **Merge de los PR del Frontend** #979 y #980 | **PENDIENTE**: CI en verde; de ellos dependen DEF-29 a DEF-31 y 6 de los 10 criterios del Eje A | Líder del repositorio del Frontend |
 | **Cobertura del frontend ≥ 90 % con umbral** | **PENDIENTE** (en curso, Frontend #975, DEF-35) | Nicolas Facundo Llousas |
 | **Mutation testing del frontend** | **PENDIENTE** (Stryker en curso, DEF-35) | Nicolas Facundo Llousas |
 | **3 corridas del CI del frontend** con el arreglo de los tests inestables | **PENDIENTE** (3 corridas locales idénticas hechas) | Nicolas Facundo Llousas |
-| **Gate de SonarCloud bloqueante en el Frontend** | **PENDIENTE**: PR FE #972 sin mergear; `sonar` no es check obligatorio del Frontend | Líder del repositorio |
+| **`sonar` como check obligatorio del Frontend** | **PENDIENTE**: el gate ya es bloqueante (FE #972, mergeado el 16/11), pero `sonar` no figura entre los checks obligatorios del Frontend | Líder del repositorio |
 | **Re-correr ZAP y `scripts/security-live.mjs` contra Render** con #701 en `main` | **PENDIENTE**: Render sirve `main`, sin #701 | Equipo |
 | **Reporte final de ZAP** archivado en `evidencia/` | **NO HECHO**: la corrida final ([run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357)) vive como artifact (90 días); en el repo están los reportes de la del 15/11 | Equipo |
 | **Cerrar el issue BE #692** (DEF-14) | El cambio ya se aplicó (e2e obligatorio); el issue sigue abierto | Líder del repositorio |
