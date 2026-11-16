@@ -33,7 +33,7 @@ export class QueryContainersDto extends PaginationQueryDto {
   zoneId?: string;
 
   @ApiPropertyOptional({
-    description: 'Buscar por dirección (coincidencia parcial)',
+    description: 'Buscar por código o dirección (coincidencia parcial, case-insensitive)',
     example: 'Rivadavia',
   })
   @IsOptional()

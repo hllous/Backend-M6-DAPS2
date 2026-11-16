@@ -134,8 +134,9 @@ export class QueryEnvironmentalReportsDto extends PaginationQueryDto {
   zoneId?: string;
 
   @ApiPropertyOptional({
-    description: 'Buscar por dirección (parcial, case-insensitive)',
-    example: 'Cintura',
+    description:
+      'Buscar por dirección, número de expediente (`caseNumber`, EXP-…) o número de reclamo de M2 (`publicId`, TK-…); parcial, case-insensitive',
+    example: 'EXP-2026-000015',
   })
   @IsOptional()
   @SearchText()

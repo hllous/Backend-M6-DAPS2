@@ -85,7 +85,7 @@ export class NeighborhoodsCatalogService implements OnApplicationBootstrap, OnMo
       (b) =>
         (!filtro.soloActivos || b.activo) &&
         (!filtro.zona || b.zona === filtro.zona) &&
-        (!q || b.nombre.toLowerCase().includes(q) || b.codigo.includes(q)),
+        (!q || b.nombre.toLowerCase().includes(q) || b.codigo.toLowerCase().includes(q)),
     );
   }
 

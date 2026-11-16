@@ -32,3 +32,4 @@ Cada ADR nuevo sigue la plantilla [MADR](https://adr.github.io/madr/) de [`_temp
 | [014](adr-014-patron-state-maquinas-de-estado.md) | Patrón State: máquinas de estado como tablas de transiciones | Aceptado | 2026-11-10 |
 | [015](adr-015-patron-outbox-inbox.md) | Patrón Outbox/Inbox para la mensajería con el bus | Aceptado | 2026-11-10 |
 | [016](adr-016-patron-adapter-puerto-de-identidad.md) | Patrón Adapter: puerto de identidad hacia M1 | Aceptado | 2026-11-10 |
+| [017](adr-017-herramientas-analisis-estatico-y-seguridad.md) | Herramientas de análisis estático y de seguridad (SonarCloud, Trivy y ZAP) | Aceptado | 2026-11-15 |

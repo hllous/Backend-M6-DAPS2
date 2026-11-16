@@ -73,7 +73,10 @@ export class RoutesService {
       where.stops = { some: { zoneId: query.zoneId } };
     }
     if (query.search) {
-      where.name = { contains: query.search, mode: 'insensitive' };
+      where.OR = [
+        { code: { contains: query.search, mode: 'insensitive' } },
+        { name: { contains: query.search, mode: 'insensitive' } },
+      ];
     }
 
     const [routes, total] = await Promise.all([

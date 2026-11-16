@@ -5,11 +5,12 @@ Documentación del proceso Scrum del equipo — cómo trabajamos.
 ## Qué hay acá
 
 - [`definition-of-done.md`](definition-of-done.md) — criterios que una tarjeta debe cumplir para pasar a "Hecho".
+- [`bitacora-entrega-4.md`](bitacora-entrega-4.md) — bitácora del equipo del sprint de la Entrega 4 (herramientas de análisis y cierre de QA).
 
 ## Qué NO hay acá
 
 - **Actas de sprint planning y retrospectivas.** Las llevamos aparte, no en el repo.
-- **Bitácoras individuales del challenge de la cátedra.** Son personales de cada integrante y no viven en el repo compartido.
+- **Bitácoras individuales del challenge de la cátedra** (la bitácora de equipo de un sprint sí puede vivir acá). Son personales de cada integrante y no viven en el repo compartido.
 - **Estado vivo del tablero de tareas.** Vive en Trello.
 
 ## Cadencia del proyecto
