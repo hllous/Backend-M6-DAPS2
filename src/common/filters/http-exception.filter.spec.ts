@@ -2,6 +2,7 @@ import {
   ArgumentsHost,
   BadRequestException,
   ForbiddenException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
@@ -40,7 +41,7 @@ describe('HttpExceptionFilter', () => {
     });
   });
 
-  it('no devuelve en path los tokens de la query', () => {
+  it('no devuelve la query en path (ni los tokens ni el resto, DEF-19)', () => {
     const status = vi.fn(() => ({ type }));
     const h = {
       switchToHttp: () => ({
@@ -49,7 +50,7 @@ describe('HttpExceptionFilter', () => {
       }),
     } as unknown as ArgumentsHost;
     filter.catch(new NotFoundException('x'), h);
-    expect(captured().path).toBe('/zones?access_token=[REDACTED]&page=2');
+    expect(captured().path).toBe('/zones');
   });
 
   it('conserva el code de la excepción (403 ROLE_REQUIRED) y no agrega uno si no hay', () => {
@@ -110,10 +111,11 @@ describe('HttpExceptionFilter', () => {
         error: 'Not Found',
         timestamp: expect.any(String),
         path: '/containers/abc',
+        traceId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       });
     });
 
-    it('instance sale redactada igual que path', () => {
+    it('instance sale sin query, igual que path', () => {
       const status = vi.fn(() => ({ type }));
       const h = {
         switchToHttp: () => ({
@@ -122,7 +124,7 @@ describe('HttpExceptionFilter', () => {
         }),
       } as unknown as ArgumentsHost;
       filter.catch(new NotFoundException('x'), h);
-      expect(captured().instance).toBe('/zones?access_token=[REDACTED]');
+      expect(captured().instance).toBe('/zones');
     });
 
     it('el arreglo de validación va unido en detail y message', () => {
@@ -155,6 +157,47 @@ describe('HttpExceptionFilter', () => {
         detail: 'Error interno del servidor',
       });
       expect(JSON.stringify(body)).not.toContain('secreto');
+    });
+
+    describe('id de correlación (DEF-19)', () => {
+      const TRACE = '3f0c1a52-9a43-4b47-8f2c-1d3e5b7a9c01';
+      const conTrace = (url = '/zones/1?token=SECRETO') => {
+        const status = vi.fn(() => ({ type }));
+        return {
+          switchToHttp: () => ({
+            getResponse: () => ({ status, locals: { traceId: TRACE } }),
+            getRequest: () => ({ url, method: 'GET' }),
+          }),
+        } as unknown as ArgumentsHost;
+      };
+
+      it('devuelve el traceId del request (el de X-Request-Id) en cualquier error', () => {
+        filter.catch(new NotFoundException('x'), conTrace());
+        expect(captured().traceId).toBe(TRACE);
+      });
+
+      it('el 500 loguea el mismo traceId con el stack, y el cliente no recibe ni stack ni query', () => {
+        const log = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+        const err = new Error('boom interno');
+        filter.catch(err, conTrace());
+
+        const body = captured();
+        expect(body).toMatchObject({ status: 500, traceId: TRACE, path: '/zones/1' });
+        expect(JSON.stringify(body)).not.toMatch(/boom|at |SECRETO|stack/);
+        expect(log).toHaveBeenCalledWith(
+          expect.stringContaining(`[traceId=${TRACE}] GET /zones/1`),
+          err.stack,
+        );
+        expect(String(log.mock.calls[0][0])).not.toContain('SECRETO');
+        log.mockRestore();
+      });
+
+      it('un 4xx no se loguea como error', () => {
+        const log = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+        filter.catch(new NotFoundException('x'), conTrace());
+        expect(log).not.toHaveBeenCalled();
+        log.mockRestore();
+      });
     });
 
     it('429 (ThrottlerException) sale como problem+json', () => {

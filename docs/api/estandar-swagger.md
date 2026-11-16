@@ -312,12 +312,14 @@ Todos los errores (400/401/403/404/409/422/429/5xx) se sirven como **Problem Det
   "message": "Container with id 123e4567-... not found",
   "error": "Not Found",
   "timestamp": "2026-08-20T10:00:00.000Z",
-  "path": "/containers/123e4567-e89b-12d3-a456-426614174000"
+  "path": "/containers/123e4567-e89b-12d3-a456-426614174000",
+  "traceId": "3f0c1a52-9a43-4b47-8f2c-1d3e5b7a9c01"
 }
 ```
 
-- RFC 9457: `type` (`about:blank` mientras no haya un tipo propio), `title` (frase del status), `status`, `detail` y `instance` (ruta, con tokens de la query redactados).
+- RFC 9457: `type` (`about:blank` mientras no haya un tipo propio), `title` (frase del status), `status`, `detail` e `instance` (la ruta, **sin la query**, desde #696).
 - Compatibilidad: se mantienen `statusCode`, `message`, `error`, `timestamp`, `path` y, en algunos errores, `code` (`ROLE_REQUIRED`, `NOT_ASSIGNED`). `detail` = `message` y `instance` = `path`. Un arreglo de validación de class-validator va unido con `; `.
+- `traceId` (#696, DEF-19): id de correlación del request, igual al header `X-Request-Id` de la respuesta. En un 500 es lo único que ve el cliente; el servidor loguea el stack con ese mismo id (`Unhandled exception [traceId=…]`). Si el cliente manda un `X-Request-Id` con forma de UUID, se adopta; si no, se genera uno.
 - Definir un DTO `ErrorResponseDto` y reutilizarlo en todos los `@ApiResponse` de error. No hace falta declarar el media type: `createOpenApiDocument()` (`src/swagger-config.ts`) reescribe `application/json` a `application/problem+json` en toda respuesta 4xx/5xx del documento.
 
 ---

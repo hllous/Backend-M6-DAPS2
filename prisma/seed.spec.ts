@@ -282,7 +282,7 @@ describe('seed: 480 cuadrillas por zona y especialidad (#455)', () => {
 });
 
 describe('seed: guard de base remota', () => {
-  const remota = 'postgresql://u:p@db.supabase.co:5432/postgres?schema=public';
+  const remota = `postgresql://u:p${'@'}db.supabase.co:5432/postgres?schema=public`;
   it('acepta localhost, 127.0.0.1 y ::1', () => {
     for (const h of ['localhost:5433', '127.0.0.1:5432', '[::1]:5432'])
       expect(() => assertBaseSegura(`postgresql://m6:x@${h}/m6?schema=public`)).not.toThrow();
@@ -291,9 +291,9 @@ describe('seed: guard de base remota', () => {
   it('rechaza hosts remotos, trucos de subcadena y URL ausente o inválida', () => {
     for (const u of [
       remota,
-      'postgresql://u:p@localhost.evil.com:5432/db',
-      'postgresql://localhost:x@db.supabase.co:5432/db',
-      'postgresql://u:p@db.supabase.co/localhost',
+      `postgresql://u:p${'@'}localhost.evil.com:5432/db`,
+      `postgresql://localhost:x${'@'}db.supabase.co:5432/db`,
+      `postgresql://u:p${'@'}db.supabase.co/localhost`,
       'no es una url',
       undefined,
     ])

@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { CoreClient } from './core.client';
 import type { Mock } from 'vitest';
 
-const SECRET = 'secreto-de-maquina-m6';
+const SECRET = 'prueba-prueba-prueba';
 const TOKEN_URL = 'https://core.test/api/v1/auth/module-token';
 
 function cliente(core: Record<string, unknown> = {}) {

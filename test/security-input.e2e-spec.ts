@@ -1,5 +1,6 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
+import { DOCS_CSP } from '../src/common/middleware/security-headers.middleware';
 import { EVIDENCE_STORAGE } from '../src/modules/attachments/storage/evidence-storage.interface';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -159,11 +160,11 @@ describe('Seguridad de entrada (e2e)', () => {
       );
     });
 
-    // Swagger no se monta en createTestApp (404): solo se prueba que el middleware
-    // no agrega CSP en esa ruta. Que Swagger UI renderice no está verificado en e2e.
-    it('el middleware no agrega CSP en /api/docs (aunque acá responda 404)', async () => {
+    // Swagger no se monta en createTestApp (404): acá solo se prueba que el
+    // middleware usa la CSP propia de Swagger UI. Montado, en security-live.
+    it('en /api/docs el middleware usa la CSP de Swagger UI (DEF-19)', async () => {
       const res = await request(app.getHttpServer()).get('/api/docs');
-      expect(res.headers['content-security-policy']).toBeUndefined();
+      expect(res.headers['content-security-policy']).toBe(DOCS_CSP);
     });
   });
 });

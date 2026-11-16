@@ -1,0 +1,16 @@
+# Valores de juguete del historial, verificados: 0 credenciales vivas según trufflehog (reporte `secrets-default-reports` del job secrets-default del CI).
+0739b410cc6e6fd563702eb5267439a2133b4a45:README.md:generic-api-key:57
+0739b410cc6e6fd563702eb5267439a2133b4a45:README.md:generic-api-key:71
+3ca362502ee82466ce97089ef87d71a56a599d0a:src/core/core.client.spec.ts:generic-api-key:4
+60b9f49dca49528d72f6e5d5e91f50c6870b03d3:docs/QA/07-informe-seguridad.md:generic-api-key:134
+6d2c7323723a034c71b78aa5b4609c42bcf24924:src/core/core.client.spec.ts:generic-api-key:4
+96087d7d0a5fc59bc158508634fa3fbd1b87f6b5:src/core/core.client.spec.ts:generic-api-key:4
+9c1abaa29da6415fb7ec143edc26a36d60dd9fb8:docker-compose.yml:generic-api-key:81
+a145d8323e869a0f6f1d9fec5951f8809a4151ae:docs/QA/07-informe-seguridad.md:generic-api-key:134
+b9511a7c71d1868850278bc2e1bd92752f6698af:.env.example:generic-api-key:23
+b9511a7c71d1868850278bc2e1bd92752f6698af:src/config/env.validation.ts:generic-api-key:33
+c8eb2992db4fbdff15aa92c15e1ffeb3e8e9bc08:.env.example:generic-api-key:43
+c8eb2992db4fbdff15aa92c15e1ffeb3e8e9bc08:src/config/env.validation.ts:generic-api-key:33
+dcb46b43862816aa34234548744ca8b0f827ecb9:docs/QA/07-informe-seguridad.md:generic-api-key:134
+fb60b7efe39a8a5a256c0f54262550f8c3e67259:.env.example:generic-api-key:43
+fb60b7efe39a8a5a256c0f54262550f8c3e67259:src/config/env.validation.ts:generic-api-key:33

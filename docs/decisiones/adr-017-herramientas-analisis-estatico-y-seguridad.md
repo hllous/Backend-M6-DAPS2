@@ -139,7 +139,7 @@ Cómo sumar tres herramientas sin tumbar G3, sin atacar producción, sin duplica
 ### Negative Consequences
 
 - El gate de Sonar **no es bloqueante** todavía (#660): un PR con un hallazgo nuevo puede mergearse con el check en rojo.
-- Hay un Medium de ZAP que es artefacto del entorno efímero (CORS `*`) y otro de producción aceptado (CSP en `/api/docs`, DEF-19).
+- Hay un Medium de ZAP que es artefacto del entorno efímero (CORS `*`) y otro de producción (CSP ausente en `/api/docs`, DEF-19), corregido en #696 con una CSP propia compatible con Swagger UI.
 - El activo se arma con los ejemplos del OpenAPI: la mayoría de las respuestas son 4xx; no prueba ausencia de fallas de lógica de negocio.
 - Trivy y ZAP no bloquean el merge: es política, no un olvido.
 

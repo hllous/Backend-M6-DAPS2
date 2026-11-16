@@ -284,6 +284,88 @@ jobs:
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
             git /repo --redact --no-banner --log-opts="--all"
 
+  # secrets-default: lo mismo que `secrets` pero como lo corre la cátedra:
+  # gitleaks con la configuración POR DEFECTO (se borra .gitleaks.toml y se respeta
+  # .gitleaksignore, que es lo que ve la cátedra; el historial no se toca) y trufflehog,
+  # sobre todas las ramas y tags. Muestra qué ve una herramienta
+  # sin nuestras excepciones (frena si gitleaks por defecto encuentra algo en el historial, o si
+  # trufflehog verifica una credencial viva). Los reportes se publican como artifact con los
+  # valores redactados (en trufflehog se eliminan Raw/RawV2).
+  secrets-default:
+    name: secrets-default
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (historial completo, todas las ramas y tags)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Carpeta de reportes
+        run: echo "REPORTS=$RUNNER_TEMP/secrets-reports" >> "$GITHUB_ENV"
+
+      - name: Gitleaks con configuración por defecto
+        continue-on-error: true
+        run: |
+          rm -f .gitleaks.toml
+          mkdir -p "$REPORTS"
+          docker run --rm -v "$PWD:/repo" -v "$REPORTS:/reports" zricethezav/gitleaks:v8.30.1 \
+            git /repo --redact --no-banner --log-opts="--all" \
+            --report-format json --report-path /reports/gitleaks-default.json || true # se evalúa en el último paso
+          # Estado actual de los archivos (no el historial).
+          docker run --rm -v "$PWD:/repo" -v "$REPORTS:/reports" zricethezav/gitleaks:v8.30.1 \
+            dir /repo --redact --no-banner \
+            --report-format json --report-path /reports/gitleaks-default-worktree.json
+
+      - name: Trufflehog (acción oficial, historial de la rama)
+        continue-on-error: true
+        uses: trufflesecurity/trufflehog@3bd2b5887eb0efb8fa18bfd1d296032924e4ffdc # v3.99.9
+        with:
+          head: HEAD
+          version: 3.99.9
+          extra_args: --results=verified,unknown,unverified,filtered_unverified
+
+      - name: Trufflehog JSON sobre todas las ramas y tags
+        continue-on-error: true
+        run: |
+          mkdir -p "$REPORTS"
+          docker run --rm -v "$PWD:/tmp" -w /tmp ghcr.io/trufflesecurity/trufflehog:3.99.9 \
+            git file:///tmp/ --json --no-update \
+            --results=verified,unknown,unverified,filtered_unverified \
+            > "$REPORTS/trufflehog-raw.jsonl"
+          jq -c 'del(.Raw, .RawV2)' "$REPORTS/trufflehog-raw.jsonl" \
+            > "$REPORTS/trufflehog-default.jsonl"
+          rm "$REPORTS/trufflehog-raw.jsonl"
+          # Estado actual de los archivos (no el historial).
+          printf '/\\.git/\n' > "$RUNNER_TEMP/th-exclude.txt"
+          docker run --rm -v "$PWD:/tmp" -v "$RUNNER_TEMP/th-exclude.txt:/th-exclude.txt" -w /tmp \
+            ghcr.io/trufflesecurity/trufflehog:3.99.9 \
+            filesystem /tmp --json --no-update --exclude-paths=/th-exclude.txt \
+            --results=verified,unknown,unverified,filtered_unverified \
+            | jq -c 'del(.Raw, .RawV2)' > "$REPORTS/trufflehog-default-worktree.jsonl"
+
+      # Frenantes del job: algún hallazgo de gitleaks por defecto en el historial
+      # (los valores de juguete ya conocidos están en .gitleaksignore) o una
+      # credencial VERIFICADA como viva por trufflehog. Trufflehog sin verificar y
+      # el estado actual de los archivos son informativos.
+      - name: Fallar ante hallazgos de gitleaks o verificados de trufflehog
+        run: |
+          g=$(jq 'length' "$REPORTS/gitleaks-default.json")
+          v=$(jq -s '[.[] | select(.Verified == true)] | length' "$REPORTS/trufflehog-default.jsonl" "$REPORTS/trufflehog-default-worktree.jsonl")
+          echo "gitleaks (historial, sin .gitleaks.toml): $g hallazgos; trufflehog verificados: $v"
+          test "$g" -eq 0 && test "$v" -eq 0
+
+      - name: Publicar reportes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secrets-default-reports
+          path: ${{ runner.temp }}/secrets-reports/
+          if-no-files-found: warn
+          retention-days: 14
+
   # ──────────────────────────────────────────────────────────────
   # audit — Vulnerabilidades de dependencias de producción.
   #

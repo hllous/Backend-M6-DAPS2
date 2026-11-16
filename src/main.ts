@@ -2,10 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { configureApp } from './configure-app';
-import { createOpenApiDocument } from './swagger-config';
+import { buildCorsOptions } from './common/http/cors-options';
+import { setupSwagger } from './swagger-config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -16,18 +16,10 @@ async function bootstrap() {
   configureApp(app);
 
   // ─── CORS ──────────────────────────────────────
-  // Sin CORS_ORIGINS se aceptan todos, que es lo que hace falta en desarrollo.
-  // En producción la validación de entorno no deja arrancar sin la URL del
-  // frontend (#642), así que el caso abierto queda para local y test.
-  //
-  // Alcance: el JWT viaja en un header y no en una cookie, asi que esto no
-  // cierra un CSRF — no habia uno. Evita que un sitio cualquiera use la API
-  // desde el navegador de un usuario nuestro.
+  // Opciones y razones en common/http/cors-options.ts: sin CORS_ORIGINS queda
+  // abierto (desarrollo), nunca con credenciales.
   const corsOrigins = configService.get<string[]>('corsOrigins');
-  // allowedHeaders sin definir: se refleja lo que pide el preflight, así que If-Match e Idempotency-Key ya pasan.
-  // ETag (ADR-012) e Idempotency-Replayed (ADR-013) se exponen para que el frontend, en otro origen, pueda leerlos.
-  const exposedHeaders = ['ETag', 'Idempotency-Replayed'];
-  app.enableCors({ ...(corsOrigins?.length ? { origin: corsOrigins } : {}), exposedHeaders });
+  app.enableCors(buildCorsOptions(corsOrigins));
   logger.log(
     corsOrigins?.length
       ? `CORS restringido a: ${corsOrigins.join(', ')}`
@@ -37,12 +29,7 @@ async function bootstrap() {
   // ─── Swagger ───────────────────────────────────
   // La configuración vive en swagger-config.ts porque el script que
   // genera docs/api/openapi.json usa exactamente la misma.
-  const document = createOpenApiDocument(app);
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
+  setupSwagger(app);
 
   // ─── Start ─────────────────────────────────────
   const port = configService.get<number>('port', 3000);

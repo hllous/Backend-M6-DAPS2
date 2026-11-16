@@ -1,0 +1,33 @@
+# GitHub solo cierra los issues de "Closes #N" cuando el PR entra a la rama por
+# defecto (main). Con el flujo develop → test → main los issues quedarían
+# abiertos hasta la promoción: este workflow los cierra al integrar a develop o test.
+name: Cerrar issues al integrar
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [develop, test]
+
+permissions:
+  issues: write
+
+jobs:
+  close:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Cerrar los issues referenciados con Closes/Fixes/Resolves
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$BODY" \
+            | grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?):? +#[0-9]+' \
+            | grep -oE '[0-9]+$' | sort -un \
+            | while read -r n; do
+                gh issue close "$n" --reason completed \
+                  --comment "Resuelto por el PR #$PR, integrado a \`${{ github.event.pull_request.base.ref }}\`." || true
+              done
