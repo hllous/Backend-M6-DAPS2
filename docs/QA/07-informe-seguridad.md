@@ -7,7 +7,7 @@
 - Cada control se **reverificó contra el código y los tests actuales**. Los veredictos originales de las tarjetas SEC de Trello quedaron viejos: se citan solo para mostrar qué cambió.
 - **Regla de evidencia:** un CUMPLE sin test ejecutado ni evidencia se toma como NO VERIFICABLE. Por eso un CUMPLE acá siempre cita un test que corrió (**R08**: 2746 unitarios y 312 e2e pasan, 4 de 4 en RabbitMQ real, 0 fallos; **R09**: 2854 unitarios y 343 e2e pasan, 0 fallos; CI de `develop` en verde, run [42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201)) o una prueba observable. No repetimos el cotejo test por test de cada CUMPLE en R09: siguen citando la evidencia de R08.
 - La revisión de código sola, sin test, deja el control en NO VERIFICABLE.
-- Las pruebas de entrada (SQL, XSS, mass assignment, 413, CSP) se ejecutaron **contra la aplicación levantada en el e2e local y en el CI**, no contra el despliegue de Render. No ejecutamos ataques en vivo contra el despliegue: el escaneo activo de ZAP corre contra un entorno efímero y contra Render solo corre el baseline pasivo (5.2). Trivy no se corrió. Lo que depende de eso figura como NO VERIFICABLE o NO HECHO.
+- Las pruebas de entrada (SQL, XSS, mass assignment, 413, CSP) se ejecutaron **contra la aplicación levantada en el e2e local y en el CI**, no contra el despliegue de Render. No ejecutamos ataques en vivo contra el despliegue: el escaneo activo de ZAP corre contra un entorno efímero y contra Render solo corre el baseline pasivo (5.2). Trivy corre en el CI sobre el lockfile, la imagen y la configuración (5.2). Lo que depende de eso figura como NO VERIFICABLE o NO HECHO.
 - Estados: **CUMPLE**, **NO CUMPLE**, **NO VERIFICABLE**, **N/A** (no aplica a este módulo). **Mixto** agrupa los controles con una parte en cada estado.
 
 ## 2. Resumen
@@ -20,7 +20,7 @@
 | NO VERIFICABLE | 0 | 0 |
 | N/A | 0 | 5 (NoSQL, XXE, fuerza bruta en login, cookies, hash de contraseñas) |
 
-Hallazgos mayores abiertos: **errores 500 sin id de correlación** (SEC-W05; el formato RFC 9457 ya está hecho: DEF-10), **sin Trivy** (DEF-13) y **1 alerta High de ZAP** (DOMPurify 3.1.4 en el Swagger UI, #668; severidad a decidir por el líder). Cerrados: **auditoría de lecturas Tier 2** (DEF-09, SEC-D02, #643), **dependencias sin altas ni críticas** (DEF-08, #619; las 8 moderadas restantes se cerraron con NestJS 12, #628), **rate limiting** (DEF-07, #580), **logs con `access_token`** (DEF-22, #581), **errores en Problem Details** (DEF-10, #590; no cambia el veredicto de SEC-W05 por el id de correlación), **ETag con 412** (DEF-05, #591) e **`Idempotency-Key`** (DEF-06, #592). No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06-registro-defectos.md`](06-registro-defectos.md).
+Hallazgos mayores abiertos: **errores 500 sin id de correlación** (SEC-W05; el formato RFC 9457 ya está hecho: DEF-10), Trivy en verde (DEF-13, parte de Trivy cerrada) y **1 alerta High de ZAP** (DOMPurify 3.1.4 en el Swagger UI, #668; severidad a decidir por el líder). Cerrados: **auditoría de lecturas Tier 2** (DEF-09, SEC-D02, #643), **dependencias sin altas ni críticas** (DEF-08, #619; las 8 moderadas restantes se cerraron con NestJS 12, #628), **rate limiting** (DEF-07, #580), **logs con `access_token`** (DEF-22, #581), **errores en Problem Details** (DEF-10, #590; no cambia el veredicto de SEC-W05 por el id de correlación), **ETag con 412** (DEF-05, #591) e **`Idempotency-Key`** (DEF-06, #592). No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06-registro-defectos.md`](06-registro-defectos.md).
 
 ## 3. Controles de la Clase 11 (SEC-W01 a SEC-D02)
 
@@ -159,7 +159,23 @@ Limitación: ZAP arma los pedidos con los ejemplos del OpenAPI; la mayoría de l
 | Informational | *Sensitive Information in URL* (`ticketId` en la query de `GET /environmental-reports` y `GET /services`) | Falso positivo del patrón: es un id de ticket usado como filtro, no una credencial |
 | Informational | Client Error (415), Non-Storable Content, Sec-Fetch-\* | Sin acción: es el ruido esperado de un escaneo activo |
 
-**Trivy: NO HECHO** (DEF-13).
+**Trivy: HECHO (#658), en verde.** Job `trivy` del CI, con tres pasadas (`fs` con lockfile y secretos, `image` con la imagen del `Dockerfile` y `config` con `Dockerfile` y `docker-compose.yml`). Cada una sube su SARIF a Code Scanning (categorías `trivy-fs`, `trivy-image`, `trivy-config`; HIGH y CRITICAL, incluidas las sin fix) y después corre un gate que falla con HIGH/CRITICAL **con fix**. El job frena el deploy (`deploy` depende de él), no el merge.
+
+| Pasada | Resultado ([run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43784574768)) |
+|---|---|
+| `fs` (lockfile y secretos) | 0 HIGH/CRITICAL con fix, 0 secretos |
+| `image` | 0 HIGH/CRITICAL con fix |
+| `config` | 0 HIGH/CRITICAL |
+
+**Hallazgos de la primera corrida ([run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43762807669)):** el gate de `image` falló con 6 HIGH con fix en el `npm` embebido de `node:24-alpine` (brace-expansion 5.0.9 y undici 6.28.0; #665) y el de `config` con DS-0002, el contenedor corría como root (#666). Se corrigieron en `develop` (DEF-26: npm 11.21.2 y `USER node`) y el job quedó en verde sin entradas en `.trivyignore`.
+
+**Tabla de HIGH/CRITICAL sin fix (`.trivyignore`):**
+
+| CVE | Paquete | Justificación | Mitigación |
+|---|---|---|---|
+| — | — | Ninguna HIGH/CRITICAL sin fix; `.trivyignore` está vacío | — |
+
+**Prueba en rojo (una vez):** con `lodash@4.17.15` (CVE-2020-8203, CVE-2021-23337 y CVE-2026-4800, todas HIGH con fix) en un PR descartable (#664, cerrado sin mergear), los tres gates fallaron: [run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43763092974). El gate de `fs` listó las 3 CVE de lodash y el de `image` las encontró también en la imagen.
 
 **Alerta High *Vulnerable JS Library* (DOMPurify, #668, DEF-25).** El baseline de ZAP contra Render reportó DOMPurify 3.1.4 en el `swagger-ui-bundle.js` de `/api/docs`. Es la versión que trae `swagger-ui-dist` 5.17.14, la de `main` (`@nestjs/swagger` 7.4.2). `develop` ya usa `swagger-ui-dist` 5.34.1 (#628), cuyo bundle trae **DOMPurify 3.4.17** (verificado en `node_modules/swagger-ui-dist/swagger-ui-bundle.js`); el `swagger-ui-dist` 5.35.0, el último, trae la misma. No existe una versión con DOMPurify 3.4.18, que corrige un aviso de severidad media (GHSA-qm7q-q8h9-jg8q) aún presente en 3.4.17; las altas y la crítica de DOMPurify se corrigieron en 3.4.5 y 3.4.17. No se mitigó ocultando `/api/docs`: la corrección es el despliegue. El baseline queda en 0 High recién cuando `develop` llegue a `main` y Render despliegue; hay que volver a correr el workflow `dast` para confirmarlo.
 
@@ -206,7 +222,7 @@ Limitación: gitleaks no analiza el contenido de los PDF ni de los binarios.
 | 1 | Dependencias de producción: la crítica, las 6 altas y las 8 moderadas se resolvieron | Mayor (cerrado) | **Cerrado** (#619 y #628): `npm audit fix` (#566), `overrides` y `zod` 4, después NestJS 12 sin `overrides`; job `audit` gate y Dependabot (#578). Trivy en DEF-13 | DEF-08 (cerrado) |
 | 2 | Sin rate limiting fuera del portal público | Mayor | **Cerrado** (#568, PR #580) | DEF-07 |
 | 3 | Sin auditoría de lecturas Tier 2 (SEC-D02) | Mayor (cerrado) | **Cerrado** (#643): `AuditService.recordRead` sobre los tres `GET` con datos Tier 2 | DEF-09 (cerrado) |
-| 4 | ZAP hecho (#659) con 1 High abierta en el baseline: DOMPurify del Swagger UI (#668); sin Trivy (SCA en el CI como gate desde #628, Dependabot, CodeQL y gitleaks sí) | Mayor (propuesta) | ZAP: workflow `dast`, corrida del 15/11; corrección de la High en #668. Trivy sin hacer | DEF-13 |
+| 4 | ZAP hecho (#659) con 1 High abierta en el baseline: DOMPurify del Swagger UI (#668); Trivy hecho (#658, en verde; SCA en el CI como gate desde #628, Dependabot, CodeQL y gitleaks sí) | Mayor (propuesta) | ZAP: workflow `dast`, corrida del 15/11; corrección de la High en #668. Trivy: job `trivy` del CI | DEF-13 |
 | 5 | Errores 500 sin id de correlación (SEC-W05); el formato RFC 9457 ya está | Mayor | Agregar el id de correlación al filtro y al log (sin hacer). El formato se **cerró** (#590, PR #597) | DEF-10 (cerrado) |
 | 6 | CORS abierto si falta `CORS_ORIGINS`; ambas variables cargadas en Render | Menor (cerrado) | **Cerrado** (#642): en producción la validación de entorno exige `CORS_ORIGINS` | DEF-18 |
 | 7 | Swagger UI público y sin CSP en producción | Menor | Decisión documentada por Swagger UI; ocultarlo o aceptarlo | DEF-19 |

@@ -75,9 +75,9 @@ Ninguna abierta.
 | HU | HU-31 |
 | Pasos | Revisar `.github/workflows/` y `.github/dependabot.yml` |
 | Esperado | Escaneo de dependencias, de secretos y análisis dinámico |
-| Obtenido | **Hecho:** `npm audit` (job `audit`, #571; gate desde #628), Dependabot semanal, CodeQL (`codeql.yml`), gitleaks sobre el historial completo (job `secrets`, #494). **Hecho en #658:** Trivy (job `trivy`: `fs`, `image` y `config`, con SARIF a Code Scanning y gate sobre HIGH/CRITICAL con fix; hallazgos #665 y #666). **No hecho:** OWASP ZAP. No revisamos las alertas de CodeQL (el workflow termina en `success`) |
+| Obtenido | **Hecho:** `npm audit` (job `audit`, #571; gate desde #628), Dependabot semanal, CodeQL (`codeql.yml`), gitleaks sobre el historial completo (job `secrets`, #494). **Hecho en #658:** Trivy (job `trivy`: `fs`, `image` y `config`, con SARIF a Code Scanning y gate sobre HIGH/CRITICAL con fix; hallazgos #665 y #666, corregidos: DEF-26). **No hecho:** OWASP ZAP. No revisamos las alertas de CodeQL (el workflow termina en `success`) |
 | Evidencia | `.github/workflows/ci.yml` (jobs `audit` y `secrets`), `.github/workflows/codeql.yml`, `.github/dependabot.yml` |
-| Estado | Abierto, **parcial**: la parte de Trivy está hecha; faltan ZAP y SonarCloud |
+| Estado | Abierto, **parcial**: la parte de Trivy está hecha y en verde |
 
 ### Menores
 
@@ -132,7 +132,7 @@ No omitimos nada conocido: estas pruebas **no se hicieron** y no se presentan co
 | Quality Gate de SonarCloud | NO HECHO | Pide un administrador de `hllous`; no hay cuenta ni `sonar-project.properties` |
 | Job `e2e` obligatorio en la protección de ramas | NO HECHO | Pide admin. El e2e corre y pasa, pero la regla exige solo `build` y `test` (DEF-14) |
 | OWASP ZAP baseline y activo autenticado | HECHO el 15/11 (#659) | 1 High abierta en el baseline: DOMPurify del Swagger UI, #668. Ver `07`, 5.2 |
-| Trivy | NO HECHO | No se corrió |
+| Trivy | HECHO (#658) | 0 HIGH/CRITICAL con fix; [run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43784574768) |
 | Éxito por endpoint en los 91 endpoints restantes | NO HECHO | Hay caso de éxito en 61 de 152 operaciones; el resto está en `test/api/PENDIENTES.md` |
 | Mutation score: refuerzo de los 21 archivos restantes | PARCIAL | Global de los 26 archivos de dominio confirmado en el CI: 71,22 % → 75,39 % tras reforzar 5 archivos (cumple el 60 %); quedan 21 sin reforzar. Ver [`05`](05-informe-ejecucion.md) §5.1 |
 
