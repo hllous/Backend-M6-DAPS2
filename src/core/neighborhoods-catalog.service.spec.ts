@@ -56,6 +56,15 @@ describe('NeighborhoodsCatalogService', () => {
     s.onModuleDestroy();
   });
 
+  it('busca por código sin distinguir mayúsculas', async () => {
+    const s = crear(vi.fn().mockResolvedValue(json([{ ...BALVANERA, codigo: 'BALV-03' }])));
+    s.onApplicationBootstrap();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(s.list({ q: 'v-03' }).map((b) => b.codigo)).toEqual(['BALV-03']);
+    s.onModuleDestroy();
+  });
+
   it('acepta la respuesta envuelta en { data }', async () => {
     const s = crear(vi.fn().mockResolvedValue(json({ data: [PALERMO] })));
     await s.refrescar();

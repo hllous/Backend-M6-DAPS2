@@ -62,6 +62,7 @@ export class GreenPointsService {
     }
     if (query.search) {
       where.OR = [
+        { code: { contains: query.search, mode: 'insensitive' } },
         { name: { contains: query.search, mode: 'insensitive' } },
         { address: { contains: query.search, mode: 'insensitive' } },
       ];

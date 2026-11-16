@@ -147,10 +147,11 @@ describe('GreenPointsService', () => {
     });
   });
 
-  it('la búsqueda mira nombre y dirección a la vez', async () => {
+  it('la búsqueda mira código, nombre y dirección a la vez', async () => {
     await service.findAll({ page: 1, pageSize: 20, search: 'mitre' } as any);
 
     expect(prisma.greenPoint.findMany.mock.calls[0][0].where.OR).toEqual([
+      { code: { contains: 'mitre', mode: 'insensitive' } },
       { name: { contains: 'mitre', mode: 'insensitive' } },
       { address: { contains: 'mitre', mode: 'insensitive' } },
     ]);

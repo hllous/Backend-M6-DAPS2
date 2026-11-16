@@ -143,10 +143,11 @@ describe('TreesService', () => {
 
   describe('findAll', () => {
     /** El operador busca "jacarandá" o "Av. Mitre" sin saber en qué campo está. */
-    it('la búsqueda mira especie y dirección a la vez', async () => {
+    it('la búsqueda mira código de relevamiento, especie y dirección a la vez', async () => {
       await service.findAll({ page: 1, pageSize: 20, search: 'jacaranda' } as any);
 
       expect(prisma.tree.findMany.mock.calls[0][0].where.OR).toEqual([
+        { surveyCode: { contains: 'jacaranda', mode: 'insensitive' } },
         { species: { contains: 'jacaranda', mode: 'insensitive' } },
         { address: { contains: 'jacaranda', mode: 'insensitive' } },
       ]);
