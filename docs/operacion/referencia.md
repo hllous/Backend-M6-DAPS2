@@ -24,8 +24,14 @@ IP de salida de Render, para el alta del puerto 5671 del Core (rangos públicos,
 
 | Archivo | Cuándo corre | Qué hace |
 |---|---|---|
-| [`ci.yml`](../../.github/workflows/ci.yml) | PR y push a `develop`, `test`, `main` | Jobs `build` (docs:check, generate, build, lint, OpenAPI al día) y `test` (`test:cov`), obligatorios por branch protection; `e2e` y `secrets` (gitleaks) se miran pero no bloquean. El job `deploy` corre solo en push a `main` y solo si `build` y `test` pasan: hace `POST` al Deploy Hook de Render con el commit exacto |
+| [`ci.yml`](../../.github/workflows/ci.yml) | PR y push a `develop`, `test`, `main` | Jobs `build` (docs:check, generate, build, lint, OpenAPI al día) y `test` (`test:cov`), obligatorios por branch protection; `sonar` (espera el Quality Gate de SonarCloud y falla si da rojo; se saltea sin `SONAR_TOKEN`), `e2e`, `secrets` (gitleaks con `.gitleaks.toml`), `secrets-default` (gitleaks por defecto y trufflehog, como lo corre la cátedra), `audit` y `trivy` corren en el mismo workflow; la cobertura mínima de `test` es 90 % (`vitest.config.ts`). `e2e` y `secrets` se miran pero no bloquean. El job `deploy` corre solo en push a `main` y solo si `build` y `test` pasan: hace `POST` al Deploy Hook de Render con el commit exacto |
 | [`keepalive.yml`](../../.github/workflows/keepalive.yml) | Cron `*/10 * * * *` (en la práctica cada 2-3 horas) y a mano | Pega a `RENDER_HEALTH_URL` con `--max-time 180`; si la variable no existe avisa y sale sin fallar; si la respuesta no es 200 el job queda rojo |
+| [`api-tests.yml`](../../.github/workflows/api-tests.yml) | PR y push a `develop`, `test`, `main` | Levanta backend y base, corre `api:coverage`, la colección Newman (`test/api/`, éxito y error en las 152 operaciones) y Schemathesis (solo `GET`, bloqueante) |
+| [`codeql.yml`](../../.github/workflows/codeql.yml) | PR y push a `develop`, `test`, `main`; cron semanal (miércoles) | CodeQL |
+| [`mutation.yml`](../../.github/workflows/mutation.yml) | Lunes 06:00 UTC y a mano | Mutation testing (Stryker) del dominio |
+| [`dast.yml`](../../.github/workflows/dast.yml) | Lunes 06:00 UTC y a mano | OWASP ZAP: baseline contra Render y activo autenticado contra un `docker compose` efímero (ver [`testing.md`](../testing.md)) |
+| [`g1-arranque.yml`](../../.github/workflows/g1-arranque.yml) | PR que toca el arranque (`docker-compose.yml`, `docker/`, `Dockerfile`, `prisma/`, `README.md`), push a `main` y a mano (`frontend_ref` opcional) | Un `docker compose up --build` en limpio hasta el login por el BFF; falla si tarda más de 15 minutos (ver [`testing.md`](../testing.md#arranque-del-sistema-completo-criterio-g1-698)) |
+| [`close-issues.yml`](../../.github/workflows/close-issues.yml) | PR mergeado a `develop` o `test` | Cierra los issues referenciados con `Closes/Fixes/Resolves #N` (GitHub solo lo hace al llegar a `main`) |
 
 Configuración en GitHub:
 

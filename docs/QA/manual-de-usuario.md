@@ -1,8 +1,8 @@
 # Manual de usuario — Módulo 6: Ambiente e Higiene
 
-> Versión 2.0 · 10/11/2026. Organizado **por tareas**: cada tarea se puede hacer siguiendo solo su sección. Se guarda en el repo de backend y se espeja en el de frontend (Issue FE #818, cerrado).
->
-> **Marcas de verificación.** Los nombres de menús, botones y mensajes se contrastaron el 03/11/2026 con la aplicación **desplegada** (`https://m6-ambiente-higiene.vercel.app`), ingresando con el login real de M1 con siete cuentas: administración (10000), Oficina de Operaciones (10002), Oficina Ambiental (10004), auditoría (10007), responsable de cuadrilla (10009), integrante de cuadrilla (10010) e inspector (10011; solo se vio su lista de servicios). Qué se pudo y qué no se pudo verificar está en la sección 5. Las acciones que modifican datos (guardar, confirmar, iniciar, cancelar) **no se ejecutaron** durante esa verificación para no alterar los datos compartidos: de ellas se verificaron el botón, el formulario y sus textos, pero no el mensaje de éxito. Las capturas son de esa misma sesión (datos de demostración, sin contraseñas).
+> Versión 2.2 · 16/11/2026
+
+> Organizado **por tareas**: cada tarea se puede hacer siguiendo solo su sección. Las capturas de `img/` son de la aplicación con datos de demostración, sin contraseñas.
 
 | | |
 |---|---|
@@ -396,13 +396,6 @@ Estas reglas dependen de la cuenta: cada fila se comprobó en la pantalla con la
 - **Exportación:** solo **Tableros** exporta (**Exportar CSV**); el resto de las pantallas no.
 - **PDF adjuntos:** no se limpian de metadatos ni se analizan en busca de virus.
 - **Campo y el catálogo:** el menú de Campo incluye **Catálogo** porque cualquier perfil lo consulta; Campo no administra el catálogo.
-- **Capturas:** son del 03/11/2026 (la de ingreso, del 04/11/2026, con el rediseño de la pantalla), sacadas de la aplicación desplegada con el login real (datos de demostración). Los datos y las fechas cambian: lo que vea puede diferir.
-
-### Qué se verificó y con qué cuenta
-
-- **Verificadas en la pantalla** (3/11/2026): administración `…10000` (expedientes y sus acciones, tableros, Eventos); Operaciones `…10002` (programar, asignar, servicio Programado y A reprogramar, contenedores en todos los estados, intervención de arbolado, catálogo); Ambiental `…10004` (Mi trabajo, acciones de cada estado de expediente); auditoría `…10007` (menú, tableros, expedientes y servicios sin botones de escritura); responsable `…10009` (Mi trabajo, detalle del servicio, reportes de contenedor); integrante `…10010` (detalle **Solo consulta**, tableros, **Vaciar contenedor**).
-- **Vista parcial:** inspector `…10011` (solo su lista de servicios de inspección y el botón **Iniciar servicio**, sin ejecutarlo; su rótulo de perfil y sus permisos sobre contenedores no se comprobaron).
-- **No verificado:** todo lo que modifica datos (guardar, confirmar, iniciar, completar, suspender, cancelar, reprogramar, emitir acta, **Confirmar vaciado**, adjuntar evidencia, completar inspección) y sus mensajes de éxito; la tarea 9 completa (no hay expediente **Sancionado** en los datos y no se cerró ninguno); la tarea 12 (trabajo sin conexión); **Accesos** (no apareció en el menú de ninguna cuenta); un código de seguimiento real en la tarea 11 y el aviso del límite de consultas; la cuenta de Operaciones aplicada a expedientes (se comprobó solo que no ve las acciones).
 
 ---
 
@@ -426,5 +419,3 @@ Las HU son las del tablero «M6 - Product Backlog & Story Map» de Trello; sus i
 | 12 Trabajar sin conexión | HU-08: Como miembro de cuadrilla quiero adjuntar fotos como evidencia, con reintento seguro |
 | 13 Leer los indicadores | HU-28: Como Oficina quiero un tablero de indicadores (cobertura, cumplimiento, incidencias y residuos) |
 | 14 Otras tareas de Oficina | HU-12, HU-13, HU-09: Como Oficina quiero llevar el censo de arbolado…; Como Oficina quiero administrar espacios verdes y puntos verdes; Como cuadrilla quiero derivar una reparación o pedir un corte de calle |
-
-**Revisión del 07/11/2026 (Issue #528).** Se cambiaron los nombres de la pantalla Eventos y del identificador de los expedientes y se rehicieron las 19 capturas de `img/` con la interfaz actual del Frontend en modo demostración (datos de demo, sin personas reales). Dos salvedades: **01-login** muestra el selector de perfil del modo demostración, porque los campos Correo y Contraseña solo existen con el ingreso real de M1; y **17-expediente-detalle** muestra un expediente con reclamo (`TK-…`), porque es el que ofrece las cuatro acciones. No se re-verificaron en el sistema desplegado los textos de la tarea 13 (filtros de Tableros, ahora tras **Más filtros**) ni la ausencia de **Accesos** (el modo demostración la muestra a administración).

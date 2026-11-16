@@ -173,3 +173,7 @@ Validación: las corridas finales sobre `main` del 16/11/2026 están enlazadas e
 - [`docs/QA/06-registro-defectos.md`](../QA/06-registro-defectos.md) (DEF-13, DEF-25, DEF-26).
 - Criterios de Testing y Aseguramiento de Calidad, Clase 15 (secciones 2, 5, 7 y 9).
 - Spec equivalente del Frontend: [hllous/Frontend-M6-DAPS2#922](https://github.com/hllous/Frontend-M6-DAPS2/issues/922).
+
+## Nota de corrección 2026-11-16 (#700)
+
+El paso 2 de la opción C se aplicó: `sonar.qualitygate.wait=true` en el CI, así que el job `sonar` falla si el gate da rojo, y la cobertura mínima del repo pasó a 90 % (#660). Lo que la consecuencia «el gate de Sonar no es bloqueante todavía» describe vale solo hasta ese cambio. Que `sonar` sea check requerido en la protección de ramas sigue dependiendo del líder.
