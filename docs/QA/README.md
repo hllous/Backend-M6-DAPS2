@@ -13,9 +13,9 @@
 | 2. Matriz de trazabilidad | `03-matriz-trazabilidad.md` | 175 criterios: 161 con test del backend, 9 solo FE y 5 huecos; filas de SonarCloud, Trivy y ZAP, y DEF-13 cerrado |
 | 3. Especificación de casos | `04-especificacion-casos.md` | 372 casos, 67,5 % negativos o de borde |
 | 4. Informe de ejecución | `05-informe-ejecucion.md` | R09 (10/11) y actualización del 16/11: 2992 unitarios, cobertura 97,97 % de sentencias (98,71 % de líneas), lint 0 errores y 343 warnings; Quality Gate de SonarCloud **OK** (A/A/A, no bloqueante, #660); métricas finales en §5.2 |
-| 5. Registro de defectos | `06-registro-defectos.md` | 26 defectos (DEF-01 a DEF-28), **2 abiertos, ambos Menores** (DEF-14 y DEF-19); DEF-13 cerrado con #656; DEF-25 a DEF-28 son los hallazgos de las herramientas, todos corregidos |
+| 5. Registro de defectos | `06-registro-defectos.md` | 35 defectos (DEF-01 a DEF-37), **11 abiertos: 0 Bloqueantes, 0 Críticos, 1 Mayor (DEF-32, con workaround) y 10 Menores**; incluye los del frontend (DEF-29 a DEF-35); DEF-25 a DEF-28 corregidos y cerrados en GitHub (#665 a #668) |
 | 6. Informe de seguridad | `07-informe-seguridad.md` | SonarCloud, Trivy y ZAP hechos: Trivy 0 HIGH/CRITICAL, ZAP 0 High, cada Medium justificada; el resto con evidencia |
-| 7. Declaración y plan de IA | Gobernanza de IA (Clase 14), `Clase14_Grupo4_Ambiente_IA.pdf`: entregado y aprobado, no versionado en este repo | No se mantiene un documento propio en QA |
+| 7. Declaración y plan de IA | Gobernanza de IA (Clase 14), `Clase14_Grupo4_Ambiente_IA.pdf`, actualizada el 16/11 con el uso de IA en testing (8.1) y el plan de IA (8.2); no versionada en este repo | Se entrega en Teams junto con este paquete |
 | 8. Lecciones aprendidas | `08-lecciones-aprendidas.md` | Ocho casos; proponemos presentar los tres primeros |
 | Manual de usuario (prueba «tarea al azar», Eje A) | `manual-de-usuario.md` | Textos de UI por verificar (están marcados). Las capturas viven en `img/` |
 

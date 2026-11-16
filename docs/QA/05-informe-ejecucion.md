@@ -319,7 +319,7 @@ Render sirve DOMPurify 3.4.17 (el High del 15/11, DEF-25, está cerrado). En la 
 | Tests flaky | 0 (3 corridas idénticas) | 3 corridas idénticas en local (R08) y repetidas en el CI (ver 2.1) | **Sí** |
 | Pipeline | ≤ 15 min | 3 min 5 s en `main` (16/11, con `sonar` y `trivy`; R09: 1 min 44 s); `API tests` 2 min 27 s | **Sí** |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` (23 más `rabbitmq-real`); los E2E de navegador viven en el repo del frontend | **Sí** |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y **0 Mayores** (DEF-13 cerrado con #656); 2 Menores abiertos (DEF-14 y DEF-19); [`06`](06-registro-defectos.md) | **Sí** |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y **1 Mayor** con workaround (DEF-32; DEF-13 cerrado con #656); 10 Menores abiertos (DEF-14, DEF-19, DEF-29 a DEF-31 y DEF-33 a DEF-37); [`06`](06-registro-defectos.md) | **Sí** |
 | Casos negativos o de borde | ≥ 40 % | 67,5 % (251 de 372, [`04`](04-especificacion-casos.md)) | **Sí** |
 | Quality Gate (SonarCloud) | Gate en verde, 0 bugs Blocker/Critical, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % de hotspots | Gate **OK** sobre `main` (16/11): 0 bugs, 0 vulnerabilidades, duplicación 1,2 %, A/A/A, hotspots 100 %, cobertura 97,3 % (5.2). **No bloqueante todavía** (#660) | **Sí** |
 | ZAP baseline y activo autenticado | 0 High, cada Medium justificada | 0 High en los dos; 1 Medium en cada uno, justificadas en [`07`](07-informe-seguridad.md) 5.2 | **Sí** |
