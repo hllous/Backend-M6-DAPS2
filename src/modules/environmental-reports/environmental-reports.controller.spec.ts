@@ -98,7 +98,12 @@ describe('EnvironmentalReportsController', () => {
 
   it('close delega id y userId', async () => {
     await controller.close(ID, USER);
-    expect(service.close).toHaveBeenCalledWith(ID, USER, undefined);
+    expect(service.close).toHaveBeenCalledWith(ID, USER, undefined, undefined);
+  });
+
+  it('close pasa el motivo del body', async () => {
+    await controller.close(ID, USER, undefined, { reason: 'Archivo' });
+    expect(service.close).toHaveBeenCalledWith(ID, USER, undefined, 'Archivo');
   });
 
   it('requestInformation delega el id, el dto y el actor', async () => {
