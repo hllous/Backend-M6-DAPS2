@@ -1,8 +1,8 @@
 # 08 · Lecciones aprendidas: defectos que descubrimos tarde
 
-> Versión 2.0 · 10/11/2026. Backend del Módulo 6 (Grupo 04). Los hechos (issues, archivos, fechas) salen de GitHub y del código; el «por qué no lo detectamos antes» es una **interpretación nuestra** a partir de los tests que existen, y quien participó de cada caso puede corregirla.
+> Versión 2.1 · 16/11/2026. Backend del Módulo 6 (Grupo 04). El 16/11 se sumaron los casos 9 a 11, del cierre de la Entrega 4. Los hechos (issues, archivos, fechas) salen de GitHub y del código; el «por qué no lo detectamos antes» es una **interpretación nuestra** a partir de los tests que existen, y quien participó de cada caso puede corregirla.
 
-Tres defectos que descubrimos tarde, por qué no los detectamos antes y qué prueba los habría atrapado. Los tres primeros (1 a 3) salen de los issues `bug`, `security` y `fix`: **pasaron la revisión y los tests**, y los encontró alguien o algo ajeno a la suite del backend. Los casos 4 a 8 salieron de la semana de testing y quedan como respaldo o reemplazo. Proponemos presentar los tres primeros; el 7 es el único de los nuevos con un test que lo atrapa hoy y el 8 es una observación abierta, sin causa investigada.
+Tres defectos que descubrimos tarde, por qué no los detectamos antes y qué prueba los habría atrapado. Los tres primeros (1 a 3) salen de los issues `bug`, `security` y `fix`: **pasaron la revisión y los tests**, y los encontró alguien o algo ajeno a la suite del backend. Los casos 4 a 8 salieron de la semana de testing y los 9 a 11 del cierre de la Entrega 4 (16/11); quedan como respaldo o reemplazo. Proponemos presentar los tres primeros; el 8 es una observación abierta, sin causa investigada.
 
 | # | Defecto | Quién o qué lo encontró |
 |---|---|---|
@@ -14,6 +14,9 @@ Tres defectos que descubrimos tarde, por qué no los detectamos antes y qué pru
 | 6 | Secreto de juguete literal en `api-tests.yml` (#572 / P-1) | gitleaks en el CI, **antes de mergear** |
 | 7 | Los `400` declarados por #593 salían como `application/json` al integrarse con #590 (Problem Details) | Integrar las cinco ramas de #597 y mirar el `openapi.json` regenerado; hoy lo atrapa un test del contrato |
 | 8 | Un e2e completo cayó por un timeout de 30 s en el arranque de una suite con la máquina cargada | Correr la suite completa con otras pruebas en paralelo; la causa no se investigó |
+| 9 | El informe decía «error en las 152 operaciones» de la colección Newman; eran 149 | El chequeo automático de cobertura de la colección (`npm run api:coverage`, #702) |
+| 10 | Tres criterios de aceptación describían un comportamiento distinto del código (login a 15 s, formato de fecha sin coma, 500 sin id de correlación) | Automatizar los criterios que solo tenía el frontend (Eje A, FE #979) y las pruebas de seguridad en vivo (#701) |
+| 11 | Una ruta del BFF devolvía 500 en vez de 503 con el backend caído (DEF-40) | Los tests que se escribieron para subir la cobertura del frontend (#975) |
 
 ---
 
@@ -157,7 +160,43 @@ Tres defectos que descubrimos tarde, por qué no los detectamos antes y qué pru
 
 ---
 
-## 9. Patrón común y reglas que adoptamos
+## 9. El informe decía «error en las 152 operaciones»; eran 149 (#702)
+
+**Qué pasó.** Hasta el 15/11, `05-informe-ejecucion.md` y `01-plan-y-estrategia.md` decían que la colección Newman tenía caso de error en las 152 operaciones del OpenAPI. Al escribir el chequeo automático de #702 (`scripts/check-api-coverage.mjs`, que cruza el OpenAPI con la colección y falla si una operación no tiene caso ni excepción justificada) aparecieron 3 operaciones sin caso de error: `GET /health`, `GET /health/ready` y `GET /public/zones`. Ninguna tiene un error que la colección pueda provocar sin romper el resto de la corrida, así que quedaron como excepciones justificadas en `test/api/PENDIENTES.md` y el informe se corrigió a 149/152.
+
+**Por qué no se detectó antes** (interpretación): la cifra se armó contando a mano y se repitió de un documento a otro sin volver a la fuente. Nadie la había medido con una herramienta.
+
+**Qué prueba lo habría atrapado.** La que existe hoy: `npm run api:coverage`, que corre dentro de `npm test` y por lo tanto en cada PR.
+
+**Lección.** Una cifra del informe que no sale de una herramienta es una afirmación, no una medición. Antes de copiar un número de un documento a otro, hay que volver a medirlo.
+
+---
+
+## 10. Tres criterios de aceptación no describían el comportamiento real
+
+**Qué pasó.** Al automatizar los 10 criterios que solo tenía el frontend (Eje A, FE #979) y al escribir las pruebas de seguridad en vivo (#701), tres criterios no coincidieron con el código: CA-HU30-4 decía que el login corta a los 15 s y el código corta a los 90 s (`LOGIN_TIMEOUT_MS`, a propósito, por los arranques en frío de M1); CA-HU26-1 decía «dd/mm/aaaa hh:mm» y el formato real lleva coma («06/09/2026, 14:05»); CA-HU31-5 declaraba como limitación la falta de id de correlación, que #701 implementó. En los dos primeros se corrigió el criterio, no el código, porque el comportamiento era el correcto.
+
+**Por qué no se detectó antes** (interpretación): esos criterios figuraban como «solo FE, sin verificar»: tenían un test citado por nombre de archivo, pero nadie lo había leído ni ejecutado contra el texto del criterio.
+
+**Qué prueba lo habría atrapado.** Un test por criterio, leído contra el texto Dado/Cuando/Entonces y ejecutado. Es lo que hizo el Eje A.
+
+**Lección.** Citar un archivo de test no es verificar un criterio. Un criterio sin ejecutar puede estar mal escrito, y eso solo aparece al automatizarlo.
+
+---
+
+## 11. Una ruta del BFF devolvía 500 en vez de 503 con el backend caído (DEF-40)
+
+**Qué pasó.** En `src/app/api/vehicles/[id]/route.ts` del frontend, `GET` y `PATCH` hacen `return forward(...)` dentro de un `try` sin `await`: si el pedido al backend falla, el rechazo de la promesa escapa del `catch` y Next.js responde 500 genérico en vez del 503 «el sistema no responde» que dan las demás rutas. Lo encontraron los tests escritos para subir la cobertura del frontend a 90 % (#975); se corrigió en esa misma rama, que al 16/11 no está mergeada.
+
+**Por qué no se detectó antes** (interpretación): ningún test de esa ruta simulaba el backend caído, y TypeScript no avisa de un `return` de una promesa sin `await` dentro de un `try`.
+
+**Qué prueba lo habría atrapado.** Un test por ruta del BFF con el backend caído (la regla que aplicaron los tests de #975), o la regla de ESLint `@typescript-eslint/return-await` en modo `in-try-catch`.
+
+**Lección.** Subir la cobertura sirve cuando los tests nuevos prueban las ramas de error, no solo las líneas.
+
+---
+
+## 12. Patrón común y reglas que adoptamos
 
 | Patrón | Reglas |
 |---|---|
@@ -166,3 +205,4 @@ Tres defectos que descubrimos tarde, por qué no los detectamos antes y qué pru
 | Los tests que habrían servido existían en forma parcial o se saltaban en el CI. | Un test no debe depender de un archivo que el CI no tiene. |
 | Los tres de la semana de testing (4 a 6) los encontró una **prueba nueva o una ejecución desde cero** (el compose en frío, el test de logs con token, gitleaks): las propiedades negativas y el arranque limpio no tenían prueba. | Probar con el dato prohibido adentro, correr desde cero lo que se entrega y acercar los escaneos de secretos al commit. |
 | Los dos últimos (7 y 8) aparecieron al **integrar y al medir juntos** lo que estaba verde por separado (cinco ramas sobre el mismo OpenAPI; la suite completa bajo carga). | Probar el artefacto generado después de integrar y guardar el log de toda corrida fallida antes de repetirla. |
+| Los del cierre (9 a 11) los encontró **automatizar algo que se daba por hecho**: una cifra contada a mano, criterios citados pero no ejecutados y rutas sin test del camino de error. | Medir con una herramienta cada cifra del informe, ejecutar cada criterio contra su texto y probar la rama de error de cada ruta. |

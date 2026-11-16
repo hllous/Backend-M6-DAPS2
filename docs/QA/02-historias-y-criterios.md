@@ -1,6 +1,6 @@
 # 02 · Historias de usuario y criterios de aceptación
 
-> Versión 2.0 · 10/11/2026. Módulo 6 «Ambiente e Higiene», Grupo 04.
+> Versión 2.1 · 16/11/2026. Módulo 6 «Ambiente e Higiene», Grupo 04. El 16/11 se corrigieron tres textos de criterio que la automatización del Eje A y las pruebas de seguridad encontraron distintos del comportamiento real (CA-HU26-1, CA-HU30-4 y CA-HU31-5), se actualizaron CA-HU01-4 y CA-HU32-4 y se cerró la sección «Riesgos de cierre».
 
 ## Cómo se armó
 
@@ -10,7 +10,7 @@
 - **Tipos de criterio:** Feliz (camino principal), Alternativo (otra variante válida o un borde), Error (entrada o estado inválido) y Falla externa (cae un sistema del que depende: M1, M2, M3, M4, M7, M9, el bus, el Core, el almacenamiento).
 - **† = criterio propuesto por nosotros, a validar con el PO.** Los que vienen de Trello (HU de R2 y tarjetas SEC de la Clase 11) no llevan marca; algunos se adaptaron al comportamiento real del código. Los criterios agregados por una corrección posterior (ACT-nn, ver [03-matriz-trazabilidad.md](03-matriz-trazabilidad.md)) también son propuestos y se numeran a continuación del último de la HU.
 - **MoSCoW:** el de Trello cuando figura (R2 MUST, R3 COULD); las HU del MVP entregado se consideran Must; para las de R2 sin prioridad en Trello propusimos una.
-- **Regla de cierre:** ningún criterio de una HU Must puede fallar al cierre. Las HU Must con trabajo abierto son HU-20, HU-24 y HU-30 (ver «Riesgos» al final); el criterio SEC-D02 de HU-31 se cerró con #643.
+- **Regla de cierre:** ningún criterio de una HU Must puede fallar al cierre. Al 16/11 ninguna HU Must tiene issues abiertos en el tracker (ver «Riesgos de cierre» al final); el criterio SEC-D02 de HU-31 se cerró con #643. Los criterios sin test automatizado están declarados en [03-matriz-trazabilidad.md](03-matriz-trazabilidad.md).
 
 ## Resumen
 
@@ -61,7 +61,7 @@ Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera d
 - **CA-HU01-1** (Feliz): **DADO** un catálogo con más de una página (pageSize 20 por defecto), **CUANDO** lo abro, **ENTONCES** puedo ordenar y filtrar con el mismo componente de tabla que Servicios. — *Agregado por ACT-F1*
 - **CA-HU01-2** (Feliz): **DADO** que el backend tarda en responder, **CUANDO** la pantalla carga, **ENTONCES** veo un esqueleto con la forma final, no un spinner suelto ni la tabla vacía. — *Agregado por ACT-F1*
 - **CA-HU01-3** (Alternativo): **DADO** cualquier pantalla del frontend, **CUANDO** corre el guard de shadcn en el CI del frontend, **ENTONCES** no quedan componentes de UI escritos a mano fuera del registro. — *Agregado por ACT-F1*
-- **CA-HU01-4** (Error†): **DADO** que el backend responde con error 5xx o excede el timeout de 15 s del BFF, **CUANDO** abro un catálogo, **ENTONCES** la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía.
+- **CA-HU01-4** (Error†): **DADO** que el backend responde con error 5xx o excede el timeout del BFF (5 s desde FE #978; antes 15 s), **CUANDO** abro un catálogo, **ENTONCES** la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía.
 
 ## HU-02 — Alta de zonas operativas y recorridos con paradas
 
@@ -272,7 +272,7 @@ Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera d
 ## HU-20 — Adaptar M6 al contrato de integración definitivo de M9
 
 - **Como** equipo de M6 **quiero** que M6 publique y consuma con el sobre y la cola definitivos del Core **para** integrarse con el resto de los módulos.
-- **Prioridad:** Must (Trello, R2 MUST) · **Release:** R2 · **Estado:** En curso (BE #257 cerrado; lo que sigue abierto del Core está en [`bloqueantes.md`](../bloqueantes.md), fila M9 / M2)
+- **Prioridad:** Must (Trello, R2 MUST) · **Release:** R2 · **Estado:** Entregado (BE #257 cerrado el 05/11; lo que sigue abierto del lado del Core, que no es trabajo de M6, está en [`bloqueantes.md`](../bloqueantes.md), fila M9 / M2)
 
 - **CA-HU20-1** (Feliz†): **DADO** un evento en el outbox de M6, **CUANDO** el dispatcher lo publica al exchange fanout muni.inbox, **ENTONCES** el sobre lleva exactamente las claves del Core, el eventId es el id de la fila, occurredAt va en ISO 8601 con offset y la fila queda SENT con publishedAt.
 - **CA-HU20-2** (Feliz†): **DADO** un mensaje en la cola q.ambiente, **CUANDO** M6 lo consume, **ENTONCES** si el inbox responde processed, duplicate o ignored se hace ack, y el sobre llega al inbox con eventId y correlación. — *Agregado por ACT-24*
@@ -318,7 +318,7 @@ Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera d
 ## HU-24 — Probar M6 contra el Core real de M9 antes de la entrega
 
 - **Como** equipo de M6 **quiero** probar M6 contra el Core real de M9 **para** verificar la circulación de eventos de ida y vuelta antes de la entrega.
-- **Prioridad:** Must (Trello, R2 MUST) · **Release:** R2 · **Estado:** En curso (BE #442 cerrado; la prueba con el Core real se hizo con M3, ver [historial](../integracion/historial.md))
+- **Prioridad:** Must (Trello, R2 MUST) · **Release:** R2 · **Estado:** Entregado (BE #299 y #442 cerrados el 05/11; la prueba con el Core real se hizo con M3, ver [historial](../integracion/historial.md)). CA-HU24-2 no tiene test automatizado: su evidencia es manual (ver [03](03-matriz-trazabilidad.md))
 
 - **CA-HU24-1** (Feliz): **DADO** RabbitMQ y el Core de M9 levantados en local según docs/testing.md, **CUANDO** M6 publica en muni.inbox y consume de q.ambiente, **ENTONCES** los eventos de ida y vuelta se ven funcionando.
 - **CA-HU24-2** (Alternativo†): **DADO** el puerto 5671 habilitado para los rangos de Render (M9, 28/10), **CUANDO** ejecuto la prueba pasiva desde Render (BE #442), **ENTONCES** se verifica TCP/TLS, autenticación y checkQueue de q.ambiente sin publicar ni consumir, y se documenta el eventId del evento pruebaConexionM6.
@@ -340,7 +340,7 @@ Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera d
 - **Como** Oficina **quiero** que la demo muestre fechas legibles y nombres en lugar de UUID **para** entender los datos de un vistazo.
 - **Prioridad:** Could (propuesta) · **Release:** R2 · **Estado:** Entregado (FE #321)
 
-- **CA-HU26-1** (Feliz): **DADO** cualquier listado, **CUANDO** se muestra una fecha, **ENTONCES** está en formato argentino dd/mm/aaaa hh:mm y en el día local. — *Agregado por ACT-F4*
+- **CA-HU26-1** (Feliz): **DADO** cualquier listado, **CUANDO** se muestra una fecha, **ENTONCES** está en formato argentino `dd/mm/aaaa, hh:mm` (coma entre fecha y hora, 24 h; por ejemplo «06/09/2026, 14:05») y en el día local. — *Agregado por ACT-F4; texto corregido el 16/11: el formato real lleva coma (Eje A, FE #979)*
 - **CA-HU26-2** (Feliz): **DADO** un listado con referencias a otras entidades, **CUANDO** lo veo, **ENTONCES** leo el nombre o el código, no el UUID. — *Agregado por ACT-F4*
 - **CA-HU26-3** (Error†): **DADO** una hora cercana a medianoche donde UTC ya es el día siguiente, **CUANDO** se muestra la fecha, **ENTONCES** se muestra el día de Argentina (UTC-3), no el de UTC.
 
@@ -388,7 +388,7 @@ Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera d
 - **CA-HU30-1** (Feliz†): **DADO** la cuenta de un empleado en M1 y el secreto vigente de M1 cargado en el backend (JWT_SECRET, JWT_ISSUER), **CUANDO** inicio sesión por el BFF (POST {M1}/auth/usuario/login) y consulto GET /me, **ENTONCES** recibo 200 con mis roles de M6; el JWT de M1 va en una cookie sellada httpOnly y nunca llega al navegador.
 - **CA-HU30-2** (Error†): **DADO** un JWT firmado con un secreto distinto del cargado en el backend, **CUANDO** llamo a un endpoint protegido, **ENTONCES** recibo 401 (hoy sucede en Render hasta que se cargue el secreto vigente de M1).
 - **CA-HU30-3** (Error†): **DADO** una sesión vencida o un 401 del backend, **CUANDO** navego, **ENTONCES** el BFF reintenta una vez con refresh y, si falla, redirige al login con el aviso de sesión vencida. — *Agregado por ACT-F7*
-- **CA-HU30-4** (Falla externa†): **DADO** que M1 no responde o devuelve 5xx al iniciar sesión, o que el build desplegado no está en modo real-m1, **CUANDO** inicio sesión, **ENTONCES** el BFF corta a los 15 s con un mensaje de error; un build deployado en un modo distinto de real-m1 falla al arrancar (fail closed, FE #800).
+- **CA-HU30-4** (Falla externa†): **DADO** que M1 no responde o devuelve 5xx al iniciar sesión, o que el build desplegado no está en modo real-m1, **CUANDO** inicio sesión, **ENTONCES** el BFF corta a los 90 s con un mensaje de error (`LOGIN_TIMEOUT_MS` en `src/lib/m1-auth.ts`: el login espera más que el resto del BFF porque M1 corre en Render free con arranques en frío largos); un build deployado en un modo distinto de real-m1 falla al arrancar (fail closed, FE #800). — *Texto corregido el 16/11: decía 15 s (Eje A, FE #979)*
 
 ## HU-31 — Seguridad de la Clase 11 (SEC-W01 a W06, SEC-I01, SEC-I02, SEC-D01, SEC-D02)
 
@@ -399,7 +399,7 @@ Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera d
 - **CA-HU31-2** (Error): **DADO** un usuario autenticado sin el rol de supervisión (SEC-W02), **CUANDO** envía POST /services con un body válido, **ENTONCES** recibe 403 y no se crea ningún servicio. — *Corregido por ACT-01*
 - **CA-HU31-3** (Error): **DADO** una consulta anónima al portal (SEC-W03), **CUANDO** consulta con el publicId, con un ticketId válido o más de 20 veces por minuto, **ENTONCES** 404 sin datos, solo etapa, tipo, dirección y fechas, y 429 respectivamente.
 - **CA-HU31-4** (Error): **DADO** un supervisor autenticado y un servicio SCHEDULED (SEC-W04), **CUANDO** envía PATCH /services/:id con status "COMPLETED" u otro campo fuera del DTO, **ENTONCES** recibe 400 y el estado en la base no cambia.
-- **CA-HU31-5** (Error): **DADO** una falla interna forzada (SEC-W05), **CUANDO** se invoca el endpoint, **ENTONCES** responde 500 con mensaje genérico, sin stack ni SQL; el id de correlación en el log no está implementado (limitación conocida).
+- **CA-HU31-5** (Error): **DADO** una falla interna forzada (SEC-W05), **CUANDO** se invoca el endpoint, **ENTONCES** responde 500 con mensaje genérico, sin stack ni SQL, con un `traceId` igual al header `X-Request-Id` y al del log. — *Corregido el 16/11: el id de correlación se implementó en #701 (antes figuraba como limitación conocida)*
 - **CA-HU31-6** (Error): **DADO** un archivo cuyo contenido no coincide con el tipo, de más de 10 MB o con EXIF (SEC-W06), **CUANDO** se sube a POST /evidence, **ENTONCES** 400, 413 y 201 sin EXIF respectivamente.
 - **CA-HU31-7** (Alternativo): **DADO** un evento ya recibido (SEC-I01), **CUANDO** llega por segunda vez, **ENTONCES** se registra como duplicate, sin volver a aplicar el efecto.
 - **CA-HU31-8** (Error): **DADO** un evento con campo obligatorio ausente o de tipo incorrecto (SEC-I02), **CUANDO** llega al inbox, **ENTONCES** 400 con qué corregir, sin efecto ni fila; la DLQ es del Core (decisión documentada).
@@ -416,7 +416,7 @@ Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera d
 - **CA-HU32-1** (Feliz†): **DADO** las pantallas del frontend, **CUANDO** corre axe con las etiquetas WCAG en el CI, **ENTONCES** no hay violaciones críticas de accesibilidad.
 - **CA-HU32-2** (Alternativo†): **DADO** el despliegue del backend, **CUANDO** consulto GET /health y GET /health/ready, **ENTONCES** liveness responde 200 sin consultar la base y readiness responde 200 con la base arriba.
 - **CA-HU32-3** (Error†): **DADO** que la base no responde o tarda más de 3 s, **CUANDO** consulto GET /health/ready, **ENTONCES** recibo 503 sin filtrar el error de la base.
-- **CA-HU32-4** (Error†): **DADO** una respuesta del frontend, **CUANDO** se inspeccionan los headers de seguridad (CSP, X-Frame-Options, HSTS, Referrer-Policy), **ENTONCES** están presentes (hoy no lo están en el frontend: limitación conocida; en el backend hay nosniff, X-Frame-Options, Referrer-Policy y HSTS solo en producción).
+- **CA-HU32-4** (Error†): **DADO** una respuesta del frontend, **CUANDO** se inspeccionan los headers de seguridad (CSP, X-Frame-Options, HSTS, Referrer-Policy), **ENTONCES** están presentes. Backend: CSP, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy y HSTS solo en producción; `/api/docs` con una CSP propia (#701). Frontend: CSP, nosniff, X-Frame-Options, Referrer-Policy y Permissions-Policy desde FE #958; HSTS desde la app con FE #977. — *Actualizado el 16/11*
 
 ## HU-33 — e2e con datos deterministas y shards balanceados
 
@@ -443,8 +443,12 @@ Propuestas de alcance del tablero, a validar por el PO. No tienen criterios ni c
 
 ## Riesgos de cierre (HU Must con trabajo abierto)
 
-| HU | Qué falta | Referencia |
-|---|---|---|
-| HU-20 | Paraguas del contrato definitivo de M9 | BE #257 |
-| HU-24 | Prueba pasiva desde Render y suscripción pruebaConexionM6; procedimiento local con el Core | BE #299, #442 |
-| HU-30 | Cargar el secreto vigente de M1 en Render y retirar el modo backend-development del BFF | BE #488, FE #800 |
+Al 16/11/2026 **ninguna HU Must tiene trabajo abierto en el tracker**. Los tres riesgos que figuraban acá se cerraron (estado verificado en GitHub el 16/11):
+
+| HU | Qué faltaba | Referencia | Estado |
+|---|---|---|---|
+| HU-20 | Paraguas del contrato definitivo de M9 | BE #257 | Cerrado el 05/11 |
+| HU-24 | Prueba pasiva desde Render y suscripción pruebaConexionM6; procedimiento local con el Core | BE #299, #442 | Cerrados el 05/11 |
+| HU-30 | Cargar el secreto vigente de M1 en Render y retirar el modo backend-development del BFF | BE #488, FE #800 | Cerrados el 03/11 y el 04/11 |
+
+Lo que queda sin test automatizado en HU Must es CA-HU24-2 (prueba pasiva desde Render, con evidencia manual en el historial de integración); los otros tres huecos son de HU Should o Could (CA-HU10-2, CA-HU33-1 y CA-HU33-4). Ver [03-matriz-trazabilidad.md](03-matriz-trazabilidad.md).

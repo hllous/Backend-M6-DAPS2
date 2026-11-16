@@ -1,6 +1,6 @@
 # 05 · Informe de ejecución
 
-> Versión 2.1 · 16/11/2026. Backend del Módulo 6 (Grupo 04). La base de R09 es `develop` @ `142e1a3` (merge de [#597](https://github.com/hllous/Backend-M6-DAPS2/pull/597), 10/11/2026); las cifras de la **Entrega 4** (unitarios, cobertura, lint, CI, SonarCloud, Trivy y ZAP) se midieron el 16/11/2026 sobre `develop` @ `6fe2614` y sobre `main` @ `78bf714`, y están marcadas con su fecha. Los números salen de corridas reales (locales y de GitHub Actions); lo que no se midió figura como **no realizado**, con el motivo.
+> Versión 2.2 · 16/11/2026, cierre de la Entrega 4. Backend del Módulo 6 (Grupo 04), con las cifras del Frontend que pide la consigna en la sección 5.3. **Cierre del 16/11:** unitarios, cobertura y e2e re-medidos sobre `develop` @ `50cfff7` (local y CI [run 43908234945](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43908234945)); las cifras de cada eje de ese día están en 5.3. Lo que no está medido figura como **PENDIENTE**. La base de R09 es `develop` @ `142e1a3` (merge de [#597](https://github.com/hllous/Backend-M6-DAPS2/pull/597), 10/11/2026); las cifras de la **Entrega 4** (unitarios, cobertura, lint, CI, SonarCloud, Trivy y ZAP) se midieron el 16/11/2026 sobre `develop` @ `6fe2614` y sobre `main` @ `78bf714`, y están marcadas con su fecha. Los números salen de corridas reales (locales y de GitHub Actions); lo que no se midió figura como **no realizado**, con el motivo.
 >
 > **Corrida R09.** Local, Windows, Node 22, máquina sin otras cargas, sobre la rama de integración de #597 (mismo contenido que `develop` @ `142e1a3`). Se midieron build, lint, `docs:check`, `openapi:generate`, unitarios con cobertura, e2e contra Postgres 16 real, Newman, Schemathesis, k6 y `docker compose up` en frío. **R08** es la corrida anterior (sobre `1d600d2`) y queda como referencia.
 
@@ -11,14 +11,15 @@
 | Build, lint, docs, OpenAPI | `npm run build`, `lint:check`, `docs:check`, `openapi:generate` + `git diff docs/api` | R09: build OK; lint 0 errores y 305 warnings; `docs:check` OK; `openapi:generate` sin diff. **16/11:** `npm run lint:check` da **0 errores y 343 warnings** (los 38 nuevos son de código que entró desde R09; no se corrigieron de antemano) |
 | Unitarios con cobertura | `npm run test:cov` (Prisma mockeado, no toca ninguna base) | Ver 2 y 3 |
 | e2e general | `npm run test:e2e` contra Postgres 16 real, base descartable (`docs/testing.md`) | Ver 2 |
-| Newman | Colección `test/api/` contra el backend local | 455 requests ejecutados (435 definidos), 763 assertions, 0 fallas |
+| Newman | Colección `test/api/` contra el backend local | R09: 455 requests, 763 assertions, 0 fallas. **16/11 (#702):** 570 requests, 1015 assertions, 0 fallas; éxito en 151/152 operaciones y error en 149/152 con excepciones justificadas (ver 6) |
 | Schemathesis 4.33.1 | Solo `GET`, `--max-examples 15`, dos pasos (esquema y errores de servidor; `status_code_conformance`) | Ver 2 |
 | Carga (k6) | `test/perf/k6-criticos.js`, 50 usuarios, 5 min | Ver 2.2 |
 | Compose en frío | `docker compose up -d --build` con volúmenes nuevos | Ver 2 |
-| CI de `develop` | Run de `CI` del commit `142e1a3` | [42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201) |
-| Newman y Schemathesis en el CI | Workflow `API tests`, job `api (newman + schemathesis)` | [42632174625](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174625) (push) y [42631657018](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42631657018) (PR) |
+| CI de `develop` | Run de `CI` del commit `142e1a3` (R09) y del commit `50cfff7` (cierre del 16/11) | [42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201); [run 43908234945](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43908234945) |
+| Newman y Schemathesis en el CI | Workflow `API tests`, job `api (newman + schemathesis)` | [42632174625](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174625) (push) y [42631657018](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42631657018) (PR); 16/11, PR #702: [run 43897945641](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43897945641) |
 | Mutation | Stryker (`npm run test:mutation`); línea base en el CI (2 h 26 min), remedición local de 5 archivos (44 min) y corrida en el CI tras el refuerzo (57 min), todas **posteriores a R09** (ver 5.1) | 26 archivos de dominio: 75,39 % en el CI (71,22 % antes del refuerzo) |
-| e2e con RabbitMQ real | `rabbitmq-real` en el job `e2e` del CI | En local se saltea sin `RABBITMQ_URL`; última corrida local: R08 (4 de 4) |
+| e2e con RabbitMQ real | `rabbitmq-real` en el job `e2e` del CI | En local se saltea sin `RABBITMQ_URL`; última corrida local: R08 (4 de 4). En el CI del 16/11: 2 suites, 8 de 8 |
+| Arranque con un comando (G1) | Workflow `g1-arranque.yml` (#698, PR #699): `docker compose up --build` desde un clon limpio, sin `.env` | [Run 43893616309](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43893616309); ver 5.3 |
 
 Los **e2e se corrieron en local** contra una base descartable. Los logs no incluyen números por caso, solo los totales de Jest.
 
@@ -28,10 +29,11 @@ R09 salvo que se diga otra cosa. «Saltados» son tests que Jest no ejecutó; «
 
 | Nivel | Suites | Ejecutados | Pasados | Fallados | Saltados | Tiempo |
 |---|---|---|---|---|---|---|
-| Unitario | 125 (125 pasan) | **2992** (16/11; R09: 2854) | 2992 | 0 | 0 | — |
-| e2e con Postgres 16 real | 24 (23 pasan, 1 salteada) | 343 | 343 | 0 | 4 | 79 s (corrida del 10/11; las anteriores, idénticas, 94 s y 100 s) |
-| `rabbitmq-real` | 1 | R08: 4 | R08: 4 | 0 | 4 en R09 (sin broker local) | En el CI corre en el job `e2e` |
-| Newman (`test/api/`) | — | 455 requests | 763 assertions | 0 | — | Corre en el CI (job `api`: 2 min 27 s con Schemathesis) |
+| Unitario | 129 (129 pasan) | **3010** (cierre 16/11, local y CI sobre `50cfff7`; R09: 2854) | 3010 | 0 | 0 | 47 s el job `test` del CI |
+| e2e con Postgres 16 real | 24 (24 pasan) | **404** (CI del 16/11; R09: 343 en local) | 404 | 0 | 0 en el CI | 1 min 30 s el job `e2e` completo, con RabbitMQ real |
+| `rabbitmq-real` | 2 | **8** (CI del 16/11; R08: 4 en local) | 8 | 0 | 4 en local sin broker | En el CI corre en el job `e2e` |
+| Seguridad en vivo (`security-live`, #701) | 1 (dentro de los e2e) | 58 | 58 | 0 | 0 | Incluida en los 404 e2e |
+| Newman (`test/api/`) | — | **570 requests** (16/11, #702; R09: 455) | **1015 assertions** (R09: 763) | 0 | — | Corre en el CI (workflow `API tests`, [run 43897945641](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43897945641)) |
 | Schemathesis: esquema y sin 5xx | — | 4388 casos | 4388 | 0 | — | — |
 | Schemathesis: `status_code_conformance` (**bloqueante**) | — | 4384 casos | 3913 | 0 (exit 0) | 471 | — |
 | Mutation (Stryker, #617) | — | 26 archivos de dominio (5182 mutantes, 2142 no compilan y no cuentan) | 75,39 % global en el CI tras el refuerzo (2292 detectados); 71,22 % antes (2165) | — | — | 57 min 16 s en el CI con incremental (2 h 26 min la primera, sin cache); medición de noviembre de 2026, **no es R09** (5.1) |
@@ -39,16 +41,16 @@ R09 salvo que se diga otra cosa. «Saltados» son tests que Jest no ejecutó; «
 | Seguridad dinámica (ZAP) | 2 escaneos (baseline en Render; activo autenticado en un entorno efímero) | Corrida del 15/11: activo con 46 577 pedidos, 2xx en 76 rutas | **0 High** en los dos (corrida final sobre `main`, 16/11) | 0 (el High de DOMPurify del 15/11 se cerró: DEF-25) | — | Workflow `dast`, [run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357); ver 5.2 y `07`, 5.2 |
 | Seguridad estática: Trivy (#658) | — | 3 pasadas: `fs`, `image`, `config` | **0 HIGH/CRITICAL** en las tres sobre `main` | 0 | — | Job `trivy` del CI de `main`, [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363) (2 min 50 s); la primera corrida ([run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43762807669)) dio 6 HIGH en la imagen y DS-0002, corregidos en DEF-26; prueba en rojo en `07`, 5.2 |
 | Calidad estática: SonarCloud (#657) | Análisis de `main` (57 817 líneas) | Gate, bugs, vulnerabilidades, ratings, duplicación, hotspots y cobertura | Gate **OK**: 0 bugs, 0 vulnerabilidades, A/A/A, 1,2 %, 100 %, 97,3 % | 0 | — | Job `sonar` de [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363); [dashboard](https://sonarcloud.io/summary/overall?id=hllous_Backend-M6-DAPS2); ver 5.2 |
-| Compose en frío | — | 1 | 1 | 0 | — | up en 46 s; `/health/ready` 200 a los 55 s; seed OK; `GET /neighborhoods` 200 |
+| Compose en frío | — | 1 | 1 | 0 | — | R09: up en 46 s; `/health/ready` 200 a los 55 s. **16/11 (G1):** sistema completo con un solo comando, login de punta a punta a los 149 s (5.3) |
 
 Notas:
 
 - **Los unitarios no saltan ningún test.** Los 12 que antes se saltaban dependían del paquete de contratos de M2, que no se versiona: `updateTicketStatus` se valida contra nuestro schema y los ejemplos de M2 usados viven como fixtures mínimos en `test/fixtures/m2/`.
 - **Los 4 saltados del e2e** son los de `rabbitmq-real`, que se saltea sin `RABBITMQ_URL`.
-- **Tests nuevos desde R08:** de 2746 a 2854 unitarios (+108) y de 312 a 343 e2e (+31: 9 de `problem-details`, 12 de `etag-if-match`, 8 de `idempotency` y 2 de `neighborhoods-catalog`).
+- **Tests nuevos desde R08:** de 2746 a 2854 unitarios (+108) y de 312 a 343 e2e (+31: 9 de `problem-details`, 12 de `etag-if-match`, 8 de `idempotency` y 2 de `neighborhoods-catalog`). **Al 16/11:** 3010 unitarios y 404 e2e (entre otros, los 58 de `security-live`, #701).
 - **Bloqueados: 0** en todos los niveles. Lo que depende de otros módulos (M1, M9, M7, M2) se probó en el historial de integración, no con un caso automatizado bloqueado.
 - **Los e2e** cubren: ciclo de servicios, pertenencia de Campo, inbox e idempotencia, outbox con reintento, flujo ambiental, cortes de calle, cierre de contenedores con rollback, roles por endpoint, auditoría, extracciones, solicitud de información, personas de demo, migración de cuadrillas, guard de la base, límite de tasa (429), seguridad de entrada, errores en Problem Details, ETag e `If-Match`, `Idempotency-Key` y catálogo local de barrios (detalle en `docs/testing.md`).
-- **Newman y Schemathesis** tienen caso de éxito en 61 de las 152 operaciones; los 91 restantes están en `test/api/PENDIENTES.md`. Schemathesis recorre solo los `GET`. Los 471 casos salteados son avisos esperables: 404 por datos de prueba y 429 en 3 operaciones del portal público.
+- **Newman:** desde #702 tiene caso de éxito en **151 de 152** operaciones y de error en **149 de 152**; las 4 excepciones están justificadas en `test/api/PENDIENTES.md` (`POST /evidence` sin credenciales de R2 en el CI; `GET /health`, `GET /health/ready` y `GET /public/zones` sin error provocable desde la colección). `npm run api:coverage` (también dentro de `npm test`) falla si una operación queda sin caso y sin excepción. **Corrección:** versiones anteriores de este informe decían «error en las 152»; eran 149, y las 3 sin caso de error no estaban declaradas. Schemathesis recorre solo los `GET`. Los 471 casos salteados son avisos esperables: 404 por datos de prueba y 429 en 3 operaciones del portal público.
 
 ### 2.1 Flaky
 
@@ -56,6 +58,8 @@ Notas:
 |---|---|---|---|---|
 | Unitarios, e2e y `rabbitmq-real` (R08, local) | 2746 / 312 / 4 | 2746 / 312 / 4 | 2746 / 312 / 4 | **Idéntico en 3 corridas** |
 | e2e general (R09, local) | 343 pasan, 4 saltados | 343 pasan, 4 saltados | — | **Idéntico en 2 corridas** |
+| Unitarios (16/11, `50cfff7`) | 3010 (local) | 3010 (CI, [run 43908234945](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43908234945)) | — | **Idéntico en 2 corridas** |
+| Frontend, unitarios con el arreglo de FE #980 (16/11, local) | 3229 pasan | 3229 pasan | 3229 pasan | **Idéntico en 3 corridas locales.** **PENDIENTE:** 3 corridas en el CI tras el merge |
 
 Las 3 corridas se repitieron también en el CI y en local sobre R09, con el mismo resultado. Observaciones: (a) una corrida completa del e2e cayó una vez por un timeout de 30 s en el arranque de una suite con la máquina cargada con otras pruebas; con la máquina libre dio idéntico, y no investigamos la causa (ver la lección 8 de [`08-lecciones-aprendidas.md`](08-lecciones-aprendidas.md)); (b) corridas iguales no prueban que no haya un defecto intermitente: DEF-24 ([#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554)) está cerrado por decisión del equipo con la causa raíz sin confirmar, y si vuelve a aparecer se reabre; (c) no corrimos `--detectOpenHandles`: dato no disponible.
 
@@ -77,9 +81,11 @@ Las 3 corridas se repitieron también en el CI y en local sobre R09, con el mism
 
 **Global (R09):** sentencias **98,58 %** · ramas **93,63 %** · funciones **98,07 %** · líneas **99,16 %** (124 suites, 2854 tests). Sale de la fila `All files` del log. Frente a R08 (98,6 / 93,94 / 98,09 / 99,18) bajó unas centésimas porque entró código nuevo (ETag, idempotencia, filtro de errores).
 
-**Global actualizado (16/11/2026, `npm run test:cov` sobre `develop` @ `6fe2614`):** sentencias **97,97 %** · ramas **95 %** · funciones **97,82 %** · líneas **98,71 %** (125 suites, 2992 tests, 0 fallos). Cumple el umbral de 85 % del repo y el de la consigna; el valor más bajo de `src/modules/*` es 97,82 % de líneas (`attachments` y `green-spaces`) y 81,57 % de ramas (`green-spaces`). La tabla por carpeta de abajo es la de R09 y no se re-midió. **Cobertura en SonarCloud: 97,3 % (líneas 98,8 %)**, con las mismas líneas sin cubrir que Vitest (el porcentaje difiere solo por el denominador). Las exclusiones de Sonar son las de Vitest ([ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md)).
+**Global al cierre (16/11/2026, `npm run test:cov` sobre `develop` @ `50cfff7`, local):** sentencias **97,98 %** · ramas **95,28 %** · funciones **97,82 %** · líneas **98,71 %** (129 archivos, 3010 tests, 0 fallos). Cumple el **umbral de 90 %** en las cuatro métricas, global y por archivo en 7 archivos críticos (`vitest.config.ts`, subido de 85 % a 90 % en #700); el CI falla por debajo.
 
-El umbral del repo es 85 % en las cuatro métricas (`package.json`, `coverageThreshold`) y la corrida lo cumplió. Umbrales de la consigna: líneas ≥ 80 %, ramas ≥ 70 % en la capa de negocio: **cumple**; el valor más bajo de `src/modules/*` es 95,77 % de líneas y 82,92 % de ramas, ambos en `green-points`.
+**Medición anterior del 16/11 (`develop` @ `6fe2614`):** sentencias **97,97 %** · ramas **95 %** · funciones **97,82 %** · líneas **98,71 %** (125 suites, 2992 tests, 0 fallos). Cumple el umbral de 85 % del repo y el de la consigna; el valor más bajo de `src/modules/*` es 97,82 % de líneas (`attachments` y `green-spaces`) y 81,57 % de ramas (`green-spaces`). La tabla por carpeta de abajo es la de R09 y no se re-midió. **Cobertura en SonarCloud: 97,3 % (líneas 98,8 %)**, con las mismas líneas sin cubrir que Vitest (el porcentaje difiere solo por el denominador). Las exclusiones de Sonar son las de Vitest ([ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md)).
+
+El umbral del repo es **90 %** en las cuatro métricas desde #700 (antes 85 %; `vitest.config.ts`) y la corrida lo cumple. Umbrales de la consigna: líneas ≥ 80 %, ramas ≥ 70 % en la capa de negocio: **cumple**; el valor más bajo de `src/modules/*` es 95,77 % de líneas y 82,92 % de ramas, ambos en `green-points`.
 
 Cobertura por carpeta (sentencias, ramas, funciones, líneas; en %):
 
@@ -126,6 +132,8 @@ Cobertura por carpeta (sentencias, ramas, funciones, líneas; en %):
 
 ## 4. Tiempos del pipeline
 
+**Cierre (16/11, CI de `develop` @ `50cfff7`, [run 43908234945](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43908234945)):** `success` en **3 min 7 s**: `build` 36 s, `test` 47 s, `e2e` 1 min 30 s (con RabbitMQ real), `secrets` 33 s, `secrets-default` 1 min 24 s, `audit` 8 s, `trivy` 3 min 3 s; `sonar` se saltea en el push a `develop` (corre en los PR y en `main`) y `deploy` solo en `main`. **Límite de 15 minutos: cumple.**
+
 **CI de `main` del 16/11/2026** ([run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363), commit `78bf714`), `success` de punta a punta en **3 min 5 s**, con `sonar`, `trivy` y el deploy: `build` 1 min 34 s, `test` 2 min, `e2e` 1 min 52 s, `trivy` 2 min 50 s, `sonar` 1 min 1 s, `secrets` 57 s, `audit` 7 s, `deploy` a Render 3 s (el job dispara el deploy y no espera). El workflow `dast` (ZAP) corre aparte y tardó 4 min 58 s ([run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357)). **Límite de 15 minutos: cumple.** Lo que sigue es la medición de R09, anterior a Sonar y Trivy.
 
 Run de `CI` del commit `142e1a3` ([42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201)), `success` de punta a punta en **1 min 44 s**:
@@ -153,7 +161,7 @@ El workflow `API tests` (Newman y Schemathesis, con `status_code_conformance` bl
 - **Render:** `/health/ready` responde 200 con `database: up` y `broker: connected`, y un `GET /services` sin token responde 401 como `application/problem+json` con los headers `x-ratelimit-*` (límite 600): el despliegue sirve el código nuevo.
 - **gitleaks sobre el historial del tag (local):** v8.30.1 con el [`.gitleaks.toml`](../../.gitleaks.toml) del repo, sobre un clon completo en `v1.0-testing`: **327 commits escaneados, 0 hallazgos**.
 
-El job `e2e` **no es check obligatorio** de la protección de ramas (`.github/branch-protection-rules.json` exige solo `build` y `test`); ver DEF-14. Cambiarlo pide permisos de administrador: **no hecho**.
+**Gates bloqueantes (16/11, verificados con la API de GitHub):** en el Backend, `build`, `test`, `e2e`, `secrets` y `sonar` son checks obligatorios de `develop`, `test` y `main`; en el Frontend, `build`, `test`, `docs`, `e2e` y `secrets`. `audit` y `trivy` frenan el deploy del Backend. DEF-14 está cerrado. El archivo de referencia `.github/branch-protection-rules.json` todavía lista solo `build` y `test`: está desactualizado respecto de la configuración real.
 
 ## 5. Calidad de los tests
 
@@ -281,7 +289,7 @@ Datos del 16/11/2026 sobre `main` @ `78bf714`. Decisiones, exclusiones y políti
 | Hotspots revisados | 100 % | 100 % | **100 %** |
 | Cobertura (líneas) | — | 97,3 % (98,8 %) | **97,3 % (98,8 %)**; 51 líneas sin cubrir |
 
-El gate sobre código nuevo da OK (confiabilidad, seguridad y mantenibilidad A, cobertura 93,9 %, duplicación 0,4 %, hotspots 100 %). **El gate no es bloqueante todavía:** pasar a `wait=true` y check requerido en los PR a `develop` está en [#660](https://github.com/hllous/Backend-M6-DAPS2/issues/660). La captura del gate en verde es el dashboard enlazado. No hay prueba en rojo de Sonar: espera al paso bloqueante.
+El gate sobre código nuevo da OK (confiabilidad, seguridad y mantenibilidad A, cobertura 93,9 %, duplicación 0,4 %, hotspots 100 %). **Desde #700 el gate es bloqueante** (`sonar.qualitygate.wait=true`: el job falla si el gate no pasa) y `sonar` es **check obligatorio** de `develop`, `test` y `main` (#660 cerrado). La captura del gate en verde es el dashboard enlazado. No registramos una prueba en rojo del gate.
 
 **Trivy** (job `trivy`, [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363)): `fs` (lockfile y secretos), `image` y `config`, **0 HIGH/CRITICAL** en las tres; `.trivyignore` vacío. Antes: imagen 6 HIGH con fix (`npm` embebido) y `config` 1 HIGH (contenedor como root), corregidos en #670 (DEF-26). El SARIF de cada pasada está en Code Scanning (`trivy-fs`, `trivy-image`, `trivy-config`). Prueba en rojo registrada en `07`, 5.2.
 
@@ -289,10 +297,30 @@ El gate sobre código nuevo da OK (confiabilidad, seguridad y mantenibilidad A, 
 
 | Escaneo | High | Medium | Low | Qué es la Medium |
 |---|---:|---:|---:|---|
-| Baseline contra Render | **0** (antes 1) | 1 | 5 | CSP ausente solo en `/api/docs` (Swagger UI); la API sí envía CSP (DEF-19) |
+| Baseline contra Render | **0** (antes 1) | 1 | 5 | CSP ausente solo en `/api/docs` (Swagger UI) en `main` @ `78bf714`; **corregida en `develop` por #701** (DEF-19). Re-correr ZAP tras promover a `main`: PENDIENTE |
 | Activo autenticado, entorno efímero | **0** | 1 | 0 | CORS `*` del entorno de desarrollo efímero; Render no lo tiene |
 
 Render sirve DOMPurify 3.4.17 (el High del 15/11, DEF-25, está cerrado). En la corrida del 15/11 el activo hizo 46 577 pedidos, todos con `Authorization` y cero respuestas 401.
+
+### 5.3 Cierre de la Entrega 4: cifras del 16/11/2026
+
+| Eje | Qué | Resultado | Evidencia |
+|---|---|---|---|
+| G1 | Sistema completo con **un solo comando** (`docker compose up --build`) desde un clon limpio y **sin `.env`**: Postgres, RabbitMQ, backend con migraciones, seed automático e idempotente, M1 falso y frontend (contexto git del repo del Frontend, `FRONTEND_REF`, por defecto `main`) | Backend listo a los **135 s**, seed a los **146 s**, login BFF → M1 falso → `GET /me` 200 a los **149 s** (límite 900 s). Segundo `up`: el seed sale con código 0 (idempotente). El frontend corre con `next dev` dentro del compose (el build de producción rechaza a propósito el M1 falso): la primera carga de cada pantalla es lenta | Workflow `g1-arranque.yml` (#698, PR #699), [run 43893616309](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43893616309); `README.md` |
+| G6 | Secretos con gitleaks **por defecto** y trufflehog sobre todo el historial (job `secrets-default`) | gitleaks por defecto: **0** hallazgos en los dos repos (respetando `.gitleaksignore`: 15 huellas en el Backend, 511 en el Frontend, todas valores de juguete); trufflehog: **0 credenciales verificadas** | [Run BE 43903772411](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43903772411), [run FE 43903780749](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43903780749); [`07`](07-informe-seguridad.md) 5.4 |
+| Eje A | Los 10 criterios que solo tenía el frontend, con test leído y ejecutado; recorrido responsive y de accesibilidad | 10 de 10 pasan (CA-HU01-1 parcial, DEF-39). 21 pantallas a 360, 768 y 1280 px: **0 violaciones axe** (wcag2a/aa/21aa/22aa) y sin scroll horizontal. Lighthouse accesibilidad **100** (escritorio y móvil) en Ingreso, Inicio Oficina, Contenedores, Servicios, Expedientes, Mapa y Portal público; buenas prácticas 100 (96 en móvil en Servicios y Mapa, por las teselas) | PR FE #979 (CI [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165) en verde, **pendiente de merge**); `Frontend-M6-DAPS2/docs/evidencia/eje-a-2026-11-16/`; matriz en [`03`](03-matriz-trazabilidad.md) |
+| Eje B | API: éxito y error por operación | Éxito **151/152**, error **149/152**, con las 4 excepciones justificadas | #702, [run 43897945641](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43897945641) |
+| Eje B | Cobertura del Backend con umbral | 97,98 / 95,28 / 97,82 / 98,71 % (sentencias, ramas, funciones, líneas); umbral **90 %** en las cuatro, bloqueante | Sección 3; #700 |
+| Eje B | Cobertura del Frontend ≥ 90 % con umbral | **PENDIENTE** (en curso, Frontend #975). Hoy Vitest la mide sin umbral (SonarCloud: 85,4 %) | DEF-35 |
+| Eje B | Mutation testing | Backend: **75,39 %** (5.1). Frontend: **PENDIENTE** (Stryker en curso) | DEF-35 |
+| Eje B | Tests inestables del Frontend | Causa raíz: timeouts por defecto que no alcanzaban bajo carga y respuestas de MSW retenidas con `delay(ms)`; Playwright pasa a `retries: 0`. 3 corridas locales idénticas (3229 tests). **PENDIENTE:** 3 corridas en el CI | PR FE #980 (pendiente de merge); DEF-29 a DEF-31 |
+| Eje B | Gates de calidad bloqueantes | Sonar bloqueante y requerido en el Backend (#700); en el Frontend, en el PR FE #972 (**pendiente de merge**). `e2e` y `secrets` requeridos en los dos repos | Sección 4 |
+| Eje C | Concurrencia optimista y timeout en el Frontend | `If-Match` en las transiciones versionadas y `PATCH /containers/:id`; 412 → aviso con «Recargar» sin perder lo escrito. Timeout del BFF de **5 s** (antes 15) con aborto real y 503 «El sistema no responde…»; un reintento solo en `GET` ante una falla de red inmediata | PR FE #978 (CI en verde, **pendiente de merge**); `e2e/optimistic-concurrency.spec.ts`; DEF-32 y DEF-33 |
+| Eje D | Pruebas de seguridad en vivo del Backend | **58 tests**: JWT (9 variantes → 401), BFLA (403 `ROLE_REQUIRED`), BOLA en escrituras y evidencia (403 `NOT_ASSIGNED`, verificado en la base), mass assignment (400 sin persistir), inyección SQL/NoSQL/XSS, cabeceras, CORS, 500 sin stack con `traceId`. Guion `scripts/security-live.mjs` contra cualquier URL | #701, [run 43900044633](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43900044633) (404/404 e2e); [`07`](07-informe-seguridad.md) |
+| Eje D | Fuerza bruta en el login del BFF | 429 con `Retry-After` (5 fallos por cuenta o 20 por IP en 15 min); contador en memoria por instancia | PR FE #977 (**pendiente de merge**); `e2e/login-rate-limit.spec.ts` |
+| Eje E | IA integrada en el sistema (Clase 14, 8.3) | **No aplica**: el sistema no incorpora funcionalidad de IA. El uso de IA del equipo (8.1) y el plan (8.2) están en la declaración de la Clase 14 | [`README`](README.md) |
+
+**Demo en vivo:** con el timeout de 5 s del BFF (FE #978), si Render está dormido los primeros pedidos dan 503 hasta que despierta; hay que abrir `/health` antes de la demo (riesgo R7).
 
 ## 6. Contrato y API
 
@@ -301,11 +329,11 @@ Render sirve DOMPurify 3.4.17 (el High del 15/11, DEF-25, está cerrado). En la 
 | `docs/api/openapi.json` | 103 rutas, 152 operaciones, 29 tags. `openapi:generate` no deja diff; el CI regenera el archivo y falla si queda desactualizado |
 | `src/openapi-contract.spec.ts` | 7 tests: toda operación 200/201 declara el schema de su respuesta; toda respuesta de error se declara como `application/problem+json` (ADR-011); todo `GET` autenticado declara el 403; todo `GET` con parámetros declara el 400 (DEF-20); `openapi.json` al día; ninguna propiedad como `type: object` sin forma; todo campo con `@Min`, `@Max`, `@IsLatitude` o `@IsLongitude` declara `minimum` y `maximum` |
 | Eventos publicados | 6 `.schema.json` más `_shared.schema.json` en `docs/eventos/publicados/`, validados con `ajv` en `src/events/payloads.spec.ts` |
-| Colección Newman (#583) | **Realizada:** 455 requests ejecutados, 763 assertions, 0 fallidas; corre en el CI (`api-tests.yml`) |
+| Colección Newman (#583, #702) | **Realizada:** 570 requests, 1015 assertions, 0 fallidas (16/11); corre en el CI (`api-tests.yml`) |
 | Schemathesis (#583) | **Realizado, solo `GET`.** Paso 1: 4388 casos pasan. Paso 2 (`status_code_conformance`, bloqueante desde #593): exit 0, 4384 casos, 3913 pasan, 471 salteados. `/neighborhoods` ya no se excluye (#594) |
-| Endpoints con caso de éxito y de error | **Parcial:** éxito en **61 de 152**; error en las 152; los 91 restantes en `test/api/PENDIENTES.md` |
+| Endpoints con caso de éxito y de error | **Hecho (#702):** éxito en **151 de 152** y error en **149 de 152**; las 4 excepciones, justificadas en `test/api/PENDIENTES.md`; `npm run api:coverage` lo controla en cada `npm test` |
 | Transición inválida → 409 | **Hecho** para servicios, reparaciones y cortes, e intervenciones de arbolado (114 tests, #582); contenedores y expedientes tenían `it.each` |
-| Problem Details (#590, DEF-10) | **Realizado**, también para JSON mal formado y cuerpo grande. `http-exception.filter.spec.ts` y `test/problem-details.e2e-spec.ts` (9 casos). Sin id de correlación en los 500; `type` siempre `about:blank` |
+| Problem Details (#590, DEF-10) | **Realizado**, también para JSON mal formado y cuerpo grande. `http-exception.filter.spec.ts` y `test/problem-details.e2e-spec.ts` (9 casos). Desde #701, todo error lleva `traceId` (igual al header `X-Request-Id` y al log) y `path` sin query; `type` siempre `about:blank` |
 | ETag e `If-Match` (#591, DEF-05) | **Realizado en el alcance de ADR-012:** transiciones de contenedores, servicios, intervenciones y expedientes, y `PATCH /containers/:id` y `PATCH /services/:id`. `test/etag-if-match.e2e-spec.ts` (12 casos, `[200, 412]` con concurrencia real). No cubre el resto de las acciones |
 | `Idempotency-Key` (#592, DEF-06) | **Realizado en 21 `POST` de creación**, opcional. `test/idempotency.e2e-spec.ts` (8 casos). El guardado de la respuesta no es atómico con la transacción de dominio (ADR-013) |
 
@@ -316,27 +344,33 @@ Render sirve DOMPurify 3.4.17 (el High del 15/11, DEF-25, está cerrado). En la 
 | Cobertura de líneas en dominio | ≥ 80 % | 98,71 % global (16/11; R09: 99,16 %); mínimo en `src/modules/*`: 97,82 % | **Sí** |
 | Cobertura de ramas en dominio | ≥ 70 % | 95 % global (16/11; R09: 93,63 %); mínimo en `src/modules/*`: 81,57 % | **Sí** |
 | Mutation score en dominio | ≥ 60 % | 75,39 % global en los 26 archivos de dominio (CI tras el refuerzo, #617, #647; antes 71,22 %; ver 5.1) | **Sí** |
-| Tests flaky | 0 (3 corridas idénticas) | 3 corridas idénticas en local (R08) y repetidas en el CI (ver 2.1) | **Sí** |
-| Pipeline | ≤ 15 min | 3 min 5 s en `main` (16/11, con `sonar` y `trivy`; R09: 1 min 44 s); `API tests` 2 min 27 s | **Sí** |
+| Tests flaky | 0 (3 corridas idénticas) | Backend: 3 corridas idénticas en local (R08), repetidas en el CI, y el 16/11 local y CI iguales (3010). Frontend: 3 corridas locales idénticas con FE #980; **PENDIENTE** en el CI (ver 2.1) | **Sí** en el Backend; **Parcial** en el Frontend |
+| Pipeline | ≤ 15 min | 3 min 7 s en `develop` @ `50cfff7` (16/11, cierre); 3 min 5 s en `main` con `sonar` y `trivy`; R09: 1 min 44 s | **Sí** |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` (23 más `rabbitmq-real`); los E2E de navegador viven en el repo del frontend | **Sí** |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y **1 Mayor** con workaround (DEF-32; DEF-13 cerrado con #656); 10 Menores abiertos (DEF-14, DEF-19, DEF-29 a DEF-31 y DEF-33 a DEF-37); [`06`](06-registro-defectos.md) | **Sí** |
-| Casos negativos o de borde | ≥ 40 % | 67,5 % (251 de 372, [`04`](04-especificacion-casos.md)) | **Sí** |
-| Quality Gate (SonarCloud) | Gate en verde, 0 bugs Blocker/Critical, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % de hotspots | Gate **OK** sobre `main` (16/11): 0 bugs, 0 vulnerabilidades, duplicación 1,2 %, A/A/A, hotspots 100 %, cobertura 97,3 % (5.2). **No bloqueante todavía** (#660) | **Sí** |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y **1 Mayor** con workaround (DEF-32, corregido en FE #978, pendiente de merge; con el merge quedan 0); 11 Menores abiertos (DEF-29 a DEF-31 y DEF-33 a DEF-40); [`06`](06-registro-defectos.md) | **Sí** |
+| Casos negativos o de borde | ≥ 40 % | 68,1 % (261 de 383, [`04`](04-especificacion-casos.md)) | **Sí** |
+| Quality Gate (SonarCloud) | Gate en verde, 0 bugs Blocker/Critical, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % de hotspots | Gate **OK** sobre `main` (16/11): 0 bugs, 0 vulnerabilidades, duplicación 1,2 %, A/A/A, hotspots 100 %, cobertura 97,3 % (5.2). **Bloqueante y requerido** desde #700 | **Sí** |
 | ZAP baseline y activo autenticado | 0 High, cada Medium justificada | 0 High en los dos; 1 Medium en cada uno, justificadas en [`07`](07-informe-seguridad.md) 5.2 | **Sí** |
 | Dependencias (Trivy y `npm audit`) | 0 CVE críticas o altas sin mitigación documentada | 0 HIGH/CRITICAL en `fs`, `image` y `config`; `npm audit --omit=dev` en 0 | **Sí** |
 | Carga: 50 usuarios, 5 min, p95 < 500 ms, error < 1 % | p95 < 500 ms, error < 1 % | p(95) 32,84 ms y 0,00 % en 14 850 requests (local); también corrida contra el despliegue y con escrituras (ver 2.2) | **Sí** |
-| Criterios de aceptación pasados / HU ejecutadas | ≥ 95 % y ninguno Must fallado | [`03`](03-matriz-trazabilidad.md): 161 criterios con test del backend sin fallos (actualizado con #643: CA-HU31-10); 9 solo FE y 5 huecos sin ejecutar | **Parcial** |
+| Criterios de aceptación pasados / HU ejecutadas | ≥ 95 % y ninguno Must fallado | [`03`](03-matriz-trazabilidad.md): **171 de 175 (97,7 %)**: 161 con test del backend y 10 con test del frontend ejecutado (Eje A); 0 fallados; 4 huecos de backend declarados (CA-HU10-2, CA-HU24-2, CA-HU33-1, CA-HU33-4). Salvedad: 6 de los 10 del frontend dependen del merge de FE #979 | **Sí** (con la salvedad de merge) |
+| Arranque con un comando (G1) | Sistema completo levantado y usable | `docker compose up --build` sin `.env`: login de punta a punta a los 149 s (5.3) | **Sí** |
+| Secretos (G6) | 0 secretos en el historial | gitleaks por defecto 0 y trufflehog 0 verificados en los dos repos (5.3) | **Sí** |
+| Cobertura del Frontend con umbral | ≥ 90 % | **PENDIENTE** (Frontend #975) | **PENDIENTE** |
+| Mutation testing del Frontend | ≥ 60 % | **PENDIENTE** (Stryker en curso) | **PENDIENTE** |
 
 ## 8. Lo que no se realizó
 
 | Criterio | Estado | Motivo |
 |---|---|---|
-| Gate de SonarCloud bloqueante y requerido en los PR a `develop`, y su prueba en rojo | **NO HECHO** | Opción C, paso 2 ([#660](https://github.com/hllous/Backend-M6-DAPS2/issues/660)). El análisis y el gate (OK) sí están hechos (5.2) |
+| Gate de SonarCloud bloqueante y requerido | **HECHO** en el Backend (#700, #660 cerrado); **PENDIENTE** en el Frontend (PR FE #972) | No registramos una prueba en rojo del gate |
+| Re-correr ZAP y `scripts/security-live.mjs` contra Render con #701 en `main` | **PENDIENTE** | Render sirve `main`; la corrida del 16/11 contra Render (sin #701) dio 9 OK y 3 FALLA, los tres que corrige #701 ([`07`](07-informe-seguridad.md) 1) |
+| Cobertura del Frontend ≥ 90 % con umbral; mutation del Frontend; 3 corridas del CI del Frontend | **PENDIENTE** | En curso al 16/11 (5.3) |
 | Reporte final de ZAP archivado en `docs/QA/evidencia/` | **NO HECHO** | Están archivados los reportes de la corrida del 15/11 (`evidencia/zap-2026-11-15/`); los de la corrida final del 16/11 viven como artifact del [run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357), que vence a los 90 días, y se pueden regenerar con el workflow |
 | OWASP ZAP (baseline y activo autenticado) | **HECHO** | 0 High en los dos sobre `main` (5.2; `07`, 5.2) |
 | Trivy | **HECHO** | 0 HIGH/CRITICAL en `fs`, `image` y `config`; sin entradas en `.trivyignore` (5.2; `07`, 5.2) |
-| Mutation score: reforzar los 21 archivos restantes y confirmar el global en el CI | **Parcial** | Línea base del dominio completo medida y 5 archivos reforzados (5.1); el score global tras el refuerzo se confirma con una corrida en el CI luego del merge |
-| Éxito por endpoint en los 91 endpoints restantes | **NO HECHO** | `test/api/PENDIENTES.md` |
+| Mutation score: reforzar los 21 archivos restantes | **Parcial** | Línea base del dominio completo medida, 5 archivos reforzados y global confirmado en el CI: 75,39 % (5.1) |
+| Éxito y error por endpoint | **HECHO** (#702) | 151/152 y 149/152, excepciones en `test/api/PENDIENTES.md` |
 | Integración con broker real (Testcontainers) | **Parcial** | Postgres y RabbitMQ reales como contenedores de servicio del CI y en local. El consumer y la publicación del outbox (también con el broker inalcanzable y su reenvío) se prueban contra RabbitMQ real (#618) |
 | `--detectOpenHandles` | **NO HECHO** | No se corrió |
 
@@ -347,19 +381,21 @@ Render sirve DOMPurify 3.4.17 (el High del 15/11, DEF-25, está cerrado). En la 
 | 1 | Test de la matriz de transiciones con 409 en los inválidos | **Hecho** (#582, 114 tests) |
 | 2 | Script k6 con 50 usuarios, 5 minutos y 3 `GET` críticos | **Hecho** (#585, #574): local, despliegue y escrituras |
 | 3 | Schemathesis contra `openapi.json` en el CI | **Hecho** (#583), solo `GET`; bloqueante desde #593 |
-| 4 | SonarCloud y Quality Gate | **Hecho** (#657): gate OK y A/A/A sobre `main` el 16/11; **falta** hacerlo bloqueante (#660) |
+| 4 | SonarCloud y Quality Gate | **Hecho** (#657): gate OK y A/A/A sobre `main` el 16/11; bloqueante y requerido desde #700 |
 | 5 | Stryker sobre el dominio completo | **Hecho** (#577, #617): 71,22 % → 75,39 % confirmado en el CI tras el refuerzo; quedan 21 archivos sin reforzar |
 | 6 | Correr la suite 3 veces seguidas | **Hecho** en local y en el CI; falta `--detectOpenHandles` |
 | 7 | Reemplazar las aserciones débiles (`services.service.spec.ts:875` y el resto) | **Sin hacer** |
-| 8 | Hacer obligatorio el job `e2e` en la protección de ramas | **NO HECHO** (pide admin; DEF-14) |
+| 8 | Hacer obligatorio el job `e2e` en la protección de ramas | **Hecho** el 16/11 en los dos repos (DEF-14) |
 | 9 | Newman en el CI | **Hecho** (#583) |
 | 10 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); ZAP **hecho** (#659, 0 High); Trivy **hecho** (#658, 0 HIGH/CRITICAL) |
 | 11 | Tag `v1.0-testing` en `main` y en el frontend | **Hecho**: ver «Versión entregada» |
 | 12 | 400 declarado en los `GET` con entrada y Schemathesis bloqueante (DEF-20) | **Hecho** (#593, PR #597) |
 | 13 | Catálogo de barrios local para el compose y el CI (DEF-21) | **Hecho** (#594, PR #597) |
-| 14 | Errores en Problem Details RFC 9457 (DEF-10) | **Hecho** (#590, PR #597); falta el id de correlación y que el frontend adapte su parser (Frontend #898) |
+| 14 | Errores en Problem Details RFC 9457 (DEF-10) | **Hecho** (#590, PR #597); id de correlación hecho en #701 (DEF-19) |
 | 15 | `ETag` e `If-Match` con 412 (DEF-05) | **Hecho** en el alcance de ADR-012 (#591, PR #597) |
 | 16 | `Idempotency-Key` en los `POST` de creación (DEF-06) | **Hecho** en 21 `POST`, con la limitación de ADR-013 (#592, PR #597) |
-| 17 | Frontend dentro del compose | **Hecho** (#560) |
+| 17 | Frontend dentro del compose | **Hecho** (#560); sistema completo con un solo comando (G1, #699) |
+| 18 | Pruebas de seguridad en vivo y guion contra una URL | **Hecho** (#701, 58 tests) |
+| 19 | Newman con éxito y error en todas las operaciones | **Hecho** (#702), con 4 excepciones justificadas |
 
 Lo que no se haga se declara «no realizado» y no se presenta con números sin evidencia.

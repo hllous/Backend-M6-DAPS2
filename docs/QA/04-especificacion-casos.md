@@ -1,14 +1,14 @@
 # 04 · Especificación de casos de prueba
 
-> Versión 2.0 · 10/11/2026. Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [02-historias-y-criterios.md](02-historias-y-criterios.md) (ahí están el CUANDO y el ENTONCES) y figura en [03-matriz-trazabilidad.md](03-matriz-trazabilidad.md).
+> Versión 2.1 · 16/11/2026. Módulo 6 «Ambiente e Higiene», Grupo 04. El 16/11 se sumaron CP-373 a CP-383 (seguridad en vivo del Backend y casos del Frontend de los Ejes C y D) y se actualizaron los casos del frontend ejecutados en el Eje A. Cada caso apunta a un criterio de [02-historias-y-criterios.md](02-historias-y-criterios.md) (ahí están el CUANDO y el ENTONCES) y figura en [03-matriz-trazabilidad.md](03-matriz-trazabilidad.md).
 
 ## Cómo leerla
 
 - **Tipo:** Positivo (camino válido), Negativo (entrada o estado inválido, o falla externa que se rechaza) y Borde (límite, caso especial, concurrencia, degradación). Nos propusimos que al menos el 40 % sean negativos o de borde; el cálculo está al final.
 - **Escenario:** precondición y datos del caso. El resultado esperado es el ENTONCES del criterio; en las secciones de casos agregados (CP-335 en adelante) va después de la flecha.
 - **Prioridad:** la de la HU (Alta para Must, Media para Should, Baja para Could).
-- **Test:** archivo y nombre del test del backend (`FE:` indica un test del frontend, solo por nombre de archivo y sin revisar su contenido; `Manual:` indica que no hay test automático). Se muestran hasta dos por caso.
-- **Estado:** **Pasó** significa que el test citado existe y que la corrida completa no tuvo fallos: R08 (local sobre `1d600d2`: 2746 unitarios y 312 e2e, más 4 de 4 en RabbitMQ real) para CP-001 a CP-348 y R09 (local sobre `142e1a3`: 2854 unitarios y 343 e2e) para CP-349 en adelante. «Corregido: …» es un criterio que cambió después de la HU, con su ACT e issue. «—» es un caso que no se ejecutó (manual o solo test del frontend).
+- **Test:** archivo y nombre del test del backend (`FE:` indica un test del frontend; los de HU-01, HU-26, HU-30 y HU-32 y los casos CP-382 y CP-383 se leyeron y ejecutaron el 16/11, el resto solo por nombre de archivo; `Manual:` indica que no hay test automático). Se muestran hasta dos por caso.
+- **Estado:** **Pasó** significa que el test citado existe y que la corrida completa no tuvo fallos: R08 (local sobre `1d600d2`: 2746 unitarios y 312 e2e, más 4 de 4 en RabbitMQ real) para CP-001 a CP-348 y R09 (local sobre `142e1a3`: 2854 unitarios y 343 e2e) para CP-349 en adelante. Los casos CP-373 a CP-381 pasaron en el CI del 16/11 (`develop` @ `50cfff7`, [run 43908234945](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43908234945)). «Pasó (FE, PR …)» es un test del frontend que pasó en el CI de ese PR; los PR FE #977, #978 y #979 están **pendientes de merge** al 16/11. «Corregido: …» es un criterio que cambió después de la HU, con su ACT e issue. «—» es un caso que no se ejecutó.
 - Los casos CP-285 en adelante pertenecen a criterios agregados con correcciones posteriores. Las rutas de test son de este repo, salvo las del frontend.
 
 
@@ -16,10 +16,10 @@
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-001 | CA-HU01-1 | Usuario con cualquier rol de M6; catálogo con más de 20 registros; Zonas: ordenar por nombre y filtrar por texto; página 2 | Positivo | FE: `catalog-shell.spec.ts`<br>FE: `zones-catalog.spec.ts` | Corregido: ACT-F1, FE #528, #520, #525; sin ejecutar |
-| CP-002 | CA-HU01-2 | Backend demorado a propósito (mock con retardo); Abrir Servicios y un catálogo de cada grupo | Positivo | FE: `catalog-a-loading.spec.ts`<br>FE: `catalog-b-loading.spec.ts`<br>(+1 más) | Corregido: ACT-F1, FE #528, #520, #525; sin ejecutar |
-| CP-003 | CA-HU01-3 | Pipeline de CI del repo Frontend-M6-DAPS2; Ejecutar el job de CI del frontend | Positivo | Manual: Guard de CI del frontend citado por Trello; no se localizó el script en esta pasada. | — |
-| CP-004 | CA-HU01-4 | Backend devolviendo 500 o sin responder; Abrir Zonas con GET /zones fallando | Negativo | FE: `failure-journeys.spec.ts` | — |
+| CP-001 | CA-HU01-1 | Usuario con cualquier rol de M6; catálogo con más de 20 registros; Zonas: ordenar por nombre y filtrar por texto; página 2 | Positivo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `zones-catalog.spec.ts` | Pasó (FE, CI del PR FE #979), parcial: los catálogos con paginación del servidor no ordenan (DEF-39, BE #703) |
+| CP-002 | CA-HU01-2 | Backend demorado a propósito (mock con retardo); Abrir Servicios y un catálogo de cada grupo | Positivo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `catalog-a-loading.spec.ts`<br>(+1 más) | Pasó (FE, CI del PR FE #979) |
+| CP-003 | CA-HU01-3 | Pipeline de CI del repo Frontend-M6-DAPS2; Ejecutar el job de CI del frontend | Positivo | FE: `src/components/ui/shadcn-guard.test.ts` | Pasó (FE, CI del PR FE #979) |
+| CP-004 | CA-HU01-4 | Backend devolviendo 500 o sin responder; Abrir Zonas con GET /zones fallando | Negativo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `failure-journeys.spec.ts` | Pasó (FE, CI del PR FE #979); con FE #978 el timeout es 5 s y responde 503 |
 
 ## HU-02 — Alta de zonas operativas y recorridos con paradas
 
@@ -408,9 +408,9 @@
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-230 | CA-HU26-1 | Listado con fechas; Servicios y Control ambiental | Positivo | FE: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts`<br>FE: `services-period.spec.ts` | Corregido: ACT-F4, FE #321; sin ejecutar |
-| CP-231 | CA-HU26-2 | Servicios con cuadrilla y vehículo; Listado de Servicios | Positivo | FE: `service-vehicle-labels.spec.ts` | Corregido: ACT-F4, FE #321; sin ejecutar |
-| CP-232 | CA-HU26-3 | Fecha 2026-10-31T23:30:00-03:00; listar | Borde | FE: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts` | — |
+| CP-230 | CA-HU26-1 | Listado con fechas; Servicios y Control ambiental | Positivo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, CI del PR FE #979). Formato real: «06/09/2026, 14:05» (con coma) |
+| CP-231 | CA-HU26-2 | Servicios con cuadrilla y vehículo; Listado de Servicios | Positivo | FE: `e2e/service-vehicle-labels.spec.ts` | Pasó (FE, CI del PR FE #979) |
+| CP-232 | CA-HU26-3 | Fecha 2026-10-31T23:30:00-03:00; listar | Borde | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, CI del PR FE #979) |
 
 ## HU-27 — Consultar sin login el estado de mi denuncia, cuándo pasa el servicio y dónde están los puntos verdes
 
@@ -470,8 +470,8 @@
 |---|---|---|---|---|---|
 | CP-262 | CA-HU30-1 | M1 hosteado; secreto cargado en Render; login real + GET /me | Positivo | FE: `real-m1-login.spec.ts`<br>`jwt.strategy.spec.ts` › «acepta un access token de M1 y lo mapea a roles de M6» | Pasó |
 | CP-263 | CA-HU30-2 | JWT_SECRET desactualizado; GET /me con token de M1 | Negativo | `jwt.strategy.spec.ts` › «rechaza: %s» | Pasó |
-| CP-264 | CA-HU30-3 | Cookie de sesión vencida; abrir una pantalla protegida | Negativo | FE: `failure-journeys.spec.ts`<br>FE: `entry-and-roles.spec.ts` | Corregido: ACT-F7, FE #379, #381, #437; sin ejecutar |
-| CP-265 | CA-HU30-4 | M1 caído; login | Negativo | FE: `real-m1-login.spec.ts` | — |
+| CP-264 | CA-HU30-3 | Cookie de sesión vencida; abrir una pantalla protegida | Negativo | FE: `src/lib/m1-refresh.test.ts`<br>FE: `e2e/failure-journeys.spec.ts` | Pasó (FE, CI del PR FE #979) |
+| CP-265 | CA-HU30-4 | M1 caído o con 5xx; login | Negativo | FE: `src/app/api/session/login/route.test.ts`<br>FE: `real-m1-login.spec.ts` | Pasó (FE, CI del PR FE #979). Corta a los 90 s (`LOGIN_TIMEOUT_MS`), no a 15 s |
 
 ## HU-31 — Seguridad de la Clase 11 (SEC-W01 a W06, SEC-I01, SEC-I02, SEC-D01, SEC-D02)
 
@@ -497,7 +497,7 @@
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-277 | CA-HU32-1 | CI del frontend; Playwright con AxeBuilder | Positivo | FE: `accessibility.spec.ts` | — |
+| CP-277 | CA-HU32-1 | CI del frontend; Playwright con AxeBuilder | Positivo | FE: `e2e/accessibility.spec.ts` (63 tests) | Pasó (FE, CI del PR FE #979); 21 pantallas a 360/768/1280 px con 0 violaciones axe |
 | CP-278 | CA-HU32-2 | Backend y base arriba; GET /health y /health/ready | Positivo | `health.controller.spec.ts` › «liveness devuelve ok sin tocar la base»<br>`health.controller.spec.ts` › «ready devuelve 200 con la base arriba» | Pasó |
 | CP-279 | CA-HU32-3 | Base caída; GET /health/ready | Negativo | `health.controller.spec.ts` › «ready responde 503 sin filtrar el error de la base»<br>`health.controller.spec.ts` › «ready responde 503 si la base no contesta a tiempo» | Pasó |
 | CP-280 | CA-HU32-4 | Respuesta del backend; GET /health | Negativo | `security-headers.middleware.spec.ts` › «pone las cabeceras base y sigue la cadena»<br>`security-headers.middleware.spec.ts` › «agrega HSTS solo en producción» | Pasó |
@@ -506,10 +506,10 @@
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-281 | CA-HU33-1 | CI con service container postgres:16; npm run test:e2e | Positivo | Manual: Es la propia ejecución del job e2e del CI (.github/workflows/ci.yml, Postgres 16); no hay un test que la pruebe. Resultado de CI no consultado en esta pasada. | Medición manual |
+| CP-281 | CA-HU33-1 | CI con service container postgres:16; npm run test:e2e | Positivo | Manual: Es la propia ejecución del job e2e del CI (.github/workflows/ci.yml, Postgres 16); no hay un test que la pruebe. CI de `develop` @ `50cfff7` del 16/11: 24 suites / 404 tests pasan ([run 43908234945](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43908234945)) | Medición con evidencia del CI |
 | CP-282 | CA-HU33-2 | DATABASE_URL remota; npm run test:e2e | Negativo | `guard-database-url.e2e-spec.ts` › «tira con un host remoto»<br>`guard-database-url.e2e-spec.ts` › «tira si no hay DATABASE_URL»<br>(+1 más) | Pasó |
 | CP-283 | CA-HU33-3 | Cuadrillas con ids usr-…; crews:migrate-user-ids dos veces | Borde | `crew-user-id-migration.e2e-spec.ts` › «es idempotente: la segunda corrida no cambia nada»<br>`crew-user-id-migration.e2e-spec.ts` › «el simulacro imprime el plan, reporta lo que no tiene mapeo y no toca nada» | Pasó |
-| CP-284 | CA-HU33-4 | Base local limpia; npm test y npm run test:e2e x3 | Borde | Manual: No medido: Jest avisó de un worker que no sale (posibles handles abiertos). A medir con --detectOpenHandles. | Medición manual |
+| CP-284 | CA-HU33-4 | Base local limpia; npm test y npm run test:e2e x3 | Borde | Manual: 3 corridas seguidas idénticas en R08 (2746 / 312 / 4) y repetidas en el CI; el 16/11, la corrida local y la del CI sobre `50cfff7` dan los mismos 3010 unitarios. `--detectOpenHandles` no se corrió | Medición manual |
 
 ## Casos agregados: PR #577 a #585 (CP-335 a CP-348)
 
@@ -528,11 +528,11 @@ Casos automatizados de los PR #577 a #585. Se numeran a continuación de los ant
 | CP-343 | CA-HU31-4 | Servicio creado y zona existente; `{status:'COMPLETED'}`, `{role:'M6_ADMIN'}`, `{id}`, mezcla válida + `status`; `PATCH /zones` con `code` y `createdAt` → recibo 400 y la fila queda idéntica; un rol en el body no escala privilegios (6 tests) | Negativo | `security-input.e2e-spec.ts` › «PATCH /services/:id rechaza %j con 400 y no persiste»<br>`security-input.e2e-spec.ts` › «PATCH /zones/:id rechaza campos fuera del DTO con 400» | Pasó |
 | CP-344 | CA-HU31-6 | Almacenamiento de evidencia reemplazado por un doble; Archivo de más de 10 MB → recibo 413 (lo corta multer) | Negativo | `security-input.e2e-spec.ts` › «un archivo de más de 10 MB responde 413 (lo corta multer)» | Pasó |
 | CP-345 | CA-HU32-4 | App levantada con `configureApp()`; Cualquier ruta salvo `/api/docs` → lleva `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` | Positivo | `security-input.e2e-spec.ts` › «la API manda una CSP restrictiva» | Pasó |
-| CP-346 | CA-HU32-4 | App levantada; `/api/docs` → el middleware **no** agrega CSP (Swagger UI la necesita); es el hallazgo DEF-19 | Borde | `security-input.e2e-spec.ts` › «el middleware no agrega CSP en /api/docs (aunque acá responda 404)» | Pasó |
+| CP-346 | CA-HU32-4 | App levantada; `/api/docs` → el middleware pone la CSP propia de Swagger UI (`DOCS_CSP`), no la de la API. Hasta el 16/11 no ponía ninguna (hallazgo DEF-19, cerrado en #701) | Borde | `security-input.e2e-spec.ts` › «en /api/docs el middleware usa la CSP de Swagger UI (DEF-19)» | Pasó (actualizado el 16/11, #701) |
 | CP-347 | CA-HU31-9 | Pedido con `?access_token=` y header `Authorization`; `/x?token=SECRETO&page=2`, `access_token`, `api-key`, `client_secret`, `sig`, `session`, etc. → el log y el `path` del error redactan el valor sensible (`[REDACTED]`) y no tocan `page`, `status`, `search`, etc. | Negativo | `redact-url.spec.ts` › «redacta %s»<br>`logging.interceptor.spec.ts` › «el log no incluye el token de la query ni el header Authorization» | Pasó |
 | CP-348 | sin criterio (seguridad, HU-31) | App con Postgres real; zona, expediente y servicio; Payloads de inyección SQL y de `<script>` en nombre, dirección, descripción y notas → no hay 500 ni efectos, el dato vuelve idéntico y la tabla sigue viva. La API **no** rechaza ni escapa estos textos (9 tests: 3 payloads × 3 recursos) | Negativo | `security-input.e2e-spec.ts` › describe `payload %s` | Pasó |
 
-**Suites de nivel API, contrato y carga que no se cuentan como casos** (no están mapeadas a un criterio): la colección Newman `test/api/m6.postman_collection.json` (455 requests ejecutados, 435 definidos, 763 assertions, 0 fallidas), Schemathesis contra `docs/api/openapi.json` (4388 casos en el paso de esquema y errores de servidor, 4384 en `status_code_conformance`, **bloqueante** desde #593; solo `GET`) y la prueba de carga k6 (`test/perf/k6-criticos.js`; resultados en `test/perf/resultados/2026-11-09/`, **solo en local**, ver `05-informe-ejecucion.md`). Newman y Schemathesis corren en `.github/workflows/api-tests.yml`; k6 no corre en el CI. El éxito está probado en 61 de las 152 operaciones; los 91 endpoints restantes están en `test/api/PENDIENTES.md`.
+**Suites de nivel API, contrato y carga que no se cuentan como casos** (no están mapeadas a un criterio): la colección Newman `test/api/m6.postman_collection.json` (desde #702: 570 requests, 1015 assertions, 0 fallidas), Schemathesis contra `docs/api/openapi.json` (4388 casos en el paso de esquema y errores de servidor, 4384 en `status_code_conformance`, **bloqueante** desde #593; solo `GET`) y la prueba de carga k6 (`test/perf/k6-criticos.js`; resultados en `test/perf/resultados/2026-11-09/`, **solo en local**, ver `05-informe-ejecucion.md`). Newman y Schemathesis corren en `.github/workflows/api-tests.yml`; k6 no corre en el CI. Desde #702 hay caso de éxito en 151 de las 152 operaciones y de error en 149 de 152; las 4 excepciones (`POST /evidence` sin credenciales de R2 en el CI; `GET /health`, `GET /health/ready` y `GET /public/zones` sin error provocable) están justificadas en `test/api/PENDIENTES.md`, y `npm run api:coverage` falla si una operación queda sin caso y sin excepción.
 
 ## Casos agregados: PR #597 (CP-349 a CP-372)
 
@@ -565,14 +565,32 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | CP-371 | sin criterio (Eje C, transversal) | App con `NEIGHBORHOODS_CATALOG_FILE` apuntando al snapshot local; GET /neighborhoods con token M6_ADMIN → responde 200 con los barrios (más de 40, con `id` y `codigo`) | Positivo | `neighborhoods-catalog.e2e-spec.ts` › «con el catálogo local responde 200 con los barrios» | Pasó |
 | CP-372 | sin criterio (Eje C, transversal) | App sin `NEIGHBORHOODS_CATALOG_FILE`; GET /neighborhoods → responde 503, no una lista vacía; la variable se rechaza en producción | Negativo | `neighborhoods-catalog.e2e-spec.ts` › «sin catálogo responde 503»<br>`configuration.spec.ts` › «se acepta fuera de producción y se rechaza en producción» | Pasó |
 
+## Casos agregados: 16/11/2026 (CP-373 a CP-383)
+
+Casos de las pruebas de seguridad en vivo del Backend (Eje D, [#701](https://github.com/hllous/Backend-M6-DAPS2/pull/701), `test/security-live.e2e-spec.ts`, 58 tests) y de dos cambios del Frontend (Ejes C y D). CP-377 y CP-379 no tienen criterio propio (seguridad, HU-31); CP-382 y CP-383 son transversales sin HU, como los del Eje C. Los casos parametrizados cuentan como uno.
+
+| ID | Criterio | Escenario y resultado esperado | Tipo | Test | Estado |
+|---|---|---|---|---|---|
+| CP-373 | CA-HU31-1 | Tokens armados a mano: vencido, payload editado con la firma vieja, otra clave, `alg=none`, otro `iss`, sin `iss`, `typ=refresh`, sin `exp`, `nbf` futuro y basura → 401; un token de control válido entra y uno rechazado tampoco escribe | Negativo | `security-live.e2e-spec.ts` › describe «JWT inválido → 401» | Pasó |
+| CP-374 | CA-HU31-2 | Roles sin el permiso (p. ej. Auditoría o Campo) sobre escrituras de gestión → 403 `ROLE_REQUIRED`, sin nombrar el rol que falta y sin filas nuevas | Negativo | `security-live.e2e-spec.ts` › describe «BFLA: rol sin permiso → 403 ROLE_REQUIRED» | Pasó |
+| CP-375 | CA-HU08-6 | Integrante de la cuadrilla B sobre un servicio de la cuadrilla A: lee o sube evidencia, suspende, cierra o informa zona; otro inspector cierra una inspección asignada → 403 `NOT_ASSIGNED`, nunca el dato, y la base no cambia (verificado en la base); el integrante de A sí ve su evidencia; `/me` ignora un `userId` en la query | Negativo | `security-live.e2e-spec.ts` › describe «BOLA: Campo sobre un recurso de otra cuadrilla → 403, nunca el dato» | Pasó |
+| CP-376 | CA-HU31-4 | `POST /zones`, `/services`, `/environmental-reports`, `PATCH /services/:id` y `PUT /role-assignments` con campos fuera del DTO (`status`, fecha de cierre, `crewId` ajeno, `id`, rol fuera del catálogo) → 400 y nada persistido | Negativo | `security-live.e2e-spec.ts` › describe «mass assignment → 400 y nada persistido» | Pasó |
+| CP-377 | sin criterio (seguridad, HU-31) | SQL en el id de la ruta y en el filtro de búsqueda, SQL y XSS en texto libre, operadores NoSQL (`$gt`, `$ne`) en el body y carácter nulo → 400 o el dato literal, nunca 500 ni filas de más | Negativo | `security-live.e2e-spec.ts` › describe «inyección SQL / NoSQL / XSS: sin ejecución ni 500» | Pasó |
+| CP-378 | CA-HU32-4 | Cualquier ruta de la API y `/api/docs` → CSP restrictiva, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, sin `X-Powered-By`; `/api/docs` con su CSP propia y sus scripts cargan; HSTS en producción | Positivo | `security-live.e2e-spec.ts` › describe «cabeceras de seguridad» | Pasó |
+| CP-379 | sin criterio (seguridad, HU-31) | Preflight y pedido con `Origin` permitido y con uno ajeno → el permitido se refleja sin credenciales y con `X-Request-Id` expuesto; el ajeno no recibe `Access-Control-Allow-Origin`, y nunca `*` | Negativo | `security-live.e2e-spec.ts` › «CORS: el origen permitido se refleja…» y «CORS: un origen ajeno no recibe Access-Control-Allow-Origin, y nunca *» | Pasó |
+| CP-380 | CA-HU31-5 | Excepción no contemplada forzada; ruta inexistente; JSON mal formado → 500 en Problem Details sin stack y con un `traceId` igual al header `X-Request-Id` y al del log; 404 y 400 sin stack ni detalle del parser | Negativo | `security-live.e2e-spec.ts` › «un 500 devuelve Problem Details con traceId y sin stack; el log tiene el mismo traceId» | Pasó |
+| CP-381 | CA-HU31-9 | Pedidos con `Authorization` y con tokens en la query → el log HTTP no contiene el header, el token, su firma ni los valores de la query sensibles | Negativo | `security-live.e2e-spec.ts` › «el log HTTP no registra el Authorization ni el token de la query» | Pasó |
+| CP-382 | sin criterio (Eje C, transversal) | Dos sesiones del frontend sobre el mismo contenedor o servicio; la segunda guarda con un `If-Match` viejo → el BFF reenvía el `ETag`, el backend responde 412 y la UI avisa «Otra persona modificó este registro. Recargue para ver los cambios.» con acción Recargar, sin perder lo escrito | Borde | FE: `e2e/optimistic-concurrency.spec.ts` | Pasó en el CI del PR FE #978 (pendiente de merge) |
+| CP-383 | sin criterio (Eje D, transversal) | Login del BFF con contraseña errónea repetida → al 6.º intento por cuenta (o 21.º por IP) en 15 min responde 429 con `Retry-After`, sin revelar si la cuenta existe; un login correcto reinicia el contador | Negativo | FE: `e2e/login-rate-limit.spec.ts` | Pasó en el CI del PR FE #977 (pendiente de merge). Contador en memoria por instancia |
+
 ## Resumen
 
-- Casos: **372**: 348 para 175 criterios de 33 HU (334 iniciales más CP-335 a CP-348; CP-348 no tiene criterio propio y se cuenta en HU-31) más 24 casos transversales sin HU (CP-349 a CP-372). Los casos parametrizados cuentan como uno: los 114 tests de transiciones de #582 son 3 casos.
-- Positivos: 121 (32,5 %). Negativos: 168 (45,2 %). Borde: 83 (22,3 %).
-- **Negativos + borde: 251 de 372 = 67,5 %** (nuestra meta: 40 % o más). Cumple la meta.
-- Casos marcados **Corregido**: 116.
-- Automatizados con test del backend: 353 (94,9 %). Solo con test del frontend sin verificar: 9. Sin test automatizado: 10.
-- Los 19 casos sin test del backend (9 de frontend y 10 manuales) no se ejecutaron.
+- Casos: **383** (372 hasta el 10/11 más CP-373 a CP-383). Detalle de los anteriores: **372**: 348 para 175 criterios de 33 HU (334 iniciales más CP-335 a CP-348; CP-348 no tiene criterio propio y se cuenta en HU-31) más 24 casos transversales sin HU (CP-349 a CP-372). Los casos parametrizados cuentan como uno: los 114 tests de transiciones de #582 son 3 casos.
+- Positivos: 122 (31,9 %). Negativos: 177 (46,2 %). Borde: 84 (21,9 %).
+- **Negativos + borde: 261 de 383 = 68,1 %** (meta de la consigna: 40 % o más). Cumple. Hasta el 10/11 era 251 de 372 = 67,5 %.
+- Casos marcados **Corregido**: 111 (eran 116; CP-001, CP-002, CP-230, CP-231 y CP-264 pasaron de «Corregido; sin ejecutar» a «Pasó» al ejecutarse en el Eje A).
+- Automatizados con test del backend: 362 (94,5 %). Con test del frontend leído y ejecutado: 12 (los 10 del Eje A más CP-382 y CP-383). Sin test automatizado: 9 (manuales o mediciones).
+- Los 9 casos sin test automatizado no se ejecutaron como test; CP-281 y CP-284 tienen medición con evidencia.
 
 | HU | Casos | Positivos | Negativos | Borde | Neg. + borde |
 |---|---|---|---|---|---|
@@ -583,7 +601,7 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | HU-05 | 18 | 5 | 8 | 5 | 72,2 % |
 | HU-06 | 11 | 5 | 3 | 3 | 54,5 % |
 | HU-07 | 17 | 4 | 10 | 3 | 76,5 % |
-| HU-08 | 14 | 3 | 10 | 1 | 78,6 % |
+| HU-08 | 15 | 3 | 11 | 1 | 80,0 % |
 | HU-09 | 19 | 7 | 7 | 5 | 63,2 % |
 | HU-10 | 3 | 2 | 1 | 0 | 33,3 % |
 | HU-11 | 17 | 7 | 8 | 2 | 58,8 % |
@@ -606,10 +624,10 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | HU-28 | 15 | 5 | 1 | 9 | 66,7 % |
 | HU-29 | 13 | 2 | 8 | 3 | 84,6 % |
 | HU-30 | 4 | 1 | 3 | 0 | 75,0 % |
-| HU-31 | 20 | 2 | 17 | 1 | 90,0 % |
-| HU-32 | 6 | 3 | 2 | 1 | 50,0 % |
+| HU-31 | 27 | 2 | 24 | 1 | 92,6 % |
+| HU-32 | 7 | 4 | 2 | 1 | 42,9 % |
 | HU-33 | 4 | 1 | 1 | 2 | 75,0 % |
-| Transversales sin HU (Eje C, CP-349 a CP-372) | 24 | 5 | 12 | 7 | 79,2 % |
-| **Total** | **372** | **121** | **168** | **83** | **67,5 %** |
+| Transversales sin HU (Eje C, CP-349 a CP-372; CP-382 y CP-383) | 26 | 5 | 13 | 8 | 80,8 % |
+| **Total** | **383** | **122** | **177** | **84** | **68,1 %** |
 
 Los casos de rol y de pertenencia ("403 NOT_ASSIGNED", "403 ROLE_REQUIRED") se cuentan como negativos. Los de degradación ante la caída de un sistema externo se cuentan como borde cuando el sistema sigue operando y como negativos cuando se rechaza la operación.
