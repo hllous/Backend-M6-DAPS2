@@ -6,9 +6,9 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
-import { redactUrl } from '../utils/redact-url';
 
 /**
  * Filtro global de excepciones HTTP.
@@ -21,6 +21,7 @@ import { redactUrl } from '../utils/redact-url';
  * {
  *   type: 'about:blank', title, status, detail, instance,   // RFC 9457
  *   statusCode, message, error, timestamp, path,            // históricos
+ *   traceId,        // id de correlación, el mismo del header X-Request-Id y del log
  *   code?: string   // solo en algunos errores (403 ROLE_REQUIRED)
  * }
  */
@@ -71,6 +72,13 @@ function isBodyParserError(e: unknown): e is Error & { status: number } {
   );
 }
 
+/** `/zones?access_token=x` → `/zones`. */
+function soloRuta(url: string | undefined): string {
+  const u = url ?? '';
+  const i = u.indexOf('?');
+  return i === -1 ? u : u.slice(0, i);
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -79,6 +87,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+
+    // Lo pone el middleware requestId; un error previo a él (no debería haber) igual lleva uno.
+    const traceId =
+      typeof response.locals?.traceId === 'string' ? response.locals.traceId : randomUUID();
+    // Solo la ruta, sin query: la URL vuelve al cliente y a cualquier proxy (DEF-19).
+    const path = soloRuta(request.url);
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Error interno del servidor';
@@ -120,15 +134,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message = exception.message;
       error = reasonPhrase(status);
     } else {
-      // Error no controlado — loguear para debugging
+      // Error no controlado: el stack va solo al log, con el traceId que ve el cliente.
       this.logger.error(
-        `Unhandled exception: ${exception}`,
+        `Unhandled exception [traceId=${traceId}] ${request.method} ${path}: ${exception}`,
         exception instanceof Error ? exception.stack : undefined,
       );
     }
-
-    // La URL vuelve al cliente y a los logs de cualquier proxy: sin tokens de la query.
-    const path = redactUrl(request.url);
 
     response
       .status(status)
@@ -145,6 +156,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ...(code && { code }),
         timestamp: new Date().toISOString(),
         path,
+        traceId,
       });
   }
 }
