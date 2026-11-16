@@ -84,7 +84,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estru
 | HU del alcance ejecutadas | 100 % | Las 33 HU tienen criterios ejecutados; quedan 4 criterios sin test automatizado ([`03`](03-matriz-trazabilidad.md)) | Sí |
 | Criterios de aceptación pasados | ≥ 95 %, sin fallos en `MUST` | 177 de 181 ejecutados y pasados (97,8 %): 167 del backend y 10 del frontend; 0 fallados | Sí |
 | Casos negativos o de borde | ≥ 40 % | 67,8 % (267 de 394) | Sí |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 4 Menores | Sí |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 3 Menores | Sí |
 | Tests flaky | 0 (3 corridas idénticas) | Backend: 3 corridas locales y el CI idénticos. Frontend: 3 corridas locales idénticas y `retries: 0` (FE #980) | Sí |
 | Pipeline | ≤ 15 min | 2 min 23 s | Sí |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | Job `e2e`: 25 suites y 410 tests | Sí |

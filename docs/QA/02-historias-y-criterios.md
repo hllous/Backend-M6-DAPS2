@@ -454,4 +454,4 @@ Propuestas de alcance del tablero, a validar por el PO. No tienen criterios ni c
 | HU | Qué sigue abierto | Referencia |
 |---|---|---|
 | HU-31 | Swagger UI público en producción y evidencia servida por URL pública del bucket | DEF-38 en [`06`](06-registro-defectos.md) (resto de DEF-19, cerrado por #701) |
-| HU-23 | La DLQ es del Core: M6 no puede verla ni reprocesarla | DEF-37, [BE #694](https://github.com/hllous/Backend-M6-DAPS2/issues/694) |
+| HU-23 | Nada abierto: la DLQ es del Core y M6 no la replica (decisión de diseño). Falta ensayar un fallo contra el Core real | DEF-37 (cerrado) en [`06`](06-registro-defectos.md), [BE #694](https://github.com/hllous/Backend-M6-DAPS2/issues/694) |
