@@ -69,6 +69,7 @@ jobs:
         run: |
           date +%s > inicio
           nohup docker compose up --build > compose.log 2>&1 &
+          echo $! > compose.pid
           echo "Arrancó a las $(date -u +%H:%M:%S) UTC"
 
       - name: Backend listo (/health/ready)
@@ -76,6 +77,7 @@ jobs:
           inicio=$(cat inicio)
           until body=$(curl -sf "$API/health/ready"); do
             [ $(( $(date +%s) - inicio )) -lt "$LIMITE_SEGUNDOS" ] || { echo "::error::El backend no respondió /health/ready en 15 minutos"; exit 1; }
+            kill -0 "$(cat compose.pid)" 2>/dev/null || { echo "::error::docker compose up terminó antes de tiempo"; tail -n 100 compose.log; exit 1; }
             sleep 5
           done
           echo "$body"
@@ -99,6 +101,7 @@ jobs:
           inicio=$(cat inicio)
           until curl -sf "$FRONT/api/health"; do
             [ $(( $(date +%s) - inicio )) -lt "$LIMITE_SEGUNDOS" ] || { echo "::error::El frontend no respondió en 15 minutos"; exit 1; }
+            kill -0 "$(cat compose.pid)" 2>/dev/null || { echo "::error::docker compose up terminó antes de tiempo"; tail -n 100 compose.log; exit 1; }
             sleep 5
           done
           echo
@@ -127,8 +130,8 @@ jobs:
           # El rol sale del seed (user_role_assignment), vía GET /me del backend.
           grep -q 'M6_ADMIN' login.json || { echo "::error::La sesión no trae el rol M6_ADMIN del seed"; cat login.json; exit 1; }
           # Un pedido autenticado por el BFF con datos del seed.
-          codigo=$(curl -s -o zonas.json -w '%{http_code}' --max-time 120 -b cookies.txt "$FRONT/api/zones")
-          echo "GET /api/zones (BFF) → $codigo"
+          codigo=$(curl -s -o zonas.json -w '%{http_code}' --max-time 120 -b cookies.txt "$FRONT/api/zones?search=Belgrano")
+          echo "GET /api/zones?search=Belgrano (BFF) → $codigo"; head -c 300 zonas.json; echo
           [ "$codigo" = "200" ] && grep -qi 'belgrano' zonas.json
           echo "$total" > total
           {
