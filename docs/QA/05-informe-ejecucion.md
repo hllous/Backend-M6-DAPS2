@@ -36,8 +36,8 @@ R09 salvo que se diga otra cosa. «Saltados» son tests que Jest no ejecutó; «
 | Schemathesis: `status_code_conformance` (**bloqueante**) | — | 4384 casos | 3913 | 0 (exit 0) | 471 | — |
 | Mutation (Stryker, #617) | — | 26 archivos de dominio (5182 mutantes, 2142 no compilan y no cuentan) | 75,39 % global en el CI tras el refuerzo (2292 detectados); 71,22 % antes (2165) | — | — | 57 min 16 s en el CI con incremental (2 h 26 min la primera, sin cache); medición de noviembre de 2026, **no es R09** (5.1) |
 | Carga (k6) | — | 14 850 requests | p(95) 32,84 ms; 0,00 % de error | 0 | — | 5 min; ver 2.2 |
-| Seguridad dinámica (ZAP) | — | — | — | — | — | **No realizado** |
-| Seguridad estática: Trivy | — | — | — | — | — | **No realizado** |
+| Seguridad dinámica (ZAP) | 2 escaneos (baseline en Render; activo autenticado en un entorno efímero) | activo: 46 577 pedidos, 2xx en 76 rutas | 0 High en el activo | 1 High en el baseline | — | Workflow `dast`, run 43764318178; **1 High abierta (#668)**; ver `07`, 5.2 |
+| Seguridad estática: Trivy (#658) | — | 3 pasadas: `fs`, `image`, `config` | 0 HIGH/CRITICAL con fix | 0 | — | Job `trivy` del CI, [run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43784574768); la primera corrida ([run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43762807669)) dio 6 HIGH en la imagen y DS-0002, corregidos en DEF-26; prueba en rojo en `07`, 5.2 |
 | Compose en frío | — | 1 | 1 | 0 | — | up en 46 s; `/health/ready` 200 a los 55 s; seed OK; `GET /neighborhoods` 200 |
 
 Notas:
@@ -296,8 +296,8 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 | Criterio | Estado | Motivo |
 |---|---|---|
 | Captura del Quality Gate en verde | **NO HECHO** | El análisis corre en el CI desde #657 (gate no bloqueante), pero el gate no está en verde: ver la fila del criterio arriba |
-| OWASP ZAP | **NO HECHO** | No se corrió |
-| Trivy | **NO HECHO** | No se corrió |
+| OWASP ZAP (baseline y activo autenticado) | **HECHO, con 1 High abierta** | Corrida real el 15/11 (`07`, 5.2). El baseline contra Render reportó 1 High (DOMPurify 3.1.4 en el Swagger UI): corrección en #668. Falta la corrida final sobre el tag |
+| Trivy | **HECHO** | 0 HIGH/CRITICAL con fix en `fs`, `image` y `config`; sin entradas en `.trivyignore`. Ver `07`, 5.2 |
 | Mutation score: reforzar los 21 archivos restantes y confirmar el global en el CI | **Parcial** | Línea base del dominio completo medida y 5 archivos reforzados (5.1); el score global tras el refuerzo se confirma con una corrida en el CI luego del merge |
 | Éxito por endpoint en los 91 endpoints restantes | **NO HECHO** | `test/api/PENDIENTES.md` |
 | Integración con broker real (Testcontainers) | **Parcial** | Postgres y RabbitMQ reales como contenedores de servicio del CI y en local. El consumer y la publicación del outbox (también con el broker inalcanzable y su reenvío) se prueban contra RabbitMQ real (#618) |
@@ -316,7 +316,7 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 | 7 | Reemplazar las aserciones débiles (`services.service.spec.ts:875` y el resto) | **Sin hacer** |
 | 8 | Hacer obligatorio el job `e2e` en la protección de ramas | **NO HECHO** (pide admin; DEF-14) |
 | 9 | Newman en el CI | **Hecho** (#583) |
-| 10 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); ZAP y Trivy **NO HECHOS** |
+| 10 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); ZAP **hecho** (#659); Trivy **hecho** (#658) |
 | 11 | Tag `v1.0-testing` en `main` y en el frontend | **Hecho**: ver «Versión entregada» |
 | 12 | 400 declarado en los `GET` con entrada y Schemathesis bloqueante (DEF-20) | **Hecho** (#593, PR #597) |
 | 13 | Catálogo de barrios local para el compose y el CI (DEF-21) | **Hecho** (#594, PR #597) |
