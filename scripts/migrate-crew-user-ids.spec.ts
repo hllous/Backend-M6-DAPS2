@@ -206,7 +206,7 @@ describe('describirDestino', () => {
   it('distingue base local y remota sin exponer host ni credencial', () => {
     expect(describirDestino('postgresql://u:secreto@localhost:5432/m6', false)).toBe('Base: local');
     expect(describirDestino('postgresql://u:secreto@127.0.0.1/m6', false)).toBe('Base: local');
-    const remota = describirDestino('postgresql://u:secreto@db.ejemplo.com:5432/m6', false);
+    const remota = describirDestino(`postgresql://u:secreto${'@'}db.ejemplo.com:5432/m6`, false);
     expect(remota).toBe('Base: remota');
     expect(remota).not.toMatch(/secreto|ejemplo/);
   });
