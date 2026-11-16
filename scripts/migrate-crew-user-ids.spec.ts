@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { migrateCrewUserIds, parseMapping } from './migrate-crew-user-ids';
+import { describirDestino, migrateCrewUserIds, parseMapping } from './migrate-crew-user-ids';
 import type { Mock } from 'vitest';
 
 describe('parseMapping', () => {
@@ -199,5 +199,19 @@ describe('migrateCrewUserIds', () => {
     expect(res).toEqual({ applied: true, changes: 0, unmapped: [] });
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(lines()).toContain('Sin cambios.');
+  });
+});
+
+describe('describirDestino', () => {
+  it('distingue base local y remota sin exponer host ni credencial', () => {
+    expect(describirDestino('postgresql://u:secreto@localhost:5432/m6', false)).toBe('Base: local');
+    expect(describirDestino('postgresql://u:secreto@127.0.0.1/m6', false)).toBe('Base: local');
+    const remota = describirDestino('postgresql://u:secreto@db.ejemplo.com:5432/m6', false);
+    expect(remota).toBe('Base: remota');
+    expect(remota).not.toMatch(/secreto|ejemplo/);
+  });
+
+  it('marca el dry-run', () => {
+    expect(describirDestino('postgresql://localhost/m6', true)).toBe('Base: local (dry-run)');
   });
 });
