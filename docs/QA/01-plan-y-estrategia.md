@@ -1,6 +1,6 @@
 # 01 · Plan y estrategia de pruebas
 
-> Versión 2.0 · 10/11/2026. Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II, sobre `develop` @ `142e1a3` (estructura de ISO/IEC/IEEE 29119-3). Las cifras están en [`05-informe-ejecucion.md`](05-informe-ejecucion.md); **R09** es la corrida local de medición.
+> Versión 2.1 · 16/11/2026. Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estructura de ISO/IEC/IEEE 29119-3). Las cifras están en [`05-informe-ejecucion.md`](05-informe-ejecucion.md); **R09** es la corrida local de medición del 10/11 (`develop` @ `142e1a3`) y la **Entrega 4** (16/11) se midió sobre `main` @ `78bf714`. Las herramientas de análisis (SonarCloud, Trivy y ZAP) están en uso desde la Entrega 4: decisión en [ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md).
 
 ## 1. Objetivo y alcance
 
@@ -31,7 +31,7 @@
 
 | Nivel | Qué existe | Qué falta |
 |---|---|---|
-| **Unitario** (backend) | 124 suites; R09: 2854 tests pasan, 0 saltados, 0 fallan. Cobertura 98,58 % sentencias, 93,63 % ramas, 99,16 % líneas; umbral de 85 % global y por archivo en 7 servicios críticos. Incluye 114 tests de transiciones inválidas (#582) | Algunos tests prueban llamadas a mocks más que comportamiento; aserción débil en `services.service.spec.ts:875` |
+| **Unitario** (backend) | 125 suites; 16/11: 2992 tests pasan, 0 fallan (R09: 2854). Cobertura 97,97 % sentencias, 95 % ramas, 98,71 % líneas; umbral de 85 % global y por archivo en 7 servicios críticos. SonarCloud la mide igual (97,3 % con su denominador, las mismas líneas sin cubrir). Incluye 114 tests de transiciones inválidas (#582) | Algunos tests prueban llamadas a mocks más que comportamiento; aserción débil en `services.service.spec.ts:875` |
 | **Mutation testing** | Stryker sobre los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules` (#577, #617): score global en CI **75,39 %** (era 71,22 % antes del refuerzo); 5 archivos reforzados con tests; workflow `mutation.yml` manual o semanal. Detalle en [`05`](05-informe-ejecucion.md) §5.1 | 21 archivos sin reforzar |
 | **Unitario** (frontend) | Vitest en el CI | Sin cobertura ni umbral |
 | **Integración / e2e** (backend) | 24 suites en `test/` contra `postgres:16` (R09: 343 pasan, 4 saltados) y `rabbitmq-real` contra RabbitMQ real en el CI; job `e2e` del CI (**no** es check obligatorio); guard que impide apuntar a una base no local | Testcontainers; publicación del outbox contra un broker real |
@@ -41,7 +41,7 @@
 | **Estado (transiciones)** | `assertTransition` con tablas por entidad; 114 tests parametrizados (#582); e2e `services-lifecycle`; `etag-if-match` (12 tests, concurrencia real `[200, 412]`) | `If-Match` solo en 4 recursos y 2 `PATCH` (ADR-012) |
 | **Idempotencia de altas** | `idempotency.interceptor.spec.ts` y `test/idempotency.e2e-spec.ts` (8 tests; 21 `POST`) | Test de caída entre crear el recurso y guardar la respuesta (ADR-013) |
 | **Resiliencia** | `inbox.e2e-spec`, `outbox-retry.e2e-spec`, `containers-close.e2e-spec` (rollback); `rabbitmq-real` (duplicado, inválido y reconexión del consumer, #579) | Timeout del Core contra un fetch colgado |
-| **Seguridad** | `auth-roles` y `crew-ownership` e2e; `route-roles.spec`; `jwt.strategy.spec`; `security-headers.middleware.spec`; `security-input` (SQL/XSS, mass assignment, 413, CSP; #581); `throttler` (429, #580); `redact-url.spec`; `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **ZAP y Trivy**; alertas de CodeQL sin revisar |
+| **Seguridad** | `auth-roles` y `crew-ownership` e2e; `route-roles.spec`; `jwt.strategy.spec`; `security-headers.middleware.spec`; `security-input` (SQL/XSS, mass assignment, 413, CSP; #581); `throttler` (429, #580); `redact-url.spec`; `npm audit`, Dependabot, gitleaks y CodeQL en el CI. **Desde la Entrega 4:** Trivy (`fs`, `image` y `config`, #658), ZAP baseline contra Render y activo autenticado contra un entorno efímero (#659) y SonarCloud (#657) | Alertas de CodeQL sin revisar; ZAP activo con ejemplos del OpenAPI (cobertura baja de escrituras exitosas); gate de Sonar no bloqueante (#660) |
 | **Carga** (50 usuarios, 5 min, p95 < 500 ms) | k6 `test/perf/k6-criticos.js` (#585). En local: p(95) 32,84 ms y 0,00 % de error en 14 850 requests (`test/perf/resultados/2026-11-09/`). También se corrió contra el despliegue (Render y Supabase) y con escrituras | — |
 | **Arranque local** | `docker compose up --build` en frío con `.env` obligatorio, stack `modulo-6-ambiente` (#584). Última corrida 11/11/2026, Windows, Node 24.22.2 en la imagen y RabbitMQ 4.4, sin imágenes, volúmenes ni caché de build (#640): build y descargas ≈ 343 s; de que arranca Postgres a `/health/ready` 200 (`database: up`, `broker: connected`), 28 s; 34 migraciones aplicadas; `rabbitmq-setup` crea exchange y cola al primer intento; seed con `--profile seed` en 126 s (incluye construir su imagen); `GET /neighborhoods` 200 con token. La corrida anterior (Node 22, con imágenes en caché) daba up en 46 s y `/health/ready` a los 55 s | No corre en el CI; el frontend no es un servicio del compose (#560) |
 | **Accesibilidad** (frontend) | `accessibility.spec.ts` con axe en el CI | Lighthouse |
@@ -52,7 +52,8 @@
 |---|---|---|
 | **Local** | Desarrollo, unitarios y e2e | `npm run prisma:seed` para demo; los e2e **truncan** las tablas: usar una base descartable (`docs/testing.md`) |
 | **Local con `docker compose`** | Base, broker y backend con un comando (`docker compose up -d --build`) | `docker compose --profile seed run --rm seed` para el seed; credenciales en `.env` (`cp .env.example .env`; el arranque corta si faltan). Postgres y RabbitMQ solo en `127.0.0.1` |
-| **CI (GitHub Actions)** | `build` (docs:check, build, lint, OpenAPI al día), `test`, `e2e`, `secrets` (gitleaks), `audit` (gate de altas y críticas); workflows `API tests`, `CodeQL Advanced` y `Mutation testing` | Solo `build` y `test` son checks obligatorios de la protección de ramas; `e2e` corre y pasa pero no bloquea (DEF-14) |
+| **CI (GitHub Actions)** | `build` (docs:check, build, lint, OpenAPI al día), `test` (con `lcov`), `sonar` (SonarCloud), `e2e`, `secrets` (gitleaks), `audit` (gate de altas y críticas), `trivy` (`fs`, `image`, `config`; gate sobre HIGH/CRITICAL con fix) y `deploy`; workflows `API tests`, `CodeQL Advanced`, `Mutation testing` y `dast` (ZAP, a demanda y los lunes) | Solo `build` y `test` son checks obligatorios de la protección de ramas; `e2e` corre y pasa pero no bloquea (DEF-14). `audit` y `trivy` frenan el deploy, no el merge; `sonar` no frena nada todavía (#660) |
+| **Entorno efímero de ZAP** | `docker compose` levantado dentro del job `dast` (base y broker descartables, `JWT_SECRET` de prueba, seed de demo), solo para el escaneo activo | El activo **nunca** va contra Render: escribe datos, choca con el límite de 600 req/min y publicaría al bus del Core |
 | **Render + Supabase** | Backend desplegado de la demo | El plan gratuito se duerme (riesgo R7) |
 | **Vercel** | Frontend desplegado de la demo | Contra el backend de Render |
 | **Core de M9** | Bus real (`muni.inbox`, cola `q.ambiente`) | Compartido por todos los grupos: avisar antes de publicar |
@@ -74,17 +75,19 @@
 
 | Criterio | Umbral | Resultado | Cumple |
 |---|---|---|---|
-| Cobertura de líneas en dominio | ≥ 80 % | 99,16 % global; mínimo en `src/modules/*`: 95,77 % | **Sí** |
-| Cobertura de ramas en dominio | ≥ 70 % | 93,63 % global; mínimo en `src/modules/*`: 82,92 % | **Sí** |
+| Cobertura de líneas en dominio | ≥ 80 % | 98,71 % global (16/11; R09: 99,16 %); mínimo en `src/modules/*`: 97,82 % (`attachments` y `green-spaces`) | **Sí** |
+| Cobertura de ramas en dominio | ≥ 70 % | 95 % global (16/11; R09: 93,63 %); mínimo en `src/modules/*`: 81,57 % (`green-spaces`) | **Sí** |
 | Mutation score en dominio | ≥ 60 % | 75,39 % global en los 26 archivos de dominio (CI tras el refuerzo, #617, #647; antes 71,22 %) | **Sí** |
 | HU del alcance ejecutadas | 100 % | Las HU con test del backend sí; 9 criterios solo-FE y 5 huecos no ([`03`](03-matriz-trazabilidad.md)) | **Parcial** |
 | Criterios de aceptación pasados | ≥ 95 %, sin fallos en HU `MUST` | 161 de 175 con test del backend pasan; 0 fallados; 14 sin ejecutar | **Parcial** |
 | Casos negativos o de borde | ≥ 40 % | 67,5 % (251 de 372) | **Sí** |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores con workaround | 0, 0 y **1 Mayor** (DEF-13, parcial: ZAP y Trivy sin hacer) | **Sí** |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores con workaround | 0, 0 y **0 Mayores**: DEF-13 se cerró con #656; quedan 2 Menores (DEF-14 y DEF-19) | **Sí** |
 | Tests flaky | 0 (3 corridas idénticas) | 3 corridas idénticas en local y repetidas en el CI | **Sí** |
-| Pipeline | ≤ 15 min | 1 min 44 s (CI de `develop`) | **Sí** |
+| Pipeline | ≤ 15 min | 3 min 5 s (CI de `main` del 16/11, con `sonar` y `trivy`; [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363)) | **Sí** |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` en cada PR | **Cumple** |
-| Quality Gate (SonarCloud) | 0 bugs Blocker o Critical, 0 vulnerabilidades, duplicación ≤ 3 % | **NO HECHO** (pide un administrador de `hllous`) | **No** |
+| Quality Gate (SonarCloud) | 0 bugs Blocker o Critical, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % de hotspots | Gate **OK** sobre `main` (16/11): 0 bugs, 0 vulnerabilidades, duplicación 1,2 %, ratings A/A/A, hotspots 100 %. **El gate todavía no es bloqueante** (#660) | **Sí** |
+| ZAP: baseline y activo autenticado | 0 alertas High, cada Medium justificada | 0 High en los dos; 1 Medium en cada uno, justificadas en [`07`](07-informe-seguridad.md) 5.2 ([run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357)) | **Sí** |
+| Dependencias (Trivy y `npm audit`) | 0 CVE críticas o altas sin mitigación documentada | 0 HIGH/CRITICAL en `fs`, `image` y `config`; `npm audit --omit=dev` en 0; `.trivyignore` vacío | **Sí** |
 | Carga: 50 usuarios, 5 min | p95 < 500 ms, error < 1 % | p95 32,84 ms y 0,00 % en local; también corrida contra el despliegue y con escrituras | **Sí** |
 
 Si un criterio no se cumple al cierre, se declara en `05-informe-ejecucion.md` con el motivo; no se omite.
@@ -104,7 +107,7 @@ Escala: probabilidad (P) e impacto (I) de 1 a 3; prioridad = P × I. Se listan l
 | R8 | Regresión de contrato con otros módulos (payload o routing key) | 2 | 3 | 6 | **Cubierto.** `openapi-contract.spec`, `payloads.spec` (ajv), el CI exige `openapi.json` al día |
 | R10 | Archivo malicioso o con metadatos personales en la evidencia | 2 | 2 | 4 | **Cubierto.** `attachments.service.spec` (firma de bytes, tamaño, EXIF), `crew-ownership.e2e-spec` |
 | R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | **Parcial.** 3 corridas idénticas; Stryker en los 26 archivos de dominio (75,39 % en CI), 21 sin reforzar; un test intermitente de `openapi-contract.spec.ts` corregido (P-3); DEF-24 cerrado sin causa confirmada |
-| R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | **Parcial.** `npm audit fix` (#566), `overrides` (#619) y NestJS 12 (#628): 0 vulnerabilidades en producción; job `audit` gate, Dependabot (#578); sin Trivy (DEF-13) |
+| R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | **Cubierto.** `npm audit fix` (#566), `overrides` (#619) y NestJS 12 (#628): 0 vulnerabilidades en producción; job `audit` gate y Dependabot (#578); Trivy `fs`, `image` y `config` (#658) con 0 HIGH/CRITICAL; la imagen traía 6 HIGH del `npm` embebido y corría como root (DEF-26, corregido en #670) |
 | R17 | El primer `docker compose up` en frío falla | 2 | 2 | 4 | **Cubierto a mano.** Falló una vez (DEF-23) y se corrigió en #584; el CI no levanta el compose |
 | R21 | Un cliente sin `If-Match` o sin parser de `application/problem+json` pierde la protección o rompe al leer errores | 2 | 2 | 4 | **Parcial.** Backend cubierto (`etag-if-match`, `problem-details`); el frontend va en [Frontend #898](https://github.com/hllous/Frontend-M6-DAPS2/issues/898) |
 
@@ -131,13 +134,13 @@ Cualquier integrante puede responder sobre cualquier test o defecto.
 | e2e de API | Vitest + supertest + Postgres 16 | En uso |
 | Unitarios (frontend) | Vitest | En uso |
 | E2E de navegador y accesibilidad | Playwright + axe | En uso |
-| Análisis estático | ESLint, `tsc` | En uso (0 errores, 305 warnings). **SonarCloud: NO HECHO** |
+| Análisis estático | ESLint, `tsc`, **SonarCloud** (job `sonar`, #657) | En uso: ESLint 0 errores y 343 warnings (`npm run lint:check`, 16/11); SonarCloud con gate OK y ratings A/A/A, no bloqueante (#660) |
 | Contrato OpenAPI | `openapi:generate` + `git diff` en CI, Schemathesis | En uso (solo `GET`; pasos bloqueantes desde #593) |
 | API | Newman (colección en `test/api/`) | En uso, en el CI (#583) |
 | Contrato de eventos | ajv contra `.schema.json` | En uso |
 | Mutation testing | Stryker + `@stryker-mutator/vitest-runner` | En uso sobre los servicios, transiciones y sweepers de `src/modules` (#577, #617) |
 | Carga | k6 | En uso (#585) |
-| Seguridad | `npm audit`, Dependabot, CodeQL, gitleaks | En el CI; **ZAP y Trivy: NO HECHOS** |
+| Seguridad | `npm audit`, Dependabot, CodeQL, gitleaks, **Trivy** (job `trivy`, #658), **OWASP ZAP** (workflow `dast`, #659) | En uso. Trivy frena el deploy sobre HIGH/CRITICAL con fix; ZAP falla ante un High; el activo corre solo contra el entorno efímero |
 | Gestión de casos y defectos | GitHub Issues y tablero de Trello (reemplazan a Jira) | En uso |
 | Generación de documentos | Markdown + `md-to-pdf` (`npm run qa:pdf`) | En uso |
 

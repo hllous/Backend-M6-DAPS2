@@ -121,3 +121,22 @@ Workflow [`dast.yml`](../.github/workflows/dast.yml): `workflow_dispatch` y corr
 - **active**: `zaproxy/action-api-scan` activo contra un `docker compose` efímero (base y broker descartables, `JWT_SECRET` de prueba, seed de demo) con `docs/api/openapi.json`. Autentica con un token admin de `test/api/make-token.mjs` (`ZAP_AUTH_HEADER_VALUE`). El override `.github/dast/compose.dast.yml` sube `THROTTLE_LIMIT` solo ahí; un proxy de registro (`.github/dast/proxy.mjs`) deja el recuento de códigos de respuesta como prueba de autenticación.
 
 **El activo nunca va contra Render**: escribe datos, choca con el límite de 600 req/min y publicaría al bus del Core. Ambos jobs fallan ante una alerta High; las Medium se justifican una por una en [`QA/07-informe-seguridad.md`](QA/07-informe-seguridad.md) §5.2. Sin reglas ignoradas. Los reportes son artifacts (90 días); la corrida final se archiva en `docs/QA/evidencia/`. Para correrlo en una rama hace falta que el workflow esté en `main` (límite de `workflow_dispatch`) o un `push` temporal.
+
+**Cómo leer el resultado.** Los reportes (HTML y JSON) son artifacts del run. El activo trae además `pedidos-por-codigo.txt`, el recuento de códigos de respuesta del proxy: si aparece un 401 generalizado, ZAP no llegó autenticado y la corrida no vale. Corrida final sobre `main` (16/11/2026): [run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357), baseline 0 High y 1 Medium, activo 0 High y 1 Medium; el detalle y la justificación de cada Medium están en `QA/07` §5.2. Para correrlo: pestaña Actions → `dast` → *Run workflow*.
+
+## SonarCloud (#657)
+
+El job `sonar` de `ci.yml` descarga el `lcov` que publica `test` (no vuelve a correr los tests) y analiza con `sonar-project.properties`. Corre en PR y en push a `main` (el plan gratuito no analiza otras ramas) y se saltea sin `SONAR_TOKEN`. Dashboard: [hllous_Backend-M6-DAPS2](https://sonarcloud.io/summary/overall?id=hllous_Backend-M6-DAPS2).
+
+- **El gate no bloquea todavía** (Opción C, paso 2 en #660): que el check esté en rojo en un PR no impide el merge, pero hay que mirarlo igual y corregir lo que reporte.
+- El gate «Sonar way» evalúa **código nuevo**. Las métricas del código total (las que pide la cátedra) se leen en el dashboard o con la API pública: `curl -s "https://sonarcloud.io/api/measures/component?component=hllous_Backend-M6-DAPS2&metricKeys=coverage,bugs,vulnerabilities,duplicated_lines_density,reliability_rating,security_rating,security_hotspots_reviewed"` (ratings: 1 = A).
+- La cobertura de Sonar viene de `npm run test:cov` y sus exclusiones son las de `vitest.config.ts` (ver el comentario de `sonar-project.properties`): si cambiás `coverage.exclude`, cambiá también `sonar.coverage.exclusions`.
+- Un hallazgo se corrige en código. Marcar uno como falso positivo o aceptado lo hace una persona, en Sonar, con justificación escrita.
+
+## Trivy (#658)
+
+Job `trivy` de `ci.yml`, tres pasadas: `fs` (lockfile y secretos), `image` (la imagen del `Dockerfile`) y `config` (`Dockerfile` y compose). Cada una sube su SARIF a Code Scanning (categorías `trivy-fs`, `trivy-image` y `trivy-config`; HIGH y CRITICAL, también las sin fix) y después corre un gate que **falla con HIGH/CRITICAL con fix**. Frena el deploy, no el merge.
+
+- Local, con Docker: `docker run --rm -v "$PWD:/w" aquasec/trivy:latest fs --severity HIGH,CRITICAL --ignore-unfixed /w`.
+- Una HIGH/CRITICAL **sin fix** va a `.trivyignore` (una línea por CVE con justificación y mitigación) y a la tabla de `QA/07` §5.2. Hoy el archivo está vacío. Las que tienen fix no se ignoran: se corrigen.
+- Cuando cambies el `Dockerfile`, levantá el compose y verificá `/health/ready`: el CI lo hizo tras cada cambio de la imagen.

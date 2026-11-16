@@ -30,6 +30,20 @@ Node 24 (`.nvmrc`). Antes de dar algo por terminado: build, lint, typecheck y te
 
 Los e2e migran la base apuntada por `DATABASE_URL`: leer `docs/testing.md` antes de correrlos para no tocar la base desplegada.
 
+### CI y herramientas de análisis
+
+Detalle y cómo leer cada resultado: [docs/testing.md](docs/testing.md). Decisión: [ADR-017](docs/decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md).
+
+| Qué | Dónde | Frena |
+|---|---|---|
+| `build` y `test` (con `lcov`) | jobs de `ci.yml` | El merge (checks requeridos) |
+| `e2e`, `audit` (`npm audit`), `secrets` (gitleaks) | jobs de `ci.yml` | `audit` frena el deploy; `e2e` y `secrets` no son requeridos |
+| `sonar`: SonarCloud con el `lcov` de `test`; se saltea sin `SONAR_TOKEN` y corre en PR y en push a `main`. Config: `sonar-project.properties` | job de `ci.yml` | **Nada todavía**: gate no bloqueante (Opción C, paso 2 pendiente en #660) |
+| `trivy`: `fs`, `image` y `config`, SARIF a Code Scanning; gate sobre HIGH/CRITICAL **con fix**. Sin fix: `.trivyignore` con justificación | job de `ci.yml` | El deploy (`deploy` depende de `trivy`), no el merge |
+| `dast`: ZAP baseline contra Render y activo autenticado contra un `docker compose` efímero | `.github/workflows/dast.yml`; a demanda y los lunes | Falla ante un High; no se engancha al deploy |
+
+El activo de ZAP **nunca** va contra Render. Un hallazgo de cualquiera de las tres herramientas se triagea y se corrige en un issue y un PR `fix/` aparte (protocolo en el ADR-017); no se marca como falso positivo sin justificación escrita.
+
 ## Arquitectura del código
 
 Tres capas por recurso en `src/modules/<recurso>/`: `*.controller.ts` (HTTP + Swagger, sin lógica) → `*.service.ts` (reglas y máquinas de estado) → Prisma. DTOs en `dto/`, validados con `class-validator` por el `ValidationPipe` global.
