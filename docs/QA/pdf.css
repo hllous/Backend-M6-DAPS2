@@ -15,7 +15,7 @@ h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
 table { border-collapse: collapse; width: 100%; font-size: 8.5pt; margin: 0.6em 0; }
 /* break-word (no "anywhere"): una palabra solo se parte si no entra en la celda y no achica
    la columna, que era lo que dejaba los ID en "DE / F- / 19". Las celdas cortas llevan .nw
-   (lo pone pdf.js) y no se parten nunca. */
+   (lo pone build-qa-pdf-pagina.js) y no se parten nunca. */
 th, td { border: 1px solid #8a8a8a; padding: 3px 4px; vertical-align: top; overflow-wrap: break-word; word-break: normal; }
 td.nw, th.nw { white-space: nowrap; }
 th { background: #e8edf3; text-align: left; }
