@@ -152,13 +152,56 @@ El gate es bloqueante en el CI (`sonar.qualitygate.wait=true`).
 | Cobertura de líneas en dominio | ≥ 80 % | 98,71 % global; 99,24 % en `src/modules` | Sí |
 | Cobertura de ramas en dominio | ≥ 70 % | 95,28 % global; 95,93 % en `src/modules` | Sí |
 | Mutation score en dominio | ≥ 60 % | 76,11 % | Sí |
-| Tests flaky | 0 (3 corridas idénticas) | 3 corridas locales y el CI con el mismo resultado | Sí |
+| Tests flaky | 0 (3 corridas idénticas) | Backend: 3 corridas locales y el CI con el mismo resultado. Frontend: 3 corridas locales idénticas y `retries: 0` en Playwright (sección 9.2) | Sí |
 | Pipeline | ≤ 15 min | 2 min 23 s (camino crítico: `trivy`) | Sí |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | Job `e2e`: 25 suites y 410 tests, más 2 suites de RabbitMQ real | Sí |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 7 Menores ([`06`](06-registro-defectos.md)) | Sí |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 4 Menores ([`06`](06-registro-defectos.md)) | Sí |
 | Casos negativos o de borde | ≥ 40 % | 67,8 % (267 de 394, [`04`](04-especificacion-casos.md)) | Sí |
 | Quality Gate (SonarCloud) | Verde, 0 bugs, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % hotspots | Gate OK; 0 / 0; 1,2 %; A/A/A; 100 % | Sí |
 | ZAP baseline y activo | 0 High, cada Medium justificada | 0 High; 1 Medium en cada uno, justificadas en [`07`](07-informe-seguridad.md) | Sí |
 | Dependencias (Trivy y `npm audit`) | 0 críticas o altas sin mitigación | 0 HIGH/CRITICAL; `npm audit` en 0 | Sí |
 | Carga: 50 usuarios, 5 min | p95 < 500 ms, error < 1 % | p(95) 32,84 ms; 0,00 % | Sí |
-| Criterios de aceptación con test / HU ejecutadas | ≥ 95 % y ninguno Must fallado | [`03`](03-matriz-trazabilidad.md): 167 de 181 criterios con test del backend, 0 fallados; 9 solo frontend y 5 huecos | Parcial |
+| Criterios de aceptación con test / HU ejecutadas | ≥ 95 % y ninguno Must fallado | [`03`](03-matriz-trazabilidad.md): **177 de 181 ejecutados y pasados (97,8 %)**: 167 con test del backend y 10 con test del frontend (Eje A, sección 9); 0 fallados; 4 huecos | Sí |
+
+## 9. Frontend
+
+Medido sobre `develop` del repo Frontend @ `0519d95` (16/11/2026), después de FE #977, #978, #979, #980, #982 y #985. Las cifras salen de las descripciones de esos PR y de la evidencia versionada en el repo Frontend; los runs citados son del CI de GitHub Actions del Frontend.
+
+### 9.1 Eje A: criterios solo-FE, responsive y accesibilidad
+
+Los 10 criterios que solo cubría el frontend tienen un test leído contra el texto del criterio y ejecutado (FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165), todos los jobs en verde). Detalle por criterio en [`03`](03-matriz-trazabilidad.md).
+
+| Criterio | Test del Frontend |
+|---|---|
+| CA-HU01-1, CA-HU01-2, CA-HU01-4 | `e2e/qa-criterios-fe.spec.ts` (orden y filtro, esqueleto, 500 y timeout del BFF → `role=alert`). CA-HU01-1 parcial: [Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983) |
+| CA-HU01-3 | `src/components/ui/shadcn-guard.test.ts` |
+| CA-HU26-1, CA-HU26-3 | `e2e/qa-criterios-fe.spec.ts` y `src/lib/argentina-date.test.ts` |
+| CA-HU26-2 | `e2e/service-vehicle-labels.spec.ts` |
+| CA-HU30-3 | `src/lib/m1-refresh.test.ts` y `e2e/failure-journeys.spec.ts` |
+| CA-HU30-4 | `src/app/api/session/login/route.test.ts` |
+| CA-HU32-1 | `e2e/accessibility.spec.ts` (63 tests) |
+
+**Responsive y accesibilidad.** 21 pantallas (`e2e/support/screens.ts`) a 360, 768 y 1280 px: **0 violaciones de axe** (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`; el test falla ante cualquier violación) y **ninguna pantalla con scroll horizontal** (`e2e/responsive-and-keyboard.spec.ts`). Se corrigieron tres violaciones para llegar ahí: `aria-valid-attr-value` en las pestañas del mapa (critical), contraste de `TabsTrigger` y `scrollable-region-focusable` en los tableros.
+
+**Lighthouse** (modo navegación, escritorio y móvil, servidor de desarrollo en modo mock; sin puntaje de rendimiento): accesibilidad **100** en escritorio y móvil en Ingreso, Inicio de Oficina, Contenedores, Servicios, Expedientes, Mapa y Portal público; buenas prácticas 100, salvo 96 en móvil en Servicios y Mapa (teselas de OpenStreetMap a menor resolución). Evidencia: `Frontend-M6-DAPS2/docs/evidencia/eje-a-2026-11-16/` (capturas, reportes HTML de Lighthouse y README con el método).
+
+### 9.2 Eje B: tests inestables, cobertura, mutation y tiempos
+
+| Qué | Resultado | Cumple |
+|---|---|---|
+| Tests inestables (FE #980) | Causa raíz: timeout de 5 s por test en local bajo carga, `findBy`/`waitFor` con tope de 1 s y compuertas `delay(ms)` de MSW. Ahora `testTimeout` de 30 s igual al CI, compuertas liberadas tras las aserciones y `retries: 0` en Playwright también en el CI. 3 corridas locales idénticas (3229 tests pasan). Desde entonces, los 3 runs del CI de `develop` ([43932396277](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43932396277), [43933683135](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43933683135), [43934913604](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43934913604)) están en verde sin reintentos, aunque cada uno sobre un commit distinto. Cierra DEF-29 a DEF-31 | Sí |
+| Cobertura unitaria con umbral (FE #985) | Sentencias **90,20 %**, líneas **93,03 %**, funciones **88,05 %**, ramas **83,58 %** (antes 87,97 % y 90,85 %, sin umbral). Umbrales en `vitest.config.ts`: 90 / 92 / 87 / 83, exigidos por el job `unit-coverage` sobre el informe fusionado de los shards. 329 archivos y 4134 tests | Sí |
+| Mutation testing (Stryker) | **PENDIENTE**: en curso, objetivo ≥ 65 % (DEF-35) | Pendiente |
+| Tiempo del CI de PR (FE #982) | 4,5 a 5,5 min de pared con runners libres; los shards de e2e se reparten por duración medida (LPT) y cada job tiene `timeout-minutes`. Los picos de 15 min venían de reintentos y de la cola compartida de 20 jobs concurrentes | Sí (≤ 15 min) |
+
+Los tests de cobertura encontraron un defecto real: `src/app/api/vehicles/[id]/route.ts` devolvía 500 en vez de 503 con el backend caído (DEF-40, corregido en FE #985).
+
+### 9.3 Eje C: concurrencia optimista y timeout del BFF
+
+FE #978 (ADR 0010 del Frontend): el BFF propaga `ETag` e `If-Match` en las transiciones versionadas (ADR-012 del Backend) y en `PATCH /containers/:id`; un 412 muestra «Otra persona modificó este registro. Recargue para ver los cambios.» con la acción Recargar y sin perder lo escrito. El timeout del BFF al backend bajó de 15 s a **5 s** con `AbortController` y responde 503; solo los `GET` se reintentan una vez ante una falla de red inmediata. Test: `e2e/optimistic-concurrency.spec.ts`. Cierra DEF-32 y DEF-33.
+
+Con Render dormido, los primeros pedidos dan 503 hasta que despierta: antes de la demo hay que abrir `/health`.
+
+### 9.4 Eje D: límite de intentos de login
+
+FE #977: el login del BFF responde **429 con `Retry-After`** tras 5 fallos por cuenta o 20 por IP en 15 minutos, reinicia el contador con el login correcto y no revela si la cuenta existe. Test: `e2e/login-rate-limit.spec.ts`, más `src/lib/login-rate-limit.test.ts` y `src/app/api/session/login/rate-limit.test.ts`. El contador vive en memoria por instancia (ADR 0009 del Frontend). Tabla completa de controles del Frontend: `Frontend-M6-DAPS2/docs/security/eje-d-evidencia.md`; resumen en [`07`](07-informe-seguridad.md).

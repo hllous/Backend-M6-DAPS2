@@ -9,7 +9,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [0
 - **Tipo:** Positivo (camino válido), Negativo (entrada o estado inválido, o falla externa que se rechaza) y Borde (límite, caso especial, concurrencia, degradación). Se pide al menos 40 % negativos o de borde; el cálculo está al final.
 - **Escenario:** precondición y datos del caso. El resultado esperado es el ENTONCES del criterio; en las secciones de casos agregados (CP-335 en adelante) va después de la flecha.
 - **Prioridad:** la de la HU (Alta para Must, Media para Should, Baja para Could).
-- **Test:** archivo y nombre del test del backend (`FE:` indica un test del frontend, solo por nombre de archivo y sin revisar su contenido; `Manual:` indica que no hay test automático). Se muestran hasta dos por caso.
+- **Test:** archivo y nombre del test del backend (`FE:` indica un test del frontend, solo por nombre de archivo y sin revisar su contenido, salvo los 10 casos marcados «Pasó (FE, Eje A, FE #979)», cuyo test se leyó contra el criterio y se ejecutó el 16/11; `Manual:` indica que no hay test automático). Se muestran hasta dos por caso.
 - **Estado:** **Pasó** = el test citado existe y la corrida completa (3056 unitarios, 410 e2e y 8 de RabbitMQ real) no tuvo fallos. «Corregido: …» es un criterio que cambió después de la HU, con su ACT e issue. «—» es un caso manual o con test solo del frontend.
 - Los casos CP-285 en adelante pertenecen a criterios agregados con correcciones posteriores. Las rutas de test son de este repo, salvo las del frontend.
 
@@ -18,10 +18,10 @@ Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [0
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-001 | CA-HU01-1 | Usuario con cualquier rol de M6; catálogo con más de 20 registros; Zonas: ordenar por nombre y filtrar por texto; página 2 | Positivo | FE: `catalog-shell.spec.ts`<br>FE: `zones-catalog.spec.ts` | Corregido: ACT-F1, FE #528, #520, #525 |
-| CP-002 | CA-HU01-2 | Backend demorado a propósito (mock con retardo); Abrir Servicios y un catálogo de cada grupo | Positivo | FE: `catalog-a-loading.spec.ts`<br>FE: `catalog-b-loading.spec.ts`<br>(+1 más) | Corregido: ACT-F1, FE #528, #520, #525 |
-| CP-003 | CA-HU01-3 | Pipeline de CI del repo Frontend-M6-DAPS2; Ejecutar el job de CI del frontend | Positivo | Manual: guard de CI del frontend | — |
-| CP-004 | CA-HU01-4 | Backend devolviendo 500 o sin responder; Abrir Zonas con GET /zones fallando | Negativo | FE: `failure-journeys.spec.ts` | — |
+| CP-001 | CA-HU01-1 | Usuario con cualquier rol de M6; catálogo con más de 20 registros; Zonas: ordenar por nombre y filtrar por texto; página 2 | Positivo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `catalog-shell.spec.ts`, `zones-catalog.spec.ts` | Pasó (FE, Eje A, FE #979); parcial: orden de catálogos paginados en Frontend #983 |
+| CP-002 | CA-HU01-2 | Backend demorado a propósito (mock con retardo); Abrir Servicios y un catálogo de cada grupo | Positivo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `catalog-a-loading.spec.ts`, `catalog-b-loading.spec.ts` | Pasó (FE, Eje A, FE #979) |
+| CP-003 | CA-HU01-3 | Pipeline de CI del repo Frontend-M6-DAPS2; Ejecutar el job de CI del frontend | Positivo | FE: `src/components/ui/shadcn-guard.test.ts` | Pasó (FE, Eje A, FE #979) |
+| CP-004 | CA-HU01-4 | Backend devolviendo 500 o sin responder; Abrir Zonas con GET /zones fallando | Negativo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `failure-journeys.spec.ts` | Pasó (FE, Eje A, FE #979) |
 
 ## HU-02 — Alta de zonas operativas y recorridos con paradas
 
@@ -410,9 +410,9 @@ Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [0
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-230 | CA-HU26-1 | Listado con fechas; Servicios y Control ambiental | Positivo | FE: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts`<br>FE: `services-period.spec.ts` | Corregido: ACT-F4, FE #321 |
-| CP-231 | CA-HU26-2 | Servicios con cuadrilla y vehículo; Listado de Servicios | Positivo | FE: `service-vehicle-labels.spec.ts` | Corregido: ACT-F4, FE #321 |
-| CP-232 | CA-HU26-3 | Fecha 2026-10-31T23:30:00-03:00; listar | Borde | FE: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts` | — |
+| CP-230 | CA-HU26-1 | Listado con fechas; Servicios y Control ambiental | Positivo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, Eje A, FE #979) |
+| CP-231 | CA-HU26-2 | Servicios con cuadrilla y vehículo; Listado de Servicios | Positivo | FE: `e2e/service-vehicle-labels.spec.ts` | Pasó (FE, Eje A, FE #979) |
+| CP-232 | CA-HU26-3 | Fecha 2026-10-31T23:30:00-03:00; listar | Borde | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, Eje A, FE #979) |
 
 ## HU-27 — Consultar sin login el estado de mi denuncia, cuándo pasa el servicio y dónde están los puntos verdes
 
@@ -472,8 +472,8 @@ Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [0
 |---|---|---|---|---|---|
 | CP-262 | CA-HU30-1 | M1 hosteado; secreto cargado en Render; login real + GET /me | Positivo | FE: `real-m1-login.spec.ts`<br>`jwt.strategy.spec.ts` › «acepta un access token de M1 y lo mapea a roles de M6» | Pasó |
 | CP-263 | CA-HU30-2 | JWT_SECRET desactualizado; GET /me con token de M1 | Negativo | `jwt.strategy.spec.ts` › «rechaza: %s» | Pasó |
-| CP-264 | CA-HU30-3 | Cookie de sesión vencida; abrir una pantalla protegida | Negativo | FE: `failure-journeys.spec.ts`<br>FE: `entry-and-roles.spec.ts` | Corregido: ACT-F7, FE #379, #381, #437 |
-| CP-265 | CA-HU30-4 | M1 caído; login | Negativo | FE: `real-m1-login.spec.ts` | — |
+| CP-264 | CA-HU30-3 | Cookie de sesión vencida; abrir una pantalla protegida | Negativo | FE: `src/lib/m1-refresh.test.ts`<br>FE: `e2e/failure-journeys.spec.ts` | Pasó (FE, Eje A, FE #979) |
+| CP-265 | CA-HU30-4 | M1 caído; login | Negativo | FE: `src/app/api/session/login/route.test.ts`<br>FE: `real-m1-login.spec.ts` | Pasó (FE, Eje A, FE #979) |
 
 ## HU-31 — Seguridad de la Clase 11 (SEC-W01 a W06, SEC-I01, SEC-I02, SEC-D01, SEC-D02)
 
@@ -499,7 +499,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [0
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-277 | CA-HU32-1 | CI del frontend; Playwright con AxeBuilder | Positivo | FE: `accessibility.spec.ts` | — |
+| CP-277 | CA-HU32-1 | CI del frontend; Playwright con AxeBuilder | Positivo | FE: `e2e/accessibility.spec.ts` (21 pantallas a 360, 768 y 1280 px) | Pasó (FE, Eje A, FE #979) |
 | CP-278 | CA-HU32-2 | Backend y base arriba; GET /health y /health/ready | Positivo | `health.controller.spec.ts` › «liveness devuelve ok sin tocar la base»<br>`health.controller.spec.ts` › «ready devuelve 200 con la base arriba» | Pasó |
 | CP-279 | CA-HU32-3 | Base caída; GET /health/ready | Negativo | `health.controller.spec.ts` › «ready responde 503 sin filtrar el error de la base»<br>`health.controller.spec.ts` › «ready responde 503 si la base no contesta a tiempo» | Pasó |
 | CP-280 | CA-HU32-4 | Respuesta del backend; GET /health | Negativo | `security-headers.middleware.spec.ts` › «pone las cabeceras base y sigue la cadena»<br>`security-headers.middleware.spec.ts` › «agrega HSTS solo en producción» | Pasó |
@@ -530,7 +530,7 @@ Casos automatizados de los PR #577 a #585. Se numeran a continuación de los ant
 | CP-343 | CA-HU31-4 | Servicio creado y zona existente; `{status:'COMPLETED'}`, `{role:'M6_ADMIN'}`, `{id}`, mezcla válida + `status`; `PATCH /zones` con `code` y `createdAt` → recibo 400 y la fila queda idéntica; un rol en el body no escala privilegios (6 tests) | Negativo | `security-input.e2e-spec.ts` › «PATCH /services/:id rechaza %j con 400 y no persiste»<br>`security-input.e2e-spec.ts` › «PATCH /zones/:id rechaza campos fuera del DTO con 400» | Pasó |
 | CP-344 | CA-HU31-6 | Almacenamiento de evidencia reemplazado por un doble; Archivo de más de 10 MB → recibo 413 (lo corta multer) | Negativo | `security-input.e2e-spec.ts` › «un archivo de más de 10 MB responde 413 (lo corta multer)» | Pasó |
 | CP-345 | CA-HU32-4 | App levantada con `configureApp()`; Cualquier ruta salvo `/api/docs` → lleva `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` | Positivo | `security-input.e2e-spec.ts` › «la API manda una CSP restrictiva» | Pasó |
-| CP-346 | CA-HU32-4 | App levantada; `/api/docs` → el middleware **no** agrega CSP (Swagger UI la necesita); es el hallazgo DEF-19 | Borde | `security-input.e2e-spec.ts` › «el middleware no agrega CSP en /api/docs (aunque acá responda 404)» | Pasó |
+| CP-346 | CA-HU32-4 | App levantada; `/api/docs` → el middleware pone la CSP propia de Swagger UI (`DOCS_CSP`), no la de la API; DEF-19 cerrado por #701 | Borde | `security-input.e2e-spec.ts` › «en /api/docs el middleware usa la CSP de Swagger UI (DEF-19)» | Pasó |
 | CP-347 | CA-HU31-9 | Pedido con `?access_token=` y header `Authorization`; `/x?token=SECRETO&page=2`, `access_token`, `api-key`, `client_secret`, `sig`, `session`, etc. → el log y el `path` del error redactan el valor sensible (`[REDACTED]`) y no tocan `page`, `status`, `search`, etc. | Negativo | `redact-url.spec.ts` › «redacta %s»<br>`logging.interceptor.spec.ts` › «el log no incluye el token de la query ni el header Authorization» | Pasó |
 | CP-348 | sin criterio (seguridad, HU-31) | App con Postgres real; zona, expediente y servicio; Payloads de inyección SQL y de `<script>` en nombre, dirección, descripción y notas → no hay 500 ni efectos, el dato vuelve idéntico y la tabla sigue viva. La API **no** rechaza ni escapa estos textos (9 tests: 3 payloads × 3 recursos) | Negativo | `security-input.e2e-spec.ts` › describe `payload %s` | Pasó |
 

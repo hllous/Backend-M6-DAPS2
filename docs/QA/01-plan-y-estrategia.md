@@ -28,7 +28,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estru
 | XXE | No aplica: M6 no recibe ni procesa XML |
 | IA integrada | No aplica: el sistema no incluye funcionalidad de IA |
 | Pruebas internas de M1, M2, M3, M4, M7 y M9 | Son de cada grupo; acá se prueba el contrato con ellos |
-| Login, hash de contraseñas y fuerza bruta | El JWT lo emite M1 (ADR-004); M6 no guarda contraseñas |
+| Login y hash de contraseñas en el backend | El JWT lo emite M1 (ADR-004); M6 no guarda contraseñas. La fuerza bruta sobre el login del BFF sí se prueba (FE #977, ver [`07`](07-informe-seguridad.md)) |
 
 ## 2. Niveles de prueba
 
@@ -36,9 +36,9 @@ Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estru
 |---|---|
 | **Unitario** (backend) | 131 suites, 3056 tests; cobertura de 98,71 % de líneas y 95,28 % de ramas; umbral de 90 % global y por archivo en 7 servicios críticos. Incluye 114 tests de transiciones inválidas |
 | **Mutation testing** | Stryker sobre los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules`: score 76,11 %; workflow `mutation.yml` |
-| **Unitario** (frontend) | Vitest en el CI; cobertura medida en SonarCloud (85,4 %) |
+| **Unitario** (frontend) | Vitest en el CI; cobertura de 90,20 % de sentencias y 93,03 % de líneas con umbral exigido en el CI (FE #985). Mutation del frontend: **PENDIENTE** (en curso) |
 | **Integración / e2e** (backend) | 25 suites y 410 tests en `test/` contra `postgres:16`, más 2 suites y 8 tests de RabbitMQ real; job `e2e` del CI; guard que impide apuntar a una base no local |
-| **E2E de usuario** (frontend) | Playwright en shards en el CI |
+| **E2E de usuario** (frontend) | Playwright en shards en el CI, con `retries: 0` (FE #980); los 10 criterios solo-FE tienen test ejecutado (FE #979) |
 | **Contrato** | `openapi-contract.spec.ts` (7 tests), `payloads.spec.ts` (ajv contra los `.schema.json`), `openapi.json` al día en el CI; Schemathesis solo `GET`: 4681 casos de esquema y `status_code_conformance` bloqueante |
 | **API** | Colección Newman (`test/api/`): 570 requests y 1015 assertions en el CI; éxito en 151 de 152 operaciones y error en 149 de 152, con excepciones en `test/api/PENDIENTES.md`; `npm run api:coverage` falla si una operación queda sin caso ni excepción |
 | **Estado** | `assertTransition` con tablas por entidad; 114 tests parametrizados; e2e `services-lifecycle`; `etag-if-match` (concurrencia real `[200, 412]`) |
@@ -47,7 +47,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estru
 | **Seguridad** | `auth-roles`, `crew-ownership`, `security-input`, `security-live` y `throttler` e2e; `route-roles`, `jwt.strategy` y `security-headers` unitarios; `npm audit`, Dependabot, gitleaks, CodeQL, Trivy, ZAP baseline y activo, SonarCloud |
 | **Carga** (50 usuarios, 5 min, p95 < 500 ms) | k6 `test/perf/k6-criticos.js`: p(95) 32,84 ms, 0,00 % de error |
 | **Arranque local** | `docker compose up --build` sin `.env`: base, broker, backend, seed, M1 falso y frontend; workflow `g1-arranque.yml` falla si del comando al login pasan más de 15 minutos |
-| **Accesibilidad** (frontend) | `accessibility.spec.ts` con axe en el CI |
+| **Accesibilidad y responsive** (frontend) | `accessibility.spec.ts` con axe en el CI: 21 pantallas a 360, 768 y 1280 px con 0 violaciones y sin scroll horizontal; Lighthouse accesibilidad 100 en 7 pantallas ([`05`](05-informe-ejecucion.md), sección 9.1) |
 
 ## 3. Entornos
 
@@ -81,11 +81,11 @@ Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estru
 | Cobertura de líneas en dominio | ≥ 80 % | 98,71 % global; 99,24 % en `src/modules` | Sí |
 | Cobertura de ramas en dominio | ≥ 70 % | 95,28 % global; 95,93 % en `src/modules` | Sí |
 | Mutation score en dominio | ≥ 60 % | 76,11 % | Sí |
-| HU del alcance ejecutadas | 100 % | HU con test del backend sí; 9 criterios solo frontend y 5 huecos ([`03`](03-matriz-trazabilidad.md)) | Parcial |
-| Criterios de aceptación pasados | ≥ 95 %, sin fallos en `MUST` | 167 de 181 con test del backend pasan; 0 fallados | Parcial |
+| HU del alcance ejecutadas | 100 % | Las 33 HU tienen criterios ejecutados; quedan 4 criterios sin test automatizado ([`03`](03-matriz-trazabilidad.md)) | Sí |
+| Criterios de aceptación pasados | ≥ 95 %, sin fallos en `MUST` | 177 de 181 ejecutados y pasados (97,8 %): 167 del backend y 10 del frontend; 0 fallados | Sí |
 | Casos negativos o de borde | ≥ 40 % | 67,8 % (267 de 394) | Sí |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 7 Menores | Sí |
-| Tests flaky | 0 (3 corridas idénticas) | 3 corridas locales y el CI idénticos | Sí |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 4 Menores | Sí |
+| Tests flaky | 0 (3 corridas idénticas) | Backend: 3 corridas locales y el CI idénticos. Frontend: 3 corridas locales idénticas y `retries: 0` (FE #980) | Sí |
 | Pipeline | ≤ 15 min | 2 min 23 s | Sí |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | Job `e2e`: 25 suites y 410 tests | Sí |
 | Quality Gate (SonarCloud) | Verde, 0 bugs, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % hotspots | Gate OK; 0 / 0; 1,2 %; A/A/A; 100 % | Sí |
@@ -107,7 +107,7 @@ Probabilidad (P) e impacto (I) de 1 a 3; prioridad = P × I. Se listan los de pr
 | R7 | Cold start de Render o de M1 durante la demo | 3 | 3 | 9 | Sin prueba automática; mitigación: despertar `/health` antes, ensayar y plan B local (`docs/testing.md`) |
 | R8 | Regresión de contrato con otros módulos (payload o routing key) | 2 | 3 | 6 | Cubierto: `openapi-contract.spec`, `payloads.spec` y `openapi.json` al día |
 | R10 | Archivo malicioso o con metadatos personales en la evidencia | 2 | 2 | 4 | Cubierto: `attachments.service.spec` (firma de bytes, tamaño, EXIF) |
-| R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | Parcial: 3 corridas idénticas y mutation 76,11 %; DEF-29 a DEF-31 en el frontend |
+| R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | Parcial: 3 corridas idénticas y mutation 76,11 % en el backend; en el frontend DEF-29 a DEF-31 cerrados (FE #980) y mutation pendiente (DEF-35) |
 | R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | Cubierto: `npm audit` en 0, job `audit` gate, Dependabot y Trivy |
 | R17 | El primer `docker compose up` en frío falla | 2 | 2 | 4 | Cubierto: `g1-arranque.yml` en el CI |
 | R21 | Un cliente sin `If-Match` o sin parser de `application/problem+json` pierde la protección o rompe al leer errores | 2 | 2 | 4 | Cubierto: backend (`etag-if-match`, `problem-details`); frontend propaga `ETag` e `If-Match` (FE #973) |

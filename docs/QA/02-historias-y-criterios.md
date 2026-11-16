@@ -424,7 +424,7 @@ Total: 33 HU con criterios, 181 criterios (150 propuestos por QA) y 3 HU fuera d
 - **CA-HU32-1** (Feliz†): **DADO** las pantallas del frontend, **CUANDO** corre axe con las etiquetas WCAG en el CI, **ENTONCES** no hay violaciones críticas de accesibilidad.
 - **CA-HU32-2** (Alternativo†): **DADO** el despliegue del backend, **CUANDO** consulto GET /health y GET /health/ready, **ENTONCES** liveness responde 200 sin consultar la base y readiness responde 200 con la base arriba.
 - **CA-HU32-3** (Error†): **DADO** que la base no responde o tarda más de 3 s, **CUANDO** consulto GET /health/ready, **ENTONCES** recibo 503 sin filtrar el error de la base.
-- **CA-HU32-4** (Error†): **DADO** una respuesta del frontend, **CUANDO** se inspeccionan los headers de seguridad (CSP, X-Frame-Options, HSTS, Referrer-Policy), **ENTONCES** están presentes (hoy no lo están en el frontend: limitación conocida; en el backend hay nosniff, X-Frame-Options, Referrer-Policy y HSTS solo en producción).
+- **CA-HU32-4** (Error†): **DADO** una respuesta del frontend, **CUANDO** se inspeccionan los headers de seguridad (CSP, X-Frame-Options, HSTS, Referrer-Policy), **ENTONCES** están presentes (en el frontend: CSP con nonce, X-Frame-Options, Referrer-Policy, Permissions-Policy y HSTS en producción desde FE #958 y #977, `e2e/security-headers.spec.ts`; en el backend hay nosniff, X-Frame-Options, Referrer-Policy y HSTS solo en producción).
 
 ## HU-33 — e2e con datos deterministas y shards balanceados
 
@@ -453,5 +453,5 @@ Propuestas de alcance del tablero, a validar por el PO. No tienen criterios ni c
 
 | HU | Qué sigue abierto | Referencia |
 |---|---|---|
-| HU-31 | Swagger UI público en producción y evidencia servida por URL pública del bucket | DEF-19 en [`06`](06-registro-defectos.md) |
+| HU-31 | Swagger UI público en producción y evidencia servida por URL pública del bucket | DEF-38 en [`06`](06-registro-defectos.md) (resto de DEF-19, cerrado por #701) |
 | HU-23 | La DLQ es del Core: M6 no puede verla ni reprocesarla | DEF-37, [BE #694](https://github.com/hllous/Backend-M6-DAPS2/issues/694) |

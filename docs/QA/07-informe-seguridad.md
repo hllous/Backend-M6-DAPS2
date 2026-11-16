@@ -8,18 +8,23 @@ Base: criterios SEC de la Clase 11 (OWASP ASVS 5.0, OWASP API Security Top 10, L
 
 - Cada control se verificó contra el código y un test que corre en el CI. Un CUMPLE siempre cita ese test.
 - Las pruebas de entrada y el guion de seguridad en vivo corren contra la aplicación levantada en el e2e (`test/security-input.e2e-spec.ts`, `test/security-live.e2e-spec.ts`); el mismo guion corre contra cualquier URL con `scripts/security-live.mjs`. El escaneo activo de ZAP corre contra un entorno efímero y contra Render solo el baseline pasivo.
+- Los controles que viven en el frontend (login del BFF, cookies de sesión, escape al renderizar) se verificaron contra `develop` del repo Frontend (16/11, tras FE #977) y su tabla de evidencia, `Frontend-M6-DAPS2/docs/security/eje-d-evidencia.md`.
 - Estados: **CUMPLE**, **Mixto** (CUMPLE en una parte y salvedad declarada en otra), **N/A** (no aplica al módulo).
 
 ## 2. Resumen
 
 | Estado | Controles de la Clase 11 (10) | Pruebas generales (21) |
 |---|---|---|
-| CUMPLE | 9 (W01, W02, W04, W05, W06, D01, D02, I01, I02) | 14 |
-| Mixto | 1 (W03) | 2 (XSS, TLS) |
+| CUMPLE | 9 (W01, W02, W04, W05, W06, D01, D02, I01, I02) | 17 |
+| Mixto | 1 (W03) | 1 (TLS) |
 | NO CUMPLE | 0 | 0 |
-| N/A | 0 | 5 (NoSQL, XXE, fuerza bruta en login, cookies, hash de contraseñas) |
+| N/A | 0 | 3 (NoSQL, XXE, hash de contraseñas) |
 
 No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06`](06-registro-defectos.md).
+
+**Cambios por el Frontend (16/11):** la fuerza bruta en el login pasa de N/A a **CUMPLE** con salvedad (FE #977); XSS pasa de Mixto a **CUMPLE** y cookies de N/A a **CUMPLE**, porque el escape al renderizar y la cookie de sesión son del frontend y ahora tienen test (`e2e/xss-escaping.spec.ts`, `e2e/security-headers.spec.ts`).
+
+**No aplica, declarado:** SOAP/WSDL y XXE (el módulo es REST/JSON más RabbitMQ: no expone ni consume SOAP, no publica WSDL y no parsea XML) e IA integrada (el sistema no incorpora funcionalidad de IA).
 
 ## 3. Controles de la Clase 11
 
@@ -30,7 +35,7 @@ No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06`](06-registro-defectos
 | **SEC-W03** | Portal ciudadano: mínima exposición y límite | **Mixto** | (a) un reclamo sin expediente da 404 sin decir si el ticket existe y (b) devuelve solo los campos públicos: `src/modules/citizen-portal/citizen-portal.service.spec.ts`. (c) límite del portal de 20 por minuto en seguimiento (`rate-limits.ts`); el e2e del 429 (`test/throttler.e2e-spec.ts`) prueba el límite global con `GET /zones`, no el tope propio del portal |
 | **SEC-W04** | Campos no permitidos rechazados | **CUMPLE** | `ValidationPipe` con `whitelist` y `forbidNonWhitelisted` (`src/configure-app.ts`). `test/security-input.e2e-spec.ts` y `test/security-live.e2e-spec.ts`: `PATCH /services/:id` con `status`, `role`, `id` o una mezcla da 400 y la fila queda idéntica |
 | **SEC-W05** | Manejo seguro de errores internos | **CUMPLE** | `src/common/filters/http-exception.filter.ts` responde 500 con «Error interno del servidor», manda el stack solo al log y devuelve Problem Details (RFC 9457, ADR-011) con `traceId` igual al header `X-Request-Id` y al log; `path` e `instance` sin query. Tests: `http-exception.filter.spec.ts`, `src/common/middleware/request-id.middleware.spec.ts`, `test/problem-details.e2e-spec.ts` y `test/security-live.e2e-spec.ts` («un 500 devuelve Problem Details con traceId y sin stack») |
-| **SEC-W06** | Carga segura de evidencias | **CUMPLE** | Contenido distinto del tipo declarado: 400 sin subir nada; tipos fuera de la lista blanca; EXIF y GPS eliminados (`attachments.service.spec.ts`, `evidence-file.spec.ts`); 413 por más de 10 MB (`test/security-input.e2e-spec.ts`). Los PDF conservan sus metadatos y la evidencia se sirve por URL pública (DEF-19) |
+| **SEC-W06** | Carga segura de evidencias | **CUMPLE** | Contenido distinto del tipo declarado: 400 sin subir nada; tipos fuera de la lista blanca; EXIF y GPS eliminados (`attachments.service.spec.ts`, `evidence-file.spec.ts`); 413 por más de 10 MB (`test/security-input.e2e-spec.ts`). Los PDF conservan sus metadatos y la evidencia se sirve por URL pública (DEF-38) |
 | **SEC-D01** | Logs sin secretos ni datos personales | **CUMPLE** | Consumidor AMQP: `rabbitmq.consumer.spec.ts` (un `x-core-last-error` sensible no aparece en el log). HTTP: `redactUrl` (`src/common/utils/redact-url.ts`; DEF-22) con `redact-url.spec.ts` y `logging.interceptor.spec.ts`; en vivo, el log no registra `Authorization` ni el token de la query (`security-live`) |
 | **SEC-I01** | Idempotencia en el consumo de eventos | **CUMPLE** | `test/inbox.e2e-spec.ts` («descarta el mismo eventId sin volver a aplicarlo»): el duplicado lo detecta la base (`messageId` único). Igual por RabbitMQ real en `test/rabbitmq-real.e2e-spec.ts` |
 | **SEC-I02** | Rechazo de eventos que violan el contrato | **CUMPLE** | `test/inbox.e2e-spec.ts`: payload inválido da 400 y no deja fila; por broker real, `rabbitmq-real`. M6 hace `nack` sin reencolar; la DLQ es del Core (DEF-37) |
@@ -40,22 +45,22 @@ No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06`](06-registro-defectos
 
 | Prueba | Esperado | Estado | Evidencia |
 |---|---|---|---|
-| **BOLA / IDOR** | 403 o 404, nunca el dato | **CUMPLE** | `test/crew-ownership.e2e-spec.ts` (403 `NOT_ASSIGNED`; propio, ajeno y sin cuadrilla), `test/security-live.e2e-spec.ts` (Campo B sobre el servicio de A: 403 y sin URLs; `/me` solo con lo del token), `attachments.service.spec.ts`. Un ciudadano recibe 403 en todo lo no público. Oficina, Auditoría y Campo leen por `GET` todos los recursos: el dominio es compartido |
+| **BOLA / IDOR** | 403 o 404, nunca el dato | **CUMPLE** | `test/crew-ownership.e2e-spec.ts` (403 `NOT_ASSIGNED`; propio, ajeno y sin cuadrilla), `test/security-live.e2e-spec.ts` (Campo B sobre el servicio de A: 403 y sin URLs; `/me` solo con lo del token), `attachments.service.spec.ts`. Un ciudadano recibe 403 en todo lo no público. Oficina, Auditoría y Campo leen por `GET` todos los recursos: el dominio es compartido. **Decisión de diseño (ADR-008) y demostración en vivo en 4.1** |
 | **BFLA** | 403 | **CUMPLE** | `test/auth-roles.e2e-spec.ts` (`it.each(TODOS)`), `route-roles.spec.ts` y `security-live`; tabla por rol en `docs/api/endpoints.md` |
 | **JWT** vencido, firma alterada, `alg=none`, otro emisor | 401 | **CUMPLE** | `jwt.strategy.spec.ts` y `security-live` |
 | **Mass assignment** | 400, nunca persistido | **CUMPLE** | `test/security-input.e2e-spec.ts` (6 tests) y `security-live` (`POST /services`, `POST /environmental-reports`, `PATCH /services/:id`, `PUT /role-assignments`) |
 | **Inyección SQL** | Sin ejecución | **CUMPLE** | `security-input` (9 tests con `'; DROP TABLE zone;--`, `' OR 1=1--` y `<script>`) y `security-live` (SQL en el id, en filtros y en body: 400 o dato idéntico, nunca 500). Prisma parametriza; las 5 consultas crudas usan *template tag* sin `Unsafe` (`health.controller.ts`, `crews.service.ts`, `indicators.service.ts` ×2, `trees.service.ts`) |
 | **NoSQL** | — | **N/A** | La base es PostgreSQL; `security-live` verifica que los operadores `$gt` y `$ne` en el body dan 400 |
-| **XSS** en campos de texto | Escapado o rechazado | **Mixto** | La API guarda el texto y lo devuelve idéntico como JSON con `nosniff` y `Content-Security-Policy: default-src 'none'`: no se ejecuta. El escape al renderizar es del frontend. Los caracteres nulos y el JSON demasiado anidado se rechazan (`no-null-chars.pipe.spec.ts`) |
+| **XSS** en campos de texto | Escapado o rechazado | **CUMPLE** | La API guarda el texto y lo devuelve idéntico como JSON con `nosniff` y `Content-Security-Policy: default-src 'none'`: no se ejecuta. El frontend lo escapa al renderizar: `e2e/xss-escaping.spec.ts` (un `<img onerror>` y un `<script>` se muestran literales y no se ejecutan) y `src/lib/security-audit.test.ts` (sin `dangerouslySetInnerHTML` ni `innerHTML` con datos de usuarios). Los caracteres nulos y el JSON demasiado anidado se rechazan (`no-null-chars.pipe.spec.ts`) |
 | **XXE** | — | **N/A** | M6 no tiene canal SOAP ni XML |
-| **Fuerza bruta en login** | 429 | **N/A** | M6 no tiene login: el JWT lo emite M1 |
+| **Fuerza bruta en login** | 429 | **CUMPLE**, con salvedad | El backend no tiene login (el JWT lo emite M1); el login atacable es el del BFF (`POST /api/session/login`). Desde FE #977 responde **429 con `Retry-After`** tras 5 fallos por cuenta o 20 por IP en 15 minutos; el login correcto reinicia el contador y la respuesta no revela si la cuenta existe. Tests: `e2e/login-rate-limit.spec.ts`, `src/lib/login-rate-limit.test.ts`, `src/app/api/session/login/rate-limit.test.ts`. **Salvedad:** el contador está en memoria por instancia; en Vercel (serverless) cada instancia cuenta por separado y el límite efectivo puede ser mayor (ADR 0009 del Frontend) |
 | **Rate limiting** | 429 | **CUMPLE** | `ThrottlerGuard` global: 600 por minuto por IP y endpoint, `POST /events/inbox` 300, `POST /evidence` 30, `/health` excluido (`test/throttler.e2e-spec.ts`; [ADR-010](../decisiones/adr-010-rate-limit-global.md)). Los contadores están en memoria: valen para una instancia. El 429 sale en Problem Details |
 | **SonarCloud** | 0 bugs Blocker/Critical, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % hotspots | **CUMPLE** | Gate OK, 0 / 0, 1,2 %, A/A/A, 100 % ([`05`](05-informe-ejecucion.md), sección 7) |
 | **OWASP ZAP** | 0 High | **CUMPLE** | Baseline y activo con 0 High; cada Medium justificada en 5.2 |
 | **Dependencias** | 0 CVE críticas o altas sin mitigación | **CUMPLE** | `npm audit --omit=dev` en 0 (job `audit`, gate); Trivy `fs`, `image` y `config` en 0 HIGH/CRITICAL (5.1) |
 | **Cabeceras** | CSP, HSTS y `X-Content-Type-Options` | **CUMPLE** | `src/common/middleware/security-headers.middleware.ts`: `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` en toda ruta y una CSP propia en `/api/docs` (`DOCS_CSP`, sin `unsafe-eval`), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: same-site`, `Permissions-Policy` y HSTS solo con `NODE_ENV=production`; sin `X-Powered-By`. `security-headers.middleware.spec.ts`, `security-input` y `security-live` |
 | **CORS** | Sin `*` con credenciales | **CUMPLE** | `src/common/http/cors-options.ts`: nunca habilita credenciales; en producción `CORS_ORIGINS` es obligatoria y el arranque falla sin ella (DEF-18). Un origen ajeno no recibe `Access-Control-Allow-Origin` (`security-live`, `cors-options.spec.ts`). Expone `ETag`, `Idempotency-Replayed` y `X-Request-Id` |
-| **Cookies** | — | **N/A** | El backend no emite cookies: el JWT va en el header |
+| **Cookies** | `Secure`, `HttpOnly`, `SameSite` | **CUMPLE** | El backend no emite cookies (el JWT va en el header). La cookie de sesión del BFF es `HttpOnly`, `SameSite=Lax` y `Secure` en producción, y el JWT de M1 nunca llega al navegador: `src/lib/security-audit.test.ts` y `e2e/security-headers.spec.ts` del Frontend |
 | **Errores sin stack** | Sin trazas | **CUMPLE** | Ver SEC-W05; también ruta inexistente y JSON mal formado (`security-live`) |
 | **Logs sin datos personales ni tokens** | Sin datos sensibles | **CUMPLE** | Ver SEC-D01 |
 | **TLS** | Cifrado | **Mixto** | Broker y Core: en producción la validación de arranque exige `amqps://`, prohíbe el usuario `guest` y exige `https://` para el Core y M1 (`src/config/env.validation.ts`, `configuration.spec.ts`). El TLS del HTTP lo termina Render y la API envía HSTS en producción |
@@ -63,6 +68,23 @@ No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06`](06-registro-defectos
 | **Datos minimizados** | — | **CUMPLE** | El portal público devuelve solo etapa, tipo, dirección y fechas (`citizen-portal.service.spec.ts`) |
 
 ## 5. Resultados de herramientas
+
+### 4.1 BOLA en vivo y la decisión de diseño de ADR-008
+
+**Decisión de diseño.** Los `GET` de servicios, expedientes e inspecciones **no se restringen por cuadrilla**: cualquier rol de M6, Campo incluido, puede leer por `GET` un servicio de otra cuadrilla. Es a propósito: es un dato operativo municipal, no un dato personal, y Campo necesita ver la cola y el detalle que comparte con Operaciones ([ADR-008](../decisiones/adr-008-roles-m6-adaptados-desde-m1.md): «No se filtran los listados»; los `GET` de expedientes e inspecciones «quedan abiertos a cualquier rol de M6»). Lo protegido por pertenencia es **la lectura de la evidencia** (fotos y archivos) y **todas las escrituras** sobre el servicio, la inspección y la evidencia. En una prueba de BOLA, recibir 200 en `GET /services/:id` de otra cuadrilla **no es un hallazgo**: es el comportamiento esperado.
+
+**Cómo se demuestra en vivo.** Con dos integrantes de Campo de cuadrillas distintas (A y B) y un servicio de A, `test/security-live.e2e-spec.ts` › «BOLA: Campo sobre un recurso de otra cuadrilla → 403, nunca el dato»:
+
+| Pedido de B sobre el servicio de A | Resultado |
+|---|---|
+| Leer la evidencia (`GET /evidence?ownerType=SERVICE&ownerId=…`) | 403 `NOT_ASSIGNED` y sin URLs; el integrante de A sí la ve |
+| Subir evidencia (`POST /evidence`) | 403 y no queda archivo |
+| Suspender, cerrar o informar una zona | 403 `NOT_ASSIGNED` y la fila del servicio queda idéntica en la base |
+| Otro inspector cierra una inspección asignada | 403 y la inspección sigue abierta |
+| `/me` con otro id en la query | Devuelve solo lo del token |
+| Un id inexistente | 404 |
+
+El mismo guion corre contra cualquier URL con `node scripts/security-live.mjs --base-url <URL>` (sección 7), así que la demostración puede hacerse contra el despliegue.
 
 ### 5.1 Dependencias, imagen y configuración
 
@@ -106,8 +128,9 @@ Job `sonar` (`sonar-project.properties`; las exclusiones de cobertura son las de
 
 | # | Hallazgo | Severidad | Tratamiento | Registro |
 |---|---|---|---|---|
-| 1 | Swagger UI público en producción (`/api/docs`) | Menor | Ocultarlo o aceptarlo por escrito | DEF-19 |
-| 2 | Evidencia servida por URL pública; los PDF conservan metadatos | Menor | URLs firmadas, o aceptar el riesgo por escrito | DEF-19 |
+| 1 | Swagger UI público en producción (`/api/docs`) | Menor | Ocultarlo o aceptarlo por escrito | DEF-38 |
+| 2 | Evidencia servida por URL pública; los PDF conservan metadatos | Menor | URLs firmadas, o aceptar el riesgo por escrito | DEF-38 |
+| 6 | El límite de intentos del login del BFF cuenta por instancia serverless | Menor | Almacén compartido o firewall de Vercel | ADR 0009 del Frontend |
 | 3 | DLQ delegada al Core: M6 no puede verla ni reprocesarla | Menor | Consultarla por la API del Core | DEF-37 |
 | 4 | `.env.example` y `docs/deploy.md` publican el usuario y el host del broker; la clave es un marcador | Menor | Confirmar con M9 que usuario y host sean públicos; si una clave alguna vez se pegó en un commit, rotarla | — |
 | 5 | No se valida `aud` del JWT | Menor | Justificado: M1 no emite `aud` (`docs/integracion/m1.md`) | — |
@@ -122,6 +145,7 @@ Job `sonar` (`sonar-project.properties`; las exclusiones de cobertura son las de
 | Mass assignment, SQL, XSS, 413 y CSP | `npm run test:e2e -- security-input` |
 | Guion en vivo (JWT, BFLA, BOLA, mass assignment, inyección, cabeceras, CORS, errores) | `npm run test:e2e -- security-live` y `node scripts/security-live.mjs [--base-url URL]` |
 | Rate limiting (429) | `npm run test:e2e -- throttler` |
+| Fuerza bruta en el login del BFF (Frontend) | `pnpm exec playwright test --project=real-m1 e2e/login-rate-limit.spec.ts` en `Frontend-M6-DAPS2` |
 | Logs sin token | `npx vitest run src/common/utils/redact-url.spec.ts src/common/interceptors/logging.interceptor.spec.ts` |
 | Idempotencia del inbox | `npm run test:e2e -- inbox` |
 | Problem Details y `traceId` | `npm run test:e2e -- problem-details` y `npx vitest run src/common/filters/http-exception.filter.spec.ts src/common/middleware/request-id.middleware.spec.ts` |
