@@ -189,8 +189,12 @@ async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
   const mapping = parseMapping(readFileSync(mapPath, 'utf8'));
 
-  const target = new URL(process.env.DATABASE_URL);
-  console.log(`Base: ${target.hostname}:${target.port || '5432'}${target.pathname}`);
+  // No se imprime nada derivado de DATABASE_URL (trae la credencial): solo si
+  // el destino es la máquina local o una base remota.
+  const esLocal = ['localhost', '127.0.0.1', '[::1]'].includes(
+    new URL(process.env.DATABASE_URL).hostname,
+  );
+  console.log(`Base: ${esLocal ? 'local' : 'remota'}${dryRun ? ' (dry-run)' : ''}`);
 
   const prisma = new PrismaClient();
   try {

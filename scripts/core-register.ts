@@ -16,7 +16,7 @@ try {
   // Sin .env, vale lo que ya esté en el entorno.
 }
 // El esquema de entorno las exige; el registro no toca la base ni firma JWT.
-process.env.DATABASE_URL ??= 'postgresql://registro:registro@localhost:5432/registro';
+process.env.DATABASE_URL ??= 'postgresql://localhost:5432/registro';
 // base64 de 32 bytes: el esquema rechaza un secret que no lo sea.
 process.env.JWT_SECRET ??= 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
 
