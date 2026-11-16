@@ -52,4 +52,10 @@ async function bootstrap() {
   logger.log(`📄 Swagger UI en http://${host}:${port}/api/docs`);
 }
 
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  new Logger('Bootstrap').error(
+    'No se pudo iniciar la aplicación',
+    error instanceof Error ? error.stack : String(error),
+  );
+  process.exit(1);
+});
