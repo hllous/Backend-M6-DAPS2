@@ -14648,7 +14648,7 @@
     },
     "/environmental-reports/{id}/close": {
       "post": {
-        "description": "Cierra desde FORWARDED, DISMISSED, NO_VIOLATION, SANCTIONED o NOTICE_ISSUED. El cierre por vencimiento del plazo de M4 lo hace el sistema solo, sin pasar por acá.",
+        "description": "Cierra desde FORWARDED, DISMISSED, NO_VIOLATION, SANCTIONED o NOTICE_ISSUED. El cierre por vencimiento del plazo de M4 lo hace el sistema solo, sin pasar por acá. El body es opcional: con `reason`, el motivo queda en el historial y viaja a M2 como nota interna (el vecino no la ve).",
         "operationId": "EnvironmentalReportsController_close",
         "parameters": [
           {
@@ -14672,6 +14672,28 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseReportDto"
+              },
+              "examples": {
+                "conMotivo": {
+                  "summary": "Cierre con motivo",
+                  "value": {
+                    "reason": "Se verificó que el vecino regularizó la situación."
+                  }
+                },
+                "sinMotivo": {
+                  "summary": "Cierre sin motivo",
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Expediente cerrado",
@@ -14693,7 +14715,7 @@
             }
           },
           "400": {
-            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "description": "Id mal formado, o motivo vacío o de más de 500 caracteres",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -23257,6 +23279,17 @@
         "required": [
           "message"
         ]
+      },
+      "CloseReportDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo del cierre. Queda en el historial del expediente y viaja a M2 como nota interna (el vecino no la ve).",
+            "example": "Se verificó que el vecino regularizó la situación.",
+            "maxLength": 500
+          }
+        }
       },
       "CreateRepairRequestDto": {
         "type": "object",

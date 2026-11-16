@@ -656,6 +656,41 @@ describe('EnvironmentalReportsService', () => {
       });
     });
 
+    it('close sin motivo no manda internalMessage ni nota de auditoría', async () => {
+      const { encolado } = await transicionar(S.NO_VIOLATION, (s) => s.close(ID, ACTOR));
+
+      expect(encolado[0].payload).not.toHaveProperty('internalMessage');
+      expect(audit.record.mock.calls[0][1].note).toBeUndefined();
+    });
+
+    it('close con motivo lo deja en el historial y lo manda a M2 solo como internalMessage', async () => {
+      const { encolado } = await transicionar(S.NO_VIOLATION, (s) =>
+        s.close(ID, ACTOR, undefined, 'Regularizó la situación'),
+      );
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ action: 'CLOSE', note: 'Regularizó la situación' }),
+      );
+      expect(encolado[0].payload).toMatchObject({
+        updateType: 'RESOLVED',
+        internalMessage: 'Regularizó la situación',
+        publicMessage: 'Su denuncia ambiental fue cerrada.',
+      });
+    });
+
+    it.each([S.FORWARDED, S.DISMISSED])(
+      'close con motivo desde %s lo audita pero no publica nada',
+      async (desde) => {
+        const { encolado } = await transicionar(desde, (s) =>
+          s.close(ID, ACTOR, undefined, 'Archivo'),
+        );
+
+        expect(encolado).toEqual([]);
+        expect(audit.record.mock.calls[0][1].note).toBe('Archivo');
+      },
+    );
+
     /**
      * #146: `RETURNED` dejó el ticket en `IN_REVIEW` y `REJECTED` en `CANCELLED`.
      * §8.2 solo acepta `RESOLVED` desde `ROUTED` o `IN_PROGRESS`: M2 lo

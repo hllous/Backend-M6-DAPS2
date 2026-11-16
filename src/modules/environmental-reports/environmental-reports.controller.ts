@@ -24,6 +24,7 @@ import {
   CreateEnvironmentalReportDto,
   EnvironmentalReportResponseDto,
   QueryEnvironmentalReportsDto,
+  CloseReportDto,
   ReportStatusChangeDto,
   RequestInformationDto,
 } from './dto';
@@ -290,20 +291,35 @@ export class EnvironmentalReportsController {
   }
 
   @Post(':id/close')
-  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: CloseReportDto,
+    required: false,
+    examples: {
+      conMotivo: {
+        summary: 'Cierre con motivo',
+        value: { reason: 'Se verificó que el vecino regularizó la situación.' },
+      },
+      sinMotivo: { summary: 'Cierre sin motivo', value: {} },
+    },
+  })
   @ApiOperation({
     summary: 'Cerrar el expediente',
     description:
-      'Cierra desde FORWARDED, DISMISSED, NO_VIOLATION, SANCTIONED o NOTICE_ISSUED. El cierre por vencimiento del plazo de M4 lo hace el sistema solo, sin pasar por acá.',
+      'Cierra desde FORWARDED, DISMISSED, NO_VIOLATION, SANCTIONED o NOTICE_ISSUED. El cierre por vencimiento del plazo de M4 lo hace el sistema solo, sin pasar por acá. El body es opcional: con `reason`, el motivo queda en el historial y viaja a M2 como nota interna (el vecino no la ve).',
   })
   @ApiParam({ name: 'id', description: 'UUID del expediente', format: 'uuid' })
   @ApiResponse({
     status: 200,
     description: 'Expediente cerrado',
     type: EnvironmentalReportResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Id mal formado, o motivo vacío o de más de 500 caracteres',
+    type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
@@ -313,7 +329,8 @@ export class EnvironmentalReportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
     @IfMatch() ifMatch?: string,
+    @Body() dto?: CloseReportDto,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.close(id, actor, ifMatch);
+    return this.reportsService.close(id, actor, ifMatch, dto?.reason);
   }
 }

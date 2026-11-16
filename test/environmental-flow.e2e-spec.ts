@@ -546,4 +546,55 @@ describe('Flujo del expediente ambiental (e2e)', () => {
       });
     });
   });
+  describe('cerrar con motivo opcional (#653)', () => {
+    const cerrarDesde = async (body?: object) => {
+      const ticketId = `TCK-E2E-${randomUUID()}`;
+      const r = await api
+        .post('/environmental-reports', { reportType: 'NOISE', ticketId })
+        .expect(201);
+      await prisma.environmentalReport.update({
+        where: { id: r.body.id },
+        data: { status: 'NO_VIOLATION' },
+      });
+      const res = await api.post(`/environmental-reports/${r.body.id}/close`, body);
+      return { id: r.body.id as string, res };
+    };
+
+    const resolved = async (id: string) =>
+      (await prisma.outboxEvent.findMany({ where: { aggregateId: id } }))
+        .map((e) => e.payload as Record<string, unknown>)
+        .filter((p) => p['updateType'] === 'RESOLVED');
+
+    const nota = async (id: string) =>
+      (await prisma.domainAuditLog.findFirstOrThrow({ where: { entityId: id, action: 'CLOSE' } }))
+        .note;
+
+    it('sin body: cierra como siempre, sin nota ni internalMessage', async () => {
+      const { id, res } = await cerrarDesde();
+
+      expect(res.status).toBe(200);
+      expect(await nota(id)).toBeNull();
+      expect((await resolved(id))[0]).not.toHaveProperty('internalMessage');
+    });
+
+    it('con motivo: queda en el historial y viaja como internalMessage', async () => {
+      const { id, res } = await cerrarDesde({ reason: 'Regularizó la situación' });
+
+      expect(res.status).toBe(200);
+      expect(await nota(id)).toBe('Regularizó la situación');
+      expect((await resolved(id))[0]).toMatchObject({
+        internalMessage: 'Regularizó la situación',
+        publicMessage: 'Su denuncia ambiental fue cerrada.',
+      });
+    });
+
+    it('motivo de más de 500 caracteres: 400 y no cierra', async () => {
+      const { id, res } = await cerrarDesde({ reason: 'a'.repeat(501) });
+
+      expect(res.status).toBe(400);
+      expect((await prisma.environmentalReport.findUniqueOrThrow({ where: { id } })).status).toBe(
+        'NO_VIOLATION',
+      );
+    });
+  });
 });
