@@ -18,7 +18,7 @@ RUN apk add --no-cache openssl
 # npm embebido en node:24-alpine trae brace-expansion 5.0.9 y undici 6.28.0 con
 # CVE altas (#665). npm 11.21.2 trae brace-expansion 5.0.12 y undici 6.29.1.
 # Versión fija para que el build sea reproducible; quitar al subir a una base con npm corregido.
-RUN npm install -g npm@11.21.2 && npm cache clean --force
+RUN npm install -g --ignore-scripts npm@11.21.2 && npm cache clean --force
 
 # Primero se copian SOLO los manifiestos para aprovechar la caché de Docker
 # (si no cambian las dependencias, esta capa se reutiliza entre builds).
@@ -52,7 +52,7 @@ RUN apk add --no-cache openssl
 # npm embebido en node:24-alpine trae brace-expansion 5.0.9 y undici 6.28.0 con
 # CVE altas (#665). npm 11.21.2 trae brace-expansion 5.0.12 y undici 6.29.1.
 # Versión fija para que el build sea reproducible; quitar al subir a una base con npm corregido.
-RUN npm install -g npm@11.21.2 && npm cache clean --force
+RUN npm install -g --ignore-scripts npm@11.21.2 && npm cache clean --force
 
 # /app pasa a ser del usuario no root `node` (Trivy DS-0002, #666).
 RUN chown node:node /app
