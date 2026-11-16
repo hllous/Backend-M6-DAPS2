@@ -14,7 +14,7 @@ M6 puede hacer **REST a M1 únicamente para consultas de identidad de solo lectu
 
 1. **Autenticación:** el module-token que ya pide `CoreClient.getToken()` (`kind=module`, `sub=module:ambiente`) va directo como `Authorization: Bearer`. No se usa el JWT de usuario ni otro encabezado.
 2. **Puerto + adaptador** ([ADR-004](adr-004-jwt-m1-y-puerto-identidad.md)): `IdentityPort` (`src/identity/identity.port.ts`) y `M1IdentityClient`. El resto del código depende del puerto.
-3. **Contrato:** 200 devuelve el registro con su `estado` real (un inactivo vuelve 200 y lo decide quien llama); 404 devuelve `null`; 401, 5xx, timeout (5 s por defecto, `M1_TIMEOUT_MS`; M1 en Render free puede tardar más en frío y es preferible el 503 rápido, #693) o red lanzan `IdentityUnavailableError`, sin token ni body en el mensaje. Sin reintento: M1 no está en el camino crítico de ninguna escritura.
+3. **Contrato:** 200 devuelve el registro con su `estado` real (un inactivo vuelve 200 y lo decide quien llama); 404 devuelve `null`; 401, 5xx, timeout (4 s por defecto, `M1_TIMEOUT_MS`: menor que los 5 s con que el BFF del Frontend corta sus pedidos, para que llegue el 503 del backend; M1 en Render free puede tardar más en frío y es preferible el 503 rápido, #693, #713) o red lanzan `IdentityUnavailableError`, sin token ni body en el mensaje. Sin reintento: M1 no está en el camino crítico de ninguna escritura.
 4. **Seguridad del token:** `redirect: 'error'` y URL solo desde `M1_BASE_URL` (https obligatorio en producción).
 5. **Config:** `M1_BASE_URL` opcional; sin ella el cliente queda deshabilitado y la app arranca igual.
 6. `sub` sigue siendo la clave interna; `actorId` (UUID) es el que va en `updatedBy.id`.
