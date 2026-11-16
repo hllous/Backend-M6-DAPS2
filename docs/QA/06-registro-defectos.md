@@ -22,10 +22,10 @@ La severidad es una propuesta: la deciden el líder y el QA y la valida el PO.
 | Bloqueante | 0 | Sí |
 | Crítica | 0 | Sí |
 | Mayor | 0 | Sí |
-| Menor | 4 (DEF-34, DEF-35, DEF-37 y DEF-38) | Sí |
-| **Total abierto** | **4** | |
+| Menor | 3 (DEF-34, DEF-35 y DEF-38) | Sí |
+| **Total abierto** | **3** | |
 
-Registrados: 38 (DEF-01 a DEF-40, sin DEF-04 ni DEF-11). Abiertos: 4. Cerrados: 34 (sección 4).
+Registrados: 38 (DEF-01 a DEF-40, sin DEF-04 ni DEF-11). Abiertos: 3. Cerrados: 35 (sección 4).
 
 El estado del Frontend se verificó contra `origin/develop` del repo Frontend del 16/11 (`0519d95`, tras FE #977, #978, #979, #980, #982 y #985).
 
@@ -41,7 +41,6 @@ Ninguno abierto.
 |---|---|---|---|
 | DEF-34 | Frontend: `Idempotency-Key` solo se envía en la carga de evidencia; las demás altas no la mandan aunque el backend la acepta en 21 `POST` | `src/app/api/evidence/route.ts`; `src/lib/containers.ts` y `services.ts` (solo evidencia) | [Frontend #968](https://github.com/hllous/Frontend-M6-DAPS2/issues/968). Anular el duplicado desde la UI |
 | DEF-35 | Frontend: sin mutation testing. La cobertura ya tiene umbral exigido en el CI desde FE #985 (sentencias 90,20 %, líneas 93,03 %, funciones 88,05 %, ramas 83,58 %; umbrales 90/92/87/83); queda abierto por el mutation | `vitest.config.ts` (`coverage.thresholds`); sin `stryker.config` en el Frontend | [Frontend #975](https://github.com/hllous/Frontend-M6-DAPS2/issues/975) (cobertura, cerrado). Mutation del Frontend **PENDIENTE** (en curso, objetivo ≥ 65 %). El backend tiene mutation 76,11 % |
-| DEF-37 | Backend: la DLQ es del Core (M9); M6 hace `nack` sin reencolar y no tiene DLQ propia ni forma de verla o reprocesarla | `src/events/consumers/rabbitmq.consumer.ts` | [#694](https://github.com/hllous/Backend-M6-DAPS2/issues/694). Consultar la DLQ por la API del Core; el inbox registra cada intento fallido |
 | DEF-38 | Backend (resto de DEF-19): Swagger UI público en `/api/docs` también en producción; la evidencia se sirve por URL pública del bucket (key UUID aleatoria) y los PDF conservan sus metadatos | `src/swagger-config.ts` (`SwaggerModule.setup('api/docs', …)` sin condición de entorno); `src/modules/attachments/storage/r2-evidence.storage.ts` | Sin issue. Riesgo aceptado: el OpenAPI no expone datos y cada ruta exige token; la key de la evidencia no es adivinable. Mejora: ocultar `/api/docs` en producción y URLs firmadas |
 
 ### Hallazgo de proceso abierto
@@ -85,6 +84,7 @@ Ninguno abierto.
 | DEF-32 | El frontend no enviaba `If-Match` ni manejaba el 412: el BFF propaga `ETag` e `If-Match` y la interfaz avisa que el registro cambió | [Frontend #973](https://github.com/hllous/Frontend-M6-DAPS2/issues/973) |
 | DEF-33 | El timeout del BFF al backend era de 15 s: ahora 5 s con aborto real | [Frontend #974](https://github.com/hllous/Frontend-M6-DAPS2/issues/974) |
 | DEF-36 | El pedido a M1 esperaba hasta 10 s con M1 caído: ahora 4 s (`M1_TIMEOUT_MS`), menos que el corte del BFF, y el 503 llega a tiempo | [#693](https://github.com/hllous/Backend-M6-DAPS2/issues/693), [#713](https://github.com/hllous/Backend-M6-DAPS2/issues/713) |
+| DEF-37 | Backend: M6 no puede ver ni reprocesar la DLQ. Cerrado por decisión de diseño: la DLQ es del Core (ADR-007, `m9.md`); M6 hace `nack` sin reencolar y el Core reintenta y la expone en `GET /api/v1/dlq`. Sin ensayar contra el Core real | [#694](https://github.com/hllous/Backend-M6-DAPS2/issues/694), [procedimiento](../integracion/m9.md#qué-pasa-con-un-mensaje-que-falla-procedimiento-de-la-demo) |
 | DEF-39 | Los listados de catálogos con paginación del servidor no aceptaban un parámetro de orden (CA-HU01-1 parcial, encontrado al automatizar el Eje A). El backend acepta `sort` y `order` en 7 listados desde #712 (CA-HU01-5 y CA-HU01-6). Que la tabla del frontend los use sigue en [Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983) | [#703](https://github.com/hllous/Backend-M6-DAPS2/issues/703), [PR #712](https://github.com/hllous/Backend-M6-DAPS2/pull/712) |
 | DEF-40 | Frontend: `src/app/api/vehicles/[id]/route.ts` devolvía 500 en vez de 503 con el backend caído (`return forward(...)` sin `await` dentro del `try`). Encontrado por los tests de cobertura; corregido con `return await` en `GET` y `PATCH` | [Frontend #975](https://github.com/hllous/Frontend-M6-DAPS2/issues/975), FE #985 |
 | P-1 | Secreto de juguete literal en `api-tests.yml`, detectado por gitleaks; nunca llegó a `develop` | sin issue |

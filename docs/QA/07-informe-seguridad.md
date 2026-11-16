@@ -38,7 +38,7 @@ No hay hallazgos bloqueantes. Los `DEF-xx` remiten a [`06`](06-registro-defectos
 | **SEC-W06** | Carga segura de evidencias | **CUMPLE** | Contenido distinto del tipo declarado: 400 sin subir nada; tipos fuera de la lista blanca; EXIF y GPS eliminados (`attachments.service.spec.ts`, `evidence-file.spec.ts`); 413 por más de 10 MB (`test/security-input.e2e-spec.ts`). Los PDF conservan sus metadatos y la evidencia se sirve por URL pública (DEF-38) |
 | **SEC-D01** | Logs sin secretos ni datos personales | **CUMPLE** | Consumidor AMQP: `rabbitmq.consumer.spec.ts` (un `x-core-last-error` sensible no aparece en el log). HTTP: `redactUrl` (`src/common/utils/redact-url.ts`; DEF-22) con `redact-url.spec.ts` y `logging.interceptor.spec.ts`; en vivo, el log no registra `Authorization` ni el token de la query (`security-live`) |
 | **SEC-I01** | Idempotencia en el consumo de eventos | **CUMPLE** | `test/inbox.e2e-spec.ts` («descarta el mismo eventId sin volver a aplicarlo»): el duplicado lo detecta la base (`messageId` único). Igual por RabbitMQ real en `test/rabbitmq-real.e2e-spec.ts` |
-| **SEC-I02** | Rechazo de eventos que violan el contrato | **CUMPLE** | `test/inbox.e2e-spec.ts`: payload inválido da 400 y no deja fila; por broker real, `rabbitmq-real`. M6 hace `nack` sin reencolar; la DLQ es del Core (DEF-37) |
+| **SEC-I02** | Rechazo de eventos que violan el contrato | **CUMPLE** | `test/inbox.e2e-spec.ts`: payload inválido da 400 y no deja fila; por broker real, `rabbitmq-real`. M6 hace `nack` sin reencolar; la DLQ es del Core, por diseño (DEF-37, cerrado) |
 | **SEC-D02** | Auditoría de lectura de datos Tier 2 | **CUMPLE** | `AuditService.recordRead` registra una fila `READ` con el actor del token en las lecturas exitosas de `GET /environmental-inspections/:id/violation-notice`, `GET /events/inbox/:messageId` y `GET /events/outbox/:id`; falla cerrado. `src/common/audit/audit.service.spec.ts`, `test/environmental-flow.e2e-spec.ts` |
 
 ## 4. Pruebas de seguridad generales
@@ -131,7 +131,7 @@ Job `sonar` (`sonar-project.properties`; las exclusiones de cobertura son las de
 | 1 | Swagger UI público en producción (`/api/docs`) | Menor | Ocultarlo o aceptarlo por escrito | DEF-38 |
 | 2 | Evidencia servida por URL pública; los PDF conservan metadatos | Menor | URLs firmadas, o aceptar el riesgo por escrito | DEF-38 |
 | 6 | El límite de intentos del login del BFF cuenta por instancia serverless | Menor | Almacén compartido o firewall de Vercel | ADR 0009 del Frontend |
-| 3 | DLQ delegada al Core: M6 no puede verla ni reprocesarla | Menor | Consultarla por la API del Core | DEF-37 |
+| 3 | DLQ delegada al Core: M6 no puede verla ni reprocesarla | Menor | Aceptado por diseño: se consulta por la API del Core (`GET /api/v1/dlq`) | DEF-37 (cerrado) |
 | 4 | `.env.example` y `docs/deploy.md` publican el usuario y el host del broker; la clave es un marcador | Menor | Confirmar con M9 que usuario y host sean públicos; si una clave alguna vez se pegó en un commit, rotarla | — |
 | 5 | No se valida `aud` del JWT | Menor | Justificado: M1 no emite `aud` (`docs/integracion/m1.md`) | — |
 
