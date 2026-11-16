@@ -282,6 +282,62 @@ jobs:
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
             git /repo --redact --no-banner --log-opts="--all"
 
+  # secrets-default: lo mismo que `secrets` pero como lo corre la cátedra:
+  # gitleaks con la configuración POR DEFECTO (se borran .gitleaks.toml y
+  # .gitleaksignore del working tree; el historial no se toca) y trufflehog,
+  # sobre todas las ramas y tags. Informativo: muestra qué ve una herramienta
+  # sin nuestras excepciones. Los reportes se publican como artifact con los
+  # valores redactados (en trufflehog se eliminan Raw/RawV2).
+  secrets-default:
+    name: secrets-default
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (historial completo, todas las ramas y tags)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks con configuración por defecto
+        continue-on-error: true
+        run: |
+          rm -f .gitleaks.toml .gitleaksignore
+          mkdir -p secrets-reports
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
+            git /repo --redact --no-banner --log-opts="--all" \
+            --report-format json --report-path /repo/secrets-reports/gitleaks-default.json
+
+      - name: Trufflehog (acción oficial, historial de la rama)
+        continue-on-error: true
+        uses: trufflesecurity/trufflehog@3bd2b5887eb0efb8fa18bfd1d296032924e4ffdc # v3.99.9
+        with:
+          head: HEAD
+          version: 3.99.9
+          extra_args: --results=verified,unknown,unverified,filtered_unverified
+
+      - name: Trufflehog JSON sobre todas las ramas y tags
+        continue-on-error: true
+        run: |
+          mkdir -p secrets-reports
+          docker run --rm -v "$PWD:/tmp" -w /tmp ghcr.io/trufflesecurity/trufflehog:3.99.9 \
+            git file:///tmp/ --json --no-update \
+            --results=verified,unknown,unverified,filtered_unverified \
+            > secrets-reports/trufflehog-raw.jsonl
+          jq -c 'del(.Raw, .RawV2)' secrets-reports/trufflehog-raw.jsonl \
+            > secrets-reports/trufflehog-default.jsonl
+          rm secrets-reports/trufflehog-raw.jsonl
+
+      - name: Publicar reportes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secrets-default-reports
+          path: secrets-reports/
+          if-no-files-found: warn
+          retention-days: 14
+
   # ──────────────────────────────────────────────────────────────
   # audit — Vulnerabilidades de dependencias de producción.
   #
