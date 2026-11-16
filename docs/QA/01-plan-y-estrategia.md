@@ -36,7 +36,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estru
 |---|---|
 | **Unitario** (backend) | 131 suites, 3056 tests; cobertura de 98,71 % de líneas y 95,28 % de ramas; umbral de 90 % global y por archivo en 7 servicios críticos. Incluye 114 tests de transiciones inválidas |
 | **Mutation testing** | Stryker sobre los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules`: score 76,11 %; workflow `mutation.yml` |
-| **Unitario** (frontend) | Vitest en el CI; cobertura de 90,20 % de sentencias y 93,03 % de líneas con umbral exigido en el CI (FE #985). Mutation del frontend: **PENDIENTE** (en curso) |
+| **Unitario** (frontend) | Vitest en el CI; cobertura de 90,20 % de sentencias y 93,03 % de líneas con umbral exigido en el CI (FE #985). Mutation del frontend: Stryker configurado sobre `src/lib` y las rutas BFF ([Frontend #986](https://github.com/hllous/Frontend-M6-DAPS2/pull/986): 16 shards por peso, modo incremental y job `mutation score` con `break: 60`); la primera medición completa está en curso ([run 43952775688](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43952775688)) y su cifra no está incluida en esta versión |
 | **Integración / e2e** (backend) | 25 suites y 410 tests en `test/` contra `postgres:16`, más 2 suites y 8 tests de RabbitMQ real; job `e2e` del CI; guard que impide apuntar a una base no local |
 | **E2E de usuario** (frontend) | Playwright en shards en el CI, con `retries: 0` (FE #980); los 10 criterios solo-FE tienen test ejecutado (FE #979) |
 | **Contrato** | `openapi-contract.spec.ts` (7 tests), `payloads.spec.ts` (ajv contra los `.schema.json`), `openapi.json` al día en el CI; Schemathesis solo `GET`: 4681 casos de esquema y `status_code_conformance` bloqueante |
@@ -107,7 +107,7 @@ Probabilidad (P) e impacto (I) de 1 a 3; prioridad = P × I. Se listan los de pr
 | R7 | Cold start de Render o de M1 durante la demo | 3 | 3 | 9 | Sin prueba automática; mitigación: despertar `/health` antes, ensayar y plan B local (`docs/testing.md`) |
 | R8 | Regresión de contrato con otros módulos (payload o routing key) | 2 | 3 | 6 | Cubierto: `openapi-contract.spec`, `payloads.spec` y `openapi.json` al día |
 | R10 | Archivo malicioso o con metadatos personales en la evidencia | 2 | 2 | 4 | Cubierto: `attachments.service.spec` (firma de bytes, tamaño, EXIF) |
-| R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | Parcial: 3 corridas idénticas y mutation 76,11 % en el backend; en el frontend DEF-29 a DEF-31 cerrados (FE #980) y mutation pendiente (DEF-35) |
+| R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | Parcial: 3 corridas idénticas y mutation 76,11 % en el backend; en el frontend DEF-29 a DEF-31 cerrados (FE #980) y mutation configurado ([Frontend #986](https://github.com/hllous/Frontend-M6-DAPS2/pull/986)), medición en curso (DEF-35) |
 | R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | Cubierto: `npm audit` en 0, job `audit` gate, Dependabot y Trivy |
 | R17 | El primer `docker compose up` en frío falla | 2 | 2 | 4 | Cubierto: `g1-arranque.yml` en el CI |
 | R21 | Un cliente sin `If-Match` o sin parser de `application/problem+json` pierde la protección o rompe al leer errores | 2 | 2 | 4 | Cubierto: backend (`etag-if-match`, `problem-details`); frontend propaga `ETag` e `If-Match` (FE #973) |
