@@ -165,7 +165,7 @@ El gate es bloqueante en el CI (`sonar.qualitygate.wait=true`).
 
 ## 9. Frontend
 
-Medido sobre `develop` del repo Frontend @ `0519d95` (16/11/2026), después de FE #977, #978, #979, #980, #982 y #985. Las cifras salen de las descripciones de esos PR y de la evidencia versionada en el repo Frontend; los runs citados son del CI de GitHub Actions del Frontend.
+Medido sobre `develop` del repo Frontend @ `0519d95` (16/11/2026), después de FE #977, #978, #979, #980, #982 y #985. Las cifras de cobertura y de tests salen de las descripciones de esos PR y de la evidencia versionada en el repo Frontend; los runs citados son del CI de GitHub Actions del Frontend. La configuración (umbrales, shards, Stryker, gate de Sonar) se recontrastó el 16/11 contra `develop` del Frontend @ `93c4cc7` (tras FE #972 y #986).
 
 ### 9.1 Eje A: criterios solo-FE, responsive y accesibilidad
 
@@ -191,8 +191,8 @@ Los 10 criterios que solo cubría el frontend tienen un test leído contra el te
 |---|---|---|
 | Tests inestables (FE #980) | Causa raíz: timeout de 5 s por test en local bajo carga, `findBy`/`waitFor` con tope de 1 s y compuertas `delay(ms)` de MSW. Ahora `testTimeout` de 30 s igual al CI, compuertas liberadas tras las aserciones y `retries: 0` en Playwright también en el CI. 3 corridas locales idénticas (3229 tests pasan). Desde entonces, los 3 runs del CI de `develop` ([43932396277](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43932396277), [43933683135](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43933683135), [43934913604](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43934913604)) están en verde sin reintentos, aunque cada uno sobre un commit distinto. Cierra DEF-29 a DEF-31 | Sí |
 | Cobertura unitaria con umbral (FE #985) | Sentencias **90,20 %**, líneas **93,03 %**, funciones **88,05 %**, ramas **83,58 %** (antes 87,97 % y 90,85 %, sin umbral). Umbrales en `vitest.config.ts`: 90 / 92 / 87 / 83, exigidos por el job `unit-coverage` sobre el informe fusionado de los shards. 329 archivos y 4134 tests | Sí |
-| Mutation testing (Stryker) | Configurado sobre `src/lib` y las rutas BFF con `break: 60` ([Frontend #986](https://github.com/hllous/Frontend-M6-DAPS2/pull/986)); primera medición completa en curso ([run 43952775688](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43952775688)), cifra no incluida en esta versión | Parcial (DEF-35) |
-| Tiempo del CI de PR (FE #982) | 4,5 a 5,5 min de pared con runners libres; los shards de e2e se reparten por duración medida (LPT) y cada job tiene `timeout-minutes`. Los picos de 15 min venían de reintentos y de la cola compartida de 20 jobs concurrentes | Sí (≤ 15 min) |
+| Mutation testing (Stryker) | Configurado sobre `src/lib` y las rutas BFF con `break: 60` ([Frontend #986](https://github.com/hllous/Frontend-M6-DAPS2/pull/986)); primera medición completa en curso ([run 43952775688](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43952775688)), cifra no incluida en esta versión. Una medición previa y parcial (7 de 8 shards del primer reparto, sin las rutas dinámicas `[id]`) dio 56,2 % (3885 de 6916 mutantes válidos), por debajo del `break` de 60, y el equipo está trabajando para subirla; no es el resultado del run (ADR-0011 del Frontend, sección «Resultado») | Parcial (DEF-35) |
+| Tiempo del CI de PR (FE #982) | 4,5 a 5,5 min de pared con runners libres; los 10 shards de e2e (y 4 de unitarios) se reparten por duración medida (LPT) y cada job tiene `timeout-minutes`. Los picos de 15 min venían de reintentos y de la cola compartida de 20 jobs concurrentes | Sí (≤ 15 min) |
 
 Los tests de cobertura encontraron un defecto real: `src/app/api/vehicles/[id]/route.ts` devolvía 500 en vez de 503 con el backend caído (DEF-40, corregido en FE #985).
 
@@ -205,3 +205,13 @@ Con Render dormido, los primeros pedidos dan 503 hasta que despierta: antes de l
 ### 9.4 Eje D: límite de intentos de login
 
 FE #977: el login del BFF responde **429 con `Retry-After`** tras 5 fallos por cuenta o 20 por IP en 15 minutos, reinicia el contador con el login correcto y no revela si la cuenta existe. Test: `e2e/login-rate-limit.spec.ts`, más `src/lib/login-rate-limit.test.ts` y `src/app/api/session/login/rate-limit.test.ts`. El contador vive en memoria por instancia (ADR 0009 del Frontend). Tabla completa de controles del Frontend: `Frontend-M6-DAPS2/docs/security/eje-d-evidencia.md`; resumen en [`07`](07-informe-seguridad.md).
+
+### 9.5 Análisis estático y de seguridad del Frontend
+
+Fuente: ADR-0008 del Frontend, `docs/agents/quality-security-ci.md` y `docs/security/zap.md` del repo Frontend. El backend no espeja estos análisis: se miran allá.
+
+| Qué | Resultado |
+|---|---|
+| SonarCloud | Quality Gate **bloqueante** desde FE #972 (ticket #926): el job `sonar` usa `sonar.qualitygate.wait=true`, se saltea sin `SONAR_TOKEN` y corre con la cobertura fusionada de los 4 shards. Que `sonar` figure como check requerido en la protección de `develop` del Frontend no se verificó |
+| Trivy | 0 HIGH/CRITICAL en dependencias, imagen y configuración (ADR-0008, medido sobre `main` @ `06bab02`, 16/11/2026). No frena el merge, solo el check |
+| OWASP ZAP | Baseline contra Vercel: 0 High, 3 Medium, 7 Low, 15 informativas. Activo (sin autenticar) contra la app construida en el CI: 0 High, 2 Medium, 8 Low, 14 informativas. Run [43763194531](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43763194531) del 15/11, archivado en `docs/security/zap-2026-11-15/`. Los Medium de CSP y anti-clickjacking se cerraron en FE #958 (`next.config.mjs` y `src/proxy.ts`); el reporte archivado es anterior y no se volvió a escanear. El activo autenticado del Frontend no existe (el login pasa por M1 real); la superficie autenticada la cubre el activo del backend |

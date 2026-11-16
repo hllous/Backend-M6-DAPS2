@@ -27,7 +27,7 @@ La severidad es una propuesta: la deciden el líder y el QA y la valida el PO.
 
 Registrados: 38 (DEF-01 a DEF-40, sin DEF-04 ni DEF-11). Abiertos: 3. Cerrados: 35 (sección 4).
 
-El estado del Frontend se verificó contra `origin/develop` del repo Frontend del 16/11 (`0519d95`, tras FE #977, #978, #979, #980, #982 y #985).
+El estado del Frontend se verificó contra `origin/develop` del repo Frontend del 16/11 (`0519d95`, tras FE #977, #978, #979, #980, #982 y #985) y se recontrastó con `93c4cc7` (tras FE #986): los números de issue y PR citados existen y su estado coincide; DEF-34 (#968) y FE #983 siguen abiertos.
 
 ## 3. Defectos abiertos
 
@@ -40,7 +40,7 @@ Ninguno abierto.
 | ID | Hallazgo | Evidencia | Issue / workaround |
 |---|---|---|---|
 | DEF-34 | Frontend: `Idempotency-Key` solo se envía en la carga de evidencia; las demás altas no la mandan aunque el backend la acepta en 21 `POST` | `src/app/api/evidence/route.ts`; `src/lib/containers.ts` y `services.ts` (solo evidencia) | [Frontend #968](https://github.com/hllous/Frontend-M6-DAPS2/issues/968). Anular el duplicado desde la UI |
-| DEF-35 | Frontend: mutation testing configurado pero todavía sin medición completa. La cobertura ya tiene umbral exigido en el CI desde FE #985 (sentencias 90,20 %, líneas 93,03 %, funciones 88,05 %, ramas 83,58 %; umbrales 90/92/87/83); queda abierto por el mutation | `vitest.config.ts` (`coverage.thresholds`); `stryker.config.json` y `.github/workflows/mutation.yml` del Frontend | [Frontend #975](https://github.com/hllous/Frontend-M6-DAPS2/issues/975) (cobertura, cerrado). Stryker configurado con `break: 60` ([Frontend #986](https://github.com/hllous/Frontend-M6-DAPS2/pull/986)); queda abierto hasta tener la primera medición completa ([run 43952775688](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43952775688)). El backend tiene mutation 76,11 % |
+| DEF-35 | Frontend: mutation testing configurado pero todavía sin medición completa. La cobertura ya tiene umbral exigido en el CI desde FE #985 (sentencias 90,20 %, líneas 93,03 %, funciones 88,05 %, ramas 83,58 %; umbrales 90/92/87/83); queda abierto por el mutation | `vitest.config.ts` (`coverage.thresholds`); `stryker.config.json` y `.github/workflows/mutation.yml` del Frontend | [Frontend #975](https://github.com/hllous/Frontend-M6-DAPS2/issues/975) (cobertura, cerrado). Stryker configurado con `break: 60` ([Frontend #986](https://github.com/hllous/Frontend-M6-DAPS2/pull/986)); queda abierto hasta tener la primera medición completa ([run 43952775688](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43952775688)). La medición parcial previa (ADR-0011 del Frontend) dio 56,2 %, **por debajo del `break` de 60**; no es la cifra final de la corrida completa (se desconoce) y el equipo está trabajando para subirla. El backend tiene mutation 76,11 % |
 | DEF-38 | Backend (resto de DEF-19): Swagger UI público en `/api/docs` también en producción; la evidencia se sirve por URL pública del bucket (key UUID aleatoria) y los PDF conservan sus metadatos | `src/swagger-config.ts` (`SwaggerModule.setup('api/docs', …)` sin condición de entorno); `src/modules/attachments/storage/r2-evidence.storage.ts` | Sin issue. Riesgo aceptado: el OpenAPI no expone datos y cada ruta exige token; la key de la evidencia no es adivinable. Mejora: ocultar `/api/docs` en producción y URLs firmadas |
 
 ### Hallazgo de proceso abierto
