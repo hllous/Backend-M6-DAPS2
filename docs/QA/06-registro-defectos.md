@@ -21,41 +21,28 @@ La severidad es una propuesta: la deciden el líder y el QA y la valida el PO.
 |---|---|---|
 | Bloqueante | 0 | Sí |
 | Crítica | 0 | Sí |
-| Mayor | 1 (DEF-32) | Sí |
-| Menor | 10 (DEF-14, DEF-19, DEF-29 a DEF-31 y DEF-33 a DEF-37) | Sí |
-| **Total abierto** | **11** | |
+| Mayor | 0 | Sí |
+| Menor | 7 (DEF-19, DEF-29 a DEF-31, DEF-34, DEF-35 y DEF-37) | Sí |
+| **Total abierto** | **7** | |
 
-Registrados: 35 (DEF-01 a DEF-37, sin DEF-04 ni DEF-11). Abiertos: 11. Cerrados: 24 (sección 4).
+Registrados: 35 (DEF-01 a DEF-37, sin DEF-04 ni DEF-11). Abiertos: 7. Cerrados: 28 (sección 4).
 
 ## 3. Defectos abiertos
 
 ### Mayor
 
-#### DEF-32 · El frontend no envía `If-Match` ni maneja el 412
-
-| Campo | Detalle |
-|---|---|
-| Issue | [Frontend #973](https://github.com/hllous/Frontend-M6-DAPS2/issues/973) |
-| Severidad / prioridad | Mayor / Media |
-| HU | Las de edición (`PATCH` de servicios, contenedores, cuadrillas y demás); riesgo R21 |
-| Pasos | 1. Abrir el mismo recurso en dos sesiones. 2. Editar y guardar en la primera. 3. Editar otro campo y guardar en la segunda |
-| Esperado | La segunda escritura manda `If-Match` con el `ETag` leído, recibe 412 y la UI pide recargar (ADR-012) |
-| Obtenido | La segunda escritura se acepta y pisa la primera. El backend soporta `ETag`/`If-Match` (#591) pero es opcional y el frontend no lo usa: no hay `If-Match` en `Frontend-M6-DAPS2/src` |
-| Workaround | Recargar el recurso antes de editar. Cualquier cliente puede mandar `If-Match` y el backend responde 412. Los cambios de estado los validan las máquinas de estado del backend |
+Ninguno abierto.
 
 ### Menores
 
 | ID | Hallazgo | Evidencia | Issue / workaround |
 |---|---|---|---|
-| DEF-14 | El job `e2e` pasa en cada PR pero no es check obligatorio: un rojo no frena el merge. Exigirlo pide permisos de administrador | `.github/branch-protection-rules.json` (exige solo `build` y `test`) | [#692](https://github.com/hllous/Backend-M6-DAPS2/issues/692) |
 | DEF-19 | Swagger UI público en `/api/docs` también en producción; la evidencia se sirve por URL pública del bucket (key UUID aleatoria) y los PDF conservan sus metadatos | `src/swagger-config.ts`; `src/modules/attachments/storage/r2-evidence.storage.ts` | Sin issue. Workaround: la key aleatoria de la evidencia |
 | DEF-29 | Frontend: test inestable «resolves linked trees by survey code beyond the first 100…»: falla con `pnpm test` completo y pasa aislado | `src/components/catalog/tree-interventions-panel.test.tsx` | [Frontend #946](https://github.com/hllous/Frontend-M6-DAPS2/issues/946). Re-correr el shard |
 | DEF-30 | Frontend: test inestable «filters the zone's list by the existing waste labels…» (`Unable to find … role "option"`) | `src/components/public/green-points.test.tsx` | [Frontend #946](https://github.com/hllous/Frontend-M6-DAPS2/issues/946). Re-correr el shard |
 | DEF-31 | Frontend: `retries: isCI ? 1 : 0` en Playwright deja en verde un e2e inestable | `playwright.config.ts:21` | [Frontend #946](https://github.com/hllous/Frontend-M6-DAPS2/issues/946). Revisar la sección *flaky* del reporte |
-| DEF-33 | Frontend: el timeout del BFF al backend es de 15 s (`DEFAULT_BACKEND_TIMEOUT_MS`) contra la referencia de 5 s; al vencer responde 503 con mensaje | `src/lib/bff-backend.ts:18` | [Frontend #974](https://github.com/hllous/Frontend-M6-DAPS2/issues/974). Despertar Render antes de la demo (R7) |
 | DEF-34 | Frontend: `Idempotency-Key` solo se envía en la carga de evidencia; las demás altas no la mandan aunque el backend la acepta en 21 `POST` | `src/app/api/evidence/route.ts`; `src/lib/containers.ts` y `services.ts` (solo evidencia) | Sin issue. Anular el duplicado desde la UI |
 | DEF-35 | Frontend: sin mutation testing y sin umbral de cobertura (Sonar: 85,4 %) | `vitest.config.ts:24-27`; `package.json` | [Frontend #975](https://github.com/hllous/Frontend-M6-DAPS2/issues/975). El backend sí tiene ambos |
-| DEF-36 | Backend: el pedido a M1 tiene timeout de 10 s y no hay circuit breaker: con M1 caído, cada alta o edición de cuadrilla espera hasta 10 s | `src/identity/m1-identity.client.ts` | [#693](https://github.com/hllous/Backend-M6-DAPS2/issues/693). M1 corre en Render free con arranques en frío de hasta 78 s; reintentar |
 | DEF-37 | Backend: la DLQ es del Core (M9); M6 hace `nack` sin reencolar y no tiene DLQ propia ni forma de verla o reprocesarla | `src/events/consumers/rabbitmq.consumer.ts` | [#694](https://github.com/hllous/Backend-M6-DAPS2/issues/694). Consultar la DLQ por la API del Core; el inbox registra cada intento fallido |
 
 ### Hallazgo de proceso abierto
@@ -79,6 +66,7 @@ Registrados: 35 (DEF-01 a DEF-37, sin DEF-04 ni DEF-11). Abiertos: 11. Cerrados:
 | DEF-10 | Errores sin formato Problem Details RFC 9457 (ADR-011) | [#590](https://github.com/hllous/Backend-M6-DAPS2/issues/590) |
 | DEF-12 | `streetClosureRequested` con el contrato final de cortes de M7 | [#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447) |
 | DEF-13 | Faltaban SonarCloud, Trivy y ZAP en el CI: integrados y con 0 hallazgos HIGH/CRITICAL | [#656](https://github.com/hllous/Backend-M6-DAPS2/issues/656), [#657](https://github.com/hllous/Backend-M6-DAPS2/issues/657), [#658](https://github.com/hllous/Backend-M6-DAPS2/issues/658), [#659](https://github.com/hllous/Backend-M6-DAPS2/issues/659), [#660](https://github.com/hllous/Backend-M6-DAPS2/issues/660) |
+| DEF-14 | El job `e2e` pasaba pero no era check obligatorio: ahora lo son `e2e`, `sonar` y `secrets` en la protección de ramas | [#692](https://github.com/hllous/Backend-M6-DAPS2/issues/692) |
 | DEF-15 | Timeout de 10 s del cliente al Core contra una referencia de 5 s: ahora 5 s | [#642](https://github.com/hllous/Backend-M6-DAPS2/issues/642) |
 | DEF-16, DEF-17 | `AGENTS.md` y `bloqueantes.md` desactualizados respecto del código | sin issue |
 | DEF-18 | Sin `CORS_ORIGINS` la API aceptaba cualquier origen en producción: ahora el arranque falla | [#642](https://github.com/hllous/Backend-M6-DAPS2/issues/642) |
@@ -91,5 +79,8 @@ Registrados: 35 (DEF-01 a DEF-37, sin DEF-04 ni DEF-11). Abiertos: 11. Cerrados:
 | DEF-26 | Imagen Docker con 6 CVE altas del `npm` embebido y contenedor como root | [#665](https://github.com/hllous/Backend-M6-DAPS2/issues/665), [#666](https://github.com/hllous/Backend-M6-DAPS2/issues/666) |
 | DEF-27 | Bugs de SonarCloud: `.sort()` sin comparador y `bootstrap()` sin `.catch` | [#667](https://github.com/hllous/Backend-M6-DAPS2/issues/667) |
 | DEF-28 | Vulnerabilidades de SonarCloud (`npm ci` sin `--ignore-scripts`, `npx` sin versión, URLs de ejemplo con credenciales) | [#674](https://github.com/hllous/Backend-M6-DAPS2/issues/674) |
+| DEF-32 | El frontend no enviaba `If-Match` ni manejaba el 412: el BFF propaga `ETag` e `If-Match` y la interfaz avisa que el registro cambió | [Frontend #973](https://github.com/hllous/Frontend-M6-DAPS2/issues/973) |
+| DEF-33 | El timeout del BFF al backend era de 15 s: ahora 5 s con aborto real | [Frontend #974](https://github.com/hllous/Frontend-M6-DAPS2/issues/974) |
+| DEF-36 | El pedido a M1 esperaba hasta 10 s con M1 caído: ahora 4 s (`M1_TIMEOUT_MS`), menos que el corte del BFF, y el 503 llega a tiempo | [#693](https://github.com/hllous/Backend-M6-DAPS2/issues/693), [#713](https://github.com/hllous/Backend-M6-DAPS2/issues/713) |
 | P-1 | Secreto de juguete literal en `api-tests.yml`, detectado por gitleaks; nunca llegó a `develop` | sin issue |
 | P-3 | Test intermitente de `openapi-contract.spec.ts` por el timeout de 5 s de Vitest; timeout propio de 30 s | sin issue |

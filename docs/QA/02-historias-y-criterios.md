@@ -18,7 +18,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04.
 
 | HU | Título | Actor | MoSCoW | Release | Criterios |
 |---|---|---|---|---|---|
-| HU-01 | Catálogos con tablas filtrables, componentes uniformes y estados de carga | Oficina | Should | R2 | 4 |
+| HU-01 | Catálogos con tablas filtrables, componentes uniformes y estados de carga | Oficina | Should | R2 | 6 |
 | HU-02 | Alta de zonas operativas y recorridos con paradas | Oficina | Must | MVP | 7 |
 | HU-03 | Administración de tipos de servicio, frecuencias, cuadrillas, vehículos y sitios de disposición | Oficina | Must | MVP | 6 |
 | HU-04 | Suspender un servicio guardando motivo y nota por separado | Oficina | Should | R2 | 6 |
@@ -34,7 +34,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04.
 | HU-14 | Filtrar la cola de denuncias por rango de fechas | Oficina | Should | R2 | 4 |
 | HU-15 | Recibir denuncias ambientales y asignarlas a una cuadrilla para inspeccionarlas | Oficina | Must | MVP | 5 |
 | HU-16 | Registrar la inspección y emitir el acta de constatación | inspector | Must | MVP | 8 |
-| HU-17 | Registrar la sanción que devuelve M4 y cerrar el expediente | Oficina | Must | MVP | 4 |
+| HU-17 | Registrar la sanción que devuelve M4 y cerrar el expediente | Oficina | Must | MVP | 6 |
 | HU-18 | Pedirle información adicional al vecino (INFORMATION_REQUIRED) | Oficina | Could | R3 | 4 |
 | HU-19 | M9 conoce los eventos que publica y consume M6 | M9 (Core) | Must | R2 | 3 |
 | HU-20 | Adaptar M6 al contrato de integración definitivo de M9 | equipo de M6 | Must | R2 | 5 |
@@ -53,7 +53,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04.
 | HU-33 | e2e con datos deterministas y shards balanceados | equipo de M6 | Could | R3 | 4 |
 | HU-34 a HU-36 | Fuera de alcance (Won't) | — | Won't | — | 0 |
 
-Total: 33 HU con criterios, 177 criterios (146 propuestos por QA) y 3 HU fuera de alcance.
+Total: 33 HU con criterios, 181 criterios (150 propuestos por QA) y 3 HU fuera de alcance.
 
 ## HU-01 — Catálogos con tablas filtrables, componentes uniformes y estados de carga
 
@@ -63,7 +63,9 @@ Total: 33 HU con criterios, 177 criterios (146 propuestos por QA) y 3 HU fuera d
 - **CA-HU01-1** (Feliz): **DADO** un catálogo con más de una página (pageSize 20 por defecto), **CUANDO** lo abro, **ENTONCES** puedo ordenar y filtrar con el mismo componente de tabla que Servicios. — *Agregado por ACT-F1*
 - **CA-HU01-2** (Feliz): **DADO** que el backend tarda en responder, **CUANDO** la pantalla carga, **ENTONCES** veo un esqueleto con la forma final, no un spinner suelto ni la tabla vacía. — *Agregado por ACT-F1*
 - **CA-HU01-3** (Alternativo): **DADO** cualquier pantalla del frontend, **CUANDO** corre el guard de shadcn en el CI del frontend, **ENTONCES** no quedan componentes de UI escritos a mano fuera del registro. — *Agregado por ACT-F1*
-- **CA-HU01-4** (Error†): **DADO** que el backend responde con error 5xx o excede el timeout de 15 s del BFF, **CUANDO** abro un catálogo, **ENTONCES** la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía.
+- **CA-HU01-4** (Error†): **DADO** que el backend responde con error 5xx o excede el timeout de 5 s del BFF, **CUANDO** abro un catálogo, **ENTONCES** la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía.
+- **CA-HU01-5** (Alternativo†): **DADO** un listado paginado de vehículos, contenedores, árboles, cuadrillas, recorridos, puntos verdes o espacios verdes, **CUANDO** lo pido con `?sort=<campo>&order=asc|desc`, **ENTONCES** el orden se aplica a todo el resultado antes de paginar y desempata por id; sin `sort` ni `order` el orden no cambia, y con solo `order` se invierte el orden por defecto del recurso.
+- **CA-HU01-6** (Error†): **DADO** un listado ordenable, **CUANDO** envío un `sort` fuera de la lista del recurso (también una columna real no visible) o un `order` distinto de asc y desc, **ENTONCES** recibo 400.
 
 ## HU-02 — Alta de zonas operativas y recorridos con paradas
 
@@ -251,6 +253,8 @@ Total: 33 HU con criterios, 177 criterios (146 propuestos por QA) y 3 HU fuera d
 - **CA-HU17-2** (Alternativo†): **DADO** un acta derivada a M4, **CUANDO** M4 publica closureUpdate ORDERED o LIFTED, **ENTONCES** ORDERED registra la clausura como resolución y LIFTED registra el levantamiento y cierra.
 - **CA-HU17-3** (Error†): **DADO** un evento de M4 sin sourceViolationId válido, o de un acta ya resuelta, **CUANDO** llega al inbox, **ENTONCES** por HTTP recibo 400 y no se guarda la fila; un acta ya resuelta no se resuelve dos veces; sin sourceViolationId el consumidor lo descarta.
 - **CA-HU17-4** (Falla externa†): **DADO** que M4 no publica nada cuando decide que no corresponde castigo, **CUANDO** vence el plazo (deadlineAt, SANCTION_DEADLINE_DAYS) de un expediente NOTICE_ISSUED, **ENTONCES** el sistema lo cierra solo (NOTICE_ISSUED → CLOSED) y no toca los que no están vencidos.
+- **CA-HU17-5** (Alternativo†): **DADO** un expediente que se puede cerrar a mano, **CUANDO** hago `POST /environmental-reports/:id/close` con `{ reason }` opcional, **ENTONCES** el motivo (recortado, hasta 500 caracteres) queda en el historial del expediente y, si se emite `RESOLVED` hacia M2, viaja como `internalMessage` sin cambiar el `publicMessage`; sin body o sin `reason` cierra como siempre, sin nota ni `internalMessage`.
+- **CA-HU17-6** (Error†): **DADO** un expediente que se puede cerrar a mano, **CUANDO** envío un `reason` de más de 500 caracteres, vacío o de solo espacios, que no sea texto, o un campo no declarado, **ENTONCES** recibo 400 y el expediente no se cierra.
 
 ## HU-18 — Pedirle información adicional al vecino (INFORMATION_REQUIRED)
 
@@ -442,7 +446,7 @@ Propuestas de alcance del tablero, a validar por el PO. No tienen criterios ni c
 
 ## Pendientes de validar con el PO
 
-- Los criterios propuestos (146, marcados con †) y la prioridad MoSCoW propuesta en HU-01, HU-04, HU-10, HU-14, HU-19, HU-21, HU-22, HU-25, HU-26 y HU-29.
+- Los criterios propuestos (150, marcados con †) y la prioridad MoSCoW propuesta en HU-01, HU-04, HU-10, HU-14, HU-19, HU-21, HU-22, HU-25, HU-26 y HU-29.
 - Si el filtro de fechas de HU-14 debe usar createdAt.
 
 ## Riesgos de cierre (HU Must con trabajo abierto)
@@ -451,4 +455,3 @@ Propuestas de alcance del tablero, a validar por el PO. No tienen criterios ni c
 |---|---|---|
 | HU-31 | Swagger UI público en producción y evidencia servida por URL pública del bucket | DEF-19 en [`06`](06-registro-defectos.md) |
 | HU-23 | La DLQ es del Core: M6 no puede verla ni reprocesarla | DEF-37, [BE #694](https://github.com/hllous/Backend-M6-DAPS2/issues/694) |
-| HU-03 | Alta y edición de cuadrillas esperan hasta 10 s con M1 caído | DEF-36, [BE #693](https://github.com/hllous/Backend-M6-DAPS2/issues/693) |

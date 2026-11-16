@@ -2,18 +2,18 @@
 
 > Versión 2.2 · 16/11/2026
 
-Índice de los documentos de QA del Módulo 6 «Ambiente e Higiene» (Grupo 04), según los *Criterios de Testing y Aseguramiento de Calidad* (ISO/IEC/IEEE 29119-3). Medido sobre `develop` @ `50cfff7`. El Markdown de esta carpeta es la fuente: el PDF se regenera a partir de él.
+Índice de los documentos de QA del Módulo 6 «Ambiente e Higiene» (Grupo 04), según los *Criterios de Testing y Aseguramiento de Calidad* (ISO/IEC/IEEE 29119-3). Medido sobre `develop` @ `53cde64`. El Markdown de esta carpeta es la fuente: el PDF se regenera a partir de él.
 
 ## Documentos
 
 | Entregable | Archivo | Contenido |
 |---|---|---|
-| Historias de usuario con Gherkin (Eje A) | `02-historias-y-criterios.md` | 33 HU y 177 criterios; los propuestos por nosotros (†) se validan con el PO |
+| Historias de usuario con Gherkin (Eje A) | `02-historias-y-criterios.md` | 33 HU y 181 criterios; los propuestos por nosotros (†) se validan con el PO |
 | 1. Plan y estrategia de pruebas | `01-plan-y-estrategia.md` | Alcance, niveles, entornos, criterios de entrada y salida, riesgos |
-| 2. Matriz de trazabilidad | `03-matriz-trazabilidad.md` | 177 criterios: 163 con test del backend, 9 solo frontend y 5 huecos |
-| 3. Especificación de casos | `04-especificacion-casos.md` | 382 casos, 67,8 % negativos o de borde |
-| 4. Informe de ejecución | `05-informe-ejecucion.md` | 3010 unitarios, 404 e2e y 8 de RabbitMQ real; cobertura 98,71 % de líneas; mutation 76,11 %; pipeline 3 min 7 s; Quality Gate OK |
-| 5. Registro de defectos | `06-registro-defectos.md` | 11 abiertos (0 Bloqueantes, 0 Críticos, 1 Mayor y 10 Menores) y 24 cerrados |
+| 2. Matriz de trazabilidad | `03-matriz-trazabilidad.md` | 181 criterios: 167 con test del backend, 9 solo frontend y 5 huecos |
+| 3. Especificación de casos | `04-especificacion-casos.md` | 394 casos, 67,8 % negativos o de borde |
+| 4. Informe de ejecución | `05-informe-ejecucion.md` | 3056 unitarios, 410 e2e y 8 de RabbitMQ real; cobertura 98,71 % de líneas; mutation 76,11 %; pipeline 2 min 23 s; Quality Gate OK |
+| 5. Registro de defectos | `06-registro-defectos.md` | 7 abiertos (0 Bloqueantes, 0 Críticos, 0 Mayores y 7 Menores) y 28 cerrados |
 | 6. Informe de seguridad | `07-informe-seguridad.md` | Matriz SEC, pruebas generales, Trivy, ZAP, gitleaks, SonarCloud |
 | 7. Declaración y plan de IA | Gobernanza de IA (Clase 14), `Clase14_Grupo4_Ambiente_IA.pdf`; no versionada en este repo | Se entrega en Teams junto con este paquete |
 | 8. Lecciones aprendidas | `08-lecciones-aprendidas.md` | Tres defectos tardíos y tres más de la semana de testing |
