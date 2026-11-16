@@ -3,6 +3,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { NoNullCharsPipe } from './common/pipes/no-null-chars.pipe';
 import { HttpExceptionFilter } from './common/filters';
 import { LoggingInterceptor } from './common/interceptors';
+import { requestId } from './common/middleware/request-id.middleware';
 import { securityHeaders } from './common/middleware/security-headers.middleware';
 import { EventTraceInterceptor } from './events/event-trace.interceptor';
 
@@ -24,6 +25,8 @@ export function configureApp(app: NestExpressApplication): NestExpressApplicatio
 
   // No anunciar el framework y agregar las cabeceras de seguridad básicas.
   app.disable('x-powered-by');
+  // Primero el id de correlación: todo lo que siga (incluido un error) lo lleva.
+  app.use(requestId);
   app.use(securityHeaders);
 
   app.useGlobalPipes(...globalPipes());
