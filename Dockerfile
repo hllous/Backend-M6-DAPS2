@@ -15,6 +15,11 @@ WORKDIR /app
 # Sin esto, prisma generate no detecta la versión de OpenSSL y falla en runtime.
 RUN apk add --no-cache openssl
 
+# npm embebido en node:24-alpine trae brace-expansion 5.0.9 y undici 6.28.0 con
+# CVE altas (#665). npm 11.21.2 trae brace-expansion 5.0.12 y undici 6.29.1.
+# Versión fija para que el build sea reproducible; quitar al subir a una base con npm corregido.
+RUN npm install -g --ignore-scripts npm@11.21.2 && npm cache clean --force
+
 # Primero se copian SOLO los manifiestos para aprovechar la caché de Docker
 # (si no cambian las dependencias, esta capa se reutiliza entre builds).
 COPY package.json package-lock.json ./
@@ -46,8 +51,17 @@ ENV SCARF_ANALYTICS=false
 # OpenSSL requerido por el query engine de Prisma en runtime.
 RUN apk add --no-cache openssl
 
+# npm embebido en node:24-alpine trae brace-expansion 5.0.9 y undici 6.28.0 con
+# CVE altas (#665). npm 11.21.2 trae brace-expansion 5.0.12 y undici 6.29.1.
+# Versión fija para que el build sea reproducible; quitar al subir a una base con npm corregido.
+RUN npm install -g --ignore-scripts npm@11.21.2 && npm cache clean --force
+
+# /app pasa a ser del usuario no root `node` (Trivy DS-0002, #666).
+RUN chown node:node /app
+USER node
+
 # Copia manifiestos e instala SOLO dependencias de producción.
-COPY package.json package-lock.json ./
+COPY --chown=node:node package.json package-lock.json ./
 # Sin scripts de terceros; solo se reconstruyen los motores de Prisma, que
 # `prisma migrate deploy` necesita al arrancar (si no, los bajaría en runtime).
 RUN npm ci --omit=dev --ignore-scripts \
@@ -56,13 +70,13 @@ RUN npm ci --omit=dev --ignore-scripts \
 
 # Copia el cliente de Prisma ya generado en la etapa builder
 # (necesario para que @prisma/client funcione en runtime).
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copia el código ya compilado.
-COPY --from=builder /app/dist ./dist
+COPY --from=builder --chown=node:node /app/dist ./dist
 
 # Copia el schema y las migraciones de Prisma.
-COPY prisma ./prisma
+COPY --chown=node:node prisma ./prisma
 
 # Puerto que expone la app (coincide con PORT del .env.example).
 EXPOSE 3000
