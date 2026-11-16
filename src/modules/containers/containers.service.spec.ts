@@ -666,7 +666,10 @@ describe('ContainersService', () => {
         status: C.DAMAGED,
         containerType: 'RECYCLABLE',
         zoneId: 'z-sur',
-        address: { contains: 'mitre', mode: 'insensitive' },
+        OR: [
+          { code: { contains: 'mitre', mode: 'insensitive' } },
+          { address: { contains: 'mitre', mode: 'insensitive' } },
+        ],
       });
     });
 

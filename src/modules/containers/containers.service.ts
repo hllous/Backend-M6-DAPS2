@@ -119,7 +119,10 @@ export class ContainersService {
       where.zoneId = query.zoneId;
     }
     if (query.search) {
-      where.address = { contains: query.search, mode: 'insensitive' };
+      where.OR = [
+        { code: { contains: query.search, mode: 'insensitive' } },
+        { address: { contains: query.search, mode: 'insensitive' } },
+      ];
     }
 
     const [containers, total] = await Promise.all([

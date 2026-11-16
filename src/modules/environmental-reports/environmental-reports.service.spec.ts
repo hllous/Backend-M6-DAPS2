@@ -278,7 +278,7 @@ describe('EnvironmentalReportsService', () => {
       expect(prisma.environmentalReport.findMany.mock.calls[0][0].where).toEqual({});
     });
 
-    it('traduce cada filtro a su campo, y la búsqueda va contra la dirección', async () => {
+    it('traduce cada filtro a su campo, y la búsqueda va contra dirección y números', async () => {
       await service.findAll({
         page: 1,
         pageSize: 20,
@@ -298,7 +298,11 @@ describe('EnvironmentalReportsService', () => {
         priority: 'HIGH',
         ticketId: 'TCK-1',
         publicId: 'TK-2026-000123',
-        address: { contains: 'Rivadavia', mode: 'insensitive' },
+        OR: [
+          { address: { contains: 'Rivadavia', mode: 'insensitive' } },
+          { caseNumber: { contains: 'Rivadavia', mode: 'insensitive' } },
+          { publicId: { contains: 'Rivadavia', mode: 'insensitive' } },
+        ],
       });
     });
 
@@ -489,6 +493,15 @@ describe('EnvironmentalReportsService', () => {
         expect(prisma.environmentalReport.findMany.mock.calls[1][0].where.id).toEqual({
           in: ['nueva', 'cerrada'],
         });
+      });
+
+      it('la búsqueda también acota los candidatos de overdue/zoneId', async () => {
+        await service.findAll(consulta({ overdue: true, search: 'EXP-2026' }));
+        expect(prisma.environmentalReport.findMany.mock.calls[0][0].where.OR).toEqual([
+          { address: { contains: 'EXP-2026', mode: 'insensitive' } },
+          { caseNumber: { contains: 'EXP-2026', mode: 'insensitive' } },
+          { publicId: { contains: 'EXP-2026', mode: 'insensitive' } },
+        ]);
       });
 
       it('overdue=true con zoneId', async () => {
@@ -885,13 +898,18 @@ describe('EnvironmentalReportsService', () => {
       });
     });
 
-    it('la búsqueda por texto va contra la dirección, sin distinguir mayúsculas', async () => {
-      await service.findAll({ page: 1, pageSize: 20, search: 'rivadavia' } as any);
+    it('la búsqueda encuentra por expediente o reclamo aunque no haya dirección (los de M2)', async () => {
+      await service.findAll({ page: 1, pageSize: 20, search: 'tk-2026-000048' } as any);
 
-      expect(prisma.environmentalReport.findMany.mock.calls[0][0].where.address).toEqual({
-        contains: 'rivadavia',
-        mode: 'insensitive',
-      });
+      const where = prisma.environmentalReport.findMany.mock.calls[0][0].where;
+      expect(where.address).toBeUndefined();
+      expect(where.OR).toEqual([
+        { address: { contains: 'tk-2026-000048', mode: 'insensitive' } },
+        { caseNumber: { contains: 'tk-2026-000048', mode: 'insensitive' } },
+        { publicId: { contains: 'tk-2026-000048', mode: 'insensitive' } },
+      ]);
+      // count filtra lo mismo que la página
+      expect(prisma.environmentalReport.count.mock.calls[0][0].where).toBe(where);
     });
 
     it('sin filtros no arma ningún where', async () => {

@@ -198,8 +198,14 @@ export class EnvironmentalReportsService {
     if (query.priority) where.priority = query.priority;
     if (query.ticketId) where.ticketId = query.ticketId;
     if (query.publicId) where.publicId = query.publicId;
+    // Lo que la tarjeta muestra como número: el expediente (EXP-…) o el reclamo
+    // de M2 (TK-…). Los que vienen de M2 no tienen dirección, solo número.
     if (query.search) {
-      where.address = { contains: query.search, mode: 'insensitive' };
+      where.OR = [
+        { address: { contains: query.search, mode: 'insensitive' } },
+        { caseNumber: { contains: query.search, mode: 'insensitive' } },
+        { publicId: { contains: query.search, mode: 'insensitive' } },
+      ];
     }
     // Cualquier inspección de esa cuadrilla con servicio vigente, no solo la más
     // reciente: la cola de Campo incluye lo que ya visitó. Va en el where para
