@@ -1,0 +1,27 @@
+name: compose-verify (descartable)
+on:
+  pull_request:
+    branches: [develop]
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Preparar .env
+        run: cp .env.example .env
+      - name: docker compose up desde cero
+        run: docker compose up --build -d --wait --wait-timeout 300
+      - name: /health/ready en 200
+        run: |
+          code=$(curl -s -o /tmp/ready.json -w '%{http_code}' http://localhost:3000/health/ready)
+          cat /tmp/ready.json; echo; echo "HTTP $code"
+          test "$code" = 200
+      - name: Migraciones aplicadas y usuario no root
+        run: |
+          docker compose exec -T postgres psql -U m6 -d m6_ambiente -tAc "select count(*) from _prisma_migrations where finished_at is not null"
+          docker compose exec -T backend id
+          ls prisma/migrations | grep -c . 
+      - name: Logs si falla
+        if: failure()
+        run: docker compose logs --no-color | tail -150
