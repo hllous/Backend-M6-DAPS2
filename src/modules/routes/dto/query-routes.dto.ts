@@ -19,7 +19,7 @@ export class QueryRoutesDto extends PaginationQueryDto {
   zoneId?: string;
 
   @ApiPropertyOptional({
-    description: 'Buscar por nombre (coincidencia parcial, case-insensitive)',
+    description: 'Buscar por código o nombre (coincidencia parcial, case-insensitive)',
     example: 'troncal',
   })
   @IsOptional()

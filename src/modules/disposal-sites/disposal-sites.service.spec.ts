@@ -146,7 +146,7 @@ describe('DisposalSitesService', () => {
       expect(args.where).toEqual({});
     });
 
-    it('filtra por active, siteType y busca por nombre', async () => {
+    it('filtra por active, siteType y busca por código o nombre', async () => {
       await service.findAll({
         active: false,
         siteType: DisposalSiteType.RECYCLING_PLANT,
@@ -157,7 +157,10 @@ describe('DisposalSitesService', () => {
       expect(args.where).toEqual({
         active: false,
         siteType: DisposalSiteType.RECYCLING_PLANT,
-        name: { contains: 'norte', mode: 'insensitive' },
+        OR: [
+          { code: { contains: 'norte', mode: 'insensitive' } },
+          { name: { contains: 'norte', mode: 'insensitive' } },
+        ],
       });
     });
   });

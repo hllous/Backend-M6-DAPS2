@@ -1,6 +1,6 @@
 # 05 · Informe de ejecución
 
-> Versión 2.0 · 10/11/2026. Backend del Módulo 6 (Grupo 04), sobre `develop` @ `142e1a3` (merge de [#597](https://github.com/hllous/Backend-M6-DAPS2/pull/597)). Los números salen de corridas reales (locales y de GitHub Actions); lo que no se midió figura como **no realizado**, con el motivo.
+> Versión 2.1 · 16/11/2026. Backend del Módulo 6 (Grupo 04). La base de R09 es `develop` @ `142e1a3` (merge de [#597](https://github.com/hllous/Backend-M6-DAPS2/pull/597), 10/11/2026); las cifras de la **Entrega 4** (unitarios, cobertura, lint, CI, SonarCloud, Trivy y ZAP) se midieron el 16/11/2026 sobre `develop` @ `6fe2614` y sobre `main` @ `78bf714`, y están marcadas con su fecha. Los números salen de corridas reales (locales y de GitHub Actions); lo que no se midió figura como **no realizado**, con el motivo.
 >
 > **Corrida R09.** Local, Windows, Node 22, máquina sin otras cargas, sobre la rama de integración de #597 (mismo contenido que `develop` @ `142e1a3`). Se midieron build, lint, `docs:check`, `openapi:generate`, unitarios con cobertura, e2e contra Postgres 16 real, Newman, Schemathesis, k6 y `docker compose up` en frío. **R08** es la corrida anterior (sobre `1d600d2`) y queda como referencia.
 
@@ -8,7 +8,7 @@
 
 | Qué | Cómo | Resultado |
 |---|---|---|
-| Build, lint, docs, OpenAPI | `npm run build`, `lint:check`, `docs:check`, `openapi:generate` + `git diff docs/api` | Build OK; lint **0 errores y 305 warnings**; `docs:check` OK; `openapi:generate` sin diff |
+| Build, lint, docs, OpenAPI | `npm run build`, `lint:check`, `docs:check`, `openapi:generate` + `git diff docs/api` | R09: build OK; lint 0 errores y 305 warnings; `docs:check` OK; `openapi:generate` sin diff. **16/11:** `npm run lint:check` da **0 errores y 343 warnings** (los 38 nuevos son de código que entró desde R09; no se corrigieron de antemano) |
 | Unitarios con cobertura | `npm run test:cov` (Prisma mockeado, no toca ninguna base) | Ver 2 y 3 |
 | e2e general | `npm run test:e2e` contra Postgres 16 real, base descartable (`docs/testing.md`) | Ver 2 |
 | Newman | Colección `test/api/` contra el backend local | 455 requests ejecutados (435 definidos), 763 assertions, 0 fallas |
@@ -28,7 +28,7 @@ R09 salvo que se diga otra cosa. «Saltados» son tests que Jest no ejecutó; «
 
 | Nivel | Suites | Ejecutados | Pasados | Fallados | Saltados | Tiempo |
 |---|---|---|---|---|---|---|
-| Unitario | 124 (124 pasan) | 2854 | 2854 | 0 | 0 | — |
+| Unitario | 125 (125 pasan) | **2992** (16/11; R09: 2854) | 2992 | 0 | 0 | — |
 | e2e con Postgres 16 real | 24 (23 pasan, 1 salteada) | 343 | 343 | 0 | 4 | 79 s (corrida del 10/11; las anteriores, idénticas, 94 s y 100 s) |
 | `rabbitmq-real` | 1 | R08: 4 | R08: 4 | 0 | 4 en R09 (sin broker local) | En el CI corre en el job `e2e` |
 | Newman (`test/api/`) | — | 455 requests | 763 assertions | 0 | — | Corre en el CI (job `api`: 2 min 27 s con Schemathesis) |
@@ -36,8 +36,9 @@ R09 salvo que se diga otra cosa. «Saltados» son tests que Jest no ejecutó; «
 | Schemathesis: `status_code_conformance` (**bloqueante**) | — | 4384 casos | 3913 | 0 (exit 0) | 471 | — |
 | Mutation (Stryker, #617) | — | 26 archivos de dominio (5182 mutantes, 2142 no compilan y no cuentan) | 75,39 % global en el CI tras el refuerzo (2292 detectados); 71,22 % antes (2165) | — | — | 57 min 16 s en el CI con incremental (2 h 26 min la primera, sin cache); medición de noviembre de 2026, **no es R09** (5.1) |
 | Carga (k6) | — | 14 850 requests | p(95) 32,84 ms; 0,00 % de error | 0 | — | 5 min; ver 2.2 |
-| Seguridad dinámica (ZAP) | 2 escaneos (baseline en Render; activo autenticado en un entorno efímero) | activo: 46 577 pedidos, 2xx en 76 rutas | 0 High en el activo | 1 High en el baseline | — | Workflow `dast`, run 43764318178; **1 High abierta (#668)**; ver `07`, 5.2 |
-| Seguridad estática: Trivy (#658) | — | 3 pasadas: `fs`, `image`, `config` | 0 HIGH/CRITICAL con fix | 0 | — | Job `trivy` del CI, [run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43784574768); la primera corrida ([run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43762807669)) dio 6 HIGH en la imagen y DS-0002, corregidos en DEF-26; prueba en rojo en `07`, 5.2 |
+| Seguridad dinámica (ZAP) | 2 escaneos (baseline en Render; activo autenticado en un entorno efímero) | Corrida del 15/11: activo con 46 577 pedidos, 2xx en 76 rutas | **0 High** en los dos (corrida final sobre `main`, 16/11) | 0 (el High de DOMPurify del 15/11 se cerró: DEF-25) | — | Workflow `dast`, [run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357); ver 5.2 y `07`, 5.2 |
+| Seguridad estática: Trivy (#658) | — | 3 pasadas: `fs`, `image`, `config` | **0 HIGH/CRITICAL** en las tres sobre `main` | 0 | — | Job `trivy` del CI de `main`, [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363) (2 min 50 s); la primera corrida ([run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43762807669)) dio 6 HIGH en la imagen y DS-0002, corregidos en DEF-26; prueba en rojo en `07`, 5.2 |
+| Calidad estática: SonarCloud (#657) | Análisis de `main` (57 817 líneas) | Gate, bugs, vulnerabilidades, ratings, duplicación, hotspots y cobertura | Gate **OK**: 0 bugs, 0 vulnerabilidades, A/A/A, 1,2 %, 100 %, 97,3 % | 0 | — | Job `sonar` de [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363); [dashboard](https://sonarcloud.io/summary/overall?id=hllous_Backend-M6-DAPS2); ver 5.2 |
 | Compose en frío | — | 1 | 1 | 0 | — | up en 46 s; `/health/ready` 200 a los 55 s; seed OK; `GET /neighborhoods` 200 |
 
 Notas:
@@ -75,6 +76,8 @@ Las 3 corridas se repitieron también en el CI y en local sobre R09, con el mism
 ## 3. Cobertura (unitarios, `npm run test:cov`)
 
 **Global (R09):** sentencias **98,58 %** · ramas **93,63 %** · funciones **98,07 %** · líneas **99,16 %** (124 suites, 2854 tests). Sale de la fila `All files` del log. Frente a R08 (98,6 / 93,94 / 98,09 / 99,18) bajó unas centésimas porque entró código nuevo (ETag, idempotencia, filtro de errores).
+
+**Global actualizado (16/11/2026, `npm run test:cov` sobre `develop` @ `6fe2614`):** sentencias **97,97 %** · ramas **95 %** · funciones **97,82 %** · líneas **98,71 %** (125 suites, 2992 tests, 0 fallos). Cumple el umbral de 85 % del repo y el de la consigna; el valor más bajo de `src/modules/*` es 97,82 % de líneas (`attachments` y `green-spaces`) y 81,57 % de ramas (`green-spaces`). La tabla por carpeta de abajo es la de R09 y no se re-midió. **Cobertura en SonarCloud: 97,3 % (líneas 98,8 %)**, con las mismas líneas sin cubrir que Vitest (el porcentaje difiere solo por el denominador). Las exclusiones de Sonar son las de Vitest ([ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md)).
 
 El umbral del repo es 85 % en las cuatro métricas (`package.json`, `coverageThreshold`) y la corrida lo cumplió. Umbrales de la consigna: líneas ≥ 80 %, ramas ≥ 70 % en la capa de negocio: **cumple**; el valor más bajo de `src/modules/*` es 95,77 % de líneas y 82,92 % de ramas, ambos en `green-points`.
 
@@ -122,6 +125,8 @@ Cobertura por carpeta (sentencias, ramas, funciones, líneas; en %):
 **Qué excluye el cálculo** (`collectCoverageFrom`): los `*.module.ts`, los `dto/`, `index.ts`, `main.ts`, `configure-app.ts`, `config/` y `prisma/` (cableado y configuración; `config/` tiene su propio spec). **Cobertura de los e2e:** dato no disponible. La cobertura de líneas dice qué se ejecutó, no qué se verificó; para eso está el mutation testing (sección 5).
 
 ## 4. Tiempos del pipeline
+
+**CI de `main` del 16/11/2026** ([run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363), commit `78bf714`), `success` de punta a punta en **3 min 5 s**, con `sonar`, `trivy` y el deploy: `build` 1 min 34 s, `test` 2 min, `e2e` 1 min 52 s, `trivy` 2 min 50 s, `sonar` 1 min 1 s, `secrets` 57 s, `audit` 7 s, `deploy` a Render 3 s (el job dispara el deploy y no espera). El workflow `dast` (ZAP) corre aparte y tardó 4 min 58 s ([run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357)). **Límite de 15 minutos: cumple.** Lo que sigue es la medición de R09, anterior a Sonar y Trivy.
 
 Run de `CI` del commit `142e1a3` ([42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201)), `success` de punta a punta en **1 min 44 s**:
 
@@ -260,6 +265,35 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 - **Windows.** El `vitest.related` por defecto del runner no encontró los tests relacionados («No tests were executed»); la remedición local se hizo con `vitest.related: false` en una config aparte, fuera del repo. El CI de Linux no lo necesita.
 - **Observación de producto, no es defecto confirmado.** `start()` acepta un servicio `SUSPENDED` (`VALID_TRANSITIONS.SUSPENDED` incluye `IN_PROGRESS`) sin limpiar `statusReason` ni `statusNote` como hace `resume`. Ningún test lo fija; decisión de producto.
 
+### 5.2 Análisis estático y de seguridad: métricas finales (Entrega 4)
+
+Datos del 16/11/2026 sobre `main` @ `78bf714`. Decisiones, exclusiones y política de gates: [ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md). Hallazgos y justificaciones: [`07`](07-informe-seguridad.md) 5.2 y 5.5; defectos: DEF-13 (cerrado), DEF-25 a DEF-28 en [`06`](06-registro-defectos.md).
+
+**SonarCloud** ([dashboard](https://sonarcloud.io/summary/overall?id=hllous_Backend-M6-DAPS2), job `sonar` del [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363)). Código total (57 817 líneas), contra el criterio de la cátedra; el gate «Sonar way» evalúa solo código nuevo, por eso se reportan aparte.
+
+| Métrica | Exigido | Primer análisis (15/11) | **Final (16/11)** |
+|---|---|---|---|
+| Quality Gate | Aprobado | rojo | **OK** |
+| Bugs | 0 Blocker/Critical | 12 | **0** |
+| Vulnerabilidades | 0 | 23 | **0** |
+| Rating de confiabilidad / seguridad / mantenibilidad | A | D / E / A | **A / A / A** |
+| Duplicación | ≤ 3 % | 1,2 % | **1,2 %** |
+| Hotspots revisados | 100 % | 100 % | **100 %** |
+| Cobertura (líneas) | — | 97,3 % (98,8 %) | **97,3 % (98,8 %)**; 51 líneas sin cubrir |
+
+El gate sobre código nuevo da OK (confiabilidad, seguridad y mantenibilidad A, cobertura 93,9 %, duplicación 0,4 %, hotspots 100 %). **El gate no es bloqueante todavía:** pasar a `wait=true` y check requerido en los PR a `develop` está en [#660](https://github.com/hllous/Backend-M6-DAPS2/issues/660). La captura del gate en verde es el dashboard enlazado. No hay prueba en rojo de Sonar: espera al paso bloqueante.
+
+**Trivy** (job `trivy`, [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363)): `fs` (lockfile y secretos), `image` y `config`, **0 HIGH/CRITICAL** en las tres; `.trivyignore` vacío. Antes: imagen 6 HIGH con fix (`npm` embebido) y `config` 1 HIGH (contenedor como root), corregidos en #670 (DEF-26). El SARIF de cada pasada está en Code Scanning (`trivy-fs`, `trivy-image`, `trivy-config`). Prueba en rojo registrada en `07`, 5.2.
+
+**OWASP ZAP** (workflow `dast`, [run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357), sobre `main`):
+
+| Escaneo | High | Medium | Low | Qué es la Medium |
+|---|---:|---:|---:|---|
+| Baseline contra Render | **0** (antes 1) | 1 | 5 | CSP ausente solo en `/api/docs` (Swagger UI); la API sí envía CSP (DEF-19) |
+| Activo autenticado, entorno efímero | **0** | 1 | 0 | CORS `*` del entorno de desarrollo efímero; Render no lo tiene |
+
+Render sirve DOMPurify 3.4.17 (el High del 15/11, DEF-25, está cerrado). En la corrida del 15/11 el activo hizo 46 577 pedidos, todos con `Authorization` y cero respuestas 401.
+
 ## 6. Contrato y API
 
 | Qué | Estado |
@@ -279,15 +313,17 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 
 | Criterio | Umbral | Resultado | Cumple |
 |---|---|---|---|
-| Cobertura de líneas en dominio | ≥ 80 % | 99,16 % global; mínimo en `src/modules/*`: 95,77 % | **Sí** |
-| Cobertura de ramas en dominio | ≥ 70 % | 93,63 % global; mínimo en `src/modules/*`: 82,92 % | **Sí** |
+| Cobertura de líneas en dominio | ≥ 80 % | 98,71 % global (16/11; R09: 99,16 %); mínimo en `src/modules/*`: 97,82 % | **Sí** |
+| Cobertura de ramas en dominio | ≥ 70 % | 95 % global (16/11; R09: 93,63 %); mínimo en `src/modules/*`: 81,57 % | **Sí** |
 | Mutation score en dominio | ≥ 60 % | 75,39 % global en los 26 archivos de dominio (CI tras el refuerzo, #617, #647; antes 71,22 %; ver 5.1) | **Sí** |
 | Tests flaky | 0 (3 corridas idénticas) | 3 corridas idénticas en local (R08) y repetidas en el CI (ver 2.1) | **Sí** |
-| Pipeline | ≤ 15 min | 1 min 44 s; `API tests` 2 min 27 s | **Sí** |
+| Pipeline | ≤ 15 min | 3 min 5 s en `main` (16/11, con `sonar` y `trivy`; R09: 1 min 44 s); `API tests` 2 min 27 s | **Sí** |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` (23 más `rabbitmq-real`); los E2E de navegador viven en el repo del frontend | **Sí** |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y **1 Mayor** (DEF-13); [`06`](06-registro-defectos.md). Actualizado con #643 (antes 2 Mayores: DEF-09 cerrado) | **Sí** |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y **0 Mayores** (DEF-13 cerrado con #656); 2 Menores abiertos (DEF-14 y DEF-19); [`06`](06-registro-defectos.md) | **Sí** |
 | Casos negativos o de borde | ≥ 40 % | 67,5 % (251 de 372, [`04`](04-especificacion-casos.md)) | **Sí** |
-| Quality Gate (SonarCloud) | Gate en verde | **NO CUMPLE (medido)**: análisis de SonarCloud del 15/11/2026 (código del PR #662, 57 454 líneas, con la configuración del proyecto): **5 bugs** (4 Critical `S2871` y 1 Major `S9383`), **22 vulnerabilidades** (3 Blocker `S6698`, 1 Critical `S8689`, 18 entre Major y Minor), duplicación **1,2 %**, confiabilidad **D**, seguridad **E**, mantenibilidad **A**, hotspots **0** (100 % revisados), cobertura **97,3 %** (líneas 98,8 %; 52 líneas sin cubrir, igual que Vitest). No cumple 0 bugs Blocker/Critical, 0 vulnerabilidades ni ratings A. Tabla de hallazgos y propuesta de severidad en [#657](https://github.com/hllous/Backend-M6-DAPS2/issues/657). La cobertura la mide el job `sonar` con el `lcov` de Vitest; el valor se explica en la tabla de [#657](https://github.com/hllous/Backend-M6-DAPS2/issues/657) | **No** |
+| Quality Gate (SonarCloud) | Gate en verde, 0 bugs Blocker/Critical, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % de hotspots | Gate **OK** sobre `main` (16/11): 0 bugs, 0 vulnerabilidades, duplicación 1,2 %, A/A/A, hotspots 100 %, cobertura 97,3 % (5.2). **No bloqueante todavía** (#660) | **Sí** |
+| ZAP baseline y activo autenticado | 0 High, cada Medium justificada | 0 High en los dos; 1 Medium en cada uno, justificadas en [`07`](07-informe-seguridad.md) 5.2 | **Sí** |
+| Dependencias (Trivy y `npm audit`) | 0 CVE críticas o altas sin mitigación documentada | 0 HIGH/CRITICAL en `fs`, `image` y `config`; `npm audit --omit=dev` en 0 | **Sí** |
 | Carga: 50 usuarios, 5 min, p95 < 500 ms, error < 1 % | p95 < 500 ms, error < 1 % | p(95) 32,84 ms y 0,00 % en 14 850 requests (local); también corrida contra el despliegue y con escrituras (ver 2.2) | **Sí** |
 | Criterios de aceptación pasados / HU ejecutadas | ≥ 95 % y ninguno Must fallado | [`03`](03-matriz-trazabilidad.md): 161 criterios con test del backend sin fallos (actualizado con #643: CA-HU31-10); 9 solo FE y 5 huecos sin ejecutar | **Parcial** |
 
@@ -295,9 +331,10 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 
 | Criterio | Estado | Motivo |
 |---|---|---|
-| Captura del Quality Gate en verde | **NO HECHO** | El análisis corre en el CI desde #657 (gate no bloqueante), pero el gate no está en verde: ver la fila del criterio arriba |
-| OWASP ZAP (baseline y activo autenticado) | **HECHO, con 1 High abierta** | Corrida real el 15/11 (`07`, 5.2). El baseline contra Render reportó 1 High (DOMPurify 3.1.4 en el Swagger UI): corrección en #668. Falta la corrida final sobre el tag |
-| Trivy | **HECHO** | 0 HIGH/CRITICAL con fix en `fs`, `image` y `config`; sin entradas en `.trivyignore`. Ver `07`, 5.2 |
+| Gate de SonarCloud bloqueante y requerido en los PR a `develop`, y su prueba en rojo | **NO HECHO** | Opción C, paso 2 ([#660](https://github.com/hllous/Backend-M6-DAPS2/issues/660)). El análisis y el gate (OK) sí están hechos (5.2) |
+| Reporte final de ZAP archivado en `docs/QA/evidencia/` | **NO HECHO** | Están archivados los reportes de la corrida del 15/11 (`evidencia/zap-2026-11-15/`); los de la corrida final del 16/11 viven como artifact del [run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357), que vence a los 90 días, y se pueden regenerar con el workflow |
+| OWASP ZAP (baseline y activo autenticado) | **HECHO** | 0 High en los dos sobre `main` (5.2; `07`, 5.2) |
+| Trivy | **HECHO** | 0 HIGH/CRITICAL en `fs`, `image` y `config`; sin entradas en `.trivyignore` (5.2; `07`, 5.2) |
 | Mutation score: reforzar los 21 archivos restantes y confirmar el global en el CI | **Parcial** | Línea base del dominio completo medida y 5 archivos reforzados (5.1); el score global tras el refuerzo se confirma con una corrida en el CI luego del merge |
 | Éxito por endpoint en los 91 endpoints restantes | **NO HECHO** | `test/api/PENDIENTES.md` |
 | Integración con broker real (Testcontainers) | **Parcial** | Postgres y RabbitMQ reales como contenedores de servicio del CI y en local. El consumer y la publicación del outbox (también con el broker inalcanzable y su reenvío) se prueban contra RabbitMQ real (#618) |
@@ -310,13 +347,13 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 | 1 | Test de la matriz de transiciones con 409 en los inválidos | **Hecho** (#582, 114 tests) |
 | 2 | Script k6 con 50 usuarios, 5 minutos y 3 `GET` críticos | **Hecho** (#585, #574): local, despliegue y escrituras |
 | 3 | Schemathesis contra `openapi.json` en el CI | **Hecho** (#583), solo `GET`; bloqueante desde #593 |
-| 4 | SonarCloud y Quality Gate | **Parcial**: análisis en el CI (#657); gate en rojo, hallazgos en triaje |
+| 4 | SonarCloud y Quality Gate | **Hecho** (#657): gate OK y A/A/A sobre `main` el 16/11; **falta** hacerlo bloqueante (#660) |
 | 5 | Stryker sobre el dominio completo | **Hecho** (#577, #617): 71,22 % → 75,39 % confirmado en el CI tras el refuerzo; quedan 21 archivos sin reforzar |
 | 6 | Correr la suite 3 veces seguidas | **Hecho** en local y en el CI; falta `--detectOpenHandles` |
 | 7 | Reemplazar las aserciones débiles (`services.service.spec.ts:875` y el resto) | **Sin hacer** |
 | 8 | Hacer obligatorio el job `e2e` en la protección de ramas | **NO HECHO** (pide admin; DEF-14) |
 | 9 | Newman en el CI | **Hecho** (#583) |
-| 10 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); ZAP **hecho** (#659); Trivy **hecho** (#658) |
+| 10 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); ZAP **hecho** (#659, 0 High); Trivy **hecho** (#658, 0 HIGH/CRITICAL) |
 | 11 | Tag `v1.0-testing` en `main` y en el frontend | **Hecho**: ver «Versión entregada» |
 | 12 | 400 declarado en los `GET` con entrada y Schemathesis bloqueante (DEF-20) | **Hecho** (#593, PR #597) |
 | 13 | Catálogo de barrios local para el compose y el CI (DEF-21) | **Hecho** (#594, PR #597) |

@@ -76,6 +76,7 @@ export class TreesService {
     }
     if (query.search) {
       where.OR = [
+        { surveyCode: { contains: query.search, mode: 'insensitive' } },
         { species: { contains: query.search, mode: 'insensitive' } },
         { address: { contains: query.search, mode: 'insensitive' } },
       ];

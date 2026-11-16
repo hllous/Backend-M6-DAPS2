@@ -50,7 +50,10 @@ export class DisposalSitesService {
       where.siteType = query.siteType;
     }
     if (query.search) {
-      where.name = { contains: query.search, mode: 'insensitive' };
+      where.OR = [
+        { code: { contains: query.search, mode: 'insensitive' } },
+        { name: { contains: query.search, mode: 'insensitive' } },
+      ];
     }
 
     const [sites, total] = await Promise.all([

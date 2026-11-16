@@ -2158,7 +2158,7 @@
             "name": "search",
             "required": false,
             "in": "query",
-            "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
+            "description": "Buscar por código o nombre (coincidencia parcial, case-insensitive)",
             "schema": {
               "maxLength": 100,
               "example": "recolección",
@@ -2667,7 +2667,7 @@
             "name": "search",
             "required": false,
             "in": "query",
-            "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
+            "description": "Buscar por código o nombre (coincidencia parcial, case-insensitive)",
             "schema": {
               "maxLength": 100,
               "example": "relleno",
@@ -3171,7 +3171,7 @@
             "name": "search",
             "required": false,
             "in": "query",
-            "description": "Buscar por nombre (coincidencia parcial, case-insensitive)",
+            "description": "Buscar por código o nombre (coincidencia parcial, case-insensitive)",
             "schema": {
               "maxLength": 100,
               "example": "troncal",
@@ -5893,7 +5893,7 @@
             "name": "search",
             "required": false,
             "in": "query",
-            "description": "Buscar por dirección (coincidencia parcial)",
+            "description": "Buscar por código o dirección (coincidencia parcial, case-insensitive)",
             "schema": {
               "maxLength": 100,
               "example": "Rivadavia",
@@ -7561,9 +7561,10 @@
             "name": "search",
             "required": false,
             "in": "query",
-            "description": "Buscar por especie o dirección",
+            "description": "Buscar por código de relevamiento, especie o dirección (coincidencia parcial, case-insensitive)",
             "schema": {
               "maxLength": 100,
+              "example": "jacarand",
               "type": "string"
             }
           }
@@ -9896,7 +9897,7 @@
             "name": "search",
             "required": false,
             "in": "query",
-            "description": "Buscar por nombre o dirección (parcial, case-insensitive)",
+            "description": "Buscar por código, nombre o dirección (parcial, case-insensitive)",
             "schema": {
               "maxLength": 100,
               "example": "Mitre",
@@ -13709,10 +13710,10 @@
             "name": "search",
             "required": false,
             "in": "query",
-            "description": "Buscar por dirección (parcial, case-insensitive)",
+            "description": "Buscar por dirección, número de expediente (`caseNumber`, EXP-…) o número de reclamo de M2 (`publicId`, TK-…); parcial, case-insensitive",
             "schema": {
               "maxLength": 100,
-              "example": "Cintura",
+              "example": "EXP-2026-000015",
               "type": "string"
             }
           }

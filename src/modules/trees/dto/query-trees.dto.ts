@@ -24,7 +24,11 @@ export class QueryTreesDto extends PaginationQueryDto {
   @IsEnum(RiskLevel)
   riskLevel?: RiskLevel;
 
-  @ApiPropertyOptional({ description: 'Buscar por especie o dirección' })
+  @ApiPropertyOptional({
+    description:
+      'Buscar por código de relevamiento, especie o dirección (coincidencia parcial, case-insensitive)',
+    example: 'jacarand',
+  })
   @IsOptional()
   @SearchText()
   search?: string;

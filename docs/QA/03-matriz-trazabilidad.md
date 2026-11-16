@@ -1,6 +1,6 @@
 # 03 · Matriz de trazabilidad
 
-> Versión 2.0 · 10/11/2026. Relaciona **HU → criterio de aceptación → caso de prueba → test automatizado → resultado → defecto**. Las HU y los criterios están en [02-historias-y-criterios.md](02-historias-y-criterios.md) y los casos en [04-especificacion-casos.md](04-especificacion-casos.md).
+> Versión 2.1 · 16/11/2026 (las filas de herramientas de análisis y DEF-13 se actualizaron con la Entrega 4; el resto, medido el 10/11/2026). Relaciona **HU → criterio de aceptación → caso de prueba → test automatizado → resultado → defecto**. Las HU y los criterios están en [02-historias-y-criterios.md](02-historias-y-criterios.md) y los casos en [04-especificacion-casos.md](04-especificacion-casos.md).
 
 ## Cómo leerla
 
@@ -497,7 +497,10 @@ Defectos del [registro](06-registro-defectos.md) que no cuelgan de un criterio c
 | Hallazgo H-1 de Schemathesis: los `GET` con entrada no declaran el 400 | DEF-20; CP-370; `src/openapi-contract.spec.ts` | **Cerrado** (#593, PR #597). `status_code_conformance` es bloqueante en el CI. Pasó en R09 |
 | Hallazgo H-2 de Schemathesis: `GET /neighborhoods` da 503 sin M9 | DEF-21; CP-371 y CP-372; `test/neighborhoods-catalog.e2e-spec.ts` | **Cerrado** (#594, PR #597). Pasó en R09 |
 | Dependencias de producción con vulnerabilidades (tras #619: 0 críticas, 0 altas, 8 moderadas; tras #628: 0) | DEF-08 | Cerrado (#619, #628) |
-| Sin ZAP ni Trivy; SCA en el CI (gate desde #628), Dependabot, CodeQL y gitleaks sí | DEF-13 | Abierto, parcial |
+| Faltaban SonarCloud, Trivy y ZAP; el SCA (`npm audit`), Dependabot, CodeQL y gitleaks ya estaban | DEF-13; spec [#656](https://github.com/hllous/Backend-M6-DAPS2/issues/656) | **Cerrado** (16/11/2026), ver las tres filas siguientes |
+| **SonarCloud**: Quality Gate y métricas del código total (HU-31) | Job `sonar` de `ci.yml` (#657, PR #662); `sonar-project.properties`; DEF-27 y DEF-28 | **Gate OK** sobre `main` (16/11): 0 bugs, 0 vulnerabilidades, duplicación 1,2 %, ratings A/A/A, hotspots 100 %, cobertura 97,3 %. **No bloqueante**: #660 pendiente. Ver [05](05-informe-ejecucion.md) 5.2 y [07](07-informe-seguridad.md) 5.5 |
+| **Trivy**: dependencias, imagen y configuración (HU-31) | Job `trivy` de `ci.yml` (#658, PR #663); `.trivyignore` (vacío); DEF-26. Prueba en rojo: PR descartable #664 | **0 HIGH/CRITICAL** en `fs`, `image` y `config` sobre `main` ([run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363)). Frena el deploy, no el merge. Ver [07](07-informe-seguridad.md) 5.2 |
+| **OWASP ZAP**: baseline contra Render y activo autenticado contra un entorno efímero (HU-31) | Workflow `dast.yml` (#659, PR #669); `.github/dast/`; DEF-25 | **0 High** en los dos ([run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357)), 1 Medium en cada uno justificada. Evidencia en `evidencia/zap-2026-11-15/`. Ver [07](07-informe-seguridad.md) 5.2 |
 | `CORS_ORIGINS` opcional; desde #642 obligatoria en producción | DEF-18 | Cerrado (#642) |
 | Primer `docker compose up` en frío fallaba por `rabbitmq-setup` | DEF-23 | Cerrado (#584) |
 | Inyección SQL y XSS almacenado en campos de texto | CP-348, `test/security-input.e2e-spec.ts` (9 tests: 3 payloads × zona, expediente y servicio). La API guarda los payloads como texto y los devuelve idénticos; no los rechaza ni los escapa | Pasó en R08 |
