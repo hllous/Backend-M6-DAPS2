@@ -10,8 +10,6 @@ import {
   OrganizationRecord,
 } from './identity.port';
 
-const TIMEOUT_MS = 10_000;
-
 const identitySchema = z.object({
   sub: z.string(),
   actorType: z.string(),
@@ -40,13 +38,16 @@ function assertUuid(id: string, campo: string): void {
 @Injectable()
 export class M1IdentityClient extends IdentityPort {
   private readonly baseUrl?: string;
+  private readonly timeoutMs: number;
 
   constructor(
     config: ConfigService,
     private readonly core: CoreClient,
   ) {
     super();
-    this.baseUrl = config.getOrThrow<{ baseUrl?: string }>('m1').baseUrl?.replace(/\/+$/, '');
+    const m1 = config.getOrThrow<{ baseUrl?: string; timeoutMs: number }>('m1');
+    this.baseUrl = m1.baseUrl?.replace(/\/+$/, '');
+    this.timeoutMs = m1.timeoutMs;
   }
 
   get enabled(): boolean {
@@ -98,7 +99,7 @@ export class M1IdentityClient extends IdentityPort {
       res = await fetch(`${this.baseUrl}${path}`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
         redirect: 'error',
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (err) {
       // Solo el nombre del error (TimeoutError, TypeError de red): sin cause ni texto.

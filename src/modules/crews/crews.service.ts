@@ -444,9 +444,7 @@ export class CrewsService {
     } catch (e) {
       if (!(e instanceof IdentityUnavailableError)) throw e;
       this.logger.error(`No se pudo validar contra M1: ${e.message}`);
-      throw new ServiceUnavailableException(
-        'No se pudo validar a los usuarios contra M1. Reintentá en unos minutos',
-      );
+      throw new ServiceUnavailableException('M1 no responde, reintentá en unos segundos');
     }
 
     const partes: string[] = [];
