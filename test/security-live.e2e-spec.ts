@@ -477,12 +477,19 @@ describe('Seguridad en vivo (e2e)', () => {
       expect(html.headers['content-security-policy']).toBe(DOCS_CSP);
       expect(html.headers['x-content-type-options']).toBe('nosniff');
       // Todo script de la página es un archivo propio: la CSP no permite scripts en línea.
-      const scripts = [...html.text.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)];
-      expect(scripts.length).toBeGreaterThan(0);
-      for (const [, attrs, cuerpo] of scripts) {
-        expect(attrs).toMatch(/src="\.?\/?[\w./-]+"/);
-        expect(cuerpo.trim()).toBe('');
+      // Se recorre con indexOf y no con una regex de etiquetas (CodeQL js/bad-tag-filter).
+      const texto = html.text.toLowerCase();
+      let desde = texto.indexOf('<script');
+      let scripts = 0;
+      while (desde !== -1) {
+        const cierre = texto.indexOf('>', desde);
+        const fin = texto.indexOf('</script', cierre);
+        expect(texto.slice(desde, cierre)).toMatch(/\ssrc="\.?\/?[\w./-]+"/);
+        expect(texto.slice(cierre + 1, fin).trim()).toBe('');
+        scripts += 1;
+        desde = texto.indexOf('<script', fin);
       }
+      expect(scripts).toBeGreaterThan(0);
       const init = await http().get('/api/docs/swagger-ui-init.js').expect(200);
       expect(init.headers['content-security-policy']).toBe(DOCS_CSP);
     });
