@@ -16,6 +16,13 @@ Errores previos al router: un JSON mal formado ya salía por el filtro (400); un
 
 En OpenAPI, `createOpenApiDocument()` (`src/swagger-config.ts`, usado por `main.ts`, `openapi:generate` y `openapi-contract.spec.ts`) reescribe a `application/problem+json` el media type de toda respuesta 4xx/5xx. `ErrorResponseDto` suma los campos RFC.
 
+## Actualización 2026-11-16: id de correlación y ruta sin query (#696, DEF-19)
+
+- Todo error lleva la extensión **`traceId`**: el id del request, que pone el middleware `requestId` (`src/common/middleware/request-id.middleware.ts`) en `res.locals.traceId` y en el header de respuesta `X-Request-Id` (expuesto por CORS). Se adopta el `X-Request-Id` del cliente solo si tiene forma de UUID, para no meter texto libre en los logs.
+- El 500 genérico sigue sin stack ni detalle; el log del servidor escribe `Unhandled exception [traceId=<id>] <método> <ruta>: <error>` con el stack, así el equipo encuentra la traza a partir del id que reporta el usuario.
+- `instance` y `path` pasan a ser **solo la ruta, sin query** (antes: la URL con los parámetros sensibles redactados por `redactUrl`). La query no aporta al diagnóstico del cliente y podía llevar datos personales en parámetros que la lista de redacción no conoce. El log HTTP (`LoggingInterceptor`) sigue usando `redactUrl`.
+- Compatibilidad: se agrega un campo y se acorta `path`/`instance`; ningún consumidor conocido parsea la query de esos campos.
+
 ## Alternativas consideradas
 
 - **Reemplazar los campos históricos por los del RFC**: rompe al frontend y a los tests; descartado. Se retirarán en otro ADR cuando el frontend migre a `detail`/`status`.
