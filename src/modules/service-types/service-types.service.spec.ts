@@ -163,7 +163,10 @@ describe('ServiceTypesService', () => {
       expect.objectContaining({
         where: {
           category: ServiceCategory.TREES,
-          name: { contains: 'poda', mode: 'insensitive' },
+          OR: [
+            { code: { contains: 'poda', mode: 'insensitive' } },
+            { name: { contains: 'poda', mode: 'insensitive' } },
+          ],
         },
       }),
     );

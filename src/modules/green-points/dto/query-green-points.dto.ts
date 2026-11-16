@@ -25,7 +25,7 @@ export class QueryGreenPointsDto extends PaginationQueryDto {
   wasteType?: WasteType;
 
   @ApiPropertyOptional({
-    description: 'Buscar por nombre o dirección (parcial, case-insensitive)',
+    description: 'Buscar por código, nombre o dirección (parcial, case-insensitive)',
     example: 'Mitre',
   })
   @IsOptional()

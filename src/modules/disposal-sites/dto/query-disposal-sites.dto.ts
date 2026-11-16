@@ -20,7 +20,7 @@ export class QueryDisposalSitesDto extends PaginationQueryDto {
   siteType?: DisposalSiteType;
 
   @ApiPropertyOptional({
-    description: 'Buscar por nombre (coincidencia parcial, case-insensitive)',
+    description: 'Buscar por código o nombre (coincidencia parcial, case-insensitive)',
     example: 'relleno',
   })
   @IsOptional()

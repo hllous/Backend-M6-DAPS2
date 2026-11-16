@@ -216,12 +216,15 @@ describe('RoutesService — CRUD', () => {
     });
   });
 
-  it('filtra por estado y busca por nombre', async () => {
+  it('filtra por estado y busca por código o nombre', async () => {
     await service.findAll({ page: 1, pageSize: 20, active: false, search: 'troncal' } as any);
 
-    expect(prisma.route.findMany.mock.calls[0][0].where).toMatchObject({
+    expect(prisma.route.findMany.mock.calls[0][0].where).toEqual({
       active: false,
-      name: { contains: 'troncal', mode: 'insensitive' },
+      OR: [
+        { code: { contains: 'troncal', mode: 'insensitive' } },
+        { name: { contains: 'troncal', mode: 'insensitive' } },
+      ],
     });
   });
 

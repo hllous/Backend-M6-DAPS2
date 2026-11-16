@@ -32,7 +32,7 @@ export class QueryServiceTypesDto extends PaginationQueryDto {
   mode?: ServiceMode;
 
   @ApiPropertyOptional({
-    description: 'Buscar por nombre (coincidencia parcial, case-insensitive)',
+    description: 'Buscar por código o nombre (coincidencia parcial, case-insensitive)',
     example: 'recolección',
   })
   @IsOptional()

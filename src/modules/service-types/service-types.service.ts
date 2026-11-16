@@ -53,7 +53,10 @@ export class ServiceTypesService {
       where.mode = query.mode;
     }
     if (query.search) {
-      where.name = { contains: query.search, mode: 'insensitive' };
+      where.OR = [
+        { code: { contains: query.search, mode: 'insensitive' } },
+        { name: { contains: query.search, mode: 'insensitive' } },
+      ];
     }
 
     const [serviceTypes, total] = await Promise.all([
