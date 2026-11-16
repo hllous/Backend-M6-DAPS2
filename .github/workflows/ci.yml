@@ -286,7 +286,7 @@ jobs:
   # gitleaks con la configuración POR DEFECTO (se borran .gitleaks.toml y
   # .gitleaksignore del working tree; el historial no se toca) y trufflehog,
   # sobre todas las ramas y tags. Informativo: muestra qué ve una herramienta
-  # sin nuestras excepciones. Los reportes se publican como artifact con los
+  # sin nuestras excepciones (solo frena si trufflehog verifica una credencial viva). Los reportes se publican como artifact con los
   # valores redactados (en trufflehog se eliminan Raw/RawV2).
   secrets-default:
     name: secrets-default
@@ -342,6 +342,15 @@ jobs:
             filesystem /tmp --json --no-update --exclude-paths=/th-exclude.txt \
             --results=verified,unknown,unverified,filtered_unverified \
             | jq -c 'del(.Raw, .RawV2)' > "$REPORTS/trufflehog-default-worktree.jsonl"
+
+      # Único frenante del job: una credencial VERIFICADA como viva. El resto
+      # (valores de juguete que ya están en el historial) es informativo, porque
+      # sin reescribir historia no puede desaparecer.
+      - name: Fallar si trufflehog verificó alguna credencial
+        run: |
+          n=$(jq -s '[.[] | select(.Verified == true)] | length' "$REPORTS/trufflehog-default.jsonl" "$REPORTS/trufflehog-default-worktree.jsonl")
+          echo "Credenciales verificadas: $n"
+          test "$n" -eq 0
 
       - name: Publicar reportes
         if: always()
