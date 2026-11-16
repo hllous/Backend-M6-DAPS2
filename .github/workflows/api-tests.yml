@@ -1,6 +1,7 @@
 # ──────────────────────────────────────────────────────────────
 # api-tests — Contrato REST contra el backend real (#572).
-#   1. Newman: colección Postman versionada en test/api/ (éxito + error por endpoint).
+#   0. Cobertura: scripts/check-api-coverage.mjs compara el OpenAPI con la colección (éxito y error por operación).
+#   1. Newman: colección Postman versionada en test/api/ (éxito + error por endpoint, flujos encadenados).
 #   2. Schemathesis: respuestas contra docs/api/openapi.json.
 # Workflow aparte de ci.yml; no es check obligatorio de la branch protection.
 # ──────────────────────────────────────────────────────────────
@@ -62,6 +63,10 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      # Sin backend: falla si una operación del OpenAPI quedó sin caso de éxito o de error en la colección.
+      - name: Cobertura de la colección (todas las operaciones, éxito y error)
+        run: npm run api:coverage
+
       - name: Generate Prisma Client
         run: npm run prisma:generate
 
@@ -93,12 +98,13 @@ jobs:
         run: |
           echo "ADMIN_TOKEN=$(node test/api/make-token.mjs admin)" >> "$GITHUB_ENV"
           echo "AUDITOR_TOKEN=$(node test/api/make-token.mjs auditor)" >> "$GITHUB_ENV"
+          echo "CAMPO_TOKEN=$(node test/api/make-token.mjs campo)" >> "$GITHUB_ENV"
 
       - name: Newman
         run: |
           npx --yes newman@6.2.3 run test/api/m6.postman_collection.json \
             -e test/api/m6.postman_environment.json \
-            --env-var "token=$ADMIN_TOKEN" --env-var "auditorToken=$AUDITOR_TOKEN" \
+            --env-var "token=$ADMIN_TOKEN" --env-var "auditorToken=$AUDITOR_TOKEN" --env-var "campoToken=$CAMPO_TOKEN" \
             --reporters cli,junit --reporter-junit-export reports/newman.xml
 
       # max-examples acotado para entrar en < 8 min. Solo GET: con datos al azar las
