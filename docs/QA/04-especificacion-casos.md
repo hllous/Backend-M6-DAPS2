@@ -10,7 +10,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [0
 - **Escenario:** precondición y datos del caso. El resultado esperado es el ENTONCES del criterio; en las secciones de casos agregados (CP-335 en adelante) va después de la flecha.
 - **Prioridad:** la de la HU (Alta para Must, Media para Should, Baja para Could).
 - **Test:** archivo y nombre del test del backend (`FE:` indica un test del frontend, solo por nombre de archivo y sin revisar su contenido; `Manual:` indica que no hay test automático). Se muestran hasta dos por caso.
-- **Estado:** **Pasó** = el test citado existe y la corrida completa (3010 unitarios, 404 e2e y 8 de RabbitMQ real) no tuvo fallos. «Corregido: …» es un criterio que cambió después de la HU, con su ACT e issue. «—» es un caso manual o con test solo del frontend.
+- **Estado:** **Pasó** = el test citado existe y la corrida completa (3056 unitarios, 410 e2e y 8 de RabbitMQ real) no tuvo fallos. «Corregido: …» es un criterio que cambió después de la HU, con su ACT e issue. «—» es un caso manual o con test solo del frontend.
 - Los casos CP-285 en adelante pertenecen a criterios agregados con correcciones posteriores. Las rutas de test son de este repo, salvo las del frontend.
 
 
@@ -582,18 +582,35 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | CP-381 | CA-HU31-14 | OpenAPI con 152 operaciones; `npm run api:coverage` → toda operación tiene caso de éxito y de error en la colección o una excepción con motivo | Positivo | `scripts/check-api-coverage.spec.ts` › «toda operación del OpenAPI tiene caso de éxito y de error, o una excepción con motivo» | Pasó |
 | CP-382 | CA-HU31-5 | Request con `X-Request-Id` UUID del cliente y otra sin él → se adopta el del cliente; sin él se genera un UUID, y va al header de respuesta | Borde | `request-id.middleware.spec.ts` › «adopta el X-Request-Id del cliente si es un UUID» | Pasó |
 
+## Casos agregados: orden de catálogos y motivo de cierre (CP-383 a CP-394)
+
+| ID | Criterio | Escenario y resultado esperado | Tipo | Test | Estado |
+|---|---|---|---|---|---|
+| CP-383 | CA-HU01-5 | Query de los siete listados (vehículos, contenedores, árboles, cuadrillas, recorridos, puntos verdes y espacios verdes); `sort` de la lista con `order` asc y desc → válido | Positivo | `sort-query.dto.spec.ts` › «acepta un campo de la lista y ambos sentidos» | Pasó |
+| CP-384 | CA-HU01-5 | Sin `sort` ni `order`, y con solo `order=desc` → `order` queda en asc y el orden por defecto conserva el desempate por id; con solo `order` se invierte el campo por defecto | Borde | `sort-query.dto.spec.ts` › «sin parámetros es válido y order queda en asc»<br>`sort-query.dto.spec.ts` › «order solo invierte el campo por defecto» | Pasó |
+| CP-385 | CA-HU01-5 | `GET /vehicles` sin parámetros → por patente ascendente; con `order=desc` → invierte todo el resultado y pagina sobre ese orden | Positivo | `catalog-sort.e2e-spec.ts` › «sin parámetros ordena por patente ascendente (comportamiento previo)»<br>`catalog-sort.e2e-spec.ts` › «order=desc invierte todo el resultado y pagina sobre ese orden» | Pasó |
+| CP-386 | CA-HU01-6 | `sort=id` (columna real no visible) o `sort=updatedAt; DROP` en cada listado → 400 sobre `sort` | Negativo | `sort-query.dto.spec.ts` › «rechaza un sort fuera de la lista (también una columna real no visible)» | Pasó |
+| CP-387 | CA-HU01-6 | `order=up` en cada listado → 400 sobre `order` | Negativo | `sort-query.dto.spec.ts` › «rechaza un order inválido» | Pasó |
+| CP-388 | CA-HU01-6 | `GET /vehicles` con un `sort` fuera de la lista → 400 | Negativo | `catalog-sort.e2e-spec.ts` › «un sort fuera de la lista da 400» | Pasó |
+| CP-389 | CA-HU17-5 | Expediente en NO_VIOLATION con `ticketId`; `POST /close` sin body → 200, sin nota en la auditoría y sin `internalMessage` en el `RESOLVED` | Borde | `environmental-flow.e2e-spec.ts` › «sin body: cierra como siempre, sin nota ni internalMessage» | Pasó |
+| CP-390 | CA-HU17-5 | Mismo expediente; `{ reason: "Regularizó la situación" }` → 200, la nota queda en el historial y el `RESOLVED` lleva `internalMessage` con el motivo y el `publicMessage` sin cambios | Positivo | `environmental-flow.e2e-spec.ts` › «con motivo: queda en el historial y viaja como internalMessage» | Pasó |
+| CP-391 | CA-HU17-5 | Servicio con expediente cerrable; `close` con y sin motivo → con motivo, nota de auditoría e `internalMessage`; sin motivo, ninguno de los dos | Positivo | `environmental-reports.service.spec.ts` › «close con motivo lo deja en el historial y lo manda a M2 solo como internalMessage»<br>`environmental-reports.service.spec.ts` › «close sin motivo no manda internalMessage ni nota de auditoría» | Pasó |
+| CP-392 | CA-HU17-5 | `CloseReportDto` con body vacío, con `reason` rodeado de espacios y con `reason` de 500 caracteres → válido; el motivo se recorta | Borde | `status-change.dto.spec.ts` › «acepta el largo máximo»<br>`status-change.dto.spec.ts` › «recorta el motivo» | Pasó |
+| CP-393 | CA-HU17-6 | `CloseReportDto` con `reason` de 501 caracteres, de solo espacios, numérico, o con un campo extra → 400 | Negativo | `status-change.dto.spec.ts` › «rechaza %j con 400» | Pasó |
+| CP-394 | CA-HU17-6 | `POST /close` con `reason` de 501 caracteres → 400 y el expediente sigue en NO_VIOLATION | Negativo | `environmental-flow.e2e-spec.ts` › «motivo de más de 500 caracteres: 400 y no cierra» | Pasó |
+
 ## Resumen
 
-- Casos: **382**: 348 para 175 criterios de 33 HU (334 iniciales más CP-335 a CP-348; CP-348 no tiene criterio propio y se cuenta en HU-31), 24 casos transversales sin HU (CP-349 a CP-372) y 10 casos de HU-31 (CP-373 a CP-382). Los casos parametrizados cuentan como uno: los 114 tests de transiciones son 3 casos.
-- Positivos: 123 (32,2 %). Negativos: 174 (45,5 %). Borde: 85 (22,3 %).
-- **Negativos + borde: 259 de 382 = 67,8 %** (meta: 40 % o más). Cumple.
+- Casos: **394**: 348 para 175 criterios de 33 HU (334 iniciales más CP-335 a CP-348; CP-348 no tiene criterio propio y se cuenta en HU-31), 24 casos transversales sin HU (CP-349 a CP-372), 10 casos de HU-31 (CP-373 a CP-382) y 12 de HU-01 y HU-17 (CP-383 a CP-394). Los casos parametrizados cuentan como uno: los 114 tests de transiciones son 3 casos.
+- Positivos: 127 (32,2 %). Negativos: 179 (45,4 %). Borde: 88 (22,3 %).
+- **Negativos + borde: 267 de 394 = 67,8 %** (meta: 40 % o más). Cumple.
 - Casos marcados **Corregido**: 116.
-- Automatizados con test del backend: 363 (95,0 %). Solo con test del frontend: 9. Manuales: 10.
+- Automatizados con test del backend: 375 (95,2 %). Solo con test del frontend: 9. Manuales: 10.
 - Los 19 casos sin test del backend son 9 de frontend y 10 manuales.
 
 | HU | Casos | Positivos | Negativos | Borde | Neg. + borde |
 |---|---|---|---|---|---|
-| HU-01 | 4 | 3 | 1 | 0 | 25,0 % |
+| HU-01 | 10 | 5 | 4 | 1 | 50,0 % |
 | HU-02 | 16 | 6 | 7 | 3 | 62,5 % |
 | HU-03 | 16 | 5 | 7 | 4 | 68,8 % |
 | HU-04 | 7 | 2 | 3 | 2 | 71,4 % |
@@ -609,7 +626,7 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | HU-14 | 7 | 2 | 3 | 2 | 71,4 % |
 | HU-15 | 10 | 3 | 5 | 2 | 70,0 % |
 | HU-16 | 21 | 7 | 6 | 8 | 66,7 % |
-| HU-17 | 7 | 4 | 2 | 1 | 42,9 % |
+| HU-17 | 13 | 6 | 4 | 3 | 53,8 % |
 | HU-18 | 9 | 2 | 5 | 2 | 77,8 % |
 | HU-19 | 6 | 2 | 2 | 2 | 66,7 % |
 | HU-20 | 10 | 2 | 5 | 3 | 80,0 % |
@@ -627,6 +644,6 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | HU-32 | 6 | 3 | 2 | 1 | 50,0 % |
 | HU-33 | 4 | 1 | 1 | 2 | 75,0 % |
 | Transversales sin HU (Eje C, CP-349 a CP-372) | 24 | 5 | 12 | 7 | 79,2 % |
-| **Total** | **382** | **123** | **174** | **85** | **67,8 %** |
+| **Total** | **394** | **127** | **179** | **88** | **67,8 %** |
 
 Los casos de rol y de pertenencia ("403 NOT_ASSIGNED", "403 ROLE_REQUIRED") se cuentan como negativos. Los de degradación ante la caída de un sistema externo se cuentan como borde cuando el sistema sigue operando y como negativos cuando se rechaza la operación.

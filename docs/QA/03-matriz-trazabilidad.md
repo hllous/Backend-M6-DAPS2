@@ -7,7 +7,7 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 ## Cómo leerla
 
 - **Test automatizado:** archivo y nombre del test del backend (hasta dos por criterio). `FE:` es un test del repo del frontend, citado por nombre de archivo.
-- **Resultado:** **Pasó** = el test citado existe y la corrida completa (3010 unitarios, 404 e2e y 8 de RabbitMQ real) no tuvo fallos. «Corregido: ACT-nn» es un criterio que cambió después de la HU.
+- **Resultado:** **Pasó** = el test citado existe y la corrida completa (3056 unitarios, 410 e2e y 8 de RabbitMQ real) no tuvo fallos. «Corregido: ACT-nn» es un criterio que cambió después de la HU.
 - **Defecto:** «—» si no hay ninguno; si no, el `DEF-xx` de [06-registro-defectos.md](06-registro-defectos.md).
 - **Marcas:** **HUECO** = ningún test automatizado. **SOLO FE** = solo un test del frontend.
 
@@ -19,6 +19,8 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 | **CA-HU01-2** (Feliz) la pantalla carga → veo un esqueleto con la forma final, no un spinner suelto ni la tabla vacía | CP-002 | **SOLO FE**: `catalog-a-loading.spec.ts`<br>FE: `catalog-b-loading.spec.ts`<br>(+1 más) | Corregido (ACT-F1) | — |
 | **CA-HU01-3** (Alternativo) corre el guard de shadcn en el CI del frontend → no quedan componentes de UI escritos a mano fuera del registro | CP-003 | **HUECO** sin test: guard de CI del frontend | Corregido (ACT-F1) | — |
 | **CA-HU01-4** (Error) abro un catálogo → la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía | CP-004 | **SOLO FE**: `failure-journeys.spec.ts` | Solo FE | — |
+| **CA-HU01-5** (Alternativo) pido un listado paginado con `?sort=<campo>&order=asc\|desc` → el orden se aplica a todo el resultado antes de paginar y desempata por id; sin `sort` ni `order` el orden no cambia, y con solo `order` se invierte el orden por defecto | CP-383, CP-384, CP-385 | `sort-query.dto.spec.ts` › «acepta un campo de la lista y ambos sentidos»<br>`catalog-sort.e2e-spec.ts` › «order=desc invierte todo el resultado y pagina sobre ese orden»<br>(+5 más) | Pasó | — |
+| **CA-HU01-6** (Error) envío un `sort` fuera de la lista (también una columna real no visible) o un `order` inválido → recibo 400 | CP-386, CP-387, CP-388 | `sort-query.dto.spec.ts` › «rechaza un sort fuera de la lista (también una columna real no visible)»<br>`catalog-sort.e2e-spec.ts` › «un sort fuera de la lista da 400»<br>(+1 más) | Pasó | — |
 
 ## HU-02 — Alta de zonas operativas y recorridos con paradas
 
@@ -190,6 +192,8 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 | **CA-HU17-2** (Alternativo) M4 publica closureUpdate ORDERED o LIFTED → ORDERED registra la clausura como resolución y LIFTED registra el levantamiento y cierra | CP-164, CP-165 | `consumers.spec.ts` › «closureUpdate ORDERED registra la clausura»<br>`consumers.spec.ts` › «closureUpdate LIFTED registra el levantamiento» | Pasó | — |
 | **CA-HU17-3** (Error) llega al inbox → por HTTP recibo 400 y no se guarda la fila; un acta ya resuelta no se resuelve dos veces; sin sourceViolationId el consumidor lo descarta | CP-166, CP-167 | `environmental-flow.e2e-spec.ts` › «rechaza con 400 una multa sin sourceViolationId válido y no guarda la fila»<br>`consumers.spec.ts` › «sin sourceViolationId no sabemos que acta resolvieron: se descarta»<br>(+1 más) | Pasó | — |
 | **CA-HU17-4** (Falla externa) vence el plazo (deadlineAt, SANCTION_DEADLINE_DAYS) de un expediente NOTICE_ISSUED → el sistema lo cierra solo (NOTICE_ISSUED → CLOSED) y no toca los que no están vencidos | CP-168, CP-169 | `report-deadline.sweeper.spec.ts` › «cierra solo los NOTICE_ISSUED con el plazo vencido»<br>`report-deadline.sweeper.spec.ts` › «si la base no responde al arrancar, no tumba el arranq» | Pasó | — |
+| **CA-HU17-5** (Alternativo) hago POST /environmental-reports/:id/close con `{ reason }` opcional → el motivo queda en el historial y viaja a M2 como `internalMessage` sin cambiar el `publicMessage`; sin body o sin `reason` cierra como siempre | CP-389, CP-390, CP-391, CP-392 | `environmental-flow.e2e-spec.ts` › «con motivo: queda en el historial y viaja como internalMessage»<br>`environmental-reports.service.spec.ts` › «close con motivo lo deja en el historial y lo manda a M2 solo como internalMessage»<br>(+5 más) | Pasó | — |
+| **CA-HU17-6** (Error) envío un `reason` de más de 500 caracteres, vacío, que no sea texto, o un campo no declarado → recibo 400 y el expediente no se cierra | CP-393, CP-394 | `status-change.dto.spec.ts` › «rechaza %j con 400»<br>`environmental-flow.e2e-spec.ts` › «motivo de más de 500 caracteres: 400 y no cierra» | Pasó | — |
 
 ## HU-18 — Pedirle información adicional al vecino (INFORMATION_REQUIRED)
 
@@ -348,24 +352,24 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU33-1** (Feliz) corre npm run test:e2e → migra la base local y ejecuta las suites de test/ contra Postgres real | CP-281 | **HUECO** sin test automatizado: es la ejecución del job `e2e` del CI (`.github/workflows/ci.yml`, Postgres 16) | Pasó en el CI: 24 suites, 404 tests | DEF-14 (abierto): el job `e2e` no es check obligatorio |
+| **CA-HU33-1** (Feliz) corre npm run test:e2e → migra la base local y ejecuta las suites de test/ contra Postgres real | CP-281 | **HUECO** sin test automatizado: es la ejecución del job `e2e` del CI (`.github/workflows/ci.yml`, Postgres 16) | Pasó en el CI: 25 suites, 410 tests | — |
 | **CA-HU33-2** (Error) arrancan los e2e → el guard aborta antes de migrar y no toca la base desplegada | CP-282 | `guard-database-url.e2e-spec.ts` › «tira con un host remoto»<br>`guard-database-url.e2e-spec.ts` › «tira si no hay DATABASE_URL»<br>(+1 más) | Pasó | — |
 | **CA-HU33-3** (Alternativo) corro el script → la segunda corrida no cambia nada y el simulacro no toca la base | CP-283 | `crew-user-id-migration.e2e-spec.ts` › «es idempotente: la segunda corrida no cambia nada»<br>`crew-user-id-migration.e2e-spec.ts` › «el simulacro imprime el plan, reporta lo que no tiene mapeo y no toca nada» | Pasó | — |
-| **CA-HU33-4** (Error) comparo los resultados → son idénticos (0 tests inestables) | CP-284 | **HUECO** sin test automatizado: es una medición | Pasó: 3 corridas locales idénticas (129 archivos, 3010 tests) y el CI con el mismo resultado | DEF-24 / [#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554) (cerrado por decisión del equipo) |
+| **CA-HU33-4** (Error) comparo los resultados → son idénticos (0 tests inestables) | CP-284 | **HUECO** sin test automatizado: es una medición | Pasó: 3 corridas locales idénticas (131 archivos, 3056 tests) y el CI con el mismo resultado | DEF-24 / [#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554) (cerrado por decisión del equipo) |
 
 ## Resumen de cobertura de la matriz
 
 Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/`, `test/` o `scripts/`; «solo FE» si cita solo el frontend; «hueco» si no cita ninguno.
 
-- HU con criterios: 33. Criterios: **177**. Casos: **382** ([04](04-especificacion-casos.md)). Todos los criterios tienen al menos un caso.
-- Con test automatizado del backend: **163** (92,1 %). Cinco son parciales (ver «Cobertura parcial declarada»).
-- Solo con test del frontend: **9** (5,1 %).
+- HU con criterios: 33. Criterios: **181**. Casos: **394** ([04](04-especificacion-casos.md)). Todos los criterios tienen al menos un caso.
+- Con test automatizado del backend: **167** (92,3 %). Cinco son parciales (ver «Cobertura parcial declarada»).
+- Solo con test del frontend: **9** (5,0 %).
 - **Huecos: 5** (2,8 %): CA-HU01-3, CA-HU10-2, CA-HU24-2, CA-HU33-1 y CA-HU33-4.
-- Resultado: los 163 criterios con test del backend **pasan**; 0 fallados, 0 bloqueados.
+- Resultado: los 167 criterios con test del backend **pasan**; 0 fallados, 0 bloqueados.
 
 | HU | Criterios | Con test del backend | Solo FE | Huecos |
 |---|---|---|---|---|
-| HU-01 | 4 | 0 | 3 | 1 |
+| HU-01 | 6 | 2 | 3 | 1 |
 | HU-02 | 7 | 7 | 0 | 0 |
 | HU-03 | 6 | 6 | 0 | 0 |
 | HU-04 | 6 | 6 | 0 | 0 |
@@ -381,7 +385,7 @@ Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/
 | HU-14 | 4 | 4 | 0 | 0 |
 | HU-15 | 5 | 5 | 0 | 0 |
 | HU-16 | 8 | 8 | 0 | 0 |
-| HU-17 | 4 | 4 | 0 | 0 |
+| HU-17 | 6 | 6 | 0 | 0 |
 | HU-18 | 4 | 4 | 0 | 0 |
 | HU-19 | 3 | 3 | 0 | 0 |
 | HU-20 | 5 | 5 | 0 | 0 |
@@ -398,7 +402,7 @@ Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/
 | HU-31 | 14 | 14 | 0 | 0 |
 | HU-32 | 4 | 3 | 1 | 0 |
 | HU-33 | 4 | 2 | 0 | 2 |
-| **Total** | **177** | **163** | **9** | **5** |
+| **Total** | **181** | **167** | **9** | **5** |
 
 ## Correcciones posteriores a las HU
 
@@ -499,5 +503,5 @@ Defectos del [registro](06-registro-defectos.md) que no cuelgan de un criterio c
 | `CORS_ORIGINS` opcional; desde #642 obligatoria en producción | DEF-18 | Cerrado (#642) |
 | Primer `docker compose up` en frío fallaba por `rabbitmq-setup` | DEF-23 | Cerrado (#584) |
 | Inyección SQL y XSS almacenado en campos de texto | CP-348, `test/security-input.e2e-spec.ts` (9 tests: 3 payloads × zona, expediente y servicio). La API guarda los payloads como texto y los devuelve idénticos; no los rechaza ni los escapa | Pasó |
-| Colección Newman (570 requests, 1015 assertions, 0 fallidas; éxito en 151 de 152 operaciones y error en 149 de 152) y Schemathesis (4432 casos de esquema y 4426 en `status_code_conformance`, solo `GET`) | `test/api/`, `scripts/check-api-coverage.mjs`, `.github/workflows/api-tests.yml`; ver [05-informe-ejecucion.md](05-informe-ejecucion.md) | Corren en el CI; la cobertura por operación se exige con `npm run api:coverage` (CA-HU31-14) |
+| Colección Newman (570 requests, 1015 assertions, 0 fallidas; éxito en 151 de 152 operaciones y error en 149 de 152) y Schemathesis (4681 casos de esquema y 4674 en `status_code_conformance`, solo `GET`) | `test/api/`, `scripts/check-api-coverage.mjs`, `.github/workflows/api-tests.yml`; ver [05-informe-ejecucion.md](05-informe-ejecucion.md) | Corren en el CI; la cobertura por operación se exige con `npm run api:coverage` (CA-HU31-14) |
 | Prueba de carga con k6 (50 usuarios, 5 min, `GET /services`, `/containers` y `/zones`) | `test/perf/k6-criticos.js` y `test/perf/resultados/2026-11-09/`; ver [05-informe-ejecucion.md](05-informe-ejecucion.md) sección 2.1 | Local, solo lecturas: p(95) 32,84 ms, 0,00 % de error; no corre en el CI |

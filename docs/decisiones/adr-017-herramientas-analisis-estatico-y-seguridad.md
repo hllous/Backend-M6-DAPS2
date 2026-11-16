@@ -177,3 +177,7 @@ Validación: las corridas finales sobre `main` del 16/11/2026 están enlazadas e
 ## Nota de corrección 2026-11-16 (#700)
 
 El paso 2 de la opción C se aplicó: `sonar.qualitygate.wait=true` en el CI, así que el job `sonar` falla si el gate da rojo, y la cobertura mínima del repo pasó a 90 % (#660). Lo que la consecuencia «el gate de Sonar no es bloqueante todavía» describe vale solo hasta ese cambio. Que `sonar` sea check requerido en la protección de ramas sigue dependiendo del líder.
+
+## Nota de corrección 2026-11-16 (#692)
+
+`sonar` quedó como check requerido en la protección de ramas, junto con `build`, `test`, `e2e` y `secrets` (`.github/branch-protection-rules.json`). La frase anterior, que lo hacía depender del líder, ya no aplica: el paso 2 de la opción C está completo.

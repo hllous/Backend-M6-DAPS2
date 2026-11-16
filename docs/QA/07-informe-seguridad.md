@@ -2,7 +2,7 @@
 
 > Versión 2.2 · 16/11/2026
 
-Base: criterios SEC de la Clase 11 (OWASP ASVS 5.0, OWASP API Security Top 10, Ley 25.326) y pruebas de seguridad de la consigna. Medido sobre `develop` @ `50cfff7` (3010 unitarios y 404 e2e en verde, CI [43908234945](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43908234945)); cifras de cada herramienta en [`05`](05-informe-ejecucion.md).
+Base: criterios SEC de la Clase 11 (OWASP ASVS 5.0, OWASP API Security Top 10, Ley 25.326) y pruebas de seguridad de la consigna. Medido sobre `develop` @ `53cde64` (3056 unitarios y 410 e2e en verde, CI [43927922346](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43927922346)); cifras de cada herramienta en [`05`](05-informe-ejecucion.md).
 
 ## 1. Método
 

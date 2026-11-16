@@ -34,12 +34,12 @@ Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estru
 
 | Nivel | Qué existe |
 |---|---|
-| **Unitario** (backend) | 129 suites, 3010 tests; cobertura de 98,71 % de líneas y 95,28 % de ramas; umbral de 90 % global y por archivo en 7 servicios críticos. Incluye 114 tests de transiciones inválidas |
+| **Unitario** (backend) | 131 suites, 3056 tests; cobertura de 98,71 % de líneas y 95,28 % de ramas; umbral de 90 % global y por archivo en 7 servicios críticos. Incluye 114 tests de transiciones inválidas |
 | **Mutation testing** | Stryker sobre los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules`: score 76,11 %; workflow `mutation.yml` |
 | **Unitario** (frontend) | Vitest en el CI; cobertura medida en SonarCloud (85,4 %) |
-| **Integración / e2e** (backend) | 24 suites y 404 tests en `test/` contra `postgres:16`, más 2 suites y 8 tests de RabbitMQ real; job `e2e` del CI; guard que impide apuntar a una base no local |
+| **Integración / e2e** (backend) | 25 suites y 410 tests en `test/` contra `postgres:16`, más 2 suites y 8 tests de RabbitMQ real; job `e2e` del CI; guard que impide apuntar a una base no local |
 | **E2E de usuario** (frontend) | Playwright en shards en el CI |
-| **Contrato** | `openapi-contract.spec.ts` (7 tests), `payloads.spec.ts` (ajv contra los `.schema.json`), `openapi.json` al día en el CI; Schemathesis solo `GET`: 4432 casos de esquema y `status_code_conformance` bloqueante |
+| **Contrato** | `openapi-contract.spec.ts` (7 tests), `payloads.spec.ts` (ajv contra los `.schema.json`), `openapi.json` al día en el CI; Schemathesis solo `GET`: 4681 casos de esquema y `status_code_conformance` bloqueante |
 | **API** | Colección Newman (`test/api/`): 570 requests y 1015 assertions en el CI; éxito en 151 de 152 operaciones y error en 149 de 152, con excepciones en `test/api/PENDIENTES.md`; `npm run api:coverage` falla si una operación queda sin caso ni excepción |
 | **Estado** | `assertTransition` con tablas por entidad; 114 tests parametrizados; e2e `services-lifecycle`; `etag-if-match` (concurrencia real `[200, 412]`) |
 | **Idempotencia** | `idempotency.interceptor.spec.ts` y `test/idempotency.e2e-spec.ts` (21 `POST`) |
@@ -55,7 +55,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estru
 |---|---|---|
 | **Local** | Desarrollo, unitarios y e2e | `npm run prisma:seed` para demo; los e2e truncan las tablas: base descartable (`docs/testing.md`) |
 | **Local con `docker compose`** | Sistema completo con un comando | El seed corre solo; sin `.env` usa valores de ejemplo. Postgres y RabbitMQ solo en `127.0.0.1` |
-| **CI (GitHub Actions)** | `build`, `test`, `sonar`, `e2e`, `secrets`, `secrets-default`, `audit`, `trivy` y `deploy`; workflows `API tests`, `CodeQL Advanced`, `Mutation testing`, `dast`, `g1-arranque` y `Cerrar issues al integrar` | Son checks obligatorios `build` y `test`; `e2e` corre y no bloquea (DEF-14). `audit` y `trivy` frenan el deploy; `sonar` falla el job si el gate da rojo |
+| **CI (GitHub Actions)** | `build`, `test`, `sonar`, `e2e`, `secrets`, `secrets-default`, `audit`, `trivy` y `deploy`; workflows `API tests`, `CodeQL Advanced`, `Mutation testing`, `dast`, `g1-arranque` y `Cerrar issues al integrar` | Son checks obligatorios `build`, `test`, `e2e`, `sonar` y `secrets`. `audit` y `trivy` frenan el deploy; `sonar` falla el job si el gate da rojo |
 | **Entorno efímero de ZAP** | `docker compose` dentro del job `dast` (base y broker descartables, seed de demo), solo para el escaneo activo | Nunca contra Render: escribe datos y publicaría al bus del Core |
 | **Render + Supabase** | Backend desplegado de la demo | El plan gratuito se duerme (R7) |
 | **Vercel** | Frontend desplegado de la demo | Contra el backend de Render |
@@ -82,12 +82,12 @@ Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estru
 | Cobertura de ramas en dominio | ≥ 70 % | 95,28 % global; 95,93 % en `src/modules` | Sí |
 | Mutation score en dominio | ≥ 60 % | 76,11 % | Sí |
 | HU del alcance ejecutadas | 100 % | HU con test del backend sí; 9 criterios solo frontend y 5 huecos ([`03`](03-matriz-trazabilidad.md)) | Parcial |
-| Criterios de aceptación pasados | ≥ 95 %, sin fallos en `MUST` | 163 de 177 con test del backend pasan; 0 fallados | Parcial |
-| Casos negativos o de borde | ≥ 40 % | 67,8 % (259 de 382) | Sí |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 1 Mayor con workaround (DEF-32); 10 Menores | Sí |
+| Criterios de aceptación pasados | ≥ 95 %, sin fallos en `MUST` | 167 de 181 con test del backend pasan; 0 fallados | Parcial |
+| Casos negativos o de borde | ≥ 40 % | 67,8 % (267 de 394) | Sí |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 7 Menores | Sí |
 | Tests flaky | 0 (3 corridas idénticas) | 3 corridas locales y el CI idénticos | Sí |
-| Pipeline | ≤ 15 min | 3 min 7 s | Sí |
-| Escenarios críticos E2E en el pipeline | ≥ 5 | Job `e2e`: 24 suites y 404 tests | Sí |
+| Pipeline | ≤ 15 min | 2 min 23 s | Sí |
+| Escenarios críticos E2E en el pipeline | ≥ 5 | Job `e2e`: 25 suites y 410 tests | Sí |
 | Quality Gate (SonarCloud) | Verde, 0 bugs, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % hotspots | Gate OK; 0 / 0; 1,2 %; A/A/A; 100 % | Sí |
 | ZAP: baseline y activo | 0 High, cada Medium justificada | 0 High; 1 Medium en cada uno, justificadas en [`07`](07-informe-seguridad.md) | Sí |
 | Dependencias (Trivy y `npm audit`) | 0 críticas o altas sin mitigación | 0 HIGH/CRITICAL; `npm audit` en 0 | Sí |
@@ -110,7 +110,7 @@ Probabilidad (P) e impacto (I) de 1 a 3; prioridad = P × I. Se listan los de pr
 | R13 | Tests flaky o que no detectan una mutación | 2 | 2 | 4 | Parcial: 3 corridas idénticas y mutation 76,11 %; DEF-29 a DEF-31 en el frontend |
 | R14 | Dependencia con vulnerabilidad conocida | 2 | 2 | 4 | Cubierto: `npm audit` en 0, job `audit` gate, Dependabot y Trivy |
 | R17 | El primer `docker compose up` en frío falla | 2 | 2 | 4 | Cubierto: `g1-arranque.yml` en el CI |
-| R21 | Un cliente sin `If-Match` o sin parser de `application/problem+json` pierde la protección o rompe al leer errores | 2 | 2 | 4 | Parcial: backend cubierto (`etag-if-match`, `problem-details`); frontend en DEF-32 |
+| R21 | Un cliente sin `If-Match` o sin parser de `application/problem+json` pierde la protección o rompe al leer errores | 2 | 2 | 4 | Cubierto: backend (`etag-if-match`, `problem-details`); frontend propaga `ETag` e `If-Match` (FE #973) |
 
 R3 y R7 son los de mayor prioridad y se mitigan principalmente con ensayo previo.
 
