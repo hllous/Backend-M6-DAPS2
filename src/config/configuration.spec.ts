@@ -334,8 +334,8 @@ describe('configuration — catálogo de barrios local', () => {
 });
 
 describe('configuration — M1', () => {
-  it('M1_TIMEOUT_MS: default 5000, configurable y acotado', () => {
-    expect(config().m1.timeoutMs).toBe(5000);
+  it('M1_TIMEOUT_MS: default 4000, configurable y acotado', () => {
+    expect(config().m1.timeoutMs).toBe(4000);
     expect(config({ M1_TIMEOUT_MS: '2000' }).m1.timeoutMs).toBe(2000);
     expect(() => config({ M1_TIMEOUT_MS: '10' })).toThrow();
     expect(() => config({ M1_TIMEOUT_MS: '120000' })).toThrow();
