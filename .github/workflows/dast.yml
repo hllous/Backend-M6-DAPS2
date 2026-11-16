@@ -1,0 +1,188 @@
+# ──────────────────────────────────────────────────────────────
+# dast — OWASP ZAP sobre el backend (#659, spec #656; DEF-13).
+#
+#   baseline  Escaneo PASIVO contra el despliegue de Render: headers reales (CSP, HSTS,
+#             nosniff) del entorno que ve la cátedra. No ataca: solo observa respuestas.
+#   active    API scan ACTIVO y autenticado contra un entorno EFÍMERO levantado acá con
+#             docker-compose.yml (base y broker descartables) y el OpenAPI versionado.
+#
+# El activo NUNCA va contra Render: escribe datos, choca con el límite de 600 req/min por
+# IP y publicaría eventos al bus del Core. Por eso su URL es localhost y no sale de
+# ninguna variable.
+#
+# Corre a demanda y una vez por semana; no se engancha al deploy (que es asíncrono).
+# Sin reglas ignoradas: toda regla que se ignore después va con su justificación en
+# docs/QA/07-informe-seguridad.md. Reportes HTML/JSON/MD como artifact (90 días); la
+# corrida final se archiva en docs/QA/evidencia/.
+# La corrida falla ante cualquier alerta High (riskcode 3). Las Medium no cortan: se
+# justifican una por una en el informe de seguridad.
+# ──────────────────────────────────────────────────────────────
+
+name: dast
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Lunes 06:00 UTC.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dast-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  baseline:
+    name: zap baseline (Render)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: URL del despliegue
+        env:
+          # Misma variable del repositorio que usa keepalive.yml (termina en /health).
+          HEALTH_URL: ${{ vars.RENDER_HEALTH_URL }}
+        run: |
+          if [ -z "$HEALTH_URL" ]; then
+            echo "::error::RENDER_HEALTH_URL no está configurada (Settings › Secrets and variables › Actions › Variables)."
+            exit 1
+          fi
+          BASE="${HEALTH_URL%/health}"
+          echo "ZAP_TARGET=$BASE/api/docs" >> "$GITHUB_ENV"
+          # Despertar el free tier: el primer pedido tarda 30-90 s.
+          curl -s -o /dev/null --max-time 180 --retry 2 --retry-all-errors --retry-delay 15 "$HEALTH_URL" || true
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: ZAP baseline
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: ${{ env.ZAP_TARGET }}
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: zap-baseline
+          # -a: incluye las reglas alfa. Sin -I el exit code refleja WARN/FAIL, que
+          # fail_action: false deja pasar; el gate de abajo corta solo ante High.
+          cmd_options: '-a'
+
+      - name: Gate High
+        run: |
+          set -eu
+          alto=$(jq '[.site[].alerts[] | select(.riskcode=="3")] | length' report_json.json)
+          jq -r '.site[].alerts[] | "\(.riskdesc)\t\(.name)\t\(.instances|length) instancia(s)"' report_json.json | sort
+          echo "Alertas High: $alto"
+          [ "$alto" -eq 0 ] || { echo "::error::ZAP baseline reportó $alto alerta(s) High"; exit 1; }
+
+  active:
+    name: zap activo autenticado (efímero)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      POSTGRES_USER: m6
+      POSTGRES_PASSWORD: zapefimero
+      POSTGRES_DB: m6_zap
+      RABBITMQ_USER: m6
+      RABBITMQ_PASSWORD: zapefimero
+      COMPOSE: docker compose -f docker-compose.yml -f .github/dast/compose.dast.yml
+    steps:
+      # Secreto efímero de este job (base64 de 32 bytes), como en api-tests.yml.
+      - name: JWT_SECRET de prueba
+        run: |
+          S=$(openssl rand -base64 32)
+          echo "::add-mask::$S"
+          echo "JWT_SECRET=$S" >> "$GITHUB_ENV"
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Levantar el stack (base, broker y backend descartables)
+        run: $COMPOSE up -d --build --wait --wait-timeout 300
+
+      - name: Sembrar el seed de demo
+        run: $COMPOSE --profile seed run --rm seed
+
+      - name: Esperar /health/ready
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/health/ready && exit 0
+            sleep 2
+          done
+          echo "::error::El backend no respondió en /health/ready"
+          $COMPOSE logs backend
+          exit 1
+
+      - name: Token de admin
+        run: |
+          T=$(node test/api/make-token.mjs admin)
+          echo "::add-mask::$T"
+          echo "ADMIN_TOKEN=$T" >> "$GITHUB_ENV"
+          # Verificar que el token autentica antes de gastar el escaneo.
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $T" http://localhost:3000/me)
+          echo "GET /me con el token → $codigo"
+          [ "$codigo" = "200" ] || { echo "::error::El token de prueba no autentica ($codigo)"; exit 1; }
+
+      # Proxy de registro delante del backend: deja una línea por pedido de ZAP con su código
+      # de respuesta y si llevó Authorization (evidencia de #659; ZAP no la entrega).
+      - name: Proxy de registro
+        run: |
+          node .github/dast/proxy.mjs 3001 3000 zap-requests.log > proxy.out 2>&1 &
+          sleep 2
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3001/me)
+          [ "$codigo" = "200" ] || { echo "::error::El proxy no reenvía bien ($codigo)"; cat proxy.out; exit 1; }
+          : > zap-requests.log
+
+      # Autenticación: ZAP_AUTH_HEADER_VALUE es la vía soportada del contenedor de ZAP (la
+      # action la reenvía con -e): arma un replacer que pone el header Authorization en TODOS
+      # los pedidos del escaneo. Se probó antes con `-z "-config replacer..."`, pero la action
+      # parte cmd_options por espacios, descarta las comillas y el valor "Bearer <token>" se rompe.
+      - name: ZAP API scan activo
+        uses: zaproxy/action-api-scan@5158fe4d9d8fcc75ea204db81317cce7f9e5453d # v0.10.0
+        env:
+          ZAP_AUTH_HEADER: Authorization
+          ZAP_AUTH_HEADER_VALUE: Bearer ${{ env.ADMIN_TOKEN }}
+        with:
+          target: docs/api/openapi.json
+          format: openapi
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: zap-active
+          cmd_options: -O http://localhost:3001 -a
+
+      - name: Evidencia de autenticación (códigos de respuesta del escaneo)
+        if: always()
+        run: |
+          {
+            echo "### Respuestas del backend al escaneo activo"
+            echo "- Pedidos totales: $(wc -l < zap-requests.log)"
+            echo "- Con header Authorization: $(grep -c 'auth=Bearer' zap-requests.log || true)"
+            echo "- Por código:"
+            awk '{print $3}' zap-requests.log | sort | uniq -c | sort -rn | sed 's/^/    /'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Gate High
+        run: |
+          set -eu
+          alto=$(jq '[.site[].alerts[] | select(.riskcode=="3")] | length' report_json.json)
+          jq -r '.site[].alerts[] | "\(.riskdesc)\t\(.name)\t\(.instances|length) instancia(s)"' report_json.json | sort
+          echo "Alertas High: $alto"
+          [ "$alto" -eq 0 ] || { echo "::error::ZAP activo reportó $alto alerta(s) High"; exit 1; }
+
+      - name: Logs del backend
+        if: always()
+        run: $COMPOSE logs --no-color backend > backend.log 2>&1 || true
+
+      - name: Subir logs del backend
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-active-backend-log
+          path: |
+            backend.log
+            zap-requests.log
+          if-no-files-found: ignore
+
+      - name: Bajar el stack
+        if: always()
+        run: $COMPOSE down -v

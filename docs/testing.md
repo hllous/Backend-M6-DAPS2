@@ -112,3 +112,12 @@ En el workflow, el modo incremental de Stryker se conserva entre corridas con `a
 **Windows:** si Stryker termina con «No tests were executed», el `vitest.related` por defecto del runner no encontró los tests relacionados; se corre con `"vitest": { "configFile": "vitest.config.ts", "related": false }` en una copia de la config fuera del repo (`-c <copia>`). El CI de Linux no lo necesita.
 
 Resultados (global en CI 71,22 % → 75,39 % tras el refuerzo, score por archivo, antes y después de los 5 archivos reforzados, lo que queda sin cubrir y por qué): [`QA/05-informe-ejecucion.md`](QA/05-informe-ejecucion.md) §5.1. Antecedente (#577): `outbound-requests.transitions.ts` y `street-closure-expiry.sweeper.ts` fueron los primeros en medirse, con 100 % tras sumar aserciones al log del sweeper.
+
+## Escaneo de seguridad dinámico (OWASP ZAP, #659)
+
+Workflow [`dast.yml`](../.github/workflows/dast.yml): `workflow_dispatch` y corrida semanal (lunes 06:00 UTC); no se engancha al deploy. Dos jobs:
+
+- **baseline**: `zaproxy/action-baseline` pasivo contra Render (`/api/docs`). La URL sale de la variable de Actions `RENDER_HEALTH_URL` (la misma de `keepalive.yml`, sin el `/health`).
+- **active**: `zaproxy/action-api-scan` activo contra un `docker compose` efímero (base y broker descartables, `JWT_SECRET` de prueba, seed de demo) con `docs/api/openapi.json`. Autentica con un token admin de `test/api/make-token.mjs` (`ZAP_AUTH_HEADER_VALUE`). El override `.github/dast/compose.dast.yml` sube `THROTTLE_LIMIT` solo ahí; un proxy de registro (`.github/dast/proxy.mjs`) deja el recuento de códigos de respuesta como prueba de autenticación.
+
+**El activo nunca va contra Render**: escribe datos, choca con el límite de 600 req/min y publicaría al bus del Core. Ambos jobs fallan ante una alerta High; las Medium se justifican una por una en [`QA/07-informe-seguridad.md`](QA/07-informe-seguridad.md) §5.2. Sin reglas ignoradas. Los reportes son artifacts (90 días); la corrida final se archiva en `docs/QA/evidencia/`. Para correrlo en una rama hace falta que el workflow esté en `main` (límite de `workflow_dispatch`) o un `push` temporal.
