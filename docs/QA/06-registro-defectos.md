@@ -112,6 +112,7 @@ El detalle (causa raíz, PR, commit y CI) está en los issues cerrados del repos
 | DEF-22 | Los logs registraban el `access_token` de la query | [#569](https://github.com/hllous/Backend-M6-DAPS2/issues/569) |
 | DEF-23 | El primer `docker compose up` en frío fallaba en `rabbitmq-setup` | [#567](https://github.com/hllous/Backend-M6-DAPS2/issues/567) |
 | DEF-24 | e2e intermitente por `e2e_no_active`; cerrado por decisión del equipo, **causa raíz sin confirmar** (si vuelve, se reabre) | [#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554) |
+| DEF-25 | ZAP (baseline contra Render) marcó 1 High: DOMPurify 3.1.4 en el `swagger-ui-bundle.js` de `/api/docs`. **Causa raíz:** el bundle viene de `swagger-ui-dist` (vía `@nestjs/swagger`) y `main` seguía con `@nestjs/swagger` 7.4.2 / `swagger-ui-dist` 5.17.14; `npm audit` no ve el JS embebido. **Corregido** en `develop` por #628 (`swagger-ui-dist` 5.34.1, DOMPurify 3.4.17 verificada en el bundle instalado); no hizo falta tocar dependencias. Queda en 0 High cuando `develop` llegue a `main` y Render despliegue | [#668](https://github.com/hllous/Backend-M6-DAPS2/issues/668) |
 
 ### Hallazgos de proceso (no son defectos del producto)
 

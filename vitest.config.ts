@@ -16,6 +16,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reportsDirectory: 'coverage',
+      // lcov: lo consume SonarCloud (job `sonar` del CI, #657). text e html son los de siempre.
+      reporter: ['text', 'html', 'clover', 'json', 'lcov'],
       include: ['src/**/*.{ts,js}', 'scripts/migrate-crew-user-ids.ts'],
       exclude: [
         '**/*.spec.ts',
