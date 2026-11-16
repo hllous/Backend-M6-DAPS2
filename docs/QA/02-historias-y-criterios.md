@@ -1,6 +1,8 @@
 # 02 · Historias de usuario y criterios de aceptación
 
-> Versión 2.0 · 10/11/2026. Módulo 6 «Ambiente e Higiene», Grupo 04.
+> Versión 2.2 · 16/11/2026
+
+Módulo 6 «Ambiente e Higiene», Grupo 04.
 
 ## Cómo se armó
 
@@ -10,7 +12,7 @@
 - **Tipos de criterio:** Feliz (camino principal), Alternativo (otra variante válida o un borde), Error (entrada o estado inválido) y Falla externa (cae un sistema del que depende: M1, M2, M3, M4, M7, M9, el bus, el Core, el almacenamiento).
 - **† = criterio propuesto por nosotros, a validar con el PO.** Los que vienen de Trello (HU de R2 y tarjetas SEC de la Clase 11) no llevan marca; algunos se adaptaron al comportamiento real del código. Los criterios agregados por una corrección posterior (ACT-nn, ver [03-matriz-trazabilidad.md](03-matriz-trazabilidad.md)) también son propuestos y se numeran a continuación del último de la HU.
 - **MoSCoW:** el de Trello cuando figura (R2 MUST, R3 COULD); las HU del MVP entregado se consideran Must; para las de R2 sin prioridad en Trello propusimos una.
-- **Regla de cierre:** ningún criterio de una HU Must puede fallar al cierre. Las HU Must con trabajo abierto son HU-20, HU-24 y HU-30 (ver «Riesgos» al final); el criterio SEC-D02 de HU-31 se cerró con #643.
+- **Regla de cierre:** ningún criterio de una HU Must puede fallar al cierre. Lo abierto está en «Riesgos de cierre», al final.
 
 ## Resumen
 
@@ -46,12 +48,12 @@
 | HU-28 | Tablero de indicadores (cobertura, cumplimiento, incidencias y residuos) | Oficina | Must | MVP | 6 |
 | HU-29 | Ver y hacer solo lo que mi rol permite, con el rol que viene de M1 | Oficina y Campo | Must | R2 | 7 |
 | HU-30 | Activar la autenticación real de M1 con sesión sellada en el BFF | Oficina y Campo | Must | R2 | 4 |
-| HU-31 | Seguridad de la Clase 11 (SEC-W01 a W06, SEC-I01, SEC-I02, SEC-D01, SEC-D02) | equipo de M6 | Must | MVP | 12 |
+| HU-31 | Seguridad de la Clase 11 (SEC-W01 a W06, SEC-I01, SEC-I02, SEC-D01, SEC-D02) | equipo de M6 | Must | MVP | 14 |
 | HU-32 | Release hardening (Fase 8): observabilidad, promoción y rollback, WCAG 2.2 AA, privacidad y GA | equipo de M6 | Could | R3 | 4 |
 | HU-33 | e2e con datos deterministas y shards balanceados | equipo de M6 | Could | R3 | 4 |
 | HU-34 a HU-36 | Fuera de alcance (Won't) | — | Won't | — | 0 |
 
-Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera de alcance.
+Total: 33 HU con criterios, 177 criterios (146 propuestos por QA) y 3 HU fuera de alcance.
 
 ## HU-01 — Catálogos con tablas filtrables, componentes uniformes y estados de carga
 
@@ -340,7 +342,7 @@ Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera d
 - **Como** Oficina **quiero** que la demo muestre fechas legibles y nombres en lugar de UUID **para** entender los datos de un vistazo.
 - **Prioridad:** Could (propuesta) · **Release:** R2 · **Estado:** Entregado (FE #321)
 
-- **CA-HU26-1** (Feliz): **DADO** cualquier listado, **CUANDO** se muestra una fecha, **ENTONCES** está en formato argentino dd/mm/aaaa hh:mm y en el día local. — *Agregado por ACT-F4*
+- **CA-HU26-1** (Feliz): **DADO** cualquier listado, **CUANDO** se muestra una fecha, **ENTONCES** está en formato argentino dd/mm/aaaa, hh:mm (con coma y reloj de 24 h) y en el día local. — *Agregado por ACT-F4*
 - **CA-HU26-2** (Feliz): **DADO** un listado con referencias a otras entidades, **CUANDO** lo veo, **ENTONCES** leo el nombre o el código, no el UUID. — *Agregado por ACT-F4*
 - **CA-HU26-3** (Error†): **DADO** una hora cercana a medianoche donde UTC ya es el día siguiente, **CUANDO** se muestra la fecha, **ENTONCES** se muestra el día de Argentina (UTC-3), no el de UTC.
 
@@ -386,20 +388,20 @@ Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera d
 - **Prioridad:** Must (Trello, R2 MUST) · **Release:** R2 · **Estado:** Backend hecho el 3/11 (#488: secreto vigente en Render, login real + `GET /me` en 200); el frontend retiró el modo backend-development en FE #800 (cerrado el 04/11)
 
 - **CA-HU30-1** (Feliz†): **DADO** la cuenta de un empleado en M1 y el secreto vigente de M1 cargado en el backend (JWT_SECRET, JWT_ISSUER), **CUANDO** inicio sesión por el BFF (POST {M1}/auth/usuario/login) y consulto GET /me, **ENTONCES** recibo 200 con mis roles de M6; el JWT de M1 va en una cookie sellada httpOnly y nunca llega al navegador.
-- **CA-HU30-2** (Error†): **DADO** un JWT firmado con un secreto distinto del cargado en el backend, **CUANDO** llamo a un endpoint protegido, **ENTONCES** recibo 401 (hoy sucede en Render hasta que se cargue el secreto vigente de M1).
+- **CA-HU30-2** (Error†): **DADO** un JWT firmado con un secreto distinto del cargado en el backend, **CUANDO** llamo a un endpoint protegido, **ENTONCES** recibo 401.
 - **CA-HU30-3** (Error†): **DADO** una sesión vencida o un 401 del backend, **CUANDO** navego, **ENTONCES** el BFF reintenta una vez con refresh y, si falla, redirige al login con el aviso de sesión vencida. — *Agregado por ACT-F7*
-- **CA-HU30-4** (Falla externa†): **DADO** que M1 no responde o devuelve 5xx al iniciar sesión, o que el build desplegado no está en modo real-m1, **CUANDO** inicio sesión, **ENTONCES** el BFF corta a los 15 s con un mensaje de error; un build deployado en un modo distinto de real-m1 falla al arrancar (fail closed, FE #800).
+- **CA-HU30-4** (Falla externa†): **DADO** que M1 no responde o devuelve 5xx al iniciar sesión, o que el build desplegado no está en modo real-m1, **CUANDO** inicio sesión, **ENTONCES** el BFF corta a los 90 s con un mensaje de error; un build deployado en un modo distinto de real-m1 falla al arrancar (fail closed, FE #800).
 
 ## HU-31 — Seguridad de la Clase 11 (SEC-W01 a W06, SEC-I01, SEC-I02, SEC-D01, SEC-D02)
 
 - **Como** equipo de M6 **quiero** cumplir los criterios de seguridad de la Clase 11 **para** proteger los datos y la operación del módulo.
-- **Prioridad:** Must (MVP entregado) · **Release:** MVP · **Estado:** Entregado. Los veredictos de las tarjetas SEC se revalidaron contra el código actual
+- **Prioridad:** Must (MVP entregado) · **Release:** MVP · **Estado:** Entregado
 
 - **CA-HU31-1** (Error): **DADO** un endpoint protegido (SEC-W01), **CUANDO** se invoca sin token, con token vencido, con firma de otro secreto o con alg "none", **ENTONCES** los cuatro casos responden 401 con el formato de error estándar y sin datos del recurso. — *Corregido por ACT-02*
 - **CA-HU31-2** (Error): **DADO** un usuario autenticado sin el rol de supervisión (SEC-W02), **CUANDO** envía POST /services con un body válido, **ENTONCES** recibe 403 y no se crea ningún servicio. — *Corregido por ACT-01*
 - **CA-HU31-3** (Error): **DADO** una consulta anónima al portal (SEC-W03), **CUANDO** consulta con el publicId, con un ticketId válido o más de 20 veces por minuto, **ENTONCES** 404 sin datos, solo etapa, tipo, dirección y fechas, y 429 respectivamente.
 - **CA-HU31-4** (Error): **DADO** un supervisor autenticado y un servicio SCHEDULED (SEC-W04), **CUANDO** envía PATCH /services/:id con status "COMPLETED" u otro campo fuera del DTO, **ENTONCES** recibe 400 y el estado en la base no cambia.
-- **CA-HU31-5** (Error): **DADO** una falla interna forzada (SEC-W05), **CUANDO** se invoca el endpoint, **ENTONCES** responde 500 con mensaje genérico, sin stack ni SQL; el id de correlación en el log no está implementado (limitación conocida).
+- **CA-HU31-5** (Error): **DADO** una falla interna forzada (SEC-W05), **CUANDO** se invoca el endpoint, **ENTONCES** responde 500 con mensaje genérico, sin stack ni SQL, y con un `traceId` igual al header `X-Request-Id` y al del log; `path` e `instance` no incluyen la query.
 - **CA-HU31-6** (Error): **DADO** un archivo cuyo contenido no coincide con el tipo, de más de 10 MB o con EXIF (SEC-W06), **CUANDO** se sube a POST /evidence, **ENTONCES** 400, 413 y 201 sin EXIF respectivamente.
 - **CA-HU31-7** (Alternativo): **DADO** un evento ya recibido (SEC-I01), **CUANDO** llega por segunda vez, **ENTONCES** se registra como duplicate, sin volver a aplicar el efecto.
 - **CA-HU31-8** (Error): **DADO** un evento con campo obligatorio ausente o de tipo incorrecto (SEC-I02), **CUANDO** llega al inbox, **ENTONCES** 400 con qué corregir, sin efecto ni fila; la DLQ es del Core (decisión documentada).
@@ -407,6 +409,8 @@ Total: 33 HU con criterios, 175 criterios (144 propuestos por QA) y 3 HU fuera d
 - **CA-HU31-10** (Error): **DADO** un usuario autenticado que consulta una denuncia ambiental o un acta (SEC-D02), **CUANDO** las lee, **ENTONCES** se registra quién, cuándo y qué recurso consultó, sin copiar el contenido.
 - **CA-HU31-11** (Falla externa†): **DADO** un evento saliente que el broker o el Core rechazan cinco veces seguidas (SEC-I02, lado emisor), **CUANDO** corre el dispatcher, **ENTONCES** la fila queda FAILED con lastError y deja de barrerse, y solo M6_ADMIN la reencola con retry, con auditoría del actor; la DLQ y el backoff del reintento de entrada son del Core. — *Agregado por ACT-11*
 - **CA-HU31-12** (Alternativo†): **DADO** una alta o una transición de estado del dominio (contenedores, expedientes, inspecciones, actas, derivaciones, intervenciones, servicios y catálogos), **CUANDO** se ejecuta, **ENTONCES** queda una fila de auditoría de solo agregado con el actor del token, el estado de origen y destino y el motivo que el flujo ya pedía, en la misma transacción; una transición rechazada (409) no deja fila; GET /audit lo consultan solo M6_ADMIN y M6_AUDITOR. — *Agregado por ACT-12*
+- **CA-HU31-13** (Error†): **DADO** el backend levantado, **CUANDO** se corre el guion de seguridad en vivo (`test/security-live.e2e-spec.ts`, `scripts/security-live.mjs`), **ENTONCES** el JWT inválido da 401, el rol sin permiso da 403 `ROLE_REQUIRED`, una cuadrilla ajena da 403 `NOT_ASSIGNED` sin datos, el mass assignment da 400 sin persistir, la inyección no da 500, un origen ajeno no recibe `Access-Control-Allow-Origin`, las cabeceras de seguridad están presentes (con CSP propia en `/api/docs`) y el log no registra tokens.
+- **CA-HU31-14** (Error†): **DADO** el OpenAPI con sus operaciones, **CUANDO** corre `npm run api:coverage`, **ENTONCES** toda operación tiene un caso de éxito y uno de error en la colección Newman, o una excepción con motivo en `test/api/excepciones.json`; si falta alguno, el comando falla.
 
 ## HU-32 — Release hardening (Fase 8): observabilidad, promoción y rollback, WCAG 2.2 AA, privacidad y GA
 
@@ -438,13 +442,13 @@ Propuestas de alcance del tablero, a validar por el PO. No tienen criterios ni c
 
 ## Pendientes de validar con el PO
 
-- Los criterios propuestos (144, marcados con †) y la prioridad MoSCoW propuesta en HU-01, HU-04, HU-10, HU-14, HU-19, HU-21, HU-22, HU-25, HU-26 y HU-29.
+- Los criterios propuestos (146, marcados con †) y la prioridad MoSCoW propuesta en HU-01, HU-04, HU-10, HU-14, HU-19, HU-21, HU-22, HU-25, HU-26 y HU-29.
 - Si el filtro de fechas de HU-14 debe usar createdAt.
 
 ## Riesgos de cierre (HU Must con trabajo abierto)
 
-| HU | Qué falta | Referencia |
+| HU | Qué sigue abierto | Referencia |
 |---|---|---|
-| HU-20 | Paraguas del contrato definitivo de M9 | BE #257 |
-| HU-24 | Prueba pasiva desde Render y suscripción pruebaConexionM6; procedimiento local con el Core | BE #299, #442 |
-| HU-30 | Cargar el secreto vigente de M1 en Render y retirar el modo backend-development del BFF | BE #488, FE #800 |
+| HU-31 | Swagger UI público en producción y evidencia servida por URL pública del bucket | DEF-19 en [`06`](06-registro-defectos.md) |
+| HU-23 | La DLQ es del Core: M6 no puede verla ni reprocesarla | DEF-37, [BE #694](https://github.com/hllous/Backend-M6-DAPS2/issues/694) |
+| HU-03 | Alta y edición de cuadrillas esperan hasta 10 s con M1 caído | DEF-36, [BE #693](https://github.com/hllous/Backend-M6-DAPS2/issues/693) |

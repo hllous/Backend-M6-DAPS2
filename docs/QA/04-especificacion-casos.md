@@ -1,14 +1,16 @@
 # 04 · Especificación de casos de prueba
 
-> Versión 2.0 · 10/11/2026. Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [02-historias-y-criterios.md](02-historias-y-criterios.md) (ahí están el CUANDO y el ENTONCES) y figura en [03-matriz-trazabilidad.md](03-matriz-trazabilidad.md).
+> Versión 2.2 · 16/11/2026
+
+Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [02-historias-y-criterios.md](02-historias-y-criterios.md) (ahí están el CUANDO y el ENTONCES) y figura en [03-matriz-trazabilidad.md](03-matriz-trazabilidad.md).
 
 ## Cómo leerla
 
-- **Tipo:** Positivo (camino válido), Negativo (entrada o estado inválido, o falla externa que se rechaza) y Borde (límite, caso especial, concurrencia, degradación). Nos propusimos que al menos el 40 % sean negativos o de borde; el cálculo está al final.
+- **Tipo:** Positivo (camino válido), Negativo (entrada o estado inválido, o falla externa que se rechaza) y Borde (límite, caso especial, concurrencia, degradación). Se pide al menos 40 % negativos o de borde; el cálculo está al final.
 - **Escenario:** precondición y datos del caso. El resultado esperado es el ENTONCES del criterio; en las secciones de casos agregados (CP-335 en adelante) va después de la flecha.
 - **Prioridad:** la de la HU (Alta para Must, Media para Should, Baja para Could).
 - **Test:** archivo y nombre del test del backend (`FE:` indica un test del frontend, solo por nombre de archivo y sin revisar su contenido; `Manual:` indica que no hay test automático). Se muestran hasta dos por caso.
-- **Estado:** **Pasó** significa que el test citado existe y que la corrida completa no tuvo fallos: R08 (local sobre `1d600d2`: 2746 unitarios y 312 e2e, más 4 de 4 en RabbitMQ real) para CP-001 a CP-348 y R09 (local sobre `142e1a3`: 2854 unitarios y 343 e2e) para CP-349 en adelante. «Corregido: …» es un criterio que cambió después de la HU, con su ACT e issue. «—» es un caso que no se ejecutó (manual o solo test del frontend).
+- **Estado:** **Pasó** = el test citado existe y la corrida completa (3010 unitarios, 404 e2e y 8 de RabbitMQ real) no tuvo fallos. «Corregido: …» es un criterio que cambió después de la HU, con su ACT e issue. «—» es un caso manual o con test solo del frontend.
 - Los casos CP-285 en adelante pertenecen a criterios agregados con correcciones posteriores. Las rutas de test son de este repo, salvo las del frontend.
 
 
@@ -16,9 +18,9 @@
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-001 | CA-HU01-1 | Usuario con cualquier rol de M6; catálogo con más de 20 registros; Zonas: ordenar por nombre y filtrar por texto; página 2 | Positivo | FE: `catalog-shell.spec.ts`<br>FE: `zones-catalog.spec.ts` | Corregido: ACT-F1, FE #528, #520, #525; sin ejecutar |
-| CP-002 | CA-HU01-2 | Backend demorado a propósito (mock con retardo); Abrir Servicios y un catálogo de cada grupo | Positivo | FE: `catalog-a-loading.spec.ts`<br>FE: `catalog-b-loading.spec.ts`<br>(+1 más) | Corregido: ACT-F1, FE #528, #520, #525; sin ejecutar |
-| CP-003 | CA-HU01-3 | Pipeline de CI del repo Frontend-M6-DAPS2; Ejecutar el job de CI del frontend | Positivo | Manual: Guard de CI del frontend citado por Trello; no se localizó el script en esta pasada. | — |
+| CP-001 | CA-HU01-1 | Usuario con cualquier rol de M6; catálogo con más de 20 registros; Zonas: ordenar por nombre y filtrar por texto; página 2 | Positivo | FE: `catalog-shell.spec.ts`<br>FE: `zones-catalog.spec.ts` | Corregido: ACT-F1, FE #528, #520, #525 |
+| CP-002 | CA-HU01-2 | Backend demorado a propósito (mock con retardo); Abrir Servicios y un catálogo de cada grupo | Positivo | FE: `catalog-a-loading.spec.ts`<br>FE: `catalog-b-loading.spec.ts`<br>(+1 más) | Corregido: ACT-F1, FE #528, #520, #525 |
+| CP-003 | CA-HU01-3 | Pipeline de CI del repo Frontend-M6-DAPS2; Ejecutar el job de CI del frontend | Positivo | Manual: guard de CI del frontend | — |
 | CP-004 | CA-HU01-4 | Backend devolviendo 500 o sin responder; Abrir Zonas con GET /zones fallando | Negativo | FE: `failure-journeys.spec.ts` | — |
 
 ## HU-02 — Alta de zonas operativas y recorridos con paradas
@@ -182,7 +184,7 @@
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
 | CP-099 | CA-HU10-1 | Intervenciones con prioridades LOW, HIGH y CRITICAL; priority=HIGH | Positivo | `tree-interventions.service.spec.ts` › «filtra por prioridad combinada con tipo y estado»<br>FE: `tree-interventions.spec.ts` | Pasó (corregido: ACT-18, #293, #294, #340) |
-| CP-100 | CA-HU10-2 | Cualquier rol de M6; priority=URGENTE | Negativo | Manual: La validación del enum la hace el ValidationPipe; no se encontró un test específico del filtro priority en esta pasada. | — |
+| CP-100 | CA-HU10-2 | Cualquier rol de M6; priority=URGENTE | Negativo | Manual: la validación del enum la hace el ValidationPipe | — |
 | CP-101 | CA-HU10-3 | Filtro priority aplicado; GET /tree-interventions sin priority | Positivo | `tree-interventions.service.spec.ts` › «filtra por tipo y estado»<br>FE: `tree-interventions.spec.ts` | Pasó |
 
 ## HU-11 — Gestión de contenedores (desborde, daño, vaciado, reparación y reubicación)
@@ -217,7 +219,7 @@
 | CP-118 | CA-HU12-4 | Extracción PENDING_AUTHORIZATION; authorize con M6_OFICINA_OPERACIONES | Negativo | `tree-intervention-authorization.e2e-spec.ts` › «Operaciones no autoriza una extracción: 403 ROLE_REQUIRED y sigue pendiente»<br>`tree-intervention-authorization.e2e-spec.ts` › «Operaciones no rechaza una extracción: 403 ROLE_REQUIRED» | Pasó (corregido: ACT-08, #456) |
 | CP-119 | CA-HU12-4 | Extracción en REQUESTED; authorize | Negativo | `tree-interventions.service.spec.ts` › «no deja autorizar una extracción que sigue en REQUESTED» | Pasó |
 | CP-120 | CA-HU12-5 | Árbol existente; riskLevel HIGH sin riskType | Negativo | `tree-surveys.service.spec.ts` › «un riesgo %s sin riskType da 400 sin escribir nada» | Pasó |
-| CP-121 | CA-HU12-5 | Árbol existente; surveyedAt: mañana | Negativo | Manual: La regla de fecha futura figura en docs/api/endpoints.md; no se localizó un test específico en esta pasada. | — |
+| CP-121 | CA-HU12-5 | Árbol existente; surveyedAt: mañana | Negativo | Manual: regla de fecha futura de `docs/api/endpoints.md` | — |
 | CP-122 | CA-HU12-5 | Árbol inexistente; POST /trees/:id/surveys | Negativo | `tree-surveys.service.spec.ts` › «un árbol inexistente da 404 sin escribir nada» | Pasó |
 | CP-123 | CA-HU12-5 | Intervención REQUESTED; assign-service | Negativo | `tree-interventions.service.spec.ts` › «solo se programa lo autorizado» | Pasó |
 | CP-124 | CA-HU12-5 | Servicio que ya ejecuta otra intervención; assign-service | Negativo | `tree-interventions.service.spec.ts` › «un servicio que ya ejecuta otra intervención da 409» | Pasó |
@@ -387,8 +389,8 @@
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-219 | CA-HU24-1 | Procedimiento de docs/testing.md; token de módulo; publicar un evento y recibir otro por q.ambiente | Positivo | Manual: Prueba de integración manual/ambiental (sin test automatizado: no hay broker real en los tests). | — |
-| CP-220 | CA-HU24-2 | Backend desplegado en Render; prueba pasiva y suscripción pruebaConexionM6 | Positivo | Manual: Prueba manual en el ambiente desplegado; la evidencia está en el historial de integración (#442, cerrado el 05/11; la prueba con el Core real quedó en el historial de integración, sin test automatizado). | — |
+| CP-219 | CA-HU24-1 | Procedimiento de docs/testing.md; token de módulo; publicar un evento y recibir otro por q.ambiente | Positivo | Manual: prueba de integración contra el Core real; el consumo contra RabbitMQ real lo cubre `rabbitmq-real` | — |
+| CP-220 | CA-HU24-2 | Backend desplegado en Render; prueba pasiva y suscripción pruebaConexionM6 | Positivo | Manual: prueba en el ambiente desplegado; evidencia en el historial de integración (#442) | — |
 | CP-221 | CA-HU24-3 | Core sin la suscripción de M6; arranque con RABBITMQ_URL | Negativo | `rabbitmq.consumer.spec.ts` › «sin la cola (falta suscribirse en el Core) loguea y falla el setup para que recovery reintente»<br>`rabbitmq.consumer.spec.ts` › «verifica la cola del Core en modo pasivo, sin declarar ni bindear nada» | Pasó |
 | CP-222 | CA-HU24-4 | Broker que devuelve nack; publicar | Negativo | `rabbitmq.publisher.spec.ts` › «el nack del broker se propaga, para que el dispatcher deje la fila PENDING»<br>`rabbitmq.publisher.spec.ts` › «si la conexión falla, un intento posterior vuelve a probar» | Pasó |
 | CP-223 | CA-HU24-4 | Broker caído más de 50 s; barrido x5 | Negativo | `outbox-dispatcher.service.spec.ts` › «al agotar los intentos la marca FAILED y deja de tomarla»<br>`outbox-retry.e2e-spec.ts` › «FAILED → retry → PENDING → el dispatcher lo publica → SENT, y queda auditado» | Pasó (corregido: ACT-11, #459) |
@@ -408,8 +410,8 @@
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-230 | CA-HU26-1 | Listado con fechas; Servicios y Control ambiental | Positivo | FE: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts`<br>FE: `services-period.spec.ts` | Corregido: ACT-F4, FE #321; sin ejecutar |
-| CP-231 | CA-HU26-2 | Servicios con cuadrilla y vehículo; Listado de Servicios | Positivo | FE: `service-vehicle-labels.spec.ts` | Corregido: ACT-F4, FE #321; sin ejecutar |
+| CP-230 | CA-HU26-1 | Listado con fechas; Servicios y Control ambiental | Positivo | FE: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts`<br>FE: `services-period.spec.ts` | Corregido: ACT-F4, FE #321 |
+| CP-231 | CA-HU26-2 | Servicios con cuadrilla y vehículo; Listado de Servicios | Positivo | FE: `service-vehicle-labels.spec.ts` | Corregido: ACT-F4, FE #321 |
 | CP-232 | CA-HU26-3 | Fecha 2026-10-31T23:30:00-03:00; listar | Borde | FE: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts` | — |
 
 ## HU-27 — Consultar sin login el estado de mi denuncia, cuándo pasa el servicio y dónde están los puntos verdes
@@ -419,9 +421,9 @@
 | CP-233 | CA-HU27-1 | Expediente con inspección y acta; GET /public/reports/<ticketId> | Positivo | `citizen-portal.service.spec.ts` › «devuelve exactamente los campos públicos, ni uno más»<br>`citizen-portal.service.spec.ts` › «colapsa el estado interno a una etapa que el vecino puede leer»<br>(+2 más) | Pasó |
 | CP-234 | CA-HU27-2 | Servicios de varios estados; GET /public/services sin from/to | Positivo | `citizen-portal.service.spec.ts` › «sin fechas mira los próximos 30 días y saltea los cancelados»<br>`citizen-portal.service.spec.ts` › «sin from arranca hoy en Argentina aunque en UTC ya sea mañana»<br>(+1 más) | Pasó |
 | CP-235 | CA-HU27-2 | Puntos verdes activos e inactivos; GET /public/green-points | Positivo | `citizen-portal.service.spec.ts` › «solo los activos, con los residuos que recibe cada uno» | Pasó |
-| CP-236 | CA-HU27-3 | Expediente con publicId TK-0001; GET /public/reports/TK-0001 | Negativo | Manual: Regla documentada (docs/api/endpoints.md, #145); no se localizó un test específico. | — |
+| CP-236 | CA-HU27-3 | Expediente con publicId TK-0001; GET /public/reports/TK-0001 | Negativo | Manual: regla de `docs/api/endpoints.md` (#145) | — |
 | CP-237 | CA-HU27-3 | Ticket sin expediente; GET /public/reports/<uuid sin expediente> | Negativo | `citizen-portal.service.spec.ts` › «un reclamo sin expediente da 404 sin decir si el ticket existe en M2» | Pasó |
-| CP-238 | CA-HU27-4 | Una misma IP; 21 requests en 1 minuto | Negativo | Manual: No hay test de 429 de punta a punta localizado (SEC-W03: "falta ejecutar el test"). | — |
+| CP-238 | CA-HU27-4 | Una misma IP; 21 requests en 1 minuto | Negativo | Manual: el e2e del 429 (`throttler.e2e-spec.ts`) prueba el límite global, no el tope del portal | — |
 | CP-239 | CA-HU27-4 | BFF con clave; X-M6-BFF-Key correcta e incorrecta + X-Forwarded-For | Borde | `client-tracker.spec.ts` › «con la clave correcta usa la IP del vecino»<br>`client-tracker.spec.ts` › «con clave incorrecta (mismo largo) ignora el X-Forwarded-For» | Pasó (corregido: ACT-06, #470) |
 | CP-240 | CA-HU27-5 | Sin Authorization; GET /containers | Negativo | `services-lifecycle.e2e-spec.ts` › «rechaza con 401 un pedido sin token»<br>`route-roles.spec.ts` › «solo los públicos esperados saltean la autorización» | Pasó |
 | CP-241 | CA-HU27-5 | Sin Authorization; GET /health, /public/zones, /public/services, /public/green-points | Positivo | `auth-roles.e2e-spec.ts` › «endpoints públicos» | Pasó |
@@ -470,7 +472,7 @@
 |---|---|---|---|---|---|
 | CP-262 | CA-HU30-1 | M1 hosteado; secreto cargado en Render; login real + GET /me | Positivo | FE: `real-m1-login.spec.ts`<br>`jwt.strategy.spec.ts` › «acepta un access token de M1 y lo mapea a roles de M6» | Pasó |
 | CP-263 | CA-HU30-2 | JWT_SECRET desactualizado; GET /me con token de M1 | Negativo | `jwt.strategy.spec.ts` › «rechaza: %s» | Pasó |
-| CP-264 | CA-HU30-3 | Cookie de sesión vencida; abrir una pantalla protegida | Negativo | FE: `failure-journeys.spec.ts`<br>FE: `entry-and-roles.spec.ts` | Corregido: ACT-F7, FE #379, #381, #437; sin ejecutar |
+| CP-264 | CA-HU30-3 | Cookie de sesión vencida; abrir una pantalla protegida | Negativo | FE: `failure-journeys.spec.ts`<br>FE: `entry-and-roles.spec.ts` | Corregido: ACT-F7, FE #379, #381, #437 |
 | CP-265 | CA-HU30-4 | M1 caído; login | Negativo | FE: `real-m1-login.spec.ts` | — |
 
 ## HU-31 — Seguridad de la Clase 11 (SEC-W01 a W06, SEC-I01, SEC-I02, SEC-D01, SEC-D02)
@@ -506,10 +508,10 @@
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-281 | CA-HU33-1 | CI con service container postgres:16; npm run test:e2e | Positivo | Manual: Es la propia ejecución del job e2e del CI (.github/workflows/ci.yml, Postgres 16); no hay un test que la pruebe. Resultado de CI no consultado en esta pasada. | Medición manual |
+| CP-281 | CA-HU33-1 | CI con service container postgres:16; npm run test:e2e | Positivo | Manual: es la ejecución del job `e2e` del CI (24 suites, 404 tests) | Pasó |
 | CP-282 | CA-HU33-2 | DATABASE_URL remota; npm run test:e2e | Negativo | `guard-database-url.e2e-spec.ts` › «tira con un host remoto»<br>`guard-database-url.e2e-spec.ts` › «tira si no hay DATABASE_URL»<br>(+1 más) | Pasó |
 | CP-283 | CA-HU33-3 | Cuadrillas con ids usr-…; crews:migrate-user-ids dos veces | Borde | `crew-user-id-migration.e2e-spec.ts` › «es idempotente: la segunda corrida no cambia nada»<br>`crew-user-id-migration.e2e-spec.ts` › «el simulacro imprime el plan, reporta lo que no tiene mapeo y no toca nada» | Pasó |
-| CP-284 | CA-HU33-4 | Base local limpia; npm test y npm run test:e2e x3 | Borde | Manual: No medido: Jest avisó de un worker que no sale (posibles handles abiertos). A medir con --detectOpenHandles. | Medición manual |
+| CP-284 | CA-HU33-4 | Base local limpia; `npm test` x3 | Borde | Manual: 3 corridas idénticas (129 archivos, 3010 tests) | Pasó |
 
 ## Casos agregados: PR #577 a #585 (CP-335 a CP-348)
 
@@ -532,7 +534,7 @@ Casos automatizados de los PR #577 a #585. Se numeran a continuación de los ant
 | CP-347 | CA-HU31-9 | Pedido con `?access_token=` y header `Authorization`; `/x?token=SECRETO&page=2`, `access_token`, `api-key`, `client_secret`, `sig`, `session`, etc. → el log y el `path` del error redactan el valor sensible (`[REDACTED]`) y no tocan `page`, `status`, `search`, etc. | Negativo | `redact-url.spec.ts` › «redacta %s»<br>`logging.interceptor.spec.ts` › «el log no incluye el token de la query ni el header Authorization» | Pasó |
 | CP-348 | sin criterio (seguridad, HU-31) | App con Postgres real; zona, expediente y servicio; Payloads de inyección SQL y de `<script>` en nombre, dirección, descripción y notas → no hay 500 ni efectos, el dato vuelve idéntico y la tabla sigue viva. La API **no** rechaza ni escapa estos textos (9 tests: 3 payloads × 3 recursos) | Negativo | `security-input.e2e-spec.ts` › describe `payload %s` | Pasó |
 
-**Suites de nivel API, contrato y carga que no se cuentan como casos** (no están mapeadas a un criterio): la colección Newman `test/api/m6.postman_collection.json` (455 requests ejecutados, 435 definidos, 763 assertions, 0 fallidas), Schemathesis contra `docs/api/openapi.json` (4388 casos en el paso de esquema y errores de servidor, 4384 en `status_code_conformance`, **bloqueante** desde #593; solo `GET`) y la prueba de carga k6 (`test/perf/k6-criticos.js`; resultados en `test/perf/resultados/2026-11-09/`, **solo en local**, ver `05-informe-ejecucion.md`). Newman y Schemathesis corren en `.github/workflows/api-tests.yml`; k6 no corre en el CI. El éxito está probado en 61 de las 152 operaciones; los 91 endpoints restantes están en `test/api/PENDIENTES.md`.
+**Suites de nivel API, contrato y carga que no se cuentan como casos** (no están mapeadas a un criterio): la colección Newman `test/api/m6.postman_collection.json` (548 requests definidas tras #702; la corrida de 455 requests y 763 assertions es anterior y no se re-midió), Schemathesis contra `docs/api/openapi.json` (4388 casos en el paso de esquema y errores de servidor, 4384 en `status_code_conformance`, **bloqueante** desde #593; solo `GET`) y la prueba de carga k6 (`test/perf/k6-criticos.js`; resultados en `test/perf/resultados/2026-11-09/`, **solo en local**, ver `05-informe-ejecucion.md`). Newman y Schemathesis corren en `.github/workflows/api-tests.yml`; k6 no corre en el CI. Newman prueba el éxito en 151 de las 152 operaciones y el error en 149; las excepciones están en `test/api/PENDIENTES.md`.
 
 ## Casos agregados: PR #597 (CP-349 a CP-372)
 
@@ -565,14 +567,29 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | CP-371 | sin criterio (Eje C, transversal) | App con `NEIGHBORHOODS_CATALOG_FILE` apuntando al snapshot local; GET /neighborhoods con token M6_ADMIN → responde 200 con los barrios (más de 40, con `id` y `codigo`) | Positivo | `neighborhoods-catalog.e2e-spec.ts` › «con el catálogo local responde 200 con los barrios» | Pasó |
 | CP-372 | sin criterio (Eje C, transversal) | App sin `NEIGHBORHOODS_CATALOG_FILE`; GET /neighborhoods → responde 503, no una lista vacía; la variable se rechaza en producción | Negativo | `neighborhoods-catalog.e2e-spec.ts` › «sin catálogo responde 503»<br>`configuration.spec.ts` › «se acepta fuera de producción y se rechaza en producción» | Pasó |
 
+## Casos agregados: Eje A y seguridad (CP-373 a CP-382)
+
+| ID | Criterio | Escenario y resultado esperado | Tipo | Test | Estado |
+|---|---|---|---|---|---|
+| CP-373 | CA-HU31-13 | Backend levantado; token vencido, firma ajena, `alg` none o sin token → 401, y el token rechazado no escribe | Negativo | `security-live.e2e-spec.ts` › «JWT inválido → 401» | Pasó |
+| CP-374 | CA-HU31-13 | Rol sin permiso invoca una escritura de otro rol → 403 `ROLE_REQUIRED` | Negativo | `security-live.e2e-spec.ts` › «BFLA: rol sin permiso → 403 ROLE_REQUIRED» | Pasó |
+| CP-375 | CA-HU31-13 | Campo B lee o sube evidencia del servicio de A, o cierra la inspección de otro inspector → 403 sin URLs ni cambios; un id inexistente da 404 | Negativo | `security-live.e2e-spec.ts` › «BOLA: Campo sobre un recurso de otra cuadrilla → 403, nunca el dato» | Pasó |
+| CP-376 | CA-HU31-13 | `POST /services`, `POST /environmental-reports`, `PATCH /services/:id` y `PUT /role-assignments` con campos ajenos → 400 y nada persistido | Negativo | `security-live.e2e-spec.ts` › «mass assignment → 400 y nada persistido» | Pasó |
+| CP-377 | CA-HU31-13 | SQL, operadores NoSQL, XSS y carácter nulo en la ruta, en filtros y en el body → 400 o dato idéntico, nunca 500 | Negativo | `security-live.e2e-spec.ts` › «inyección SQL / NoSQL / XSS: sin ejecución ni 500» | Pasó |
+| CP-378 | CA-HU31-13 | `GET /api/docs` y una ruta de la API → CSP restrictiva en la API y `DOCS_CSP` en Swagger UI, `nosniff`, `DENY`, `Permissions-Policy`, sin `X-Powered-By`; HSTS solo en producción | Borde | `security-live.e2e-spec.ts` › «cabeceras de seguridad»<br>`security-headers.middleware.spec.ts` | Pasó |
+| CP-379 | CA-HU31-13 | Pedido con origen permitido y con origen ajeno → el permitido se refleja sin credenciales; el ajeno no recibe `Access-Control-Allow-Origin` | Negativo | `security-live.e2e-spec.ts` › «CORS: un origen ajeno no recibe Access-Control-Allow-Origin, y nunca *»<br>`cors-options.spec.ts` | Pasó |
+| CP-380 | CA-HU31-5 | Error interno forzado → 500 Problem Details con `traceId`, sin stack; el log lleva el mismo `traceId` | Positivo | `security-live.e2e-spec.ts` › «un 500 devuelve Problem Details con traceId y sin stack; el log tiene el mismo traceId» | Pasó |
+| CP-381 | CA-HU31-14 | OpenAPI con 152 operaciones; `npm run api:coverage` → toda operación tiene caso de éxito y de error en la colección o una excepción con motivo | Positivo | `scripts/check-api-coverage.spec.ts` › «toda operación del OpenAPI tiene caso de éxito y de error, o una excepción con motivo» | Pasó |
+| CP-382 | CA-HU31-5 | Request con `X-Request-Id` UUID del cliente y otra sin él → se adopta el del cliente; sin él se genera un UUID, y va al header de respuesta | Borde | `request-id.middleware.spec.ts` › «adopta el X-Request-Id del cliente si es un UUID» | Pasó |
+
 ## Resumen
 
-- Casos: **372**: 348 para 175 criterios de 33 HU (334 iniciales más CP-335 a CP-348; CP-348 no tiene criterio propio y se cuenta en HU-31) más 24 casos transversales sin HU (CP-349 a CP-372). Los casos parametrizados cuentan como uno: los 114 tests de transiciones de #582 son 3 casos.
-- Positivos: 121 (32,5 %). Negativos: 168 (45,2 %). Borde: 83 (22,3 %).
-- **Negativos + borde: 251 de 372 = 67,5 %** (nuestra meta: 40 % o más). Cumple la meta.
+- Casos: **382**: 348 para 175 criterios de 33 HU (334 iniciales más CP-335 a CP-348; CP-348 no tiene criterio propio y se cuenta en HU-31), 24 casos transversales sin HU (CP-349 a CP-372) y 10 casos de HU-31 (CP-373 a CP-382). Los casos parametrizados cuentan como uno: los 114 tests de transiciones son 3 casos.
+- Positivos: 123 (32,2 %). Negativos: 174 (45,5 %). Borde: 85 (22,3 %).
+- **Negativos + borde: 259 de 382 = 67,8 %** (meta: 40 % o más). Cumple.
 - Casos marcados **Corregido**: 116.
-- Automatizados con test del backend: 353 (94,9 %). Solo con test del frontend sin verificar: 9. Sin test automatizado: 10.
-- Los 19 casos sin test del backend (9 de frontend y 10 manuales) no se ejecutaron.
+- Automatizados con test del backend: 363 (95,0 %). Solo con test del frontend: 9. Manuales: 10.
+- Los 19 casos sin test del backend son 9 de frontend y 10 manuales.
 
 | HU | Casos | Positivos | Negativos | Borde | Neg. + borde |
 |---|---|---|---|---|---|
@@ -606,10 +623,10 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | HU-28 | 15 | 5 | 1 | 9 | 66,7 % |
 | HU-29 | 13 | 2 | 8 | 3 | 84,6 % |
 | HU-30 | 4 | 1 | 3 | 0 | 75,0 % |
-| HU-31 | 20 | 2 | 17 | 1 | 90,0 % |
+| HU-31 | 30 | 4 | 23 | 3 | 86,7 % |
 | HU-32 | 6 | 3 | 2 | 1 | 50,0 % |
 | HU-33 | 4 | 1 | 1 | 2 | 75,0 % |
 | Transversales sin HU (Eje C, CP-349 a CP-372) | 24 | 5 | 12 | 7 | 79,2 % |
-| **Total** | **372** | **121** | **168** | **83** | **67,5 %** |
+| **Total** | **382** | **123** | **174** | **85** | **67,8 %** |
 
 Los casos de rol y de pertenencia ("403 NOT_ASSIGNED", "403 ROLE_REQUIRED") se cuentan como negativos. Los de degradación ante la caída de un sistema externo se cuentan como borde cuando el sistema sigue operando y como negativos cuando se rechaza la operación.

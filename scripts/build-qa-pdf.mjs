@@ -75,7 +75,7 @@ function inlineImages(md, fileDir) {
 }
 
 function cover({ title, subtitle }) {
-  const fecha = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const fecha = 'Versión 2.2 · 16/11/2026';
   return `<div class="cover">
 <p class="cover-kicker">Desarrollo de Aplicaciones II · 2.º C 2026 · UADE</p>
 <p class="cover-title">${title}</p>

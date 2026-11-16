@@ -16,7 +16,7 @@ El TPO exige para cada módulo:
 - **API REST** documentada con Swagger.
 - Integración con otros módulos vía **eventos asincrónicos**.
 - Autenticación y autorización por roles.
-- Tests con cobertura mínima **85%** en frontend y backend por separado.
+- Tests con cobertura mínima **85%** (el backend exige 90% desde #660; ver `vitest.config.ts`) en frontend y backend por separado.
 - Deploy en un entorno accesible.
 - Frontend web o mobile independiente del backend.
 
