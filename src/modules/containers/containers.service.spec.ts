@@ -604,6 +604,13 @@ describe('ContainersService', () => {
       expect(prisma.container.update.mock.calls[0][0].data).toEqual({ address: 'Nueva 100' });
     });
 
+    it('con todos los campos editables escribe cada uno', async () => {
+      const dto = { zoneId: 'z-2', capacityLiters: 240, address: 'Otra 1', lat: -34.6, lng: -58.4 };
+      await service.update(ID, dto as any);
+
+      expect(prisma.container.update.mock.calls[0][0].data).toEqual(dto);
+    });
+
     it('no deja cambiar el código ni el estado', async () => {
       await service.update(ID, { code: 'OTRO', status: C.REMOVED } as any);
 

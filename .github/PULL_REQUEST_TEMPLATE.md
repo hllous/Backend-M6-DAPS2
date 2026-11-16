@@ -21,7 +21,7 @@ feature · fix · docs · refactor · tests · chore
 ## Checklist
 
 - [ ] El código compila y los tests pasan localmente
-- [ ] Cobertura de tests ≥ 85% en los archivos tocados (medida con `npm run test:cov`)
+- [ ] Cobertura de tests ≥ 90% en los archivos tocados (medida con `npm run test:cov`)
 - [ ] Si es un endpoint: cumple el [estándar Swagger](../docs/api/estandar-swagger.md) y `docs/api/openapi.json` está regenerado
 - [ ] Si es un endpoint: declara `@Roles` en las escrituras, valida pertenencia del recurso (no solo el rol) y no expone campos internos en la respuesta
 - [ ] Si cambia un endpoint o DTO público: avisado al Frontend con un issue en `hllous/Frontend-M6-DAPS2`

@@ -20,11 +20,11 @@ Además de lo general:
 
 - [ ] El código compila sin errores.
 - [ ] Los tests unitarios pasan localmente.
-- [ ] **Cobertura de tests ≥ 85%** en los archivos modificados (requisito del TPO). Desde #152 **lo verifica el CI**: el job `test` corre `npm run test:cov` y los umbrales viven en `coverage.thresholds` (`vitest.config.ts`). Si tocás un archivo que todavía no tiene umbral propio y lo dejás sobre 85, agregale su entrada ahí para que no vuelva a bajar.
+- [ ] **Cobertura de tests ≥ 90%** en los archivos modificados (el TPO exige 85%; el repo sube el umbral a 90% desde #660). Desde #152 **lo verifica el CI**: el job `test` corre `npm run test:cov` y los umbrales viven en `coverage.thresholds` (`vitest.config.ts`). Si tocás un archivo que todavía no tiene umbral propio y lo dejás sobre 90, agregale su entrada ahí para que no vuelva a bajar.
 
   > El umbral global cuenta **todos** los archivos, también los que tienen umbral propio: agregar una entrada por archivo no mueve el global. (Con Jest, hasta #628, era al revés: los restaba del global y había que recalibrarlo.) Ojo: un umbral con un glob que abarca **varios** archivos se mide con la cobertura **sumada** de todos (Jest lo exigía por archivo); para exigirlo a cada uno, agregá `perFile: true` a esa entrada.
 - [ ] El linter no arroja errores ni warnings nuevos.
-- [ ] Los jobs `sonar` y `trivy` del CI no reportan hallazgos nuevos: un bug, una vulnerabilidad o una HIGH/CRITICAL con fix se corrige en el PR (o en un `fix/` aparte con su DEF-xx). El gate de Sonar todavía no bloquea el merge (#660), pero se mira igual. Ver [ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md).
+- [ ] Los jobs `sonar` y `trivy` del CI no reportan hallazgos nuevos: un bug, una vulnerabilidad o una HIGH/CRITICAL con fix se corrige en el PR (o en un `fix/` aparte con su DEF-xx). Desde #660 el job `sonar` falla si el Quality Gate da rojo. Ver [ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md).
 - [ ] No hay código comentado ni `console.log` de debug olvidados.
 - [ ] Ninguna variable sensible (secretos, tokens, credenciales, URLs privadas) quedó hardcodeada.
 - [ ] Si aplica: la variable de entorno nueva está agregada al `.env.example`.
