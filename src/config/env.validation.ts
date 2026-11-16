@@ -30,7 +30,7 @@ function validarUrlAmqp(value: string, ctx: z.RefinementCtx): void {
 }
 
 /** Valor del .env.example: público, así que en producción no protege nada. */
-const JWT_SECRET_EJEMPLO = 'Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==';
+const JWT_SECRET_EJEMPLO = 'ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2';
 
 export const envSchema = z
   .object({

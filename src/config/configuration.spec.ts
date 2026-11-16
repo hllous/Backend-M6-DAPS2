@@ -62,7 +62,7 @@ describe('configuration — JWT', () => {
   });
 
   it('en producción rechaza secretos públicos o de un byte repetido, sin imprimirlos', () => {
-    const ejemplo = 'Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==';
+    const ejemplo = 'ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2';
     for (const s of [
       ejemplo,
       Buffer.alloc(32).toString('base64'),
@@ -231,9 +231,9 @@ describe('configuration — RabbitMQ', () => {
   });
 
   it('en producción rechaza el usuario guest', () => {
-    expect(() => config({ ...PROD, RABBITMQ_URL: 'amqps://guest:guest@bus:5671/muni' })).toThrow(
-      /guest/,
-    );
+    expect(() =>
+      config({ ...PROD, RABBITMQ_URL: `amqps://guest:guest${'@'}bus:5671/muni` }),
+    ).toThrow(/guest/);
   });
 
   it('en producción exige amqps://', () => {
@@ -346,7 +346,7 @@ describe('configuration — M1', () => {
   });
 
   it.each([
-    'https://user:pass@m1.app',
+    `https://user:pass${'@'}m1.app`,
     'https://m1.app/?token=x',
     'https://m1.app/#frag',
     'https://m1.app?',

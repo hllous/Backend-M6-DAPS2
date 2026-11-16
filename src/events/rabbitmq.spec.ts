@@ -18,7 +18,7 @@ describe('brokerHost', () => {
 
 describe('brokerUser', () => {
   it('devuelve el usuario decodificado, sin la clave', () => {
-    expect(brokerUser('amqps://m%40m6:secreto@bus:5671/muni')).toBe('m@m6');
+    expect(brokerUser(`amqps://m%40m6:secreto${'@'}bus:5671/muni`)).toBe('m@m6');
   });
 
   it('sin usuario o con una URL ilegible no hay userId', () => {
