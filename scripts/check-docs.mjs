@@ -4,20 +4,22 @@
 //     módulos) contra docs/api/openapi.json, prisma/schema.prisma y src/modules/.
 //  3. Cada variable de entorno que valida src/config/env.validation.ts figura en
 //     docs/operacion/referencia.md.
-// Sin dependencias. Los .md se toman de `git ls-files`, así que lo ignorado por git
-// (por ejemplo docs/documentacion/) no se revisa. Uso: npm run docs:check
-import { execFileSync } from 'node:child_process';
+// Sin dependencias. Los .md se recorren desde la raíz salteando lo que git ignora
+// (node_modules, dist, docs/documentacion/, etc.). Uso: npm run docs:check
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const leer = (ruta) => readFileSync(join(raiz, ruta), 'utf8');
 const errores = [];
 
-const archivos = execFileSync('git', ['ls-files', '*.md'], { cwd: raiz, encoding: 'utf8' })
-  .split('\n')
-  .filter(Boolean);
+// Directorios que git ignora o que no son del repo (se recorre sin invocar a git).
+const IGNORADOS = new Set(['.git', '.claude', 'node_modules', 'dist', 'build', 'coverage', 'documentacion']);
+const archivos = readdirSync(raiz, { recursive: true, withFileTypes: true })
+  .filter((e) => e.isFile() && e.name.endsWith('.md'))
+  .map((e) => join(e.parentPath, e.name).slice(raiz.length + 1).split(sep).join('/'))
+  .filter((ruta) => !ruta.split('/').some((parte) => IGNORADOS.has(parte)));
 
 // Quita los bloques ``` conservando los saltos de línea, para que los números de línea sigan valiendo.
 const sinCodigo = (texto) => texto.replace(/```[\s\S]*?```/g, (b) => b.replace(/[^\n]/g, ''));

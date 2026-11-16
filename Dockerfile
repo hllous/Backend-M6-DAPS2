@@ -25,14 +25,16 @@ RUN npm install -g --ignore-scripts npm@11.21.2 && npm cache clean --force
 COPY package.json package-lock.json ./
 
 # Instala TODAS las dependencias (incluye dev) necesarias para compilar.
-RUN npm ci
+# --ignore-scripts: no corre scripts de instalación de terceros (S6505); lo que
+# hacían (cliente y motores de Prisma) se hace explícito más abajo.
+RUN npm ci --ignore-scripts
 
 # Copia el resto del código fuente (respeta .dockerignore).
 COPY . .
 
 # Genera el cliente de Prisma a partir de prisma/schema.prisma.
 # (No necesita conexión a la base, solo el schema.)
-RUN npx prisma generate
+RUN npm run prisma:generate
 
 # Compila TypeScript -> dist/ (usa tsconfig.build.json).
 RUN npm run build
@@ -60,7 +62,11 @@ USER node
 
 # Copia manifiestos e instala SOLO dependencias de producción.
 COPY --chown=node:node package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+# Sin scripts de terceros; solo se reconstruyen los motores de Prisma, que
+# `prisma migrate deploy` necesita al arrancar (si no, los bajaría en runtime).
+RUN npm ci --omit=dev --ignore-scripts \
+    && npm rebuild @prisma/engines \
+    && npm cache clean --force
 
 # Copia el cliente de Prisma ya generado en la etapa builder
 # (necesario para que @prisma/client funcione en runtime).
@@ -78,4 +84,4 @@ EXPOSE 3000
 # Aplica las migraciones pendientes y arranca.
 # Si la migración falla el contenedor no levanta, que es lo correcto:
 # preferimos no servir una API contra un esquema desactualizado.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "npm run prisma:migrate:deploy && node dist/main.js"]

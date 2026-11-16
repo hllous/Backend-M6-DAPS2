@@ -4,6 +4,7 @@ import { puntoEnGeometria, puntoInterior, GeometriaPoligonal } from '../src/comm
 import {
   capitalizar,
   construir,
+  entradaSegura,
   EspacioVerde,
   nombreDe,
   slugBarrio,
@@ -134,5 +135,24 @@ describe('prisma/data/espacios-verdes.json', () => {
   it('el archivo es compacto', () => {
     const bytes = readFileSync(join(__dirname, '../prisma/data/espacios-verdes.json')).length;
     expect(bytes).toBeLessThan(300 * 1024);
+  });
+});
+
+describe('entradaSegura', () => {
+  const raiz = join(__dirname, '..');
+
+  it('sin argumento usa el GeoJSON versionado', () => {
+    expect(entradaSegura(raiz)).toBe(join(raiz, 'docs/geojson/espacio_verde_publico.geojson'));
+  });
+
+  it('acepta un .geojson dentro del repositorio', () => {
+    expect(entradaSegura(raiz, 'docs/geojson/otro.geojson')).toBe(
+      join(raiz, 'docs/geojson/otro.geojson'),
+    );
+  });
+
+  it('rechaza rutas fuera del repositorio y otras extensiones', () => {
+    expect(() => entradaSegura(raiz, '../../etc/passwd.geojson')).toThrow();
+    expect(() => entradaSegura(raiz, 'package.json')).toThrow();
   });
 });
