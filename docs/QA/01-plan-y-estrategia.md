@@ -33,7 +33,7 @@
 |---|---|---|
 | **Unitario** (backend) | 125 suites; 16/11: 2992 tests pasan, 0 fallan (R09: 2854). Cobertura 97,97 % sentencias, 95 % ramas, 98,71 % líneas; umbral de 85 % global y por archivo en 7 servicios críticos. SonarCloud la mide igual (97,3 % con su denominador, las mismas líneas sin cubrir). Incluye 114 tests de transiciones inválidas (#582) | Algunos tests prueban llamadas a mocks más que comportamiento; aserción débil en `services.service.spec.ts:875` |
 | **Mutation testing** | Stryker sobre los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules` (#577, #617): score global en CI **75,39 %** (era 71,22 % antes del refuerzo); 5 archivos reforzados con tests; workflow `mutation.yml` manual o semanal. Detalle en [`05`](05-informe-ejecucion.md) §5.1 | 21 archivos sin reforzar |
-| **Unitario** (frontend) | Vitest en el CI | Sin cobertura ni umbral |
+| **Unitario** (frontend) | Vitest en el CI; cobertura medida en SonarCloud (85,4 %) | Sin umbral bloqueante (DEF-35) |
 | **Integración / e2e** (backend) | 24 suites en `test/` contra `postgres:16` (R09: 343 pasan, 4 saltados) y `rabbitmq-real` contra RabbitMQ real en el CI; job `e2e` del CI (**no** es check obligatorio); guard que impide apuntar a una base no local | Testcontainers; publicación del outbox contra un broker real |
 | **E2E de usuario** (frontend) | 58 specs Playwright en 10 shards en el CI | Viewports 360 y 768 px (hoy 390 y 1280) |
 | **Contrato** | `openapi-contract.spec.ts` (7 tests), `payloads.spec.ts` (ajv contra los `.schema.json`), el CI exige `openapi.json` al día; Schemathesis (#583, solo `GET`): 4388 casos de esquema pasan y `status_code_conformance` es bloqueante (#593) | Schemathesis sobre las escrituras |
@@ -81,7 +81,7 @@
 | HU del alcance ejecutadas | 100 % | Las HU con test del backend sí; 9 criterios solo-FE y 5 huecos no ([`03`](03-matriz-trazabilidad.md)) | **Parcial** |
 | Criterios de aceptación pasados | ≥ 95 %, sin fallos en HU `MUST` | 161 de 175 con test del backend pasan; 0 fallados; 14 sin ejecutar | **Parcial** |
 | Casos negativos o de borde | ≥ 40 % | 67,5 % (251 de 372) | **Sí** |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores con workaround | 0, 0 y **0 Mayores**: DEF-13 se cerró con #656; quedan 2 Menores (DEF-14 y DEF-19) | **Sí** |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores con workaround | 0, 0 y **1 Mayor** con workaround (DEF-32); DEF-13 se cerró con #656; quedan 10 Menores (DEF-14, DEF-19, DEF-29 a DEF-31 y DEF-33 a DEF-37) | **Sí** |
 | Tests flaky | 0 (3 corridas idénticas) | 3 corridas idénticas en local y repetidas en el CI | **Sí** |
 | Pipeline | ≤ 15 min | 3 min 5 s (CI de `main` del 16/11, con `sonar` y `trivy`; [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363)) | **Sí** |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` en cada PR | **Cumple** |
