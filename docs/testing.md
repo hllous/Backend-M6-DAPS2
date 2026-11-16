@@ -6,7 +6,7 @@ Dos suites separadas, con propósitos distintos:
 
 | Suite | Comando | Qué prueba | Base de datos |
 |---|---|---|---|
-| **Unitaria** | `npm test` / `npm run test:cov` | Reglas de negocio de cada service, con Prisma mockeado. Es la que mide el 85% del DoD | No usa |
+| **Unitaria** | `npm test` / `npm run test:cov` | Reglas de negocio de cada service, con Prisma mockeado. Es la que mide la cobertura: umbral **90%** en las cuatro métricas (#660; el mínimo del TPO es 85%) | No usa |
 | **End to end** | `npm run test:e2e` | La app completa —auth, `ValidationPipe`, cabeceras de seguridad, máquinas de estado, outbox e inbox— contra Postgres | Sí, y **la trunca** |
 
 Los unitarios viven al lado del código (`src/**/*.spec.ts`; también `scripts/migrate-crew-user-ids.spec.ts`, vía el `include` de `vitest.config.ts`); los e2e, en `test/*.e2e-spec.ts`.
@@ -90,7 +90,7 @@ El `OutboxDispatcher` se reemplaza por un stub sin `@Interval`. Si no, barre la 
 
 El job `e2e` de `.github/workflows/ci.yml` levanta `postgres:16` y `rabbitmq:4.4-management` con `services:` y corre `npm run test:e2e -- --exclude '**/*rabbitmq-real*'` y, en un paso aparte con `RABBITMQ_URL` (para no activar el consumer en las demás), `npm run test:e2e -- rabbitmq-real --no-file-parallelism`; las migraciones las aplica `global-setup.ts`, igual que en local.
 
-**No es check obligatorio** de la protección de ramas: ahí siguen solo `build` y `test`. La cobertura de los e2e tampoco se suma al 85%, que se sigue midiendo con los unitarios.
+**No es check obligatorio** de la protección de ramas: ahí siguen solo `build` y `test`. La cobertura de los e2e tampoco se suma al 90%, que se sigue midiendo con los unitarios.
 
 **Contratos de M2 (v1.78).** `updateTicketStatus` se valida en `payloads.spec.ts` y en los specs de los services contra nuestro schema versionado (`docs/eventos/publicados/`, helper `src/events/update-ticket-status-schema.testing.ts`), siempre, también en el CI. El otro sentido (ejemplos de M2 contra nuestro inbox) lo cubre `src/events/consumers/m2-ejemplos.spec.ts` con una selección mínima de sobres en `test/fixtures/m2/`. La comprobación contra el paquete oficial de M2 (que vive en `docs/documentacion/`, sin versionar) es manual y local, cuando M2 publique una versión nueva; la v1.78/v1.79 vigente no cambió schemas ni ejemplos. **Límite:** lo que nuestro schema no declara ya no se valida en CI; en concreto `ticketId` es `string` libre acá, así que dejó de comprobarse que sea UUID como exige M2. Agregarle `format: uuid` es un cambio de contrato que decide el equipo.
 
@@ -147,7 +147,7 @@ Workflow [`dast.yml`](../.github/workflows/dast.yml): `workflow_dispatch` y corr
 
 El job `sonar` de `ci.yml` descarga el `lcov` que publica `test` (no vuelve a correr los tests) y analiza con `sonar-project.properties`. Corre en PR y en push a `main` (el plan gratuito no analiza otras ramas) y se saltea sin `SONAR_TOKEN`. Dashboard: [hllous_Backend-M6-DAPS2](https://sonarcloud.io/summary/overall?id=hllous_Backend-M6-DAPS2).
 
-- **El gate no bloquea todavía** (Opción C, paso 2 en #660): que el check esté en rojo en un PR no impide el merge, pero hay que mirarlo igual y corregir lo que reporte.
+- **El gate es bloqueante para el job** (Opción C, paso 2, #660): el scanner corre con `sonar.qualitygate.wait=true` (espera hasta 5 min) y el job `sonar` falla si el gate da rojo. Que eso impida el merge depende de que `sonar` figure como check requerido en la protección de `develop`, que configura el líder.
 - El gate «Sonar way» evalúa **código nuevo**. Las métricas del código total (las que pide la cátedra) se leen en el dashboard o con la API pública: `curl -s "https://sonarcloud.io/api/measures/component?component=hllous_Backend-M6-DAPS2&metricKeys=coverage,bugs,vulnerabilities,duplicated_lines_density,reliability_rating,security_rating,security_hotspots_reviewed"` (ratings: 1 = A).
 - La cobertura de Sonar viene de `npm run test:cov` y sus exclusiones son las de `vitest.config.ts` (ver el comentario de `sonar-project.properties`): si cambiás `coverage.exclude`, cambiá también `sonar.coverage.exclusions`.
 - Un hallazgo se corrige en código. Marcar uno como falso positivo o aceptado lo hace una persona, en Sonar, con justificación escrita.

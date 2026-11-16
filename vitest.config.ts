@@ -1,7 +1,7 @@
 import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
-const umbral = { statements: 85, branches: 85, functions: 85, lines: 85 };
+const umbral = { statements: 90, branches: 90, functions: 90, lines: 90 };
 
 // SWC en vez del transform por defecto de Vite: NestJS resuelve la inyección
 // por `emitDecoratorMetadata`, y oxc/esbuild no emiten esa metadata. Los campos
