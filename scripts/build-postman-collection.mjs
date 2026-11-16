@@ -9,9 +9,10 @@
 //      datos de estado que la colección no arma; GET con query requerido).
 // Uso: npm run api:collection   (si cambia el OpenAPI, regenerar y commitear).
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { flujos } from './api-flujos.mjs';
 
 // Valor JS para interpolar en el código de los tests de Postman. JSON.stringify solo no
 // alcanza (CodeQL js/bad-code-sanitization): no escapa <, > ni los separadores de línea.
@@ -20,13 +21,14 @@ const lit = (valor) => JSON.stringify(valor).replace(/[<>\u{2028}\u{2029}]/gu, (
 
 const spec = JSON.parse(readFileSync('docs/api/openapi.json', 'utf8'));
 const tmp = join(mkdtempSync(join(tmpdir(), 'm6-pm-')), 'base.json');
-execFileSync(
+if (!process.env.BASE_CACHE || !existsSync(process.env.BASE_CACHE)) execFileSync(
   process.platform === 'win32' ? 'npx.cmd' : 'npx',
   ['--yes', 'openapi-to-postmanv2', '-s', 'docs/api/openapi.json', '-o', tmp, '-p',
     '-O', 'folderStrategy=Tags,requestParametersResolution=Example,exampleParametersResolution=Example'],
   { stdio: 'inherit', shell: process.platform === 'win32' },
 );
-const base = JSON.parse(readFileSync(tmp, 'utf8'));
+if (process.env.BASE_CACHE && !existsSync(process.env.BASE_CACHE)) copyFileSync(tmp, process.env.BASE_CACHE);
+const base = JSON.parse(readFileSync(process.env.BASE_CACHE && existsSync(process.env.BASE_CACHE) ? process.env.BASE_CACHE : tmp, 'utf8'));
 
 // "METHOD /path/{id}" -> request convertido
 const convertidos = new Map();
@@ -216,6 +218,48 @@ for (const [path, ops] of Object.entries(spec.paths)) {
   }
 }
 
+// --- Flujos encadenados (scripts/api-flujos.mjs): los casos de éxito de las escrituras.
+const { sinExito: excepciones, sinError: excepcionesError } = JSON.parse(readFileSync('test/api/excepciones.json', 'utf8'));
+const itemsFlujo = flujos().map((s) => {
+  const [M] = s.op.split(' ');
+  const segs = s.path.split('/').slice(1);
+  const exito = s.esperado >= 200 && s.esperado < 300;
+  const hdr = [{ key: 'Content-Type', value: 'application/json' }, ...Object.entries(s.headers ?? {}).map(([key, value]) => ({ key, value }))];
+  const lineas = [
+    `let j = {}; try { j = pm.response.json(); } catch (e) { j = {}; }`,
+    `const r = pm.response;`,
+    `pm.test('status ${s.esperado}', () => pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.eql(${s.esperado}));`,
+    ...(s.esperado === 204 && !s.chequeos ? [`pm.test('sin cuerpo', () => pm.expect(pm.response.text()).to.eql(''));`] : []),
+    ...(s.chequeos ?? []).map(([d, cod]) => `pm.test(${lit(d)}, () => { ${cod}; });`),
+    ...Object.entries(s.guardar ?? {}).map(([v, ex]) => `pm.test(${lit('guarda ' + v)}, () => { const v = ${ex}; pm.expect(v).to.be.ok; pm.collectionVariables.set(${lit(v)}, v); });`),
+  ];
+  if (exito) conExito.add(s.op);
+  casos++;
+  const pre = s.pre ? [{ listen: 'prerequest', script: { type: 'text/javascript', exec: [`(async () => {`, ...s.pre, `})();`] } }] : [];
+  return {
+    name: `${s.op} - ${exito ? 'exito' : 'error'} ${s.esperado} (${s.nombre})`,
+    event: [...pre, { listen: 'test', script: { type: 'text/javascript', exec: lineas } }],
+    request: {
+      method: M,
+      header: hdr,
+      url: { raw: `{{baseUrl}}/${segs.join('/')}${s.query ? '?' + Object.entries(s.query).map(([k, v]) => k + '=' + v).join('&') : ''}`, host: ['{{baseUrl}}'], path: segs, ...(s.query ? { query: Object.entries(s.query).map(([key, value]) => ({ key, value })) } : {}) },
+      auth: auth(s.como === undefined ? 'token' : s.como),
+      ...(s.body ? { body: { mode: 'raw', raw: JSON.stringify(s.body), options: { raw: { language: 'json' } } } } : {}),
+      description: s.nombre,
+    },
+  };
+});
+for (const op of conExito) {
+  const i = pendientes.findIndex(([e]) => e === op);
+  if (i >= 0) pendientes.splice(i, 1);
+}
+for (const [op] of Object.entries(excepciones)) {
+  if (!pendientes.some(([e]) => e === op)) throw new Error(`Excepción sobrante: ${op} ya tiene caso de éxito`);
+}
+const sinJustificar = pendientes.filter(([e]) => !(e in excepciones));
+if (sinJustificar.length && !process.env.FLUJOS_PARCIAL) throw new Error(`Sin caso de éxito ni excepción: ${sinJustificar.map(([e]) => e).join(', ')}`);
+for (const pe of pendientes) pe[1] = excepciones[pe[0]];
+
 const coleccion = {
   info: {
     name: 'M6 Ambiente, Higiene y Servicios Urbanos',
@@ -224,21 +268,30 @@ const coleccion = {
   },
   variable: [{ key: 'baseUrl', value: 'http://localhost:3000' }],
   auth: auth('token'),
-  item: [...carpetas.entries()].map(([name, item]) => ({ name, item })),
+  item: [...carpetas.entries()].map(([name, item]) => ({ name, item })).concat([{ name: 'Flujos', item: itemsFlujo }]),
 };
 writeFileSync('test/api/m6.postman_collection.json', JSON.stringify(coleccion, null, 2) + '\n');
 
 const total = Object.values(spec.paths).reduce((n, o) => n + Object.keys(o).length, 0);
 writeFileSync(
   'test/api/PENDIENTES.md',
-  `# Endpoints sin caso de éxito en la colección Postman
+  `# Excepciones de la colección Postman
 
-Generado por \`npm run api:collection\`. Todos tienen caso de error (401/403/400/404 según corresponda);
-${conExito.size} de ${total} tienen además caso de éxito. Los ${pendientes.length} de abajo no, y por qué:
+Generado por \`npm run api:collection\` desde \`test/api/excepciones.json\`. La colección cubre las ${total} operaciones
+del OpenAPI con caso de éxito (${conExito.size}/${total}, más ${pendientes.length} con excepción) y de error (${total - Object.keys(excepcionesError).length}/${total}, más ${Object.keys(excepcionesError).length} con excepción).
+\`npm run api:coverage\` falla si alguna operación queda sin caso y sin excepción justificada acá.
+
+## Sin caso de éxito
 
 | Endpoint | Motivo |
 |---|---|
 ${pendientes.map(([e, m]) => `| \`${e}\` | ${m} |`).join('\n')}
+
+## Sin caso de error
+
+| Endpoint | Motivo |
+|---|---|
+${Object.entries(excepcionesError).map(([e, m]) => `| \`${e}\` | ${m} |`).join('\n')}
 
 ## Hallazgos de Schemathesis
 

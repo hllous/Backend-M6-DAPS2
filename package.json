@@ -32,6 +32,7 @@
     "crews:migrate-user-ids": "ts-node -P tsconfig.json scripts/migrate-crew-user-ids.ts",
     "openapi:generate": "ts-node -P tsconfig.json scripts/generate-openapi.ts",
     "api:collection": "node scripts/build-postman-collection.mjs",
+    "api:coverage": "node scripts/check-api-coverage.mjs",
     "docs:check": "node scripts/check-docs-integracion.mjs && node scripts/check-docs.mjs",
     "docs:roles": "ts-node -P tsconfig.json scripts/generate-roles-table.ts",
     "qa:pdf": "node scripts/build-qa-pdf.mjs",

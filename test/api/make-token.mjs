@@ -1,5 +1,5 @@
 // Firma un access token de prueba (HS256, como el de M1) con el JWT_SECRET del entorno.
-// Uso: JWT_SECRET=<base64> node test/api/make-token.mjs [admin|auditor]
+// Uso: JWT_SECRET=<base64> node test/api/make-token.mjs [admin|auditor|campo]
 // No hay tokens ni secretos en el repo: el secreto lo declara quien corre (CI o local).
 import { createHmac } from 'node:crypto';
 
@@ -7,10 +7,12 @@ import { createHmac } from 'node:crypto';
 const PERFILES = {
   admin: { sub: '10000', rol: 'RESPONSABLE_AREA' },
   auditor: { sub: '10007', rol: 'AUDITOR' },
+  // 29001: no está en el seed; el primer paso de la colección le asigna Campo y inspector por la API.
+  campo: { sub: '29001', rol: 'ADMINISTRATIVO' },
 };
 
 const perfil = PERFILES[process.argv[2] ?? 'admin'];
-if (!perfil) throw new Error(`Perfil desconocido: ${process.argv[2]} (admin|auditor)`);
+if (!perfil) throw new Error(`Perfil desconocido: ${process.argv[2]} (admin|auditor|campo)`);
 const secret = process.env.JWT_SECRET;
 if (!secret) throw new Error('Falta JWT_SECRET');
 
