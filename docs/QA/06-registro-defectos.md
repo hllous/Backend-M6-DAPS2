@@ -1,6 +1,6 @@
 # 06 · Registro de defectos y limitaciones conocidas
 
-> Versión 2.0 · 10/11/2026. Backend del Módulo 6 (Grupo 04), sobre `develop` @ `142e1a3`. Lo cargamos desde GitHub Issues, [`docs/bloqueantes.md`](../bloqueantes.md), el código y la auditoría interna. Todo lo marcado como abierto se **verificó contra el código actual**.
+> Versión 2.1 · 16/11/2026. Backend del Módulo 6 (Grupo 04). Los defectos de las secciones 3 y 4 salen de la medición del 10/11 (`develop` @ `142e1a3`); DEF-13 y DEF-25 a DEF-28 se cerraron con la Entrega 4 y se verificaron sobre `main` @ `78bf714` (16/11). Lo cargamos desde GitHub Issues, [`docs/bloqueantes.md`](../bloqueantes.md), el código y la auditoría interna. Todo lo marcado como abierto se **verificó contra el código actual**.
 
 Usamos **GitHub Issues** (`hllous/Backend-M6-DAPS2`) y Trello en lugar de Jira. El identificador de cada defecto es `DEF-nn`; si tiene Issue, se enlaza, y si no, figura como **sin issue**. La numeración no se reutiliza: DEF-04 y DEF-11 se retiraron del registro (el bus y los contratos de otros módulos no son responsabilidad del equipo) y esos números quedan vacíos.
 
@@ -19,21 +19,21 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 
 | | Cantidad |
 |---|---|
-| Defectos y brechas registrados | 24 (DEF-01 a DEF-26, sin DEF-04 ni DEF-11). **Abiertos: 3. Cerrados: 21** |
+| Defectos y brechas registrados | 26 (DEF-01 a DEF-28, sin DEF-04 ni DEF-11). **Abiertos: 2. Cerrados: 24** |
 | Issues con etiqueta `bug`, `security` o `fix` | Todos cerrados en GitHub (`gh issue list --state all`) |
-| Verificaciones no realizadas (no son defectos) | 8, en la sección 5 |
+| Verificaciones no realizadas o parciales (no son defectos) | 4, en la sección 5 |
 
 | Severidad | Abiertos | Dentro del máximo |
 |---|---|---|
 | Bloqueante | 0 | Sí |
 | Crítica | 0 | Sí |
-| Mayor | **1** (DEF-13) | Sí (máximo 3) |
+| Mayor | **0** (DEF-13 se cerró con #656) | Sí (máximo 3) |
 | Menor | 2 (DEF-14 y DEF-19) | Sí |
-| **Total abierto** | **3** | |
+| **Total abierto** | **2** | |
 
-**Lectura honesta:** el criterio de salida **se cumple en cantidad**: hay 1 Mayor abierta (DEF-13) contra un máximo de 3 (DEF-08 se cerró por mitigación con #619 y DEF-09 con #643). La severidad de las Mayores es una **propuesta**: el equipo y el PO la validan antes de la entrega.
+**Lectura honesta:** el criterio de salida **se cumple**: 0 Bloqueantes, 0 Críticos y 0 Mayores abiertos (DEF-08 se cerró por mitigación con #619 y #628, DEF-09 con #643 y DEF-13 con #656). Quedan 2 Menores, DEF-14 (e2e no obligatorio, pide admin) y DEF-19 (Swagger UI público y sin CSP). Las severidades son una **propuesta** (por ejemplo, DEF-25 y DEF-26 como Mayor): las deciden el líder y el QA y las valida el PO. **Pendiente declarado:** el gate de SonarCloud todavía no es bloqueante ([#660](https://github.com/hllous/Backend-M6-DAPS2/issues/660)); no es un defecto del producto, es la fase 2 de la Opción C de [ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md).
 
-## 3. Defectos y brechas abiertos
+## 3. Defectos y brechas abiertos (y los Mayores cerrados, con detalle)
 
 ### Críticas
 
@@ -66,18 +66,19 @@ Ninguna abierta.
 
 **Otras:** `multer` está en 2.5.0 por el `override`; `file-type` (moderada) no se importa en `src/` (el MIME se valida con `sniffMime`); `qs`, `uuid` y `@nestjs/core` (moderadas) siguen **sin analizar** y se resuelven con #628. Como defensa adicional, el `ThrottlerGuard` global (600 por minuto por IP) acota la frecuencia, aunque corre después del parseo y sus contadores están en memoria (ADR-010). La hipótesis del issue (solo `body-parser` tenía superficie) se confirmó por lectura del código; **no se probó con un request real**.
 
-#### DEF-13 · Análisis de seguridad en el CI: parcial, falta ZAP
+#### DEF-13 · Análisis de seguridad en el CI: faltaban SonarCloud, Trivy y ZAP (cerrado, #656)
 
 | Campo | Detalle |
 |---|---|
-| ID | sin issue |
+| ID | sin issue propio hasta ahora; lo cubre la spec [#656](https://github.com/hllous/Backend-M6-DAPS2/issues/656) (tickets [#657](https://github.com/hllous/Backend-M6-DAPS2/issues/657), [#658](https://github.com/hllous/Backend-M6-DAPS2/issues/658), [#659](https://github.com/hllous/Backend-M6-DAPS2/issues/659) y [#661](https://github.com/hllous/Backend-M6-DAPS2/issues/661)) |
 | Severidad / prioridad | Mayor / Alta |
 | HU | HU-31 |
 | Pasos | Revisar `.github/workflows/` y `.github/dependabot.yml` |
-| Esperado | Escaneo de dependencias, de secretos y análisis dinámico |
-| Obtenido | **Hecho:** `npm audit` (job `audit`, #571; gate desde #628), Dependabot semanal, CodeQL (`codeql.yml`), gitleaks sobre el historial completo (job `secrets`, #494). **Hecho en #658:** Trivy (job `trivy`: `fs`, `image` y `config`, con SARIF a Code Scanning y gate sobre HIGH/CRITICAL con fix; hallazgos #665 y #666, corregidos: DEF-26). **No hecho:** OWASP ZAP. No revisamos las alertas de CodeQL (el workflow termina en `success`) |
-| Evidencia | `.github/workflows/ci.yml` (jobs `audit` y `secrets`), `.github/workflows/codeql.yml`, `.github/dependabot.yml` |
-| Estado | Abierto, **parcial**: la parte de Trivy está hecha y en verde |
+| Esperado | Escaneo de dependencias, de secretos y análisis estático y dinámico, con evidencia en vivo (criterios de la Clase 15, ejes B y D) |
+| Obtenido (15/11, al abrir la spec) | **Hecho:** `npm audit` (job `audit`, #571; gate desde #628), Dependabot semanal, CodeQL, gitleaks sobre el historial (job `secrets`, #494). **No hecho:** SonarCloud (sin cuenta ni configuración), Trivy y OWASP ZAP |
+| Causa raíz | El análisis de seguridad se armó por capas según aparecía cada necesidad y no se planificó contra los criterios de la cátedra: no había cuenta de SonarCloud, ni segundo SCA, ni escaneo dinámico, y no se registró como defecto hasta compararlo con la Clase 15 |
+| Evidencia del cierre | SonarCloud: job `sonar` (#662), gate **OK** y ratings A/A/A sobre `main` (`05`, 5.2). Trivy: job `trivy` (#663), 0 HIGH/CRITICAL en `fs`, `image` y `config`; run de `main` [43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363). ZAP: workflow `dast` (#669), run final sobre `main` [43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357): 0 High en baseline y activo (`07`, 5.2). Decisiones en [ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md) |
+| Estado | **Cerrado (16/11/2026).** Los hallazgos reales de las tres herramientas se corrigieron y se registraron como DEF-25 a DEF-28. Quedan declarados: el gate de Sonar no bloqueante (#660) y las Medium de ZAP, justificadas una por una en `07`, 5.2. No revisamos las alertas de CodeQL (el workflow termina en `success`) |
 
 ### Menores
 
@@ -112,8 +113,10 @@ El detalle (causa raíz, PR, commit y CI) está en los issues cerrados del repos
 | DEF-22 | Los logs registraban el `access_token` de la query | [#569](https://github.com/hllous/Backend-M6-DAPS2/issues/569) |
 | DEF-23 | El primer `docker compose up` en frío fallaba en `rabbitmq-setup` | [#567](https://github.com/hllous/Backend-M6-DAPS2/issues/567) |
 | DEF-24 | e2e intermitente por `e2e_no_active`; cerrado por decisión del equipo, **causa raíz sin confirmar** (si vuelve, se reabre) | [#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554) |
-| DEF-25 | ZAP (baseline contra Render) marcó 1 High: DOMPurify 3.1.4 en el `swagger-ui-bundle.js` de `/api/docs`. **Causa raíz:** el bundle viene de `swagger-ui-dist` (vía `@nestjs/swagger`) y `main` seguía con `@nestjs/swagger` 7.4.2 / `swagger-ui-dist` 5.17.14; `npm audit` no ve el JS embebido. **Corregido** en `develop` por #628 (`swagger-ui-dist` 5.34.1, DOMPurify 3.4.17 verificada en el bundle instalado); no hizo falta tocar dependencias. Queda en 0 High cuando `develop` llegue a `main` y Render despliegue | [#668](https://github.com/hllous/Backend-M6-DAPS2/issues/668) |
-| DEF-26 | La imagen Docker traía 6 CVE altas con fix en el `npm` embebido de `node:24-alpine` (brace-expansion 5.0.9 y undici 6.28.0) y la etapa `runner` corría como root (Trivy DS-0002). Causa raíz: el `Dockerfile` heredaba el npm de la base sin actualizarlo y no declaraba `USER`; el escaneo `fs` del lockfile y `npm audit` no los ven. **Corregido:** `npm install -g npm@11.21.2` (brace-expansion 5.0.12, undici 6.29.1) en las dos etapas y `USER node` en `runner` con los `COPY --chown=node:node`; sin entradas nuevas en `.trivyignore` | [#665](https://github.com/hllous/Backend-M6-DAPS2/issues/665), [#666](https://github.com/hllous/Backend-M6-DAPS2/issues/666) |
+| DEF-25 | ZAP (baseline contra Render) marcó 1 High: DOMPurify 3.1.4 en el `swagger-ui-bundle.js` de `/api/docs`. **Causa raíz:** el bundle viene de `swagger-ui-dist` (vía `@nestjs/swagger`) y `main` seguía con `@nestjs/swagger` 7.4.2 / `swagger-ui-dist` 5.17.14; `npm audit` no ve el JS embebido. **Corregido** en `develop` por #628 (`swagger-ui-dist` 5.34.1, DOMPurify 3.4.17 verificada en el bundle instalado); no hizo falta tocar dependencias. **Verificado en producción el 16/11:** con `develop` en `main`, Render sirve DOMPurify 3.4.17 y el baseline final da **0 High** ([run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357)). Queda un aviso de severidad media de DOMPurify (GHSA-qm7q-q8h9-jg8q) que solo corrige la 3.4.18, hoy en ningún `swagger-ui-dist`. Severidad (Mayor) propuesta | [#668](https://github.com/hllous/Backend-M6-DAPS2/issues/668), registro en #671 |
+| DEF-26 | La imagen Docker traía 6 CVE altas con fix en el `npm` embebido de `node:24-alpine` (brace-expansion 5.0.9 y undici 6.28.0) y la etapa `runner` corría como root (Trivy DS-0002). Causa raíz: el `Dockerfile` heredaba el npm de la base sin actualizarlo y no declaraba `USER`; el escaneo `fs` del lockfile y `npm audit` no los ven. **Corregido en #670:** `npm install -g npm@11.21.2` (brace-expansion 5.0.12, undici 6.29.1) en las dos etapas y `USER node` en `runner` con los `COPY --chown=node:node`; sin entradas nuevas en `.trivyignore`. **Verificado el 16/11:** Trivy `fs`, `image` y `config` en 0 HIGH/CRITICAL sobre `main`. Severidad (Mayor) propuesta | [#665](https://github.com/hllous/Backend-M6-DAPS2/issues/665), [#666](https://github.com/hllous/Backend-M6-DAPS2/issues/666) |
+| DEF-27 | Bugs reales de SonarCloud: `.sort()` sin comparador sobre strings (`typescript:S2871` ×4: `idempotency.interceptor.ts`, `inbox.service.ts` y 2 en `scripts/build-datos-ciudad.ts`) y `bootstrap()` sin `.catch` (`S9383`: un fallo de arranque quedaba como promesa rechazada). Causa raíz: el análisis estático no corría en el CI y ESLint no activa esas reglas. **Corregido en #672:** comparador explícito (mismo orden UTF-16, comportamiento idéntico) y `.catch` que loguea y sale con código 1. El primer análisis de `main` contó 12 bugs y el del PR #662, 5; el líder decidió corregir en código los 5 reales (triaje en #657) y el resto eran falsos positivos o aceptables. Severidad (Menor) propuesta. **Verificado el 16/11:** 0 bugs, confiabilidad A | [#667](https://github.com/hllous/Backend-M6-DAPS2/issues/667) |
+| DEF-28 | Vulnerabilidades de SonarCloud: el primer análisis de `main` contó 23 (el del PR #662, 22). Ninguna Blocker o Critical real: las 3 Blocker `S6698` eran URLs de ejemplo con `usuario:usuario@localhost` (**G6 nunca estuvo en riesgo**); el resto eran `npm ci` sin `--ignore-scripts` (`S6505`), `npx` sin versión fija (`S8543`), un log de host y base (`S8689`), una entrada sin validar en un script de build (`S8707`) y `git` y `npx` invocados por PATH (`S4036`). **Corregido en código en #675:** `--ignore-scripts` con `prisma generate` explícito, scripts de `package.json` en lugar de `npx`, URLs de ejemplo sin credenciales, log sin host, validación de la entrada del script y `process.execPath` en lugar de `npx`. La última (`S8707` en `scripts/build-espacios-verdes.ts:160`, script local con argumentos del propio equipo) la **aceptó el líder en SonarCloud** con su usuario. Severidad (Menor) propuesta. **Verificado el 16/11:** 0 vulnerabilidades, seguridad A | [#674](https://github.com/hllous/Backend-M6-DAPS2/issues/674) |
 
 ### Hallazgos de proceso (no son defectos del producto)
 
@@ -129,10 +132,10 @@ No omitimos nada conocido: estas pruebas **no se hicieron** y no se presentan co
 
 | Verificación | Estado | Motivo |
 |---|---|---|
-| Quality Gate de SonarCloud | NO HECHO | Pide un administrador de `hllous`; no hay cuenta ni `sonar-project.properties` |
+| Gate de SonarCloud **bloqueante** | NO HECHO (análisis y gate HECHOS, #657) | Gate OK y ratings A/A/A sobre `main` el 16/11. Pasar a bloqueante y requerido en los PR a `develop` queda en [#660](https://github.com/hllous/Backend-M6-DAPS2/issues/660) (Opción C, paso 2). Ver `05`, 5.2 |
 | Job `e2e` obligatorio en la protección de ramas | NO HECHO | Pide admin. El e2e corre y pasa, pero la regla exige solo `build` y `test` (DEF-14) |
-| OWASP ZAP baseline y activo autenticado | HECHO el 15/11 (#659) | 1 High abierta en el baseline: DOMPurify del Swagger UI, #668. Ver `07`, 5.2 |
-| Trivy | HECHO (#658) | 0 HIGH/CRITICAL con fix; [run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43784574768) |
+| OWASP ZAP baseline y activo autenticado | HECHO (#659) | Corrida final sobre `main` el 16/11 ([run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357)): 0 High en baseline y activo; DEF-25 cerrado. Ver `07`, 5.2 |
+| Trivy | HECHO (#658) | 0 HIGH/CRITICAL en `fs`, `image` y `config`; [run de `main`](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363) |
 | Éxito por endpoint en los 91 endpoints restantes | NO HECHO | Hay caso de éxito en 61 de 152 operaciones; el resto está en `test/api/PENDIENTES.md` |
 | Mutation score: refuerzo de los 21 archivos restantes | PARCIAL | Global de los 26 archivos de dominio confirmado en el CI: 71,22 % → 75,39 % tras reforzar 5 archivos (cumple el 60 %); quedan 21 sin reforzar. Ver [`05`](05-informe-ejecucion.md) §5.1 |
 
