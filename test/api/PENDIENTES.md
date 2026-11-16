@@ -1,101 +1,22 @@
-# Endpoints sin caso de éxito en la colección Postman
+# Excepciones de la colección Postman
 
-Generado por `npm run api:collection`. Todos tienen caso de error (401/403/400/404 según corresponda);
-61 de 152 tienen además caso de éxito. Los 91 de abajo no, y por qué:
+Generado por `npm run api:collection` desde `test/api/excepciones.json`. La colección cubre las 152 operaciones
+del OpenAPI con caso de éxito (151/152, más 1 con excepción) y de error (149/152, más 3 con excepción).
+`npm run api:coverage` falla si alguna operación queda sin caso y sin excepción justificada acá.
+
+## Sin caso de éxito
 
 | Endpoint | Motivo |
 |---|---|
-| `POST /events/inbox` | escritura: necesita datos y estado de dominio |
-| `POST /events/outbox/retry-failed` | escritura: necesita datos y estado de dominio |
-| `POST /events/outbox/{id}/retry` | escritura: necesita datos y estado de dominio |
-| `POST /zones` | escritura: necesita datos y estado de dominio |
-| `PATCH /zones/{id}` | escritura: necesita datos y estado de dominio |
-| `DELETE /zones/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /zones/{id}/neighborhoods` | escritura: necesita datos y estado de dominio |
-| `DELETE /zones/{id}/neighborhoods/{neighborhoodId}` | escritura: necesita datos y estado de dominio |
-| `POST /service-types` | escritura: necesita datos y estado de dominio |
-| `PATCH /service-types/{id}` | escritura: necesita datos y estado de dominio |
-| `DELETE /service-types/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /disposal-sites` | escritura: necesita datos y estado de dominio |
-| `PATCH /disposal-sites/{id}` | escritura: necesita datos y estado de dominio |
-| `DELETE /disposal-sites/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /routes` | escritura: necesita datos y estado de dominio |
-| `PATCH /routes/{id}` | escritura: necesita datos y estado de dominio |
-| `DELETE /routes/{id}` | escritura: necesita datos y estado de dominio |
-| `PUT /routes/{id}/stops` | escritura: necesita datos y estado de dominio |
-| `POST /service-frequencies` | escritura: necesita datos y estado de dominio |
-| `PATCH /service-frequencies/{id}` | escritura: necesita datos y estado de dominio |
-| `DELETE /service-frequencies/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /crews` | escritura: necesita datos y estado de dominio |
-| `PATCH /crews/{id}` | escritura: necesita datos y estado de dominio |
-| `DELETE /crews/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /crews/{id}/members` | escritura: necesita datos y estado de dominio |
-| `DELETE /crews/{id}/members/{userId}` | escritura: necesita datos y estado de dominio |
-| `POST /crews/{id}/zone-assignments` | escritura: necesita datos y estado de dominio |
-| `POST /vehicles` | escritura: necesita datos y estado de dominio |
-| `PATCH /vehicles/{id}` | escritura: necesita datos y estado de dominio |
-| `DELETE /vehicles/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /containers` | escritura: necesita datos y estado de dominio |
-| `PATCH /containers/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /containers/{id}/report-overflow` | escritura: necesita datos y estado de dominio |
-| `POST /containers/{id}/report-damage` | escritura: necesita datos y estado de dominio |
-| `POST /containers/{id}/empty` | escritura: necesita datos y estado de dominio |
-| `POST /containers/{id}/start-repair` | escritura: necesita datos y estado de dominio |
-| `POST /containers/{id}/complete-repair` | escritura: necesita datos y estado de dominio |
-| `POST /containers/{id}/relocate` | escritura: necesita datos y estado de dominio |
-| `POST /containers/{id}/confirm-relocation` | escritura: necesita datos y estado de dominio |
-| `POST /containers/{id}/remove` | escritura: necesita datos y estado de dominio |
-| `POST /trees` | escritura: necesita datos y estado de dominio |
-| `PATCH /trees/{id}` | escritura: necesita datos y estado de dominio |
-| `DELETE /trees/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /trees/{treeId}/surveys` | escritura: necesita datos y estado de dominio |
-| `POST /tree-interventions` | escritura: necesita datos y estado de dominio |
-| `POST /tree-interventions/{id}/submit-for-authorization` | escritura: necesita datos y estado de dominio |
-| `POST /tree-interventions/{id}/authorize` | escritura: necesita datos y estado de dominio |
-| `POST /tree-interventions/{id}/reject` | escritura: necesita datos y estado de dominio |
-| `POST /tree-interventions/{id}/assign-service` | escritura: necesita datos y estado de dominio |
-| `POST /green-spaces` | escritura: necesita datos y estado de dominio |
-| `PATCH /green-spaces/{id}` | escritura: necesita datos y estado de dominio |
-| `DELETE /green-spaces/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /green-points` | escritura: necesita datos y estado de dominio |
-| `PATCH /green-points/{id}` | escritura: necesita datos y estado de dominio |
-| `DELETE /green-points/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /services` | escritura: necesita datos y estado de dominio |
-| `PATCH /services/{id}` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/assign-crew` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/delay-notices` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/start` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/suspend` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/resume` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/complete` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/cancel` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/reschedule` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/confirm-reschedule` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/zone-results` | escritura: necesita datos y estado de dominio |
-| `POST /services/{id}/collection-records` | escritura: necesita datos y estado de dominio |
-| `POST /environmental-reports/{reportId}/inspections` | escritura: necesita datos y estado de dominio |
-| `GET /environmental-inspections/{id}` | el listado del padre no existe para resolver el id |
-| `POST /environmental-inspections/{id}/complete` | escritura: necesita datos y estado de dominio |
-| `POST /environmental-inspections/{id}/violation-notice` | escritura: necesita datos y estado de dominio |
-| `GET /environmental-inspections/{id}/violation-notice` | el listado del padre no existe para resolver el id |
-| `POST /environmental-reports` | escritura: necesita datos y estado de dominio |
-| `POST /environmental-reports/{id}/start-review` | escritura: necesita datos y estado de dominio |
-| `POST /environmental-reports/{id}/forward` | escritura: necesita datos y estado de dominio |
-| `POST /environmental-reports/{id}/dismiss` | escritura: necesita datos y estado de dominio |
-| `POST /environmental-reports/{id}/request-information` | escritura: necesita datos y estado de dominio |
-| `POST /environmental-reports/{id}/close` | escritura: necesita datos y estado de dominio |
-| `POST /repair-requests` | escritura: necesita datos y estado de dominio |
-| `POST /repair-requests/{id}/start` | escritura: necesita datos y estado de dominio |
-| `POST /repair-requests/{id}/close` | escritura: necesita datos y estado de dominio |
-| `POST /street-closure-requests` | escritura: necesita datos y estado de dominio |
-| `POST /street-closure-requests/{id}/approve` | escritura: necesita datos y estado de dominio |
-| `POST /street-closure-requests/{id}/reject` | escritura: necesita datos y estado de dominio |
-| `POST /street-closure-requests/{id}/end` | escritura: necesita datos y estado de dominio |
-| `GET /public/reports/{ticketId}` | el listado del padre no existe para resolver el id |
-| `POST /evidence` | escritura: necesita datos y estado de dominio |
-| `GET /evidence` | query requerido sin valor de demo |
-| `PUT /role-assignments/{userId}` | escritura: necesita datos y estado de dominio |
-| `DELETE /role-assignments/{userId}` | escritura: necesita datos y estado de dominio |
+| `POST /evidence` | Sube el archivo a Cloudflare R2 (cliente S3 con endpoint fijo https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com). El CI no tiene credenciales ni bucket: sin ellos el camino válido responde 503 por diseño. Los casos de error (401, 403 de rol, 400) sí corren. |
+
+## Sin caso de error
+
+| Endpoint | Motivo |
+|---|---|
+| `GET /health` | No recibe entradas ni depende de nada: solo declara 200, no hay forma de provocarle un error. |
+| `GET /health/ready` | Su único error es el 503 con la base caída; el CI no puede tirar la base sin cortar el resto de la colección. |
+| `GET /public/zones` | No recibe parámetros; su único error declarado es el 429 del límite del portal, que dejaría bloqueadas por IP las demás rutas públicas de la corrida. |
 
 ## Hallazgos de Schemathesis
 
