@@ -1,0 +1,10 @@
+{
+  "sinExito": {
+    "POST /evidence": "Sube el archivo a Cloudflare R2 (cliente S3 con endpoint fijo https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com). El CI no tiene credenciales ni bucket: sin ellos el camino válido responde 503 por diseño. Los casos de error (401, 403 de rol, 400) sí corren."
+  },
+  "sinError": {
+    "GET /health": "No recibe entradas ni depende de nada: solo declara 200, no hay forma de provocarle un error.",
+    "GET /health/ready": "Su único error es el 503 con la base caída; el CI no puede tirar la base sin cortar el resto de la colección.",
+    "GET /public/zones": "No recibe parámetros; su único error declarado es el 429 del límite del portal, que dejaría bloqueadas por IP las demás rutas públicas de la corrida."
+  }
+}
