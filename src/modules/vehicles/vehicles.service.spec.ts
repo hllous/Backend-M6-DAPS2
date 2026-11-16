@@ -131,7 +131,18 @@ describe('VehiclesService', () => {
     it('ordena por patente', async () => {
       await service.findAll({ page: 1, pageSize: 20 } as any);
 
-      expect(prisma.vehicle.findMany.mock.calls[0][0].orderBy).toEqual({ plate: 'asc' });
+      expect(prisma.vehicle.findMany.mock.calls[0][0].orderBy).toEqual([
+        { plate: 'asc' },
+        { id: 'asc' },
+      ]);
+    });
+
+    it('sort y order llegan a la consulta con id de desempate', async () => {
+      await service.findAll({ page: 2, pageSize: 5, sort: 'createdAt', order: 'desc' } as any);
+
+      expect(prisma.vehicle.findMany.mock.calls[0][0]).toMatchObject({
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      });
     });
 
     it('la capacidad sale como número, y la ausente como null', async () => {

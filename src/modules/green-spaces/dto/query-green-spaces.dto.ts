@@ -2,9 +2,14 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { SearchText, ToBoolean } from '../../../common/decorators';
 import { GreenSpaceType } from '@prisma/client';
-import { PaginationQueryDto } from '../../../common/dto';
+import { SortablePaginationQueryDto, SortField } from '../../../common/dto';
 
-export class QueryGreenSpacesDto extends PaginationQueryDto {
+export const GREEN_SPACES_SORT_FIELDS = ['name', 'spaceType', 'active', 'createdAt'] as const;
+
+export class QueryGreenSpacesDto extends SortablePaginationQueryDto {
+  @SortField(GREEN_SPACES_SORT_FIELDS, 'name')
+  sort?: (typeof GREEN_SPACES_SORT_FIELDS)[number];
+
   @ApiPropertyOptional({
     description: 'Filtrar por estado activo/inactivo',
     example: true,

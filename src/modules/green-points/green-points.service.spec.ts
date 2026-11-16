@@ -178,7 +178,7 @@ describe('GreenPointsService', () => {
 
     const args = prisma.greenPoint.findMany.mock.calls[0][0];
     expect(args.where).toStrictEqual({});
-    expect(args).toMatchObject({ skip: 20, take: 10, orderBy: { code: 'asc' } });
+    expect(args).toMatchObject({ skip: 20, take: 10, orderBy: [{ code: 'asc' }, { id: 'asc' }] });
     expect(prisma.greenPoint.count).toHaveBeenCalledWith({ where: {} });
     expect(res.meta).toMatchObject({ total: 41, page: 3, pageSize: 10 });
   });

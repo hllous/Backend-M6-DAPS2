@@ -3147,6 +3147,36 @@
             }
           },
           {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "code",
+              "type": "string",
+              "enum": [
+                "code",
+                "name",
+                "active",
+                "createdAt"
+              ]
+            }
+          },
+          {
             "name": "active",
             "required": false,
             "in": "query",
@@ -4336,6 +4366,37 @@
             }
           },
           {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "name",
+              "type": "string",
+              "enum": [
+                "name",
+                "crewType",
+                "defaultShift",
+                "active",
+                "createdAt"
+              ]
+            }
+          },
+          {
             "name": "active",
             "required": false,
             "in": "query",
@@ -5325,6 +5386,37 @@
             }
           },
           {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "plate",
+              "type": "string",
+              "enum": [
+                "plate",
+                "vehicleType",
+                "capacity",
+                "active",
+                "createdAt"
+              ]
+            }
+          },
+          {
             "name": "active",
             "required": false,
             "in": "query",
@@ -5842,6 +5934,37 @@
               "maximum": 100,
               "default": 20,
               "type": "number"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "code",
+              "type": "string",
+              "enum": [
+                "code",
+                "containerType",
+                "status",
+                "capacityLiters",
+                "createdAt"
+              ]
             }
           },
           {
@@ -7520,6 +7643,36 @@
               "maximum": 100,
               "default": 20,
               "type": "number"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "surveyCode",
+              "type": "string",
+              "enum": [
+                "surveyCode",
+                "species",
+                "active",
+                "createdAt"
+              ]
             }
           },
           {
@@ -9326,6 +9479,36 @@
             }
           },
           {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "name",
+              "type": "string",
+              "enum": [
+                "name",
+                "spaceType",
+                "active",
+                "createdAt"
+              ]
+            }
+          },
+          {
             "name": "active",
             "required": false,
             "in": "query",
@@ -9854,6 +10037,36 @@
               "maximum": 100,
               "default": 20,
               "type": "number"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "code",
+              "type": "string",
+              "enum": [
+                "code",
+                "name",
+                "active",
+                "createdAt"
+              ]
             }
           },
           {

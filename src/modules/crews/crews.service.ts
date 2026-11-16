@@ -20,7 +20,7 @@ import {
   CrewZoneAssignmentResponseDto,
 } from './dto';
 import { IdentityPort, IdentityUnavailableError } from '../../identity/identity.port';
-import { PaginatedResponseDto } from '../../common/dto';
+import { PaginatedResponseDto, buildOrderBy } from '../../common/dto';
 import { normalizeM1UserId } from '../../common/decorators';
 import { toDateOnly, todayArgentina } from '../../common/utils/date-only';
 import { reubicacionVigente, zonaEfectiva } from './crew-zone';
@@ -132,7 +132,7 @@ export class CrewsService {
         include: crewInclude(hoy),
         skip: query.skip,
         take: query.take,
-        orderBy: { name: 'asc' },
+        orderBy: buildOrderBy(query, 'name'),
       }),
       this.prisma.crew.count({ where }),
     ]);

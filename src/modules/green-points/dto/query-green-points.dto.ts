@@ -2,9 +2,14 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { WasteType } from '@prisma/client';
 import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { SearchText, ToBoolean } from '../../../common/decorators';
-import { PaginationQueryDto } from '../../../common/dto';
+import { SortablePaginationQueryDto, SortField } from '../../../common/dto';
 
-export class QueryGreenPointsDto extends PaginationQueryDto {
+export const GREEN_POINTS_SORT_FIELDS = ['code', 'name', 'active', 'createdAt'] as const;
+
+export class QueryGreenPointsDto extends SortablePaginationQueryDto {
+  @SortField(GREEN_POINTS_SORT_FIELDS, 'code')
+  sort?: (typeof GREEN_POINTS_SORT_FIELDS)[number];
+
   @ApiPropertyOptional({ description: 'Filtrar por estado habilitado', example: true })
   @IsOptional()
   @ToBoolean()

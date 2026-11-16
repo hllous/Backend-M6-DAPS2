@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditActor, AuditService, activeState } from '../../common/audit/audit.service';
 import { CreateVehicleDto, UpdateVehicleDto, QueryVehiclesDto, VehicleResponseDto } from './dto';
-import { PaginatedResponseDto } from '../../common/dto';
+import { PaginatedResponseDto, buildOrderBy } from '../../common/dto';
 
 @Injectable()
 export class VehiclesService {
@@ -68,7 +68,7 @@ export class VehiclesService {
         where,
         skip: query.skip,
         take: query.take,
-        orderBy: { plate: 'asc' },
+        orderBy: buildOrderBy(query, 'plate'),
       }),
       this.prisma.vehicle.count({ where }),
     ]);
