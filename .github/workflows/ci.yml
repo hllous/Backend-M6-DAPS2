@@ -283,10 +283,11 @@ jobs:
             git /repo --redact --no-banner --log-opts="--all"
 
   # secrets-default: lo mismo que `secrets` pero como lo corre la cátedra:
-  # gitleaks con la configuración POR DEFECTO (se borran .gitleaks.toml y
-  # .gitleaksignore del working tree; el historial no se toca) y trufflehog,
-  # sobre todas las ramas y tags. Informativo: muestra qué ve una herramienta
-  # sin nuestras excepciones (solo frena si trufflehog verifica una credencial viva). Los reportes se publican como artifact con los
+  # gitleaks con la configuración POR DEFECTO (se borra .gitleaks.toml y se respeta
+  # .gitleaksignore, que es lo que ve la cátedra; el historial no se toca) y trufflehog,
+  # sobre todas las ramas y tags. Muestra qué ve una herramienta
+  # sin nuestras excepciones (frena si gitleaks por defecto encuentra algo en el historial, o si
+  # trufflehog verifica una credencial viva). Los reportes se publican como artifact con los
   # valores redactados (en trufflehog se eliminan Raw/RawV2).
   secrets-default:
     name: secrets-default
@@ -306,11 +307,11 @@ jobs:
       - name: Gitleaks con configuración por defecto
         continue-on-error: true
         run: |
-          rm -f .gitleaks.toml .gitleaksignore
+          rm -f .gitleaks.toml
           mkdir -p "$REPORTS"
           docker run --rm -v "$PWD:/repo" -v "$REPORTS:/reports" zricethezav/gitleaks:v8.30.1 \
             git /repo --redact --no-banner --log-opts="--all" \
-            --report-format json --report-path /reports/gitleaks-default.json || true
+            --report-format json --report-path /reports/gitleaks-default.json || true # se evalúa en el último paso
           # Estado actual de los archivos (no el historial).
           docker run --rm -v "$PWD:/repo" -v "$REPORTS:/reports" zricethezav/gitleaks:v8.30.1 \
             dir /repo --redact --no-banner \
@@ -343,14 +344,16 @@ jobs:
             --results=verified,unknown,unverified,filtered_unverified \
             | jq -c 'del(.Raw, .RawV2)' > "$REPORTS/trufflehog-default-worktree.jsonl"
 
-      # Único frenante del job: una credencial VERIFICADA como viva. El resto
-      # (valores de juguete que ya están en el historial) es informativo, porque
-      # sin reescribir historia no puede desaparecer.
-      - name: Fallar si trufflehog verificó alguna credencial
+      # Frenantes del job: algún hallazgo de gitleaks por defecto en el historial
+      # (los valores de juguete ya conocidos están en .gitleaksignore) o una
+      # credencial VERIFICADA como viva por trufflehog. Trufflehog sin verificar y
+      # el estado actual de los archivos son informativos.
+      - name: Fallar ante hallazgos de gitleaks o verificados de trufflehog
         run: |
-          n=$(jq -s '[.[] | select(.Verified == true)] | length' "$REPORTS/trufflehog-default.jsonl" "$REPORTS/trufflehog-default-worktree.jsonl")
-          echo "Credenciales verificadas: $n"
-          test "$n" -eq 0
+          g=$(jq 'length' "$REPORTS/gitleaks-default.json")
+          v=$(jq -s '[.[] | select(.Verified == true)] | length' "$REPORTS/trufflehog-default.jsonl" "$REPORTS/trufflehog-default-worktree.jsonl")
+          echo "gitleaks (historial, sin .gitleaks.toml): $g hallazgos; trufflehog verificados: $v"
+          test "$g" -eq 0 && test "$v" -eq 0
 
       - name: Publicar reportes
         if: always()
