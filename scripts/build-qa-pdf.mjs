@@ -137,6 +137,7 @@ function build({ out, title, subtitle, files, toc }) {
       basedir: docsDir,
       dest: pdfPath,
       stylesheet: [join(qaDir, 'pdf.css')],
+      script: [{ path: join(qaDir, 'pdf.js') }],
       document_title: title,
       pdf_options: {
         format: 'A4',
