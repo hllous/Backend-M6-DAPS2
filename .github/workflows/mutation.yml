@@ -28,7 +28,7 @@ jobs:
       # El cron corre sobre la rama por defecto; un workflow_dispatch en otra
       # rama también puede leer ese cache.
       - name: Restaurar el incremental de Stryker
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: reports/mutation/incremental.json
           key: stryker-incremental-${{ github.run_id }}
@@ -40,7 +40,7 @@ jobs:
       # resultado de los mutantes vale igual para la próxima corrida.
       - name: Guardar el incremental de Stryker
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: reports/mutation/incremental.json
           key: stryker-incremental-${{ github.run_id }}

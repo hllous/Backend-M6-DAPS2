@@ -46,7 +46,7 @@ jobs:
       # dependencias lo invalida. #632
       - name: Cache node_modules
         id: deps
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-node-${{ hashFiles('.nvmrc', 'package-lock.json') }}
@@ -92,7 +92,7 @@ jobs:
       # dependencias lo invalida. #632
       - name: Cache node_modules
         id: deps
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-node-${{ hashFiles('.nvmrc', 'package-lock.json') }}
@@ -234,7 +234,7 @@ jobs:
       # dependencias lo invalida. #632
       - name: Cache node_modules
         id: deps
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-node-${{ hashFiles('.nvmrc', 'package-lock.json') }}
