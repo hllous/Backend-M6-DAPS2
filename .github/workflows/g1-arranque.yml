@@ -1,0 +1,182 @@
+# ──────────────────────────────────────────────────────────────
+# g1-arranque — Criterio eliminatorio G1 (#698).
+#
+# Reproduce lo que hace el docente: un checkout limpio (sin .env) y el único
+# comando del README, `docker compose up --build`. Mide desde el comando hasta
+# un login real contra el M1 falso a través del BFF del frontend, y falla si
+# tarda más de 15 minutos. Después repite `docker compose up` sobre la misma
+# base para probar que el seed de demo es idempotente.
+#
+# El frontend se construye desde su repo (FRONTEND_REF, default del compose: main).
+# Corre en los PR que tocan el arranque, en push a main y a demanda.
+# ──────────────────────────────────────────────────────────────
+
+name: g1-arranque
+
+on:
+  pull_request:
+    branches: [develop, test, main]
+    paths:
+      - docker-compose.yml
+      - docker/**
+      - Dockerfile
+      - .dockerignore
+      - prisma/**
+      - README.md
+      - .github/workflows/g1-arranque.yml
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      frontend_ref:
+        description: Rama o tag del frontend (vacío = el default del compose)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  g1:
+    name: g1 (docker compose up en ≤ 15 min)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      LIMITE_SEGUNDOS: 900
+      FRONT: http://localhost:3001
+      API: http://localhost:3000
+      CUENTA: carlos.rodriguez@m6.local
+    steps:
+      - name: Checkout limpio
+        uses: actions/checkout@v7
+
+      - name: FRONTEND_REF (solo a demanda)
+        if: github.event_name == 'workflow_dispatch' && inputs.frontend_ref != ''
+        env:
+          REF: ${{ inputs.frontend_ref }}
+        run: echo "FRONTEND_REF=$REF" >> "$GITHUB_ENV"
+
+      - name: Sin .env (como en un clon nuevo)
+        run: test ! -e .env
+
+      # El comando del README, tal cual, en segundo plano: los pasos siguientes
+      # esperan a cada pieza. INICIO marca el arranque del cronómetro.
+      - name: docker compose up --build
+        run: |
+          date +%s > inicio
+          nohup docker compose up --build > compose.log 2>&1 &
+          echo "Arrancó a las $(date -u +%H:%M:%S) UTC"
+
+      - name: Backend listo (/health/ready)
+        run: |
+          inicio=$(cat inicio)
+          until body=$(curl -sf "$API/health/ready"); do
+            [ $(( $(date +%s) - inicio )) -lt "$LIMITE_SEGUNDOS" ] || { echo "::error::El backend no respondió /health/ready en 15 minutos"; exit 1; }
+            sleep 5
+          done
+          echo "$body"
+          echo "$body" | grep -q '"database":"up"'
+          echo "$body" | grep -q '"broker":"connected"'
+          echo "Backend listo a los $(( $(date +%s) - inicio )) s"
+
+      - name: Seed de demo terminado
+        run: |
+          inicio=$(cat inicio)
+          until [ -n "$(docker compose ps -a -q seed)" ] && [ "$(docker inspect -f '{{.State.Status}}' "$(docker compose ps -a -q seed)")" = "exited" ]; do
+            [ $(( $(date +%s) - inicio )) -lt "$LIMITE_SEGUNDOS" ] || { echo "::error::El seed no terminó en 15 minutos"; exit 1; }
+            sleep 5
+          done
+          codigo=$(docker inspect -f '{{.State.ExitCode}}' "$(docker compose ps -a -q seed)")
+          echo "Seed terminó con código $codigo a los $(( $(date +%s) - inicio )) s"
+          [ "$codigo" = "0" ] || { docker compose logs seed; exit 1; }
+
+      - name: Frontend respondiendo
+        run: |
+          inicio=$(cat inicio)
+          until curl -sf "$FRONT/api/health"; do
+            [ $(( $(date +%s) - inicio )) -lt "$LIMITE_SEGUNDOS" ] || { echo "::error::El frontend no respondió en 15 minutos"; exit 1; }
+            sleep 5
+          done
+          echo
+          # Primera carga de la pantalla de login (next dev la compila en este pedido).
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 300 "$FRONT/login")
+          echo "GET /login → $codigo"
+          [ "$codigo" = "200" ]
+
+      - name: Login real (BFF → M1 falso → GET /me del backend)
+        run: |
+          inicio=$(cat inicio)
+          login() {
+            curl -s -o login.json -w '%{http_code}' --max-time 120 -c cookies.txt \
+              -H 'content-type: application/json' -H 'x-requested-with: XMLHttpRequest' \
+              -d "{\"email\":\"$CUENTA\",\"password\":\"m6-dev-796\"}" "$FRONT/api/session/login"
+          }
+          # El M1 falso arranca junto con el frontend: unos segundos de 503 son esperables.
+          until codigo=$(login) && [ "$codigo" = "200" ]; do
+            echo "POST /api/session/login → $codigo"
+            [ $(( $(date +%s) - inicio )) -lt "$LIMITE_SEGUNDOS" ] || { echo "::error::El login no funcionó en 15 minutos"; cat login.json; exit 1; }
+            sleep 5
+          done
+          fin=$(date +%s)
+          total=$(( fin - inicio ))
+          echo "POST /api/session/login → 200 a los $total s"
+          # El rol sale del seed (user_role_assignment), vía GET /me del backend.
+          grep -q 'M6_ADMIN' login.json || { echo "::error::La sesión no trae el rol M6_ADMIN del seed"; cat login.json; exit 1; }
+          # Un pedido autenticado por el BFF con datos del seed.
+          codigo=$(curl -s -o zonas.json -w '%{http_code}' --max-time 120 -b cookies.txt "$FRONT/api/zones")
+          echo "GET /api/zones (BFF) → $codigo"
+          [ "$codigo" = "200" ] && grep -qi 'belgrano' zonas.json
+          echo "$total" > total
+          {
+            echo "### G1: sistema completo con \`docker compose up --build\`"
+            echo "- Desde el comando hasta el login real a través del BFF: **$(( total / 60 )) min $(( total % 60 )) s** (límite: 15 min)"
+            echo "- Backend \`/health/ready\`, seed de demo (código 0), frontend en :3001, login de \`$CUENTA\` con rol M6_ADMIN y \`GET /api/zones\` por el BFF: OK"
+            echo "- Frontend: \`${FRONTEND_REF:-main}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Dentro de los 15 minutos
+        run: |
+          total=$(cat total)
+          echo "Tiempo total: $total s (límite $LIMITE_SEGUNDOS s)"
+          [ "$total" -le "$LIMITE_SEGUNDOS" ] || { echo "::error::G1 tardó $total s, más de 15 minutos"; exit 1; }
+
+      # Segundo arranque sobre la misma base: el seed vuelve a correr y no debe romper.
+      - name: Segundo docker compose up (seed idempotente)
+        run: |
+          docker compose up -d
+          seed=$(docker compose ps -a -q seed)
+          codigo=$(timeout 600 docker wait "$seed")
+          echo "Seed del segundo up terminó con código $codigo"
+          [ "$codigo" = "0" ] || { docker compose logs seed; exit 1; }
+          rm -f cookies.txt
+          codigo=$(curl -s -o login.json -w '%{http_code}' --max-time 120 -c cookies.txt \
+            -H 'content-type: application/json' -H 'x-requested-with: XMLHttpRequest' \
+            -d "{\"email\":\"$CUENTA\",\"password\":\"m6-dev-796\"}" "$FRONT/api/session/login")
+          echo "POST /api/session/login tras el segundo up → $codigo"
+          [ "$codigo" = "200" ]
+          echo "- Segundo \`docker compose up\`: seed código 0 y login OK" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Estado y logs
+        if: always()
+        run: |
+          docker compose ps -a || true
+          docker compose logs --no-color > compose-servicios.log 2>&1 || true
+          tail -n 80 compose.log || true
+
+      - name: Subir logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g1-compose-logs
+          path: |
+            compose.log
+            compose-servicios.log
+          if-no-files-found: ignore
+
+      - name: Bajar el stack
+        if: always()
+        run: docker compose down -v

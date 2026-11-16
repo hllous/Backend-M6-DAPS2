@@ -12,75 +12,24 @@ NestJS · PostgreSQL (Prisma) · RabbitMQ.
 
 ### Requisitos
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) abierto.
-- [Node.js 22](https://nodejs.org/) y Git (solo para el frontend).
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (o Docker Engine con Compose v2) abierto.
+- Git.
 
-### 1. Backend, base de datos y broker
+No hace falta Node, pnpm ni clonar el frontend: Docker construye todo.
+
+### Un solo comando
 
 ```bash
 git clone https://github.com/hllous/Backend-M6-DAPS2.git
 cd Backend-M6-DAPS2
-cp .env.example .env
 docker compose up --build
 ```
 
-`.env` no se edita: los valores de ejemplo sirven tal cual. El primer arranque tarda unos 5 minutos. Está listo cuando <http://localhost:3000/health/ready> responde `"database":"up"` y `"broker":"connected"`.
+Levanta la base de datos (PostgreSQL), el broker de mensajes (RabbitMQ), el backend (aplica las migraciones), los datos de demo, el M1 falso que emite los logins y el frontend. El frontend se construye desde su repositorio ([hllous/Frontend-M6-DAPS2](https://github.com/hllous/Frontend-M6-DAPS2)) sin clonarlo a mano. No hay que crear ni editar `.env`.
 
-### 2. Datos de demo
+El primer arranque tarda entre 5 y 10 minutos (descarga imágenes y compila). Está listo cuando el log muestra `Ready` del servicio `frontend`. La primera vez que se abre cada pantalla tarda unos segundos más: el frontend corre en modo desarrollo y la compila en ese momento.
 
-En otra terminal, dentro de `Backend-M6-DAPS2`:
-
-```bash
-docker compose --profile seed run --rm seed
-```
-
-Sin este paso las cuentas de prueba entran sin rol.
-
-### 3. Frontend y M1 falso
-
-El login lo emite M1 (otro grupo). En local lo reemplaza un **M1 falso** que viene con el frontend. Cloná el frontend al lado del backend:
-
-```bash
-git clone https://github.com/hllous/Frontend-M6-DAPS2.git
-cd Frontend-M6-DAPS2
-git checkout v2.0-entrega4
-corepack enable
-pnpm install
-```
-
-Después abrí **dos terminales** dentro de `Frontend-M6-DAPS2`. Elegí la variante de tu sistema.
-
-**macOS / Linux / Git Bash**
-
-```bash
-# Terminal A: M1 falso
-M1_FAKE_JWT_SECRET=Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw== pnpm dev:fake-m1
-```
-
-```bash
-# Terminal B: frontend
-M6_AUTH_MODE=real-m1 M1_FAKE_ENABLED=true M1_BASE_URL=http://127.0.0.1:3120/api/v1/ \
-M6_BACKEND_ORIGIN=http://localhost:3000 M6_SESSION_SECRET=local-dev-secret \
-pnpm dev --port 3001
-```
-
-**Windows (PowerShell)**
-
-```powershell
-# Terminal A: M1 falso
-$env:M1_FAKE_JWT_SECRET="Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw=="; pnpm dev:fake-m1
-```
-
-```powershell
-# Terminal B: frontend
-$env:M6_AUTH_MODE="real-m1"; $env:M1_FAKE_ENABLED="true"; $env:M1_BASE_URL="http://127.0.0.1:3120/api/v1/"
-$env:M6_BACKEND_ORIGIN="http://localhost:3000"; $env:M6_SESSION_SECRET="local-dev-secret"
-pnpm dev --port 3001
-```
-
-El secreto de la terminal A es el `JWT_SECRET` de `.env.example`. Si lo cambiaste en `.env`, usá el mismo valor.
-
-### 4. Entrar
+### Entrar
 
 Abrí <http://localhost:3001/login>. Todas las cuentas usan la clave `m6-dev-796`:
 
@@ -97,9 +46,22 @@ Abrí <http://localhost:3001/login>. Todas las cuentas usan la clave `m6-dev-796
 Otras direcciones útiles:
 
 - API (Swagger): <http://localhost:3000/api/docs>
+- Estado del backend: <http://localhost:3000/health/ready> (`"database":"up"` y `"broker":"connected"`)
 - Consola de RabbitMQ: <http://localhost:15672> (usuario `m6`, clave `cambiame`)
 
-Para apagar todo: `Ctrl+C` en cada terminal y `docker compose down`. Con `docker compose down -v` también se borran la base y la cola.
+### Apagar
+
+`Ctrl+C` en la terminal del comando, o `docker compose down` desde otra. Con `docker compose down -v` también se borran la base y la cola; el próximo `up` vuelve a cargar los datos de demo.
+
+Volver a correr `docker compose up` es seguro: los datos de demo no se duplican.
+
+### Opcional
+
+- **Otra versión del frontend**: `FRONTEND_REF=<rama o tag> docker compose up --build` (por defecto, `main`).
+- **Cambiar usuarios o claves locales**: `cp .env.example .env` y editarlo. Sin `.env`, el compose usa los valores de ejemplo, que valen solo en tu máquina.
+- **Puertos ocupados**: el sistema usa 3000, 3001, 5432, 5672 y 15672.
+
+La prueba de este arranque corre en GitHub Actions ([`g1-arranque`](.github/workflows/g1-arranque.yml)): clon limpio, este comando, login real por el frontend y límite de 15 minutos.
 
 ## Versión desplegada
 

@@ -113,12 +113,18 @@ En el workflow, el modo incremental de Stryker se conserva entre corridas con `a
 
 Resultados (global en CI 71,22 % → 75,39 % tras el refuerzo, score por archivo, antes y después de los 5 archivos reforzados, lo que queda sin cubrir y por qué): [`QA/05-informe-ejecucion.md`](QA/05-informe-ejecucion.md) §5.1. Antecedente (#577): `outbound-requests.transitions.ts` y `street-closure-expiry.sweeper.ts` fueron los primeros en medirse, con 100 % tras sumar aserciones al log del sweeper.
 
+## Arranque del sistema completo (criterio G1, #698)
+
+Workflow [`g1-arranque.yml`](../.github/workflows/g1-arranque.yml): en los PR que tocan el arranque (`docker-compose.yml`, `docker/`, `Dockerfile`, `prisma/`, `README.md`), en push a `main` y a demanda (con un `frontend_ref` opcional). Reproduce el README en un checkout limpio y sin `.env`: corre `docker compose up --build`, espera `/health/ready` (base y broker), que el seed de demo termine con código 0, que el frontend responda en `:3001` (`/api/health` y `/login`) y hace un login real por el BFF (`POST /api/session/login` con `carlos.rodriguez@m6.local`): BFF → M1 falso → `GET /me` del backend. Exige el rol `M6_ADMIN` del seed en la sesión y un `GET /api/zones` por el BFF con datos sembrados. **Falla si desde el comando hasta el login pasan más de 15 minutos.** Después corre un segundo `docker compose up` sobre la misma base: el seed vuelve a terminar en 0 y el login sigue andando (idempotencia). El tiempo queda en el resumen del run; los logs del compose, como artifact.
+
+El frontend sale de `docker/frontend-demo/Dockerfile`, con el código del repo del Frontend como contexto git (`FRONTEND_REF`, default `main`; al crear el tag de la entrega se fija a `v2.0-entrega4`). Corre con `next dev` porque el build de producción rechaza a propósito el M1 falso y un `M1_BASE_URL` de loopback. El M1 falso (`scripts/fake-m1.mjs` del frontend) comparte la red del contenedor del frontend porque solo acepta conexiones de loopback.
+
 ## Escaneo de seguridad dinámico (OWASP ZAP, #659)
 
 Workflow [`dast.yml`](../.github/workflows/dast.yml): `workflow_dispatch` y corrida semanal (lunes 06:00 UTC); no se engancha al deploy. Dos jobs:
 
 - **baseline**: `zaproxy/action-baseline` pasivo contra Render (`/api/docs`). La URL sale de la variable de Actions `RENDER_HEALTH_URL` (la misma de `keepalive.yml`, sin el `/health`).
-- **active**: `zaproxy/action-api-scan` activo contra un `docker compose` efímero (base y broker descartables, `JWT_SECRET` de prueba, seed de demo) con `docs/api/openapi.json`. Autentica con un token admin de `test/api/make-token.mjs` (`ZAP_AUTH_HEADER_VALUE`). El override `.github/dast/compose.dast.yml` sube `THROTTLE_LIMIT` solo ahí; un proxy de registro (`.github/dast/proxy.mjs`) deja el recuento de códigos de respuesta como prueba de autenticación.
+- **active**: `zaproxy/action-api-scan` activo contra un `docker compose` efímero (solo base, broker y backend descartables, sin frontend ni M1 falso; `JWT_SECRET` de prueba, seed de demo) con `docs/api/openapi.json`. Autentica con un token admin de `test/api/make-token.mjs` (`ZAP_AUTH_HEADER_VALUE`). El override `.github/dast/compose.dast.yml` sube `THROTTLE_LIMIT` solo ahí; un proxy de registro (`.github/dast/proxy.mjs`) deja el recuento de códigos de respuesta como prueba de autenticación.
 
 **El activo nunca va contra Render**: escribe datos, choca con el límite de 600 req/min y publicaría al bus del Core. Ambos jobs fallan ante una alerta High; las Medium se justifican una por una en [`QA/07-informe-seguridad.md`](QA/07-informe-seguridad.md) §5.2. Sin reglas ignoradas. Los reportes son artifacts (90 días); la corrida final se archiva en `docs/QA/evidencia/`. Para correrlo en una rama hace falta que el workflow esté en `main` (límite de `workflow_dispatch`) o un `push` temporal.
 
