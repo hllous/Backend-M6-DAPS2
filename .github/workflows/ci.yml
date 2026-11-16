@@ -294,13 +294,14 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-    env:
-      REPORTS: ${{ runner.temp }}/secrets-reports
     steps:
       - name: Checkout (historial completo, todas las ramas y tags)
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Carpeta de reportes
+        run: echo "REPORTS=$RUNNER_TEMP/secrets-reports" >> "$GITHUB_ENV"
 
       - name: Gitleaks con configuración por defecto
         continue-on-error: true
