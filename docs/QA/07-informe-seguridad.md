@@ -138,6 +138,8 @@ Sin reglas ignoradas: no hay archivo de reglas. El workflow falla ante cualquier
 
 Limitación: ZAP arma los pedidos con los ejemplos del OpenAPI; la mayoría de los ids no existen o los cuerpos no pasan la validación, así que el grueso de las respuestas es 4xx y la cobertura de escrituras exitosas es baja. No se presenta como prueba de ausencia de fallas en la lógica de negocio.
 
+*Re-corrida tras endurecer el proxy y fijar las actions por SHA ([run 43779076076](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43779076076)): 46 577 pedidos, todos con `Authorization`, cero 401, mismos 1 High (baseline) y 0 High (activo).*
+
 *Primeras corridas, descartadas:* con `-z "-config replacer..."` la action parte la línea por espacios y descarta las comillas, y el escaneo no llevaba el header; se pasó a `ZAP_AUTH_HEADER_VALUE`, la vía soportada por el contenedor de ZAP.
 
 #### Alertas del baseline (Render)
