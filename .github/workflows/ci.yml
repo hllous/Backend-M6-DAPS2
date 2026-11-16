@@ -308,6 +308,10 @@ jobs:
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
             git /repo --redact --no-banner --log-opts="--all" \
             --report-format json --report-path /repo/secrets-reports/gitleaks-default.json
+          # Estado actual de los archivos (no el historial).
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
+            dir /repo --redact --no-banner \
+            --report-format json --report-path /repo/secrets-reports/gitleaks-default-worktree.json
 
       - name: Trufflehog (acción oficial, historial de la rama)
         continue-on-error: true
@@ -328,6 +332,13 @@ jobs:
           jq -c 'del(.Raw, .RawV2)' secrets-reports/trufflehog-raw.jsonl \
             > secrets-reports/trufflehog-default.jsonl
           rm secrets-reports/trufflehog-raw.jsonl
+          # Estado actual de los archivos (no el historial).
+          printf '/\\.git/\n' > "$RUNNER_TEMP/th-exclude.txt"
+          docker run --rm -v "$PWD:/tmp" -v "$RUNNER_TEMP/th-exclude.txt:/th-exclude.txt" -w /tmp \
+            ghcr.io/trufflesecurity/trufflehog:3.99.9 \
+            filesystem /tmp --json --no-update --exclude-paths=/th-exclude.txt \
+            --results=verified,unknown,unverified,filtered_unverified \
+            | jq -c 'del(.Raw, .RawV2)' > secrets-reports/trufflehog-default-worktree.jsonl
 
       - name: Publicar reportes
         if: always()

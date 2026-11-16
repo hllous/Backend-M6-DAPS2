@@ -62,7 +62,7 @@ describe('configuration — JWT', () => {
   });
 
   it('en producción rechaza secretos públicos o de un byte repetido, sin imprimirlos', () => {
-    const ejemplo = 'Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==';
+    const ejemplo = 'ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2ZGV2';
     for (const s of [
       ejemplo,
       Buffer.alloc(32).toString('base64'),
