@@ -92,6 +92,16 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
 }
 
 /**
+ * Sirve Swagger UI en `/api/docs`. Lo llaman `main.ts` y el e2e de seguridad
+ * (que verifica la CSP de esa ruta, DEF-19), antes de `init()`.
+ */
+export function setupSwagger(app: INestApplication): void {
+  SwaggerModule.setup('api/docs', app, createOpenApiDocument(app), {
+    swaggerOptions: { persistAuthorization: true },
+  });
+}
+
+/**
  * ADR-011: toda respuesta de error (4xx/5xx) se sirve como
  * `application/problem+json`. Declararlo en cada @ApiResponse serían ~1000
  * decoradores; se reescribe el media type acá, una sola vez.
