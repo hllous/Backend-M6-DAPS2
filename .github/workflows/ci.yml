@@ -294,6 +294,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    env:
+      REPORTS: ${{ runner.temp }}/secrets-reports
     steps:
       - name: Checkout (historial completo, todas las ramas y tags)
         uses: actions/checkout@v7
@@ -304,14 +306,14 @@ jobs:
         continue-on-error: true
         run: |
           rm -f .gitleaks.toml .gitleaksignore
-          mkdir -p secrets-reports
-          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
+          mkdir -p "$REPORTS"
+          docker run --rm -v "$PWD:/repo" -v "$REPORTS:/reports" zricethezav/gitleaks:v8.30.1 \
             git /repo --redact --no-banner --log-opts="--all" \
-            --report-format json --report-path /repo/secrets-reports/gitleaks-default.json
+            --report-format json --report-path /reports/gitleaks-default.json || true
           # Estado actual de los archivos (no el historial).
-          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
+          docker run --rm -v "$PWD:/repo" -v "$REPORTS:/reports" zricethezav/gitleaks:v8.30.1 \
             dir /repo --redact --no-banner \
-            --report-format json --report-path /repo/secrets-reports/gitleaks-default-worktree.json
+            --report-format json --report-path /reports/gitleaks-default-worktree.json
 
       - name: Trufflehog (acción oficial, historial de la rama)
         continue-on-error: true
@@ -324,28 +326,28 @@ jobs:
       - name: Trufflehog JSON sobre todas las ramas y tags
         continue-on-error: true
         run: |
-          mkdir -p secrets-reports
+          mkdir -p "$REPORTS"
           docker run --rm -v "$PWD:/tmp" -w /tmp ghcr.io/trufflesecurity/trufflehog:3.99.9 \
             git file:///tmp/ --json --no-update \
             --results=verified,unknown,unverified,filtered_unverified \
-            > secrets-reports/trufflehog-raw.jsonl
-          jq -c 'del(.Raw, .RawV2)' secrets-reports/trufflehog-raw.jsonl \
-            > secrets-reports/trufflehog-default.jsonl
-          rm secrets-reports/trufflehog-raw.jsonl
+            > "$REPORTS/trufflehog-raw.jsonl"
+          jq -c 'del(.Raw, .RawV2)' "$REPORTS/trufflehog-raw.jsonl" \
+            > "$REPORTS/trufflehog-default.jsonl"
+          rm "$REPORTS/trufflehog-raw.jsonl"
           # Estado actual de los archivos (no el historial).
           printf '/\\.git/\n' > "$RUNNER_TEMP/th-exclude.txt"
           docker run --rm -v "$PWD:/tmp" -v "$RUNNER_TEMP/th-exclude.txt:/th-exclude.txt" -w /tmp \
             ghcr.io/trufflesecurity/trufflehog:3.99.9 \
             filesystem /tmp --json --no-update --exclude-paths=/th-exclude.txt \
             --results=verified,unknown,unverified,filtered_unverified \
-            | jq -c 'del(.Raw, .RawV2)' > secrets-reports/trufflehog-default-worktree.jsonl
+            | jq -c 'del(.Raw, .RawV2)' > "$REPORTS/trufflehog-default-worktree.jsonl"
 
       - name: Publicar reportes
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: secrets-default-reports
-          path: secrets-reports/
+          path: ${{ runner.temp }}/secrets-reports/
           if-no-files-found: warn
           retention-days: 14
 

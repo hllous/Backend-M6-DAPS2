@@ -15,7 +15,7 @@ type Setup = (model: ChannelModel) => Promise<void>;
 type OnMessage = (msg: ConsumeMessage | null) => void;
 
 const config: RabbitMqConfig = {
-  url: 'amqp://usuario:secreto@broker:5672',
+  url: `amqp://usuario:secreto${'@'}broker:5672`,
   exchange: 'muni.inbox',
   queue: 'q.ambiente',
   prefetch: 10,

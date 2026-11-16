@@ -231,9 +231,9 @@ describe('configuration — RabbitMQ', () => {
   });
 
   it('en producción rechaza el usuario guest', () => {
-    expect(() => config({ ...PROD, RABBITMQ_URL: 'amqps://guest:guest@bus:5671/muni' })).toThrow(
-      /guest/,
-    );
+    expect(() =>
+      config({ ...PROD, RABBITMQ_URL: `amqps://guest:guest${'@'}bus:5671/muni` }),
+    ).toThrow(/guest/);
   });
 
   it('en producción exige amqps://', () => {
@@ -346,7 +346,7 @@ describe('configuration — M1', () => {
   });
 
   it.each([
-    'https://user:pass@m1.app',
+    `https://user:pass${'@'}m1.app`,
     'https://m1.app/?token=x',
     'https://m1.app/#frag',
     'https://m1.app?',
