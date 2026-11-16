@@ -183,7 +183,7 @@ export const envSchema = z
     ),
     // Espera máxima a M1 por consulta. M1 corre en Render free y un arranque en frío
     // puede tardar decenas de segundos: mejor fallar rápido con 503 que colgar el alta.
-    M1_TIMEOUT_MS: z.coerce.number().int().min(500).max(60_000).default(5000),
+    M1_TIMEOUT_MS: z.coerce.number().int().min(500).max(60_000).default(4000),
     // Secret de máquina con el que pedimos el token de módulo. Lo entrega M9;
     // nunca se loguea ni va en un mensaje de error. Uno en blanco ("  ") no
     // pasa; largo mínimo no se exige porque M9 no lo fijó.
