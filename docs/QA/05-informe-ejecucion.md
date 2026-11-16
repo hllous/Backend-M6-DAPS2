@@ -155,7 +155,7 @@ El gate es bloqueante en el CI (`sonar.qualitygate.wait=true`).
 | Tests flaky | 0 (3 corridas idénticas) | Backend: 3 corridas locales y el CI con el mismo resultado. Frontend: 3 corridas locales idénticas y `retries: 0` en Playwright (sección 9.2) | Sí |
 | Pipeline | ≤ 15 min | 2 min 23 s (camino crítico: `trivy`) | Sí |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | Job `e2e`: 25 suites y 410 tests, más 2 suites de RabbitMQ real | Sí |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 3 Menores ([`06`](06-registro-defectos.md)) | Sí |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 2 Menores ([`06`](06-registro-defectos.md)) | Sí |
 | Casos negativos o de borde | ≥ 40 % | 67,8 % (267 de 394, [`04`](04-especificacion-casos.md)) | Sí |
 | Quality Gate (SonarCloud) | Verde, 0 bugs, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % hotspots | Gate OK; 0 / 0; 1,2 %; A/A/A; 100 % | Sí |
 | ZAP baseline y activo | 0 High, cada Medium justificada | 0 High; 1 Medium en cada uno, justificadas en [`07`](07-informe-seguridad.md) | Sí |
