@@ -27,7 +27,7 @@ export class ErrorResponseDto {
 
   @ApiProperty({
     example: '/containers/123e4567-e89b-12d3-a456-426614174000',
-    description: 'RFC 9457: ruta de la request, con tokens de la query redactados (igual a path)',
+    description: 'RFC 9457: ruta de la request, sin la query (igual a path)',
   })
   instance: string;
 
@@ -50,6 +50,16 @@ export class ErrorResponseDto {
   @ApiProperty({ example: '2026-08-20T10:00:00.000Z' })
   timestamp: string;
 
-  @ApiProperty({ example: '/containers/123e4567-e89b-12d3-a456-426614174000' })
+  @ApiProperty({
+    example: '/containers/123e4567-e89b-12d3-a456-426614174000',
+    description: 'Ruta de la request, sin la query',
+  })
   path: string;
+
+  @ApiProperty({
+    example: '3f0c1a52-9a43-4b47-8f2c-1d3e5b7a9c01',
+    description:
+      'Id de correlación del request: el mismo del header X-Request-Id y del log del servidor. Citarlo al reportar un 500',
+  })
+  traceId: string;
 }

@@ -64,8 +64,9 @@ describe('Pertenencia de Campo (e2e)', () => {
   const prohibido = (res: request.Response) => {
     expect(res.status).toBe(403);
     expect(res.body).toMatchObject({ statusCode: 403, code: 'NOT_ASSIGNED' });
-    // Ni la cuadrilla dueña ni su líder se filtran en el mensaje.
-    const texto = JSON.stringify(res.body);
+    // Ni la cuadrilla dueña ni su líder se filtran en el mensaje. Sin el traceId:
+    // es un UUID al azar y puede contener, por ejemplo, "9004".
+    const texto = JSON.stringify({ ...res.body, traceId: undefined });
     for (const dato of [cuadrillaA, cuadrillaB, LIDER_A, INTEGRANTE_A, INTEGRANTE_B]) {
       expect(texto).not.toContain(dato);
     }
