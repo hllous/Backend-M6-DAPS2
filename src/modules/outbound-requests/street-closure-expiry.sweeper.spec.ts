@@ -11,19 +11,19 @@ describe('StreetClosureExpirySweeper', () => {
   let sweeper: StreetClosureExpirySweeper;
 
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     prisma = {
       streetClosureRequest: {
-        findMany: jest.fn().mockResolvedValue([]),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findMany: vi.fn().mockResolvedValue([]),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
-      service: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      service: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     sweeper = new StreetClosureExpirySweeper(prisma as unknown as PrismaService);
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('la gracia es de 6 horas', () => {
     expect(CLOSURE_EXPIRY_GRACE_MS).toBe(6 * 60 * 60 * 1000);
@@ -91,7 +91,7 @@ describe('StreetClosureExpirySweeper', () => {
     prisma.$transaction.mockImplementation((cb: (tx: unknown) => unknown) =>
       ++n === 2 ? Promise.reject(new Error('boom')) : cb(prisma),
     );
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     await expect(sweeper.expireClosures()).resolves.toBeUndefined();
 
@@ -102,7 +102,7 @@ describe('StreetClosureExpirySweeper', () => {
 
   it('onModuleInit barre al arrancar y no propaga el error', async () => {
     prisma.streetClosureRequest.findMany.mockRejectedValue(new Error('db caida'));
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     await expect(sweeper.onModuleInit()).resolves.toBeUndefined();
 

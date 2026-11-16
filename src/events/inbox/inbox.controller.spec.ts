@@ -3,30 +3,35 @@ import { InboxService } from './inbox.service';
 import { InboxAdminService } from './inbox-admin.service';
 import { QueryInboxDto } from './inbox-admin.dto';
 import { IngestEventDto } from './ingest-event.dto';
+import type { Mocked } from 'vitest';
+import { AuthenticatedUser } from '../../auth/jwt.strategy';
+
+const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
 describe('InboxController', () => {
-  let service: jest.Mocked<InboxService>;
-  let admin: jest.Mocked<InboxAdminService>;
+  let service: Mocked<InboxService>;
+  let admin: Mocked<InboxAdminService>;
   let controller: InboxController;
 
   beforeEach(() => {
     service = {
-      ingest: jest.fn().mockResolvedValue({ status: 'processed' }),
-      registeredTypes: jest.fn().mockReturnValue(['tipoA', 'tipoB']),
-    } as unknown as jest.Mocked<InboxService>;
+      ingest: vi.fn().mockResolvedValue({ status: 'processed' }),
+      registeredTypes: vi.fn().mockReturnValue(['tipoA', 'tipoB']),
+    } as unknown as Mocked<InboxService>;
     admin = {
-      findAll: jest.fn().mockResolvedValue('lista'),
-      findOne: jest.fn().mockResolvedValue('detalle'),
-    } as unknown as jest.Mocked<InboxAdminService>;
+      findAll: vi.fn().mockResolvedValue('lista'),
+      findOne: vi.fn().mockResolvedValue('detalle'),
+    } as unknown as Mocked<InboxAdminService>;
     controller = new InboxController(service, admin);
   });
 
   it('el listado y el detalle delegan en el service de consulta', async () => {
     const q = new QueryInboxDto();
     await expect(controller.findAll(q)).resolves.toBe('lista');
-    await expect(controller.findOne('ev-1')).resolves.toBe('detalle');
+    await expect(controller.findOne('ev-1', USER)).resolves.toBe('detalle');
     expect(admin.findAll).toHaveBeenCalledWith(q);
-    expect(admin.findOne).toHaveBeenCalledWith('ev-1');
+    // El actor de la auditoría de lectura sale del token.
+    expect(admin.findOne).toHaveBeenCalledWith('ev-1', USER);
   });
 
   it('ingest arma el sobre a partir del dto y delega en el service', async () => {
@@ -46,7 +51,7 @@ describe('InboxController', () => {
   });
 
   it('el detalle rechaza un messageId demasiado largo sin consultar', async () => {
-    await expect(controller.findOne('x'.repeat(101))).rejects.toThrow('excede');
+    await expect(controller.findOne('x'.repeat(101), USER)).rejects.toThrow('excede');
     expect(admin.findOne).not.toHaveBeenCalled();
   });
 

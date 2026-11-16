@@ -61,7 +61,7 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
   beforeEach(() => {
     prisma = {
       serviceType: {
-        findUnique: jest.fn().mockResolvedValue({
+        findUnique: vi.fn().mockResolvedValue({
           id: TYPE_ID,
           code: 'CONT-VAC',
           mode: ServiceMode.POINT,
@@ -69,32 +69,32 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
           active: true,
         }),
       },
-      route: { findUnique: jest.fn() },
-      zone: { findUnique: jest.fn().mockResolvedValue({ id: ZONE_A }) },
-      container: { findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_A }) },
-      tree: { findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_A }) },
-      greenSpace: { findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_A }) },
-      greenPoint: { findUnique: jest.fn().mockResolvedValue({ zoneId: ZONE_A }) },
+      route: { findUnique: vi.fn() },
+      zone: { findUnique: vi.fn().mockResolvedValue({ id: ZONE_A }) },
+      container: { findUnique: vi.fn().mockResolvedValue({ zoneId: ZONE_A }) },
+      tree: { findUnique: vi.fn().mockResolvedValue({ zoneId: ZONE_A }) },
+      greenSpace: { findUnique: vi.fn().mockResolvedValue({ zoneId: ZONE_A }) },
+      greenPoint: { findUnique: vi.fn().mockResolvedValue({ zoneId: ZONE_A }) },
       crew: {
-        count: jest.fn().mockResolvedValue(1),
-        findUnique: jest.fn().mockResolvedValue({ id: CREW_ID, active: true, name: 'Norte' }),
+        count: vi.fn().mockResolvedValue(1),
+        findUnique: vi.fn().mockResolvedValue({ id: CREW_ID, active: true, name: 'Norte' }),
       },
       vehicle: {
-        findUnique: jest.fn().mockResolvedValue({ id: VEHICLE_ID, active: true, plate: 'AA123BB' }),
+        findUnique: vi.fn().mockResolvedValue({ id: VEHICLE_ID, active: true, plate: 'AA123BB' }),
       },
       disposalSite: {
-        findUnique: jest.fn().mockResolvedValue({ id: SITE_ID, code: 'DS-1', active: true }),
+        findUnique: vi.fn().mockResolvedValue({ id: SITE_ID, code: 'DS-1', active: true }),
       },
       service: {
-        create: jest.fn().mockResolvedValue(serviceRow()),
-        findUnique: jest.fn().mockResolvedValue(serviceRow()),
-        update: jest.fn().mockResolvedValue(serviceRow()),
-        findMany: jest.fn().mockResolvedValue([serviceRow()]),
-        count: jest.fn().mockResolvedValue(1),
+        create: vi.fn().mockResolvedValue(serviceRow()),
+        findUnique: vi.fn().mockResolvedValue(serviceRow()),
+        update: vi.fn().mockResolvedValue(serviceRow()),
+        findMany: vi.fn().mockResolvedValue([serviceRow()]),
+        count: vi.fn().mockResolvedValue(1),
       },
-      zoneResult: { create: jest.fn().mockResolvedValue({ id: 'zr1', zoneId: ZONE_A }) },
+      zoneResult: { create: vi.fn().mockResolvedValue({ id: 'zr1', zoneId: ZONE_A }) },
       collectionRecord: {
-        create: jest.fn().mockResolvedValue({
+        create: vi.fn().mockResolvedValue({
           id: 'cr1',
           wasteType: WasteType.HOUSEHOLD,
           disposalSiteId: SITE_ID,
@@ -103,18 +103,18 @@ describe('ServicesService — consultas, edición, recolección e inventario', (
           weightKg: null,
         }),
       },
-      $transaction: jest.fn((arg: unknown) =>
+      $transaction: vi.fn((arg: unknown) =>
         typeof arg === 'function'
           ? (arg as (tx: unknown) => unknown)(prisma)
           : Promise.all(arg as Promise<unknown>[]),
       ),
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
     service = new ServicesService(
       prisma as unknown as PrismaService,
       outbox,
       {} as never,
-      { record: jest.fn() } as never,
+      { record: vi.fn() } as never,
     );
   });
 

@@ -85,29 +85,29 @@ describe('OutboundRequestsService', () => {
   beforeEach(() => {
     prisma = {
       repairRequest: {
-        create: jest.fn().mockResolvedValue(repairRow()),
-        findUnique: jest.fn().mockResolvedValue(repairRow()),
-        findFirst: jest.fn().mockResolvedValue(null),
-        update: jest.fn().mockResolvedValue(repairRow()),
-        findMany: jest.fn(),
-        count: jest.fn(),
+        create: vi.fn().mockResolvedValue(repairRow()),
+        findUnique: vi.fn().mockResolvedValue(repairRow()),
+        findFirst: vi.fn().mockResolvedValue(null),
+        update: vi.fn().mockResolvedValue(repairRow()),
+        findMany: vi.fn(),
+        count: vi.fn(),
       },
       streetClosureRequest: {
-        create: jest.fn().mockResolvedValue(closureRow()),
-        findUnique: jest.fn().mockResolvedValue(closureRow()),
-        update: jest.fn().mockResolvedValue(closureRow()),
-        findMany: jest.fn(),
-        count: jest.fn(),
+        create: vi.fn().mockResolvedValue(closureRow()),
+        findUnique: vi.fn().mockResolvedValue(closureRow()),
+        update: vi.fn().mockResolvedValue(closureRow()),
+        findMany: vi.fn(),
+        count: vi.fn(),
       },
-      service: { findUnique: jest.fn().mockResolvedValue({ ticketId: null }) },
+      service: { findUnique: vi.fn().mockResolvedValue({ ticketId: null }) },
       treeIntervention: {
-        findUnique: jest.fn().mockResolvedValue({ id: SERVICE_ID, status: 'AUTHORIZED' }),
+        findUnique: vi.fn().mockResolvedValue({ id: SERVICE_ID, status: 'AUTHORIZED' }),
       },
-      environmentalInspection: { findUnique: jest.fn().mockResolvedValue(inspectionRow()) },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      environmentalInspection: { findUnique: vi.fn().mockResolvedValue(inspectionRow()) },
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     service = new OutboundRequestsService(
       prisma as unknown as PrismaService,
       outbox,

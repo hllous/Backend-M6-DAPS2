@@ -1,22 +1,23 @@
 import { GreenPointsController } from './green-points.controller';
 import { GreenPointsService } from './green-points.service';
 import { CreateGreenPointDto, QueryGreenPointsDto, UpdateGreenPointDto } from './dto';
+import type { Mocked } from 'vitest';
 
 const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
 
 describe('GreenPointsController', () => {
-  let service: jest.Mocked<GreenPointsService>;
+  let service: Mocked<GreenPointsService>;
   let controller: GreenPointsController;
 
   beforeEach(() => {
     service = {
-      create: jest.fn().mockResolvedValue(RESULT),
-      findAll: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findOne: jest.fn().mockResolvedValue(RESULT),
-      update: jest.fn().mockResolvedValue(RESULT),
-      remove: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<GreenPointsService>;
+      create: vi.fn().mockResolvedValue(RESULT),
+      findAll: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findOne: vi.fn().mockResolvedValue(RESULT),
+      update: vi.fn().mockResolvedValue(RESULT),
+      remove: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Mocked<GreenPointsService>;
     controller = new GreenPointsController(service);
   });
 

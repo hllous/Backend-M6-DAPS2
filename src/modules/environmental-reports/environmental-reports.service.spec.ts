@@ -11,7 +11,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { QueryEnvironmentalReportsDto, RequestInformationDto } from './dto';
-import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from '../../events/m2-contract.testing';
+import { erroresUpdateTicketStatus } from '../../events/update-ticket-status-schema.testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
 import { ConfigService } from '@nestjs/config';
@@ -68,21 +68,21 @@ describe('EnvironmentalReportsService', () => {
   beforeEach(() => {
     prisma = {
       environmentalReport: {
-        create: jest.fn().mockResolvedValue(expediente()),
-        findUnique: jest.fn().mockResolvedValue(expediente()),
-        findMany: jest.fn().mockResolvedValue([expediente()]),
-        count: jest.fn().mockResolvedValue(1),
-        update: jest.fn(),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-        findUniqueOrThrow: jest.fn(),
+        create: vi.fn().mockResolvedValue(expediente()),
+        findUnique: vi.fn().mockResolvedValue(expediente()),
+        findMany: vi.fn().mockResolvedValue([expediente()]),
+        count: vi.fn().mockResolvedValue(1),
+        update: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: vi.fn(),
       },
       // Estado del ticket en M2 (#303): sin dato por defecto.
-      ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
+      ticketM2State: { findUnique: vi.fn().mockResolvedValue(null) },
       // Prisma acepta callback o array; los tests usan siempre el callback.
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
-    outbox = { enqueueMany: jest.fn().mockResolvedValue(undefined) };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    outbox = { enqueueMany: vi.fn().mockResolvedValue(undefined) };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     service = new EnvironmentalReportsService(
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,
@@ -466,7 +466,7 @@ describe('EnvironmentalReportsService', () => {
         inspections: zoneId ? [{ service: { zones: [{ zoneId }] } }] : [],
       });
       beforeEach(() => {
-        jest.useFakeTimers({ now: new Date('2026-08-24T15:00:00.000Z') });
+        vi.useFakeTimers({ now: new Date('2026-08-24T15:00:00.000Z') });
         // La primera lectura son los candidatos; la segunda, la página.
         prisma.environmentalReport.findMany.mockResolvedValueOnce([
           cand('vieja', '2026-08-10T15:00:00.000Z', 'RECEIVED', 'z1'),
@@ -475,7 +475,7 @@ describe('EnvironmentalReportsService', () => {
           cand('otra-zona', '2026-08-10T15:00:00.000Z', 'UNDER_REVIEW', 'z2'),
         ]);
       });
-      afterEach(() => jest.useRealTimers());
+      afterEach(() => vi.useRealTimers());
 
       it('overdue=true deja solo las abiertas pasadas de plazo', async () => {
         await service.findAll(consulta({ overdue: true }));
@@ -802,7 +802,7 @@ describe('EnvironmentalReportsService', () => {
 
   describe('applyTransition', () => {
     it('escribe sobre el tx que le pasan, no sobre el servicio', async () => {
-      const tx = { environmentalReport: { update: jest.fn() } };
+      const tx = { environmentalReport: { update: vi.fn() } };
 
       await service.applyTransition(
         tx as any,
@@ -819,7 +819,7 @@ describe('EnvironmentalReportsService', () => {
     });
 
     it('valida la transición igual que las acciones propias', async () => {
-      const tx = { environmentalReport: { update: jest.fn() } };
+      const tx = { environmentalReport: { update: vi.fn() } };
 
       await expect(
         service.applyTransition(tx as any, expediente({ status: S.RECEIVED }), S.SANCTIONED, ACTOR),
@@ -828,7 +828,7 @@ describe('EnvironmentalReportsService', () => {
     });
 
     it('apaga la solicitud de información pendiente al salir de UNDER_REVIEW', async () => {
-      const tx = { environmentalReport: { update: jest.fn() } };
+      const tx = { environmentalReport: { update: vi.fn() } };
 
       await service.applyTransition(
         tx as any,
@@ -846,7 +846,7 @@ describe('EnvironmentalReportsService', () => {
     });
 
     it('deja pasar datos extra junto con el estado', async () => {
-      const tx = { environmentalReport: { update: jest.fn() } };
+      const tx = { environmentalReport: { update: vi.fn() } };
       const deadlineAt = new Date('2026-10-01T00:00:00.000Z');
 
       await service.applyTransition(
@@ -926,7 +926,6 @@ describe('EnvironmentalReportsService', () => {
   // ─── Pedir información al vecino (#169) ─────────────
 
   describe('requestInformation', () => {
-    const itM2 = PAQUETE_M2_PRESENTE ? it : it.skip;
     const pedido = (over: Partial<RequestInformationDto> = {}): RequestInformationDto =>
       ({ message: 'Necesito una foto más del frente.', ...over }) as RequestInformationDto;
     const enRevision = (over: Partial<EnvironmentalReport> = {}) =>
@@ -1017,14 +1016,14 @@ describe('EnvironmentalReportsService', () => {
       expect(eventos[0].payload).not.toHaveProperty('internalMessage');
     });
 
-    itM2('con nota en blanco el payload sigue validando contra M2 v1.78', async () => {
+    it('con nota en blanco el payload sigue validando contra el schema', async () => {
       prisma.environmentalReport.findUnique.mockResolvedValue(
         enRevision({ ticketId: '550e8400-e29b-41d4-a716-446655440000' }),
       );
       await service.requestInformation(ID, pedido({ internalNote: '' }), ACTOR);
 
       const [, eventos] = outbox.enqueueMany.mock.calls[0];
-      expect(erroresM2UpdateTicketStatus(eventos[0].payload)).toEqual([]);
+      expect(erroresUpdateTicketStatus(eventos[0].payload)).toEqual([]);
     });
 
     it('404 si el expediente no existe', async () => {
@@ -1082,8 +1081,8 @@ describe('EnvironmentalReportsService', () => {
       await expect(service.requestInformation(ID, pedido(), ACTOR)).resolves.toBeDefined();
     });
 
-    itM2('el payload valida contra el paquete de M2 v1.78', async () => {
-      // M2 exige UUID de verdad en ticketId; el de los demás casos es un código de fantasía.
+    it('el payload valida contra el schema de updateTicketStatus', async () => {
+      // Con un ticketId con forma de UUID, el real de M2. Nuestro schema declara ticketId como string: no lo verifica.
       prisma.environmentalReport.findUnique.mockResolvedValue(
         enRevision({ ticketId: '550e8400-e29b-41d4-a716-446655440000' }),
       );
@@ -1093,7 +1092,7 @@ describe('EnvironmentalReportsService', () => {
         ACTOR,
       );
       const [, eventos] = outbox.enqueueMany.mock.calls[0];
-      expect(erroresM2UpdateTicketStatus(eventos[0].payload)).toEqual([]);
+      expect(erroresUpdateTicketStatus(eventos[0].payload)).toEqual([]);
     });
   });
 
@@ -1133,7 +1132,7 @@ describe('EnvironmentalReportsService', () => {
     });
 
     it('las transiciones que dispara otro módulo se auditan en el tx que reciben', async () => {
-      const tx = { environmentalReport: { update: jest.fn() } };
+      const tx = { environmentalReport: { update: vi.fn() } };
 
       await service.applyTransition(
         tx as any,

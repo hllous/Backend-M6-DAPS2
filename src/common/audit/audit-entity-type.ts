@@ -16,6 +16,8 @@ export const AUDIT_ENTITY_TYPES = [
   'VEHICLE',
   'ROUTE',
   'SANCTION_OUTCOME',
+  // Solo para `READ` (#643): el evento entrante cuyo dato Tier 2 no se pudo atar a un expediente o resolución.
+  'INBOX_EVENT',
 ] as const;
 
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];

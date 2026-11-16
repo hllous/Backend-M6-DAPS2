@@ -7,6 +7,9 @@ const BASE = {
   JWT_SECRET: Buffer.from(Array.from({ length: 32 }, (_, i) => i * 7 + 1)).toString('base64'),
 };
 
+/** Producción con lo que exige siempre (CORS_ORIGINS, #642). */
+const PROD = { NODE_ENV: 'production', CORS_ORIGINS: 'https://m6.vercel.app' };
+
 function config(extra: Record<string, string> = {}) {
   const previo = process.env;
   process.env = { ...BASE, ...extra } as NodeJS.ProcessEnv;
@@ -68,7 +71,7 @@ describe('configuration — JWT', () => {
     ]) {
       let msg = '';
       try {
-        config({ NODE_ENV: 'production', JWT_SECRET: s });
+        config({ ...PROD, JWT_SECRET: s });
       } catch (e) {
         msg = String(e);
       }
@@ -78,7 +81,7 @@ describe('configuration — JWT', () => {
     // Fuera de producción el de ejemplo sigue sirviendo, y uno real pasa en producción.
     expect(config({ JWT_SECRET: ejemplo }).jwt.secret).toBe(ejemplo);
     const real = Buffer.from(Array.from({ length: 32 }, (_, i) => i * 7 + 1)).toString('base64');
-    expect(config({ NODE_ENV: 'production', JWT_SECRET: real }).jwt.secret).toBe(real);
+    expect(config({ ...PROD, JWT_SECRET: real }).jwt.secret).toBe(real);
   });
 });
 
@@ -115,6 +118,64 @@ describe('configuration — CORS', () => {
 
   it('una lista vacía no restringe nada', () => {
     expect(config({ CORS_ORIGINS: '  ,  ' }).corsOrigins).toEqual([]);
+  });
+
+  /** En producción, sin lista el CORS quedaría abierto a cualquier origen (#642). */
+  it.each([undefined, '', '  ', ' , '])('en producción rechaza CORS_ORIGINS %p', (v) => {
+    const env: Record<string, string> = { NODE_ENV: 'production' };
+    if (v !== undefined) env.CORS_ORIGINS = v;
+    expect(() => config(env)).toThrow(/CORS_ORIGINS es obligatoria/);
+  });
+
+  it('en producción acepta una lista y fuera de producción sigue siendo opcional', () => {
+    expect(config(PROD).corsOrigins).toEqual(['https://m6.vercel.app']);
+    expect(config({ NODE_ENV: 'development' }).corsOrigins).toBeUndefined();
+    expect(config({ NODE_ENV: 'test', CORS_ORIGINS: '' }).corsOrigins).toEqual([]);
+  });
+
+  /** El navegador compara el Origin exacto: cualquier otra forma deja afuera al frontend. */
+  it.each(['*', 'null', 'https://x.app/', 'x.app', 'https://x.app/path', 'https://a.app,*'])(
+    'rechaza el formato de CORS_ORIGINS %p en cualquier entorno',
+    (v) => {
+      expect(() => config({ CORS_ORIGINS: v })).toThrow(/CORS_ORIGINS tiene una entrada inválida/);
+      expect(() => config({ ...PROD, CORS_ORIGINS: v })).toThrow(
+        /CORS_ORIGINS tiene una entrada inválida/,
+      );
+    },
+  );
+
+  it('el error nombra la entrada inválida', () => {
+    expect(() => config({ CORS_ORIGINS: 'https://a.app,https://x.app/' })).toThrow(
+      /entrada inválida \(https:\/\/x\.app\/\)/,
+    );
+  });
+
+  it.each([
+    ['https://M6.app', 'https://m6.app'],
+    ['https://x.app:443', 'https://x.app'],
+  ])('si %s parsea pero no es la forma que manda el navegador, sugiere %s', (entrada, forma) => {
+    expect(() => config({ CORS_ORIGINS: entrada })).toThrow(`¿quisiste decir ${forma}?`);
+  });
+
+  it('sin forma normalizada no sugiere nada', () => {
+    expect(() => config({ CORS_ORIGINS: '*' })).not.toThrow(/quisiste/);
+  });
+
+  it('en producción exige https://, fuera de producción acepta http://localhost', () => {
+    expect(() => config({ ...PROD, CORS_ORIGINS: 'http://x.app' })).toThrow(
+      /CORS_ORIGINS solo acepta orígenes https:\/\/, y http:\/\/x\.app no lo es/,
+    );
+    expect(config({ CORS_ORIGINS: 'http://localhost:3001' }).corsOrigins).toEqual([
+      'http://localhost:3001',
+    ]);
+  });
+
+  it.each([
+    ['https://x.app', ['https://x.app']],
+    ['https://a.app,https://b.app:8443', ['https://a.app', 'https://b.app:8443']],
+    [' https://a.app , https://b.app:8443 ', ['https://a.app', 'https://b.app:8443']],
+  ])('en producción acepta CORS_ORIGINS %p', (v, esperado) => {
+    expect(config({ ...PROD, CORS_ORIGINS: v }).corsOrigins).toEqual(esperado);
   });
 });
 
@@ -170,19 +231,17 @@ describe('configuration — RabbitMQ', () => {
   });
 
   it('en producción rechaza el usuario guest', () => {
-    expect(() =>
-      config({ NODE_ENV: 'production', RABBITMQ_URL: 'amqps://guest:guest@bus:5671/muni' }),
-    ).toThrow(/guest/);
+    expect(() => config({ ...PROD, RABBITMQ_URL: 'amqps://guest:guest@bus:5671/muni' })).toThrow(
+      /guest/,
+    );
   });
 
   it('en producción exige amqps://', () => {
-    expect(() => config({ NODE_ENV: 'production', RABBITMQ_URL: 'amqp://m6:c@bus' })).toThrow(
-      /amqps/,
-    );
-    expect(config({ NODE_ENV: 'production', RABBITMQ_URL: 'amqps://m6:c@bus' }).rabbitmq.url).toBe(
+    expect(() => config({ ...PROD, RABBITMQ_URL: 'amqp://m6:c@bus' })).toThrow(/amqps/);
+    expect(config({ ...PROD, RABBITMQ_URL: 'amqps://m6:c@bus' }).rabbitmq.url).toBe(
       'amqps://m6:c@bus',
     );
-    expect(config({ NODE_ENV: 'production' }).rabbitmq.url).toBeUndefined();
+    expect(config(PROD).rabbitmq.url).toBeUndefined();
   });
 
   /** Es el `sourceModule` del sobre: el Core lo limita a 60 caracteres. */
@@ -251,7 +310,7 @@ describe('configuration — Core', () => {
 
   /** El secret viaja en el body del pedido de token. */
   it('en producción exige https://', () => {
-    const prod = { NODE_ENV: 'production', CORE_MODULE_SECRET: 's' };
+    const prod = { ...PROD, CORE_MODULE_SECRET: 's' };
     expect(() => config({ ...prod, CORE_API_URL: 'http://core.app' })).toThrow(/https/);
     expect(config({ ...prod, CORE_API_URL: 'https://core.app' }).core.apiUrl).toBe(
       'https://core.app',
@@ -268,7 +327,7 @@ describe('configuration — catálogo de barrios local', () => {
   it('se acepta fuera de producción y se rechaza en producción', () => {
     const ruta = 'prisma/data/m9-barrios.json';
     expect(config({ NEIGHBORHOODS_CATALOG_FILE: ruta }).neighborhoodsCatalogFile).toBe(ruta);
-    expect(() => config({ NODE_ENV: 'production', NEIGHBORHOODS_CATALOG_FILE: ruta })).toThrow(
+    expect(() => config({ ...PROD, NEIGHBORHOODS_CATALOG_FILE: ruta })).toThrow(
       /NEIGHBORHOODS_CATALOG_FILE/,
     );
   });
@@ -297,10 +356,8 @@ describe('configuration — M1', () => {
   });
 
   it('en producción exige https://', () => {
-    expect(() => config({ NODE_ENV: 'production', M1_BASE_URL: 'http://m1.app' })).toThrow(/https/);
-    expect(config({ NODE_ENV: 'production', M1_BASE_URL: 'https://m1.app' }).m1.baseUrl).toBe(
-      'https://m1.app',
-    );
+    expect(() => config({ ...PROD, M1_BASE_URL: 'http://m1.app' })).toThrow(/https/);
+    expect(config({ ...PROD, M1_BASE_URL: 'https://m1.app' }).m1.baseUrl).toBe('https://m1.app');
   });
 });
 

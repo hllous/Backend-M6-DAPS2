@@ -1,5 +1,5 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
-import * as request from 'supertest';
+import request from 'supertest';
 import { EVIDENCE_STORAGE } from '../src/modules/attachments/storage/evidence-storage.interface';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {

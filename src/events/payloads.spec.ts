@@ -15,7 +15,7 @@ import {
   TreeInterventionType,
 } from '@prisma/client';
 import * as payloads from './payloads';
-import { PAQUETE_M2_PRESENTE, erroresM2UpdateTicketStatus } from './m2-contract.testing';
+import { erroresUpdateTicketStatus } from './update-ticket-status-schema.testing';
 
 /**
  * Valida lo que emitimos contra los `.schema.json` que le circulamos a la
@@ -423,13 +423,12 @@ describe('payloads de los eventos publicados', () => {
       },
     );
 
-    // El schema local acepta cualquier string en ticketId; el de M2 exige UUID.
-    const itM2 = PAQUETE_M2_PRESENTE ? it : it.skip;
-    itM2.each([
+    // Varios actores y tipos de aviso contra el schema local (updatedBy.id: UUID o null; ticketId es string libre ahí).
+    it.each([
       ['persona con UUID', UUID_ACTOR],
       ['persona sin UUID', 'user-009'],
       ['sistema', 'sistema'],
-    ])('valida contra el paquete de M2 v1.78: %s', (_n, actor) => {
+    ])('valida contra el schema local: %s', (_n, actor) => {
       const base = { ticketId: ID(7), updatedById: actor };
       for (const p of [
         payloads.updateTicketStatus({ ...base, updateType: 'STARTED' }),
@@ -441,7 +440,7 @@ describe('payloads de los eventos publicados', () => {
           details: { resolution: { type: 'ACTION_COMPLETED' } },
         }),
       ]) {
-        expect(erroresM2UpdateTicketStatus(p)).toEqual([]);
+        expect(erroresUpdateTicketStatus(p)).toEqual([]);
       }
     });
 

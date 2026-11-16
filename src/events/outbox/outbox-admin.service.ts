@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { OutboxEvent, OutboxEventStatus, OutboxRetryAudit, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditActor, AuditService } from '../../common/audit/audit.service';
+import { EventType } from '../event-types';
 import { PaginatedResponseDto } from '../../common/dto';
 import { startOfDayArgentina, toDateOnly } from '../../common/utils/date-only';
 import {
@@ -57,7 +59,10 @@ export const OUTBOX_TRANSITIONS: Record<OutboxEventStatus, OutboxEventStatus[]> 
  */
 @Injectable()
 export class OutboxAdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async findAll(query: QueryOutboxDto): Promise<PaginatedResponseDto<OutboxEventResponseDto>> {
     if (query.from && query.to && toDateOnly(query.from) > toDateOnly(query.to)) {
@@ -97,12 +102,27 @@ export class OutboxAdminService {
     );
   }
 
-  async findOne(id: string): Promise<OutboxEventDetailResponseDto> {
+  /**
+   * El payload de `environmentalViolationDetected` es el acta (Tier 2, ADR-005,
+   * #643), el único saliente con datos de ese nivel: la lectura se audita sobre el
+   * acta antes de responder y, si la fila no se escribe, el error sube sin
+   * entregar el payload.
+   */
+  async findOne(id: string, actor: AuditActor): Promise<OutboxEventDetailResponseDto> {
     const event = await this.prisma.outboxEvent.findUnique({
       where: { id },
       include: { retries: { orderBy: { at: 'asc' } } },
     });
     if (!event) throw new NotFoundException(`Evento del outbox ${id} no encontrado`);
+
+    if (event.eventType === EventType.ENVIRONMENTAL_VIOLATION_DETECTED) {
+      const p = event.payload;
+      const violationId =
+        typeof p === 'object' && p !== null && !Array.isArray(p) ? p.violationId : undefined;
+      // aggregateId es el mismo id del acta: respaldo si el payload no lo trae.
+      const entityId = typeof violationId === 'string' ? violationId : event.aggregateId;
+      await this.audit.recordRead([{ entityType: 'VIOLATION_NOTICE', entityId }], actor);
+    }
 
     return {
       ...this.toResponseDto(event),

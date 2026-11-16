@@ -81,7 +81,10 @@ describeReal('Consumer RabbitMQ con broker real (e2e)', () => {
     conn = await connect(url!, { clientProperties: { connection_name: 'm6-e2e-publisher' } });
     ch = await conn.createChannel();
     // El consumer verifica la cola en modo pasivo: la crea quien la dueña (el Core).
-    await ch.assertQueue(queue, { durable: false });
+    // Durable como q.ambiente: RabbitMQ 4 rechaza colas no durables y no exclusivas
+    // (`transient_nonexcl_queues`), y exclusiva no puede ser porque la consume otra
+    // conexión. La borra el afterAll.
+    await ch.assertQueue(queue, { durable: true });
 
     consumer = new RabbitMqConsumer(
       { url: url!, exchange: 'muni.inbox', queue, prefetch: 1 },
@@ -129,7 +132,7 @@ describeReal('Consumer RabbitMQ con broker real (e2e)', () => {
   });
 
   // El broker no se puede apagar desde un service container del CI, pero la
-  // API de management (rabbitmq:3-management) sí cierra conexiones: al consumer
+  // API de management (rabbitmq:4.4-management) sí cierra conexiones: al consumer
   // le llega lo mismo que ante una caída y `recovery` tiene que reconectar.
   it('se recupera cuando el broker le cierra la conexión', async () => {
     const u = new URL(url!);

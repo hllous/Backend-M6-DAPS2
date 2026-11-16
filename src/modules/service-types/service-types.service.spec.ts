@@ -3,15 +3,16 @@ import { Prisma, ServiceCategory, ServiceMode } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ServiceTypesService } from './service-types.service';
 import { QueryServiceTypesDto } from './dto/query-service-types.dto';
+import type { Mock } from 'vitest';
 
 describe('ServiceTypesService', () => {
   let prisma: {
     serviceType: {
-      create: jest.Mock;
-      findMany: jest.Mock;
-      count: jest.Mock;
-      findUnique: jest.Mock;
-      update: jest.Mock;
+      create: Mock;
+      findMany: Mock;
+      count: Mock;
+      findUnique: Mock;
+      update: Mock;
     };
   };
   let service: ServiceTypesService;
@@ -31,11 +32,11 @@ describe('ServiceTypesService', () => {
   beforeEach(() => {
     prisma = {
       serviceType: {
-        create: jest.fn().mockResolvedValue(row),
-        findMany: jest.fn().mockResolvedValue([row]),
-        count: jest.fn().mockResolvedValue(1),
-        findUnique: jest.fn().mockResolvedValue(row),
-        update: jest.fn().mockResolvedValue(row),
+        create: vi.fn().mockResolvedValue(row),
+        findMany: vi.fn().mockResolvedValue([row]),
+        count: vi.fn().mockResolvedValue(1),
+        findUnique: vi.fn().mockResolvedValue(row),
+        update: vi.fn().mockResolvedValue(row),
       },
     };
     service = new ServiceTypesService(prisma as unknown as PrismaService);

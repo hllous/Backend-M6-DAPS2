@@ -47,7 +47,7 @@ Son las 34 claves de [`src/config/env.validation.ts`](../../src/config/env.valid
 | `PORT` | default `3000` | Opcional. **No setear en Render**: lo inyecta la plataforma (`10000` en free tier) y pisarlo rompe el health check | Local |
 | `NODE_ENV` | `development` (default), `production`, `test` | `production` en Render: activa los chequeos de https/amqps y rechaza secretos de ejemplo | Local `development`; Render `production` |
 | `DATABASE_URL` | URI directa de Supabase, puerto `5432`, con `?schema=public` | **Obligatoria** (URL válida). Secreta | Local y Render. Los e2e truncan la base: nunca apuntarlos a la de Render |
-| `CORS_ORIGINS` | `https://m6-ambiente-higiene.vercel.app`; varios, separados por coma | Opcional: sin ella se acepta cualquier origen (higiene, no límite de seguridad) | Render |
+| `CORS_ORIGINS` | `https://m6-ambiente-higiene.vercel.app`; varios, separados por coma | Obligatoria en producción: sin ella (o vacía) el backend no arranca (#642). En desarrollo y test es opcional y sin ella se acepta cualquier origen (higiene, no límite de seguridad). Formato, validado en todos los entornos: cada origen exacto (esquema + host + puerto opcional, sin path ni barra final), sin `*` ni `null`; en producción solo `https://`. Fuera de formato el backend no arranca | Render |
 
 ### Auth y roles
 

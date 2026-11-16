@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { DECORATORS } from '@nestjs/swagger/dist/constants';
+import { DECORATORS } from '@nestjs/swagger';
 import { getMetadataStorage } from 'class-validator';
 import { Test } from '@nestjs/testing';
 import { AppModule } from './app.module';
@@ -117,7 +117,7 @@ describe('contrato OpenAPI', () => {
     expect(perdidas).toEqual([]);
   });
 
-  it('todo campo con @Min/@Max/@IsLatitude/@IsLongitude declara minimum/maximum en el swagger', () => {
+  it('todo campo con @Min/@Max/@IsLatitude/@IsLongitude declara minimum/maximum en el swagger', async () => {
     // El repo no usa el plugin de Swagger: el rango validado no se refleja solo
     // y un cliente generado no lo ve (#196). Se leen los DTO reales.
     const archivos: string[] = [];
@@ -148,8 +148,8 @@ describe('contrato OpenAPI', () => {
     };
     const faltan = new Set<string>();
     for (const archivo of archivos) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const modulo = require(archivo) as Record<string, unknown>;
+      // import() y no require(): el require nativo no transpila los .ts.
+      const modulo = (await import(archivo)) as Record<string, unknown>;
       for (const clase of Object.values(modulo)) {
         if (typeof clase !== 'function') continue;
         const metas = getMetadataStorage().getTargetValidationMetadatas(clase, '', false, false);
@@ -174,5 +174,7 @@ describe('contrato OpenAPI', () => {
       }
     }
     expect([...faltan].sort()).toEqual([]);
-  });
+    // Importa todos los DTO: ~2,3 s en solitario y más de 5 s (el timeout por
+    // defecto) con la suite completa en paralelo y la máquina cargada.
+  }, 30_000);
 });

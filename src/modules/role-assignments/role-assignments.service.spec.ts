@@ -12,16 +12,16 @@ const TARGET = '42';
 function setup(opts: { current?: M6Role[]; otherAdmins?: number; bootstrap?: string[] } = {}) {
   const tx = {
     userRoleAssignment: {
-      findMany: jest.fn().mockResolvedValue((opts.current ?? []).map((role) => ({ role }))),
-      count: jest.fn().mockResolvedValue(opts.otherAdmins ?? 0),
-      deleteMany: jest.fn(),
-      createMany: jest.fn(),
+      findMany: vi.fn().mockResolvedValue((opts.current ?? []).map((role) => ({ role }))),
+      count: vi.fn().mockResolvedValue(opts.otherAdmins ?? 0),
+      deleteMany: vi.fn(),
+      createMany: vi.fn(),
     },
-    roleAssignmentAudit: { createMany: jest.fn() },
+    roleAssignmentAudit: { createMany: vi.fn() },
   };
   const prisma = {
-    $transaction: jest.fn((fn: (t: typeof tx) => Promise<void>) => fn(tx)),
-    userRoleAssignment: { findMany: jest.fn().mockResolvedValue([]), groupBy: jest.fn() },
+    $transaction: vi.fn((fn: (t: typeof tx) => Promise<void>) => fn(tx)),
+    userRoleAssignment: { findMany: vi.fn().mockResolvedValue([]), groupBy: vi.fn() },
   };
   const config = { get: () => opts.bootstrap ?? [] } as unknown as ConfigService;
   const service = new RoleAssignmentsService(prisma as unknown as PrismaService, config);
@@ -211,7 +211,7 @@ describe('RoleAssignmentsService', () => {
 
   it('onModuleInit loguea solo la cantidad de admins de bootstrap, no los ids', () => {
     const { service } = setup({ bootstrap: ['123456', '789'] });
-    const log = jest.spyOn(service['logger'], 'log').mockImplementation();
+    const log = vi.spyOn(service['logger'], 'log').mockImplementation(() => undefined);
     service.onModuleInit();
     const msg = log.mock.calls[0][0] as string;
     expect(msg).toContain('2');
@@ -220,7 +220,7 @@ describe('RoleAssignmentsService', () => {
 
   it('onModuleInit avisa cuando no hay admins de bootstrap', () => {
     const { service } = setup();
-    const log = jest.spyOn(service['logger'], 'log').mockImplementation();
+    const log = vi.spyOn(service['logger'], 'log').mockImplementation(() => undefined);
     service.onModuleInit();
     expect(log.mock.calls[0][0]).toContain('Sin admins de bootstrap');
   });

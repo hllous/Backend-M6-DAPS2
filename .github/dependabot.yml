@@ -10,7 +10,7 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
-    # Los majors de NestJS y zod hoy no se pueden aplicar (QA 07 §5.1).
+    # Los majors de NestJS y zod piden cambios de código (ver #628): se hacen a mano.
     ignore:
       - dependency-name: "@nestjs/*"
         update-types: ["version-update:semver-major"]

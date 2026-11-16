@@ -1,0 +1,4 @@
+# Trivy — HIGH/CRITICAL sin fix disponible (#658).
+# Una línea por CVE, con justificación y mitigación; el detalle va en
+# docs/QA/07-informe-seguridad.md. Las que tienen fix NO se ignoran: se corrigen.
+# Formato: CVE-AAAA-NNNN  # justificación | mitigación

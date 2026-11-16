@@ -98,6 +98,11 @@ export class AttachmentsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 415,
+    description: 'El cuerpo es multipart pero no multipart/form-data',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 429,
     description: 'Demasiadas subidas desde la misma dirección en el último minuto',
     type: ErrorResponseDto,

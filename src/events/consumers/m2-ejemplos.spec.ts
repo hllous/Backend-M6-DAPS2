@@ -6,78 +6,71 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { globalPipes } from '../../configure-app';
 import { InboxService } from '../inbox/inbox.service';
 import { IngestEventDto } from '../inbox/ingest-event.dto';
-import { EJEMPLOS_M2_VALIDOS, PAQUETE_M2_PRESENTE } from '../m2-contract.testing';
 import { TicketsConsumer } from './tickets.consumer';
+import type { Mock } from 'vitest';
 
 /**
- * El otro sentido del contrato con M2: sus ejemplos válidos (v1.78) tienen que
- * pasar por NUESTRO inbox sin romper. Como el paquete no se versiona, sin él
- * el spec se saltea (ver `m2-contract.testing.ts` y docs/testing.md).
+ * El otro sentido del contrato con M2: sobres de ejemplo (copiados del paquete
+ * v1.78, selección mínima en `test/fixtures/m2/`) tienen que pasar por NUESTRO
+ * inbox sin romper. Cubren cada updateType con rama propia en el consumer (ver el README del directorio).
  *
- * Todos los ejemplos de M2 traen `responsibleAreaId: "M3"`, así que cada uno
- * corre dos veces: tal cual (ajeno, se descarta) y reasignado a "M6" (nuestro).
+ * Todos traen `responsibleAreaId: "M3"`, así que cada uno corre dos veces:
+ * tal cual (ajeno, se descarta) y reasignado a "M6" (nuestro).
  */
+const EJEMPLOS_M2 = path.join(__dirname, '../../../test/fixtures/m2');
+
 const archivos = (prefijo: string): string[] =>
-  PAQUETE_M2_PRESENTE && fs.existsSync(EJEMPLOS_M2_VALIDOS)
-    ? fs
-        .readdirSync(EJEMPLOS_M2_VALIDOS)
-        .filter((n) => n.startsWith(prefijo) && n.endsWith('.json'))
-    : [];
+  fs.readdirSync(EJEMPLOS_M2).filter((n) => n.startsWith(prefijo) && n.endsWith('.json'));
 
 const leer = (f: string): Record<string, unknown> =>
-  JSON.parse(fs.readFileSync(path.join(EJEMPLOS_M2_VALIDOS, f), 'utf-8'));
+  JSON.parse(fs.readFileSync(path.join(EJEMPLOS_M2, f), 'utf-8'));
 
-// `.each` no admite una tabla vacía ni salteado; el test de arriba es el que falla si no hay ejemplos.
-const VACIO = '(sin ejemplos)';
-
-const describeM2 = PAQUETE_M2_PRESENTE ? describe : describe.skip;
-
-describeM2('ejemplos válidos de M2 v1.78 contra nuestro inbox', () => {
+describe('ejemplos de M2 v1.78 contra nuestro inbox', () => {
   const ticketUpdated = archivos('ticketUpdated_');
   const ticketCreated = archivos('ticketCreated');
   let prisma: any;
   let inbox: InboxService;
-  let outbox: { enqueue: jest.Mock; enqueueMany: jest.Mock };
+  let outbox: { enqueue: Mock; enqueueMany: Mock };
 
   beforeAll(() => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   });
-  afterAll(() => jest.restoreAllMocks());
+  afterAll(() => vi.restoreAllMocks());
 
   beforeEach(() => {
     prisma = {
       environmentalReport: {
-        findFirst: jest.fn().mockResolvedValue(null),
-        findMany: jest.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
-        create: jest.fn().mockResolvedValue({ id: 'r1', reportType: 'OTHER' }),
-        update: jest.fn().mockResolvedValue({}),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
+        create: vi.fn().mockResolvedValue({ id: 'r1', reportType: 'OTHER' }),
+        update: vi.fn().mockResolvedValue({}),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       service: {
-        findMany: jest.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findMany: vi.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
       ticketM2State: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        upsert: jest.fn().mockResolvedValue({}),
+        findUnique: vi.fn().mockResolvedValue(null),
+        upsert: vi.fn().mockResolvedValue({}),
       },
       inboxEvent: {
-        create: jest.fn().mockResolvedValue({}),
-        update: jest.fn().mockResolvedValue({}),
+        create: vi.fn().mockResolvedValue({}),
+        update: vi.fn().mockResolvedValue({}),
       },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     inbox = new InboxService(prisma as unknown as PrismaService);
     outbox = {
-      enqueue: jest.fn().mockResolvedValue(undefined),
-      enqueueMany: jest.fn().mockResolvedValue(undefined),
+      enqueue: vi.fn().mockResolvedValue(undefined),
+      enqueueMany: vi.fn().mockResolvedValue(undefined),
     };
     new TicketsConsumer(
       prisma as unknown as PrismaService,
       inbox,
       outbox as never,
-      { record: jest.fn() } as unknown as AuditService,
+      { record: vi.fn() } as unknown as AuditService,
     ).onModuleInit();
   });
 
@@ -90,20 +83,13 @@ describeM2('ejemplos válidos de M2 v1.78 contra nuestro inbox', () => {
     })) as unknown as Parameters<InboxService['ingest']>[0];
   };
 
-  it('el directorio de ejemplos existe y trae los de ticketCreated y ticketUpdated', () => {
-    expect(fs.existsSync(EJEMPLOS_M2_VALIDOS)).toBe(true);
-    // Lo que trae el paquete v1.78: que no pase con un solo ejemplo.
-    expect(ticketUpdated.length).toBeGreaterThanOrEqual(18);
-    expect(ticketCreated.length).toBeGreaterThanOrEqual(2);
-    // Para el resumen: cuántos corrieron.
-    console.info(
-      `Ejemplos de M2 v1.78: ${ticketCreated.length} ticketCreated + ${ticketUpdated.length} ticketUpdated (cada uno como M3 y como M6)`,
-    );
+  it('los fixtures traen ticketCreated y ticketUpdated', () => {
+    expect(ticketUpdated).toHaveLength(12);
+    expect(ticketCreated).toHaveLength(2);
   });
 
-  describe.each(ticketUpdated.length ? ticketUpdated : [VACIO])('%s', (archivo) => {
-    // Sin ejemplos (paquete ausente) el bloque se saltea; no se lee nada acá.
-    const raw = archivo === VACIO ? {} : leer(archivo);
+  describe.each(ticketUpdated)('%s', (archivo) => {
+    const raw = leer(archivo);
     const data = (raw.data ?? {}) as Record<string, unknown>;
     const details = (data.details ?? {}) as Record<string, any>;
     const reclasificacion =
@@ -165,16 +151,13 @@ describeM2('ejemplos válidos de M2 v1.78 contra nuestro inbox', () => {
     });
   });
 
-  it.each(ticketCreated.length ? ticketCreated : [VACIO])(
-    '%s: sin handler, se ignora sin persistir contenido',
-    async (archivo) => {
-      const r = await inbox.ingest(await sobre(leer(archivo), false));
+  it.each(ticketCreated)('%s: sin handler, se ignora sin persistir contenido', async (archivo) => {
+    const r = await inbox.ingest(await sobre(leer(archivo), false));
 
-      expect(r.status).toBe('ignored');
-      expect(prisma.inboxEvent.create.mock.calls[0][0].data.payload).toEqual({
-        redacted: expect.any(String),
-      });
-      expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
-    },
-  );
+    expect(r.status).toBe('ignored');
+    expect(prisma.inboxEvent.create.mock.calls[0][0].data.payload).toEqual({
+      redacted: expect.any(String),
+    });
+    expect(prisma.environmentalReport.create).not.toHaveBeenCalled();
+  });
 });

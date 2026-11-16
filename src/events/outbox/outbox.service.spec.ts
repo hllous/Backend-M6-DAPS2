@@ -17,7 +17,7 @@ describe('OutboxService', () => {
   });
 
   beforeEach(() => {
-    tx = { outboxEvent: { create: jest.fn(), createMany: jest.fn() } };
+    tx = { outboxEvent: { create: vi.fn(), createMany: vi.fn() } };
     outbox = new OutboxService();
   });
 
@@ -108,7 +108,7 @@ describe('OutboxService', () => {
       });
 
     beforeEach(() => {
-      tx.ticketM2State = { upsert: jest.fn() };
+      tx.ticketM2State = { upsert: vi.fn() };
     });
 
     it('enqueue deduce el estado de un updateTicketStatus', async () => {

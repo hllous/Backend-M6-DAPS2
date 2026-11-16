@@ -13,7 +13,7 @@ const BARRIO = {
 };
 
 describe('NeighborhoodsService / Controller', () => {
-  const catalog = { disponible: true, list: jest.fn().mockReturnValue([BARRIO]) };
+  const catalog = { disponible: true, list: vi.fn().mockReturnValue([BARRIO]) };
   const service = new NeighborhoodsService(catalog as unknown as NeighborhoodsCatalogService);
 
   it('mapea el catálogo cacheado y pasa los filtros', () => {

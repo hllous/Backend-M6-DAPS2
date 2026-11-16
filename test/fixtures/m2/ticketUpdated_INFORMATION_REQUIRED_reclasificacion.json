@@ -1,0 +1,28 @@
+{
+  "eventId": "279ed68f-916a-40ab-8b08-13f1b9cfd283",
+  "eventType": "ticketUpdated",
+  "eventVersion": "1.0",
+  "occurredAt": "2026-10-05T10:45:02-03:00",
+  "sourceModule": "atencion-ciudadana",
+  "correlationId": "c63a4b9c-e914-4c4e-b50b-d9f23edf1f53",
+  "causationId": null,
+  "data": {
+    "ticketId": "550e8400-e29b-41d4-a716-446655440000",
+    "publicId": "TK-2026-000123",
+    "citizenId": "8f14e45f-ea5e-4e5d-bd3f-1c71f4f6a001",
+    "isAnonymous": false,
+    "responsibleAreaId": "M3",
+    "updateType": "INFORMATION_REQUIRED",
+    "currentStatus": "PENDING_INFORMATION",
+    "currentPriority": "MEDIUM",
+    "publicMessage": "M2 solicita información para revisar la clasificación del ticket.",
+    "details": {
+      "informationRequest": {
+        "messageForCitizen": "Indicá la altura aproximada del bache y, si podés, adjuntá una foto de frente.",
+        "requiredBy": "2026-10-10T23:59:59-03:00",
+        "purpose": "RECLASSIFICATION"
+      }
+    },
+    "updatedAt": "2026-10-05T10:45:00-03:00"
+  }
+}

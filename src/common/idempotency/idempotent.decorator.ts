@@ -5,8 +5,9 @@ import { IdempotencyInterceptor } from './idempotency.interceptor';
 
 /**
  * Habilita `Idempotency-Key` opcional en un POST de creación (ADR-013).
- * Va como último decorador del handler: así los `@ApiResponse` propios del
- * endpoint (409/422) pisan a los genéricos de acá y no al revés.
+ * Swagger (desde la v12) concatena las descripciones de un mismo status: los
+ * `@ApiResponse` propios del endpoint (409/422) se suman a los genéricos de acá.
+ * Va como último decorador del handler para que el genérico quede primero.
  */
 export const Idempotent = () =>
   applyDecorators(

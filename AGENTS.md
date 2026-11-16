@@ -17,11 +17,12 @@ TPO "Municipalidad UADE" (Desarrollo de Aplicaciones II): plataforma municipal d
 
 ## Comandos
 
-Node 22 (`.nvmrc`). Antes de dar algo por terminado: build, lint y tests en verde.
+Node 24 (`.nvmrc`). Antes de dar algo por terminado: build, lint, typecheck y tests en verde.
 
 | Qué | Comando |
 |---|---|
 | Build / lint (sin autofix) | `npm run build` / `npm run lint:check` |
+| Tipos de specs, seed y scripts (Vitest y `nest build` no los chequean; el CI sí) | `npm run typecheck` |
 | Tests unitarios / cobertura (umbral 85%) | `npm test` / `npm run test:cov` |
 | e2e (Postgres real, ver `docs/testing.md`) | `npm run test:e2e` |
 | Regenerar `docs/api/openapi.json` | `npm run openapi:generate` |
@@ -73,7 +74,7 @@ Flujo: `main ← test ← develop ← feature/*|fix/*|docs/*|refactor/*|tests/*|
 
 ### Issue tracker
 
-GitHub Issues (repo: `hllous/Backend-M6-DAPS2`), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+GitHub Issues (repo: `hllous/Backend-M6-DAPS2`), via the `gh` CLI. See `docs/agents/issue-tracker.md`. Todo issue nuevo usa una plantilla de `.github/ISSUE_TEMPLATE/` (`bug`, `feature`, `tarea`, `contrato`, `docs`): con `gh issue create` leer la plantilla y respetar sus secciones; título descriptivo del objetivo, sin prefijos.
 
 ### Cross-repo changes
 

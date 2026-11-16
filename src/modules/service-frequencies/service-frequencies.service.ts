@@ -151,7 +151,7 @@ export class ServiceFrequenciesService {
    * `ServiceFrequency` no tiene columna `active`: el dominio ya expresa la baja
    * con `validTo` (ver docs/entidades/configuracion-y-recursos.md), así que
    * agregar una columna nueva duplicaría el mismo dato. La regla deja de
-   * generar servicios a partir de hoy, y queda el registro de que existió.
+   * regir a partir de hoy, y queda el registro de que existió.
    *
    * Si la regla todavía no empezó a regir, se cierra en su fecha de inicio:
    * un `validTo` anterior al `validFrom` sería un período inválido.
@@ -181,7 +181,7 @@ export class ServiceFrequenciesService {
 
   /**
    * Dos reglas del mismo recorrido, tipo y turno que comparten algún día y cuya
-   * vigencia se superpone generarían el mismo servicio dos veces. `validTo` nulo
+   * vigencia se superpone programarían el mismo servicio dos veces. `validTo` nulo
    * es una vigencia abierta.
    *
    * Limitación conocida: es un chequeo previo sin restricción en la base (ver
@@ -218,7 +218,7 @@ export class ServiceFrequenciesService {
   }
 
   /**
-   * El tipo de servicio tiene que ser de modo ROUTE: una frecuencia genera
+   * El tipo de servicio tiene que ser de modo ROUTE: una frecuencia programa
    * servicios sobre un recorrido, y un tipo POINT no se ejecuta sobre uno.
    */
   private async assertReferencesExist(serviceTypeId: string, routeId: string): Promise<void> {

@@ -70,20 +70,20 @@ describe('TreeInterventionsService', () => {
   beforeEach(() => {
     prisma = {
       tree: {
-        findMany: jest.fn().mockResolvedValue([{ id: 'ar-1' }]),
-        findUnique: jest.fn().mockResolvedValue(arbol()),
+        findMany: vi.fn().mockResolvedValue([{ id: 'ar-1' }]),
+        findUnique: vi.fn().mockResolvedValue(arbol()),
       },
       treeIntervention: {
-        create: jest.fn().mockResolvedValue(intervencion()),
-        findUnique: jest.fn().mockResolvedValue(intervencion()),
-        findMany: jest.fn().mockResolvedValue([intervencion()]),
-        count: jest.fn().mockResolvedValue(1),
-        update: jest.fn(({ data }: any) => Promise.resolve(intervencion(data))),
+        create: vi.fn().mockResolvedValue(intervencion()),
+        findUnique: vi.fn().mockResolvedValue(intervencion()),
+        findMany: vi.fn().mockResolvedValue([intervencion()]),
+        count: vi.fn().mockResolvedValue(1),
+        update: vi.fn(({ data }: any) => Promise.resolve(intervencion(data))),
       },
-      service: { findUnique: jest.fn().mockResolvedValue(servicio()) },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      service: { findUnique: vi.fn().mockResolvedValue(servicio()) },
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     service = new TreeInterventionsService(
       prisma as unknown as PrismaService,
       audit as unknown as AuditService,

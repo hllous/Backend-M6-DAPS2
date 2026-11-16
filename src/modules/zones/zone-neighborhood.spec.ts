@@ -1,7 +1,7 @@
 import { zoneNeighborhoodId } from './zone-neighborhood';
 
 const db = (rows: { neighborhoodId: string }[]) =>
-  ({ zoneNeighborhood: { findMany: jest.fn().mockResolvedValue(rows) } }) as never;
+  ({ zoneNeighborhood: { findMany: vi.fn().mockResolvedValue(rows) } }) as never;
 
 const UUID = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
 

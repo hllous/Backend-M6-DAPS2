@@ -17,7 +17,7 @@ const config = {
 
 // Filas de la tabla de asignaciones que devuelve el mock; cada test las pisa.
 let assigned: M6Role[] = [];
-const findMany = jest.fn(async () => assigned.map((role) => ({ role })));
+const findMany = vi.fn(async () => assigned.map((role) => ({ role })));
 const prisma = { userRoleAssignment: { findMany } } as unknown as PrismaService;
 const adapter = new M1RoleAdapter();
 

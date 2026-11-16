@@ -4,8 +4,8 @@ import { CommunesController } from './communes.controller';
 import { CommunesService } from './communes.service';
 
 describe('CommunesService / Controller', () => {
-  const prisma = { commune: { findMany: jest.fn() } };
-  const catalog = { list: jest.fn() };
+  const prisma = { commune: { findMany: vi.fn() } };
+  const catalog = { list: vi.fn() };
   const service = new CommunesService(
     prisma as unknown as PrismaService,
     catalog as unknown as NeighborhoodsCatalogService,

@@ -62,26 +62,26 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
   beforeEach(() => {
     prisma = {
       service: {
-        findUnique: jest.fn().mockResolvedValue(serviceRow()),
-        update: jest.fn(async () => serviceRow()),
+        findUnique: vi.fn().mockResolvedValue(serviceRow()),
+        update: vi.fn(async () => serviceRow()),
       },
       // La pertenencia (#365) se cumple por defecto: es el usuario de la cuadrilla.
-      crew: { count: jest.fn().mockResolvedValue(1) },
+      crew: { count: vi.fn().mockResolvedValue(1) },
       container: {
-        findUnique: jest.fn().mockResolvedValue(container(ContainerStatus.OVERFLOWED)),
-        update: jest.fn(async (args: unknown) => args),
+        findUnique: vi.fn().mockResolvedValue(container(ContainerStatus.OVERFLOWED)),
+        update: vi.fn(async (args: unknown) => args),
       },
-      containerStatusHistory: { create: jest.fn().mockResolvedValue(undefined) },
-      outboxEvent: { create: jest.fn(), createMany: jest.fn() },
+      containerStatusHistory: { create: vi.fn().mockResolvedValue(undefined) },
+      outboxEvent: { create: vi.fn(), createMany: vi.fn() },
       // complete() usa la forma de callback; otros metodos, la de array.
-      $transaction: jest.fn((arg: unknown) =>
+      $transaction: vi.fn((arg: unknown) =>
         typeof arg === 'function'
           ? (arg as (tx: unknown) => unknown)(prisma)
           : Promise.all(arg as Promise<unknown>[]),
       ),
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    audit = { record: jest.fn() };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
+    audit = { record: vi.fn() };
     service = new ServicesService(
       prisma as unknown as PrismaService,
       outbox,
@@ -154,26 +154,24 @@ describe('ServicesService — cierre encadenado del contenedor', () => {
     expect(prisma.container.findUnique).not.toHaveBeenCalled();
   });
 
-  it('un contenedor ACTIVE no transiciona: no habia trabajo pendiente', async () => {
-    prisma.container.findUnique.mockResolvedValue(container(ContainerStatus.ACTIVE));
+  it.each<[ContainerStatus, string]>([
+    [ContainerStatus.ACTIVE, 'no había trabajo pendiente'],
+    [ContainerStatus.DAMAGED, 'falta pasar por start-repair'],
+    [ContainerStatus.REMOVED, 'ya no está en la calle'],
+  ])('un contenedor %s no transiciona: %s', async (status) => {
+    prisma.container.findUnique.mockResolvedValue(container(status));
 
     await service.complete(SERVICE_ID, {}, ACTOR);
 
     expect(prisma.container.update).not.toHaveBeenCalled();
   });
 
-  it('un contenedor DAMAGED no transiciona: falta pasar por start-repair', async () => {
-    prisma.container.findUnique.mockResolvedValue(container(ContainerStatus.DAMAGED));
-
-    await service.complete(SERVICE_ID, {}, ACTOR);
-
-    expect(prisma.container.update).not.toHaveBeenCalled();
-  });
-
-  it('un servicio ROUTE no mira contenedores', async () => {
-    prisma.service.findUnique.mockResolvedValue(
-      serviceRow({ mode: ServiceMode.ROUTE, targetType: null, targetId: null }),
-    );
+  it.each([
+    ['ROUTE', { mode: ServiceMode.ROUTE, targetType: null, targetId: null }],
+    ['que apunta a un árbol', { targetType: ServiceTargetType.TREE }],
+    ['POINT sin targetId', { targetId: null }],
+  ])('un servicio %s no mira contenedores', async (_caso, over) => {
+    prisma.service.findUnique.mockResolvedValue(serviceRow(over));
 
     await service.complete(SERVICE_ID, {}, ACTOR);
 

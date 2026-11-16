@@ -1,8 +1,10 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { M6Role, OutboxEventStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
+  ACTORES,
   Api,
   crearTipoServicio,
   crearZona,
@@ -11,6 +13,7 @@ import {
   hoy,
   truncateAll,
   seedActores,
+  tokenDe,
   tokenFor,
 } from './helpers';
 
@@ -191,6 +194,8 @@ describe('Flujo del expediente ambiental (e2e)', () => {
     expect(res.headers['content-type']).toMatch(/application\/json/);
     expect(res.text).toBe('null');
     await api.get(`/environmental-inspections/${randomUUID()}/violation-notice`).expect(404);
+    // Ni el null ni el 404 entregan datos Tier 2: no se auditan (#643).
+    expect(await prisma.domainAuditLog.count({ where: { action: 'READ' } })).toBe(0);
   });
 
   it('emite el acta, la deriva a M4 y cierra el expediente en NOTICE_ISSUED', async () => {
@@ -289,6 +294,113 @@ describe('Flujo del expediente ambiental (e2e)', () => {
       .expect(200);
     expect(tercera.body.status).toBe('processed');
     expect(await prisma.sanctionOutcome.count({ where: { violationNoticeId: acta.id } })).toBe(1);
+  });
+
+  it('leer el acta con su resolución deja una fila READ por recurso, con el actor y sin contenido (#643)', async () => {
+    const acta = await prisma.violationNotice.findFirstOrThrow({
+      where: { inspectionId },
+      include: { sanctionOutcome: true },
+    });
+    // Sin token (401) o con un rol sin permiso (403): no llega a leer, no audita.
+    await request(app.getHttpServer())
+      .get(`/environmental-inspections/${inspectionId}/violation-notice`)
+      .expect(401);
+    await new Api(app, tokenDe('cuadrilla'))
+      .get(`/environmental-inspections/${inspectionId}/violation-notice`)
+      .expect(403);
+    await new Api(app, tokenDe('auditor'))
+      .get(`/environmental-inspections/${inspectionId}/violation-notice`)
+      .expect(200);
+
+    const lecturas = await prisma.domainAuditLog.findMany({
+      where: { action: 'READ', entityId: { in: [acta.id, acta.sanctionOutcome!.id] } },
+    });
+    expect(lecturas.map((l) => [l.entityType, l.entityId]).sort()).toEqual(
+      [
+        ['SANCTION_OUTCOME', acta.sanctionOutcome!.id],
+        ['VIOLATION_NOTICE', acta.id],
+      ].sort(),
+    );
+    for (const l of lecturas) {
+      expect(l).toMatchObject({
+        actorUserId: ACTORES.auditor.userId,
+        actorRoles: ['M6_AUDITOR'],
+        fromStatus: null,
+        toStatus: null,
+        note: null,
+      });
+    }
+
+    // Se ve con el GET /audit existente.
+    const res = await api.get(`/audit?entityType=VIOLATION_NOTICE&entityId=${acta.id}`).expect(200);
+    expect(res.body.data[0]).toMatchObject({ action: 'READ', actorUserId: ACTORES.auditor.userId });
+  });
+
+  it('el detalle del evento de M4 en el inbox audita la lectura sobre la resolución (#643)', async () => {
+    const acta = await prisma.violationNotice.findFirstOrThrow({
+      where: { inspectionId },
+      include: { sanctionOutcome: true },
+    });
+    const outcomeId = acta.sanctionOutcome!.id;
+    const fine = await prisma.inboxEvent.findFirstOrThrow({
+      where: { eventType: 'commercialFineGenerated', processedAt: { not: null } },
+      orderBy: { receivedAt: 'asc' },
+    });
+    const lecturas = () =>
+      prisma.domainAuditLog.count({ where: { action: 'READ', entityId: outcomeId } });
+    const antes = await lecturas();
+    const admin = new Api(app, tokenDe('admin'));
+
+    // 401, 403 y 404 no entregan el payload: no registran.
+    await request(app.getHttpServer()).get(`/events/inbox/${fine.messageId}`).expect(401);
+    await new Api(app, tokenDe('auditor')).get(`/events/inbox/${fine.messageId}`).expect(403);
+    await admin.get('/events/inbox/no-existe').expect(404);
+    expect(await lecturas()).toBe(antes);
+
+    const res = await admin.get(`/events/inbox/${fine.messageId}`).expect(200);
+    expect(res.body.payload.sourceViolationId).toBe(acta.id);
+    const filas = await prisma.domainAuditLog.findMany({
+      where: { action: 'READ', entityId: outcomeId },
+      orderBy: { occurredAt: 'desc' },
+    });
+    expect(filas).toHaveLength(antes + 1);
+    expect(filas[0]).toMatchObject({
+      entityType: 'SANCTION_OUTCOME',
+      actorUserId: ACTORES.admin.userId,
+      actorRoles: ['M6_ADMIN'],
+      note: null,
+    });
+  });
+
+  it('el detalle de environmentalViolationDetected en el outbox audita la lectura sobre el acta (#643)', async () => {
+    const acta = await prisma.violationNotice.findFirstOrThrow({ where: { inspectionId } });
+    const evento = await prisma.outboxEvent.findFirstOrThrow({
+      where: { eventType: 'environmentalViolationDetected', aggregateId: acta.id },
+    });
+    const lecturas = () =>
+      prisma.domainAuditLog.count({
+        where: { action: 'READ', entityType: 'VIOLATION_NOTICE', entityId: acta.id },
+      });
+    const antes = await lecturas();
+    const admin = new Api(app, tokenDe('admin'));
+
+    await request(app.getHttpServer()).get(`/events/outbox/${evento.id}`).expect(401);
+    await new Api(app, tokenDe('auditor')).get(`/events/outbox/${evento.id}`).expect(403);
+    await admin.get(`/events/outbox/${randomUUID()}`).expect(404);
+    expect(await lecturas()).toBe(antes);
+
+    const res = await admin.get(`/events/outbox/${evento.id}`).expect(200);
+    expect(res.body.payload.violationId).toBe(acta.id);
+    expect(await lecturas()).toBe(antes + 1);
+    const fila = await prisma.domainAuditLog.findFirstOrThrow({
+      where: { action: 'READ', entityType: 'VIOLATION_NOTICE', entityId: acta.id },
+      orderBy: { occurredAt: 'desc' },
+    });
+    expect(fila).toMatchObject({
+      actorUserId: ACTORES.admin.userId,
+      actorRoles: ['M6_ADMIN'],
+      note: null,
+    });
   });
 
   it('rechaza con 400 una multa sin sourceViolationId válido y no guarda la fila', async () => {

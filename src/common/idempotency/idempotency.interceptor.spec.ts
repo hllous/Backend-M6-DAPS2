@@ -14,7 +14,7 @@ const p2002 = () =>
   new Prisma.PrismaClientKnownRequestError('dup', { code: 'P2002', clientVersion: 'x' });
 
 function setup(headers: Record<string, unknown>, body: unknown = { a: 1 }) {
-  const res = { statusCode: 201, setHeader: jest.fn(), status: jest.fn() };
+  const res = { statusCode: 201, setHeader: vi.fn(), status: vi.fn() };
   const ctx = {
     switchToHttp: () => ({
       getRequest: () => ({
@@ -29,11 +29,11 @@ function setup(headers: Record<string, unknown>, body: unknown = { a: 1 }) {
   } as unknown as ExecutionContext;
   const prisma = {
     idempotencyRecord: {
-      create: jest.fn().mockResolvedValue({}),
-      findUnique: jest.fn(),
-      update: jest.fn().mockResolvedValue({}),
-      updateMany: jest.fn(),
-      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      create: vi.fn().mockResolvedValue({}),
+      findUnique: vi.fn(),
+      update: vi.fn().mockResolvedValue({}),
+      updateMany: vi.fn(),
+      deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,8 +97,10 @@ describe('IdempotencyInterceptor', () => {
   });
 
   describe('clave repetida', () => {
-    const handle = jest.fn(() => of('nuevo'));
-    beforeEach(() => handle.mockClear());
+    const handle = vi.fn(() => of('nuevo'));
+    beforeEach(() => {
+      handle.mockClear();
+    });
 
     it('mismo cuerpo, completada: replay sin ejecutar', async () => {
       const { ctx, res, prisma, interceptor } = setup({ 'idempotency-key': 'k1' });
@@ -165,7 +167,7 @@ describe('IdempotencyInterceptor', () => {
 
 describe('IdempotencyRetentionSweeper', () => {
   it('borra lo de más de 24 h', async () => {
-    const deleteMany = jest.fn().mockResolvedValue({ count: 2 });
+    const deleteMany = vi.fn().mockResolvedValue({ count: 2 });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const s = new IdempotencyRetentionSweeper({ idempotencyRecord: { deleteMany } } as any);
     await s.purge(new Date('2026-01-02T00:00:00Z'));
@@ -175,7 +177,7 @@ describe('IdempotencyRetentionSweeper', () => {
   });
 
   it('no propaga errores', async () => {
-    const deleteMany = jest.fn().mockRejectedValue(new Error('db'));
+    const deleteMany = vi.fn().mockRejectedValue(new Error('db'));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const s = new IdempotencyRetentionSweeper({ idempotencyRecord: { deleteMany } } as any);
     await expect(s.purge()).resolves.toBeUndefined();

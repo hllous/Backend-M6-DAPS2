@@ -1,5 +1,5 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
-import * as request from 'supertest';
+import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { Api, bearer, createTestApp, seedActores, tokenDe, truncateAll, unique } from './helpers';
 

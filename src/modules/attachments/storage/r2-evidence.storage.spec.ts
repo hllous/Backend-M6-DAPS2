@@ -2,12 +2,22 @@ import { InternalServerErrorException, ServiceUnavailableException } from '@nest
 import { ConfigService } from '@nestjs/config';
 import { S3Client } from '@aws-sdk/client-s3';
 import { R2EvidenceStorage } from './r2-evidence.storage';
+import type { Mock } from 'vitest';
 
-const sendMock = jest.fn();
-jest.mock('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn().mockImplementation(() => ({ send: sendMock })),
-  PutObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
-  DeleteObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
+// vi.mock se hoistea arriba de todo: la factory solo ve lo creado con vi.hoisted.
+// Las implementaciones son `function` y no flecha porque el código las llama con
+// `new`, y Vitest no construye con una flecha.
+const { sendMock } = vi.hoisted(() => ({ sendMock: vi.fn() }));
+vi.mock('@aws-sdk/client-s3', () => ({
+  S3Client: vi.fn().mockImplementation(function () {
+    return { send: sendMock };
+  }),
+  PutObjectCommand: vi.fn().mockImplementation(function (input: unknown) {
+    return { input };
+  }),
+  DeleteObjectCommand: vi.fn().mockImplementation(function (input: unknown) {
+    return { input };
+  }),
 }));
 
 describe('R2EvidenceStorage', () => {
@@ -20,12 +30,12 @@ describe('R2EvidenceStorage', () => {
       'r2.secretAccessKey': 'secret',
       ...overrides,
     };
-    return { get: jest.fn((key: string) => values[key]) } as unknown as ConfigService;
+    return { get: vi.fn((key: string) => values[key]) } as unknown as ConfigService;
   };
 
   beforeEach(() => {
     sendMock.mockReset();
-    (S3Client as jest.Mock).mockClear();
+    (S3Client as Mock).mockClear();
   });
 
   it('sube el archivo y arma la url pública a partir del base y la key', async () => {
