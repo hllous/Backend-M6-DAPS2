@@ -44,7 +44,7 @@ En Render, **Auto-Deploy va apagado** (si no, hay doble deploy) y el **Health Ch
 
 ## Variables de entorno del backend
 
-Son las 34 claves de [`src/config/env.validation.ts`](../../src/config/env.validation.ts), una vez cada una. El ejemplo comentado está en [`.env.example`](../../.env.example). Los **secretos** se cargan solo en el panel de Render, nunca en el repo, en capturas ni en logs. "Dónde" es Render salvo que diga otra cosa.
+Son las 35 claves de [`src/config/env.validation.ts`](../../src/config/env.validation.ts), una vez cada una. El ejemplo comentado está en [`.env.example`](../../.env.example). Los **secretos** se cargan solo en el panel de Render, nunca en el repo, en capturas ni en logs. "Dónde" es Render salvo que diga otra cosa.
 
 ### Servidor y base
 
