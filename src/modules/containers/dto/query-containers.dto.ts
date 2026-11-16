@@ -2,9 +2,20 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { SearchText } from '../../../common/decorators';
 import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { ContainerType, ContainerStatus } from '@prisma/client';
-import { PaginationQueryDto } from '../../../common/dto';
+import { SortablePaginationQueryDto, SortField } from '../../../common/dto';
 
-export class QueryContainersDto extends PaginationQueryDto {
+export const CONTAINERS_SORT_FIELDS = [
+  'code',
+  'containerType',
+  'status',
+  'capacityLiters',
+  'createdAt',
+] as const;
+
+export class QueryContainersDto extends SortablePaginationQueryDto {
+  @SortField(CONTAINERS_SORT_FIELDS, 'code')
+  sort?: (typeof CONTAINERS_SORT_FIELDS)[number];
+
   @ApiPropertyOptional({
     description: 'Filtrar por estado del contenedor',
     enum: ContainerStatus,

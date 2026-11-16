@@ -2,9 +2,14 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { RiskLevel } from '@prisma/client';
 import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { SearchText, ToBoolean } from '../../../common/decorators';
-import { PaginationQueryDto } from '../../../common/dto';
+import { SortablePaginationQueryDto, SortField } from '../../../common/dto';
 
-export class QueryTreesDto extends PaginationQueryDto {
+export const TREES_SORT_FIELDS = ['surveyCode', 'species', 'active', 'createdAt'] as const;
+
+export class QueryTreesDto extends SortablePaginationQueryDto {
+  @SortField(TREES_SORT_FIELDS, 'surveyCode')
+  sort?: (typeof TREES_SORT_FIELDS)[number];
+
   @ApiPropertyOptional({ description: 'Filtrar por activo/inactivo' })
   @IsOptional()
   @ToBoolean()

@@ -1,9 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsUUID } from 'class-validator';
 import { SearchText, ToBoolean } from '../../../common/decorators';
-import { PaginationQueryDto } from '../../../common/dto';
+import { SortablePaginationQueryDto, SortField } from '../../../common/dto';
 
-export class QueryRoutesDto extends PaginationQueryDto {
+export const ROUTES_SORT_FIELDS = ['code', 'name', 'active', 'createdAt'] as const;
+
+export class QueryRoutesDto extends SortablePaginationQueryDto {
+  @SortField(ROUTES_SORT_FIELDS, 'code')
+  sort?: (typeof ROUTES_SORT_FIELDS)[number];
+
   @ApiPropertyOptional({ description: 'Filtrar por estado activo/inactivo', example: true })
   @IsOptional()
   @ToBoolean()

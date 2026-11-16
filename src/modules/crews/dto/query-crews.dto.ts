@@ -2,9 +2,20 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { ToBoolean } from '../../../common/decorators';
 import { CrewSpecialty, CrewType, Shift } from '@prisma/client';
-import { PaginationQueryDto } from '../../../common/dto';
+import { SortablePaginationQueryDto, SortField } from '../../../common/dto';
 
-export class QueryCrewsDto extends PaginationQueryDto {
+export const CREWS_SORT_FIELDS = [
+  'name',
+  'crewType',
+  'defaultShift',
+  'active',
+  'createdAt',
+] as const;
+
+export class QueryCrewsDto extends SortablePaginationQueryDto {
+  @SortField(CREWS_SORT_FIELDS, 'name')
+  sort?: (typeof CREWS_SORT_FIELDS)[number];
+
   @ApiPropertyOptional({
     description: 'Filtrar por estado activo/inactivo',
     example: true,
