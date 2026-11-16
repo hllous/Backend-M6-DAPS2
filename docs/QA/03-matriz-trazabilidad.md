@@ -9,16 +9,16 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 - **Test automatizado:** archivo y nombre del test del backend (hasta dos por criterio). `FE:` es un test del repo del frontend, citado por nombre de archivo.
 - **Resultado:** **Pasó** = el test citado existe y la corrida completa (3056 unitarios, 410 e2e y 8 de RabbitMQ real) no tuvo fallos. «Corregido: ACT-nn» es un criterio que cambió después de la HU.
 - **Defecto:** «—» si no hay ninguno; si no, el `DEF-xx` de [06-registro-defectos.md](06-registro-defectos.md).
-- **Marcas:** **HUECO** = ningún test automatizado. **SOLO FE** = solo un test del frontend.
+- **Marcas:** **HUECO** = ningún test automatizado. **FE ejecutado** = lo cubre un test del frontend leído contra el texto del criterio y ejecutado el 16/11 (Eje A, FE #979, mergeado en `develop` del Frontend); las demás citas `FE:` se verificaron solo por nombre de archivo.
 
 ## HU-01 — Catálogos con tablas filtrables, componentes uniformes y estados de carga
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU01-1** (Feliz) lo abro → puedo ordenar y filtrar con el mismo componente de tabla que Servicios | CP-001 | **SOLO FE**: `catalog-shell.spec.ts`<br>FE: `zones-catalog.spec.ts` | Corregido (ACT-F1) | — |
-| **CA-HU01-2** (Feliz) la pantalla carga → veo un esqueleto con la forma final, no un spinner suelto ni la tabla vacía | CP-002 | **SOLO FE**: `catalog-a-loading.spec.ts`<br>FE: `catalog-b-loading.spec.ts`<br>(+1 más) | Corregido (ACT-F1) | — |
-| **CA-HU01-3** (Alternativo) corre el guard de shadcn en el CI del frontend → no quedan componentes de UI escritos a mano fuera del registro | CP-003 | **HUECO** sin test: guard de CI del frontend | Corregido (ACT-F1) | — |
-| **CA-HU01-4** (Error) abro un catálogo → la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía | CP-004 | **SOLO FE**: `failure-journeys.spec.ts` | Solo FE | — |
+| **CA-HU01-1** (Feliz) lo abro → puedo ordenar y filtrar con el mismo componente de tabla que Servicios | CP-001 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts` (orden y filtro en Zonas; paginación de a 20 en Vehículos)<br>FE: `catalog-shell.spec.ts`, `zones-catalog.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)), **parcial**: los catálogos con paginación del servidor todavía no ordenan por columna en la tabla | DEF-39 (cerrado: el backend acepta `sort` y `order` desde #712, CA-HU01-5); falta que el frontend los use ([Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983)) |
+| **CA-HU01-2** (Feliz) la pantalla carga → veo un esqueleto con la forma final, no un spinner suelto ni la tabla vacía | CP-002 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts` (esqueleto mientras carga)<br>FE: `catalog-a-loading.spec.ts`, `catalog-b-loading.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU01-3** (Alternativo) corre el guard de shadcn en el CI del frontend → no quedan componentes de UI escritos a mano fuera del registro | CP-003 | **FE ejecutado**: `src/components/ui/shadcn-guard.test.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU01-4** (Error) abro un catálogo → la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía | CP-004 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts` (500 y timeout del BFF → `role=alert`)<br>FE: `failure-journeys.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). Desde FE #978 el timeout del BFF es de 5 s y responde 503 | DEF-33 (cerrado) |
 | **CA-HU01-5** (Alternativo) pido un listado paginado con `?sort=<campo>&order=asc\|desc` → el orden se aplica a todo el resultado antes de paginar y desempata por id; sin `sort` ni `order` el orden no cambia, y con solo `order` se invierte el orden por defecto | CP-383, CP-384, CP-385 | `sort-query.dto.spec.ts` › «acepta un campo de la lista y ambos sentidos»<br>`catalog-sort.e2e-spec.ts` › «order=desc invierte todo el resultado y pagina sobre ese orden»<br>(+5 más) | Pasó | — |
 | **CA-HU01-6** (Error) envío un `sort` fuera de la lista (también una columna real no visible) o un `order` inválido → recibo 400 | CP-386, CP-387, CP-388 | `sort-query.dto.spec.ts` › «rechaza un sort fuera de la lista (también una columna real no visible)»<br>`catalog-sort.e2e-spec.ts` › «un sort fuera de la lista da 400»<br>(+1 más) | Pasó | — |
 
@@ -274,9 +274,9 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU26-1** (Feliz) se muestra una fecha → está en formato argentino dd/mm/aaaa, hh:mm y en el día local | CP-230 | **SOLO FE**: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts`<br>FE: `services-period.spec.ts` | Corregido (ACT-F4) | — |
-| **CA-HU26-2** (Feliz) lo veo → leo el nombre o el código, no el UUID | CP-231 | **SOLO FE**: `service-vehicle-labels.spec.ts` | Corregido (ACT-F4) | — |
-| **CA-HU26-3** (Error) se muestra la fecha → se muestra el día de Argentina (UTC-3), no el de UTC | CP-232 | **SOLO FE**: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts` | Solo FE | — |
+| **CA-HU26-1** (Feliz) se muestra una fecha → está en formato argentino dd/mm/aaaa, hh:mm y en el día local | CP-230 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). El formato real lleva coma («06/09/2026, 14:05»): se corrigió el texto del criterio, no el código | — |
+| **CA-HU26-2** (Feliz) lo veo → leo el nombre o el código, no el UUID | CP-231 | **FE ejecutado**: `e2e/service-vehicle-labels.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU26-3** (Error) se muestra la fecha → se muestra el día de Argentina (UTC-3), no el de UTC | CP-232 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
 
 ## HU-27 — Consultar sin login el estado de mi denuncia, cuándo pasa el servicio y dónde están los puntos verdes
 
@@ -317,8 +317,8 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 |---|---|---|---|---|
 | **CA-HU30-1** (Feliz) inicio sesión por el BFF (POST {M1}/auth/usuario/login) y consulto GET /me → recibo 200 con mis roles de M6; el JWT de M1 va en una cookie sellada httpOnly y nunca llega al navegador | CP-262 | FE: `real-m1-login.spec.ts`<br>`jwt.strategy.spec.ts` › «acepta un access token de M1 y lo mapea a roles de M6» | Pasó (parte backend) | — |
 | **CA-HU30-2** (Error) llamo a un endpoint protegido → recibo 401  | CP-263 | `jwt.strategy.spec.ts` › «rechaza: %s» | Pasó | — |
-| **CA-HU30-3** (Error) navego → el BFF reintenta una vez con refresh y, si falla, redirige al login con el aviso de sesión vencida | CP-264 | **SOLO FE**: `failure-journeys.spec.ts`<br>FE: `entry-and-roles.spec.ts` | Corregido (ACT-F7) | — |
-| **CA-HU30-4** (Falla externa) inicio sesión → el BFF corta a los 90 s con un mensaje de error; un build deployado en un modo distinto de real-m1 falla al arrancar (fail closed, FE #800) | CP-265 | **SOLO FE**: `real-m1-login.spec.ts` | Solo FE | — |
+| **CA-HU30-3** (Error) navego → el BFF reintenta una vez con refresh y, si falla, redirige al login con el aviso de sesión vencida | CP-264 | **FE ejecutado**: `src/lib/m1-refresh.test.ts`<br>FE: `e2e/failure-journeys.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU30-4** (Falla externa) inicio sesión → el BFF corta a los 90 s con un mensaje de error; un build deployado en un modo distinto de real-m1 falla al arrancar (fail closed, FE #800) | CP-265 | **FE ejecutado**: `src/app/api/session/login/route.test.ts`<br>FE: `real-m1-login.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). El criterio decía 15 s; el código corta a 90 s (`LOGIN_TIMEOUT_MS`) y se corrigió el texto | — |
 
 ## HU-31 — Seguridad de la Clase 11 (SEC-W01 a W06, SEC-I01, SEC-I02, SEC-D01, SEC-D02)
 
@@ -343,7 +343,7 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU32-1** (Feliz) corre axe con las etiquetas WCAG en el CI → no hay violaciones críticas de accesibilidad | CP-277 | **SOLO FE**: `accessibility.spec.ts` | Solo FE | — |
+| **CA-HU32-1** (Feliz) corre axe con las etiquetas WCAG en el CI → no hay violaciones críticas de accesibilidad | CP-277 | **FE ejecutado**: `e2e/accessibility.spec.ts` (63 tests: 21 pantallas × 360, 768 y 1280 px) | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). 0 violaciones axe (wcag2a/aa/21aa/22aa) y Lighthouse accesibilidad 100 en 7 pantallas: `Frontend-M6-DAPS2/docs/evidencia/eje-a-2026-11-16/` | Corregidas en FE #979: `aria-valid-attr-value` del mapa (critical), contraste de `TabsTrigger` y `scrollable-region-focusable` de los tableros |
 | **CA-HU32-2** (Alternativo) consulto GET /health y GET /health/ready → liveness responde 200 sin consultar la base y readiness responde 200 con la base arriba | CP-278 | `health.controller.spec.ts` › «liveness devuelve ok sin tocar la base»<br>`health.controller.spec.ts` › «ready devuelve 200 con la base arriba» | Pasó | — |
 | **CA-HU32-3** (Error) consulto GET /health/ready → recibo 503 sin filtrar el error de la base | CP-279 | `health.controller.spec.ts` › «ready responde 503 sin filtrar el error de la base»<br>`health.controller.spec.ts` › «ready responde 503 si la base no contesta a tiempo» | Pasó | — |
 | **CA-HU32-4** (Error) se inspeccionan los headers de seguridad (CSP, X-Frame-Options, HSTS, Referrer-Policy) → están presentes (en el backend hay nosniff, X… | CP-280, CP-345, CP-346 | `security-headers.middleware.spec.ts` › «pone las cabeceras base y sigue la cadena»<br>`security-headers.middleware.spec.ts` › «agrega HSTS solo en producción»<br>(+2 más) | Pasó | En `/api/docs` rige una CSP propia (`DOCS_CSP`, #701) |
@@ -359,17 +359,17 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 
 ## Resumen de cobertura de la matriz
 
-Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/`, `test/` o `scripts/`; «solo FE» si cita solo el frontend; «hueco» si no cita ninguno.
+Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/`, `test/` o `scripts/`; «FE ejecutado» si lo cubre solo un test del frontend leído y ejecutado; «hueco» si no cita ninguno.
 
 - HU con criterios: 33. Criterios: **181**. Casos: **394** ([04](04-especificacion-casos.md)). Todos los criterios tienen al menos un caso.
 - Con test automatizado del backend: **167** (92,3 %). Cinco son parciales (ver «Cobertura parcial declarada»).
-- Solo con test del frontend: **9** (5,0 %).
-- **Huecos: 5** (2,8 %): CA-HU01-3, CA-HU10-2, CA-HU24-2, CA-HU33-1 y CA-HU33-4.
-- Resultado: los 167 criterios con test del backend **pasan**; 0 fallados, 0 bloqueados.
+- Con test del frontend ejecutado (Eje A, FE #979): **10** (5,5 %): CA-HU01-1 a CA-HU01-4, CA-HU26-1 a CA-HU26-3, CA-HU30-3, CA-HU30-4 y CA-HU32-1. CA-HU01-1 es parcial (DEF-39, [Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983)).
+- **Huecos: 4** (2,2 %): CA-HU10-2, CA-HU24-2, CA-HU33-1 y CA-HU33-4.
+- Resultado: **177 de 181 criterios ejecutados y pasados (97,8 %)**: los 167 con test del backend y los 10 del frontend; 0 fallados, 0 bloqueados, 4 sin test automatizado (los huecos). Umbral: ≥ 95 % y ningún Must fallado: cumple. Sin contar los parciales sigue por encima del 95 %.
 
-| HU | Criterios | Con test del backend | Solo FE | Huecos |
+| HU | Criterios | Con test del backend | FE ejecutado | Huecos |
 |---|---|---|---|---|
-| HU-01 | 6 | 2 | 3 | 1 |
+| HU-01 | 6 | 2 | 4 | 0 |
 | HU-02 | 7 | 7 | 0 | 0 |
 | HU-03 | 6 | 6 | 0 | 0 |
 | HU-04 | 6 | 6 | 0 | 0 |
@@ -402,7 +402,7 @@ Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/
 | HU-31 | 14 | 14 | 0 | 0 |
 | HU-32 | 4 | 3 | 1 | 0 |
 | HU-33 | 4 | 2 | 0 | 2 |
-| **Total** | **181** | **167** | **9** | **5** |
+| **Total** | **181** | **167** | **10** | **4** |
 
 ## Correcciones posteriores a las HU
 
@@ -446,41 +446,42 @@ Lo corregido o agregado después de la HU (issues cerrados y PR mergeados). Cada
 | ACT-29 | #452; PR #462 (donde entran los tests de este cambio) | CA-HU16-7 (agregado) | Pasó |
 | ACT-30 | #453; PR #482 | CA-HU11-7 (agregado) | Pasó |
 | ACT-31 | #325; PR #330 | CA-HU16-8 (agregado) | Pasó |
-| ACT-F1 | FE #528, #520, #525 | CA-HU01-1 (agregado), CA-HU01-2 (agregado), CA-HU01-3 (agregado) | Sin ejecutar (frontend) |
+| ACT-F1 | FE #528, #520, #525 | CA-HU01-1 (agregado), CA-HU01-2 (agregado), CA-HU01-3 (agregado) | Pasó en el frontend (Eje A, FE #979) |
 | ACT-F2 | FE #617 | CA-HU04-2 (agregado) | Sin ejecutar (frontend) |
 | ACT-F3 | FE #621, #622 | CA-HU10-1 (agregado), CA-HU14-1 (agregado) | Sin ejecutar (frontend) |
-| ACT-F4 | FE #321 | CA-HU26-1 (agregado), CA-HU26-2 (agregado) | Sin ejecutar (frontend) |
+| ACT-F4 | FE #321 | CA-HU26-1 (agregado), CA-HU26-2 (agregado) | Pasó en el frontend (Eje A, FE #979) |
 | ACT-F5 | FE #469 | CA-HU29-4 (agregado) | Sin ejecutar (frontend) |
 | ACT-F6 | FE #380, #435, #438 | CA-HU08-3 (corregido) | Sin ejecutar (frontend) |
-| ACT-F7 | FE #379, #381, #437 | CA-HU30-3 (agregado) | Sin ejecutar (frontend) |
+| ACT-F7 | FE #379, #381, #437 | CA-HU30-3 (agregado) | Pasó en el frontend (Eje A, FE #979) |
 | ACT-N1 | BE #285, FE #413 | aclaración | No aplica |
 
 ### Cobertura parcial declarada
 
 Criterios contados como cubiertos por tener al menos un test del backend, pero con algún caso que se prueba a mano, que se prueba solo en parte o que no tiene test:
 
+- **CA-HU01-1**: CP-001. El test del frontend prueba orden y filtro en Zonas y la paginación de a 20 en Vehículos; la tabla de los catálogos con paginación del servidor no ordena todavía por columna. El backend ya acepta `sort` y `order` (#712); falta que el frontend los use ([Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983)).
 - **CA-HU12-5**: CP-121 (regla de fecha futura de `docs/api/endpoints.md`)
 - **CA-HU24-1**: CP-219 y CP-340. El consumo y la publicación del outbox se prueban contra un RabbitMQ real propio (`rabbitmq-real` y `outbox-rabbitmq-real`); la prueba contra el Core de M9 es manual (historial de integración).
 - **CA-HU27-3**: CP-236 (regla de `docs/api/endpoints.md`, #145)
 - **CA-HU27-4**: CP-238. El e2e del 429 (`test/throttler.e2e-spec.ts`) prueba el límite **global** sobre `GET /zones` con `THROTTLE_LIMIT=3`; el tope propio del portal (20 por minuto) no tiene e2e. El test de cuenta por IP del BFF es `client-tracker.spec.ts`.
 - **CA-HU31-3**: CP-268 y CP-342. El 429 está probado en el límite global, no en el del portal.
 
-### Huecos y criterios solo con test del frontend
+### Huecos y criterios cubiertos solo por el frontend
 
 | Criterio | Estado | Detalle |
 |---|---|---|
-| CA-HU01-1 | Solo FE | ordenar y filtrar con el mismo componente de tabla que Servicios |
-| CA-HU01-2 | Solo FE | esqueleto con la forma final al cargar |
-| CA-HU01-3 | Hueco | guard de shadcn en el CI del frontend |
-| CA-HU01-4 | Solo FE | mensaje de error con aria-live o role="alert" |
+| CA-HU01-1 | FE ejecutado (parcial) | `e2e/qa-criterios-fe.spec.ts`; orden en catálogos paginados pendiente en Frontend #983 |
+| CA-HU01-2 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` |
+| CA-HU01-3 | FE ejecutado | `src/components/ui/shadcn-guard.test.ts` |
+| CA-HU01-4 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` |
 | CA-HU10-2 | Hueco | el 400 del filtro `priority` lo da el ValidationPipe; sin test propio |
 | CA-HU24-2 | Hueco | prueba pasiva desde Render (TCP/TLS, autenticación y `checkQueue` de `q.ambiente`); la evidencia está en el historial de integración (#442) |
-| CA-HU26-1 | Solo FE | formato dd/mm/aaaa, hh:mm en el día local |
-| CA-HU26-2 | Solo FE | nombre o código en lugar del UUID |
-| CA-HU26-3 | Solo FE | día de Argentina (UTC-3), no el de UTC |
-| CA-HU30-3 | Solo FE | refresh y redirección al login con aviso de sesión vencida |
-| CA-HU30-4 | Solo FE | corte del login a los 90 s y fail closed fuera del modo real-m1 |
-| CA-HU32-1 | Solo FE | sin violaciones críticas de axe |
+| CA-HU26-1 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` y `src/lib/argentina-date.test.ts` |
+| CA-HU26-2 | FE ejecutado | `e2e/service-vehicle-labels.spec.ts` |
+| CA-HU26-3 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` y `src/lib/argentina-date.test.ts` |
+| CA-HU30-3 | FE ejecutado | `src/lib/m1-refresh.test.ts` y `e2e/failure-journeys.spec.ts` |
+| CA-HU30-4 | FE ejecutado | `src/app/api/session/login/route.test.ts` |
+| CA-HU32-1 | FE ejecutado | `e2e/accessibility.spec.ts` (63 tests) |
 | CA-HU33-1 | Hueco | ejecución del job `e2e` del CI; no es un test |
 | CA-HU33-4 | Hueco | repetición de corridas; es una medición, no un test |
 
