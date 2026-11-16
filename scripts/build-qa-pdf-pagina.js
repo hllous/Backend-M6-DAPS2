@@ -1,4 +1,4 @@
-// Se inyecta en la página antes de imprimir el PDF (ver scripts/build-qa-pdf.mjs).
+// Se inyecta en la página antes de imprimir el PDF (lo carga scripts/build-qa-pdf.mjs).
 
 // Las celdas cortas (ID, severidad, fecha, issue) no se parten: el texto largo sí.
 const MAX_NOWRAP = 22;
