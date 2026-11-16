@@ -412,11 +412,6 @@ export class CrewsController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
-    status: 403,
-    description: 'El rol del usuario no puede reubicar cuadrillas',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
     status: 404,
     description: 'Cuadrilla o zona no encontrada',
     type: ErrorResponseDto,

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { migrateCrewUserIds, parseMapping } from './migrate-crew-user-ids';
+import { describirDestino, migrateCrewUserIds, parseMapping } from './migrate-crew-user-ids';
+import type { Mock } from 'vitest';
 
 describe('parseMapping', () => {
   it('acepta un objeto { "usr-…": "<id de M1>" }', () => {
@@ -31,7 +32,7 @@ describe('parseMapping', () => {
 
 describe('migrateCrewUserIds', () => {
   let prisma: any;
-  let log: jest.Mock;
+  let log: Mock;
   let lines: () => string;
 
   const withData = (
@@ -47,17 +48,17 @@ describe('migrateCrewUserIds', () => {
   beforeEach(() => {
     prisma = {
       crewMember: {
-        findMany: jest.fn().mockResolvedValue([]),
-        update: jest.fn((args) => ({ op: 'memberUpdate', args })),
-        delete: jest.fn((args) => ({ op: 'memberDelete', args })),
+        findMany: vi.fn().mockResolvedValue([]),
+        update: vi.fn((args) => ({ op: 'memberUpdate', args })),
+        delete: vi.fn((args) => ({ op: 'memberDelete', args })),
       },
       crew: {
-        findMany: jest.fn().mockResolvedValue([]),
-        update: jest.fn((args) => ({ op: 'crewUpdate', args })),
+        findMany: vi.fn().mockResolvedValue([]),
+        update: vi.fn((args) => ({ op: 'crewUpdate', args })),
       },
-      $transaction: jest.fn().mockResolvedValue([]),
+      $transaction: vi.fn().mockResolvedValue([]),
     };
-    log = jest.fn();
+    log = vi.fn();
     lines = () => log.mock.calls.map(([l]) => l).join('\n');
   });
 
@@ -198,5 +199,19 @@ describe('migrateCrewUserIds', () => {
     expect(res).toEqual({ applied: true, changes: 0, unmapped: [] });
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(lines()).toContain('Sin cambios.');
+  });
+});
+
+describe('describirDestino', () => {
+  it('distingue base local y remota sin exponer host ni credencial', () => {
+    expect(describirDestino('postgresql://u:secreto@localhost:5432/m6', false)).toBe('Base: local');
+    expect(describirDestino('postgresql://u:secreto@127.0.0.1/m6', false)).toBe('Base: local');
+    const remota = describirDestino('postgresql://u:secreto@db.ejemplo.com:5432/m6', false);
+    expect(remota).toBe('Base: remota');
+    expect(remota).not.toMatch(/secreto|ejemplo/);
+  });
+
+  it('marca el dry-run', () => {
+    expect(describirDestino('postgresql://localhost/m6', true)).toBe('Base: local (dry-run)');
   });
 });

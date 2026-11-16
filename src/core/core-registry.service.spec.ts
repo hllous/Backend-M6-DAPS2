@@ -3,6 +3,7 @@ import { CoreClient } from './core.client';
 import { CoreRegistryService } from './core-registry.service';
 import { ConsumedEvent } from '../events/inbox/consumed-events';
 import { EventType } from '../events/event-types';
+import type { Mock } from 'vitest';
 
 const CONSUMIDOS = Object.values(ConsumedEvent).filter((e) => e !== 'weatherAlertIssued');
 const PUBLICADOS = Object.values(EventType);
@@ -14,7 +15,7 @@ function json(body: unknown, status = 200): Response {
 
 interface CoreSimulado {
   core: CoreClient;
-  request: jest.Mock;
+  request: Mock;
   posts: { path: string; body: Record<string, unknown> }[];
 }
 
@@ -38,7 +39,7 @@ function coreSimulado(
     ...(inicial.rawPubs ?? []),
   ];
   const posts: CoreSimulado['posts'] = [];
-  const request = jest.fn((path: string, init: RequestInit = {}) => {
+  const request = vi.fn((path: string, init: RequestInit = {}) => {
     const method = init.method ?? 'GET';
     if (falla?.(path, method)) return Promise.resolve(json({}, 503));
     if (method === 'GET') {
@@ -60,7 +61,7 @@ function servicio(core: CoreClient, cfg: Record<string, unknown> = {}) {
 }
 
 describe('CoreRegistryService', () => {
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('registra lo que sale del código: 8 suscripciones (sin weatherAlertIssued) y 6 publicaciones', async () => {
     const { core, posts } = coreSimulado();
@@ -149,7 +150,7 @@ describe('CoreRegistryService', () => {
   it('un error HTTP o una respuesta que no es lista falla sin crear nada a ciegas', async () => {
     await expect(servicio(coreSimulado({}, () => true).core).sync()).rejects.toThrow(/HTTP 503/);
 
-    const raro = { enabled: true, request: jest.fn().mockResolvedValue(json({ ok: 1 })) };
+    const raro = { enabled: true, request: vi.fn().mockResolvedValue(json({ ok: 1 })) };
     await expect(servicio(raro as unknown as CoreClient).sync()).rejects.toThrow(/no es una lista/);
     expect(raro.request).toHaveBeenCalledTimes(1);
 
@@ -158,7 +159,7 @@ describe('CoreRegistryService', () => {
   });
 
   it('una respuesta paginada (meta.total mayor a lo recibido) no crea nada', async () => {
-    const request = jest
+    const request = vi
       .fn()
       .mockResolvedValue(json({ data: [{ eventType: 'ticketUpdated' }], meta: { total: 9 } }));
     await expect(
@@ -235,7 +236,7 @@ describe('CoreRegistryService', () => {
 
   describe('al arrancar', () => {
     it('sin CORE_API_URL no hace nada', () => {
-      const request = jest.fn();
+      const request = vi.fn();
       servicio({ enabled: false, request } as unknown as CoreClient).onApplicationBootstrap();
       expect(request).not.toHaveBeenCalled();
     });
@@ -247,48 +248,48 @@ describe('CoreRegistryService', () => {
     });
 
     it('no bloquea el arranque y termina de registrar', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const { core, posts } = coreSimulado();
       const s = servicio(core);
       s.onApplicationBootstrap();
       expect(posts).toHaveLength(0);
-      await jest.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
       expect(posts).toHaveLength(TOTAL);
       s.onModuleDestroy();
     });
 
     it('una falla del Core no tira la app: se reintenta con backoff y se completa', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       let caido = true;
       const { core, posts } = coreSimulado({}, () => caido);
       const s = servicio(core);
       expect(() => s.onApplicationBootstrap()).not.toThrow();
-      await jest.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
       expect(posts).toHaveLength(0);
 
       caido = false;
-      await jest.advanceTimersByTimeAsync(5_000);
+      await vi.advanceTimersByTimeAsync(5_000);
       expect(posts).toHaveLength(TOTAL);
       s.onModuleDestroy();
     });
 
     it('abandona tras los intentos máximos', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const { core, request } = coreSimulado({}, () => true);
       servicio(core).onApplicationBootstrap();
-      await jest.advanceTimersByTimeAsync(2_000_000);
+      await vi.advanceTimersByTimeAsync(2_000_000);
       // Un GET por intento: falla antes de pedir el segundo.
       expect(request).toHaveBeenCalledTimes(6);
     });
 
     it('no reintenta después de cerrar la app', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const { core, request } = coreSimulado({}, () => true);
       const s = servicio(core);
       s.onApplicationBootstrap();
-      await jest.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
       s.onModuleDestroy();
-      await jest.advanceTimersByTimeAsync(2_000_000);
+      await vi.advanceTimersByTimeAsync(2_000_000);
       expect(request).toHaveBeenCalledTimes(1);
     });
   });

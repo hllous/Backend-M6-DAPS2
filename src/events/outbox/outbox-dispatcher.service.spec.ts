@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { EventPublisher } from '../publishers/event-publisher.port';
 import { EventEnvelope } from '../envelope';
 import { MAX_ATTEMPTS, OutboxDispatcher } from './outbox-dispatcher.service';
+import type { Mock } from 'vitest';
 
 const configCon = (moduleId: string) => new ConfigService({ core: { moduleId } });
 
@@ -14,7 +15,7 @@ describe('OutboxDispatcher', () => {
   const CAUSA = '44444444-4444-4444-4444-444444444444';
 
   let prisma: any;
-  let publisher: { publish: jest.Mock; transport: string };
+  let publisher: { publish: Mock; transport: string };
   let dispatcher: OutboxDispatcher;
 
   const row = (over: Record<string, unknown> = {}) => ({
@@ -36,12 +37,12 @@ describe('OutboxDispatcher', () => {
   beforeEach(() => {
     prisma = {
       outboxEvent: {
-        findMany: jest.fn().mockResolvedValue([row()]),
-        update: jest.fn().mockResolvedValue({}),
-        groupBy: jest.fn().mockResolvedValue([]),
+        findMany: vi.fn().mockResolvedValue([row()]),
+        update: vi.fn().mockResolvedValue({}),
+        groupBy: vi.fn().mockResolvedValue([]),
       },
     };
-    publisher = { publish: jest.fn().mockResolvedValue(undefined), transport: 'test' };
+    publisher = { publish: vi.fn().mockResolvedValue(undefined), transport: 'test' };
     dispatcher = new OutboxDispatcher(
       prisma as unknown as PrismaService,
       publisher as unknown as EventPublisher,

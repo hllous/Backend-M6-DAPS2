@@ -13,6 +13,20 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+## Plantillas de issues
+
+Viven en `.github/ISSUE_TEMPLATE/`. Al crear un issue con `gh issue create`, abrir la plantilla que corresponda, completar **todas** sus secciones y pasar su etiqueta con `--label`. `gh` no las aplica solo.
+
+| Plantilla | Cuándo | Etiqueta |
+|---|---|---|
+| `bug.md` | Algo no funciona como debería (pasos para reproducir) | `bug` |
+| `feature.md` | Capacidad nueva, con historia de usuario | `feature` |
+| `tarea.md` | Refactor, tests, infraestructura, trabajo sin funcionalidad visible | `task` |
+| `contrato.md` | Cambio o consulta de evento, endpoint, DTO u OpenAPI que afecta a otros módulos o al Frontend | `event-driven`, `api` |
+| `docs.md` | Documentación faltante o desactualizada | `documentation` |
+
+Título: describe el objetivo sin abrir el issue ("Impedir registrar usuarios sin email"), sin prefijos `[BUG]`; la clasificación va en las etiquetas.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_

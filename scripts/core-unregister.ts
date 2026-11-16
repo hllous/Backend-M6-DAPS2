@@ -16,7 +16,7 @@ try {
 } catch {
   // Sin .env, vale lo que ya esté en el entorno.
 }
-process.env.DATABASE_URL ??= 'postgresql://registro:registro@localhost:5432/registro';
+process.env.DATABASE_URL ??= 'postgresql://localhost:5432/registro';
 process.env.JWT_SECRET ??= 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
 
 async function main(): Promise<void> {

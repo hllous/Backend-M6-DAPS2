@@ -55,6 +55,15 @@ interface MemberChange extends IdChange {
 }
 
 /** Valida y normaliza el mapeo: las claves son libres, los destinos tienen que ser ids de M1. */
+/**
+ * Resume el destino sin imprimir nada derivado de DATABASE_URL (trae la
+ * credencial): solo si es la máquina local o una base remota.
+ */
+export function describirDestino(databaseUrl: string, dryRun: boolean): string {
+  const esLocal = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(databaseUrl).hostname);
+  return `Base: ${esLocal ? 'local' : 'remota'}${dryRun ? ' (dry-run)' : ''}`;
+}
+
 export function parseMapping(json: string): Mapping {
   const raw: unknown = JSON.parse(json);
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -189,8 +198,7 @@ async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
   const mapping = parseMapping(readFileSync(mapPath, 'utf8'));
 
-  const target = new URL(process.env.DATABASE_URL);
-  console.log(`Base: ${target.hostname}:${target.port || '5432'}${target.pathname}`);
+  console.log(describirDestino(process.env.DATABASE_URL, dryRun));
 
   const prisma = new PrismaClient();
   try {

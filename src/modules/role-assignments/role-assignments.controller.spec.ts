@@ -6,10 +6,10 @@ import { RoleAssignmentsService } from './role-assignments.service';
 
 describe('RoleAssignmentsController', () => {
   const service = {
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-    replace: jest.fn(),
-    remove: jest.fn(),
+    findAll: vi.fn(),
+    findOne: vi.fn(),
+    replace: vi.fn(),
+    remove: vi.fn(),
   };
   const controller = new RoleAssignmentsController(service as unknown as RoleAssignmentsService);
 

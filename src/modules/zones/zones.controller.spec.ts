@@ -2,6 +2,7 @@ import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { ZonesController } from './zones.controller';
 import { ZonesService } from './zones.service';
 import { AddNeighborhoodsDto, CreateZoneDto, QueryZonesDto, UpdateZoneDto } from './dto';
+import type { Mocked } from 'vitest';
 
 const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
@@ -9,19 +10,19 @@ const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
 
 describe('ZonesController', () => {
-  let service: jest.Mocked<ZonesService>;
+  let service: Mocked<ZonesService>;
   let controller: ZonesController;
 
   beforeEach(() => {
     service = {
-      create: jest.fn().mockResolvedValue(RESULT),
-      findAll: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findOne: jest.fn().mockResolvedValue(RESULT),
-      update: jest.fn().mockResolvedValue(RESULT),
-      remove: jest.fn().mockResolvedValue(undefined),
-      addNeighborhoods: jest.fn().mockResolvedValue(RESULT),
-      removeNeighborhood: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<ZonesService>;
+      create: vi.fn().mockResolvedValue(RESULT),
+      findAll: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findOne: vi.fn().mockResolvedValue(RESULT),
+      update: vi.fn().mockResolvedValue(RESULT),
+      remove: vi.fn().mockResolvedValue(undefined),
+      addNeighborhoods: vi.fn().mockResolvedValue(RESULT),
+      removeNeighborhood: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Mocked<ZonesService>;
     controller = new ZonesController(service);
   });
 

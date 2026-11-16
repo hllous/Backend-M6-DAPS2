@@ -113,6 +113,7 @@ export class RepairRequestsController {
   }
 
   @Post(':id/start')
+  @ApiBadRequestParams()
   @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -135,6 +136,7 @@ export class RepairRequestsController {
   }
 
   @Post(':id/close')
+  @ApiBadRequestParams()
   @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -236,6 +238,7 @@ export class StreetClosureRequestsController {
   }
 
   @Post(':id/approve')
+  @ApiBadRequestParams()
   @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -289,6 +292,7 @@ export class StreetClosureRequestsController {
   }
 
   @Post(':id/end')
+  @ApiBadRequestParams()
   @Roles(...ROLES_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

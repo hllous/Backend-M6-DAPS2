@@ -19,10 +19,10 @@ describe('TreeInterventionsService — transiciones inválidas (409)', () => {
 
   beforeEach(() => {
     prisma = {
-      treeIntervention: { findUnique: jest.fn(), update: jest.fn() },
-      $transaction: jest.fn(),
+      treeIntervention: { findUnique: vi.fn(), update: vi.fn() },
+      $transaction: vi.fn(),
     };
-    audit = { record: jest.fn() };
+    audit = { record: vi.fn() };
     service = new TreeInterventionsService(
       prisma as unknown as PrismaService,
       audit as unknown as AuditService,

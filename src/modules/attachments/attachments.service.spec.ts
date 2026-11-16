@@ -8,6 +8,7 @@ import { M6Role, Prisma } from '@prisma/client';
 import { AttachmentsService } from './attachments.service';
 import { AttachmentOwnerType } from './attachment-owner-type';
 import { EvidenceStorage } from './storage/evidence-storage.interface';
+import type { Mocked } from 'vitest';
 
 const USER_ID = '4242';
 const CONTAINER_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
@@ -98,32 +99,32 @@ describe('AttachmentsService', () => {
   });
 
   let prisma: any;
-  let storage: jest.Mocked<EvidenceStorage>;
+  let storage: Mocked<EvidenceStorage>;
   let service: AttachmentsService;
 
   beforeEach(() => {
     prisma = {
-      container: { count: jest.fn().mockResolvedValue(1) },
-      service: { findUnique: jest.fn().mockResolvedValue(null) },
-      zoneResult: { findUnique: jest.fn().mockResolvedValue(null) },
-      environmentalInspection: { findUnique: jest.fn().mockResolvedValue(null) },
-      crew: { count: jest.fn().mockResolvedValue(0) },
+      container: { count: vi.fn().mockResolvedValue(1) },
+      service: { findUnique: vi.fn().mockResolvedValue(null) },
+      zoneResult: { findUnique: vi.fn().mockResolvedValue(null) },
+      environmentalInspection: { findUnique: vi.fn().mockResolvedValue(null) },
+      crew: { count: vi.fn().mockResolvedValue(0) },
       attachment: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        findUniqueOrThrow: jest.fn(),
-        create: jest.fn().mockImplementation(({ data }) =>
+        findUnique: vi.fn().mockResolvedValue(null),
+        findUniqueOrThrow: vi.fn(),
+        create: vi.fn().mockImplementation(({ data }) =>
           Promise.resolve({
             id: ATTACHMENT_ID,
             uploadedAt: new Date('2026-09-02T22:00:00.000Z'),
             ...data,
           }),
         ),
-        findMany: jest.fn().mockResolvedValue([]),
+        findMany: vi.fn().mockResolvedValue([]),
       },
     };
     storage = {
-      upload: jest.fn().mockResolvedValue({ url: 'https://cdn.example.com/evidence/x.jpg' }),
-      remove: jest.fn().mockResolvedValue(undefined),
+      upload: vi.fn().mockResolvedValue({ url: 'https://cdn.example.com/evidence/x.jpg' }),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
     service = new AttachmentsService(prisma, storage);
   });

@@ -8,6 +8,7 @@ import { OutboundResponsesConsumer } from './outbound-responses.consumer';
 import { SanctionsConsumer } from './sanctions.consumer';
 import { TicketsConsumer } from './tickets.consumer';
 import { WeatherConsumer } from './weather.consumer';
+import type { Mock } from 'vitest';
 
 /**
  * El Core re-serializa el sobre antes de entregarlo a `q.ambiente` (#296): los
@@ -34,23 +35,23 @@ function sinNulls(v: unknown): unknown {
 function crearPrisma() {
   const prisma: any = {
     inboxEvent: {
-      create: jest.fn().mockResolvedValue({}),
-      update: jest.fn().mockResolvedValue({}),
+      create: vi.fn().mockResolvedValue({}),
+      update: vi.fn().mockResolvedValue({}),
     },
     repairRequest: {
-      findUnique: jest.fn().mockResolvedValue({ id: ID, workOrderId: null }),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findUnique: vi.fn().mockResolvedValue({ id: ID, workOrderId: null }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     streetClosureRequest: {
-      findUnique: jest.fn().mockResolvedValue({ id: ID, sourceType: 'SERVICE', sourceId: 'srv-1' }),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findUnique: vi.fn().mockResolvedValue({ id: ID, sourceType: 'SERVICE', sourceId: 'srv-1' }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     service: {
-      findMany: jest.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findMany: vi.fn().mockResolvedValue([{ id: 'srv-1', status: 'SCHEDULED' }]),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     violationNotice: {
-      findUnique: jest.fn().mockResolvedValue({
+      findUnique: vi.fn().mockResolvedValue({
         id: ID,
         noticeNumber: 'ACTA-1',
         inspection: { reportId: 'rep-1' },
@@ -58,15 +59,15 @@ function crearPrisma() {
       }),
     },
     environmentalReport: {
-      findUnique: jest.fn().mockResolvedValue({ id: 'rep-1', status: S.NOTICE_ISSUED }),
-      findFirst: jest.fn().mockResolvedValue(null),
-      findMany: jest.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
-      create: jest.fn().mockResolvedValue({ id: ID, reportType: 'NOISE' }),
-      update: jest.fn(),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findUnique: vi.fn().mockResolvedValue({ id: 'rep-1', status: S.NOTICE_ISSUED }),
+      findFirst: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([{ id: 'rep-1', status: 'UNDER_REVIEW' }]),
+      create: vi.fn().mockResolvedValue({ id: ID, reportType: 'NOISE' }),
+      update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
-    sanctionOutcome: { create: jest.fn().mockResolvedValue({ id: 'out-1' }) },
-    $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+    sanctionOutcome: { create: vi.fn().mockResolvedValue({ id: 'out-1' }) },
+    $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
   };
   return prisma;
 }
@@ -76,7 +77,7 @@ function llamadas(prisma: Record<string, unknown>): [string, unknown][] {
   return Object.entries(prisma)
     .filter(([k]) => k !== 'inboxEvent' && k !== '$transaction')
     .flatMap(([k, repo]) =>
-      Object.entries(repo as Record<string, jest.Mock>).map(([m, fn]): [string, unknown] => [
+      Object.entries(repo as Record<string, Mock>).map(([m, fn]): [string, unknown] => [
         `${k}.${m}`,
         fn.mock.calls,
       ]),
@@ -92,12 +93,12 @@ async function correr(
   const inbox = new InboxService(prisma as unknown as PrismaService);
   const p = prisma as unknown as PrismaService;
   [
-    new OutboundResponsesConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
-    new SanctionsConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
+    new OutboundResponsesConsumer(p, inbox, { record: vi.fn() } as unknown as AuditService),
+    new SanctionsConsumer(p, inbox, { record: vi.fn() } as unknown as AuditService),
     new TicketsConsumer(p, inbox, new OutboxService(), {
-      record: jest.fn(),
+      record: vi.fn(),
     } as unknown as AuditService),
-    new WeatherConsumer(p, inbox, { record: jest.fn() } as unknown as AuditService),
+    new WeatherConsumer(p, inbox, { record: vi.fn() } as unknown as AuditService),
   ].forEach((c) => c.onModuleInit());
   const { status } = await inbox.ingest({ eventId: EVENT_ID, eventType, occurredAt, data });
   return { status, calls: llamadas(prisma) };
@@ -105,10 +106,10 @@ async function correr(
 
 describe('sobre re-serializado por el Core (#296)', () => {
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   describe('un campo ausente se trata igual que null en data', () => {
     const ROUTED = {
@@ -249,7 +250,7 @@ describe('sobre re-serializado por el Core (#296)', () => {
         );
         const inbox = new InboxService(prisma as unknown as PrismaService);
         new TicketsConsumer(prisma as unknown as PrismaService, inbox, new OutboxService(), {
-          record: jest.fn(),
+          record: vi.fn(),
         } as unknown as AuditService).onModuleInit();
         await inbox.ingest({
           eventId: EVENT_ID,

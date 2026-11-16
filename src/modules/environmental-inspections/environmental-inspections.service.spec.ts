@@ -89,30 +89,33 @@ describe('EnvironmentalInspectionsService', () => {
   beforeEach(() => {
     prisma = {
       environmentalInspection: {
-        findUnique: jest.fn().mockResolvedValue(inspection()),
-        findMany: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
+        findUnique: vi.fn().mockResolvedValue(inspection()),
+        findMany: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
       },
       environmentalReport: {
-        findUnique: jest.fn().mockResolvedValue(report()),
-        update: jest.fn(),
+        findUnique: vi.fn().mockResolvedValue(report()),
+        update: vi.fn(),
       },
       violationNotice: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        count: jest.fn().mockResolvedValue(2),
-        create: jest.fn((args) => ({ ...args.data, id: 'notice-1', createdAt: new Date() })),
+        findUnique: vi.fn().mockResolvedValue(null),
+        count: vi.fn().mockResolvedValue(2),
+        create: vi.fn((args) => ({ ...args.data, id: 'notice-1', createdAt: new Date() })),
       },
       service: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'svc-1', mode: ServiceMode.POINT }),
+        findUnique: vi.fn().mockResolvedValue({ id: 'svc-1', mode: ServiceMode.POINT }),
       },
-      userRoleAssignment: { findFirst: jest.fn().mockResolvedValue({ id: 'fila-1' }) },
-      attachment: { findMany: jest.fn().mockResolvedValue([]) },
-      ticketM2State: { findUnique: jest.fn().mockResolvedValue(null) },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      userRoleAssignment: { findFirst: vi.fn().mockResolvedValue({ id: 'fila-1' }) },
+      attachment: { findMany: vi.fn().mockResolvedValue([]) },
+      ticketM2State: { findUnique: vi.fn().mockResolvedValue(null) },
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
-    outbox = { enqueue: jest.fn(), enqueueMany: jest.fn() };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    outbox = { enqueue: vi.fn(), enqueueMany: vi.fn() };
+    audit = {
+      record: vi.fn().mockResolvedValue(undefined),
+      recordRead: vi.fn().mockResolvedValue(undefined),
+    };
     reports = new EnvironmentalReportsService(
       prisma as unknown as PrismaService,
       outbox,
@@ -856,9 +859,13 @@ describe('EnvironmentalInspectionsService', () => {
         createdAt: new Date(),
       });
 
-      const result = await service.findNotice(INSPECTION_ID);
+      const result = await service.findNotice(INSPECTION_ID, ACTOR);
       expect(result?.noticeNumber).toBe('ACTA-2026-000001');
       expect(result?.sanctionOutcome).toBeNull();
+      expect(audit.recordRead).toHaveBeenCalledWith(
+        [{ entityType: 'VIOLATION_NOTICE', entityId: 'notice-1' }],
+        ACTOR,
+      );
     });
 
     it('findNotice expone la resolución de M4 con su externalRef', async () => {
@@ -885,7 +892,14 @@ describe('EnvironmentalInspectionsService', () => {
         createdAt: new Date(),
       });
 
-      const result = await service.findNotice(INSPECTION_ID);
+      const result = await service.findNotice(INSPECTION_ID, ACTOR);
+      expect(audit.recordRead).toHaveBeenCalledWith(
+        [
+          { entityType: 'VIOLATION_NOTICE', entityId: 'notice-1' },
+          { entityType: 'SANCTION_OUTCOME', entityId: 'so-1' },
+        ],
+        ACTOR,
+      );
       expect(result?.sanctionOutcome).toEqual({
         decision: 'FINE_ISSUED',
         decidedAt,
@@ -897,13 +911,33 @@ describe('EnvironmentalInspectionsService', () => {
     it('findNotice devuelve null si la inspección existe y no tiene acta', async () => {
       prisma.violationNotice.findUnique.mockResolvedValue(null);
       prisma.environmentalInspection.findUnique.mockResolvedValue(inspection({ outcome: null }));
-      await expect(service.findNotice(INSPECTION_ID)).resolves.toBeNull();
+      await expect(service.findNotice(INSPECTION_ID, ACTOR)).resolves.toBeNull();
+      expect(audit.recordRead).not.toHaveBeenCalled();
     });
 
     it('findNotice lanza 404 si la inspección no existe', async () => {
       prisma.violationNotice.findUnique.mockResolvedValue(null);
       prisma.environmentalInspection.findUnique.mockResolvedValue(null);
-      await expect(service.findNotice(INSPECTION_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.findNotice(INSPECTION_ID, ACTOR)).rejects.toThrow(NotFoundException);
+      expect(audit.recordRead).not.toHaveBeenCalled();
+    });
+
+    it('findNotice falla cerrado si no se puede auditar la lectura', async () => {
+      prisma.violationNotice.findUnique.mockResolvedValue({
+        id: 'notice-1',
+        noticeNumber: 'ACTA-2026-000001',
+        inspectionId: INSPECTION_ID,
+        issuedAt: new Date(),
+        establishmentId: null,
+        violationType: ViolationType.UNTREATED_DISCHARGE,
+        severity: Severity.HIGH,
+        suggestedAction: SuggestedAction.FINE,
+        priorNoticeCount: 0,
+        sanctionOutcome: null,
+        createdAt: new Date(),
+      });
+      audit.recordRead.mockRejectedValueOnce(new Error('db caída'));
+      await expect(service.findNotice(INSPECTION_ID, ACTOR)).rejects.toThrow('db caída');
     });
   });
 });

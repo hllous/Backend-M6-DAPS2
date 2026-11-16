@@ -8,6 +8,7 @@ import {
   QueryCrewsDto,
   UpdateCrewDto,
 } from './dto';
+import type { Mocked } from 'vitest';
 
 const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
@@ -15,21 +16,21 @@ const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
 
 describe('CrewsController', () => {
-  let service: jest.Mocked<CrewsService>;
+  let service: Mocked<CrewsService>;
   let controller: CrewsController;
 
   beforeEach(() => {
     service = {
-      create: jest.fn().mockResolvedValue(RESULT),
-      findAll: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findOne: jest.fn().mockResolvedValue(RESULT),
-      update: jest.fn().mockResolvedValue(RESULT),
-      remove: jest.fn().mockResolvedValue(undefined),
-      addMembers: jest.fn().mockResolvedValue(RESULT),
-      removeMember: jest.fn().mockResolvedValue(undefined),
-      createZoneAssignment: jest.fn().mockResolvedValue(RESULT),
-      listZoneAssignments: jest.fn().mockResolvedValue([RESULT]),
-    } as unknown as jest.Mocked<CrewsService>;
+      create: vi.fn().mockResolvedValue(RESULT),
+      findAll: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findOne: vi.fn().mockResolvedValue(RESULT),
+      update: vi.fn().mockResolvedValue(RESULT),
+      remove: vi.fn().mockResolvedValue(undefined),
+      addMembers: vi.fn().mockResolvedValue(RESULT),
+      removeMember: vi.fn().mockResolvedValue(undefined),
+      createZoneAssignment: vi.fn().mockResolvedValue(RESULT),
+      listZoneAssignments: vi.fn().mockResolvedValue([RESULT]),
+    } as unknown as Mocked<CrewsService>;
     controller = new CrewsController(service);
   });
 

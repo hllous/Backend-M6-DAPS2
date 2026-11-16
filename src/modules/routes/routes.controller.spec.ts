@@ -2,6 +2,7 @@ import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import { RoutesController } from './routes.controller';
 import { RoutesService } from './routes.service';
 import { CreateRouteDto, QueryRoutesDto, SetRouteStopsDto, UpdateRouteDto } from './dto';
+import type { Mocked } from 'vitest';
 
 const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
@@ -9,18 +10,18 @@ const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
 
 describe('RoutesController', () => {
-  let service: jest.Mocked<RoutesService>;
+  let service: Mocked<RoutesService>;
   let controller: RoutesController;
 
   beforeEach(() => {
     service = {
-      create: jest.fn().mockResolvedValue(RESULT),
-      findAll: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findOne: jest.fn().mockResolvedValue(RESULT),
-      update: jest.fn().mockResolvedValue(RESULT),
-      remove: jest.fn().mockResolvedValue(undefined),
-      setStops: jest.fn().mockResolvedValue(RESULT),
-    } as unknown as jest.Mocked<RoutesService>;
+      create: vi.fn().mockResolvedValue(RESULT),
+      findAll: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findOne: vi.fn().mockResolvedValue(RESULT),
+      update: vi.fn().mockResolvedValue(RESULT),
+      remove: vi.fn().mockResolvedValue(undefined),
+      setStops: vi.fn().mockResolvedValue(RESULT),
+    } as unknown as Mocked<RoutesService>;
     controller = new RoutesController(service);
   });
 

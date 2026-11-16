@@ -232,6 +232,7 @@ export class ContainersController {
   // ─── Transiciones de estado ────────────────────────
 
   @Post(':id/report-overflow')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
@@ -331,6 +332,7 @@ export class ContainersController {
   }
 
   @Post(':id/empty')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @Roles(...ROLES_CUADRILLA)
   @HttpCode(HttpStatus.OK)
@@ -378,6 +380,7 @@ export class ContainersController {
   }
 
   @Post(':id/start-repair')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
@@ -425,6 +428,7 @@ export class ContainersController {
   }
 
   @Post(':id/complete-repair')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
@@ -472,6 +476,7 @@ export class ContainersController {
   }
 
   @Post(':id/relocate')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)
@@ -572,6 +577,7 @@ export class ContainersController {
   }
 
   @Post(':id/remove')
+  @ApiBadRequestParams()
   @ApiETag({ ifMatch: true })
   @Roles(...ROLES_OPERACIONES)
   @HttpCode(HttpStatus.OK)

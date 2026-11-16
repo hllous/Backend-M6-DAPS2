@@ -90,7 +90,7 @@ describe('RolesGuard', () => {
     });
 
     it('loguea la denegación con usuario, ruta y roles requeridos, sin token', () => {
-      const warn = jest.spyOn(guard['logger'], 'warn').mockImplementation();
+      const warn = vi.spyOn(guard['logger'], 'warn').mockImplementation(() => undefined);
       meta[ROLES_KEY] = [M6Role.M6_ADMIN];
       denegado(ctx(user(), 'PUT'));
       const msg = warn.mock.calls[0][0] as string;
@@ -111,8 +111,8 @@ describe('RolesGuard', () => {
     it.each(['POST', 'PUT', 'PATCH', 'DELETE'])(
       '%s falla cerrado para todos y loguea error de configuración',
       (method) => {
-        const error = jest.spyOn(guard['logger'], 'error').mockImplementation();
-        jest.spyOn(guard['logger'], 'warn').mockImplementation();
+        const error = vi.spyOn(guard['logger'], 'error').mockImplementation(() => undefined);
+        vi.spyOn(guard['logger'], 'warn').mockImplementation(() => undefined);
         expect(denegado(ctx(user(M6Role.M6_ADMIN), method))).toMatchObject({
           code: 'ROLE_REQUIRED',
         });

@@ -4,7 +4,10 @@
 # ──────────────────────────────────────────────────────────────
 
 # ─── Etapa 1: builder (compilación) ───────────────────────────
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
+
+# Sin telemetría de @scarf/scarf (postinstall de swagger-ui-dist).
+ENV SCARF_ANALYTICS=false
 
 WORKDIR /app
 
@@ -12,47 +15,68 @@ WORKDIR /app
 # Sin esto, prisma generate no detecta la versión de OpenSSL y falla en runtime.
 RUN apk add --no-cache openssl
 
+# npm embebido en node:24-alpine trae brace-expansion 5.0.9 y undici 6.28.0 con
+# CVE altas (#665). npm 11.21.2 trae brace-expansion 5.0.12 y undici 6.29.1.
+# Versión fija para que el build sea reproducible; quitar al subir a una base con npm corregido.
+RUN npm install -g --ignore-scripts npm@11.21.2 && npm cache clean --force
+
 # Primero se copian SOLO los manifiestos para aprovechar la caché de Docker
 # (si no cambian las dependencias, esta capa se reutiliza entre builds).
 COPY package.json package-lock.json ./
 
 # Instala TODAS las dependencias (incluye dev) necesarias para compilar.
-RUN npm ci
+# --ignore-scripts: no corre scripts de instalación de terceros (S6505); lo que
+# hacían (cliente y motores de Prisma) se hace explícito más abajo.
+RUN npm ci --ignore-scripts
 
 # Copia el resto del código fuente (respeta .dockerignore).
 COPY . .
 
 # Genera el cliente de Prisma a partir de prisma/schema.prisma.
 # (No necesita conexión a la base, solo el schema.)
-RUN npx prisma generate
+RUN npm run prisma:generate
 
 # Compila TypeScript -> dist/ (usa tsconfig.build.json).
 RUN npm run build
 
 # ─── Etapa 2: runner (imagen final, liviana) ──────────────────
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 
 WORKDIR /app
 
 # Entorno de producción
 ENV NODE_ENV=production
+ENV SCARF_ANALYTICS=false
 
 # OpenSSL requerido por el query engine de Prisma en runtime.
 RUN apk add --no-cache openssl
 
+# npm embebido en node:24-alpine trae brace-expansion 5.0.9 y undici 6.28.0 con
+# CVE altas (#665). npm 11.21.2 trae brace-expansion 5.0.12 y undici 6.29.1.
+# Versión fija para que el build sea reproducible; quitar al subir a una base con npm corregido.
+RUN npm install -g --ignore-scripts npm@11.21.2 && npm cache clean --force
+
+# /app pasa a ser del usuario no root `node` (Trivy DS-0002, #666).
+RUN chown node:node /app
+USER node
+
 # Copia manifiestos e instala SOLO dependencias de producción.
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+COPY --chown=node:node package.json package-lock.json ./
+# Sin scripts de terceros; solo se reconstruyen los motores de Prisma, que
+# `prisma migrate deploy` necesita al arrancar (si no, los bajaría en runtime).
+RUN npm ci --omit=dev --ignore-scripts \
+    && npm rebuild @prisma/engines \
+    && npm cache clean --force
 
 # Copia el cliente de Prisma ya generado en la etapa builder
 # (necesario para que @prisma/client funcione en runtime).
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copia el código ya compilado.
-COPY --from=builder /app/dist ./dist
+COPY --from=builder --chown=node:node /app/dist ./dist
 
 # Copia el schema y las migraciones de Prisma.
-COPY prisma ./prisma
+COPY --chown=node:node prisma ./prisma
 
 # Puerto que expone la app (coincide con PORT del .env.example).
 EXPOSE 3000
@@ -60,4 +84,4 @@ EXPOSE 3000
 # Aplica las migraciones pendientes y arranca.
 # Si la migración falla el contenedor no levanta, que es lo correcto:
 # preferimos no servir una API contra un esquema desactualizado.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "npm run prisma:migrate:deploy && node dist/main.js"]

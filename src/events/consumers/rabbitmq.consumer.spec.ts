@@ -7,8 +7,9 @@ import { createRabbitMqConsumer } from '../events.module';
 import { BusStatus } from '../bus-status';
 import { InboxService } from '../inbox/inbox.service';
 import { RabbitMqConfig } from '../rabbitmq';
+import type { Mock, MockInstance } from 'vitest';
 
-jest.mock('amqplib', () => ({ connect: jest.fn() }));
+vi.mock('amqplib', () => ({ connect: vi.fn() }));
 
 type Setup = (model: ChannelModel) => Promise<void>;
 type OnMessage = (msg: ConsumeMessage | null) => void;
@@ -31,25 +32,25 @@ const json = (body: unknown): Buffer => Buffer.from(JSON.stringify(body));
 
 function fakeChannel() {
   return Object.assign(new EventEmitter(), {
-    checkQueue: jest.fn().mockResolvedValue(undefined),
-    prefetch: jest.fn().mockResolvedValue(undefined),
-    consume: jest.fn().mockResolvedValue(undefined),
-    ack: jest.fn(),
-    nack: jest.fn(),
-    close: jest.fn().mockResolvedValue(undefined),
+    checkQueue: vi.fn().mockResolvedValue(undefined),
+    prefetch: vi.fn().mockResolvedValue(undefined),
+    consume: vi.fn().mockResolvedValue(undefined),
+    ack: vi.fn(),
+    nack: vi.fn(),
+    close: vi.fn().mockResolvedValue(undefined),
   });
 }
 
 describe('RabbitMqConsumer', () => {
-  const connectMock = connect as jest.Mock;
-  let inbox: { ingest: jest.Mock };
-  let recovering: EventEmitter & { close: jest.Mock };
+  const connectMock = connect as Mock;
+  let inbox: { ingest: Mock };
+  let recovering: EventEmitter & { close: Mock };
   let consumer: RabbitMqConsumer;
 
   beforeEach(() => {
-    inbox = { ingest: jest.fn().mockResolvedValue({ status: 'processed' }) };
+    inbox = { ingest: vi.fn().mockResolvedValue({ status: 'processed' }) };
     recovering = Object.assign(new EventEmitter(), {
-      close: jest.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
     });
     connectMock.mockReset().mockResolvedValue(recovering);
     consumer = new RabbitMqConsumer(config, inbox as unknown as InboxService);
@@ -119,7 +120,7 @@ describe('RabbitMqConsumer', () => {
     });
 
     it('el detalle del error que se loguea se trunca a 500 caracteres', async () => {
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
       inbox.ingest.mockRejectedValueOnce(new BadRequestException('x'.repeat(2000)));
       await consumer.handle(json(sobre));
       const logueado = warn.mock.calls.at(-1)?.[0] as string;
@@ -149,8 +150,8 @@ describe('RabbitMqConsumer', () => {
       const options = connectMock.mock.calls[0][1];
       const channel = fakeChannel();
       const model = Object.assign(new EventEmitter(), {
-        createChannel: jest.fn().mockResolvedValue(channel),
-        close: jest.fn().mockResolvedValue(undefined),
+        createChannel: vi.fn().mockResolvedValue(channel),
+        close: vi.fn().mockResolvedValue(undefined),
       });
       await (options.recovery.setup as Setup)(model as unknown as ChannelModel);
       const onMessage = channel.consume.mock.calls[0][1] as OnMessage;
@@ -177,14 +178,14 @@ describe('RabbitMqConsumer', () => {
     });
 
     it('sin la cola (falta suscribirse en el Core) loguea y falla el setup para que recovery reintente', async () => {
-      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      const error = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
       await consumer.onApplicationBootstrap();
       const options = connectMock.mock.calls[0][1];
       const channel = fakeChannel();
       channel.checkQueue.mockRejectedValueOnce(new Error('NOT_FOUND - no queue'));
       const model = Object.assign(new EventEmitter(), {
-        createChannel: jest.fn().mockResolvedValue(channel),
-        close: jest.fn().mockResolvedValue(undefined),
+        createChannel: vi.fn().mockResolvedValue(channel),
+        close: vi.fn().mockResolvedValue(undefined),
       });
 
       await expect(
@@ -233,14 +234,14 @@ describe('RabbitMqConsumer', () => {
           properties: { messageId: 'ev-1', headers },
         }) as unknown as ConsumeMessage;
 
-      let warn: jest.SpyInstance;
-      let log: jest.SpyInstance;
+      let warn: MockInstance;
+      let log: MockInstance;
 
       beforeEach(() => {
-        warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-        log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+        warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+        log = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
       });
-      afterEach(() => jest.restoreAllMocks());
+      afterEach(() => vi.restoreAllMocks());
 
       it('un nack loguea eventId, intento, traza y último error del Core', async () => {
         const { onMessage } = await arrancar();
@@ -354,7 +355,7 @@ describe('RabbitMqConsumer', () => {
       channel.ack.mockImplementationOnce(() => {
         throw new Error('Channel closed');
       });
-      const unhandled = jest.fn();
+      const unhandled = vi.fn();
       process.on('unhandledRejection', unhandled);
 
       onMessage({ content: json(sobre), fields: { redelivered: false } } as ConsumeMessage);
@@ -427,7 +428,7 @@ describe('RabbitMqConsumer', () => {
 
   describe('createRabbitMqConsumer', () => {
     const conConfig = (rabbitmq: Partial<RabbitMqConfig>) =>
-      ({ get: jest.fn(() => rabbitmq) }) as unknown as ConfigService;
+      ({ get: vi.fn(() => rabbitmq) }) as unknown as ConfigService;
 
     it('sin RABBITMQ_URL no se instancia nada', () => {
       const sinUrl: Partial<RabbitMqConfig> = { ...config, url: undefined };

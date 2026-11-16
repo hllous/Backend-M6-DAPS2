@@ -8,14 +8,14 @@ const ID = '3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b';
 
 describe('AuditService', () => {
   const prisma = {
-    domainAuditLog: { findMany: jest.fn(), count: jest.fn() },
+    domainAuditLog: { findMany: vi.fn(), count: vi.fn(), createMany: vi.fn() },
   };
   const service = new AuditService(prisma as unknown as PrismaService);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('record escribe en el tx con el actor del token y nulos donde no hay estado', async () => {
-    const tx = { domainAuditLog: { create: jest.fn() } };
+    const tx = { domainAuditLog: { create: vi.fn() } };
     await service.record(tx as never, {
       entityType: 'CREW',
       entityId: ID,
@@ -38,7 +38,7 @@ describe('AuditService', () => {
   });
 
   it('record guarda estados y recorta la nota', async () => {
-    const tx = { domainAuditLog: { create: jest.fn() } };
+    const tx = { domainAuditLog: { create: vi.fn() } };
     await service.record(tx as never, {
       entityType: 'CONTAINER',
       entityId: ID,
@@ -52,6 +52,42 @@ describe('AuditService', () => {
     const data = tx.domainAuditLog.create.mock.calls[0][0].data;
     expect(data).toMatchObject({ fromStatus: 'ACTIVE', toStatus: 'RELOCATING' });
     expect(data.note).toHaveLength(500);
+  });
+
+  it('recordRead deja una fila READ por recurso, sin estados ni nota', async () => {
+    await service.recordRead(
+      [
+        { entityType: 'VIOLATION_NOTICE', entityId: ID },
+        { entityType: 'SANCTION_OUTCOME', entityId: 'so-1' },
+      ],
+      ACTOR,
+    );
+
+    expect(prisma.domainAuditLog.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          entityType: 'VIOLATION_NOTICE',
+          entityId: ID,
+          action: 'READ',
+          actorUserId: '42',
+          actorRoles: [M6Role.M6_ADMIN],
+        },
+        {
+          entityType: 'SANCTION_OUTCOME',
+          entityId: 'so-1',
+          action: 'READ',
+          actorUserId: '42',
+          actorRoles: [M6Role.M6_ADMIN],
+        },
+      ],
+    });
+  });
+
+  it('recordRead propaga la falla: sin auditoría no hay lectura', async () => {
+    prisma.domainAuditLog.createMany.mockRejectedValueOnce(new Error('db caída'));
+    await expect(
+      service.recordRead([{ entityType: 'VIOLATION_NOTICE', entityId: ID }], ACTOR),
+    ).rejects.toThrow('db caída');
   });
 
   it('findAll filtra por entidad y ordena del más nuevo al más viejo', async () => {

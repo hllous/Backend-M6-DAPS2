@@ -15,7 +15,7 @@ const TIMEOUT_MS = 10_000;
 const identitySchema = z.object({
   sub: z.string(),
   actorType: z.string(),
-  actorId: z.string().uuid(),
+  actorId: z.guid(),
   nombre: z.string(),
   apellido: z.string(),
   estado: z.string(),
@@ -25,7 +25,7 @@ const directorySchema = z
   .object({ id: z.string().optional(), uuid: z.string().optional(), estado: z.string().optional() })
   .passthrough();
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = z.guid();
 /** Un id no UUID no llega a M1 (path traversal con '.', '..', '/'). Error de argumento, no de M1. */
 function assertUuid(id: string, campo: string): void {
   if (!uuidSchema.safeParse(id).success) throw new TypeError(`${campo} debe ser un UUID`);

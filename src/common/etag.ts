@@ -8,7 +8,7 @@ import {
   createParamDecorator,
 } from '@nestjs/common';
 import { ApiHeader, ApiResponse } from '@nestjs/swagger';
-import { DECORATORS } from '@nestjs/swagger/dist/constants';
+import { DECORATORS } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';

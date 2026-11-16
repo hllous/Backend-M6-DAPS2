@@ -25,6 +25,8 @@ Durante la etapa de diseño de arquitectura y mapa de Wayfinder del Frontend (Is
 
 > **Nota del 2026-10-21:** la exclusividad Office/Field de la decisión 2 se aplica en el backend desde #161 ([ADR-008](adr-008-roles-m6-adaptados-desde-m1.md)): `PUT /role-assignments/:userId` rechaza con 400 mezclar `M6_ADMIN`/`M6_OFICINA_*` con `M6_CAMPO_*`.
 
+> **Nota del 2026-11-11:** la auditoría de lecturas Tier 2 de la decisión 3 está implementada ([#643](https://github.com/hllous/Backend-M6-DAPS2/issues/643)), sin interceptor: los tres GET que entregan estos datos llaman a `AuditService.recordRead` y dejan una fila `READ` por recurso; si la auditoría falla responden 500 sin entregar el dato. Son `GET /environmental-inspections/:id/violation-notice` (acta y resolución), `GET /events/inbox/:messageId` (el payload de `ticketUpdated` trae la identidad del denunciante, y el de `commercialFineGenerated`/`closureUpdate`, la resolución de M4) y `GET /events/outbox/:id` (el payload de `environmentalViolationDetected` es el acta). Detalle en [entidades/auditoria.md](../entidades/auditoria.md).
+
 ## Alternativas consideradas
 
 - **Permitir que el navegador gestione directamente el JWT de M1:** Descartada por riesgo de robo de token ante vulnerabilidades XSS en el navegador.
@@ -43,7 +45,7 @@ Durante la etapa de diseño de arquitectura y mapa de Wayfinder del Frontend (Is
 ### Negativas
 
 - El backend debe incorporar validación de magic bytes y stripping de EXIF en el servicio de R2 cuando se pase a producción.
-- La auditoría de lecturas (GET sobre datos Tier 2) requerirá interceptores o middleware dedicado de logging en NestJS.
+- ~~La auditoría de lecturas (GET sobre datos Tier 2) requerirá interceptores o middleware dedicado de logging en NestJS.~~ Resuelta por [#643](https://github.com/hllous/Backend-M6-DAPS2/issues/643): se hizo en los services con `AuditService.recordRead`, sin interceptor ni middleware.
 
 ### Neutras
 

@@ -8,7 +8,7 @@ Estaban en el contrato porque se los ofrecíamos a M2 como detalle del avance de
 
 Eran quince eventos publicados; quedaron ocho, y el 21/10 bajaron a seis (ver más abajo). Los seis tienen consumidor declarado.
 
-**El dato no se pierde del todo.** El cierre viaja como `details.resolution` + `publicMessage` en el `RESOLVED` de [`updateTicketStatus`](updateTicketStatus.md). La fecha agendada sigue sin campo definido en el contrato de M2 — bloqueante, ver ahí — y la evidencia (`attachments[]`) todavía no se manda. Lo que queda afuera son nuestros identificadores internos, que el propio contrato de M2 prohíbe transportar.
+**El dato no se pierde del todo.** El cierre viaja como `details.resolution` + `publicMessage` en el `RESOLVED` de [`updateTicketStatus`](updateTicketStatus.md). La fecha agendada no tiene campo propio en el contrato de M2: se resolvió el 20/10 (#303) mandándola como texto en `publicMessage`, ver [`updateTicketStatus`](updateTicketStatus.md). La evidencia (`attachments[]`) todavía no se manda. Lo que queda afuera son nuestros identificadores internos, que el propio contrato de M2 prohíbe transportar.
 
 **Si alguno hace falta, se pide y se publica.** El payload ya está diseñado y no hay que rediseñar nada. Lo que no hacemos es publicarlo por las dudas.
 

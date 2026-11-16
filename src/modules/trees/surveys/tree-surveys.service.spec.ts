@@ -69,19 +69,17 @@ describe('TreeSurveysService', () => {
 
   beforeEach(() => {
     prisma = {
-      tree: { findUnique: jest.fn().mockResolvedValue(arbol()) },
+      tree: { findUnique: vi.fn().mockResolvedValue(arbol()) },
       treeSurvey: {
-        create: jest
-          .fn()
-          .mockImplementation(({ data }: any) => Promise.resolve(relevamiento(data))),
-        findMany: jest.fn().mockResolvedValue([relevamiento()]),
-        findFirst: jest.fn().mockResolvedValue(relevamiento()),
-        count: jest.fn().mockResolvedValue(1),
+        create: vi.fn().mockImplementation(({ data }: any) => Promise.resolve(relevamiento(data))),
+        findMany: vi.fn().mockResolvedValue([relevamiento()]),
+        findFirst: vi.fn().mockResolvedValue(relevamiento()),
+        count: vi.fn().mockResolvedValue(1),
       },
-      zoneNeighborhood: { findMany: jest.fn().mockResolvedValue([]) },
-      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      zoneNeighborhood: { findMany: vi.fn().mockResolvedValue([]) },
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
-    outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
+    outbox = { enqueue: vi.fn().mockResolvedValue(undefined) };
     service = new TreeSurveysService(
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,
@@ -117,11 +115,11 @@ describe('TreeSurveysService', () => {
     describe('surveyedAt y el día en Argentina', () => {
       // Solo se falsea Date: el resto de los timers reales mantiene andando las promesas.
       const reloj = (iso: string) =>
-        jest.useFakeTimers({
+        vi.useFakeTimers({
           now: new Date(iso),
-          doNotFake: ['nextTick', 'setImmediate', 'setTimeout', 'setInterval', 'queueMicrotask'],
+          toFake: ['Date'],
         });
-      afterEach(() => jest.useRealTimers());
+      afterEach(() => vi.useRealTimers());
 
       it.each([
         ['mañana en Argentina', '2026-09-20T05:59:00.000Z', '2026-09-21T03:00:00.000Z'],

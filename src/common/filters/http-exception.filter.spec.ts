@@ -7,17 +7,18 @@ import {
 import { ThrottlerException } from '@nestjs/throttler';
 import { Prisma } from '@prisma/client';
 import { HttpExceptionFilter } from './http-exception.filter';
+import type { Mock } from 'vitest';
 
 describe('HttpExceptionFilter', () => {
   const filter = new HttpExceptionFilter();
-  let json: jest.Mock;
-  let type: jest.Mock;
+  let json: Mock;
+  let type: Mock;
   let host: ArgumentsHost;
 
   beforeEach(() => {
-    json = jest.fn();
-    type = jest.fn(() => ({ json }));
-    const status = jest.fn(() => ({ type }));
+    json = vi.fn();
+    type = vi.fn(() => ({ json }));
+    const status = vi.fn(() => ({ type }));
     host = {
       switchToHttp: () => ({
         getResponse: () => ({ status }),
@@ -40,7 +41,7 @@ describe('HttpExceptionFilter', () => {
   });
 
   it('no devuelve en path los tokens de la query', () => {
-    const status = jest.fn(() => ({ type }));
+    const status = vi.fn(() => ({ type }));
     const h = {
       switchToHttp: () => ({
         getResponse: () => ({ status }),
@@ -113,7 +114,7 @@ describe('HttpExceptionFilter', () => {
     });
 
     it('instance sale redactada igual que path', () => {
-      const status = jest.fn(() => ({ type }));
+      const status = vi.fn(() => ({ type }));
       const h = {
         switchToHttp: () => ({
           getResponse: () => ({ status }),

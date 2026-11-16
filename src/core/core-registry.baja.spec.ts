@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { CoreClient } from './core.client';
 import { CoreRegistryService } from './core-registry.service';
 import { parsearArgs } from './unregister-args';
+import type { Mock } from 'vitest';
 
 const SUBS: Record<string, unknown>[] = [
   { id: 'a1', eventType: 'zoneNotServiced', moduleName: 'ambiente' },
@@ -17,7 +18,7 @@ function montar(
     deleteThrows?: (path: string) => boolean;
   } = {},
 ) {
-  const request = jest.fn((path: string, init: RequestInit = {}) => {
+  const request = vi.fn((path: string, init: RequestInit = {}) => {
     if (init.method === 'DELETE') {
       if (opts.deleteThrows?.(path)) return Promise.reject(new TypeError('fetch failed'));
       return Promise.resolve(new Response(null, { status: opts.deleteStatus ?? 204 }));
@@ -31,7 +32,7 @@ function montar(
   return { svc: new CoreRegistryService(core, config), request };
 }
 
-const deletes = (request: jest.Mock) =>
+const deletes = (request: Mock) =>
   request.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE');
 
 describe('CoreRegistryService.darDeBaja', () => {

@@ -30,11 +30,11 @@ describe('GreenSpacesService', () => {
   beforeEach(() => {
     prisma = {
       greenSpace: {
-        create: jest.fn().mockResolvedValue(espacio()),
-        findUnique: jest.fn().mockResolvedValue(espacio()),
-        findMany: jest.fn().mockResolvedValue([espacio()]),
-        count: jest.fn().mockResolvedValue(1),
-        update: jest.fn().mockResolvedValue(espacio()),
+        create: vi.fn().mockResolvedValue(espacio()),
+        findUnique: vi.fn().mockResolvedValue(espacio()),
+        findMany: vi.fn().mockResolvedValue([espacio()]),
+        count: vi.fn().mockResolvedValue(1),
+        update: vi.fn().mockResolvedValue(espacio()),
       },
     };
     service = new GreenSpacesService(prisma as unknown as PrismaService);

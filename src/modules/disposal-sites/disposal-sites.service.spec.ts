@@ -3,15 +3,16 @@ import { DisposalSiteType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DisposalSitesService } from './disposal-sites.service';
 import { QueryDisposalSitesDto } from './dto/query-disposal-sites.dto';
+import type { Mock } from 'vitest';
 
 describe('DisposalSitesService', () => {
   let prisma: {
     disposalSite: {
-      create: jest.Mock;
-      findMany: jest.Mock;
-      count: jest.Mock;
-      findUnique: jest.Mock;
-      update: jest.Mock;
+      create: Mock;
+      findMany: Mock;
+      count: Mock;
+      findUnique: Mock;
+      update: Mock;
     };
   };
   let service: DisposalSitesService;
@@ -29,11 +30,11 @@ describe('DisposalSitesService', () => {
   beforeEach(() => {
     prisma = {
       disposalSite: {
-        create: jest.fn().mockResolvedValue(row),
-        findMany: jest.fn().mockResolvedValue([row]),
-        count: jest.fn().mockResolvedValue(1),
-        findUnique: jest.fn().mockResolvedValue(row),
-        update: jest.fn().mockResolvedValue(row),
+        create: vi.fn().mockResolvedValue(row),
+        findMany: vi.fn().mockResolvedValue([row]),
+        count: vi.fn().mockResolvedValue(1),
+        findUnique: vi.fn().mockResolvedValue(row),
+        update: vi.fn().mockResolvedValue(row),
       },
     };
     service = new DisposalSitesService(prisma as unknown as PrismaService);

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiPaginatedResponse, Public, ApiBadRequestParams } from '../../common/decorators';
@@ -58,7 +58,9 @@ export class CitizenPortalController {
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor', type: ErrorResponseDto })
   @ApiBadRequestParams()
-  async findReport(@Param('ticketId') ticketId: string): Promise<PublicReportResponseDto> {
+  async findReport(
+    @Param('ticketId', ParseUUIDPipe) ticketId: string,
+  ): Promise<PublicReportResponseDto> {
     return this.citizenPortalService.findReportByTicket(ticketId);
   }
 

@@ -10,6 +10,7 @@ import { ACTOR } from '../../common/audit/audit-test-actor';
 import { AuditService } from '../../common/audit/audit.service';
 import { IdentityPort, IdentityUnavailableError } from '../../identity/identity.port';
 import { CrewsService } from './crews.service';
+import type { Mock } from 'vitest';
 
 const ID = '44444444-4444-4444-4444-444444444444';
 const ZONA = '55555555-5555-5555-5555-555555555555';
@@ -17,8 +18,8 @@ const OTRA_ZONA = '66666666-6666-6666-6666-666666666666';
 
 describe('CrewsService', () => {
   let prisma: any;
-  let audit: { record: jest.Mock };
-  let identity: { enabled: boolean; findEmployeeBySub: jest.Mock };
+  let audit: { record: Mock };
+  let identity: { enabled: boolean; findEmployeeBySub: Mock };
   let service: CrewsService;
 
   const cuadrilla = (over: Record<string, unknown> = {}) => ({
@@ -55,34 +56,34 @@ describe('CrewsService', () => {
   beforeEach(() => {
     prisma = {
       crew: {
-        create: jest.fn().mockResolvedValue(cuadrilla()),
-        findUnique: jest.fn().mockResolvedValue(cuadrilla({ members: [] })),
-        findMany: jest.fn().mockResolvedValue([cuadrilla()]),
-        count: jest.fn().mockResolvedValue(1),
-        update: jest.fn().mockResolvedValue(cuadrilla()),
+        create: vi.fn().mockResolvedValue(cuadrilla()),
+        findUnique: vi.fn().mockResolvedValue(cuadrilla({ members: [] })),
+        findMany: vi.fn().mockResolvedValue([cuadrilla()]),
+        count: vi.fn().mockResolvedValue(1),
+        update: vi.fn().mockResolvedValue(cuadrilla()),
       },
       crewMember: {
-        upsert: jest.fn((args: unknown) => args),
-        findMany: jest.fn().mockResolvedValue([]),
-        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        upsert: vi.fn((args: unknown) => args),
+        findMany: vi.fn().mockResolvedValue([]),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       crewZoneAssignment: {
-        findFirst: jest.fn().mockResolvedValue(null),
-        findMany: jest.fn().mockResolvedValue([reubicacion()]),
-        create: jest.fn().mockResolvedValue(reubicacion()),
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([reubicacion()]),
+        create: vi.fn().mockResolvedValue(reubicacion()),
       },
-      zone: { findUnique: jest.fn().mockResolvedValue({ active: true, name: 'Palermo' }) },
-      $executeRaw: jest.fn().mockResolvedValue(1),
+      zone: { findUnique: vi.fn().mockResolvedValue({ active: true, name: 'Palermo' }) },
+      $executeRaw: vi.fn().mockResolvedValue(1),
       // Las dos formas: array de operaciones (miembros) y callback (reubicaciones).
-      $transaction: jest.fn((arg: unknown) =>
+      $transaction: vi.fn((arg: unknown) =>
         typeof arg === 'function' ? arg(prisma) : Promise.resolve(arg),
       ),
     };
-    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
     // Por defecto M1 está configurada y todos los subs son empleados activos.
     identity = {
       enabled: true,
-      findEmployeeBySub: jest.fn((sub: string) =>
+      findEmployeeBySub: vi.fn((sub: string) =>
         Promise.resolve({ sub, nombre: 'Ana', apellido: 'Pérez', estado: 'ACTIVO' }),
       ),
     };
@@ -649,7 +650,7 @@ describe('CrewsService', () => {
 
     it('deshabilitado: no valida y avisa una sola vez', async () => {
       identity.enabled = false;
-      const warn = jest.spyOn((service as any).logger, 'warn').mockImplementation();
+      const warn = vi.spyOn((service as any).logger, 'warn').mockImplementation(() => undefined);
       await service.create({ ...base, leaderUserId: '9' } as any, ACTOR);
       await service.create({ ...base, leaderUserId: '9' } as any, ACTOR);
       expect(identity.findEmployeeBySub).not.toHaveBeenCalled();

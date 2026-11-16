@@ -1,15 +1,26 @@
 ---
-name: Tarea
-about: Trabajo técnico, de documentación o de infraestructura
+name: Tarea técnica
+about: Refactor, tests, documentación, infraestructura o trabajo sin funcionalidad visible
 labels: task
 ---
 
-## Por qué
+## Objetivo
 
-## Qué hay que hacer
+## Contexto
+
+<!-- Dónde aparece el problema o por qué hace falta. -->
+
+## Alcance
+
+-
+
+## Criterios de aceptación
 
 - [ ]
+- [ ]
 
-## Criterio de aceptación
+## Consideraciones técnicas
 
-<!-- Qué comando o resultado prueba que está terminado. -->
+<!-- Dependencias, limitaciones, riesgos. -->
+
+## Evidencia / Referencias

@@ -1,0 +1,9 @@
+# Override del docker-compose.yml SOLO para el escaneo activo de ZAP (dast.yml, #659).
+# Vive en un entorno efímero del CI: no se usa en local ni en Render.
+services:
+  backend:
+    environment:
+      # ZAP lanza miles de pedidos desde una sola IP: con el default (600/min) casi todo
+      # sería 429 y el escaneo no probaría nada. Se sube acá y solo acá; la configuración
+      # de producción no cambia (el límite sigue en 600/min, DEF-07).
+      THROTTLE_LIMIT: "1000000"

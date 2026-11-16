@@ -35,7 +35,7 @@ Se adopta el siguiente stack:
 | Capa | Elección |
 |---|---|
 | Frontend | **Next.js 15** + React 19 + TypeScript + Tailwind + shadcn/ui |
-| Backend | **NestJS** + TypeScript + Node 22 LTS (actualizado desde Node 20 LTS por EOL/deprecación) |
+| Backend | **NestJS** + TypeScript + Node 24 LTS (actualizado desde Node 22; ver adendas) |
 | Base de datos | **PostgreSQL** + Prisma como ORM |
 | Broker de eventos | **Kafka** (confirmado por M9) |
 | Deploy frontend | Vercel |
@@ -104,6 +104,11 @@ Se adopta el siguiente stack:
 
 - **Motivo**: Node.js 20 alcanzó el fin de su ciclo de vida (EOL / deprecado).
 - **Acción**: Se migró el entorno de ejecución, `Dockerfile` (`node:22-alpine` en builder y runner), CI GitHub Actions (`node-version: 22`), `.nvmrc` y `@types/node` a Node 22 LTS, asegurando compatibilidad con el entorno activo y pipelines.
+
+### Adenda 2026-11-11: Actualización a Node.js 24 LTS (#628)
+
+- **Motivo**: el CLI de NestJS 12 exige Node ≥ 24.15.0 y Node 22 pasa a mantenimiento.
+- **Acción**: `.nvmrc` → `24`, `engines.node` → `>=24.15.0`, `Dockerfile` en `node:24-alpine` (builder y runner), CI lee la versión de `.nvmrc` (`node-version-file`) y `@types/node` → 24.
 
 ## Referencias
 

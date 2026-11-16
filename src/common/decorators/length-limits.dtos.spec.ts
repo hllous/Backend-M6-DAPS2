@@ -81,7 +81,7 @@ const WASTE: Array<[string, new () => object, string]> = [
   ['UpdateGreenPointDto', UpdateGreenPointDto, 'wasteTypes'],
 ];
 
-// Con %s jest imprimiria la clase entera: el titulo es "Clase.campo".
+// Con %s el runner imprimiria la clase entera: el titulo es "Clase.campo".
 function titulos<A extends unknown[]>(tabla: Array<[string, ...A]>): Array<[string, ...A]> {
   return tabla.map(([n, ...r]) => [`${n}.${String(r[1])}`, ...r] as [string, ...A]);
 }

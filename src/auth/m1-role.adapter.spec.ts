@@ -34,7 +34,7 @@ describe('M1RoleAdapter', () => {
     'valor desconocido %p: ninguno y warn',
     (rol) => {
       const a = new M1RoleAdapter();
-      const warn = jest.spyOn(a['logger'], 'warn').mockImplementation();
+      const warn = vi.spyOn(a['logger'], 'warn').mockImplementation(() => undefined);
       expect(a.assignableRoles(rol)).toEqual([]);
       expect(warn).toHaveBeenCalledTimes(1);
     },
@@ -42,7 +42,7 @@ describe('M1RoleAdapter', () => {
 
   it('el warn sale una vez por valor, no por request', () => {
     const a = new M1RoleAdapter();
-    const warn = jest.spyOn(a['logger'], 'warn').mockImplementation();
+    const warn = vi.spyOn(a['logger'], 'warn').mockImplementation(() => undefined);
     for (let i = 0; i < 5; i++) a.assignableRoles('NUEVO');
     a.assignableRoles('OTRO');
     expect(warn).toHaveBeenCalledTimes(2);
@@ -50,7 +50,7 @@ describe('M1RoleAdapter', () => {
 
   it('acota la cantidad de valores distintos que registra', () => {
     const a = new M1RoleAdapter();
-    const warn = jest.spyOn(a['logger'], 'warn').mockImplementation();
+    const warn = vi.spyOn(a['logger'], 'warn').mockImplementation(() => undefined);
     for (let i = 0; i < 80; i++) a.assignableRoles(`X${i}`);
     expect(warn).toHaveBeenCalledTimes(50);
   });

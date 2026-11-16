@@ -10,7 +10,7 @@ Los ADRs no se reescriben una vez aceptados. Si una decisión cambia, se escribe
 
 ## Formato
 
-Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeración correlativa: `adr-001-*.md`, `adr-002-*.md`, etc.
+Cada ADR nuevo sigue la plantilla [MADR](https://adr.github.io/madr/) de [`_template-adr.md`](_template-adr.md) (desde el ADR-014). Los ADR 001 a 013 conservan la plantilla anterior, porque un ADR aceptado no se reescribe. Numeración correlativa: `adr-001-*.md`, `adr-002-*.md`, etc.
 
 ## Índice
 
@@ -29,3 +29,6 @@ Cada ADR sigue la plantilla de [`_template-adr.md`](_template-adr.md). Numeraci�
 | [011](adr-011-errores-problem-details-rfc-9457.md) | Errores en Problem Details (RFC 9457) con los campos históricos como extensión | Aceptado | 2026-11-09 |
 | [012](adr-012-concurrencia-optimista-etag.md) | Concurrencia optimista con ETag e If-Match | Aceptado | 2026-11-09 |
 | [013](adr-013-idempotency-key.md) | `Idempotency-Key` opcional en los POST de creación | Aceptado | 2026-11-09 |
+| [014](adr-014-patron-state-maquinas-de-estado.md) | Patrón State: máquinas de estado como tablas de transiciones | Aceptado | 2026-11-10 |
+| [015](adr-015-patron-outbox-inbox.md) | Patrón Outbox/Inbox para la mensajería con el bus | Aceptado | 2026-11-10 |
+| [016](adr-016-patron-adapter-puerto-de-identidad.md) | Patrón Adapter: puerto de identidad hacia M1 | Aceptado | 2026-11-10 |

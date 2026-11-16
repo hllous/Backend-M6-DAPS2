@@ -10,6 +10,7 @@ import {
   CreateTreeInterventionDto,
   QueryTreeInterventionsDto,
 } from './dto';
+import type { Mocked } from 'vitest';
 
 const USER = { userId: 'user-7', roles: [M6Role.M6_ADMIN] } as unknown as AuthenticatedUser;
 
@@ -17,19 +18,19 @@ const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
 
 describe('TreeInterventionsController', () => {
-  let service: jest.Mocked<TreeInterventionsService>;
+  let service: Mocked<TreeInterventionsService>;
   let controller: TreeInterventionsController;
 
   beforeEach(() => {
     service = {
-      create: jest.fn().mockResolvedValue(RESULT),
-      findAll: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findOne: jest.fn().mockResolvedValue(RESULT),
-      submitForAuthorization: jest.fn().mockResolvedValue(RESULT),
-      authorize: jest.fn().mockResolvedValue(RESULT),
-      reject: jest.fn().mockResolvedValue(RESULT),
-      assignService: jest.fn().mockResolvedValue(RESULT),
-    } as unknown as jest.Mocked<TreeInterventionsService>;
+      create: vi.fn().mockResolvedValue(RESULT),
+      findAll: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findOne: vi.fn().mockResolvedValue(RESULT),
+      submitForAuthorization: vi.fn().mockResolvedValue(RESULT),
+      authorize: vi.fn().mockResolvedValue(RESULT),
+      reject: vi.fn().mockResolvedValue(RESULT),
+      assignService: vi.fn().mockResolvedValue(RESULT),
+    } as unknown as Mocked<TreeInterventionsService>;
     controller = new TreeInterventionsController(service);
   });
 

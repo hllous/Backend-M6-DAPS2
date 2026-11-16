@@ -32,13 +32,13 @@ export const notAssignedException = () =>
   });
 
 /**
- * Documenta el 403 NOT_ASSIGNED de un endpoint de Campo. Va ARRIBA de @Roles:
- * Swagger guarda una respuesta por status y gana el último decorador aplicado
- * (el de más arriba), así que este pisa al de @Roles con un texto que cubre los dos códigos.
+ * Documenta el 403 NOT_ASSIGNED de un endpoint de Campo, junto a @Roles. Swagger
+ * (desde la v12) concatena las descripciones de un mismo status en vez de quedarse
+ * con una, así que este texto complementa al de @Roles (ROLE_REQUIRED) y no lo repite.
  */
 export const ApiNotAssigned = (who: string) =>
   ApiForbiddenResponse({
-    description: `403 con code ${ROLE_REQUIRED_CODE} si falta el rol de Campo, o con code ${NOT_ASSIGNED_CODE} si el usuario no es ${who} (no se revela de quién es)`,
+    description: `También 403 con code ${NOT_ASSIGNED_CODE} si el usuario no es ${who} (no se revela de quién es)`,
     type: ErrorResponseDto,
   });
 
@@ -67,7 +67,7 @@ export const Roles = (...roles: M6Role[]) =>
  * Documenta el 403 de un GET sin @Roles: el RolesGuard exige igual algún rol de
  * M6 (solo documenta, no hace cumplir nada). Un GET autenticado sin 403 en el
  * swagger rompe openapi-contract.spec. No combinar con @Roles: ya documenta su
- * propio 403 y los dos se pisarían.
+ * propio 403 y Swagger concatenaría los dos textos.
  */
 export const ApiAnyM6Role = () =>
   ApiForbiddenResponse({

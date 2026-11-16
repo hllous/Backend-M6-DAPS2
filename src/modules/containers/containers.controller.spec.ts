@@ -9,6 +9,7 @@ import {
   UpdateContainerDto,
 } from './dto';
 import { PaginationQueryDto } from '../../common/dto';
+import type { Mocked } from 'vitest';
 
 const USER = { userId: '42', roles: [] } as unknown as AuthenticatedUser;
 
@@ -16,25 +17,25 @@ const ID = '11111111-1111-1111-1111-111111111111';
 const RESULT = { id: ID };
 
 describe('ContainersController', () => {
-  let service: jest.Mocked<ContainersService>;
+  let service: Mocked<ContainersService>;
   let controller: ContainersController;
 
   beforeEach(() => {
     service = {
-      create: jest.fn().mockResolvedValue(RESULT),
-      findAll: jest.fn().mockResolvedValue({ items: [RESULT] }),
-      findOne: jest.fn().mockResolvedValue(RESULT),
-      findHistory: jest.fn().mockResolvedValue({ items: [] }),
-      update: jest.fn().mockResolvedValue(RESULT),
-      reportOverflow: jest.fn().mockResolvedValue(RESULT),
-      reportDamage: jest.fn().mockResolvedValue(RESULT),
-      empty: jest.fn().mockResolvedValue(RESULT),
-      startRepair: jest.fn().mockResolvedValue(RESULT),
-      completeRepair: jest.fn().mockResolvedValue(RESULT),
-      relocate: jest.fn().mockResolvedValue(RESULT),
-      confirmRelocation: jest.fn().mockResolvedValue(RESULT),
-      remove: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<ContainersService>;
+      create: vi.fn().mockResolvedValue(RESULT),
+      findAll: vi.fn().mockResolvedValue({ items: [RESULT] }),
+      findOne: vi.fn().mockResolvedValue(RESULT),
+      findHistory: vi.fn().mockResolvedValue({ items: [] }),
+      update: vi.fn().mockResolvedValue(RESULT),
+      reportOverflow: vi.fn().mockResolvedValue(RESULT),
+      reportDamage: vi.fn().mockResolvedValue(RESULT),
+      empty: vi.fn().mockResolvedValue(RESULT),
+      startRepair: vi.fn().mockResolvedValue(RESULT),
+      completeRepair: vi.fn().mockResolvedValue(RESULT),
+      relocate: vi.fn().mockResolvedValue(RESULT),
+      confirmRelocation: vi.fn().mockResolvedValue(RESULT),
+      remove: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Mocked<ContainersService>;
     controller = new ContainersController(service);
   });
 
