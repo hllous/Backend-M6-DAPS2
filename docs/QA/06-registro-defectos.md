@@ -19,7 +19,7 @@ La **prioridad** (orden de corrección) es independiente de la severidad: un hal
 
 | | Cantidad |
 |---|---|
-| Defectos y brechas registrados | 22 (DEF-01 a DEF-24, sin DEF-04 ni DEF-11). **Abiertos: 3. Cerrados: 19** |
+| Defectos y brechas registrados | 24 (DEF-01 a DEF-26, sin DEF-04 ni DEF-11). **Abiertos: 3. Cerrados: 21** |
 | Issues con etiqueta `bug`, `security` o `fix` | Todos cerrados en GitHub (`gh issue list --state all`) |
 | Verificaciones no realizadas (no son defectos) | 8, en la sección 5 |
 
@@ -112,6 +112,8 @@ El detalle (causa raíz, PR, commit y CI) está en los issues cerrados del repos
 | DEF-22 | Los logs registraban el `access_token` de la query | [#569](https://github.com/hllous/Backend-M6-DAPS2/issues/569) |
 | DEF-23 | El primer `docker compose up` en frío fallaba en `rabbitmq-setup` | [#567](https://github.com/hllous/Backend-M6-DAPS2/issues/567) |
 | DEF-24 | e2e intermitente por `e2e_no_active`; cerrado por decisión del equipo, **causa raíz sin confirmar** (si vuelve, se reabre) | [#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554) |
+| DEF-25 | ZAP (baseline contra Render) marcó 1 High: DOMPurify 3.1.4 en el `swagger-ui-bundle.js` de `/api/docs`. **Causa raíz:** el bundle viene de `swagger-ui-dist` (vía `@nestjs/swagger`) y `main` seguía con `@nestjs/swagger` 7.4.2 / `swagger-ui-dist` 5.17.14; `npm audit` no ve el JS embebido. **Corregido** en `develop` por #628 (`swagger-ui-dist` 5.34.1, DOMPurify 3.4.17 verificada en el bundle instalado); no hizo falta tocar dependencias. Queda en 0 High cuando `develop` llegue a `main` y Render despliegue | [#668](https://github.com/hllous/Backend-M6-DAPS2/issues/668) |
+| DEF-26 | La imagen Docker traía 6 CVE altas con fix en el `npm` embebido de `node:24-alpine` (brace-expansion 5.0.9 y undici 6.28.0) y la etapa `runner` corría como root (Trivy DS-0002). Causa raíz: el `Dockerfile` heredaba el npm de la base sin actualizarlo y no declaraba `USER`; el escaneo `fs` del lockfile y `npm audit` no los ven. **Corregido:** `npm install -g npm@11.21.2` (brace-expansion 5.0.12, undici 6.29.1) en las dos etapas y `USER node` en `runner` con los `COPY --chown=node:node`; sin entradas nuevas en `.trivyignore` | [#665](https://github.com/hllous/Backend-M6-DAPS2/issues/665), [#666](https://github.com/hllous/Backend-M6-DAPS2/issues/666) |
 
 ### Hallazgos de proceso (no son defectos del producto)
 
