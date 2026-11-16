@@ -1,0 +1,4659 @@
+{
+	"@programName": "ZAP",
+	"@version": "2.17.0",
+	"@generated": "Sun, 15 Nov 2026 21:37:18",
+	"created": "2026-11-15T21:37:18.747307665Z",
+	"insights":[
+		{
+			"level": "Medium",
+			"reason": "Exceeded High",
+			"site": "http://localhost:3001",
+			"key": "insight.code.4xx",
+			"description": "Percentage of responses with status code 4xx",
+			"statistic": "96"
+		},
+		{
+			"level": "Low",
+			"reason": "Warning",
+			"site": "",
+			"key": "insight.log.warn",
+			"description": "ZAP warnings logged - see the zap.log file for details",
+			"statistic": "15"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://localhost:3001",
+			"key": "insight.code.2xx",
+			"description": "Percentage of responses with status code 2xx",
+			"statistic": "3"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://localhost:3001",
+			"key": "insight.endpoint.ctype.application/json",
+			"description": "Percentage of endpoints with content type application/json",
+			"statistic": "6"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://localhost:3001",
+			"key": "insight.endpoint.ctype.application/problem+json",
+			"description": "Percentage of endpoints with content type application/problem+json",
+			"statistic": "92"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://localhost:3001",
+			"key": "insight.endpoint.method.DELETE",
+			"description": "Percentage of endpoints with method DELETE",
+			"statistic": "6"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://localhost:3001",
+			"key": "insight.endpoint.method.GET",
+			"description": "Percentage of endpoints with method GET",
+			"statistic": "56"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://localhost:3001",
+			"key": "insight.endpoint.method.PATCH",
+			"description": "Percentage of endpoints with method PATCH",
+			"statistic": "6"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://localhost:3001",
+			"key": "insight.endpoint.method.POST",
+			"description": "Percentage of endpoints with method POST",
+			"statistic": "30"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://localhost:3001",
+			"key": "insight.endpoint.method.PUT",
+			"description": "Percentage of endpoints with method PUT",
+			"statistic": "1"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://localhost:3001",
+			"key": "insight.endpoint.total",
+			"description": "Count of total endpoints",
+			"statistic": "410"
+		}
+	],
+	"site":[ 
+		{
+			"@name": "http://localhost:3001",
+			"@host": "localhost",
+			"@port": "3001",
+			"@ssl": "false",
+			"alerts": [ 
+				{
+					"pluginid": "10098",
+					"alertRef": "10098",
+					"alert": "Cross-Domain Misconfiguration",
+					"name": "Cross-Domain Misconfiguration",
+					"riskcode": "2",
+					"confidence": "2",
+					"riskdesc": "Medium (Medium)",
+					"desc": "<p>Web browser data loading may be possible, due to a Cross Origin Resource Sharing (CORS) misconfiguration on the web server.</p>",
+					"instances":[ 
+						{
+							"id": "41",
+							"uri": "http://localhost:3001/events/inbox?page=1&pageSize=20&status=processed&eventType=ticketUpdated&sourceModule=tickets&from=Thu%20Oct%2001%2000:00:00%20UTC%202026&to=Sat%20Oct%2031%2000:00:00%20UTC%202026",
+							"nodeName": "http:\/\/localhost:3001\/events\/inbox (eventType,from,page,pageSize,sourceModule,status,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "access-control-allow-origin: *",
+							"otherinfo": "The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing."
+						},
+						{
+							"id": "35",
+							"uri": "http://localhost:3001/health",
+							"nodeName": "http:\/\/localhost:3001\/health",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "access-control-allow-origin: *",
+							"otherinfo": "The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing."
+						},
+						{
+							"id": "34",
+							"uri": "http://localhost:3001/health/ready",
+							"nodeName": "http:\/\/localhost:3001\/health\/ready",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "access-control-allow-origin: *",
+							"otherinfo": "The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing."
+						},
+						{
+							"id": "32",
+							"uri": "http://localhost:3001/me",
+							"nodeName": "http:\/\/localhost:3001\/me",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "access-control-allow-origin: *",
+							"otherinfo": "The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing."
+						},
+						{
+							"id": "63",
+							"uri": "http://localhost:3001/events/inbox",
+							"nodeName": "http:\/\/localhost:3001\/events\/inbox ()({\"eventId\":\"3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11\",\"eventType\":\"workOrderCompleted\",\"data\":\"{\"sourceRequestId\":\"0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a\",\"workOrderId\":\"f1e2d3c4-b5a6-4789-9abc-def012345678\",\"completedAt\":\"2026-09-29T17:45:00Z\"}\",\"eventVersion\":\"1.0\",\"occurredAt\":\"2026-09-29T18:00Z\",\"occuredAt\":\"2026-09-29T18:00Z\",\"sourceModule\":\"obras\",\"correlationId\":\"8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5\",\"causationId\":\"John Doe\",\"specVersion\":\"1.0\",\"producer\":\"M7\",\"subject\":\"Zaproxy dolore alias impedit expedi)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "access-control-allow-origin: *",
+							"otherinfo": "The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing."
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>Ensure that sensitive data is not available in an unauthenticated manner (using IP address white-listing, for instance).</p><p>Configure the \"Access-Control-Allow-Origin\" HTTP header to a more restrictive set of domains, or remove all CORS headers entirely, to allow the web browser to enforce the Same Origin Policy (SOP) in a more restrictive manner.</p>",
+					"otherinfo": "<p>The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing.</p>",
+					"reference": "<p>https://vulncat.fortify.com/en/detail?category=HTML5&subcategory=Overly%20Permissive%20CORS%20Policy</p>",
+					"cweid": "264",
+					"wascid": "14",
+					"sourceid": "6"
+				},
+				{
+					"pluginid": "100000",
+					"alertRef": "100000-1",
+					"alert": "A Client Error response code was returned by the server",
+					"name": "A Client Error response code was returned by the server",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>A response code of 400 was returned by the server.</p><p>This may indicate that the application is failing to handle unexpected input correctly.</p><p>Raised by the 'Alert on HTTP Response Code Error' script</p>",
+					"instances":[ 
+						{
+							"id": "30",
+							"uri": "http://localhost:3001/crews/id",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38736",
+							"uri": "http://localhost:3001/crews/id/",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "36",
+							"uri": "http://localhost:3001/crews/id/members/userId",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/members\/userId",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38739",
+							"uri": "http://localhost:3001/crews/id/members/userId/",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/members\/userId\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "17",
+							"uri": "http://localhost:3001/disposal-sites/id",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites\/id",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38743",
+							"uri": "http://localhost:3001/disposal-sites/id/",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites\/id\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "108",
+							"uri": "http://localhost:3001/green-points/id",
+							"nodeName": "http:\/\/localhost:3001\/green-points\/id",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38761",
+							"uri": "http://localhost:3001/green-points/id/",
+							"nodeName": "http:\/\/localhost:3001\/green-points\/id\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "103",
+							"uri": "http://localhost:3001/green-spaces/id",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces\/id",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38757",
+							"uri": "http://localhost:3001/green-spaces/id/",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces\/id\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "20",
+							"uri": "http://localhost:3001/routes/id",
+							"nodeName": "http:\/\/localhost:3001\/routes\/id",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38765",
+							"uri": "http://localhost:3001/routes/id/",
+							"nodeName": "http:\/\/localhost:3001\/routes\/id\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "26",
+							"uri": "http://localhost:3001/service-frequencies/id",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies\/id",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38766",
+							"uri": "http://localhost:3001/service-frequencies/id/",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies\/id\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "14",
+							"uri": "http://localhost:3001/service-types/id",
+							"nodeName": "http:\/\/localhost:3001\/service-types\/id",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38775",
+							"uri": "http://localhost:3001/service-types/id/",
+							"nodeName": "http:\/\/localhost:3001\/service-types\/id\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "90",
+							"uri": "http://localhost:3001/trees/id",
+							"nodeName": "http:\/\/localhost:3001\/trees\/id",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38798",
+							"uri": "http://localhost:3001/trees/id/",
+							"nodeName": "http:\/\/localhost:3001\/trees\/id\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "57",
+							"uri": "http://localhost:3001/vehicles/id",
+							"nodeName": "http:\/\/localhost:3001\/vehicles\/id",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38799",
+							"uri": "http://localhost:3001/vehicles/id/",
+							"nodeName": "http:\/\/localhost:3001\/vehicles\/id\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "8",
+							"uri": "http://localhost:3001/zones/id",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38808",
+							"uri": "http://localhost:3001/zones/id/",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "11",
+							"uri": "http://localhost:3001/zones/id/neighborhoods/neighborhoodId",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/neighborhoods\/neighborhoodId",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38805",
+							"uri": "http://localhost:3001/zones/id/neighborhoods/neighborhoodId/",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/neighborhoods\/neighborhoodId\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2259",
+							"uri": "http://localhost:3001",
+							"nodeName": "http:\/\/localhost:3001",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38809",
+							"uri": "http://localhost:3001/",
+							"nodeName": "http:\/\/localhost:3001\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "159",
+							"uri": "http://localhost:3001/1981716439280078738",
+							"nodeName": "http:\/\/localhost:3001\/1981716439280078738",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "43420",
+							"uri": "http://localhost:3001/audit?page=1&=&entityType=CONTAINER&entityId=3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b",
+							"nodeName": "http:\/\/localhost:3001\/audit (entityId,entityType,page)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2339",
+							"uri": "http://localhost:3001/audit?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20&entityType=CONTAINER&entityId=3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b",
+							"nodeName": "http:\/\/localhost:3001\/audit (entityId,entityType,page,pageSize)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43392",
+							"uri": "http://localhost:3001/audit?=&pageSize=20&entityType=CONTAINER&entityId=3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b",
+							"nodeName": "http:\/\/localhost:3001\/audit (entityId,entityType,pageSize)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43449",
+							"uri": "http://localhost:3001/audit?page=1&pageSize=20&=&entityId=3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b",
+							"nodeName": "http:\/\/localhost:3001\/audit (entityId,page,pageSize)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43479",
+							"uri": "http://localhost:3001/audit?page=1&pageSize=20&entityType=CONTAINER&=",
+							"nodeName": "http:\/\/localhost:3001\/audit (entityType,page,pageSize)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43400",
+							"uri": "http://localhost:3001/communes?=",
+							"nodeName": "http:\/\/localhost:3001\/communes",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2340",
+							"uri": "http://localhost:3001/communes?active=http%3A%2F%2Fwww.google.com%2F",
+							"nodeName": "http:\/\/localhost:3001\/communes (active)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43515",
+							"uri": "http://localhost:3001/containers?page=1&pageSize=20&status=ACTIVE&containerType=HOUSEHOLD&=&search=Rivadavia",
+							"nodeName": "http:\/\/localhost:3001\/containers (containerType,page,pageSize,search,status)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2346",
+							"uri": "http://localhost:3001/containers?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20&status=ACTIVE&containerType=HOUSEHOLD&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=Rivadavia",
+							"nodeName": "http:\/\/localhost:3001\/containers (containerType,page,pageSize,search,status,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43456",
+							"uri": "http://localhost:3001/containers?page=1&pageSize=20&=&containerType=HOUSEHOLD&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=Rivadavia",
+							"nodeName": "http:\/\/localhost:3001\/containers (containerType,page,pageSize,search,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43529",
+							"uri": "http://localhost:3001/containers?page=1&pageSize=20&status=ACTIVE&containerType=HOUSEHOLD&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&=",
+							"nodeName": "http:\/\/localhost:3001\/containers (containerType,page,pageSize,status,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43431",
+							"uri": "http://localhost:3001/containers?page=1&=&status=ACTIVE&containerType=HOUSEHOLD&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=Rivadavia",
+							"nodeName": "http:\/\/localhost:3001\/containers (containerType,page,search,status,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43401",
+							"uri": "http://localhost:3001/containers?=&pageSize=20&status=ACTIVE&containerType=HOUSEHOLD&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=Rivadavia",
+							"nodeName": "http:\/\/localhost:3001\/containers (containerType,pageSize,search,status,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43488",
+							"uri": "http://localhost:3001/containers?page=1&pageSize=20&status=ACTIVE&=&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=Rivadavia",
+							"nodeName": "http:\/\/localhost:3001\/containers (page,pageSize,search,status,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "160",
+							"uri": "http://localhost:3001/containers/8531469147122307182",
+							"nodeName": "http:\/\/localhost:3001\/containers\/8531469147122307182",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "60",
+							"uri": "http://localhost:3001/containers/id",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38812",
+							"uri": "http://localhost:3001/containers/id/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "161",
+							"uri": "http://localhost:3001/containers/id/4523399318196373817",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/4523399318196373817",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "43910",
+							"uri": "http://localhost:3001/containers/id/actuator/health",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/actuator\/health",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "62",
+							"uri": "http://localhost:3001/containers/id/history?page=1&pageSize=20",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/history (page,pageSize)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38813",
+							"uri": "http://localhost:3001/containers/id/history/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/history\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43540",
+							"uri": "http://localhost:3001/crews?page=1&pageSize=20&active=true&crewType=MUNICIPAL&defaultShift=MORNING&specialty=COLLECTION&=",
+							"nodeName": "http:\/\/localhost:3001\/crews (active,crewType,defaultShift,page,pageSize,specialty)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2497",
+							"uri": "http://localhost:3001/crews?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20&active=true&crewType=MUNICIPAL&defaultShift=MORNING&specialty=COLLECTION&zoneId=a1b2c3d4-e5f6-4789-8abc-def012345678",
+							"nodeName": "http:\/\/localhost:3001\/crews (active,crewType,defaultShift,page,pageSize,specialty,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43533",
+							"uri": "http://localhost:3001/crews?page=1&pageSize=20&active=true&crewType=MUNICIPAL&defaultShift=MORNING&=&zoneId=a1b2c3d4-e5f6-4789-8abc-def012345678",
+							"nodeName": "http:\/\/localhost:3001\/crews (active,crewType,defaultShift,page,pageSize,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43450",
+							"uri": "http://localhost:3001/crews?page=1&=&active=true&crewType=MUNICIPAL&defaultShift=MORNING&specialty=COLLECTION&zoneId=a1b2c3d4-e5f6-4789-8abc-def012345678",
+							"nodeName": "http:\/\/localhost:3001\/crews (active,crewType,defaultShift,page,specialty,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43422",
+							"uri": "http://localhost:3001/crews?=&pageSize=20&active=true&crewType=MUNICIPAL&defaultShift=MORNING&specialty=COLLECTION&zoneId=a1b2c3d4-e5f6-4789-8abc-def012345678",
+							"nodeName": "http:\/\/localhost:3001\/crews (active,crewType,defaultShift,pageSize,specialty,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43524",
+							"uri": "http://localhost:3001/crews?page=1&pageSize=20&active=true&crewType=MUNICIPAL&=&specialty=COLLECTION&zoneId=a1b2c3d4-e5f6-4789-8abc-def012345678",
+							"nodeName": "http:\/\/localhost:3001\/crews (active,crewType,page,pageSize,specialty,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43504",
+							"uri": "http://localhost:3001/crews?page=1&pageSize=20&active=true&=&defaultShift=MORNING&specialty=COLLECTION&zoneId=a1b2c3d4-e5f6-4789-8abc-def012345678",
+							"nodeName": "http:\/\/localhost:3001\/crews (active,defaultShift,page,pageSize,specialty,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43477",
+							"uri": "http://localhost:3001/crews?page=1&pageSize=20&=&crewType=MUNICIPAL&defaultShift=MORNING&specialty=COLLECTION&zoneId=a1b2c3d4-e5f6-4789-8abc-def012345678",
+							"nodeName": "http:\/\/localhost:3001\/crews (crewType,defaultShift,page,pageSize,specialty,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "162",
+							"uri": "http://localhost:3001/crews/221583044040243224",
+							"nodeName": "http:\/\/localhost:3001\/crews\/221583044040243224",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "29",
+							"uri": "http://localhost:3001/crews/id",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38815",
+							"uri": "http://localhost:3001/crews/id/",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "163",
+							"uri": "http://localhost:3001/crews/id/5432491814582531168",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/5432491814582531168",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2491",
+							"uri": "http://localhost:3001/crews/id/members",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/members",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38816",
+							"uri": "http://localhost:3001/crews/id/members/",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/members\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "164",
+							"uri": "http://localhost:3001/crews/id/members/141198218312435162",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/members\/141198218312435162",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "39",
+							"uri": "http://localhost:3001/crews/id/zone-assignments",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/zone-assignments",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38817",
+							"uri": "http://localhost:3001/crews/id/zone-assignments/",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/zone-assignments\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43501",
+							"uri": "http://localhost:3001/disposal-sites?page=1&pageSize=20&active=true&=&search=relleno",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites (active,page,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2504",
+							"uri": "http://localhost:3001/disposal-sites?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20&active=true&siteType=LANDFILL&search=relleno",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites (active,page,pageSize,search,siteType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43521",
+							"uri": "http://localhost:3001/disposal-sites?page=1&pageSize=20&active=true&siteType=LANDFILL&=",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites (active,page,pageSize,siteType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43446",
+							"uri": "http://localhost:3001/disposal-sites?page=1&=&active=true&siteType=LANDFILL&search=relleno",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites (active,page,search,siteType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43418",
+							"uri": "http://localhost:3001/disposal-sites?=&pageSize=20&active=true&siteType=LANDFILL&search=relleno",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites (active,pageSize,search,siteType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43474",
+							"uri": "http://localhost:3001/disposal-sites?page=1&pageSize=20&=&siteType=LANDFILL&search=relleno",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites (page,pageSize,search,siteType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "165",
+							"uri": "http://localhost:3001/disposal-sites/8197539534618082006",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites\/8197539534618082006",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "16",
+							"uri": "http://localhost:3001/disposal-sites/id",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38820",
+							"uri": "http://localhost:3001/disposal-sites/id/",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2502",
+							"uri": "http://localhost:3001/environmental-inspections",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38819",
+							"uri": "http://localhost:3001/environmental-inspections/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "166",
+							"uri": "http://localhost:3001/environmental-inspections/5152407000921595191",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/5152407000921595191",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "131",
+							"uri": "http://localhost:3001/environmental-inspections/id",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38821",
+							"uri": "http://localhost:3001/environmental-inspections/id/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "167",
+							"uri": "http://localhost:3001/environmental-inspections/id/4904367501202680772",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/id\/4904367501202680772",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "133",
+							"uri": "http://localhost:3001/environmental-inspections/id/violation-notice",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/id\/violation-notice",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38822",
+							"uri": "http://localhost:3001/environmental-inspections/id/violation-notice/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/id\/violation-notice\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "135",
+							"uri": "http://localhost:3001/environmental-reports?page=1&pageSize=20&status=%5B%22RECEIVED%22,%22UNDER_REVIEW%22%5D&reportType=NOISE&priority=LOW&ticketId=550e8400-e29b-41d4-a716-446655440000&publicId=TK-2026-000123&crewId=e5f6a7b8-c9d0-4234-8fab-345678901234&from=Tue%20Sep%2001%2000:00:00%20UTC%202026&to=Wed%20Sep%2030%2000:00:00%20UTC%202026&createdFrom=Tue%20Sep%2001%2000:00:00%20UTC%202026&createdTo=Wed%20Sep%2030%2000:00:00%20UTC%202026&overdue=true&zoneId=zoneId&search=Cintura",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports (createdFrom,createdTo,crewId,from,overdue,page,pageSize,priority,publicId,reportType,search,status,ticketId,to,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "168",
+							"uri": "http://localhost:3001/environmental-reports/2912941865644043458",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/2912941865644043458",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "136",
+							"uri": "http://localhost:3001/environmental-reports/id",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38824",
+							"uri": "http://localhost:3001/environmental-reports/id/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "169",
+							"uri": "http://localhost:3001/environmental-reports/id/1008496857979663485",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/1008496857979663485",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2519",
+							"uri": "http://localhost:3001/environmental-reports/reportId",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/reportId",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38826",
+							"uri": "http://localhost:3001/environmental-reports/reportId/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/reportId\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "170",
+							"uri": "http://localhost:3001/environmental-reports/reportId/8538816892443469708",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/reportId\/8538816892443469708",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "129",
+							"uri": "http://localhost:3001/environmental-reports/reportId/inspections",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/reportId\/inspections",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38827",
+							"uri": "http://localhost:3001/environmental-reports/reportId/inspections/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/reportId\/inspections\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2525",
+							"uri": "http://localhost:3001/events",
+							"nodeName": "http:\/\/localhost:3001\/events",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38828",
+							"uri": "http://localhost:3001/events/",
+							"nodeName": "http:\/\/localhost:3001\/events\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "171",
+							"uri": "http://localhost:3001/events/6173068842753707095",
+							"nodeName": "http:\/\/localhost:3001\/events\/6173068842753707095",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "0",
+							"uri": "http://localhost:3001/events/inbox?page=1&pageSize=20&status=processed&eventType=ticketUpdated&sourceModule=tickets&from=Thu%20Oct%2001%2000:00:00%20UTC%202026&to=Sat%20Oct%2031%2000:00:00%20UTC%202026",
+							"nodeName": "http:\/\/localhost:3001\/events\/inbox (eventType,from,page,pageSize,sourceModule,status,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "172",
+							"uri": "http://localhost:3001/events/inbox/4899967087159336518",
+							"nodeName": "http:\/\/localhost:3001\/events\/inbox\/4899967087159336518",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2",
+							"uri": "http://localhost:3001/events/inbox/ev-0001",
+							"nodeName": "http:\/\/localhost:3001\/events\/inbox\/ev-0001",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38829",
+							"uri": "http://localhost:3001/events/inbox/ev-0001/",
+							"nodeName": "http:\/\/localhost:3001\/events\/inbox\/ev-0001\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "3",
+							"uri": "http://localhost:3001/events/outbox?page=1&pageSize=20&status=PENDING&eventType=containerDamaged&from=Thu%20Oct%2001%2000:00:00%20UTC%202026&to=Sat%20Oct%2031%2000:00:00%20UTC%202026",
+							"nodeName": "http:\/\/localhost:3001\/events\/outbox (eventType,from,page,pageSize,status,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "173",
+							"uri": "http://localhost:3001/events/outbox/2192191130622815268",
+							"nodeName": "http:\/\/localhost:3001\/events\/outbox\/2192191130622815268",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "4",
+							"uri": "http://localhost:3001/events/outbox/id",
+							"nodeName": "http:\/\/localhost:3001\/events\/outbox\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38830",
+							"uri": "http://localhost:3001/events/outbox/id/",
+							"nodeName": "http:\/\/localhost:3001\/events\/outbox\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "174",
+							"uri": "http://localhost:3001/events/outbox/id/3496634465163582068",
+							"nodeName": "http:\/\/localhost:3001\/events\/outbox\/id\/3496634465163582068",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "43559",
+							"uri": "http://localhost:3001/evidence?=&ownerId=a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+							"nodeName": "http:\/\/localhost:3001\/evidence (ownerId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2551",
+							"uri": "http://localhost:3001/evidence?ownerType=http%3A%2F%2Fwww.google.com%2F&ownerId=a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+							"nodeName": "http:\/\/localhost:3001\/evidence (ownerId,ownerType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43599",
+							"uri": "http://localhost:3001/evidence?ownerType=SERVICE&=",
+							"nodeName": "http:\/\/localhost:3001\/evidence (ownerType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38831",
+							"uri": "http://localhost:3001/evidence/",
+							"nodeName": "http:\/\/localhost:3001\/evidence\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "105",
+							"uri": "http://localhost:3001/green-points?page=1&pageSize=20&active=true&zoneId=zoneId&wasteType=HOUSEHOLD&search=Mitre",
+							"nodeName": "http:\/\/localhost:3001\/green-points (active,page,pageSize,search,wasteType,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "175",
+							"uri": "http://localhost:3001/green-points/7324540277388771756",
+							"nodeName": "http:\/\/localhost:3001\/green-points\/7324540277388771756",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "107",
+							"uri": "http://localhost:3001/green-points/id",
+							"nodeName": "http:\/\/localhost:3001\/green-points\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38832",
+							"uri": "http://localhost:3001/green-points/id/",
+							"nodeName": "http:\/\/localhost:3001\/green-points\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43696",
+							"uri": "http://localhost:3001/green-spaces?page=1&pageSize=20&active=true&spaceType=SQUARE&=&search=Miserere",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces (active,page,pageSize,search,spaceType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2758",
+							"uri": "http://localhost:3001/green-spaces?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20&active=true&spaceType=SQUARE&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=Miserere",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces (active,page,pageSize,search,spaceType,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43669",
+							"uri": "http://localhost:3001/green-spaces?page=1&pageSize=20&active=true&=&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=Miserere",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces (active,page,pageSize,search,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43722",
+							"uri": "http://localhost:3001/green-spaces?page=1&pageSize=20&active=true&spaceType=SQUARE&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&=",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces (active,page,pageSize,spaceType,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43627",
+							"uri": "http://localhost:3001/green-spaces?page=1&=&active=true&spaceType=SQUARE&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=Miserere",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces (active,page,search,spaceType,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43595",
+							"uri": "http://localhost:3001/green-spaces?=&pageSize=20&active=true&spaceType=SQUARE&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=Miserere",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces (active,pageSize,search,spaceType,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43645",
+							"uri": "http://localhost:3001/green-spaces?page=1&pageSize=20&=&spaceType=SQUARE&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=Miserere",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces (page,pageSize,search,spaceType,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "176",
+							"uri": "http://localhost:3001/green-spaces/1086207112823958374",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces\/1086207112823958374",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "102",
+							"uri": "http://localhost:3001/green-spaces/id",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38834",
+							"uri": "http://localhost:3001/green-spaces/id/",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "177",
+							"uri": "http://localhost:3001/health/5793907785611352910",
+							"nodeName": "http:\/\/localhost:3001\/health\/5793907785611352910",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2848",
+							"uri": "http://localhost:3001/indicators",
+							"nodeName": "http:\/\/localhost:3001\/indicators",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38835",
+							"uri": "http://localhost:3001/indicators/",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "178",
+							"uri": "http://localhost:3001/indicators/1503211901014517409",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/1503211901014517409",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "158",
+							"uri": "http://localhost:3001/indicators/compliance?from=2026-08-01&to=2026-08-31&bucket=day&compare=previous&zoneId=zoneId&serviceTypeId=serviceTypeId",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/compliance (bucket,compare,from,serviceTypeId,to,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "157",
+							"uri": "http://localhost:3001/indicators/coverage?from=2026-08-01&to=2026-08-31&bucket=day&compare=previous&zoneId=zoneId&serviceTypeId=serviceTypeId",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/coverage (bucket,compare,from,serviceTypeId,to,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43629",
+							"uri": "http://localhost:3001/indicators/incidents?from=2026-08-01&=&bucket=day&compare=previous",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/incidents (bucket,compare,from)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2972",
+							"uri": "http://localhost:3001/indicators/incidents?from=http%3A%2F%2Fwww.google.com%2F&to=2026-08-31&bucket=day&compare=previous",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/incidents (bucket,compare,from,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43588",
+							"uri": "http://localhost:3001/indicators/incidents?=&to=2026-08-31&bucket=day&compare=previous",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/incidents (bucket,compare,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43703",
+							"uri": "http://localhost:3001/indicators/incidents?from=2026-08-01&to=2026-08-31&bucket=day&=",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/incidents (bucket,from,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43653",
+							"uri": "http://localhost:3001/indicators/incidents?from=2026-08-01&to=2026-08-31&=&compare=previous",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/incidents (compare,from,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43625",
+							"uri": "http://localhost:3001/indicators/waste?from=2026-08-01&=&bucket=day&compare=previous",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/waste (bucket,compare,from)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "2973",
+							"uri": "http://localhost:3001/indicators/waste?from=http%3A%2F%2Fwww.google.com%2F&to=2026-08-31&bucket=day&compare=previous",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/waste (bucket,compare,from,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43593",
+							"uri": "http://localhost:3001/indicators/waste?=&to=2026-08-31&bucket=day&compare=previous",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/waste (bucket,compare,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43668",
+							"uri": "http://localhost:3001/indicators/waste?from=2026-08-01&to=2026-08-31&bucket=day&=",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/waste (bucket,from,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43643",
+							"uri": "http://localhost:3001/indicators/waste?from=2026-08-01&to=2026-08-31&=&compare=previous",
+							"nodeName": "http:\/\/localhost:3001\/indicators\/waste (compare,from,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43695",
+							"uri": "http://localhost:3001/neighborhoods?soloActivos=true&=&q=paler",
+							"nodeName": "http:\/\/localhost:3001\/neighborhoods (q,soloActivos)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "3176",
+							"uri": "http://localhost:3001/neighborhoods?soloActivos=http%3A%2F%2Fwww.google.com%2F&zona=comuna-14&q=paler",
+							"nodeName": "http:\/\/localhost:3001\/neighborhoods (q,soloActivos,zona)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43663",
+							"uri": "http://localhost:3001/neighborhoods?=&zona=comuna-14&q=paler",
+							"nodeName": "http:\/\/localhost:3001\/neighborhoods (q,zona)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43714",
+							"uri": "http://localhost:3001/neighborhoods?soloActivos=true&zona=comuna-14&=",
+							"nodeName": "http:\/\/localhost:3001\/neighborhoods (soloActivos,zona)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "3174",
+							"uri": "http://localhost:3001/public",
+							"nodeName": "http:\/\/localhost:3001\/public",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38837",
+							"uri": "http://localhost:3001/public/",
+							"nodeName": "http:\/\/localhost:3001\/public\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "179",
+							"uri": "http://localhost:3001/public/8578836663402663336",
+							"nodeName": "http:\/\/localhost:3001\/public\/8578836663402663336",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "155",
+							"uri": "http://localhost:3001/public/green-points?page=1&pageSize=20&zoneId=zoneId",
+							"nodeName": "http:\/\/localhost:3001\/public\/green-points (page,pageSize,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "8689",
+							"uri": "http://localhost:3001/public/green-points?page=%3C%21--%23EXEC+cmd%3D%22dir+%5C%22--%3E&pageSize=20&zoneId=zoneId",
+							"nodeName": "http:\/\/localhost:3001\/public\/green-points (page,pageSize,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "429",
+							"otherinfo": ""
+						},
+						{
+							"id": "38839",
+							"uri": "http://localhost:3001/public/green-points/",
+							"nodeName": "http:\/\/localhost:3001\/public\/green-points\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "429",
+							"otherinfo": ""
+						},
+						{
+							"id": "3181",
+							"uri": "http://localhost:3001/public/reports",
+							"nodeName": "http:\/\/localhost:3001\/public\/reports",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38840",
+							"uri": "http://localhost:3001/public/reports/",
+							"nodeName": "http:\/\/localhost:3001\/public\/reports\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "180",
+							"uri": "http://localhost:3001/public/reports/1145168009437523195",
+							"nodeName": "http:\/\/localhost:3001\/public\/reports\/1145168009437523195",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "153",
+							"uri": "http://localhost:3001/public/reports/550e8400-e29b-41d4-a716-446655440000",
+							"nodeName": "http:\/\/localhost:3001\/public\/reports\/550e8400-e29b-41d4-a716-446655440000",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38842",
+							"uri": "http://localhost:3001/public/reports/550e8400-e29b-41d4-a716-446655440000/",
+							"nodeName": "http:\/\/localhost:3001\/public\/reports\/550e8400-e29b-41d4-a716-446655440000\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "154",
+							"uri": "http://localhost:3001/public/services?page=1&pageSize=20&zoneId=zoneId&serviceTypeId=serviceTypeId&from=2026-09-01&to=2026-09-30",
+							"nodeName": "http:\/\/localhost:3001\/public\/services (from,page,pageSize,serviceTypeId,to,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "3490",
+							"uri": "http://localhost:3001/public/services?page=1&pageSize=20&zoneId=zoneId&serviceTypeId=serviceTypeId&from=2026-09-01&to=www.google.com%3A80%2Fsearch%3Fq%3DZAP",
+							"nodeName": "http:\/\/localhost:3001\/public\/services (from,page,pageSize,serviceTypeId,to,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "429",
+							"otherinfo": ""
+						},
+						{
+							"id": "38841",
+							"uri": "http://localhost:3001/public/services/",
+							"nodeName": "http:\/\/localhost:3001\/public\/services\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "429",
+							"otherinfo": ""
+						},
+						{
+							"id": "142",
+							"uri": "http://localhost:3001/repair-requests?page=1&pageSize=20&status=REQUESTED&damageType=BROKEN_PAVEMENT&severity=LOW&detectedInId=detectedInId",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests (damageType,detectedInId,page,pageSize,severity,status)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "181",
+							"uri": "http://localhost:3001/repair-requests/3476421131227925476",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests\/3476421131227925476",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "144",
+							"uri": "http://localhost:3001/repair-requests/id",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38843",
+							"uri": "http://localhost:3001/repair-requests/id/",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "182",
+							"uri": "http://localhost:3001/repair-requests/id/811118181563774260",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests\/id\/811118181563774260",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "43745",
+							"uri": "http://localhost:3001/role-assignments?page=1&=",
+							"nodeName": "http:\/\/localhost:3001\/role-assignments (page)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "3296",
+							"uri": "http://localhost:3001/role-assignments?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20",
+							"nodeName": "http:\/\/localhost:3001\/role-assignments (page,pageSize)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43702",
+							"uri": "http://localhost:3001/role-assignments?=&pageSize=20",
+							"nodeName": "http:\/\/localhost:3001\/role-assignments (pageSize)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43769",
+							"uri": "http://localhost:3001/routes?page=1&pageSize=20&active=true&=&search=troncal",
+							"nodeName": "http:\/\/localhost:3001\/routes (active,page,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "3312",
+							"uri": "http://localhost:3001/routes?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20&active=true&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=troncal",
+							"nodeName": "http:\/\/localhost:3001\/routes (active,page,pageSize,search,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43781",
+							"uri": "http://localhost:3001/routes?page=1&pageSize=20&active=true&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&=",
+							"nodeName": "http:\/\/localhost:3001\/routes (active,page,pageSize,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43734",
+							"uri": "http://localhost:3001/routes?page=1&=&active=true&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=troncal",
+							"nodeName": "http:\/\/localhost:3001\/routes (active,page,search,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43705",
+							"uri": "http://localhost:3001/routes?=&pageSize=20&active=true&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=troncal",
+							"nodeName": "http:\/\/localhost:3001\/routes (active,pageSize,search,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43754",
+							"uri": "http://localhost:3001/routes?page=1&pageSize=20&=&zoneId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&search=troncal",
+							"nodeName": "http:\/\/localhost:3001\/routes (page,pageSize,search,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "183",
+							"uri": "http://localhost:3001/routes/1006602501666727735",
+							"nodeName": "http:\/\/localhost:3001\/routes\/1006602501666727735",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "19",
+							"uri": "http://localhost:3001/routes/id",
+							"nodeName": "http:\/\/localhost:3001\/routes\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38844",
+							"uri": "http://localhost:3001/routes/id/",
+							"nodeName": "http:\/\/localhost:3001\/routes\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "184",
+							"uri": "http://localhost:3001/routes/id/5785001733833713733",
+							"nodeName": "http:\/\/localhost:3001\/routes\/id\/5785001733833713733",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "23",
+							"uri": "http://localhost:3001/service-frequencies?page=1&pageSize=20&serviceTypeId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&routeId=b2c3d4e5-f6a7-8901-bcde-f12345678901&shift=MORNING&weekday=2&validOn=Wed%20Sep%2002%2000:00:00%20UTC%202026",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies (page,pageSize,routeId,serviceTypeId,shift,validOn,weekday)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "185",
+							"uri": "http://localhost:3001/service-frequencies/1925710259689976090",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies\/1925710259689976090",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "25",
+							"uri": "http://localhost:3001/service-frequencies/id",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38845",
+							"uri": "http://localhost:3001/service-frequencies/id/",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43791",
+							"uri": "http://localhost:3001/service-types?page=1&pageSize=20&active=true&category=WASTE_COLLECTION&mode=ROUTE&=",
+							"nodeName": "http:\/\/localhost:3001\/service-types (active,category,mode,page,pageSize)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "3332",
+							"uri": "http://localhost:3001/service-types?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20&active=true&category=WASTE_COLLECTION&mode=ROUTE&search=recolecci%C3%B3n",
+							"nodeName": "http:\/\/localhost:3001\/service-types (active,category,mode,page,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43749",
+							"uri": "http://localhost:3001/service-types?page=1&=&active=true&category=WASTE_COLLECTION&mode=ROUTE&search=recolecci%C3%B3n",
+							"nodeName": "http:\/\/localhost:3001\/service-types (active,category,mode,page,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43728",
+							"uri": "http://localhost:3001/service-types?=&pageSize=20&active=true&category=WASTE_COLLECTION&mode=ROUTE&search=recolecci%C3%B3n",
+							"nodeName": "http:\/\/localhost:3001\/service-types (active,category,mode,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43784",
+							"uri": "http://localhost:3001/service-types?page=1&pageSize=20&active=true&category=WASTE_COLLECTION&=&search=recolecci%C3%B3n",
+							"nodeName": "http:\/\/localhost:3001\/service-types (active,category,page,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43776",
+							"uri": "http://localhost:3001/service-types?page=1&pageSize=20&active=true&=&mode=ROUTE&search=recolecci%C3%B3n",
+							"nodeName": "http:\/\/localhost:3001\/service-types (active,mode,page,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43764",
+							"uri": "http://localhost:3001/service-types?page=1&pageSize=20&=&category=WASTE_COLLECTION&mode=ROUTE&search=recolecci%C3%B3n",
+							"nodeName": "http:\/\/localhost:3001\/service-types (category,mode,page,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "186",
+							"uri": "http://localhost:3001/service-types/3716473556581364092",
+							"nodeName": "http:\/\/localhost:3001\/service-types\/3716473556581364092",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "13",
+							"uri": "http://localhost:3001/service-types/id",
+							"nodeName": "http:\/\/localhost:3001\/service-types\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38846",
+							"uri": "http://localhost:3001/service-types/id/",
+							"nodeName": "http:\/\/localhost:3001\/service-types\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "110",
+							"uri": "http://localhost:3001/services?page=1&pageSize=20&status=SCHEDULED&serviceTypeId=serviceTypeId&mode=ROUTE&origin=PLANNED&crewId=crewId&vehicleId=vehicleId&zoneId=zoneId&targetType=CONTAINER&targetId=c3d4e5f6-a7b8-4012-8def-123456789012&ticketId=TCK-2026-004821&scheduledFrom=Tue%20Sep%2001%2000:00:00%20UTC%202026&scheduledTo=Wed%20Sep%2030%2000:00:00%20UTC%202026",
+							"nodeName": "http:\/\/localhost:3001\/services (crewId,mode,origin,page,pageSize,scheduledFrom,scheduledTo,serviceTypeId,status,targetId,targetType,ticketId,vehicleId,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "187",
+							"uri": "http://localhost:3001/services/6884734017337557806",
+							"nodeName": "http:\/\/localhost:3001\/services\/6884734017337557806",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "112",
+							"uri": "http://localhost:3001/services/id",
+							"nodeName": "http:\/\/localhost:3001\/services\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38851",
+							"uri": "http://localhost:3001/services/id/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "188",
+							"uri": "http://localhost:3001/services/id/4116061109246715735",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/4116061109246715735",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "115",
+							"uri": "http://localhost:3001/services/id/assignment-conflicts?crewId=crewId&vehicleId=vehicleId",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/assignment-conflicts (crewId,vehicleId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38849",
+							"uri": "http://localhost:3001/services/id/assignment-conflicts/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/assignment-conflicts\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "127",
+							"uri": "http://localhost:3001/services/id/collection-records",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/collection-records",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38847",
+							"uri": "http://localhost:3001/services/id/collection-records/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/collection-records\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "116",
+							"uri": "http://localhost:3001/services/id/delay-notices",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/delay-notices",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38848",
+							"uri": "http://localhost:3001/services/id/delay-notices/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/delay-notices\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "125",
+							"uri": "http://localhost:3001/services/id/zone-results",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/zone-results",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38850",
+							"uri": "http://localhost:3001/services/id/zone-results/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/zone-results\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "147",
+							"uri": "http://localhost:3001/street-closure-requests?page=1&pageSize=20&status=REQUESTED&sourceId=sourceId",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests (page,pageSize,sourceId,status)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "189",
+							"uri": "http://localhost:3001/street-closure-requests/1225212240708143415",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/1225212240708143415",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "149",
+							"uri": "http://localhost:3001/street-closure-requests/id",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38852",
+							"uri": "http://localhost:3001/street-closure-requests/id/",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "190",
+							"uri": "http://localhost:3001/street-closure-requests/id/615789382719989302",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/id\/615789382719989302",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "43898",
+							"uri": "http://localhost:3001/tree-interventions?page=1&pageSize=20&interventionType=FORMATION_PRUNING&status=REQUESTED&priority=LOW&=",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions (interventionType,page,pageSize,priority,status)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "3664",
+							"uri": "http://localhost:3001/tree-interventions?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20&interventionType=FORMATION_PRUNING&status=REQUESTED&priority=LOW&treeId=b8c9d0e1-f2a3-4567-8bcd-678901234567",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions (interventionType,page,pageSize,priority,status,treeId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43873",
+							"uri": "http://localhost:3001/tree-interventions?page=1&pageSize=20&interventionType=FORMATION_PRUNING&=&priority=LOW&treeId=b8c9d0e1-f2a3-4567-8bcd-678901234567",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions (interventionType,page,pageSize,priority,treeId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43891",
+							"uri": "http://localhost:3001/tree-interventions?page=1&pageSize=20&interventionType=FORMATION_PRUNING&status=REQUESTED&=&treeId=b8c9d0e1-f2a3-4567-8bcd-678901234567",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions (interventionType,page,pageSize,status,treeId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43833",
+							"uri": "http://localhost:3001/tree-interventions?page=1&=&interventionType=FORMATION_PRUNING&status=REQUESTED&priority=LOW&treeId=b8c9d0e1-f2a3-4567-8bcd-678901234567",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions (interventionType,page,priority,status,treeId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43804",
+							"uri": "http://localhost:3001/tree-interventions?=&pageSize=20&interventionType=FORMATION_PRUNING&status=REQUESTED&priority=LOW&treeId=b8c9d0e1-f2a3-4567-8bcd-678901234567",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions (interventionType,pageSize,priority,status,treeId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43851",
+							"uri": "http://localhost:3001/tree-interventions?page=1&pageSize=20&=&status=REQUESTED&priority=LOW&treeId=b8c9d0e1-f2a3-4567-8bcd-678901234567",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions (page,pageSize,priority,status,treeId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "191",
+							"uri": "http://localhost:3001/tree-interventions/3368447875843480638",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/3368447875843480638",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "96",
+							"uri": "http://localhost:3001/tree-interventions/id",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38853",
+							"uri": "http://localhost:3001/tree-interventions/id/",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "192",
+							"uri": "http://localhost:3001/tree-interventions/id/9117659023950865720",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id\/9117659023950865720",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "87",
+							"uri": "http://localhost:3001/trees?page=1&pageSize=20&active=true&zoneId=zoneId&riskLevel=NONE&search=ZAP",
+							"nodeName": "http:\/\/localhost:3001\/trees (active,page,pageSize,riskLevel,search,zoneId)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "193",
+							"uri": "http://localhost:3001/trees/5284221880729916224",
+							"nodeName": "http:\/\/localhost:3001\/trees\/5284221880729916224",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "89",
+							"uri": "http://localhost:3001/trees/id",
+							"nodeName": "http:\/\/localhost:3001\/trees\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38855",
+							"uri": "http://localhost:3001/trees/id/",
+							"nodeName": "http:\/\/localhost:3001\/trees\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "3675",
+							"uri": "http://localhost:3001/trees/treeId",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38857",
+							"uri": "http://localhost:3001/trees/treeId/",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "194",
+							"uri": "http://localhost:3001/trees/treeId/6933366036444743298",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId\/6933366036444743298",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "3681",
+							"uri": "http://localhost:3001/trees/treeId/surveys",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId\/surveys",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "92",
+							"uri": "http://localhost:3001/trees/treeId/surveys?page=1&pageSize=20&healthStatus=HEALTHY&riskLevel=NONE",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId\/surveys (healthStatus,page,pageSize,riskLevel)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38859",
+							"uri": "http://localhost:3001/trees/treeId/surveys/",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId\/surveys\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "195",
+							"uri": "http://localhost:3001/trees/treeId/surveys/538042603928437641",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId\/surveys\/538042603928437641",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "94",
+							"uri": "http://localhost:3001/trees/treeId/surveys/surveyId",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId\/surveys\/surveyId",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38858",
+							"uri": "http://localhost:3001/trees/treeId/surveys/surveyId/",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId\/surveys\/surveyId\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43879",
+							"uri": "http://localhost:3001/vehicles?page=1&pageSize=20&active=true&=",
+							"nodeName": "http:\/\/localhost:3001\/vehicles (active,page,pageSize)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "3694",
+							"uri": "http://localhost:3001/vehicles?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20&active=true&vehicleType=COMPACTOR_TRUCK",
+							"nodeName": "http:\/\/localhost:3001\/vehicles (active,page,pageSize,vehicleType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43848",
+							"uri": "http://localhost:3001/vehicles?page=1&=&active=true&vehicleType=COMPACTOR_TRUCK",
+							"nodeName": "http:\/\/localhost:3001\/vehicles (active,page,vehicleType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43821",
+							"uri": "http://localhost:3001/vehicles?=&pageSize=20&active=true&vehicleType=COMPACTOR_TRUCK",
+							"nodeName": "http:\/\/localhost:3001\/vehicles (active,pageSize,vehicleType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43862",
+							"uri": "http://localhost:3001/vehicles?page=1&pageSize=20&=&vehicleType=COMPACTOR_TRUCK",
+							"nodeName": "http:\/\/localhost:3001\/vehicles (page,pageSize,vehicleType)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "196",
+							"uri": "http://localhost:3001/vehicles/5483470199222693028",
+							"nodeName": "http:\/\/localhost:3001\/vehicles\/5483470199222693028",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "56",
+							"uri": "http://localhost:3001/vehicles/id",
+							"nodeName": "http:\/\/localhost:3001\/vehicles\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38861",
+							"uri": "http://localhost:3001/vehicles/id/",
+							"nodeName": "http:\/\/localhost:3001\/vehicles\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43888",
+							"uri": "http://localhost:3001/zones?page=1&pageSize=20&active=true&=&communeId=c0a80101-0000-4000-8000-000000000014",
+							"nodeName": "http:\/\/localhost:3001\/zones (active,communeId,page,pageSize)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "3709",
+							"uri": "http://localhost:3001/zones?page=http%3A%2F%2Fwww.google.com%2F&pageSize=20&active=true&search=Norte&communeId=c0a80101-0000-4000-8000-000000000014",
+							"nodeName": "http:\/\/localhost:3001\/zones (active,communeId,page,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43852",
+							"uri": "http://localhost:3001/zones?page=1&=&active=true&search=Norte&communeId=c0a80101-0000-4000-8000-000000000014",
+							"nodeName": "http:\/\/localhost:3001\/zones (active,communeId,page,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43834",
+							"uri": "http://localhost:3001/zones?=&pageSize=20&active=true&search=Norte&communeId=c0a80101-0000-4000-8000-000000000014",
+							"nodeName": "http:\/\/localhost:3001\/zones (active,communeId,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43900",
+							"uri": "http://localhost:3001/zones?page=1&pageSize=20&active=true&search=Norte&=",
+							"nodeName": "http:\/\/localhost:3001\/zones (active,page,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "43871",
+							"uri": "http://localhost:3001/zones?page=1&pageSize=20&=&search=Norte&communeId=c0a80101-0000-4000-8000-000000000014",
+							"nodeName": "http:\/\/localhost:3001\/zones (communeId,page,pageSize,search)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "197",
+							"uri": "http://localhost:3001/zones/3362729832413101268",
+							"nodeName": "http:\/\/localhost:3001\/zones\/3362729832413101268",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "7",
+							"uri": "http://localhost:3001/zones/id",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38864",
+							"uri": "http://localhost:3001/zones/id/",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "198",
+							"uri": "http://localhost:3001/zones/id/7715276543005629005",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/7715276543005629005",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "3703",
+							"uri": "http://localhost:3001/zones/id/neighborhoods",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/neighborhoods",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38863",
+							"uri": "http://localhost:3001/zones/id/neighborhoods/",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/neighborhoods\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "199",
+							"uri": "http://localhost:3001/zones/id/neighborhoods/6645949388751701690",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/neighborhoods\/6645949388751701690",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "61",
+							"uri": "http://localhost:3001/containers/id",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id ()({zoneId,capacityLiters,address,lat,lng})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38735",
+							"uri": "http://localhost:3001/containers/id/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/ ()({zoneId,capacityLiters,address,lat,lng})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "31",
+							"uri": "http://localhost:3001/crews/id",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id ()({name,defaultShift,leaderUserId,organizationId,leaderName,organizationName,specialty,homeZoneId,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38737",
+							"uri": "http://localhost:3001/crews/id/",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/ ()({name,defaultShift,leaderUserId,organizationId,leaderName,organizationName,specialty,homeZoneId,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "18",
+							"uri": "http://localhost:3001/disposal-sites/id",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites\/id ()({name,siteType,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38747",
+							"uri": "http://localhost:3001/disposal-sites/id/",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites\/id\/ ()({name,siteType,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "109",
+							"uri": "http://localhost:3001/green-points/id",
+							"nodeName": "http:\/\/localhost:3001\/green-points\/id ()({name,zoneId,wasteTypes:[],address,lat,lng,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38759",
+							"uri": "http://localhost:3001/green-points/id/",
+							"nodeName": "http:\/\/localhost:3001\/green-points\/id\/ ()({name,zoneId,wasteTypes:[],address,lat,lng,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "104",
+							"uri": "http://localhost:3001/green-spaces/id",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces\/id ()({name,zoneId,lat,lng,areaM2,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38758",
+							"uri": "http://localhost:3001/green-spaces/id/",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces\/id\/ ()({name,zoneId,lat,lng,areaM2,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "21",
+							"uri": "http://localhost:3001/routes/id",
+							"nodeName": "http:\/\/localhost:3001\/routes\/id ()({name,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38767",
+							"uri": "http://localhost:3001/routes/id/",
+							"nodeName": "http:\/\/localhost:3001\/routes\/id\/ ()({name,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "1358",
+							"uri": "http://localhost:3001/service-frequencies/id",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies\/id ()({weekdays:[],shift,validFrom,validTo})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "27",
+							"uri": "http://localhost:3001/service-frequencies/id",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies\/id ()({weekdays:[{}],shift,validFrom,validTo})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38772",
+							"uri": "http://localhost:3001/service-frequencies/id/",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies\/id\/ ()({weekdays:[{}],shift,validFrom,validTo})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "15",
+							"uri": "http://localhost:3001/service-types/id",
+							"nodeName": "http:\/\/localhost:3001\/service-types\/id ()({name,requiresVehicle,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38771",
+							"uri": "http://localhost:3001/service-types/id/",
+							"nodeName": "http:\/\/localhost:3001\/service-types\/id\/ ()({name,requiresVehicle,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "113",
+							"uri": "http://localhost:3001/services/id",
+							"nodeName": "http:\/\/localhost:3001\/services\/id ()({vehicleId,windowFrom,windowTo,notes,overrideNote})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38787",
+							"uri": "http://localhost:3001/services/id/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/ ()({vehicleId,windowFrom,windowTo,notes,overrideNote})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "91",
+							"uri": "http://localhost:3001/trees/id",
+							"nodeName": "http:\/\/localhost:3001\/trees\/id ()({zoneId,species,address,lat,lng,heightM,diameterCm,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38796",
+							"uri": "http://localhost:3001/trees/id/",
+							"nodeName": "http:\/\/localhost:3001\/trees\/id\/ ()({zoneId,species,address,lat,lng,heightM,diameterCm,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "58",
+							"uri": "http://localhost:3001/vehicles/id",
+							"nodeName": "http:\/\/localhost:3001\/vehicles\/id ()({plate,capacity,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38804",
+							"uri": "http://localhost:3001/vehicles/id/",
+							"nodeName": "http:\/\/localhost:3001\/vehicles\/id\/ ()({plate,capacity,active})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "9",
+							"uri": "http://localhost:3001/zones/id",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id ()({name,active,communeId})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38807",
+							"uri": "http://localhost:3001/zones/id/",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/ ()({name,active,communeId})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "28758",
+							"uri": "http://localhost:3001/computeMetadata/v1/",
+							"nodeName": "http:\/\/localhost:3001\/computeMetadata\/v1\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "207",
+							"uri": "http://localhost:3001/containers",
+							"nodeName": "http:\/\/localhost:3001\/containers ()({code,containerType,zoneId,capacityLiters,address,lat,lng})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "59",
+							"uri": "http://localhost:3001/containers",
+							"nodeName": "http:\/\/localhost:3001\/containers ()({code,containerType,zoneId,capacityLiters,address,lat,lng})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38738",
+							"uri": "http://localhost:3001/containers/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/ ()({code,containerType,zoneId,capacityLiters,address,lat,lng})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "75",
+							"uri": "http://localhost:3001/containers/id/complete-repair",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/complete-repair",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38727",
+							"uri": "http://localhost:3001/containers/id/complete-repair/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/complete-repair\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "79",
+							"uri": "http://localhost:3001/containers/id/confirm-relocation",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/confirm-relocation ()({address,lat,lng})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38731",
+							"uri": "http://localhost:3001/containers/id/confirm-relocation/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/confirm-relocation\/ ()({address,lat,lng})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "73",
+							"uri": "http://localhost:3001/containers/id/empty",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/empty",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38728",
+							"uri": "http://localhost:3001/containers/id/empty/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/empty\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "78",
+							"uri": "http://localhost:3001/containers/id/relocate",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/relocate",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38733",
+							"uri": "http://localhost:3001/containers/id/relocate/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/relocate\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "84",
+							"uri": "http://localhost:3001/containers/id/remove",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/remove",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38730",
+							"uri": "http://localhost:3001/containers/id/remove/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/remove\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "69",
+							"uri": "http://localhost:3001/containers/id/report-damage",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/report-damage ()({damageType,severity,requiresPublicWorks,observations})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38729",
+							"uri": "http://localhost:3001/containers/id/report-damage/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/report-damage\/ ()({damageType,severity,requiresPublicWorks,observations})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "64",
+							"uri": "http://localhost:3001/containers/id/report-overflow",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/report-overflow",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38734",
+							"uri": "http://localhost:3001/containers/id/report-overflow/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/report-overflow\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "74",
+							"uri": "http://localhost:3001/containers/id/start-repair",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/start-repair",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38732",
+							"uri": "http://localhost:3001/containers/id/start-repair/",
+							"nodeName": "http:\/\/localhost:3001\/containers\/id\/start-repair\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "296",
+							"uri": "http://localhost:3001/crews",
+							"nodeName": "http:\/\/localhost:3001\/crews ()({name,crewType,defaultShift,specialty,leaderUserId,leaderName,homeZoneId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "28",
+							"uri": "http://localhost:3001/crews",
+							"nodeName": "http:\/\/localhost:3001\/crews ()({name,crewType,defaultShift,specialty,leaderUserId,leaderName,homeZoneId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38742",
+							"uri": "http://localhost:3001/crews/",
+							"nodeName": "http:\/\/localhost:3001\/crews\/ ()({name,crewType,defaultShift,specialty,leaderUserId,leaderName,homeZoneId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "33",
+							"uri": "http://localhost:3001/crews/id/members",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/members ()({members:[{userId,displayName}..]})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38740",
+							"uri": "http://localhost:3001/crews/id/members/",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/members\/ ()({members:[{userId,displayName}..]})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "48",
+							"uri": "http://localhost:3001/crews/id/zone-assignments",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/zone-assignments ()({zoneId,validFrom,validTo,reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38741",
+							"uri": "http://localhost:3001/crews/id/zone-assignments/",
+							"nodeName": "http:\/\/localhost:3001\/crews\/id\/zone-assignments\/ ()({zoneId,validFrom,validTo,reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "457",
+							"uri": "http://localhost:3001/disposal-sites",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites ()({code,name,siteType,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "38750",
+							"uri": "http://localhost:3001/disposal-sites/",
+							"nodeName": "http:\/\/localhost:3001\/disposal-sites\/ ()({code,name,siteType,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "409",
+							"otherinfo": ""
+						},
+						{
+							"id": "132",
+							"uri": "http://localhost:3001/environmental-inspections/id/complete",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/id\/complete ()({inspectedAt,outcome,nextStep,findings,checklist:[{itemCode,label,result,observations}],conclusion,violationType,severity,suggestedAction})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38746",
+							"uri": "http://localhost:3001/environmental-inspections/id/complete/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/id\/complete\/ ()({inspectedAt,outcome,nextStep,findings,checklist:[{itemCode,label,result,observations}],conclusion,violationType,severity,suggestedAction})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "134",
+							"uri": "http://localhost:3001/environmental-inspections/id/violation-notice",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/id\/violation-notice ()({violationType,severity,suggestedAction,establishmentId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38745",
+							"uri": "http://localhost:3001/environmental-inspections/id/violation-notice/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-inspections\/id\/violation-notice\/ ()({violationType,severity,suggestedAction,establishmentId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "750",
+							"uri": "http://localhost:3001/environmental-reports",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports ()({reportType,address,description,lat,lng,ticketId,priority})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "141",
+							"uri": "http://localhost:3001/environmental-reports/id/close",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/close",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38744",
+							"uri": "http://localhost:3001/environmental-reports/id/close/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/close\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "139",
+							"uri": "http://localhost:3001/environmental-reports/id/dismiss",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/dismiss ()({reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38749",
+							"uri": "http://localhost:3001/environmental-reports/id/dismiss/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/dismiss\/ ()({reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "138",
+							"uri": "http://localhost:3001/environmental-reports/id/forward",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/forward ()({reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38748",
+							"uri": "http://localhost:3001/environmental-reports/id/forward/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/forward\/ ()({reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "140",
+							"uri": "http://localhost:3001/environmental-reports/id/request-information",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/request-information ()({message,requiredBy,internalNote})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38752",
+							"uri": "http://localhost:3001/environmental-reports/id/request-information/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/request-information\/ ()({message,requiredBy,internalNote})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "137",
+							"uri": "http://localhost:3001/environmental-reports/id/start-review",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/start-review",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38755",
+							"uri": "http://localhost:3001/environmental-reports/id/start-review/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/id\/start-review\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "130",
+							"uri": "http://localhost:3001/environmental-reports/reportId/inspections",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/reportId\/inspections ()({serviceId,inspectorId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38756",
+							"uri": "http://localhost:3001/environmental-reports/reportId/inspections/",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports\/reportId\/inspections\/ ()({serviceId,inspectorId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "1",
+							"uri": "http://localhost:3001/events/inbox",
+							"nodeName": "http:\/\/localhost:3001\/events\/inbox ()({\"eventId\":\"3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11\",\"eventType\":\"workOrderCompleted\",\"data\":\"{\"sourceRequestId\":\"0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a\",\"workOrderId\":\"f1e2d3c4-b5a6-4789-9abc-def012345678\",\"completedAt\":\"2026-09-29T17:45:00Z\"}\",\"eventVersion\":\"1.0\",\"occurredAt\":\"2026-09-29T18:00Z\",\"occuredAt\":\"2026-09-29T18:00Z\",\"sourceModule\":\"obras\",\"correlationId\":\"8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5\",\"causationId\":\"John Doe\",\"specVersion\":\"1.0\",\"producer\":\"M7\",\"subject\":\"Zaproxy dolore alias impedit expedi)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38751",
+							"uri": "http://localhost:3001/events/inbox/",
+							"nodeName": "http:\/\/localhost:3001\/events\/inbox\/ ()({\"eventId\":\"3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11\",\"eventType\":\"workOrderCompleted\",\"data\":\"{\"sourceRequestId\":\"0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a\",\"workOrderId\":\"f1e2d3c4-b5a6-4789-9abc-def012345678\",\"completedAt\":\"2026-09-29T17:45:00Z\"}\",\"eventVersion\":\"1.0\",\"occurredAt\":\"2026-09-29T18:00Z\",\"occuredAt\":\"2026-09-29T18:00Z\",\"sourceModule\":\"obras\",\"correlationId\":\"8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5\",\"causationId\":\"John Doe\",\"specVersion\":\"1.0\",\"producer\":\"M7\",\"subject\":\"Zaproxy dolore alias impedit expedi)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "5",
+							"uri": "http://localhost:3001/events/outbox/id/retry",
+							"nodeName": "http:\/\/localhost:3001\/events\/outbox\/id\/retry",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38754",
+							"uri": "http://localhost:3001/events/outbox/id/retry/",
+							"nodeName": "http:\/\/localhost:3001\/events\/outbox\/id\/retry\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "825",
+							"uri": "http://localhost:3001/events/outbox/retry-failed",
+							"nodeName": "http:\/\/localhost:3001\/events\/outbox\/retry-failed ()({confirm,limit})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "156",
+							"uri": "http://localhost:3001/evidence",
+							"nodeName": "http:\/\/localhost:3001\/evidence ()(multipart:file,ownerType,ownerId)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "991",
+							"uri": "http://localhost:3001/evidence",
+							"nodeName": "http:\/\/localhost:3001\/evidence ()(multipart:file,ownerType,ownerId)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "429",
+							"otherinfo": ""
+						},
+						{
+							"id": "44102",
+							"uri": "http://localhost:3001/evidence",
+							"nodeName": "http:\/\/localhost:3001\/evidence ()(multipart:rtobject,ownerType,ownerId)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "429",
+							"otherinfo": ""
+						},
+						{
+							"id": "38753",
+							"uri": "http://localhost:3001/evidence/",
+							"nodeName": "http:\/\/localhost:3001\/evidence\/ ()(multipart:file,ownerType,ownerId)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "429",
+							"otherinfo": ""
+						},
+						{
+							"id": "830",
+							"uri": "http://localhost:3001/green-points",
+							"nodeName": "http:\/\/localhost:3001\/green-points ()({code,name,zoneId,wasteTypes:[],address,lat,lng,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "106",
+							"uri": "http://localhost:3001/green-points",
+							"nodeName": "http:\/\/localhost:3001\/green-points ()({code,name,zoneId,wasteTypes:[],address,lat,lng,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38763",
+							"uri": "http://localhost:3001/green-points/",
+							"nodeName": "http:\/\/localhost:3001\/green-points\/ ()({code,name,zoneId,wasteTypes:[],address,lat,lng,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "1044",
+							"uri": "http://localhost:3001/green-spaces",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces ()({name,spaceType,zoneId,lat,lng,areaM2,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "101",
+							"uri": "http://localhost:3001/green-spaces",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces ()({name,spaceType,zoneId,lat,lng,areaM2,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38764",
+							"uri": "http://localhost:3001/green-spaces/",
+							"nodeName": "http:\/\/localhost:3001\/green-spaces\/ ()({name,spaceType,zoneId,lat,lng,areaM2,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "28756",
+							"uri": "http://localhost:3001/latest/meta-data/",
+							"nodeName": "http:\/\/localhost:3001\/latest\/meta-data\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "28796",
+							"uri": "http://localhost:3001/metadata/instance",
+							"nodeName": "http:\/\/localhost:3001\/metadata\/instance",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "28802",
+							"uri": "http://localhost:3001/metadata/v1",
+							"nodeName": "http:\/\/localhost:3001\/metadata\/v1",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "28766",
+							"uri": "http://localhost:3001/opc/v1/instance/",
+							"nodeName": "http:\/\/localhost:3001\/opc\/v1\/instance\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "28777",
+							"uri": "http://localhost:3001/opc/v2/instance/",
+							"nodeName": "http:\/\/localhost:3001\/opc\/v2\/instance\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "28804",
+							"uri": "http://localhost:3001/openstack/latest/meta_data.json",
+							"nodeName": "http:\/\/localhost:3001\/openstack\/latest\/meta_data.json",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "143",
+							"uri": "http://localhost:3001/repair-requests",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests ()({damageType,severity,publicSafetyRisk,detectedInType,detectedInId,address})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38769",
+							"uri": "http://localhost:3001/repair-requests/",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests\/ ()({damageType,severity,publicSafetyRisk,detectedInType,detectedInId,address})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "146",
+							"uri": "http://localhost:3001/repair-requests/id/close",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests\/id\/close",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38760",
+							"uri": "http://localhost:3001/repair-requests/id/close/",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests\/id\/close\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "145",
+							"uri": "http://localhost:3001/repair-requests/id/start",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests\/id\/start ()({workOrderId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38762",
+							"uri": "http://localhost:3001/repair-requests/id/start/",
+							"nodeName": "http:\/\/localhost:3001\/repair-requests\/id\/start\/ ()({workOrderId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "1267",
+							"uri": "http://localhost:3001/routes",
+							"nodeName": "http:\/\/localhost:3001\/routes ()({code,name,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "38770",
+							"uri": "http://localhost:3001/routes/",
+							"nodeName": "http:\/\/localhost:3001\/routes\/ ()({code,name,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "409",
+							"otherinfo": ""
+						},
+						{
+							"id": "1487",
+							"uri": "http://localhost:3001/service-frequencies",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies ()({serviceTypeId,routeId,weekdays:[],shift,validFrom,validTo})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "24",
+							"uri": "http://localhost:3001/service-frequencies",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies ()({serviceTypeId,routeId,weekdays:[{}],shift,validFrom,validTo})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38777",
+							"uri": "http://localhost:3001/service-frequencies/",
+							"nodeName": "http:\/\/localhost:3001\/service-frequencies\/ ()({serviceTypeId,routeId,weekdays:[{}],shift,validFrom,validTo})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "1368",
+							"uri": "http://localhost:3001/service-types",
+							"nodeName": "http:\/\/localhost:3001\/service-types ()({code,name,category,mode,requiresVehicle,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "12",
+							"uri": "http://localhost:3001/service-types",
+							"nodeName": "http:\/\/localhost:3001\/service-types ()({code,name,category,mode,requiresVehicle,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "409",
+							"otherinfo": ""
+						},
+						{
+							"id": "1421",
+							"uri": "http://localhost:3001/service-types",
+							"nodeName": "http:\/\/localhost:3001\/service-types ()({code,name,category,mode,requiresVehicle,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "38778",
+							"uri": "http://localhost:3001/service-types/",
+							"nodeName": "http:\/\/localhost:3001\/service-types\/ ()({code,name,category,mode,requiresVehicle,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "409",
+							"otherinfo": ""
+						},
+						{
+							"id": "1783",
+							"uri": "http://localhost:3001/services",
+							"nodeName": "http:\/\/localhost:3001\/services ()({serviceTypeId,scheduledDate,origin,routeId,crewId,vehicleId,windowFrom,windowTo})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "111",
+							"uri": "http://localhost:3001/services",
+							"nodeName": "http:\/\/localhost:3001\/services ()({serviceTypeId,scheduledDate,origin,routeId,crewId,vehicleId,windowFrom,windowTo})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38793",
+							"uri": "http://localhost:3001/services/",
+							"nodeName": "http:\/\/localhost:3001\/services\/ ()({serviceTypeId,scheduledDate,origin,routeId,crewId,vehicleId,windowFrom,windowTo})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "114",
+							"uri": "http://localhost:3001/services/id/assign-crew",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/assign-crew ()({crewId,vehicleId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38773",
+							"uri": "http://localhost:3001/services/id/assign-crew/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/assign-crew\/ ()({crewId,vehicleId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "122",
+							"uri": "http://localhost:3001/services/id/cancel",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/cancel ()({reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38776",
+							"uri": "http://localhost:3001/services/id/cancel/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/cancel\/ ()({reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "128",
+							"uri": "http://localhost:3001/services/id/collection-records",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/collection-records ()({wasteType,disposalSiteId,volumeM3,weightKg})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38774",
+							"uri": "http://localhost:3001/services/id/collection-records/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/collection-records\/ ()({wasteType,disposalSiteId,volumeM3,weightKg})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "121",
+							"uri": "http://localhost:3001/services/id/complete",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/complete ()({})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38786",
+							"uri": "http://localhost:3001/services/id/complete/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/complete\/ ()({})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "124",
+							"uri": "http://localhost:3001/services/id/confirm-reschedule",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/confirm-reschedule ()({scheduledDate,windowFrom,windowTo})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38779",
+							"uri": "http://localhost:3001/services/id/confirm-reschedule/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/confirm-reschedule\/ ()({scheduledDate,windowFrom,windowTo})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "117",
+							"uri": "http://localhost:3001/services/id/delay-notices",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/delay-notices ()({delayType,delayMinutes,reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38782",
+							"uri": "http://localhost:3001/services/id/delay-notices/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/delay-notices\/ ()({delayType,delayMinutes,reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "123",
+							"uri": "http://localhost:3001/services/id/reschedule",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/reschedule ()({reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38783",
+							"uri": "http://localhost:3001/services/id/reschedule/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/reschedule\/ ()({reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "120",
+							"uri": "http://localhost:3001/services/id/resume",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/resume",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38780",
+							"uri": "http://localhost:3001/services/id/resume/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/resume\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "118",
+							"uri": "http://localhost:3001/services/id/start",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/start",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38781",
+							"uri": "http://localhost:3001/services/id/start/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/start\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "119",
+							"uri": "http://localhost:3001/services/id/suspend",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/suspend ()({reason,note})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38784",
+							"uri": "http://localhost:3001/services/id/suspend/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/suspend\/ ()({reason,note})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "126",
+							"uri": "http://localhost:3001/services/id/zone-results",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/zone-results ()({zoneId,status,reason,proposedDate,notes})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38785",
+							"uri": "http://localhost:3001/services/id/zone-results/",
+							"nodeName": "http:\/\/localhost:3001\/services\/id\/zone-results\/ ()({zoneId,status,reason,proposedDate,notes})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "148",
+							"uri": "http://localhost:3001/street-closure-requests",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests ()({sourceType,sourceId,reason,sections:[{streetName,fromCross,toCross,direction}],requestedFrom,requestedTo,closureType})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38794",
+							"uri": "http://localhost:3001/street-closure-requests/",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/ ()({sourceType,sourceId,reason,sections:[{streetName,fromCross,toCross,direction}],requestedFrom,requestedTo,closureType})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "150",
+							"uri": "http://localhost:3001/street-closure-requests/id/approve",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/id\/approve ()({closureId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38792",
+							"uri": "http://localhost:3001/street-closure-requests/id/approve/",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/id\/approve\/ ()({closureId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "152",
+							"uri": "http://localhost:3001/street-closure-requests/id/end",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/id\/end",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38791",
+							"uri": "http://localhost:3001/street-closure-requests/id/end/",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/id\/end\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "151",
+							"uri": "http://localhost:3001/street-closure-requests/id/reject",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/id\/reject ()({reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38789",
+							"uri": "http://localhost:3001/street-closure-requests/id/reject/",
+							"nodeName": "http:\/\/localhost:3001\/street-closure-requests\/id\/reject\/ ()({reason})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "95",
+							"uri": "http://localhost:3001/tree-interventions",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions ()({interventionType,treeIds:[],address,requiresStreetClosure,priority,justification})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38801",
+							"uri": "http://localhost:3001/tree-interventions/",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/ ()({interventionType,treeIds:[],address,requiresStreetClosure,priority,justification})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "100",
+							"uri": "http://localhost:3001/tree-interventions/id/assign-service",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id\/assign-service ()({serviceId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38790",
+							"uri": "http://localhost:3001/tree-interventions/id/assign-service/",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id\/assign-service\/ ()({serviceId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "98",
+							"uri": "http://localhost:3001/tree-interventions/id/authorize",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id\/authorize ()({authorizedByUserId,justification})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38788",
+							"uri": "http://localhost:3001/tree-interventions/id/authorize/",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id\/authorize\/ ()({authorizedByUserId,justification})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "99",
+							"uri": "http://localhost:3001/tree-interventions/id/reject",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id\/reject",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38795",
+							"uri": "http://localhost:3001/tree-interventions/id/reject/",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id\/reject\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "97",
+							"uri": "http://localhost:3001/tree-interventions/id/submit-for-authorization",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id\/submit-for-authorization",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38797",
+							"uri": "http://localhost:3001/tree-interventions/id/submit-for-authorization/",
+							"nodeName": "http:\/\/localhost:3001\/tree-interventions\/id\/submit-for-authorization\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "1922",
+							"uri": "http://localhost:3001/trees",
+							"nodeName": "http:\/\/localhost:3001\/trees ()({surveyCode,zoneId,species,address,lat,lng,heightM,diameterCm,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "88",
+							"uri": "http://localhost:3001/trees",
+							"nodeName": "http:\/\/localhost:3001\/trees ()({surveyCode,zoneId,species,address,lat,lng,heightM,diameterCm,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "38802",
+							"uri": "http://localhost:3001/trees/",
+							"nodeName": "http:\/\/localhost:3001\/trees\/ ()({surveyCode,zoneId,species,address,lat,lng,heightM,diameterCm,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "93",
+							"uri": "http://localhost:3001/trees/treeId/surveys",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId\/surveys ()({surveyedAt,healthStatus,riskLevel,riskType,suggestedIntervention,inspectorId,requiresStreetClosure,requiresPublicWorks,notes})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "38800",
+							"uri": "http://localhost:3001/trees/treeId/surveys/",
+							"nodeName": "http:\/\/localhost:3001\/trees\/treeId\/surveys\/ ()({surveyedAt,healthStatus,riskLevel,riskType,suggestedIntervention,inspectorId,requiresStreetClosure,requiresPublicWorks,notes})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "403",
+							"otherinfo": ""
+						},
+						{
+							"id": "2068",
+							"uri": "http://localhost:3001/vehicles",
+							"nodeName": "http:\/\/localhost:3001\/vehicles ()({plate,vehicleType,capacity,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "38811",
+							"uri": "http://localhost:3001/vehicles/",
+							"nodeName": "http:\/\/localhost:3001\/vehicles\/ ()({plate,vehicleType,capacity,active})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "409",
+							"otherinfo": ""
+						},
+						{
+							"id": "6",
+							"uri": "http://localhost:3001/zones",
+							"nodeName": "http:\/\/localhost:3001\/zones ()({code,name,active,communeId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38810",
+							"uri": "http://localhost:3001/zones/",
+							"nodeName": "http:\/\/localhost:3001\/zones\/ ()({code,name,active,communeId})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "10",
+							"uri": "http://localhost:3001/zones/id/neighborhoods",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/neighborhoods ()({neighborhoodIds:[]})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38806",
+							"uri": "http://localhost:3001/zones/id/neighborhoods/",
+							"nodeName": "http:\/\/localhost:3001\/zones\/id\/neighborhoods\/ ()({neighborhoodIds:[]})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "1182",
+							"uri": "http://localhost:3001/role-assignments/42",
+							"nodeName": "http:\/\/localhost:3001\/role-assignments\/42 ()({roles:[]})",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "22",
+							"uri": "http://localhost:3001/routes/id/stops",
+							"nodeName": "http:\/\/localhost:3001\/routes\/id\/stops ()({stops:[{zoneId,estimatedDurationMin}]})",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "38768",
+							"uri": "http://localhost:3001/routes/id/stops/",
+							"nodeName": "http:\/\/localhost:3001\/routes\/id\/stops\/ ()({stops:[{zoneId,estimatedDurationMin}]})",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						}
+					],
+					"count": "415",
+					"systemic": false,
+					"solution": "",
+					"otherinfo": "",
+					"reference": "",
+					"cweid": "388",
+					"wascid": "20",
+					"sourceid": "61"
+				},
+				{
+					"pluginid": "10024",
+					"alertRef": "10024",
+					"alert": "Information Disclosure - Sensitive Information in URL",
+					"name": "Information Disclosure - Sensitive Information in URL",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informational (Medium)",
+					"desc": "<p>The request appeared to contain sensitive information leaked in the URL. This can violate PCI and most organizational compliance policies. You can configure the list of strings for this check to add or remove values specific to your environment.</p>",
+					"instances":[ 
+						{
+							"id": "426",
+							"uri": "http://localhost:3001/environmental-reports?page=1&pageSize=20&status=%5B%22RECEIVED%22,%22UNDER_REVIEW%22%5D&reportType=NOISE&priority=LOW&ticketId=550e8400-e29b-41d4-a716-446655440000&publicId=TK-2026-000123&crewId=e5f6a7b8-c9d0-4234-8fab-345678901234&from=Tue%20Sep%2001%2000:00:00%20UTC%202026&to=Wed%20Sep%2030%2000:00:00%20UTC%202026&createdFrom=Tue%20Sep%2001%2000:00:00%20UTC%202026&createdTo=Wed%20Sep%2030%2000:00:00%20UTC%202026&overdue=true&zoneId=zoneId&search=Cintura",
+							"nodeName": "http:\/\/localhost:3001\/environmental-reports (createdFrom,createdTo,crewId,from,overdue,page,pageSize,priority,publicId,reportType,search,status,ticketId,to,zoneId)",
+							"method": "GET",
+							"param": "ticketId",
+							"attack": "",
+							"evidence": "ticketId",
+							"otherinfo": "The URL contains potentially sensitive information. The following string was found via the pattern: ticket\nticketId"
+						},
+						{
+							"id": "335",
+							"uri": "http://localhost:3001/services?page=1&pageSize=20&status=SCHEDULED&serviceTypeId=serviceTypeId&mode=ROUTE&origin=PLANNED&crewId=crewId&vehicleId=vehicleId&zoneId=zoneId&targetType=CONTAINER&targetId=c3d4e5f6-a7b8-4012-8def-123456789012&ticketId=TCK-2026-004821&scheduledFrom=Tue%20Sep%2001%2000:00:00%20UTC%202026&scheduledTo=Wed%20Sep%2030%2000:00:00%20UTC%202026",
+							"nodeName": "http:\/\/localhost:3001\/services (crewId,mode,origin,page,pageSize,scheduledFrom,scheduledTo,serviceTypeId,status,targetId,targetType,ticketId,vehicleId,zoneId)",
+							"method": "GET",
+							"param": "ticketId",
+							"attack": "",
+							"evidence": "ticketId",
+							"otherinfo": "The URL contains potentially sensitive information. The following string was found via the pattern: ticket\nticketId"
+						}
+					],
+					"count": "2",
+					"systemic": false,
+					"solution": "<p>Do not pass sensitive information in URIs.</p>",
+					"otherinfo": "<p>The URL contains potentially sensitive information. The following string was found via the pattern: ticket</p><p>ticketId</p>",
+					"reference": "",
+					"cweid": "598",
+					"wascid": "13",
+					"sourceid": "153"
+				},
+				{
+					"pluginid": "10049",
+					"alertRef": "10049-1",
+					"alert": "Non-Storable Content",
+					"name": "Non-Storable Content",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informational (Medium)",
+					"desc": "<p>The response contents are not storable by caching components such as proxy servers. If the response does not contain sensitive, personal or user-specific information, it may benefit from being stored and cached, to improve performance.</p>",
+					"instances":[ 
+						{
+							"id": "55",
+							"uri": "http://localhost:3001/events/inbox?page=1&pageSize=20&status=processed&eventType=ticketUpdated&sourceModule=tickets&from=Thu%20Oct%2001%2000:00:00%20UTC%202026&to=Sat%20Oct%2031%2000:00:00%20UTC%202026",
+							"nodeName": "http:\/\/localhost:3001\/events\/inbox (eventType,from,page,pageSize,sourceModule,status,to)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "authorization:",
+							"otherinfo": ""
+						},
+						{
+							"id": "37",
+							"uri": "http://localhost:3001/health",
+							"nodeName": "http:\/\/localhost:3001\/health",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "authorization:",
+							"otherinfo": ""
+						},
+						{
+							"id": "38",
+							"uri": "http://localhost:3001/health/ready",
+							"nodeName": "http:\/\/localhost:3001\/health\/ready",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "authorization:",
+							"otherinfo": ""
+						},
+						{
+							"id": "40",
+							"uri": "http://localhost:3001/me",
+							"nodeName": "http:\/\/localhost:3001\/me",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "authorization:",
+							"otherinfo": ""
+						},
+						{
+							"id": "65",
+							"uri": "http://localhost:3001/events/inbox",
+							"nodeName": "http:\/\/localhost:3001\/events\/inbox ()({\"eventId\":\"3f6c1b7e-9d24-4a1f-9f2a-2b0f0c7d5e11\",\"eventType\":\"workOrderCompleted\",\"data\":\"{\"sourceRequestId\":\"0d9c8b7a-6f5e-4d3c-8b2a-1f0e9d8c7b6a\",\"workOrderId\":\"f1e2d3c4-b5a6-4789-9abc-def012345678\",\"completedAt\":\"2026-09-29T17:45:00Z\"}\",\"eventVersion\":\"1.0\",\"occurredAt\":\"2026-09-29T18:00Z\",\"occuredAt\":\"2026-09-29T18:00Z\",\"sourceModule\":\"obras\",\"correlationId\":\"8a1f0c22-5d3e-4b77-9c10-6e2b4a90f3d5\",\"causationId\":\"John Doe\",\"specVersion\":\"1.0\",\"producer\":\"M7\",\"subject\":\"Zaproxy dolore alias impedit expedi)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "authorization:",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>The content may be marked as storable by ensuring that the following conditions are satisfied:</p><p>The request method must be understood by the cache and defined as being cacheable (\"GET\", \"HEAD\", and \"POST\" are currently defined as cacheable)</p><p>The response status code must be understood by the cache (one of the 1XX, 2XX, 3XX, 4XX, or 5XX response classes are generally understood)</p><p>The \"no-store\" cache directive must not appear in the request or response header fields</p><p>For caching by \"shared\" caches such as \"proxy\" caches, the \"private\" response directive must not appear in the response</p><p>For caching by \"shared\" caches such as \"proxy\" caches, the \"Authorization\" header field must not appear in the request, unless the response explicitly allows it (using one of the \"must-revalidate\", \"public\", or \"s-maxage\" Cache-Control response directives)</p><p>In addition to the conditions above, at least one of the following conditions must also be satisfied by the response:</p><p>It must contain an \"Expires\" header field</p><p>It must contain a \"max-age\" response directive</p><p>For \"shared\" caches such as \"proxy\" caches, it must contain a \"s-maxage\" response directive</p><p>It must contain a \"Cache Control Extension\" that allows it to be cached</p><p>It must have a status code that is defined as cacheable by default (200, 203, 204, 206, 300, 301, 404, 405, 410, 414, 501).</p>",
+					"otherinfo": "",
+					"reference": "<p>https://datatracker.ietf.org/doc/html/rfc7234</p><p>https://datatracker.ietf.org/doc/html/rfc7231</p><p>https://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html</p>",
+					"cweid": "524",
+					"wascid": "13",
+					"sourceid": "6"
+				},
+				{
+					"pluginid": "90005",
+					"alertRef": "90005-3",
+					"alert": "Sec-Fetch-Dest Header is Missing",
+					"name": "Sec-Fetch-Dest Header is Missing",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>Specifies how and where the data would be used. For instance, if the value is audio, then the requested resource must be audio data and not any other type of resource.</p>",
+					"instances":[ 
+						{
+							"id": "49",
+							"uri": "http://localhost:3001/health",
+							"nodeName": "http:\/\/localhost:3001\/health",
+							"method": "GET",
+							"param": "Sec-Fetch-Dest",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "53",
+							"uri": "http://localhost:3001/health/ready",
+							"nodeName": "http:\/\/localhost:3001\/health\/ready",
+							"method": "GET",
+							"param": "Sec-Fetch-Dest",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "51",
+							"uri": "http://localhost:3001/me",
+							"nodeName": "http:\/\/localhost:3001\/me",
+							"method": "GET",
+							"param": "Sec-Fetch-Dest",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Ensure that Sec-Fetch-Dest header is included in request headers.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Sec-Fetch-Dest</p>",
+					"cweid": "352",
+					"wascid": "9",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "90005",
+					"alertRef": "90005-2",
+					"alert": "Sec-Fetch-Mode Header is Missing",
+					"name": "Sec-Fetch-Mode Header is Missing",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>Allows to differentiate between requests for navigating between HTML pages and requests for loading resources like images, audio etc.</p>",
+					"instances":[ 
+						{
+							"id": "47",
+							"uri": "http://localhost:3001/health",
+							"nodeName": "http:\/\/localhost:3001\/health",
+							"method": "GET",
+							"param": "Sec-Fetch-Mode",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "46",
+							"uri": "http://localhost:3001/health/ready",
+							"nodeName": "http:\/\/localhost:3001\/health\/ready",
+							"method": "GET",
+							"param": "Sec-Fetch-Mode",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "45",
+							"uri": "http://localhost:3001/me",
+							"nodeName": "http:\/\/localhost:3001\/me",
+							"method": "GET",
+							"param": "Sec-Fetch-Mode",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Ensure that Sec-Fetch-Mode header is included in request headers.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Sec-Fetch-Mode</p>",
+					"cweid": "352",
+					"wascid": "9",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "90005",
+					"alertRef": "90005-1",
+					"alert": "Sec-Fetch-Site Header is Missing",
+					"name": "Sec-Fetch-Site Header is Missing",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>Specifies the relationship between request initiator's origin and target's origin.</p>",
+					"instances":[ 
+						{
+							"id": "42",
+							"uri": "http://localhost:3001/health",
+							"nodeName": "http:\/\/localhost:3001\/health",
+							"method": "GET",
+							"param": "Sec-Fetch-Site",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "43",
+							"uri": "http://localhost:3001/health/ready",
+							"nodeName": "http:\/\/localhost:3001\/health\/ready",
+							"method": "GET",
+							"param": "Sec-Fetch-Site",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "44",
+							"uri": "http://localhost:3001/me",
+							"nodeName": "http:\/\/localhost:3001\/me",
+							"method": "GET",
+							"param": "Sec-Fetch-Site",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Ensure that Sec-Fetch-Site header is included in request headers.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Sec-Fetch-Site</p>",
+					"cweid": "352",
+					"wascid": "9",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "90005",
+					"alertRef": "90005-4",
+					"alert": "Sec-Fetch-User Header is Missing",
+					"name": "Sec-Fetch-User Header is Missing",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>Specifies if a navigation request was initiated by a user.</p>",
+					"instances":[ 
+						{
+							"id": "50",
+							"uri": "http://localhost:3001/health",
+							"nodeName": "http:\/\/localhost:3001\/health",
+							"method": "GET",
+							"param": "Sec-Fetch-User",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "54",
+							"uri": "http://localhost:3001/health/ready",
+							"nodeName": "http:\/\/localhost:3001\/health\/ready",
+							"method": "GET",
+							"param": "Sec-Fetch-User",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "52",
+							"uri": "http://localhost:3001/me",
+							"nodeName": "http:\/\/localhost:3001\/me",
+							"method": "GET",
+							"param": "Sec-Fetch-User",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Ensure that Sec-Fetch-User header is included in user initiated requests.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Sec-Fetch-User</p>",
+					"cweid": "352",
+					"wascid": "9",
+					"sourceid": "1"
+				}
+			]
+		}
+	],
+	"sequences":[
+	]
+
+}

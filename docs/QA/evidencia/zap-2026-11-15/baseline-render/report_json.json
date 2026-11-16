@@ -1,0 +1,949 @@
+{
+	"@programName": "ZAP",
+	"@version": "2.17.0",
+	"@generated": "Sun, 15 Nov 2026 21:34:22",
+	"created": "2026-11-15T21:34:22.342992099Z",
+	"insights":[
+		{
+			"level": "Low",
+			"reason": "Warning",
+			"site": "",
+			"key": "insight.log.warn",
+			"description": "ZAP warnings logged - see the zap.log file for details",
+			"statistic": "2"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://m6-backend-m64k.onrender.com",
+			"key": "insight.code.2xx",
+			"description": "Percentage of responses with status code 2xx",
+			"statistic": "61"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://m6-backend-m64k.onrender.com",
+			"key": "insight.code.4xx",
+			"description": "Percentage of responses with status code 4xx",
+			"statistic": "38"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://m6-backend-m64k.onrender.com",
+			"key": "insight.endpoint.ctype.application/javascript",
+			"description": "Percentage of endpoints with content type application/javascript",
+			"statistic": "27"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://m6-backend-m64k.onrender.com",
+			"key": "insight.endpoint.ctype.application/problem+json",
+			"description": "Percentage of endpoints with content type application/problem+json",
+			"statistic": "36"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://m6-backend-m64k.onrender.com",
+			"key": "insight.endpoint.ctype.image/png",
+			"description": "Percentage of endpoints with content type image/png",
+			"statistic": "18"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://m6-backend-m64k.onrender.com",
+			"key": "insight.endpoint.ctype.text/css",
+			"description": "Percentage of endpoints with content type text/css",
+			"statistic": "9"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://m6-backend-m64k.onrender.com",
+			"key": "insight.endpoint.ctype.text/html",
+			"description": "Percentage of endpoints with content type text/html",
+			"statistic": "9"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://m6-backend-m64k.onrender.com",
+			"key": "insight.endpoint.method.GET",
+			"description": "Percentage of endpoints with method GET",
+			"statistic": "100"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://m6-backend-m64k.onrender.com",
+			"key": "insight.endpoint.total",
+			"description": "Count of total endpoints",
+			"statistic": "11"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://m6-backend-m64k.onrender.com",
+			"key": "insight.response.slow",
+			"description": "Percentage of slow responses",
+			"statistic": "76"
+		}
+	],
+	"site":[ 
+		{
+			"@name": "https://m6-backend-m64k.onrender.com",
+			"@host": "m6-backend-m64k.onrender.com",
+			"@port": "443",
+			"@ssl": "true",
+			"alerts": [ 
+				{
+					"pluginid": "10003",
+					"alertRef": "10003",
+					"alert": "Vulnerable JS Library",
+					"name": "Vulnerable JS Library",
+					"riskcode": "3",
+					"confidence": "2",
+					"riskdesc": "High (Medium)",
+					"desc": "<p>The identified library appears to be vulnerable.</p>",
+					"instances":[ 
+						{
+							"id": "48",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-bundle.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-bundle.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "DOMPurify.version=\"3.1.4\"",
+							"otherinfo": "The identified library DOMPurify, version 3.1.4 is vulnerable.\nCVE-2025-26791\nCVE-2026-66010\nCVE-2026-75838\nCVE-2025-15599\nCVE-2026-41239\nCVE-2026-65899\nCVE-2026-41238\nCVE-2026-65898\nCVE-2026-109345\nCVE-2026-65912\nCVE-2026-65901\nCVE-2026-65900\nCVE-2026-65914\nCVE-2026-65903\nCVE-2026-65913\nCVE-2026-65902\nCVE-2026-0540\nCVE-2026-41240\nCVE-2026-49978\nCVE-2026-49458\nCVE-2026-116802\nCVE-2026-49459\nCVE-2026-116803\nhttps://www.vulncheck.com/advisories/dompurify-xss-via-textarea-rawtext-bypass-in-safeforxml\nhttps://www.vulncheck.com/advisories/dompurify-xss-via-missing-rawtext-elements-in-safeforxml\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-gvmj-g25r-r7wr\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-c2j3-45gr-mqc4\nhttps://github.com/cure53/DOMPurify/commit/d18ffcb554e0001748865da03ac75dd7829f0f02\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-cj63-jhhr-wcxv\nhttps://github.com/cure53/DOMPurify/pull/1672\nhttps://www.vulncheck.com/advisories/dompurify-xss-via-missing-rawtext-elements-in-safe-for-xml\nhttps://github.com/cure53/DOMPurify/commit/fca0a938b4261ddc9c0293a289935a9029c049f5\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-39q2-94rc-95cp\nhttps://github.com/cure53/DOMPurify/commit/c861f5a83fb8d90800f1680f855fee551161ac2b\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-r47g-fvhr-h676\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-h7mw-gpvr-xq4m\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-cjmm-f4jc-qw8r\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-cmwh-pvxp-8882\nhttps://github.com/cure53/DOMPurify/pull/1537\nhttps://github.com/cure53/DOMPurify/pull/1636\nhttps://github.com/advisories/GHSA-vhxf-7vqr-mrjg\nhttps://github.com/cure53/DOMPurify/pull/1557\nhttps://nvd.nist.gov/vuln/detail/CVE-2025-26791\nhttps://ensy.zip/posts/dompurify-323-bypass\nhttps://nsysean.github.io/posts/dompurify-323-bypass\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-rp9w-3fw7-7cwq\nhttps://github.com/cure53/DOMPurify/commit/b9b9d80f7e401771c2ccaef5f45def7eec8f27d7\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-mrv2-3pqr-j5jr\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-c6gr-qvv4-5v3f\nhttps://github.com/cure53/DOMPurify/releases/tag/3.2.4\nhttps://github.com/cure53/DOMPurify/releases/tag/3.3.2\nhttps://github.com/cure53/DOMPurify/releases/tag/3.4.0\nhttps://github.com/cure53/DOMPurify/releases/tag/3.4.16\nhttps://github.com/cure53/DOMPurify/commit/3067f7746769\nhttps://github.com/cure53/DOMPurify/releases/tag/3.4.17\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-vxr8-fq34-vvx9\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-v9jr-rg53-9pgp\nhttps://www.vulncheck.com/advisories/dompurify-xss-via-textarea-rawtext-bypass-in-safe-for-xml\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-x4vx-rjvf-j5p4\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-hpcv-96wg-7vj8\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-h8r8-wccr-v5f2\nhttps://github.com/cure53/DOMPurify\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-55q2-fjhq-7xh7\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-6688-9rhm-gjv2\nhttps://github.com/cure53/DOMPurify/commit/a77a3e78b59f72fa4d1c83f22e121ad9cc7d3575\nhttps://github.com/cure53/DOMPurify/releases/tag/3.4.12\nhttps://github.com/cure53/DOMPurify/releases/tag/3.4.13\nhttps://github.com/cure53/DOMPurify/commit/a9ca1e537422319a557a9a2aa61f003b23b4a197\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-crv5-9vww-q3g8\nhttps://github.com/cure53/DOMPurify/security/advisories/GHSA-76mc-f452-cxcm\n"
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>Upgrade to the latest version of the affected library.</p>",
+					"otherinfo": "<p>The identified library DOMPurify, version 3.1.4 is vulnerable.</p><p>CVE-2025-26791</p><p>CVE-2026-66010</p><p>CVE-2026-75838</p><p>CVE-2025-15599</p><p>CVE-2026-41239</p><p>CVE-2026-65899</p><p>CVE-2026-41238</p><p>CVE-2026-65898</p><p>CVE-2026-109345</p><p>CVE-2026-65912</p><p>CVE-2026-65901</p><p>CVE-2026-65900</p><p>CVE-2026-65914</p><p>CVE-2026-65903</p><p>CVE-2026-65913</p><p>CVE-2026-65902</p><p>CVE-2026-0540</p><p>CVE-2026-41240</p><p>CVE-2026-49978</p><p>CVE-2026-49458</p><p>CVE-2026-116802</p><p>CVE-2026-49459</p><p>CVE-2026-116803</p><p>https://www.vulncheck.com/advisories/dompurify-xss-via-textarea-rawtext-bypass-in-safeforxml</p><p>https://www.vulncheck.com/advisories/dompurify-xss-via-missing-rawtext-elements-in-safeforxml</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-gvmj-g25r-r7wr</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-c2j3-45gr-mqc4</p><p>https://github.com/cure53/DOMPurify/commit/d18ffcb554e0001748865da03ac75dd7829f0f02</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-cj63-jhhr-wcxv</p><p>https://github.com/cure53/DOMPurify/pull/1672</p><p>https://www.vulncheck.com/advisories/dompurify-xss-via-missing-rawtext-elements-in-safe-for-xml</p><p>https://github.com/cure53/DOMPurify/commit/fca0a938b4261ddc9c0293a289935a9029c049f5</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-39q2-94rc-95cp</p><p>https://github.com/cure53/DOMPurify/commit/c861f5a83fb8d90800f1680f855fee551161ac2b</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-r47g-fvhr-h676</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-h7mw-gpvr-xq4m</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-cjmm-f4jc-qw8r</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-cmwh-pvxp-8882</p><p>https://github.com/cure53/DOMPurify/pull/1537</p><p>https://github.com/cure53/DOMPurify/pull/1636</p><p>https://github.com/advisories/GHSA-vhxf-7vqr-mrjg</p><p>https://github.com/cure53/DOMPurify/pull/1557</p><p>https://nvd.nist.gov/vuln/detail/CVE-2025-26791</p><p>https://ensy.zip/posts/dompurify-323-bypass</p><p>https://nsysean.github.io/posts/dompurify-323-bypass</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-rp9w-3fw7-7cwq</p><p>https://github.com/cure53/DOMPurify/commit/b9b9d80f7e401771c2ccaef5f45def7eec8f27d7</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-mrv2-3pqr-j5jr</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-c6gr-qvv4-5v3f</p><p>https://github.com/cure53/DOMPurify/releases/tag/3.2.4</p><p>https://github.com/cure53/DOMPurify/releases/tag/3.3.2</p><p>https://github.com/cure53/DOMPurify/releases/tag/3.4.0</p><p>https://github.com/cure53/DOMPurify/releases/tag/3.4.16</p><p>https://github.com/cure53/DOMPurify/commit/3067f7746769</p><p>https://github.com/cure53/DOMPurify/releases/tag/3.4.17</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-vxr8-fq34-vvx9</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-v9jr-rg53-9pgp</p><p>https://www.vulncheck.com/advisories/dompurify-xss-via-textarea-rawtext-bypass-in-safe-for-xml</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-x4vx-rjvf-j5p4</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-hpcv-96wg-7vj8</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-h8r8-wccr-v5f2</p><p>https://github.com/cure53/DOMPurify</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-55q2-fjhq-7xh7</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-6688-9rhm-gjv2</p><p>https://github.com/cure53/DOMPurify/commit/a77a3e78b59f72fa4d1c83f22e121ad9cc7d3575</p><p>https://github.com/cure53/DOMPurify/releases/tag/3.4.12</p><p>https://github.com/cure53/DOMPurify/releases/tag/3.4.13</p><p>https://github.com/cure53/DOMPurify/commit/a9ca1e537422319a557a9a2aa61f003b23b4a197</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-crv5-9vww-q3g8</p><p>https://github.com/cure53/DOMPurify/security/advisories/GHSA-76mc-f452-cxcm</p><p></p>",
+					"reference": "<p>https://owasp.org/Top10/2021/A06_2021-Vulnerable_and_Outdated_Components/</p>",
+					"cweid": "1395",
+					"wascid": "-1",
+					"sourceid": "25"
+				},
+				{
+					"pluginid": "10038",
+					"alertRef": "10038-1",
+					"alert": "Content Security Policy (CSP) Header Not Set",
+					"name": "Content Security Policy (CSP) Header Not Set",
+					"riskcode": "2",
+					"confidence": "3",
+					"riskdesc": "Medium (High)",
+					"desc": "<p>Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks, including Cross Site Scripting (XSS) and data injection attacks. These attacks are used for everything from data theft to site defacement or distribution of malware. CSP provides a set of standard HTTP headers that allow website owners to declare approved sources of content that browsers should be allowed to load on that page \u2014 covered types are JavaScript, CSS, HTML frames, fonts, images and embeddable objects such as Java applets, ActiveX, audio and video files.</p>",
+					"instances":[ 
+						{
+							"id": "1",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>Ensure that your web server, application server, load balancer, etc. is configured to set the Content-Security-Policy header.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP</p><p>https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html</p><p>https://www.w3.org/TR/CSP/</p><p>https://w3c.github.io/webappsec-csp/</p><p>https://web.dev/articles/csp</p><p>https://caniuse.com/#feat=contentsecuritypolicy</p><p>https://content-security-policy.com/</p>",
+					"cweid": "693",
+					"wascid": "15",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "90004",
+					"alertRef": "90004-2",
+					"alert": "Cross-Origin-Embedder-Policy Header Missing or Invalid",
+					"name": "Cross-Origin-Embedder-Policy Header Missing or Invalid",
+					"riskcode": "1",
+					"confidence": "2",
+					"riskdesc": "Low (Medium)",
+					"desc": "<p>Cross-Origin-Embedder-Policy header is a response header that prevents a document from loading any cross-origin resources that don't explicitly grant the document permission (using CORP or CORS).</p>",
+					"instances":[ 
+						{
+							"id": "10",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "Cross-Origin-Embedder-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>Ensure that the application/web server sets the Cross-Origin-Embedder-Policy header appropriately, and that it sets the Cross-Origin-Embedder-Policy header to 'require-corp' for documents.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that supports the Cross-Origin-Embedder-Policy header (https://caniuse.com/mdn-http_headers_cross-origin-embedder-policy).</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Embedder-Policy</p>",
+					"cweid": "693",
+					"wascid": "14",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "90004",
+					"alertRef": "90004-3",
+					"alert": "Cross-Origin-Opener-Policy Header Missing or Invalid",
+					"name": "Cross-Origin-Opener-Policy Header Missing or Invalid",
+					"riskcode": "1",
+					"confidence": "2",
+					"riskdesc": "Low (Medium)",
+					"desc": "<p>Cross-Origin-Opener-Policy header is a response header that allows a site to control if others included documents share the same browsing context. Sharing the same browsing context with untrusted documents might lead to data leak.</p>",
+					"instances":[ 
+						{
+							"id": "11",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "Cross-Origin-Opener-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>Ensure that the application/web server sets the Cross-Origin-Opener-Policy header appropriately, and that it sets the Cross-Origin-Opener-Policy header to 'same-origin' for documents.</p><p>'same-origin-allow-popups' is considered as less secured and should be avoided.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that supports the Cross-Origin-Opener-Policy header (https://caniuse.com/mdn-http_headers_cross-origin-opener-policy).</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Opener-Policy</p>",
+					"cweid": "693",
+					"wascid": "14",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "90004",
+					"alertRef": "90004-1",
+					"alert": "Cross-Origin-Resource-Policy Header Missing or Invalid",
+					"name": "Cross-Origin-Resource-Policy Header Missing or Invalid",
+					"riskcode": "1",
+					"confidence": "2",
+					"riskdesc": "Low (Medium)",
+					"desc": "<p>Cross-Origin-Resource-Policy header is an opt-in header designed to counter side-channels attacks like Spectre. Resource should be specifically set as shareable amongst different origins.</p>",
+					"instances":[ 
+						{
+							"id": "9",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "same-site",
+							"otherinfo": ""
+						},
+						{
+							"id": "34",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/favicon-16x16.png",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/favicon-16x16.png",
+							"method": "GET",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "same-site",
+							"otherinfo": ""
+						},
+						{
+							"id": "36",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/favicon-32x32.png",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/favicon-32x32.png",
+							"method": "GET",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "same-site",
+							"otherinfo": ""
+						},
+						{
+							"id": "104",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-standalone-preset.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-standalone-preset.js",
+							"method": "GET",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "same-site",
+							"otherinfo": ""
+						},
+						{
+							"id": "47",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui.css",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui.css",
+							"method": "GET",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "same-site",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>Ensure that the application/web server sets the Cross-Origin-Resource-Policy header appropriately, and that it sets the Cross-Origin-Resource-Policy header to 'same-origin' for all web pages.</p><p>'same-site' is considered as less secured and should be avoided.</p><p>If resources must be shared, set the header to 'cross-origin'.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that supports the Cross-Origin-Resource-Policy header (https://caniuse.com/mdn-http_headers_cross-origin-resource-policy).</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Embedder-Policy</p>",
+					"cweid": "693",
+					"wascid": "14",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "10063",
+					"alertRef": "10063-1",
+					"alert": "Permissions Policy Header Not Set",
+					"name": "Permissions Policy Header Not Set",
+					"riskcode": "1",
+					"confidence": "2",
+					"riskdesc": "Low (Medium)",
+					"desc": "<p>Permissions Policy Header is an added layer of security that helps to restrict from unauthorized access or usage of browser/client features by web resources. This policy ensures the user privacy by limiting or specifying the features of the browsers can be used by the web resources. Permissions Policy provides a set of standard HTTP headers that allow website owners to limit which features of browsers can be used by the page such as camera, microphone, location, full screen etc.</p>",
+					"instances":[ 
+						{
+							"id": "8",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "109",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-bundle.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-bundle.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "106",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-init.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-init.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "103",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-standalone-preset.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-standalone-preset.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "4",
+					"systemic": false,
+					"solution": "<p>Ensure that your web server, application server, load balancer, etc. is configured to set the Permissions-Policy header.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Permissions-Policy</p><p>https://developer.chrome.com/blog/feature-policy/</p><p>https://scotthelme.co.uk/a-new-security-header-feature-policy/</p><p>https://w3c.github.io/webappsec-feature-policy/</p><p>https://www.smashingmagazine.com/2018/12/feature-policy/</p>",
+					"cweid": "693",
+					"wascid": "15",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "10096",
+					"alertRef": "10096",
+					"alert": "Timestamp Disclosure - Unix",
+					"name": "Timestamp Disclosure - Unix",
+					"riskcode": "1",
+					"confidence": "1",
+					"riskdesc": "Low (Low)",
+					"desc": "<p>A timestamp was disclosed by the application/web server. - Unix</p>",
+					"instances":[ 
+						{
+							"id": "49",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-standalone-preset.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-standalone-preset.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "1518500249",
+							"otherinfo": "1518500249, which evaluates to: 2018-02-13 05:37:29."
+						},
+						{
+							"id": "52",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-standalone-preset.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-standalone-preset.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "1732584193",
+							"otherinfo": "1732584193, which evaluates to: 2024-11-26 01:23:13."
+						},
+						{
+							"id": "57",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-standalone-preset.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-standalone-preset.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "1750603025",
+							"otherinfo": "1750603025, which evaluates to: 2025-06-22 14:37:05."
+						},
+						{
+							"id": "50",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-standalone-preset.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-standalone-preset.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "1859775393",
+							"otherinfo": "1859775393, which evaluates to: 2028-12-07 04:16:33."
+						},
+						{
+							"id": "51",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-standalone-preset.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-standalone-preset.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "1894007588",
+							"otherinfo": "1894007588, which evaluates to: 2030-01-07 09:13:08."
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>Manually confirm that the timestamp data is not sensitive, and that the data cannot be aggregated to disclose exploitable patterns.</p>",
+					"otherinfo": "<p>1518500249, which evaluates to: 2018-02-13 05:37:29.</p>",
+					"reference": "<p>https://cwe.mitre.org/data/definitions/200.html</p>",
+					"cweid": "497",
+					"wascid": "13",
+					"sourceid": "27"
+				},
+				{
+					"pluginid": "10094",
+					"alertRef": "10094-3",
+					"alert": "Base64 Disclosure",
+					"name": "Base64 Disclosure",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informational (Medium)",
+					"desc": "<p>Base64 encoded data was disclosed by the application/web server. Note: in the interests of performance not all base64 strings in the response were analyzed individually, the entire response should be looked at by the analyst/security team/developer(s).</p>",
+					"instances":[ 
+						{
+							"id": "108",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-bundle.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-bundle.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+							"otherinfo": "\\x0000\\x0010\uFFFD\\x0010Q\uFFFD \uFFFD\uFFFD0\u04CFA\\x0014\uFFFDQU\uFFFDa\uFFFD\uFFFDq\u05DF\uFFFD\\x0018\uFFFD\uFFFDY\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\u06EF\uFFFD\\x001c\uFFFD\uFFFD]\uFFFD\u37BB\uFFFD\u07FF"
+						},
+						{
+							"id": "101",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-standalone-preset.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-standalone-preset.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+							"otherinfo": "\\x0000\\x0010\uFFFD\\x0010Q\uFFFD \uFFFD\uFFFD0\u04CFA\\x0014\uFFFDQU\uFFFDa\uFFFD\uFFFDq\u05DF\uFFFD\\x0018\uFFFD\uFFFDY\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\u06EF\uFFFD\\x001c\uFFFD\uFFFD]\uFFFD\u37BB\uFFFD\u07FF"
+						},
+						{
+							"id": "45",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui.css",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui.css",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyhpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMTExIDc5LjE1ODMyNSwgMjAxNS8wOS8xMC0wMToxMDoyMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6MTRDOTY4N0U2N0VFMTFFNjg2MzZDQjkwNkQ4MjgwMEIiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6MTRDOTY4N0Q2N0VFMTFFNjg2MzZDQjkwNkQ4MjgwMEIiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTUgKE1hY2ludG9zaCkiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo3NjcyQkQ3NjY3QzUxMUU2QjJCQ0UyNDA4MTAwMjE3MSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo3NjcyQkQ3NzY3QzUxMUU2QjJCQ0UyNDA4MTAwMjE3MSIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PsBS+GMAAAAjSURBVHjaYvz//z8DLsD4gcGXiYEAGBIKGBne//fFpwAgwAB98AaF2pjlUQAAAABJRU5ErkJggg==",
+							"otherinfo": "\uFFFDPNG\r\n\\x001a\n\\x0000\\x0000\\x0000\rIHDR\\x0000\\x0000\\x0000\\x0008\\x0000\\x0000\\x0000\\x0008\\x0008\\x0006\\x0000\\x0000\\x0000\uFFFD\\x000f\uFFFD\uFFFD\\x0000\\x0000\\x0000\\x0019tEXtSoftware\\x0000Adobe ImageReadyq\uFFFDe<\\x0000\\x0000\\x0003(iTXtXML:com.adobe.xmp\\x0000\\x0000\\x0000\\x0000\\x0000<?xpacket begin=\"\uFEFF\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?> <x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"Adobe XMP Core 5.6-c111 79.158325, 2015/09/10-01:10:20        \"> <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"> <rdf:Description rdf:about=\"\" xmlns:xmpMM=\"http://ns.adobe.com/xap/1.0/mm/\" xmlns:stRef=\"http://ns.adobe.com/xap/1.0/sType/ResourceRef#\" xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\" xmpMM:DocumentID=\"xmp.did:14C9687E67EE11E68636CB906D82800B\" xmpMM:InstanceID=\"xmp.iid:14C9687D67EE11E68636CB906D82800B\" xmp:CreatorTool=\"Adobe Photoshop CC 2015 (Macintosh)\"> <xmpMM:DerivedFrom stRef:instanceID=\"xmp.iid:7672BD7667C511E6B2BCE24081002171\" stRef:documentID=\"xmp.did:7672BD7767C511E6B2BCE24081002171\"/> </rdf:Description> </rdf:RDF> </x:xmpmeta> <?xpacket end=\"r\"?>\uFFFDR\uFFFDc\\x0000\\x0000\\x0000#IDATx\uFFFDb\uFFFD\uFFFD\uFFFD?\\x0003.\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\\x0000\\x0018\\x0012\n\\x0018\\x0019\uFFFD\uFFFD\uFFFD\u0167\\x0000 \uFFFD\\x0000}\uFFFD\\x0006\uFFFD\u0698\uFFFDQ\\x0000\\x0000\\x0000\\x0000IEND\uFFFDB`\uFFFD"
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Manually confirm that the Base64 data does not leak sensitive information, and that the data cannot be aggregated/used to exploit other vulnerabilities.</p>",
+					"otherinfo": "<p>\\x0000\\x0010\uFFFD\\x0010Q\uFFFD \uFFFD\uFFFD0\u04CFA\\x0014\uFFFDQU\uFFFDa\uFFFD\uFFFDq\u05DF\uFFFD\\x0018\uFFFD\uFFFDY\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\u06EF\uFFFD\\x001c\uFFFD\uFFFD]\uFFFD\u37BB\uFFFD\u07FF</p>",
+					"reference": "<p>https://projects.webappsec.org/w/page/13246936/Information%20Leakage</p>",
+					"cweid": "319",
+					"wascid": "13",
+					"sourceid": "25"
+				},
+				{
+					"pluginid": "10109",
+					"alertRef": "10109",
+					"alert": "Modern Web Application",
+					"name": "Modern Web Application",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informational (Medium)",
+					"desc": "<p>The application appears to be a modern web application. If you need to explore it automatically then the Client Spider may well be more effective than the standard one.</p>",
+					"instances":[ 
+						{
+							"id": "2",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "<script src=\"./docs/swagger-ui-bundle.js\"> </script>",
+							"otherinfo": "No links have been found while there are scripts, which is an indication that this is a modern web application."
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>This is an informational alert and so no changes are required.</p>",
+					"otherinfo": "<p>No links have been found while there are scripts, which is an indication that this is a modern web application.</p>",
+					"reference": "",
+					"cweid": "-1",
+					"wascid": "-1",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "10015",
+					"alertRef": "10015",
+					"alert": "Re-examine Cache-control Directives",
+					"name": "Re-examine Cache-control Directives",
+					"riskcode": "0",
+					"confidence": "1",
+					"riskdesc": "Informational (Low)",
+					"desc": "<p>The cache-control header has not been set properly or is missing, allowing the browser and proxies to cache content. For static assets like css, js, or image files this might be intended, however, the resources should be reviewed to ensure that no sensitive content will be cached.</p>",
+					"instances":[ 
+						{
+							"id": "0",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "cache-control",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>For secure content, ensure the cache-control HTTP header is set with \"no-cache, no-store, must-revalidate\". If an asset should be cached consider setting the directives \"public, max-age, immutable\".</p>",
+					"otherinfo": "",
+					"reference": "<p>https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#web-content-caching</p><p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control</p><p>https://grayduck.mn/2021/09/13/cache-control-recommendations/</p>",
+					"cweid": "525",
+					"wascid": "13",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "90005",
+					"alertRef": "90005-3",
+					"alert": "Sec-Fetch-Dest Header is Missing",
+					"name": "Sec-Fetch-Dest Header is Missing",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>Specifies how and where the data would be used. For instance, if the value is audio, then the requested resource must be audio data and not any other type of resource.</p>",
+					"instances":[ 
+						{
+							"id": "16",
+							"uri": "https://m6-backend-m64k.onrender.com/",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/",
+							"method": "GET",
+							"param": "Sec-Fetch-Dest",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "22",
+							"uri": "https://m6-backend-m64k.onrender.com/api",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api",
+							"method": "GET",
+							"param": "Sec-Fetch-Dest",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "5",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "Sec-Fetch-Dest",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "24",
+							"uri": "https://m6-backend-m64k.onrender.com/robots.txt",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/robots.txt",
+							"method": "GET",
+							"param": "Sec-Fetch-Dest",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "26",
+							"uri": "https://m6-backend-m64k.onrender.com/sitemap.xml",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/sitemap.xml",
+							"method": "GET",
+							"param": "Sec-Fetch-Dest",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": false,
+					"solution": "<p>Ensure that Sec-Fetch-Dest header is included in request headers.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Sec-Fetch-Dest</p>",
+					"cweid": "352",
+					"wascid": "9",
+					"sourceid": "4"
+				},
+				{
+					"pluginid": "90005",
+					"alertRef": "90005-2",
+					"alert": "Sec-Fetch-Mode Header is Missing",
+					"name": "Sec-Fetch-Mode Header is Missing",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>Allows to differentiate between requests for navigating between HTML pages and requests for loading resources like images, audio etc.</p>",
+					"instances":[ 
+						{
+							"id": "15",
+							"uri": "https://m6-backend-m64k.onrender.com/",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/",
+							"method": "GET",
+							"param": "Sec-Fetch-Mode",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "19",
+							"uri": "https://m6-backend-m64k.onrender.com/api",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api",
+							"method": "GET",
+							"param": "Sec-Fetch-Mode",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "4",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "Sec-Fetch-Mode",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "23",
+							"uri": "https://m6-backend-m64k.onrender.com/robots.txt",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/robots.txt",
+							"method": "GET",
+							"param": "Sec-Fetch-Mode",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "20",
+							"uri": "https://m6-backend-m64k.onrender.com/sitemap.xml",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/sitemap.xml",
+							"method": "GET",
+							"param": "Sec-Fetch-Mode",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": false,
+					"solution": "<p>Ensure that Sec-Fetch-Mode header is included in request headers.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Sec-Fetch-Mode</p>",
+					"cweid": "352",
+					"wascid": "9",
+					"sourceid": "4"
+				},
+				{
+					"pluginid": "90005",
+					"alertRef": "90005-1",
+					"alert": "Sec-Fetch-Site Header is Missing",
+					"name": "Sec-Fetch-Site Header is Missing",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>Specifies the relationship between request initiator's origin and target's origin.</p>",
+					"instances":[ 
+						{
+							"id": "12",
+							"uri": "https://m6-backend-m64k.onrender.com/",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/",
+							"method": "GET",
+							"param": "Sec-Fetch-Site",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "18",
+							"uri": "https://m6-backend-m64k.onrender.com/api",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api",
+							"method": "GET",
+							"param": "Sec-Fetch-Site",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "3",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "Sec-Fetch-Site",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "13",
+							"uri": "https://m6-backend-m64k.onrender.com/robots.txt",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/robots.txt",
+							"method": "GET",
+							"param": "Sec-Fetch-Site",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "14",
+							"uri": "https://m6-backend-m64k.onrender.com/sitemap.xml",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/sitemap.xml",
+							"method": "GET",
+							"param": "Sec-Fetch-Site",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": false,
+					"solution": "<p>Ensure that Sec-Fetch-Site header is included in request headers.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Sec-Fetch-Site</p>",
+					"cweid": "352",
+					"wascid": "9",
+					"sourceid": "4"
+				},
+				{
+					"pluginid": "90005",
+					"alertRef": "90005-4",
+					"alert": "Sec-Fetch-User Header is Missing",
+					"name": "Sec-Fetch-User Header is Missing",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>Specifies if a navigation request was initiated by a user.</p>",
+					"instances":[ 
+						{
+							"id": "17",
+							"uri": "https://m6-backend-m64k.onrender.com/",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/",
+							"method": "GET",
+							"param": "Sec-Fetch-User",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "27",
+							"uri": "https://m6-backend-m64k.onrender.com/api",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api",
+							"method": "GET",
+							"param": "Sec-Fetch-User",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "6",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "Sec-Fetch-User",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "25",
+							"uri": "https://m6-backend-m64k.onrender.com/robots.txt",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/robots.txt",
+							"method": "GET",
+							"param": "Sec-Fetch-User",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "28",
+							"uri": "https://m6-backend-m64k.onrender.com/sitemap.xml",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/sitemap.xml",
+							"method": "GET",
+							"param": "Sec-Fetch-User",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": false,
+					"solution": "<p>Ensure that Sec-Fetch-User header is included in user initiated requests.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Sec-Fetch-User</p>",
+					"cweid": "352",
+					"wascid": "9",
+					"sourceid": "4"
+				},
+				{
+					"pluginid": "10049",
+					"alertRef": "10049-3",
+					"alert": "Storable and Cacheable Content",
+					"name": "Storable and Cacheable Content",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informational (Medium)",
+					"desc": "<p>The response contents are storable by caching components such as proxy servers, and may be retrieved directly from the cache, rather than from the origin server by the caching servers, in response to similar requests from other users. If the response data is sensitive, personal or user-specific, this may result in sensitive information being leaked. In some cases, this may even result in a user gaining complete control of the session of another user, depending on the configuration of the caching components in use in their environment. This is primarily an issue where \"shared\" caching servers such as \"proxy\" caches are configured on the local network. This configuration is typically found in corporate or educational environments, for instance.</p>",
+					"instances":[ 
+						{
+							"id": "21",
+							"uri": "https://m6-backend-m64k.onrender.com/",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "In the absence of an explicitly specified caching lifetime directive in the response, a liberal lifetime heuristic of 1 year was assumed. This is permitted by rfc7234."
+						},
+						{
+							"id": "30",
+							"uri": "https://m6-backend-m64k.onrender.com/api",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "In the absence of an explicitly specified caching lifetime directive in the response, a liberal lifetime heuristic of 1 year was assumed. This is permitted by rfc7234."
+						},
+						{
+							"id": "7",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "In the absence of an explicitly specified caching lifetime directive in the response, a liberal lifetime heuristic of 1 year was assumed. This is permitted by rfc7234."
+						},
+						{
+							"id": "29",
+							"uri": "https://m6-backend-m64k.onrender.com/robots.txt",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/robots.txt",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "In the absence of an explicitly specified caching lifetime directive in the response, a liberal lifetime heuristic of 1 year was assumed. This is permitted by rfc7234."
+						},
+						{
+							"id": "31",
+							"uri": "https://m6-backend-m64k.onrender.com/sitemap.xml",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/sitemap.xml",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "In the absence of an explicitly specified caching lifetime directive in the response, a liberal lifetime heuristic of 1 year was assumed. This is permitted by rfc7234."
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>Validate that the response does not contain sensitive, personal or user-specific information. If it does, consider the use of the following HTTP response headers, to limit, or prevent the content being stored and retrieved from the cache by another user:</p><p>Cache-Control: no-cache, no-store, must-revalidate, private</p><p>Pragma: no-cache</p><p>Expires: 0</p><p>This configuration directs both HTTP 1.0 and HTTP 1.1 compliant caching servers to not store the response, and to not retrieve the response (without validation) from the cache, in response to a similar request.</p>",
+					"otherinfo": "<p>In the absence of an explicitly specified caching lifetime directive in the response, a liberal lifetime heuristic of 1 year was assumed. This is permitted by rfc7234.</p>",
+					"reference": "<p>https://datatracker.ietf.org/doc/html/rfc7234</p><p>https://datatracker.ietf.org/doc/html/rfc7231</p><p>https://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html</p>",
+					"cweid": "524",
+					"wascid": "13",
+					"sourceid": "4"
+				},
+				{
+					"pluginid": "10049",
+					"alertRef": "10049-2",
+					"alert": "Storable but Non-Cacheable Content",
+					"name": "Storable but Non-Cacheable Content",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informational (Medium)",
+					"desc": "<p>The response contents are storable by caching components such as proxy servers, but will not be retrieved directly from the cache, without validating the request upstream, in response to similar requests from other users.</p>",
+					"instances":[ 
+						{
+							"id": "33",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/favicon-16x16.png",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/favicon-16x16.png",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=0",
+							"otherinfo": ""
+						},
+						{
+							"id": "35",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/favicon-32x32.png",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/favicon-32x32.png",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=0",
+							"otherinfo": ""
+						},
+						{
+							"id": "102",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui-standalone-preset.js",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui-standalone-preset.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=0",
+							"otherinfo": ""
+						},
+						{
+							"id": "46",
+							"uri": "https://m6-backend-m64k.onrender.com/api/docs/swagger-ui.css",
+							"nodeName": "https:\/\/m6-backend-m64k.onrender.com\/api\/docs\/swagger-ui.css",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=0",
+							"otherinfo": ""
+						}
+					],
+					"count": "4",
+					"systemic": false,
+					"solution": "",
+					"otherinfo": "",
+					"reference": "<p>https://datatracker.ietf.org/doc/html/rfc7234</p><p>https://datatracker.ietf.org/doc/html/rfc7231</p><p>https://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html</p>",
+					"cweid": "524",
+					"wascid": "13",
+					"sourceid": "23"
+				}
+			]
+		}
+	],
+	"sequences":[
+	]
+
+}

@@ -182,7 +182,7 @@ export function repartir(
   capacidad: ReadonlyMap<string, number>,
   previo: ReadonlyMap<string, number> = new Map(),
 ): Map<string, number> {
-  const cupo = new Map([...capacidad.keys()].sort().map((c) => [c, 0]));
+  const cupo = new Map([...capacidad.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).map((c) => [c, 0]));
   const nivel = (c: string): number => (previo.get(c) ?? 0) + (cupo.get(c) as number);
   for (let resto = total; resto > 0; resto--) {
     const libres = [...cupo.keys()].filter(
@@ -486,7 +486,7 @@ async function main(): Promise<void> {
   const codigos = leer<{ codigo: string; activo: boolean }[]>('prisma/data/m9-barrios.json')
     .filter((b) => b.activo)
     .map((b) => b.codigo)
-    .sort();
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const poligonos = poligonosPorBarrio(leer('docs/geojson/caba_barrios.geojson'), codigos);
 
   // Contenedores: las dos capas completas (≈32 pedidos de 1000), tipo según la capa.

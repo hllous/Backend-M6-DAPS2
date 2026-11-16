@@ -36,8 +36,8 @@ R09 salvo que se diga otra cosa. «Saltados» son tests que Jest no ejecutó; «
 | Schemathesis: `status_code_conformance` (**bloqueante**) | — | 4384 casos | 3913 | 0 (exit 0) | 471 | — |
 | Mutation (Stryker, #617) | — | 26 archivos de dominio (5182 mutantes, 2142 no compilan y no cuentan) | 75,39 % global en el CI tras el refuerzo (2292 detectados); 71,22 % antes (2165) | — | — | 57 min 16 s en el CI con incremental (2 h 26 min la primera, sin cache); medición de noviembre de 2026, **no es R09** (5.1) |
 | Carga (k6) | — | 14 850 requests | p(95) 32,84 ms; 0,00 % de error | 0 | — | 5 min; ver 2.2 |
-| Seguridad dinámica (ZAP) | — | — | — | — | — | **No realizado** |
-| Seguridad estática: Trivy (#658) | — | 3 pasadas: `fs`, `image`, `config` | `fs`: 0 vulnerabilidades | `image`: 6 HIGH con fix; `config`: 1 HIGH (DS-0002) | — | Job `trivy` del CI ([run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43762807669)); hallazgos en #665 y #666; prueba en rojo en 07 §5.2 |
+| Seguridad dinámica (ZAP) | 2 escaneos (baseline en Render; activo autenticado en un entorno efímero) | activo: 46 577 pedidos, 2xx en 76 rutas | 0 High en el activo | 1 High en el baseline | — | Workflow `dast`, run 43764318178; **1 High abierta (#668)**; ver `07`, 5.2 |
+| Seguridad estática: Trivy | — | — | — | — | — | **No realizado** |
 | Compose en frío | — | 1 | 1 | 0 | — | up en 46 s; `/health/ready` 200 a los 55 s; seed OK; `GET /neighborhoods` 200 |
 
 Notas:
@@ -287,7 +287,7 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 | Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` (23 más `rabbitmq-real`); los E2E de navegador viven en el repo del frontend | **Sí** |
 | Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y **1 Mayor** (DEF-13); [`06`](06-registro-defectos.md). Actualizado con #643 (antes 2 Mayores: DEF-09 cerrado) | **Sí** |
 | Casos negativos o de borde | ≥ 40 % | 67,5 % (251 de 372, [`04`](04-especificacion-casos.md)) | **Sí** |
-| Quality Gate (SonarCloud) | Gate en verde | **NO HECHO**: no hay cuenta ni `sonar-project.properties`; pide un administrador de `hllous` | **No** |
+| Quality Gate (SonarCloud) | Gate en verde | **NO CUMPLE (medido)**: análisis de SonarCloud del 15/11/2026 (código del PR #662, 57 454 líneas, con la configuración del proyecto): **5 bugs** (4 Critical `S2871` y 1 Major `S9383`), **22 vulnerabilidades** (3 Blocker `S6698`, 1 Critical `S8689`, 18 entre Major y Minor), duplicación **1,2 %**, confiabilidad **D**, seguridad **E**, mantenibilidad **A**, hotspots **0** (100 % revisados), cobertura **97,3 %** (líneas 98,8 %; 52 líneas sin cubrir, igual que Vitest). No cumple 0 bugs Blocker/Critical, 0 vulnerabilidades ni ratings A. Tabla de hallazgos y propuesta de severidad en [#657](https://github.com/hllous/Backend-M6-DAPS2/issues/657). La cobertura la mide el job `sonar` con el `lcov` de Vitest; el valor se explica en la tabla de [#657](https://github.com/hllous/Backend-M6-DAPS2/issues/657) | **No** |
 | Carga: 50 usuarios, 5 min, p95 < 500 ms, error < 1 % | p95 < 500 ms, error < 1 % | p(95) 32,84 ms y 0,00 % en 14 850 requests (local); también corrida contra el despliegue y con escrituras (ver 2.2) | **Sí** |
 | Criterios de aceptación pasados / HU ejecutadas | ≥ 95 % y ninguno Must fallado | [`03`](03-matriz-trazabilidad.md): 161 criterios con test del backend sin fallos (actualizado con #643: CA-HU31-10); 9 solo FE y 5 huecos sin ejecutar | **Parcial** |
 
@@ -295,9 +295,9 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 
 | Criterio | Estado | Motivo |
 |---|---|---|
-| Quality Gate (SonarCloud) y su captura | **NO HECHO** | Pide administrador del repositorio; no hay configuración |
-| OWASP ZAP | **NO HECHO** | No se corrió |
-| Trivy | **Hecho, con hallazgos abiertos** | `fs` limpio; `image` y `config` en rojo por 6 HIGH del npm embebido (#665) y DS-0002 (#666), ambos con fix. Ver 07 §5.2 |
+| Captura del Quality Gate en verde | **NO HECHO** | El análisis corre en el CI desde #657 (gate no bloqueante), pero el gate no está en verde: ver la fila del criterio arriba |
+| OWASP ZAP (baseline y activo autenticado) | **HECHO, con 1 High abierta** | Corrida real el 15/11 (`07`, 5.2). El baseline contra Render reportó 1 High (DOMPurify 3.1.4 en el Swagger UI): corrección en #668. Falta la corrida final sobre el tag |
+| Trivy | **NO HECHO** | No se corrió |
 | Mutation score: reforzar los 21 archivos restantes y confirmar el global en el CI | **Parcial** | Línea base del dominio completo medida y 5 archivos reforzados (5.1); el score global tras el refuerzo se confirma con una corrida en el CI luego del merge |
 | Éxito por endpoint en los 91 endpoints restantes | **NO HECHO** | `test/api/PENDIENTES.md` |
 | Integración con broker real (Testcontainers) | **Parcial** | Postgres y RabbitMQ reales como contenedores de servicio del CI y en local. El consumer y la publicación del outbox (también con el broker inalcanzable y su reenvío) se prueban contra RabbitMQ real (#618) |
@@ -310,13 +310,13 @@ Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueue
 | 1 | Test de la matriz de transiciones con 409 en los inválidos | **Hecho** (#582, 114 tests) |
 | 2 | Script k6 con 50 usuarios, 5 minutos y 3 `GET` críticos | **Hecho** (#585, #574): local, despliegue y escrituras |
 | 3 | Schemathesis contra `openapi.json` en el CI | **Hecho** (#583), solo `GET`; bloqueante desde #593 |
-| 4 | SonarCloud y Quality Gate | **NO HECHO** (pide admin) |
+| 4 | SonarCloud y Quality Gate | **Parcial**: análisis en el CI (#657); gate en rojo, hallazgos en triaje |
 | 5 | Stryker sobre el dominio completo | **Hecho** (#577, #617): 71,22 % → 75,39 % confirmado en el CI tras el refuerzo; quedan 21 archivos sin reforzar |
 | 6 | Correr la suite 3 veces seguidas | **Hecho** en local y en el CI; falta `--detectOpenHandles` |
 | 7 | Reemplazar las aserciones débiles (`services.service.spec.ts:875` y el resto) | **Sin hacer** |
 | 8 | Hacer obligatorio el job `e2e` en la protección de ramas | **NO HECHO** (pide admin; DEF-14) |
 | 9 | Newman en el CI | **Hecho** (#583) |
-| 10 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); Trivy **hecho** (#658, con 2 hallazgos abiertos: #665 y #666); ZAP **NO HECHO** |
+| 10 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); ZAP **hecho** (#659); Trivy **NO HECHO** |
 | 11 | Tag `v1.0-testing` en `main` y en el frontend | **Hecho**: ver «Versión entregada» |
 | 12 | 400 declarado en los `GET` con entrada y Schemathesis bloqueante (DEF-20) | **Hecho** (#593, PR #597) |
 | 13 | Catálogo de barrios local para el compose y el CI (DEF-21) | **Hecho** (#594, PR #597) |

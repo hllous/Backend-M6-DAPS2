@@ -18,6 +18,8 @@ on:
     branches: [develop, test, main]
   push:
     branches: [develop, test, main]
+  # Solo para el job `sonar` (ver más abajo); el resto corre igual.
+  workflow_dispatch:
 
 jobs:
   build:
@@ -112,6 +114,59 @@ jobs:
       # (vitest.config.ts); si la cobertura baja, este paso falla y no se deploya.
       - name: Run tests
         run: npm run test:cov
+
+      # lcov para el job `sonar`: así no se vuelven a correr los tests (#657).
+      - name: Subir cobertura (lcov)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────
+  # sonar — Análisis en SonarCloud con la cobertura del job `test` (#657).
+  #
+  # Paso 1 de la opción C de #656: el gate NO bloquea (qualitygate.wait=false)
+  # y el job no es check obligatorio de la branch protection. Se saltea sin
+  # SONAR_TOKEN (PRs de forks, que no reciben secrets). Configuración del
+  # proyecto en sonar-project.properties.
+  # ──────────────────────────────────────────────────────────────
+  sonar:
+    name: sonar
+    needs: test
+    # El plan Free de SonarQube Cloud solo analiza la rama principal (`main`) y
+    # los PRs: https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/branch-analysis/branch-analysis
+    # Por eso no corre en push a develop/test. `workflow_dispatch` sube un
+    # análisis manual de la rama principal (ver args del paso SonarCloud).
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Checkout (historial completo, lo pide Sonar para atribuir código nuevo)
+        if: env.SONAR_TOKEN != ''
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Descargar cobertura (lcov)
+        if: env.SONAR_TOKEN != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage
+
+      - name: SonarCloud
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
+        with:
+          # En el disparo manual el scanner vería la rama de trabajo como una rama
+          # más (el plan Free la rechaza): se fuerza `main` solo ahí.
+          args: -Dsonar.qualitygate.wait=false ${{ github.event_name == 'workflow_dispatch' && '-Dsonar.branch.name=main' || '' }}
 
   # ──────────────────────────────────────────────────────────────
   # e2e — La app completa contra un Postgres de verdad.
