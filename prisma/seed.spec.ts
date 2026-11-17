@@ -43,8 +43,9 @@ describe('seed: distribución sobre los 48 barrios y 15 comunas', () => {
   it('la planificación es coherente y entra en el tope de servicios', () => {
     expect(() => verificar(planes)).not.toThrow();
     expect(planes.length).toBeLessThanOrEqual(TOPE_SERVICIOS);
-    expect(planes.length).toBeGreaterThan(600);
-    // El total baja con los días: se agenda desde hoy hasta el fin de la cursada.
+    // El total baja con los días: se agenda desde hoy hasta el fin de la cursada (603 el 16/11, 590 el 17/11,
+    // 450 el 01/12). Un piso fijo vencía con el calendario; 300 se mantiene mientras el seed puede sembrar.
+    expect(planes.length).toBeGreaterThan(300);
   });
 
   it('toda comuna tiene recorridos y servicios, y todo barrio inventario', () => {
