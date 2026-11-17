@@ -1174,7 +1174,18 @@ describe('EnvironmentalReportsService', () => {
         fromStatus: S.UNDER_REVIEW,
         toStatus: S.FORWARDED,
         actor: ACTOR,
+        // El motivo queda como nota para el historial (#728).
+        note: 'motivo',
       });
+    });
+
+    it('desestimar deja el motivo como nota de la auditoría', async () => {
+      await transicionar(S.UNDER_REVIEW, (s) => s.dismiss(ID, 'no corresponde', ACTOR));
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ action: 'DISMISS', note: 'no corresponde' }),
+      );
     });
 
     it('una transición inválida no audita', async () => {

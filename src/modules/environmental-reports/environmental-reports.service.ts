@@ -335,6 +335,7 @@ export class EnvironmentalReportsService {
         }),
       ],
       ifMatch,
+      reason,
     );
   }
 
@@ -360,6 +361,7 @@ export class EnvironmentalReportsService {
         }),
       ],
       ifMatch,
+      reason,
     );
   }
 
