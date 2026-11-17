@@ -88,6 +88,7 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 | **CA-HU07-5** (Error) intento iniciarlo → recibo 409 (sin vehículo) o 403 NOT_ASSIGNED (sin cuadrilla) y el servicio sigue SCHEDULED | CP-067 | `services.service.spec.ts` › «no deja iniciar sin vehiculo si el tipo lo exige»<br>`services-lifecycle.e2e-spec.ts` › «no deja iniciar sin cuadrilla y sí después de asignarla» | Pasó | — |
 | **CA-HU07-6** (Alternativo) aviso una demora (POST /services/:id/delay-notices) → el estado no cambia; START solo se acepta antes de arrancar y DURATION solo con la cuadrilla trabajando (la combinación cruzada da 40… | CP-068, CP-069, CP-070, CP-071 | `services-delay-assignment.spec.ts` › «un servicio que no arrancó admite START»<br>`services-delay-assignment.spec.ts` › «no toca el estado del servicio»<br>(+3 más) | Pasó | — |
 | **CA-HU07-7** (Error) falla la escritura del contenedor dentro de la transacción de cierre → el cierre se revierte completo: el servicio sigue IN_PROGRESS, el contenedor no cambia y no queda fila en el outbox | CP-072, CP-073, CP-074 | `containers-close.e2e-spec.ts` › «revierte el cierre del servicio si falla la escritura del contenedor dentro de la transacción»<br>`containers-close.e2e-spec.ts` › «no cierra el servicio si falta la ubicación nueva del contenedor en RELOCATING»<br>(+2 más) | Pasó | — |
+| **CA-HU07-8** (Falla externa) lo inicio y lo cierro → el servicio queda COMPLETED igual y los avisos hacia M2 (PROGRESS al iniciar, RESOLVED con ACTION_COMPLETED al cerrar) quedan PENDING en el outbox, escritos en la misma transacción de cada cambio, para que el dispatcher los reenvíe | CP-395 | `services-lifecycle.e2e-spec.ts` › «proyecta hacia M2 los cambios del servicio nacido de un reclamo»<br>`services-rules-mutation.spec.ts` › «al completar avisa RESOLVED con resolución ACTION_COMPLETED» | Pasó | — |
 
 ## HU-08 — Adjuntar evidencia fotográfica con reintento seguro
 
@@ -211,6 +212,7 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 | **CA-HU19-1** (Feliz) M6 arranca con CORE_REGISTER_ON_BOOT activo o se ejecuta npm run core:register → quedan registradas 6 publicaciones y 8 suscripciones (weatherAlertIssued es simulado y no se suscribe), co… | CP-179 | `core-registry.service.spec.ts` › «registra lo que sale del código: 8 suscripciones (sin weatherAlertIssued) y 6 publicaciones» | Pasó (corregido: ACT-25) | Corregido en #266, #381, #391 |
 | **CA-HU19-2** (Alternativo) se ejecuta el registro → crea solo lo que falta, loguea lo que sobra sin borrarlo y no duplica nada; el modo simulacro no hace ningún POST | CP-180, CP-181 | `core-registry.service.spec.ts` › «crea solo lo que falta y loguea lo que sobra sin borrarlo»<br>`core-registry.service.spec.ts` › «correrlo dos veces no duplica nada»<br>(+1 más) | Pasó (corregido: ACT-25) | Corregido en #266, #381, #391 |
 | **CA-HU19-3** (Falla externa) M6 intenta registrarse → el arranque de M6 no se bloquea, el registro se reintenta con backoff y abandona al llegar a los intentos máximos; con una respuesta paginada incompleta no crea n… | CP-182, CP-183, CP-184 | `core-registry.service.spec.ts` › «una falla del Core no tira la app: se reintenta con backoff y se complet»<br>`core-registry.service.spec.ts` › «abandona tras los intentos máximos»<br>(+2 más) | Pasó | — |
+| **CA-HU19-4** (Error) M6 sincroniza su registro → un cuerpo que no es lista falla con ese motivo sin crear nada a ciegas; los nombres inválidos se ignoran (no figuran entre los sobrantes) y la lectura se corta en 200 entradas | CP-396, CP-397 | `core-registry.service.spec.ts` › «un error HTTP o una respuesta que no es lista falla sin crear nada a ciegas»<br>`core-registry.service.spec.ts` › «ignora nombres sin forma de evento y corta la lista en 200 entradas» | Pasó | — |
 
 ## HU-20 — Adaptar M6 al contrato de integración definitivo de M9
 
@@ -276,7 +278,8 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 |---|---|---|---|---|
 | **CA-HU26-1** (Feliz) se muestra una fecha → está en formato argentino dd/mm/aaaa, hh:mm y en el día local | CP-230 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). El formato real lleva coma («06/09/2026, 14:05»): se corrigió el texto del criterio, no el código | — |
 | **CA-HU26-2** (Feliz) lo veo → leo el nombre o el código, no el UUID | CP-231 | **FE ejecutado**: `e2e/service-vehicle-labels.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
-| **CA-HU26-3** (Error) se muestra la fecha → se muestra el día de Argentina (UTC-3), no el de UTC | CP-232 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU26-3** (Alternativo) se muestra la fecha → se muestra el día de Argentina (UTC-3), no el de UTC | CP-232 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU26-4** (Error) el frontend lo formatea → lo muestra tal cual, sin convertirlo en otra fecha | CP-398 | **FE ejecutado**: `src/lib/argentina-date.test.ts` («returns values that are not dates untouched», «formats leap day and returns impossible calendar days unchanged») | Pasó (FE, ejecutado el 16/11 en local sobre el commit de FE #979: 27 de 27 tests del archivo) | — |
 
 ## HU-27 — Consultar sin login el estado de mi denuncia, cuándo pasa el servicio y dónde están los puntos verdes
 
@@ -305,7 +308,7 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 |---|---|---|---|---|
 | **CA-HU29-1** (Error) llamo a un endpoint de gestión → recibo 401 | CP-249 | `auth-roles.e2e-spec.ts` › «sin token da 401» | Pasó (corregido: ACT-01) | — |
 | **CA-HU29-2** (Error) intento emitir un acta o programar un servicio → recibo 403 con code ROLE_REQUIRED y el cuerpo no revela qué rol faltaba | CP-250 | `auth-roles.e2e-spec.ts` › «$grupo: $method $path»<br>`auth-roles.e2e-spec.ts` › «el 403 por rol no revela qué rol faltaba»<br>(+1 más) | Pasó (corregido: ACT-01) | — |
-| **CA-HU29-3** (Feliz) programo un servicio → recibo 2xx; y un GET permitido devuelve 200 también al auditor, que no puede escribir | CP-251, CP-252 | `auth-roles.e2e-spec.ts` › «$grupo: $method $path»<br>`auth-roles.e2e-spec.ts` › «un GET permitido devuelve 200 y el auditor lee pero no escribe»<br>(+1 más) | Pasó (corregido: ACT-01) | — |
+| **CA-HU29-3** (Alternativo) programo un servicio → recibo 2xx; y un GET permitido devuelve 200 también al auditor, que no puede escribir | CP-251, CP-252 | `auth-roles.e2e-spec.ts` › «$grupo: $method $path»<br>`auth-roles.e2e-spec.ts` › «un GET permitido devuelve 200 y el auditor lee pero no escribe»<br>(+1 más) | Pasó (corregido: ACT-01) | — |
 | **CA-HU29-4** (Feliz) consulto GET /me → el menú muestra solo las capacidades que devuelve GET /me (roles, cuadrillas e isAssignedInspector) | CP-253 | `demo-personas.e2e-spec.ts` › «GET /me: el líder y el integrante ven su cuadrilla con su rol»<br>FE: `access-roles.spec.ts`<br>(+1 más) | Pasó (parte backend) | — |
 | **CA-HU29-5** (Error) lo uso → 401 para los tokens inválidos, 403 para el ciudadano y para el empleado sin roles (salvo GET /me, que responde) | CP-254, CP-255, CP-256 | `jwt-auth.guard.spec.ts` › «rechaza a un ciudadano con 403 y mensaje claro»<br>`demo-personas.e2e-spec.ts` › «el ciudadano queda afuera, también de GET /me»<br>(+3 más) | Pasó (corregido: ACT-02, ACT-03) | — |
 | **CA-HU29-6** (Error) intento cambiar los roles (PUT o DELETE /role-assignments/:userId) → recibo 409 (quitaría el último admin) o 400 (mezcla Oficina y Campo, rol inexistente o repetido) y no cambia nada | CP-257, CP-258, CP-259 | `role-assignments.e2e-spec.ts` › «no deja el sistema sin M6_ADMIN cuando no hay admins de bootstrap»<br>`role-assignments.e2e-spec.ts` › «exclusividad Oficina/Campo: 400 y no cambia nada»<br>(+1 más) | Pasó | — |
@@ -317,7 +320,7 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 |---|---|---|---|---|
 | **CA-HU30-1** (Feliz) inicio sesión por el BFF (POST {M1}/auth/usuario/login) y consulto GET /me → recibo 200 con mis roles de M6; el JWT de M1 va en una cookie sellada httpOnly y nunca llega al navegador | CP-262 | FE: `real-m1-login.spec.ts`<br>`jwt.strategy.spec.ts` › «acepta un access token de M1 y lo mapea a roles de M6» | Pasó (parte backend) | — |
 | **CA-HU30-2** (Error) llamo a un endpoint protegido → recibo 401  | CP-263 | `jwt.strategy.spec.ts` › «rechaza: %s» | Pasó | — |
-| **CA-HU30-3** (Error) navego → el BFF reintenta una vez con refresh y, si falla, redirige al login con el aviso de sesión vencida | CP-264 | **FE ejecutado**: `src/lib/m1-refresh.test.ts`<br>FE: `e2e/failure-journeys.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU30-3** (Alternativo) navego → el BFF reintenta una vez con refresh y, si falla, redirige al login con el aviso de sesión vencida | CP-264 | **FE ejecutado**: `src/lib/m1-refresh.test.ts`<br>FE: `e2e/failure-journeys.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
 | **CA-HU30-4** (Falla externa) inicio sesión → el BFF corta a los 90 s con un mensaje de error; un build deployado en un modo distinto de real-m1 falla al arrancar (fail closed, FE #800) | CP-265 | **FE ejecutado**: `src/app/api/session/login/route.test.ts`<br>FE: `real-m1-login.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). El criterio decía 15 s; el código corta a 90 s (`LOGIN_TIMEOUT_MS`) y se corrigió el texto | — |
 
 ## HU-31 — Seguridad de la Clase 11 (SEC-W01 a W06, SEC-I01, SEC-I02, SEC-D01, SEC-D02)
@@ -335,7 +338,7 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 | **CA-HU31-9** (Error) se procesa con éxito o falla → ningún log contiene el token, secretos ni datos personales en claro; el LoggingInterceptor registra solo método, URL, estado y duración | CP-274, CP-347 | `logging.interceptor.spec.ts` › «deja pasar la respuesta y loguea método, url y status»<br>`roles.guard.spec.ts` › «loguea la denegación con usuario, ruta y roles requeridos, sin token»<br>(+2 más) | Pasó | DEF-22 (cerrado, #581): los logs registraban el `access_token` de la query |
 | **CA-HU31-10** (Error) las lee → se registra quién, cuándo y qué recurso consultó, sin copiar el contenido | CP-275 | `src/common/audit/audit.service.spec.ts` › «recordRead deja una fila READ por recurso, sin estados ni nota»<br>`src/common/audit/audit.service.spec.ts` › «recordRead propaga la falla: sin auditoría no hay lectura»<br>`environmental-inspections.service.spec.ts` › «findNotice falla cerrado si no se puede auditar la lectura»<br>`outbox-admin.service.spec.ts` › «environmentalViolationDetected audita la lectura sobre el acta del payload (#643)»<br>`inbox-admin.service.spec.ts` › «un evento de M4 se audita sobre la resolución del acta»<br>`environmental-flow.e2e-spec.ts` › «leer el acta con su resolución deja una fila READ por recurso, con el actor y sin contenido (#643)» | Pasó | Cerrado con #643 (DEF-09): `AuditService.recordRead` en los tres `GET` con datos Tier 2; `GET /audit` no se audita a sí mismo (riesgo aceptado, `entidades/auditoria.md`) |
 | **CA-HU31-11** (Falla externa) corre el dispatcher → la fila queda FAILED con lastError y deja de barrerse, y solo M6_ADMIN la reencola con retry, con auditoría del actor; la DLQ y el backoff del reintento de entrada s… | CP-276 | `outbox-dispatcher.service.spec.ts` › «al agotar los intentos la marca FAILED y deja de tomarla»<br>`outbox-retry.e2e-spec.ts` › «FAILED → retry → PENDING → el dispatcher lo publica → SENT, y queda auditado» | Pasó (corregido: ACT-11) | — |
-| **CA-HU31-12** (Alternativo) se ejecuta → queda una fila de auditoría de solo agregado con el actor del token, el estado de origen y destino y el motivo que el flujo ya pedía, en la misma transacción; una transición … | CP-331, CP-332, CP-333, CP-334 | `audit.e2e-spec.ts` › «cada transición del contenedor deja una fila con el actor del token»<br>`audit.service.spec.ts` › «record guarda estados y recorta la nota»<br>(+3 más) | Pasó (corregido: ACT-12) | — |
+| **CA-HU31-12** (Feliz) se ejecuta → queda una fila de auditoría de solo agregado con el actor del token, el estado de origen y destino y el motivo que el flujo ya pedía, en la misma transacción; una transición … | CP-331, CP-332, CP-333, CP-334 | `audit.e2e-spec.ts` › «cada transición del contenedor deja una fila con el actor del token»<br>`audit.service.spec.ts` › «record guarda estados y recorta la nota»<br>(+3 más) | Pasó (corregido: ACT-12) | — |
 | **CA-HU31-13** (Error) se corre el guion de seguridad en vivo → JWT inválido 401, rol sin permiso 403, cuadrilla ajena 403 sin datos, mass assignment 400, inyección sin 500, origen ajeno sin CORS, cabeceras presentes y logs sin tokens | CP-373 a CP-379 | `security-live.e2e-spec.ts` › «JWT inválido → 401»<br>`security-live.e2e-spec.ts` › «BOLA: Campo sobre un recurso de otra cuadrilla → 403, nunca el dato»<br>(+5 más) | Pasó | — |
 | **CA-HU31-14** (Error) corre npm run api:coverage → toda operación del OpenAPI tiene caso de éxito y de error, o una excepción con motivo; si falta alguno, falla | CP-381 | `scripts/check-api-coverage.spec.ts` › «toda operación del OpenAPI tiene caso de éxito y de error, o una excepción con motivo» | Pasó | — |
 
@@ -361,11 +364,11 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 
 Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/`, `test/` o `scripts/`; «FE ejecutado» si lo cubre solo un test del frontend leído y ejecutado; «hueco» si no cita ninguno.
 
-- HU con criterios: 33. Criterios: **181**. Casos: **394** ([04](04-especificacion-casos.md)). Todos los criterios tienen al menos un caso.
-- Con test automatizado del backend: **167** (92,3 %). Cinco son parciales (ver «Cobertura parcial declarada»).
-- Con test del frontend ejecutado (Eje A, FE #979): **10** (5,5 %): CA-HU01-1 a CA-HU01-4, CA-HU26-1 a CA-HU26-3, CA-HU30-3, CA-HU30-4 y CA-HU32-1. El orden de CA-HU01-1 en los catálogos paginados se cubre con tests de unidad y de componente (DEF-39, [Frontend #990](https://github.com/hllous/Frontend-M6-DAPS2/pull/990)).
+- HU con criterios: 33. Criterios: **184**. Casos: **398** ([04](04-especificacion-casos.md)). Todos los criterios tienen al menos un caso.
+- Con test automatizado del backend: **169** (91,8 %). Cinco son parciales (ver «Cobertura parcial declarada»).
+- Con test del frontend ejecutado (Eje A, FE #979): **11** (6,0 %): CA-HU01-1 a CA-HU01-4, CA-HU26-1 a CA-HU26-4, CA-HU30-3, CA-HU30-4 y CA-HU32-1. El orden de CA-HU01-1 en los catálogos paginados se cubre con tests de unidad y de componente (DEF-39, [Frontend #990](https://github.com/hllous/Frontend-M6-DAPS2/pull/990)).
 - **Huecos: 4** (2,2 %): CA-HU10-2, CA-HU24-2, CA-HU33-1 y CA-HU33-4.
-- Resultado: **177 de 181 criterios ejecutados y pasados (97,8 %)**: los 167 con test del backend y los 10 del frontend; 0 fallados, 0 bloqueados, 4 sin test automatizado (los huecos). Umbral: ≥ 95 % y ningún Must fallado: cumple. Sin contar los parciales sigue por encima del 95 %.
+- Resultado: **180 de 184 criterios ejecutados y pasados (97,8 %)**: los 169 con test del backend y los 11 del frontend; 0 fallados, 0 bloqueados, 4 sin test automatizado (los huecos). Umbral: ≥ 95 % y ningún Must fallado: cumple. Sin contar los parciales sigue por encima del 95 %.
 
 | HU | Criterios | Con test del backend | FE ejecutado | Huecos |
 |---|---|---|---|---|
@@ -375,7 +378,7 @@ Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/
 | HU-04 | 6 | 6 | 0 | 0 |
 | HU-05 | 6 | 6 | 0 | 0 |
 | HU-06 | 5 | 5 | 0 | 0 |
-| HU-07 | 7 | 7 | 0 | 0 |
+| HU-07 | 8 | 8 | 0 | 0 |
 | HU-08 | 6 | 6 | 0 | 0 |
 | HU-09 | 6 | 6 | 0 | 0 |
 | HU-10 | 3 | 2 | 0 | 1 |
@@ -387,14 +390,14 @@ Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/
 | HU-16 | 8 | 8 | 0 | 0 |
 | HU-17 | 6 | 6 | 0 | 0 |
 | HU-18 | 4 | 4 | 0 | 0 |
-| HU-19 | 3 | 3 | 0 | 0 |
+| HU-19 | 4 | 4 | 0 | 0 |
 | HU-20 | 5 | 5 | 0 | 0 |
 | HU-21 | 5 | 5 | 0 | 0 |
 | HU-22 | 5 | 5 | 0 | 0 |
 | HU-23 | 5 | 5 | 0 | 0 |
 | HU-24 | 4 | 3 | 0 | 1 |
 | HU-25 | 4 | 4 | 0 | 0 |
-| HU-26 | 3 | 0 | 3 | 0 |
+| HU-26 | 4 | 0 | 4 | 0 |
 | HU-27 | 5 | 5 | 0 | 0 |
 | HU-28 | 6 | 6 | 0 | 0 |
 | HU-29 | 7 | 7 | 0 | 0 |
@@ -402,7 +405,7 @@ Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/
 | HU-31 | 14 | 14 | 0 | 0 |
 | HU-32 | 4 | 3 | 1 | 0 |
 | HU-33 | 4 | 2 | 0 | 2 |
-| **Total** | **181** | **167** | **10** | **4** |
+| **Total** | **184** | **169** | **11** | **4** |
 
 ## Correcciones posteriores a las HU
 
@@ -478,6 +481,7 @@ Criterios contados como cubiertos por tener al menos un test del backend, pero c
 | CA-HU26-1 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` y `src/lib/argentina-date.test.ts` |
 | CA-HU26-2 | FE ejecutado | `e2e/service-vehicle-labels.spec.ts` |
 | CA-HU26-3 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` y `src/lib/argentina-date.test.ts` |
+| CA-HU26-4 | FE ejecutado | `src/lib/argentina-date.test.ts` |
 | CA-HU30-3 | FE ejecutado | `src/lib/m1-refresh.test.ts` y `e2e/failure-journeys.spec.ts` |
 | CA-HU30-4 | FE ejecutado | `src/app/api/session/login/route.test.ts` |
 | CA-HU32-1 | FE ejecutado | `e2e/accessibility.spec.ts` (63 tests) |

@@ -156,12 +156,12 @@ El gate es bloqueante en el CI (`sonar.qualitygate.wait=true`).
 | Pipeline | ≤ 15 min | 2 min 23 s (camino crítico: `trivy`) | Sí |
 | Escenarios críticos E2E en el pipeline | ≥ 5 | Job `e2e`: 25 suites y 410 tests, más 2 suites de RabbitMQ real | Sí |
 | Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 2 Menores ([`06`](06-registro-defectos.md)) | Sí |
-| Casos negativos o de borde | ≥ 40 % | 67,8 % (267 de 394, [`04`](04-especificacion-casos.md)) | Sí |
+| Casos negativos o de borde | ≥ 40 % | 68,1 % (271 de 398, [`04`](04-especificacion-casos.md)) | Sí |
 | Quality Gate (SonarCloud) | Verde, 0 bugs, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % hotspots | Gate OK; 0 / 0; 1,2 %; A/A/A; 100 % | Sí |
 | ZAP baseline y activo | 0 High, cada Medium justificada | 0 High; 1 Medium en cada uno, justificadas en [`07`](07-informe-seguridad.md) | Sí |
 | Dependencias (Trivy y `npm audit`) | 0 críticas o altas sin mitigación | 0 HIGH/CRITICAL; `npm audit` en 0 | Sí |
 | Carga: 50 usuarios, 5 min | p95 < 500 ms, error < 1 % | p(95) 32,84 ms; 0,00 % | Sí |
-| Criterios de aceptación con test / HU ejecutadas | ≥ 95 % y ninguno Must fallado | [`03`](03-matriz-trazabilidad.md): **177 de 181 ejecutados y pasados (97,8 %)**: 167 con test del backend y 10 con test del frontend (Eje A, sección 9); 0 fallados; 4 huecos | Sí |
+| Criterios de aceptación con test / HU ejecutadas | ≥ 95 % y ninguno Must fallado | [`03`](03-matriz-trazabilidad.md): **180 de 184 ejecutados y pasados (97,8 %)**: 169 con test del backend y 11 con test del frontend (Eje A, sección 9); 0 fallados; 4 huecos | Sí |
 
 ## 9. Frontend
 
@@ -169,7 +169,7 @@ Medido sobre `develop` del repo Frontend @ `0519d95` (16/11/2026), después de F
 
 ### 9.1 Eje A: criterios solo-FE, responsive y accesibilidad
 
-Los 10 criterios que solo cubría el frontend tienen un test leído contra el texto del criterio y ejecutado (FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165), todos los jobs en verde). Detalle por criterio en [`03`](03-matriz-trazabilidad.md).
+Los 10 criterios que solo cubría el frontend tienen un test leído contra el texto del criterio y ejecutado (FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165), todos los jobs en verde). Detalle por criterio en [`03`](03-matriz-trazabilidad.md). El criterio 11, CA-HU26-4 (agregado el 16/11), se ejecutó en local sobre el mismo commit (`src/lib/argentina-date.test.ts`, 27 de 27 tests) y no tiene corrida de CI propia.
 
 | Criterio | Test del Frontend |
 |---|---|

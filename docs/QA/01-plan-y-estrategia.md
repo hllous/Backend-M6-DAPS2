@@ -82,8 +82,8 @@ Módulo 6 «Ambiente e Higiene», Grupo 04, Desarrollo de Aplicaciones II (estru
 | Cobertura de ramas en dominio | ≥ 70 % | 95,28 % global; 95,93 % en `src/modules` | Sí |
 | Mutation score en dominio | ≥ 60 % | 76,11 % | Sí |
 | HU del alcance ejecutadas | 100 % | Las 33 HU tienen criterios ejecutados; quedan 4 criterios sin test automatizado ([`03`](03-matriz-trazabilidad.md)) | Sí |
-| Criterios de aceptación pasados | ≥ 95 %, sin fallos en `MUST` | 177 de 181 ejecutados y pasados (97,8 %): 167 del backend y 10 del frontend; 0 fallados | Sí |
-| Casos negativos o de borde | ≥ 40 % | 67,8 % (267 de 394) | Sí |
+| Criterios de aceptación pasados | ≥ 95 %, sin fallos en `MUST` | 180 de 184 ejecutados y pasados (97,8 %): 169 del backend y 11 del frontend; 0 fallados | Sí |
+| Casos negativos o de borde | ≥ 40 % | 68,1 % (271 de 398) | Sí |
 | Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 2 Menores | Sí |
 | Tests flaky | 0 (3 corridas idénticas) | Backend: 3 corridas locales y el CI idénticos. Frontend: 3 corridas locales idénticas y `retries: 0` (FE #980) | Sí |
 | Pipeline | ≤ 15 min | 2 min 23 s | Sí |

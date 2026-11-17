@@ -136,6 +136,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [0
 | CP-072 | CA-HU07-7 | Servicio POINT sobre contenedor OVERFLOWED; falla forzada de escritura; complete | Negativo | `containers-close.e2e-spec.ts` › «revierte el cierre del servicio si falla la escritura del contenedor dentro de la transacción»<br>`containers-close.e2e-spec.ts` › «no cierra el servicio si falta la ubicación nueva del contenedor en RELOCATING» | Pasó |
 | CP-073 | CA-HU07-7 | Contenedor OVERFLOWED; complete COMPLETED | Positivo | `containers-close.e2e-spec.ts` › «devuelve a ACTIVE el contenedor desbordado al cerrar el servicio» | Pasó |
 | CP-074 | CA-HU07-7 | Cierre PARTIAL; complete PARTIALLY_COMPLETED | Borde | `containers-close.e2e-spec.ts` › «no toca el contenedor si el cierre es parcial» | Pasó |
+| CP-395 | CA-HU07-8 | Servicio nacido de un reclamo (ticketId) con el dispatcher sin publicar; agendar, start y complete → el servicio queda COMPLETED y los avisos PROGRESS y RESOLVED (ACTION_COMPLETED) quedan PENDING en el outbox | Borde | `services-lifecycle.e2e-spec.ts` › «proyecta hacia M2 los cambios del servicio nacido de un reclamo»<br>`services-rules-mutation.spec.ts` › «al completar avisa RESOLVED con resolución ACTION_COMPLETED» | Pasó |
 
 ## HU-08 — Adjuntar evidencia fotográfica con reintento seguro
 
@@ -327,6 +328,8 @@ Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [0
 | CP-182 | CA-HU19-3 | Core caído; arranque de M6 | Negativo | `core-registry.service.spec.ts` › «una falla del Core no tira la app: se reintenta con backoff y se complet»<br>`core-registry.service.spec.ts` › «abandona tras los intentos máximos» | Pasó |
 | CP-183 | CA-HU19-3 | Core con respuesta paginada (meta.total mayor a lo recibido); sync | Negativo | `core-registry.service.spec.ts` › «una respuesta paginada (meta.total mayor a lo recibido) no crea nada» | Pasó |
 | CP-184 | CA-HU19-3 | Sin CORE_API_URL; arranque | Borde | `core-registry.service.spec.ts` › «sin CORE_API_URL no hace nada» | Pasó |
+| CP-396 | CA-HU19-4 | Core con error HTTP al leer o crear, o con un cuerpo que no es lista; sync → falla con el motivo y no crea nada a ciegas | Negativo | `core-registry.service.spec.ts` › «un error HTTP o una respuesta que no es lista falla sin crear nada a ciegas» | Pasó |
+| CP-397 | CA-HU19-4 | Core con nombres de evento con salto de línea, con espacios o de 61 caracteres, más 300 válidos; sync → los inválidos no figuran entre los sobrantes y la lectura se corta en 200 | Borde | `core-registry.service.spec.ts` › «ignora nombres sin forma de evento y corta la lista en 200 entradas» | Pasó |
 
 ## HU-20 — Adaptar M6 al contrato de integración definitivo de M9
 
@@ -413,6 +416,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [0
 | CP-230 | CA-HU26-1 | Listado con fechas; Servicios y Control ambiental | Positivo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, Eje A, FE #979) |
 | CP-231 | CA-HU26-2 | Servicios con cuadrilla y vehículo; Listado de Servicios | Positivo | FE: `e2e/service-vehicle-labels.spec.ts` | Pasó (FE, Eje A, FE #979) |
 | CP-232 | CA-HU26-3 | Fecha 2026-10-31T23:30:00-03:00; listar | Borde | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, Eje A, FE #979) |
+| CP-398 | CA-HU26-4 | Valor «sin fecha» y día imposible 2026-02-30; formatear | Negativo | FE: `src/lib/argentina-date.test.ts` | Pasó (FE, ejecutado el 16/11 en local sobre el commit de FE #979) |
 
 ## HU-27 — Consultar sin login el estado de mi denuncia, cuándo pasa el servicio y dónde están los puntos verdes
 
@@ -601,12 +605,12 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 
 ## Resumen
 
-- Casos: **394**: 348 para 175 criterios de 33 HU (334 iniciales más CP-335 a CP-348; CP-348 no tiene criterio propio y se cuenta en HU-31), 24 casos transversales sin HU (CP-349 a CP-372), 10 casos de HU-31 (CP-373 a CP-382) y 12 de HU-01 y HU-17 (CP-383 a CP-394). Los casos parametrizados cuentan como uno: los 114 tests de transiciones son 3 casos.
-- Positivos: 127 (32,2 %). Negativos: 179 (45,4 %). Borde: 88 (22,3 %).
-- **Negativos + borde: 267 de 394 = 67,8 %** (meta: 40 % o más). Cumple.
+- Casos: **398**: 348 para 175 criterios de 33 HU (334 iniciales más CP-335 a CP-348; CP-348 no tiene criterio propio y se cuenta en HU-31), 24 casos transversales sin HU (CP-349 a CP-372), 10 casos de HU-31 (CP-373 a CP-382) 12 de HU-01 y HU-17 (CP-383 a CP-394) y 4 de HU-07, HU-19 y HU-26 (CP-395 a CP-398). Los casos parametrizados cuentan como uno: los 114 tests de transiciones son 3 casos.
+- Positivos: 127 (31,9 %). Negativos: 181 (45,5 %). Borde: 90 (22,6 %).
+- **Negativos + borde: 271 de 398 = 68,1 %** (meta: 40 % o más). Cumple.
 - Casos marcados **Corregido**: 116.
-- Automatizados con test del backend: 375 (95,2 %). Solo con test del frontend: 9. Manuales: 10.
-- Los 19 casos sin test del backend son 9 de frontend y 10 manuales.
+- Automatizados con test del backend: 378 (95,0 %). Solo con test del frontend: 10. Manuales: 10.
+- Los 20 casos sin test del backend son 10 de frontend y 10 manuales.
 
 | HU | Casos | Positivos | Negativos | Borde | Neg. + borde |
 |---|---|---|---|---|---|
@@ -616,7 +620,7 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | HU-04 | 7 | 2 | 3 | 2 | 71,4 % |
 | HU-05 | 18 | 5 | 8 | 5 | 72,2 % |
 | HU-06 | 11 | 5 | 3 | 3 | 54,5 % |
-| HU-07 | 17 | 4 | 10 | 3 | 76,5 % |
+| HU-07 | 18 | 4 | 10 | 4 | 77,8 % |
 | HU-08 | 14 | 3 | 10 | 1 | 78,6 % |
 | HU-09 | 19 | 7 | 7 | 5 | 63,2 % |
 | HU-10 | 3 | 2 | 1 | 0 | 33,3 % |
@@ -628,14 +632,14 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | HU-16 | 21 | 7 | 6 | 8 | 66,7 % |
 | HU-17 | 13 | 6 | 4 | 3 | 53,8 % |
 | HU-18 | 9 | 2 | 5 | 2 | 77,8 % |
-| HU-19 | 6 | 2 | 2 | 2 | 66,7 % |
+| HU-19 | 8 | 2 | 3 | 3 | 75,0 % |
 | HU-20 | 10 | 2 | 5 | 3 | 80,0 % |
 | HU-21 | 10 | 6 | 3 | 1 | 40,0 % |
 | HU-22 | 5 | 2 | 2 | 1 | 60,0 % |
 | HU-23 | 14 | 3 | 7 | 4 | 78,6 % |
 | HU-24 | 7 | 3 | 3 | 1 | 57,1 % |
 | HU-25 | 6 | 3 | 2 | 1 | 50,0 % |
-| HU-26 | 3 | 2 | 0 | 1 | 33,3 % |
+| HU-26 | 4 | 2 | 1 | 1 | 50,0 % |
 | HU-27 | 9 | 4 | 4 | 1 | 55,6 % |
 | HU-28 | 15 | 5 | 1 | 9 | 66,7 % |
 | HU-29 | 13 | 2 | 8 | 3 | 84,6 % |
@@ -644,6 +648,6 @@ Casos automatizados del PR [#597](https://github.com/hllous/Backend-M6-DAPS2/pul
 | HU-32 | 6 | 3 | 2 | 1 | 50,0 % |
 | HU-33 | 4 | 1 | 1 | 2 | 75,0 % |
 | Transversales sin HU (Eje C, CP-349 a CP-372) | 24 | 5 | 12 | 7 | 79,2 % |
-| **Total** | **394** | **127** | **179** | **88** | **67,8 %** |
+| **Total** | **398** | **127** | **181** | **90** | **68,1 %** |
 
 Los casos de rol y de pertenencia ("403 NOT_ASSIGNED", "403 ROLE_REQUIRED") se cuentan como negativos. Los de degradación ante la caída de un sistema externo se cuentan como borde cuando el sistema sigue operando y como negativos cuando se rechaza la operación.
