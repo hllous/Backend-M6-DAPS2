@@ -27,7 +27,7 @@ docker compose up --build
 
 Levanta la base de datos (PostgreSQL), el broker de mensajes (RabbitMQ), el backend (aplica las migraciones), los datos de demo, el M1 falso que emite los logins y el frontend. El frontend se construye desde su repositorio ([hllous/Frontend-M6-DAPS2](https://github.com/hllous/Frontend-M6-DAPS2)) sin clonarlo a mano. No hay que crear ni editar `.env`.
 
-El primer arranque tarda entre 5 y 10 minutos (descarga imágenes y compila). Está listo cuando el log muestra `Ready` del servicio `frontend`. La primera vez que se abre cada pantalla tarda unos segundos más: el frontend corre en modo desarrollo y la compila en ese momento.
+El primer arranque descarga imágenes y compila, y el tiempo depende de la máquina y de la red. En la medición del 16/11/2026 (Windows 11, Docker Desktop, desde cero y sin caché de Docker, con `FRONTEND_REF=main`) fueron unos 14 minutos: ≈13 de build y ≈1 de arranque hasta tener todos los servicios en estado healthy. Los arranques siguientes reutilizan la caché de Docker. Está listo cuando el log muestra `Ready` del servicio `frontend`. La primera vez que se abre cada pantalla tarda unos segundos más: el frontend corre en modo desarrollo y la compila en ese momento.
 
 ### Entrar
 
@@ -57,7 +57,7 @@ Volver a correr `docker compose up` es seguro: los datos de demo no se duplican.
 
 ### Opcional
 
-- **Otra versión del frontend**: `FRONTEND_REF=<rama o tag> docker compose up --build` (por defecto, `main`).
+- **Otra versión del frontend**: `FRONTEND_REF=<rama o tag> docker compose up --build` (por defecto, `main`). Para la entrega está previsto fijarlo al tag `v2.0-entrega4`, que todavía no existe en el repositorio del frontend (pendiente de crear); hasta entonces, lo probado es `main`.
 - **Cambiar usuarios o claves locales**: `cp .env.example .env` y editarlo. Sin `.env`, el compose usa los valores de ejemplo, que valen solo en tu máquina.
 - **Puertos ocupados**: el sistema usa 3000, 3001, 5432, 5672 y 15672.
 
