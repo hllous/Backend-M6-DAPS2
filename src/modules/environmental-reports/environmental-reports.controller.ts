@@ -28,8 +28,10 @@ import {
   ReportStatusChangeDto,
   RequestInformationDto,
 } from './dto';
-import { ErrorResponseDto } from '../../common/dto';
+import { ErrorResponseDto, PaginatedResponseDto, PaginationQueryDto } from '../../common/dto';
+import { AuditHistoryItemDto } from '../../common/audit/dto';
 import { ApiETag, ETagInterceptor, IfMatch } from '../../common/etag';
+import { M6Role } from '../../auth/m6-role';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import {
   ApiPaginatedResponse,
@@ -288,6 +290,26 @@ export class EnvironmentalReportsController {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<EnvironmentalReportResponseDto> {
     return this.reportsService.requestInformation(id, dto, actor);
+  }
+
+  @Get(':id/history')
+  @Roles(...ROLES_AMBIENTAL, M6Role.M6_AUDITOR)
+  @ApiOperation({
+    summary: 'Historial del expediente',
+    description:
+      'Los pasos del expediente (cierre, derivación, desestimación, etc.) con su estado anterior y nuevo y el motivo (`note`) que escribió quien decidió. Paginado, del más reciente al más antiguo. No incluye quién actuó ni las lecturas de datos sensibles, y el motivo de lo que resuelve M4 va en null (la decisión de la sanción se lee en el acta). Es lo que `GET /audit` da al admin y al auditor, pero acotado a un expediente y legible por Oficina Ambiental.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID del expediente', format: 'uuid' })
+  @ApiPaginatedResponse(AuditHistoryItemDto, 'Historial paginado del expediente')
+  @ApiResponse(AUTH)
+  @ApiResponse(NOT_FOUND)
+  @ApiResponse(SERVER)
+  @ApiBadRequestParams()
+  async findHistory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<AuditHistoryItemDto>> {
+    return this.reportsService.findHistory(id, query);
   }
 
   @Post(':id/close')

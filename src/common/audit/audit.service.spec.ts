@@ -1,8 +1,10 @@
 import { M6Role } from '../../auth/m6-role';
 import { PrismaService } from '../../prisma/prisma.service';
+import { M4_ACTOR_ID } from './audit-actors';
 import { ACTOR } from './audit-test-actor';
 import { AuditService } from './audit.service';
 import { QueryAuditDto } from './dto';
+import { PaginationQueryDto } from '../dto';
 
 const ID = '3f2b8c1e-5d4a-4e6f-9a1b-2c3d4e5f6a7b';
 
@@ -126,5 +128,61 @@ describe('AuditService', () => {
     prisma.domainAuditLog.count.mockResolvedValue(0);
     await service.findAll(new QueryAuditDto());
     expect(prisma.domainAuditLog.count).toHaveBeenCalledWith({ where: {} });
+  });
+  describe('findHistory', () => {
+    const fila = (over: Record<string, unknown> = {}) => ({
+      id: 'a',
+      entityType: 'ENVIRONMENTAL_REPORT',
+      entityId: ID,
+      action: 'CLOSE',
+      fromStatus: 'FORWARDED',
+      toStatus: 'CLOSED',
+      actorUserId: '42',
+      actorRoles: [M6Role.M6_OFICINA_AMBIENTAL],
+      note: 'Regularizado',
+      occurredAt: new Date('2026-11-02T10:00:00.000Z'),
+      ...over,
+    });
+
+    it('filtra por la entidad, excluye READ, ordena con desempate y pagina', async () => {
+      prisma.domainAuditLog.findMany.mockResolvedValue([fila()]);
+      prisma.domainAuditLog.count.mockResolvedValue(41);
+      const query = Object.assign(new PaginationQueryDto(), { page: 2, pageSize: 10 });
+
+      const res = await service.findHistory('ENVIRONMENTAL_REPORT', ID, query);
+
+      const where = { entityType: 'ENVIRONMENTAL_REPORT', entityId: ID, action: { not: 'READ' } };
+      expect(prisma.domainAuditLog.findMany).toHaveBeenCalledWith({
+        where,
+        skip: 10,
+        take: 10,
+        orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      });
+      expect(prisma.domainAuditLog.count).toHaveBeenCalledWith({ where });
+      expect(res.meta.total).toBe(41);
+    });
+
+    it('expone solo occurredAt, action, estados y note: ni actor ni ids', async () => {
+      prisma.domainAuditLog.findMany.mockResolvedValue([fila()]);
+      prisma.domainAuditLog.count.mockResolvedValue(1);
+
+      const res = await service.findHistory('ENVIRONMENTAL_REPORT', ID, new PaginationQueryDto());
+
+      expect(Object.keys(res.data[0]).sort()).toEqual(
+        ['action', 'fromStatus', 'note', 'occurredAt', 'toStatus'].sort(),
+      );
+      expect(res.data[0].note).toBe('Regularizado');
+    });
+
+    it('no entrega el note de lo que escribe M4 (decisión de la sanción, Tier 2)', async () => {
+      prisma.domainAuditLog.findMany.mockResolvedValue([
+        fila({ actorUserId: M4_ACTOR_ID, action: 'STATUS_CHANGE', note: 'FINE_ISSUED' }),
+      ]);
+      prisma.domainAuditLog.count.mockResolvedValue(1);
+
+      const res = await service.findHistory('ENVIRONMENTAL_REPORT', ID, new PaginationQueryDto());
+
+      expect(res.data[0]).toMatchObject({ action: 'STATUS_CHANGE', note: null });
+    });
   });
 });

@@ -1,7 +1,7 @@
 # Excepciones de la colección Postman
 
-Generado por `npm run api:collection` desde `test/api/excepciones.json`. La colección cubre las 152 operaciones
-del OpenAPI con caso de éxito (151/152, más 1 con excepción) y de error (149/152, más 3 con excepción).
+Generado por `npm run api:collection` desde `test/api/excepciones.json`. La colección cubre las 153 operaciones
+del OpenAPI con caso de éxito (152/153, más 1 con excepción) y de error (150/153, más 3 con excepción).
 `npm run api:coverage` falla si alguna operación queda sin caso y sin excepción justificada acá.
 
 ## Sin caso de éxito
