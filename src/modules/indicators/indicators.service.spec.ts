@@ -858,6 +858,26 @@ describe('IndicatorsService', () => {
       });
     });
 
+    it('una zona que ya no está en el catálogo sale como «?» en contenedores, árboles y vencidas', async () => {
+      prisma.zone.findMany.mockResolvedValue([]);
+      prisma.environmentalReport.findMany.mockResolvedValue([
+        {
+          createdAt: new Date('2026-08-10T15:00:00.000Z'),
+          status: 'RECEIVED',
+          inspections: [{ service: { zones: [{ zoneId: 'z-borrada' }] } }],
+        },
+      ]);
+
+      const result = await indicators.incidents({});
+
+      for (const z of [...result.containers.byZone, ...result.trees.byZone]) {
+        expect(z).toMatchObject({ code: '?', name: '?' });
+      }
+      expect(result.reports.overdue.byZone).toEqual([
+        expect.objectContaining({ zoneId: 'z-borrada', code: '?', name: '?' }),
+      ]);
+    });
+
     it('ordena las zonas por incidencias, no alfabéticamente', async () => {
       const result = await indicators.incidents({});
 

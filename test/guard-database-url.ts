@@ -15,7 +15,7 @@ export function assertBaseLocal(databaseUrl: string | undefined): string {
   }
 
   // Se parsea el host en vez de buscar la subcadena: una URL como
-  // postgresql://u:p@localhost:5432@host.remoto/x pasa cualquier regex de
+  // u:p@localhost:5432@host.remoto/x pasa cualquier regex de
   // substring, y Prisma conecta al host que va después del último '@'.
   let hostname: string;
   try {

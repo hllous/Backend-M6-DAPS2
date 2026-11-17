@@ -7,7 +7,7 @@ import {
   QueryGreenPointsDto,
   UpdateGreenPointDto,
 } from './dto';
-import { PaginatedResponseDto } from '../../common/dto';
+import { PaginatedResponseDto, buildOrderBy } from '../../common/dto';
 
 type GreenPointWithWasteTypes = GreenPoint & { wasteTypes: GreenPointWasteType[] };
 
@@ -74,7 +74,7 @@ export class GreenPointsService {
         include: { wasteTypes: true },
         skip: query.skip,
         take: query.take,
-        orderBy: { code: 'asc' },
+        orderBy: buildOrderBy(query, 'code'),
       }),
       this.prisma.greenPoint.count({ where }),
     ]);

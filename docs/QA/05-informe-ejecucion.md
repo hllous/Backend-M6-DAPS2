@@ -1,365 +1,217 @@
 # 05 · Informe de ejecución
 
-> Versión 2.1 · 16/11/2026. Backend del Módulo 6 (Grupo 04). La base de R09 es `develop` @ `142e1a3` (merge de [#597](https://github.com/hllous/Backend-M6-DAPS2/pull/597), 10/11/2026); las cifras de la **Entrega 4** (unitarios, cobertura, lint, CI, SonarCloud, Trivy y ZAP) se midieron el 16/11/2026 sobre `develop` @ `6fe2614` y sobre `main` @ `78bf714`, y están marcadas con su fecha. Los números salen de corridas reales (locales y de GitHub Actions); lo que no se midió figura como **no realizado**, con el motivo.
->
-> **Corrida R09.** Local, Windows, Node 22, máquina sin otras cargas, sobre la rama de integración de #597 (mismo contenido que `develop` @ `142e1a3`). Se midieron build, lint, `docs:check`, `openapi:generate`, unitarios con cobertura, e2e contra Postgres 16 real, Newman, Schemathesis, k6 y `docker compose up` en frío. **R08** es la corrida anterior (sobre `1d600d2`) y queda como referencia.
+> Versión 2.2 · 16/11/2026
+
+Backend del Módulo 6 (Grupo 04), medido sobre `develop` @ `53cde64`. Local: Windows, Node 24. CI: último run de `develop` ([CI 43927922346](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43927922346), [API tests 43927922082](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43927922082), [CodeQL 43927922293](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43927922293)).
 
 ## 1. Cómo se obtuvieron los números
 
 | Qué | Cómo | Resultado |
 |---|---|---|
-| Build, lint, docs, OpenAPI | `npm run build`, `lint:check`, `docs:check`, `openapi:generate` + `git diff docs/api` | R09: build OK; lint 0 errores y 305 warnings; `docs:check` OK; `openapi:generate` sin diff. **16/11:** `npm run lint:check` da **0 errores y 343 warnings** (los 38 nuevos son de código que entró desde R09; no se corrigieron de antemano) |
-| Unitarios con cobertura | `npm run test:cov` (Prisma mockeado, no toca ninguna base) | Ver 2 y 3 |
-| e2e general | `npm run test:e2e` contra Postgres 16 real, base descartable (`docs/testing.md`) | Ver 2 |
-| Newman | Colección `test/api/` contra el backend local | 455 requests ejecutados (435 definidos), 763 assertions, 0 fallas |
-| Schemathesis 4.33.1 | Solo `GET`, `--max-examples 15`, dos pasos (esquema y errores de servidor; `status_code_conformance`) | Ver 2 |
-| Carga (k6) | `test/perf/k6-criticos.js`, 50 usuarios, 5 min | Ver 2.2 |
-| Compose en frío | `docker compose up -d --build` con volúmenes nuevos | Ver 2 |
-| CI de `develop` | Run de `CI` del commit `142e1a3` | [42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201) |
-| Newman y Schemathesis en el CI | Workflow `API tests`, job `api (newman + schemathesis)` | [42632174625](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174625) (push) y [42631657018](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42631657018) (PR) |
-| Mutation | Stryker (`npm run test:mutation`); línea base en el CI (2 h 26 min), remedición local de 5 archivos (44 min) y corrida en el CI tras el refuerzo (57 min), todas **posteriores a R09** (ver 5.1) | 26 archivos de dominio: 75,39 % en el CI (71,22 % antes del refuerzo) |
-| e2e con RabbitMQ real | `rabbitmq-real` en el job `e2e` del CI | En local se saltea sin `RABBITMQ_URL`; última corrida local: R08 (4 de 4) |
-
-Los **e2e se corrieron en local** contra una base descartable. Los logs no incluyen números por caso, solo los totales de Jest.
+| Build, tipos, lint, docs | `npm run build`, `typecheck`, `lint:check`, `docs:check` | Build OK; typecheck OK; lint 0 errores y 345 warnings; `docs:check` OK |
+| Unitarios y cobertura | `npm run test:cov` (Prisma mockeado, sin base) | Secciones 2 y 3 |
+| e2e | Job `e2e` del CI (Postgres 16 y RabbitMQ reales, `docs/testing.md`) | Sección 2 |
+| API (Newman y Schemathesis 4.33.1) | Workflow `API tests` | Sección 6 |
+| Mutation | Stryker, workflow `mutation.yml` sobre `50cfff7` ([run 43910859083](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43910859083)) | Sección 5 |
+| Carga | k6, `test/perf/k6-criticos.js` | Sección 2.1 |
+| Seguridad y calidad estática | Jobs `trivy`, `secrets`, `secrets-default`, `audit`, workflow `dast`, SonarCloud | Sección 7 |
 
 ## 2. Totales por nivel
 
-R09 salvo que se diga otra cosa. «Saltados» son tests que Jest no ejecutó; «no realizado» es un nivel sin ninguna corrida.
-
 | Nivel | Suites | Ejecutados | Pasados | Fallados | Saltados | Tiempo |
 |---|---|---|---|---|---|---|
-| Unitario | 125 (125 pasan) | **2992** (16/11; R09: 2854) | 2992 | 0 | 0 | — |
-| e2e con Postgres 16 real | 24 (23 pasan, 1 salteada) | 343 | 343 | 0 | 4 | 79 s (corrida del 10/11; las anteriores, idénticas, 94 s y 100 s) |
-| `rabbitmq-real` | 1 | R08: 4 | R08: 4 | 0 | 4 en R09 (sin broker local) | En el CI corre en el job `e2e` |
-| Newman (`test/api/`) | — | 455 requests | 763 assertions | 0 | — | Corre en el CI (job `api`: 2 min 27 s con Schemathesis) |
-| Schemathesis: esquema y sin 5xx | — | 4388 casos | 4388 | 0 | — | — |
-| Schemathesis: `status_code_conformance` (**bloqueante**) | — | 4384 casos | 3913 | 0 (exit 0) | 471 | — |
-| Mutation (Stryker, #617) | — | 26 archivos de dominio (5182 mutantes, 2142 no compilan y no cuentan) | 75,39 % global en el CI tras el refuerzo (2292 detectados); 71,22 % antes (2165) | — | — | 57 min 16 s en el CI con incremental (2 h 26 min la primera, sin cache); medición de noviembre de 2026, **no es R09** (5.1) |
-| Carga (k6) | — | 14 850 requests | p(95) 32,84 ms; 0,00 % de error | 0 | — | 5 min; ver 2.2 |
-| Seguridad dinámica (ZAP) | 2 escaneos (baseline en Render; activo autenticado en un entorno efímero) | Corrida del 15/11: activo con 46 577 pedidos, 2xx en 76 rutas | **0 High** en los dos (corrida final sobre `main`, 16/11) | 0 (el High de DOMPurify del 15/11 se cerró: DEF-25) | — | Workflow `dast`, [run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357); ver 5.2 y `07`, 5.2 |
-| Seguridad estática: Trivy (#658) | — | 3 pasadas: `fs`, `image`, `config` | **0 HIGH/CRITICAL** en las tres sobre `main` | 0 | — | Job `trivy` del CI de `main`, [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363) (2 min 50 s); la primera corrida ([run](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43762807669)) dio 6 HIGH en la imagen y DS-0002, corregidos en DEF-26; prueba en rojo en `07`, 5.2 |
-| Calidad estática: SonarCloud (#657) | Análisis de `main` (57 817 líneas) | Gate, bugs, vulnerabilidades, ratings, duplicación, hotspots y cobertura | Gate **OK**: 0 bugs, 0 vulnerabilidades, A/A/A, 1,2 %, 100 %, 97,3 % | 0 | — | Job `sonar` de [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363); [dashboard](https://sonarcloud.io/summary/overall?id=hllous_Backend-M6-DAPS2); ver 5.2 |
-| Compose en frío | — | 1 | 1 | 0 | — | up en 46 s; `/health/ready` 200 a los 55 s; seed OK; `GET /neighborhoods` 200 |
+| Unitario | 131 | **3056** | 3056 | 0 | 0 | 26 s en el CI; 80 s con cobertura en local |
+| e2e con Postgres 16 | 25 | **410** | 410 | 0 | 0 | 36 s |
+| e2e con RabbitMQ real | 2 | **8** | 8 | 0 | 0 | 11 s |
+| Newman (`test/api/`) | 1 colección | 570 requests, 1015 assertions | 1015 | 0 | — | 6,8 s |
+| Schemathesis: esquema y errores de servidor | 65 de 152 operaciones (`GET`) | 4681 casos | 4681 | 0 | 0 | 14 s |
+| Schemathesis: `status_code_conformance` (bloqueante) | 65 de 152 operaciones (`GET`) | 4674 casos | 4203 | 0 | 471 | 12 s |
+| Mutation (Stryker) | 26 archivos de dominio | 3068 mutantes evaluados | **76,11 %** | — | — | 4 min 39 s |
+| Carga (k6) | — | 14 850 requests | p(95) 32,84 ms; 0,00 % de error | 0 | — | 5 min |
 
-Notas:
+Total automatizado de tests: **3474** (3056 unitarios + 410 e2e + 8 de RabbitMQ real). Bloqueados: 0. Los 471 casos salteados de Schemathesis son 404 por datos de prueba y 429 en 3 operaciones del portal público.
 
-- **Los unitarios no saltan ningún test.** Los 12 que antes se saltaban dependían del paquete de contratos de M2, que no se versiona: `updateTicketStatus` se valida contra nuestro schema y los ejemplos de M2 usados viven como fixtures mínimos en `test/fixtures/m2/`.
-- **Los 4 saltados del e2e** son los de `rabbitmq-real`, que se saltea sin `RABBITMQ_URL`.
-- **Tests nuevos desde R08:** de 2746 a 2854 unitarios (+108) y de 312 a 343 e2e (+31: 9 de `problem-details`, 12 de `etag-if-match`, 8 de `idempotency` y 2 de `neighborhoods-catalog`).
-- **Bloqueados: 0** en todos los niveles. Lo que depende de otros módulos (M1, M9, M7, M2) se probó en el historial de integración, no con un caso automatizado bloqueado.
-- **Los e2e** cubren: ciclo de servicios, pertenencia de Campo, inbox e idempotencia, outbox con reintento, flujo ambiental, cortes de calle, cierre de contenedores con rollback, roles por endpoint, auditoría, extracciones, solicitud de información, personas de demo, migración de cuadrillas, guard de la base, límite de tasa (429), seguridad de entrada, errores en Problem Details, ETag e `If-Match`, `Idempotency-Key` y catálogo local de barrios (detalle en `docs/testing.md`).
-- **Newman y Schemathesis** tienen caso de éxito en 61 de las 152 operaciones; los 91 restantes están en `test/api/PENDIENTES.md`. Schemathesis recorre solo los `GET`. Los 471 casos salteados son avisos esperables: 404 por datos de prueba y 429 en 3 operaciones del portal público.
+Los e2e cubren: ciclo de servicios, pertenencia de Campo, inbox e idempotencia, outbox con reintento (también contra RabbitMQ real), flujo ambiental, cortes de calle, cierre de contenedores con rollback, roles por endpoint, auditoría, extracciones, solicitud de información, personas de demo, migración de cuadrillas, guard de la base, límite de tasa (429), seguridad de entrada, seguridad en vivo, errores en Problem Details, ETag e `If-Match`, `Idempotency-Key` y catálogo local de barrios (detalle en `docs/testing.md`).
 
-### 2.1 Flaky
+**Flaky.** Tres corridas locales idénticas (`npm run test:cov` y dos `npm test`): 131 archivos y 3056 tests pasan en las tres, y los mismos números en el CI.
 
-| Suite | Corrida 1 | Corrida 2 | Corrida 3 | Resultado |
-|---|---|---|---|---|
-| Unitarios, e2e y `rabbitmq-real` (R08, local) | 2746 / 312 / 4 | 2746 / 312 / 4 | 2746 / 312 / 4 | **Idéntico en 3 corridas** |
-| e2e general (R09, local) | 343 pasan, 4 saltados | 343 pasan, 4 saltados | — | **Idéntico en 2 corridas** |
+### 2.1 Carga (k6)
 
-Las 3 corridas se repitieron también en el CI y en local sobre R09, con el mismo resultado. Observaciones: (a) una corrida completa del e2e cayó una vez por un timeout de 30 s en el arranque de una suite con la máquina cargada con otras pruebas; con la máquina libre dio idéntico, y no investigamos la causa (ver la lección 8 de [`08-lecciones-aprendidas.md`](08-lecciones-aprendidas.md)); (b) corridas iguales no prueban que no haya un defecto intermitente: DEF-24 ([#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554)) está cerrado por decisión del equipo con la causa raíz sin confirmar, y si vuelve a aparecer se reabre; (c) no corrimos `--detectOpenHandles`: dato no disponible.
-
-### 2.2 Carga (k6)
-
-`test/perf/k6-criticos.js`: 50 usuarios concurrentes, 5 minutos, `GET /services`, `/containers` y `/zones` autenticados, `pageSize=20`, 1 s de pausa por usuario. Evidencia: `test/perf/resultados/2026-11-09/k6-completa.txt` y `k6-summary-completa.json`; la tabla está en `test/perf/README.md`.
+`test/perf/k6-criticos.js`: 50 usuarios, 5 minutos, `GET /services`, `/containers` y `/zones` autenticados, `pageSize=20`. Evidencia: `test/perf/resultados/2026-11-09/`.
 
 | Métrica | Resultado | Umbral | Cumple |
 |---|---|---|---|
-| `http_req_duration` p(95) | **32,84 ms** | < 500 ms | **Sí** |
-| `http_req_failed` | **0,00 %** (0 de 14 850) | < 1 % | **Sí** |
+| `http_req_duration` p(95) | **32,84 ms** | < 500 ms | Sí |
+| `http_req_failed` | **0,00 %** (0 de 14 850) | < 1 % | Sí |
 | Requests | 14 850 (49,1 por segundo) | — | — |
 | Promedio / mediana / p(90) / máximo | 14,97 / 11,11 / 23,95 / 441,21 ms | — | — |
-| Checks (200 en los tres `GET`) | 100 % | — | — |
 
-**Alcance de esta corrida.** Fue **en local**, con backend, Postgres, RabbitMQ y k6 en la misma máquina de 6 CPUs, solo con lecturas, con `THROTTLE_LIMIT` en 100000 (en el despliegue el límite global sigue en 600 por minuto por IP y endpoint) y sobre la base del seed de demo (673 servicios, 500 contenedores, 48 zonas). También se corrió la carga contra el despliegue (Render y Supabase) y con escrituras; la evidencia vive en `test/perf/`.
+Corrida local con backend, Postgres, RabbitMQ y k6 en la misma máquina, solo lecturas, `THROTTLE_LIMIT` en 100000 y el seed de demo (673 servicios, 500 contenedores, 48 zonas). Contra el despliegue el límite sigue en 600 por minuto por IP y endpoint.
 
-## 3. Cobertura (unitarios, `npm run test:cov`)
+## 3. Cobertura (`npm run test:cov`)
 
-**Global (R09):** sentencias **98,58 %** · ramas **93,63 %** · funciones **98,07 %** · líneas **99,16 %** (124 suites, 2854 tests). Sale de la fila `All files` del log. Frente a R08 (98,6 / 93,94 / 98,09 / 99,18) bajó unas centésimas porque entró código nuevo (ETag, idempotencia, filtro de errores).
+| Métrica | Global | Umbral del repo | Consigna |
+|---|---|---|---|
+| Sentencias | **97,98 %** | 90 % | — |
+| Ramas | **95,28 %** | 90 % | ≥ 70 % en negocio |
+| Funciones | **97,82 %** | 90 % | — |
+| Líneas | **98,71 %** | 90 % | ≥ 80 % en negocio |
 
-**Global actualizado (16/11/2026, `npm run test:cov` sobre `develop` @ `6fe2614`):** sentencias **97,97 %** · ramas **95 %** · funciones **97,82 %** · líneas **98,71 %** (125 suites, 2992 tests, 0 fallos). Cumple el umbral de 85 % del repo y el de la consigna; el valor más bajo de `src/modules/*` es 97,82 % de líneas (`attachments` y `green-spaces`) y 81,57 % de ramas (`green-spaces`). La tabla por carpeta de abajo es la de R09 y no se re-midió. **Cobertura en SonarCloud: 97,3 % (líneas 98,8 %)**, con las mismas líneas sin cubrir que Vitest (el porcentaje difiere solo por el denominador). Las exclusiones de Sonar son las de Vitest ([ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md)).
+Por capa (líneas, ramas y funciones; suma de los archivos de cada carpeta):
 
-El umbral del repo es 85 % en las cuatro métricas (`package.json`, `coverageThreshold`) y la corrida lo cumplió. Umbrales de la consigna: líneas ≥ 80 %, ramas ≥ 70 % en la capa de negocio: **cumple**; el valor más bajo de `src/modules/*` es 95,77 % de líneas y 82,92 % de ramas, ambos en `green-points`.
-
-Cobertura por carpeta (sentencias, ramas, funciones, líneas; en %):
-
-| Carpeta | Sent. | Ramas | Func. | Líneas |
+| Capa | Archivos | Líneas | Ramas | Funciones |
 |---|---|---|---|---|
-| `src/auth` | 98,32 | 90 | 96,77 | 100 |
-| `src/common` (raíz) | 96,07 | 85 | 92,3 | 95,55 |
-| `src/common/audit` | 100 | 100 | 100 | 100 |
-| `src/common/decorators` | 99,11 | 90,9 | 100 | 100 |
-| `src/common/filters` | 97,82 | 88 | 100 | 100 |
-| `src/common/idempotency` | 98,88 | 85,71 | 100 | 98,73 |
-| `src/common/middleware` | 100 | 83,33 | 100 | 100 |
-| `src/common/utils` | 97,11 | 88,88 | 95 | 98,83 |
-| `src/common/guards`, `interceptors`, `pipes` | 100 | 100 | 100 | 100 |
-| `src/core` | 98,04 | 98,39 | 91,66 | 100 |
-| `src/events` (raíz) | 100 | 97,4 | 100 | 100 |
-| `src/events/consumers` | 97,81 | 94,48 | 98,07 | 98,79 |
-| `src/events/inbox` | 100 | 95,83 | 100 | 100 |
-| `src/events/outbox` | 98,46 | 92,3 | 100 | 99,12 |
-| `src/events/publishers` | 95,83 | 100 | 88,88 | 98,36 |
-| `src/health`, `src/identity` | 100 | 100 | 100 | 100 |
-| `modules/attachments` | 95,78 | 90,14 | 100 | 98,23 |
-| `modules/attachments/storage` | 100 | 100 | 100 | 100 |
-| `modules/citizen-portal` | 100 | 90,62 | 100 | 100 |
-| `modules/containers` | 99,3 | 92,3 | 100 | 99,27 |
-| `modules/crews` | 100 | 96,11 | 100 | 100 |
-| `modules/environmental-inspections` | 100 | 97,26 | 100 | 100 |
-| `modules/environmental-reports` | 99,48 | 91,8 | 100 | 100 |
-| `modules/green-points` | 96 | 82,92 | 100 | 95,77 |
-| `modules/green-spaces` | 98,57 | 93,33 | 100 | 98,48 |
-| `modules/indicators` | 97,51 | 86,9 | 93,4 | 98,41 |
-| `modules/outbound-requests` | 98,59 | 95,65 | 98 | 98,46 |
-| `modules/role-assignments` | 100 | 95 | 100 | 100 |
-| `modules/routes` | 100 | 88 | 100 | 100 |
-| `modules/services` | 97,43 | 93,31 | 99 | 97,66 |
-| `modules/trees` | 98,68 | 90,9 | 100 | 98,5 |
-| `modules/trees/interventions` | 99,21 | 94,87 | 100 | 99,17 |
-| `modules/trees/surveys` | 100 | 100 | 100 | 100 |
-| `modules/vehicles` | 98,7 | 96 | 100 | 98,63 |
-| `modules/zones` | 100 | 97,56 | 100 | 100 |
-| `modules/communes`, `disposal-sites`, `neighborhoods`, `service-frequencies`, `service-types` | 100 | 100 | 100 | 100 |
+| `src/modules` (negocio y dominio) | 62 | 99,24 % | 95,93 % | 98,84 % |
+| `src/events` (outbox, inbox, consumers, publishers) | 31 | 99,00 % | 95,14 % | 98,18 % |
+| `src/common` | 34 | 98,92 % | 91,71 % | 98,02 % |
+| `src/core` | 5 | 100 % | 97,61 % | 91,67 % |
+| `src/auth` | 7 | 100 % | 92,65 % | 96,55 % |
 
-**Qué excluye el cálculo** (`collectCoverageFrom`): los `*.module.ts`, los `dto/`, `index.ts`, `main.ts`, `configure-app.ts`, `config/` y `prisma/` (cableado y configuración; `config/` tiene su propio spec). **Cobertura de los e2e:** dato no disponible. La cobertura de líneas dice qué se ejecutó, no qué se verificó; para eso está el mutation testing (sección 5).
+Dentro de `src/modules`, el archivo más bajo es `attachments/evidence-file.ts` en líneas (96 %) y `green-spaces/green-spaces.service.ts` en ramas (81,57 %): ambos cumplen la consigna. Excluye el cálculo: `*.module.ts`, `dto/`, `index.ts`, `main.ts`, `configure-app.ts`, `config/` y `prisma/`. Detalle en `vitest.config.ts` y [ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md).
 
 ## 4. Tiempos del pipeline
 
-**CI de `main` del 16/11/2026** ([run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363), commit `78bf714`), `success` de punta a punta en **3 min 5 s**, con `sonar`, `trivy` y el deploy: `build` 1 min 34 s, `test` 2 min, `e2e` 1 min 52 s, `trivy` 2 min 50 s, `sonar` 1 min 1 s, `secrets` 57 s, `audit` 7 s, `deploy` a Render 3 s (el job dispara el deploy y no espera). El workflow `dast` (ZAP) corre aparte y tardó 4 min 58 s ([run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357)). **Límite de 15 minutos: cumple.** Lo que sigue es la medición de R09, anterior a Sonar y Trivy.
-
-Run de `CI` del commit `142e1a3` ([42632174201](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174201)), `success` de punta a punta en **1 min 44 s**:
+Run de `CI` de `develop` @ `53cde64`, `success` de punta a punta en **2 min 23 s** (de 18:21:16 a 18:23:39 UTC). El camino crítico es `trivy` (2 min 20 s), del que depende `deploy`.
 
 | Job | Resultado | Duración |
 |---|---|---|
-| `build` | success | 54 s |
-| `test` | success | 1 min 16 s |
-| `e2e` (incluye RabbitMQ real) | success | 1 min 39 s |
-| `secrets` (gitleaks sobre todo el historial) | success | 32 s |
-| `audit` (`npm audit`, informativo) | success | 10 s |
+| `build` (docs:check, build, lint, OpenAPI al día) | success | 40 s |
+| `test` (typecheck de specs, unitarios, `lcov`) | success | 1 min 11 s |
+| `e2e` (Postgres y RabbitMQ reales) | success | 1 min 27 s |
+| `audit` (`npm audit`, gate de altas y críticas) | success | 18 s |
+| `secrets` (gitleaks con `.gitleaks.toml`, historial completo) | success | 1 min |
+| `secrets-default` (gitleaks por defecto y trufflehog) | success | 1 min 13 s |
+| `trivy` (`fs`, `image`, `config`) | success | 2 min 20 s |
+| `sonar` | skipped (el plan Free analiza solo `main` y los PR) | — |
 | `deploy` | skipped (solo corre en push a `main`) | — |
 
-El workflow `API tests` (Newman y Schemathesis, con `status_code_conformance` bloqueante) terminó en `success` en 2 min 27 s ([42632174625](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42632174625)). `CodeQL Advanced` terminó en `success`. **Límite de 15 minutos: cumple, con mucho margen.**
+| Workflow | Job | Resultado | Duración |
+|---|---|---|---|
+| `API tests` | `api (newman + schemathesis)` | success | 2 min 8 s (workflow: 2 min 11 s) |
+| `CodeQL Advanced` | `Analyze (javascript-typescript)` | success | 1 min 27 s (workflow: 1 min 30 s) |
+| `CodeQL Advanced` | `Analyze (actions)` | success | 47 s |
 
-**Versión entregada (`main`, tag `v1.0-testing`).**
-
-| Repo | Commit de `main` | Cómo llegó | CI | Tag |
-|---|---|---|---|---|
-| Backend | `6333ecb` (árbol idéntico a `develop` @ `031d3a0`) | PR [#602](https://github.com/hllous/Backend-M6-DAPS2/pull/602) (`develop → test`) y [#603](https://github.com/hllous/Backend-M6-DAPS2/pull/603) (`test → main`) | `CI` [42679401568](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42679401568), `API tests` [42679401997](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42679401997) y `CodeQL` [42679402043](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/42679402043): `success` | `v1.0-testing` (anotado) |
-| Frontend | `c59e756` (árbol idéntico a su `develop`) | PR [#903](https://github.com/hllous/Frontend-M6-DAPS2/pull/903) y [#904](https://github.com/hllous/Frontend-M6-DAPS2/pull/904) | `CI` [42668828421](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/42668828421): `success` con 22 jobs, al cuarto intento | `v1.0-testing` (anotado) |
-
-- **Qué cambió respecto de `142e1a3`:** solo documentación, README y `.env.example` (`git diff --stat 142e1a3 6333ecb -- src prisma test package.json docker-compose.yml Dockerfile .github` da vacío). Las cifras de este informe siguen siendo las de ese código.
-- **Los intentos fallidos del CI del frontend en `main` no fueron del código:** el primero falló en `unit shard 4/4` por timeouts de 5 s (el shard tardó 1084 s contra ~2 min en un run verde) y los siguientes quedaron con jobs `abandoned` durante una caída parcial de GitHub Actions. El mismo árbol había pasado el CI completo en `develop`, en `test` y en el PR #904. No medimos la causa del runner lento.
-- **Render:** `/health/ready` responde 200 con `database: up` y `broker: connected`, y un `GET /services` sin token responde 401 como `application/problem+json` con los headers `x-ratelimit-*` (límite 600): el despliegue sirve el código nuevo.
-- **gitleaks sobre el historial del tag (local):** v8.30.1 con el [`.gitleaks.toml`](../../.gitleaks.toml) del repo, sobre un clon completo en `v1.0-testing`: **327 commits escaneados, 0 hallazgos**.
-
-El job `e2e` **no es check obligatorio** de la protección de ramas (`.github/branch-protection-rules.json` exige solo `build` y `test`); ver DEF-14. Cambiarlo pide permisos de administrador: **no hecho**.
+Los tres workflows corren en paralelo: el pipeline completo termina con `CI` a los 2 min 23 s. **Límite de 15 minutos: cumple.**
 
 ## 5. Calidad de los tests
 
-**Tests saltados.** En los unitarios no hay ninguno; en los e2e solo `describe.skip` de `rabbitmq-real` cuando no hay `RABBITMQ_URL` local (`test/rabbitmq-real.e2e-spec.ts:24`; en el CI corre con la variable puesta). No hay `it.todo`, `xit`, `xdescribe`, `test.skip` ni `.only` en `src/` y `test/` (`grep`).
+**Mutation score (Stryker).** `stryker.config.json` muta los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules`, con `break: 60`. Resultado: **76,11 %** global (77,16 % sobre mutantes cubiertos): 2334 killed, 1 timeout, 691 survived y 42 sin cobertura. Umbral: 60 %. Cumple. Cómo repetirlo: [`docs/testing.md`](../testing.md), sección «Mutation testing».
 
-**Aserciones débiles.** `src/modules/services/services.service.spec.ts:875` verifica «se puede cancelar desde %s» solo con `resolves.toBeDefined()`: un `cancel()` que devolviera cualquier cosa pasaría. **No se corrigió.** Hay 25 usos de `toBeDefined()` o `toBeTruthy()` en los specs; solo revisamos el de la línea 875.
+**Tests saltados.** Ninguno. No hay `it.todo`, `xit`, `xdescribe`, `test.skip` ni `.only` en `src/` y `test/`.
 
-**Mutation score (Stryker, #577 y #617).** `stryker.config.json` muta los 26 `*.service.ts`, `*.transitions.ts` y `*.sweeper.ts` de `src/modules`, con umbral `break: 60`. **Score global vigente en CI: 75,39 %** (línea base previa al refuerzo: 71,22 %; cumple el criterio de 60 %). Se reforzaron 5 archivos y 4 llegaron a 100 %; el detalle, la clasificación de lo que queda y las reglas que protegen los tests nuevos están en 5.1. El workflow `mutation.yml` corre a mano o los lunes.
+**Aserciones débiles.** `src/modules/services/services.service.spec.ts:875` verifica «se puede cancelar desde %s» solo con `resolves.toBeDefined()`.
 
-**Mocks.** No encontramos por muestreo tests que mockeen la clase bajo prueba. Los unitarios mockean Prisma, así que prueban llamadas más que comportamiento de base; el comportamiento real lo cubren los 343 e2e.
-
-### 5.1 Mutation testing del dominio (#617)
-
-**Esta medición es posterior a R09 y no se hizo sobre la misma base:** es del 10 y 11/11/2026, sobre la rama `tests/617-mutation-score` con `develop` @ `8daa52d` o posterior (Vitest, NestJS 12, Node 24). No reemplaza ni reescribe las cifras de R09 de las secciones 2 y 3. Cómo repetirla: [`docs/testing.md`](../testing.md), sección «Mutation testing».
-
-**Alcance y línea base.** Stryker 9 con `@stryker-mutator/vitest-runner`, checker TypeScript y `coverageAnalysis: perTest`, sobre `src/modules/**/*.service.ts`, `*.transitions.ts` y `*.sweeper.ts`: 26 archivos. Corrida en GitHub Actions (Linux, run **42913181516**, `concurrency: 3`, `timeoutMS: 10000`), **2 h 26 min**, sin incremental previo. 5182 mutantes: 2044 Killed, 121 Timeout, **801 Survived**, **74 NoCoverage** y 2142 CompileError (no cuentan). **Score global = (2044 + 121) / (2044 + 121 + 801 + 74) = 71,22 %**; el umbral del issue y el `break` son 60 %. Un mutante *Survived* es un cambio que ningún test notó; *NoCoverage*, un cambio en una línea que ningún test ejecuta.
-
-Score por archivo de la línea base, de menor a mayor («No detectados» = Survived + NoCoverage):
-
-| Archivo (bajo `src/modules/`) | Score | Detectados | Survived | NoCoverage | Total |
-|---|---:|---:|---:|---:|---:|
-| `environmental-reports/report-deadline.sweeper.ts` | 40,0 % | 6 | 9 | 0 | 15 |
-| `green-points/green-points.service.ts` | 52,6 % | 50 | 35 | 10 | 95 |
-| `citizen-portal/citizen-portal.service.ts` | 55,0 % | 33 | 27 | 0 | 60 |
-| `trees/trees.service.ts` | 60,7 % | 65 | 37 | 5 | 107 |
-| `green-spaces/green-spaces.service.ts` | 62,3 % | 48 | 27 | 2 | 77 |
-| `containers/containers.service.ts` | 64,6 % | 93 | 47 | 4 | 144 |
-| `services/services.service.ts` | 65,8 % | 404 | 198 | 12 | 614 |
-| `vehicles/vehicles.service.ts` | 67,6 % | 46 | 21 | 1 | 68 |
-| `outbound-requests/outbound-requests.service.ts` | 68,5 % | 63 | 26 | 3 | 92 |
-| `trees/interventions/tree-interventions.service.ts` | 68,9 % | 91 | 40 | 1 | 132 |
-| `crews/crews.service.ts` | 71,3 % | 149 | 56 | 4 | 209 |
-| `environmental-inspections/environmental-inspections.service.ts` | 71,5 % | 103 | 41 | 0 | 144 |
-| `zones/zones.service.ts` | 71,6 % | 73 | 28 | 1 | 102 |
-| `service-frequencies/service-frequencies.service.ts` | 72,2 % | 65 | 25 | 0 | 90 |
-| `service-types/service-types.service.ts` | 72,2 % | 39 | 15 | 0 | 54 |
-| `routes/routes.service.ts` | 74,7 % | 74 | 22 | 3 | 99 |
-| `attachments/attachments.service.ts` | 75,0 % | 57 | 19 | 0 | 76 |
-| `communes/communes.service.ts` | 75,0 % | 6 | 2 | 0 | 8 |
-| `disposal-sites/disposal-sites.service.ts` | 77,6 % | 38 | 11 | 0 | 49 |
-| `trees/surveys/tree-surveys.service.ts` | 78,4 % | 40 | 11 | 0 | 51 |
-| `indicators/indicators.service.ts` | 80,6 % | 295 | 48 | 23 | 366 |
-| `role-assignments/role-assignments.service.ts` | 81,2 % | 69 | 15 | 1 | 85 |
-| `environmental-reports/environmental-reports.service.ts` | 81,7 % | 196 | 40 | 4 | 240 |
-| `neighborhoods/neighborhoods.service.ts` | 83,3 % | 5 | 1 | 0 | 6 |
-| `outbound-requests/street-closure-expiry.sweeper.ts` | 100,0 % | 43 | 0 | 0 | 43 |
-| `outbound-requests/outbound-requests.transitions.ts` | 100,0 % | 14 | 0 | 0 | 14 |
-
-**Qué se reforzó.** Los cinco archivos con peor score o más sobrevivientes (333 de los 875 no detectados; `services.service.ts` solo, 210). Cada uno se re-midió solo, en local (Windows, Node 24, Vitest, `concurrency: 5`, 44 min 44 s en total, sin incremental). Después se corrió `mutation.yml` en el CI sobre `develop` con el refuerzo (run 43047378274, Linux, Node 24, 57 min 16 s con el cache incremental estrenado): **75,39 % global es el score vigente**; 71,22 % es el de antes del refuerzo (run 42913181516). Sobre 5182 mutantes: 2291 Killed, 1 Timeout, 697 Survived, 51 NoCoverage y 2142 CompileError (no cuentan); (2291 + 1) / (2291 + 1 + 697 + 51) = 75,39 %. La columna local y la del CI solo difieren en `services.service.ts`: en local 4 mutantes terminaron en *Timeout* (cuentan como detectados) y en el CI esos mismos 4 figuran como *Survived* (154 → 158 sobrevivientes); en los otros cuatro archivos coinciden exactamente.
-
-| Archivo | Antes (CI) | Después (local) | Después (CI) | No detectados antes → después |
-|---|---:|---:|---:|---:|
-| `environmental-reports/report-deadline.sweeper.ts` | 40,0 % | **100 %** (15 killed) | 100 % | 9 → 0 |
-| `green-points/green-points.service.ts` | 52,6 % | **94,74 %** (90 killed, 5 survived) | 94,74 % | 45 → 5 |
-| `citizen-portal/citizen-portal.service.ts` | 55,0 % | **100 %** (60 killed) | 100 % | 27 → 0 |
-| `trees/trees.service.ts` | 60,7 % | **95,33 %** (102 killed, 5 survived) | 95,33 % | 42 → 5 |
-| `services/services.service.ts` | 65,8 % | **74,27 %** (452 killed, 4 timeout, 154 survived, 4 nocoverage) | 73,62 % (452 killed, 158 survived, 4 nocoverage) | 210 → 158 |
-
-Los cinco juntos: **81,14 %** (723 de 891). Los cuatro archivos chicos se re-midieron después de recortar sus specs (14 min 7 s): los 10 sobrevivientes de `green-points` y `trees` son 6 textos de log de alta, cambio y baja y 4 `select: { id: true }` de la verificación de existencia, las dos categorías aceptadas de la tabla de abajo; antes del recorte los mataban tests que solo afirmaban esos textos. Los 154 sobrevivientes de `services.service.ts` son, por mutador: `StringLiteral` 66, `ConditionalExpression` 40, `ObjectLiteral` 20, `LogicalOperator` 8, `EqualityOperator` 6, `BlockStatement` 5, `BooleanLiteral` 5, `ArrayDeclaration` 4 y 1 de `ArithmeticOperator`, `ArrowFunction`, `MethodExpression` y `CallExpression`.
-
-**Verificación de validez.** Cada mutante muerto lo mata un test del spec de su propio archivo, nunca uno ajeno. Tests distintos que matan: `green-points` 20, `citizen-portal` 20, `services` 142, sweeper 5, `trees` 19; ningún test mata más de 26 mutantes, así que no hay un test «comodín» que explique el score.
-
-**Qué no se cubrió, y por qué.** Los otros 21 archivos (542 de los 875 no detectados) no se trabajaron: el criterio numérico ya se cumplía y el issue pide cubrir «los relevantes» y justificar el resto. La clasificación se hizo por mutador y línea (script sobre `mutation.json`), no mutante por mutante; las cantidades son aproximadas y son de la línea base completa (875).
-
-| Categoría | Cant. | Ejemplo | Veredicto |
-|---|---:|---|---|
-| **Texto de log** (`StringLiteral` en `this.logger.*`) | ~70 | `containers.service.ts:96` «Contenedor registrado: …» | **Justificado.** No hay contrato de log. En los cinco archivos trabajados se cubrió solo donde el log lleva un dato útil para operar |
-| **Texto de mensaje de error sin contrato** | ~210 | `attachments.service.ts:49` «Falta el archivo (campo "file")» | **Parcialmente justificado.** El código HTTP es contrato y está cubierto; el texto lo lee una persona. Se cubrió donde el frontend o un criterio Gherkin lo citan |
-| **Mutantes equivalentes o casi** | ~25 | `containers.service.ts:413` y `tree-interventions.service.ts:352` (`CONTAINER_TRANSITIONS[x] ?? []`, tabla con todas las claves); `indicators.service.ts:159,535` (`+= 1` ↔ `-= 1` sobre un contador no observable) | **Justificado.** No hay comportamiento observable que cambie. Entra la rama inalcanzable de `resolveContainerOutcome` (`services.service.ts` ~914-918): se probó una vez parcheando `CONTAINER_TRANSITIONS`, el test se borró y el mutante queda **aceptado** |
-| **`select: { id: true }` → `false` y similares** | ~31 | `crews.service.ts:400`, `disposal-sites.service.ts:117` | **Justificado con reparo.** Con Prisma mockeado la selección no cambia el resultado; el e2e contra Postgres real la cubre indirectamente |
-| **Patrón PATCH parcial** (`dto.x !== undefined && {…}`) | ~35 | `containers.service.ts:203-208` | **Pendiente, no justificado.** Mismo hueco que se cerró en `green-points`, `trees` y `services`; la receta (`toStrictEqual` sobre un PATCH vacío, que no debe mandar ninguna clave, y sobre uno parcial con valores falsy válidos) aplica tal cual |
-| **`assertTransition` sin test que lo detecte** | 3 | `environmental-inspections.service.ts:72,144,230` | **Pendiente, real.** Borrar la llamada no rompe ningún test: la máquina de estados del expediente queda sin protección en esos tres pasos |
-| **Orden y paginación** (`orderBy`, `skip`, `take`) | ~60 | `attachments.service.ts:150`, `communes.service.ts:20` | **Pendiente, bajo riesgo.** Se cerró en los cinco archivos trabajados |
-
-**Los tests nuevos de `services.service.ts`, regla por regla.** El spec `services-rules-mutation.spec.ts` (50 tests) más las tablas `it.each` sumadas a `services.service.spec.ts` y `services-container-close.spec.ts`. Cada regla se explica en una frase y es la que queda sin red si se borra el test:
-
-1. Un rango de fechas de un solo día (desde == hasta) es válido.
-2. Volumen y peso salen como número, o `null` si no se midió (nunca un Decimal como texto).
-3. No se programa contra un tipo o recorrido inexistente (404) o dado de baja (400); el error nombra cuál.
-4. Un servicio es de recorrido o puntual: `ROUTE` descarta el objetivo puntual, `POINT` deja `routeId` en `null`; se guarda quién lo programó.
-5. Una franja exige inicio estrictamente anterior al fin, también al editar una sola punta y al confirmar una reprogramación.
-6. Solo un ETag concreto convierte el conflicto de versión en 412; sin `If-Match` o con `*` no hay control optimista (ADR-012).
-7. Solo el «registro no encontrado» (P2025) se traduce en 409/412; cualquier otro error de base sale tal cual.
-8. Un servicio en curso no cambia de cuadrilla (409).
-9. Asignar cuadrilla sin mandar vehículo no borra el vehículo que ya tenía.
-10. El conflicto de recursos le da al operador recurso, nombre (patente, o id), servicio, estado, tipo, día y franja.
-11. Para el encaje cuenta la reubicación de zona vigente el día del servicio, no la de hoy.
-12. Toda operación (CREATE, UPDATE, ASSIGN_CREW, START, SUSPEND, RESUME, CANCEL, RESCHEDULE, CONFIRM_RESCHEDULE, COMPLETE) deja auditoría con acción y estados, en la misma transacción.
-13. Cada aviso al reclamo de M2 (create/start STARTED, cancel REJECTED con motivo, complete RESOLVED, confirmReschedule STARTED, demora PROGRESS) se encola en el outbox dentro de la transacción, con el tipo correcto.
-14. No se reprograma a una fecha anterior a hoy en Argentina; hoy vale, también a las 02:00 UTC.
-15. Confirmar la reprogramación no pisa la punta de la franja que no se mandó.
-16. Al reubicar un contenedor sin coordenadas nuevas se borran las viejas.
-17. La fecha propuesta de vuelta a una zona es un día, sin hora.
-18. La recolección en el sitio de disposición se puede registrar con el servicio `COMPLETED` o `PARTIALLY_COMPLETED`.
-19. Quien no es de la cuadrilla recibe 403 antes de cualquier regla de estado.
-
-Lo más valioso del spec es el montaje `tx = Object.create(prisma)` con `enqueuedInTx`, que distingue el cliente de la transacción: ningún otro spec detecta un outbox o una auditoría escritos fuera de la transacción (reglas 12 y 13).
-
-**Tests generados con IA: se recortaron.** El primer `services-rules-mutation.spec.ts` salió con 2345 líneas y 139 tests. La revisión (`m6-revisor`) clasificó cada uno: el 80 % repetía otros 7 specs de la carpeta o afirmaba textos de log y formas de `select`. Quedó en **753 líneas y 50 tests** (las 19 reglas). Lo recortado se fusionó en `it.each` de `services-container-close.spec.ts` y `services.service.spec.ts`; de este último además se borraron dos tests no deterministas con `Date.now() - 3 h`; la regla 14 los reemplaza con una fecha fija y fake timers. Con el mismo criterio se recortaron los specs agregados a los otros cuatro archivos (de 112 a 79 tests): se fusionaron los «el 404/409 nombra X» en el test del mismo caso, se borraron los que solo afirmaban textos de log y los `it.each` de «PATCH con solo un campo» (los reemplaza `toStrictEqual` sobre un PATCH vacío), y quedó una sola factory por entidad. Lo que protegen, por archivo:
-
-- **`report-deadline.sweeper`** (5): cierra solo los `NOTICE_ISSUED` vencidos a la hora actual; barre al arrancar; si la base falla al arrancar no tumba la aplicación y deja la causa en el log; informa cuántos cerró y no loguea si no hubo ninguno (en un cron el log es el único efecto observable).
-- **`citizen-portal`** (23): la vista pública es una lista blanca (campos de respuesta y `select` de Prisma exactos: nunca denunciante, inspector, hallazgos, cuadrilla, vehículo ni notas); los 11 estados internos del expediente colapsan en 7 etapas y los 7 del servicio en 4, cada etapa con frase propia; el calendario mira 30 días desde «hoy» en Argentina, trunca las fechas al día y excluye cancelados; un reclamo sin expediente da 404 sin revelar si existe en M2.
-- **`green-points`** (24) y **`trees`** (27): defaults al crear (`null` y activo) y respeto de los valores dados; 409 y 404 que nombran el código o la zona; solo los errores conocidos de Prisma se traducen a HTTP, el resto se propaga; un PATCH manda solo los campos presentes, incluidos los falsy válidos (`active=false`, `lat=0`, una medida de 0 cm), y uno vacío no manda ninguna clave; la baja es lógica y sobre un id inexistente da 404 sin escribir; los Decimal salen como número o `null`. En `trees`, además, el filtro por riesgo usa el último relevamiento y el relevamiento publicado es un resumen sin inspector ni notas.
-
-**Hallazgos al medir.**
-
-- **Test intermitente, corregido (P-3 de [`06`](06-registro-defectos.md)).** `src/openapi-contract.spec.ts`, «todo campo con @Min/@Max… declara minimum/maximum», importa todos los DTO (~2,3 s solo) y superaba el timeout por defecto de Vitest (5 s) con la suite en paralelo y la máquina cargada: era el «1 fallo en 6 corridas tras `npm ci`». Se le dio un timeout propio de 30 s. No es DEF-24 (ese es un e2e por `e2e_no_active`).
-- **Vitest no chequea tipos.** Los specs generados tenían 2 errores de tipo (`it.each` con una columna de descripción no declarada) que ni Vitest ni `nest build` (excluye los specs) ven; los detectó el checker TypeScript de Stryker y el job «Typecheck specs» del CI los habría frenado. Se tiparon las tablas (`it.each<[A, string]>`).
-- **Windows.** El `vitest.related` por defecto del runner no encontró los tests relacionados («No tests were executed»); la remedición local se hizo con `vitest.related: false` en una config aparte, fuera del repo. El CI de Linux no lo necesita.
-- **Observación de producto, no es defecto confirmado.** `start()` acepta un servicio `SUSPENDED` (`VALID_TRANSITIONS.SUSPENDED` incluye `IN_PROGRESS`) sin limpiar `statusReason` ni `statusNote` como hace `resume`. Ningún test lo fija; decisión de producto.
-
-### 5.2 Análisis estático y de seguridad: métricas finales (Entrega 4)
-
-Datos del 16/11/2026 sobre `main` @ `78bf714`. Decisiones, exclusiones y política de gates: [ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md). Hallazgos y justificaciones: [`07`](07-informe-seguridad.md) 5.2 y 5.5; defectos: DEF-13 (cerrado), DEF-25 a DEF-28 en [`06`](06-registro-defectos.md).
-
-**SonarCloud** ([dashboard](https://sonarcloud.io/summary/overall?id=hllous_Backend-M6-DAPS2), job `sonar` del [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363)). Código total (57 817 líneas), contra el criterio de la cátedra; el gate «Sonar way» evalúa solo código nuevo, por eso se reportan aparte.
-
-| Métrica | Exigido | Primer análisis (15/11) | **Final (16/11)** |
-|---|---|---|---|
-| Quality Gate | Aprobado | rojo | **OK** |
-| Bugs | 0 Blocker/Critical | 12 | **0** |
-| Vulnerabilidades | 0 | 23 | **0** |
-| Rating de confiabilidad / seguridad / mantenibilidad | A | D / E / A | **A / A / A** |
-| Duplicación | ≤ 3 % | 1,2 % | **1,2 %** |
-| Hotspots revisados | 100 % | 100 % | **100 %** |
-| Cobertura (líneas) | — | 97,3 % (98,8 %) | **97,3 % (98,8 %)**; 51 líneas sin cubrir |
-
-El gate sobre código nuevo da OK (confiabilidad, seguridad y mantenibilidad A, cobertura 93,9 %, duplicación 0,4 %, hotspots 100 %). **El gate no es bloqueante todavía:** pasar a `wait=true` y check requerido en los PR a `develop` está en [#660](https://github.com/hllous/Backend-M6-DAPS2/issues/660). La captura del gate en verde es el dashboard enlazado. No hay prueba en rojo de Sonar: espera al paso bloqueante.
-
-**Trivy** (job `trivy`, [run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363)): `fs` (lockfile y secretos), `image` y `config`, **0 HIGH/CRITICAL** en las tres; `.trivyignore` vacío. Antes: imagen 6 HIGH con fix (`npm` embebido) y `config` 1 HIGH (contenedor como root), corregidos en #670 (DEF-26). El SARIF de cada pasada está en Code Scanning (`trivy-fs`, `trivy-image`, `trivy-config`). Prueba en rojo registrada en `07`, 5.2.
-
-**OWASP ZAP** (workflow `dast`, [run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357), sobre `main`):
-
-| Escaneo | High | Medium | Low | Qué es la Medium |
-|---|---:|---:|---:|---|
-| Baseline contra Render | **0** (antes 1) | 1 | 5 | CSP ausente solo en `/api/docs` (Swagger UI); la API sí envía CSP (DEF-19) |
-| Activo autenticado, entorno efímero | **0** | 1 | 0 | CORS `*` del entorno de desarrollo efímero; Render no lo tiene |
-
-Render sirve DOMPurify 3.4.17 (el High del 15/11, DEF-25, está cerrado). En la corrida del 15/11 el activo hizo 46 577 pedidos, todos con `Authorization` y cero respuestas 401.
+**Mocks.** Los unitarios mockean Prisma: prueban llamadas más que comportamiento de base; el comportamiento real lo cubren los 410 e2e.
 
 ## 6. Contrato y API
 
 | Qué | Estado |
 |---|---|
-| `docs/api/openapi.json` | 103 rutas, 152 operaciones, 29 tags. `openapi:generate` no deja diff; el CI regenera el archivo y falla si queda desactualizado |
-| `src/openapi-contract.spec.ts` | 7 tests: toda operación 200/201 declara el schema de su respuesta; toda respuesta de error se declara como `application/problem+json` (ADR-011); todo `GET` autenticado declara el 403; todo `GET` con parámetros declara el 400 (DEF-20); `openapi.json` al día; ninguna propiedad como `type: object` sin forma; todo campo con `@Min`, `@Max`, `@IsLatitude` o `@IsLongitude` declara `minimum` y `maximum` |
-| Eventos publicados | 6 `.schema.json` más `_shared.schema.json` en `docs/eventos/publicados/`, validados con `ajv` en `src/events/payloads.spec.ts` |
-| Colección Newman (#583) | **Realizada:** 455 requests ejecutados, 763 assertions, 0 fallidas; corre en el CI (`api-tests.yml`) |
-| Schemathesis (#583) | **Realizado, solo `GET`.** Paso 1: 4388 casos pasan. Paso 2 (`status_code_conformance`, bloqueante desde #593): exit 0, 4384 casos, 3913 pasan, 471 salteados. `/neighborhoods` ya no se excluye (#594) |
-| Endpoints con caso de éxito y de error | **Parcial:** éxito en **61 de 152**; error en las 152; los 91 restantes en `test/api/PENDIENTES.md` |
-| Transición inválida → 409 | **Hecho** para servicios, reparaciones y cortes, e intervenciones de arbolado (114 tests, #582); contenedores y expedientes tenían `it.each` |
-| Problem Details (#590, DEF-10) | **Realizado**, también para JSON mal formado y cuerpo grande. `http-exception.filter.spec.ts` y `test/problem-details.e2e-spec.ts` (9 casos). Sin id de correlación en los 500; `type` siempre `about:blank` |
-| ETag e `If-Match` (#591, DEF-05) | **Realizado en el alcance de ADR-012:** transiciones de contenedores, servicios, intervenciones y expedientes, y `PATCH /containers/:id` y `PATCH /services/:id`. `test/etag-if-match.e2e-spec.ts` (12 casos, `[200, 412]` con concurrencia real). No cubre el resto de las acciones |
-| `Idempotency-Key` (#592, DEF-06) | **Realizado en 21 `POST` de creación**, opcional. `test/idempotency.e2e-spec.ts` (8 casos). El guardado de la respuesta no es atómico con la transacción de dominio (ADR-013) |
+| `docs/api/openapi.json` | 103 rutas, 152 operaciones, 29 tags; el CI regenera el archivo y falla si queda desactualizado |
+| `src/openapi-contract.spec.ts` | 7 tests: schema de toda respuesta 200/201; errores como `application/problem+json`; 403 en todo `GET` autenticado; 400 en todo `GET` con parámetros; `openapi.json` al día; sin `type: object` sin forma; `minimum`/`maximum` en `@Min`, `@Max`, `@IsLatitude` y `@IsLongitude` |
+| Eventos publicados | 6 `.schema.json` más `_shared.schema.json`, validados con `ajv` en `src/events/payloads.spec.ts` |
+| Newman (`npm run api:coverage`) | Éxito en **151 de 152** operaciones y error en **149 de 152**; las 4 excepciones están en `test/api/PENDIENTES.md`. El script falla si una operación queda sin caso ni excepción |
+| Schemathesis | Solo `GET` (65 de 152 operaciones); cobertura de esquema: parámetros 55,1 %, respuestas 20,8 % |
+| Transición inválida → 409 | 114 tests parametrizados para servicios, reparaciones, cortes e intervenciones; `it.each` en contenedores y expedientes |
+| Problem Details (ADR-011) | `traceId` igual al header `X-Request-Id` y al log del 500; `path` e `instance` sin query; `test/problem-details.e2e-spec.ts` |
+| ETag e `If-Match` (ADR-012) | `test/etag-if-match.e2e-spec.ts` (concurrencia real `[200, 412]`) |
+| `Idempotency-Key` (ADR-013) | 21 `POST` de creación; `test/idempotency.e2e-spec.ts` |
 
-## 7. Criterios de salida: cumple, parcial o no hecho
+## 7. Análisis estático y de seguridad
+
+Decisiones y exclusiones: [ADR-017](../decisiones/adr-017-herramientas-analisis-estatico-y-seguridad.md). Hallazgos: [`07`](07-informe-seguridad.md).
+
+**SonarCloud** ([dashboard](https://sonarcloud.io/summary/overall?id=hllous_Backend-M6-DAPS2)): último análisis, de `main` (16/11/2026, 57 877 líneas).
+
+| Métrica | Exigido | Resultado |
+|---|---|---|
+| Quality Gate | Aprobado | **OK** |
+| Bugs / vulnerabilidades | 0 | **0 / 0** |
+| Confiabilidad / seguridad / mantenibilidad | A | **A / A / A** |
+| Duplicación | ≤ 3 % | **1,2 %** (código nuevo: 0,3 %) |
+| Hotspots revisados | 100 % | **100 %** (0 abiertos) |
+| Cobertura | — | **97,3 %** (líneas 98,8 %; código nuevo: 94,3 %) |
+
+El gate es bloqueante en el CI (`sonar.qualitygate.wait=true`).
+
+**Trivy** (job `trivy`, 2 min 20 s): `fs`, `image` y `config` con **0 HIGH/CRITICAL**; `.trivyignore` vacío.
+
+**OWASP ZAP** (workflow `dast`, último run: [43895156093](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43895156093), 4 min 48 s; baseline 1 min 26 s y activo 4 min 45 s en paralelo):
+
+| Escaneo | High | Medium | Resto | Qué es la Medium |
+|---|---:|---:|---|---|
+| Baseline contra Render | **0** | 1 | 8 avisos Low o informativos | CSP ausente en `/api/docs` |
+| Activo autenticado, entorno efímero | **0** | 1 | 122 reglas sin hallazgo | CORS `*` del entorno efímero |
+
+**Secretos:** `secrets` (gitleaks con `.gitleaks.toml`, 1 min) y `secrets-default` (gitleaks por defecto y trufflehog, 1 min 13 s) en `success`. **Dependencias:** `npm audit --omit=dev` con 0 vulnerabilidades (job `audit`, 18 s). **CodeQL:** `success` en `javascript-typescript` y `actions`.
+
+## 8. Criterios de salida
 
 | Criterio | Umbral | Resultado | Cumple |
 |---|---|---|---|
-| Cobertura de líneas en dominio | ≥ 80 % | 98,71 % global (16/11; R09: 99,16 %); mínimo en `src/modules/*`: 97,82 % | **Sí** |
-| Cobertura de ramas en dominio | ≥ 70 % | 95 % global (16/11; R09: 93,63 %); mínimo en `src/modules/*`: 81,57 % | **Sí** |
-| Mutation score en dominio | ≥ 60 % | 75,39 % global en los 26 archivos de dominio (CI tras el refuerzo, #617, #647; antes 71,22 %; ver 5.1) | **Sí** |
-| Tests flaky | 0 (3 corridas idénticas) | 3 corridas idénticas en local (R08) y repetidas en el CI (ver 2.1) | **Sí** |
-| Pipeline | ≤ 15 min | 3 min 5 s en `main` (16/11, con `sonar` y `trivy`; R09: 1 min 44 s); `API tests` 2 min 27 s | **Sí** |
-| Escenarios críticos E2E en el pipeline | ≥ 5 | El job `e2e` corre las suites de `test/` (23 más `rabbitmq-real`); los E2E de navegador viven en el repo del frontend | **Sí** |
-| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y **0 Mayores** (DEF-13 cerrado con #656); 2 Menores abiertos (DEF-14 y DEF-19); [`06`](06-registro-defectos.md) | **Sí** |
-| Casos negativos o de borde | ≥ 40 % | 67,5 % (251 de 372, [`04`](04-especificacion-casos.md)) | **Sí** |
-| Quality Gate (SonarCloud) | Gate en verde, 0 bugs Blocker/Critical, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % de hotspots | Gate **OK** sobre `main` (16/11): 0 bugs, 0 vulnerabilidades, duplicación 1,2 %, A/A/A, hotspots 100 %, cobertura 97,3 % (5.2). **No bloqueante todavía** (#660) | **Sí** |
-| ZAP baseline y activo autenticado | 0 High, cada Medium justificada | 0 High en los dos; 1 Medium en cada uno, justificadas en [`07`](07-informe-seguridad.md) 5.2 | **Sí** |
-| Dependencias (Trivy y `npm audit`) | 0 CVE críticas o altas sin mitigación documentada | 0 HIGH/CRITICAL en `fs`, `image` y `config`; `npm audit --omit=dev` en 0 | **Sí** |
-| Carga: 50 usuarios, 5 min, p95 < 500 ms, error < 1 % | p95 < 500 ms, error < 1 % | p(95) 32,84 ms y 0,00 % en 14 850 requests (local); también corrida contra el despliegue y con escrituras (ver 2.2) | **Sí** |
-| Criterios de aceptación pasados / HU ejecutadas | ≥ 95 % y ninguno Must fallado | [`03`](03-matriz-trazabilidad.md): 161 criterios con test del backend sin fallos (actualizado con #643: CA-HU31-10); 9 solo FE y 5 huecos sin ejecutar | **Parcial** |
+| Cobertura de líneas en dominio | ≥ 80 % | 98,71 % global; 99,24 % en `src/modules` | Sí |
+| Cobertura de ramas en dominio | ≥ 70 % | 95,28 % global; 95,93 % en `src/modules` | Sí |
+| Mutation score en dominio | ≥ 60 % | 76,11 % | Sí |
+| Tests flaky | 0 (3 corridas idénticas) | Backend: 3 corridas locales y el CI con el mismo resultado. Frontend: 3 corridas locales idénticas y `retries: 0` en Playwright (sección 9.2) | Sí |
+| Pipeline | ≤ 15 min | 2 min 23 s (camino crítico: `trivy`) | Sí |
+| Escenarios críticos E2E en el pipeline | ≥ 5 | Job `e2e`: 25 suites y 410 tests, más 2 suites de RabbitMQ real | Sí |
+| Defectos abiertos | 0 Bloqueantes, 0 Críticos, ≤ 3 Mayores | 0, 0 y 0 Mayores; 2 Menores ([`06`](06-registro-defectos.md)) | Sí |
+| Casos negativos o de borde | ≥ 40 % | 68,1 % (271 de 398, [`04`](04-especificacion-casos.md)) | Sí |
+| Quality Gate (SonarCloud) | Verde, 0 bugs, 0 vulnerabilidades, duplicación ≤ 3 %, ratings A, 100 % hotspots | Gate OK; 0 / 0; 1,2 %; A/A/A; 100 % | Sí |
+| ZAP baseline y activo | 0 High, cada Medium justificada | 0 High; 1 Medium en cada uno, justificadas en [`07`](07-informe-seguridad.md) | Sí |
+| Dependencias (Trivy y `npm audit`) | 0 críticas o altas sin mitigación | 0 HIGH/CRITICAL; `npm audit` en 0 | Sí |
+| Carga: 50 usuarios, 5 min | p95 < 500 ms, error < 1 % | p(95) 32,84 ms; 0,00 % | Sí |
+| Criterios de aceptación con test / HU ejecutadas | ≥ 95 % y ninguno Must fallado | [`03`](03-matriz-trazabilidad.md): **180 de 184 ejecutados y pasados (97,8 %)**: 169 con test del backend y 11 con test del frontend (Eje A, sección 9); 0 fallados; 4 huecos | Sí |
 
-## 8. Lo que no se realizó
+## 9. Frontend
 
-| Criterio | Estado | Motivo |
+Medido sobre `develop` del repo Frontend @ `0519d95` (16/11/2026), después de FE #977, #978, #979, #980, #982 y #985. Las cifras de cobertura y de tests salen de las descripciones de esos PR y de la evidencia versionada en el repo Frontend; los runs citados son del CI de GitHub Actions del Frontend. La configuración (umbrales, shards, Stryker, gate de Sonar) se recontrastó el 16/11 contra `develop` del Frontend @ `93c4cc7` (tras FE #972 y #986).
+
+### 9.1 Eje A: criterios solo-FE, responsive y accesibilidad
+
+Los 10 criterios que solo cubría el frontend tienen un test leído contra el texto del criterio y ejecutado (FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165), todos los jobs en verde). Detalle por criterio en [`03`](03-matriz-trazabilidad.md). El criterio 11, CA-HU26-4 (agregado el 16/11), se ejecutó en local sobre el mismo commit (`src/lib/argentina-date.test.ts`, 27 de 27 tests) y no tiene corrida de CI propia.
+
+| Criterio | Test del Frontend |
+|---|---|
+| CA-HU01-1, CA-HU01-2, CA-HU01-4 | `e2e/qa-criterios-fe.spec.ts` (orden y filtro, esqueleto, 500 y timeout del BFF → `role=alert`). El orden de CA-HU01-1 en los catálogos paginados: tests de unidad y de componente de [Frontend #990](https://github.com/hllous/Frontend-M6-DAPS2/pull/990) (cierra [Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983)) |
+| CA-HU01-3 | `src/components/ui/shadcn-guard.test.ts` |
+| CA-HU26-1, CA-HU26-3 | `e2e/qa-criterios-fe.spec.ts` y `src/lib/argentina-date.test.ts` |
+| CA-HU26-2 | `e2e/service-vehicle-labels.spec.ts` |
+| CA-HU30-3 | `src/lib/m1-refresh.test.ts` y `e2e/failure-journeys.spec.ts` |
+| CA-HU30-4 | `src/app/api/session/login/route.test.ts` |
+| CA-HU32-1 | `e2e/accessibility.spec.ts` (63 tests) |
+
+**Responsive y accesibilidad.** 21 pantallas (`e2e/support/screens.ts`) a 360, 768 y 1280 px: **0 violaciones de axe** (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`; el test falla ante cualquier violación) y **ninguna pantalla con scroll horizontal** (`e2e/responsive-and-keyboard.spec.ts`). Se corrigieron tres violaciones para llegar ahí: `aria-valid-attr-value` en las pestañas del mapa (critical), contraste de `TabsTrigger` y `scrollable-region-focusable` en los tableros.
+
+**Lighthouse** (modo navegación, escritorio y móvil, servidor de desarrollo en modo mock; sin puntaje de rendimiento): accesibilidad **100** en escritorio y móvil en Ingreso, Inicio de Oficina, Contenedores, Servicios, Expedientes, Mapa y Portal público; buenas prácticas 100, salvo 96 en móvil en Servicios y Mapa (teselas de OpenStreetMap a menor resolución). Evidencia: `Frontend-M6-DAPS2/docs/evidencia/eje-a-2026-11-16/` (capturas, reportes HTML de Lighthouse y README con el método).
+
+### 9.2 Eje B: tests inestables, cobertura, mutation y tiempos
+
+| Qué | Resultado | Cumple |
 |---|---|---|
-| Gate de SonarCloud bloqueante y requerido en los PR a `develop`, y su prueba en rojo | **NO HECHO** | Opción C, paso 2 ([#660](https://github.com/hllous/Backend-M6-DAPS2/issues/660)). El análisis y el gate (OK) sí están hechos (5.2) |
-| Reporte final de ZAP archivado en `docs/QA/evidencia/` | **NO HECHO** | Están archivados los reportes de la corrida del 15/11 (`evidencia/zap-2026-11-15/`); los de la corrida final del 16/11 viven como artifact del [run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357), que vence a los 90 días, y se pueden regenerar con el workflow |
-| OWASP ZAP (baseline y activo autenticado) | **HECHO** | 0 High en los dos sobre `main` (5.2; `07`, 5.2) |
-| Trivy | **HECHO** | 0 HIGH/CRITICAL en `fs`, `image` y `config`; sin entradas en `.trivyignore` (5.2; `07`, 5.2) |
-| Mutation score: reforzar los 21 archivos restantes y confirmar el global en el CI | **Parcial** | Línea base del dominio completo medida y 5 archivos reforzados (5.1); el score global tras el refuerzo se confirma con una corrida en el CI luego del merge |
-| Éxito por endpoint en los 91 endpoints restantes | **NO HECHO** | `test/api/PENDIENTES.md` |
-| Integración con broker real (Testcontainers) | **Parcial** | Postgres y RabbitMQ reales como contenedores de servicio del CI y en local. El consumer y la publicación del outbox (también con el broker inalcanzable y su reenvío) se prueban contra RabbitMQ real (#618) |
-| `--detectOpenHandles` | **NO HECHO** | No se corrió |
+| Tests inestables (FE #980) | Causa raíz: timeout de 5 s por test en local bajo carga, `findBy`/`waitFor` con tope de 1 s y compuertas `delay(ms)` de MSW. Ahora `testTimeout` de 30 s igual al CI, compuertas liberadas tras las aserciones y `retries: 0` en Playwright también en el CI. 3 corridas locales idénticas (3229 tests pasan). Desde entonces, los 3 runs del CI de `develop` ([43932396277](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43932396277), [43933683135](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43933683135), [43934913604](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43934913604)) están en verde sin reintentos, aunque cada uno sobre un commit distinto. Cierra DEF-29 a DEF-31 | Sí |
+| Cobertura unitaria con umbral (FE #985) | Sentencias **90,20 %**, líneas **93,03 %**, funciones **88,05 %**, ramas **83,58 %** (antes 87,97 % y 90,85 %, sin umbral). Umbrales en `vitest.config.ts`: 90 / 92 / 87 / 83, exigidos por el job `unit-coverage` sobre el informe fusionado de los shards. 329 archivos y 4134 tests | Sí |
+| Mutation testing (Stryker) | Configurado sobre `src/lib` y las rutas BFF con `break: 60` ([Frontend #986](https://github.com/hllous/Frontend-M6-DAPS2/pull/986)); la medición completa quedó postergada: la corrida [run 43952775688](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43952775688) se canceló sin cifra global (el shard 0 y el job `mutation score` no terminaron); sobre los 15 de 16 shards que sí terminaron el score es 56,40 % (7990 de 14166 mutantes válidos), por debajo del `break` de 60. Es la medición más completa disponible y reemplaza al 56,2 % del ADR-0011 del Frontend, que salió de un reparto anterior de 7 de 8 shards sin las rutas dinámicas `[id]` | Postergado (DEF-35) |
+| Tiempo del CI de PR (FE #982) | 4,5 a 5,5 min de pared con runners libres; los 10 shards de e2e (y 4 de unitarios) se reparten por duración medida (LPT) y cada job tiene `timeout-minutes`. Los picos de 15 min venían de reintentos y de la cola compartida de 20 jobs concurrentes | Sí (≤ 15 min) |
 
-## 9. Plan de acciones
+Los tests de cobertura encontraron un defecto real: `src/app/api/vehicles/[id]/route.ts` devolvía 500 en vez de 503 con el backend caído (DEF-40, corregido en FE #985).
 
-| # | Acción | Estado |
-|---|---|---|
-| 1 | Test de la matriz de transiciones con 409 en los inválidos | **Hecho** (#582, 114 tests) |
-| 2 | Script k6 con 50 usuarios, 5 minutos y 3 `GET` críticos | **Hecho** (#585, #574): local, despliegue y escrituras |
-| 3 | Schemathesis contra `openapi.json` en el CI | **Hecho** (#583), solo `GET`; bloqueante desde #593 |
-| 4 | SonarCloud y Quality Gate | **Hecho** (#657): gate OK y A/A/A sobre `main` el 16/11; **falta** hacerlo bloqueante (#660) |
-| 5 | Stryker sobre el dominio completo | **Hecho** (#577, #617): 71,22 % → 75,39 % confirmado en el CI tras el refuerzo; quedan 21 archivos sin reforzar |
-| 6 | Correr la suite 3 veces seguidas | **Hecho** en local y en el CI; falta `--detectOpenHandles` |
-| 7 | Reemplazar las aserciones débiles (`services.service.spec.ts:875` y el resto) | **Sin hacer** |
-| 8 | Hacer obligatorio el job `e2e` en la protección de ramas | **NO HECHO** (pide admin; DEF-14) |
-| 9 | Newman en el CI | **Hecho** (#583) |
-| 10 | `npm audit`, Dependabot, gitleaks y CodeQL en el CI | **Hecho** (#578, #564, #494); ZAP **hecho** (#659, 0 High); Trivy **hecho** (#658, 0 HIGH/CRITICAL) |
-| 11 | Tag `v1.0-testing` en `main` y en el frontend | **Hecho**: ver «Versión entregada» |
-| 12 | 400 declarado en los `GET` con entrada y Schemathesis bloqueante (DEF-20) | **Hecho** (#593, PR #597) |
-| 13 | Catálogo de barrios local para el compose y el CI (DEF-21) | **Hecho** (#594, PR #597) |
-| 14 | Errores en Problem Details RFC 9457 (DEF-10) | **Hecho** (#590, PR #597); falta el id de correlación y que el frontend adapte su parser (Frontend #898) |
-| 15 | `ETag` e `If-Match` con 412 (DEF-05) | **Hecho** en el alcance de ADR-012 (#591, PR #597) |
-| 16 | `Idempotency-Key` en los `POST` de creación (DEF-06) | **Hecho** en 21 `POST`, con la limitación de ADR-013 (#592, PR #597) |
-| 17 | Frontend dentro del compose | **Hecho** (#560) |
+### 9.3 Eje C: concurrencia optimista y timeout del BFF
 
-Lo que no se haga se declara «no realizado» y no se presenta con números sin evidencia.
+FE #978 (ADR 0010 del Frontend): el BFF propaga `ETag` e `If-Match` en las transiciones versionadas (ADR-012 del Backend) y en `PATCH /containers/:id`; un 412 muestra «Otra persona modificó este registro. Recargue para ver los cambios.» con la acción Recargar y sin perder lo escrito. El timeout del BFF al backend bajó de 15 s a **5 s** con `AbortController` y responde 503; solo los `GET` se reintentan una vez ante una falla de red inmediata. Test: `e2e/optimistic-concurrency.spec.ts`. Cierra DEF-32 y DEF-33.
+
+Con Render dormido, los primeros pedidos dan 503 hasta que despierta: antes de la demo hay que abrir `/health`.
+
+### 9.4 Eje D: límite de intentos de login
+
+FE #977: el login del BFF responde **429 con `Retry-After`** tras 5 fallos por cuenta o 20 por IP en 15 minutos, reinicia el contador con el login correcto y no revela si la cuenta existe. Test: `e2e/login-rate-limit.spec.ts`, más `src/lib/login-rate-limit.test.ts` y `src/app/api/session/login/rate-limit.test.ts`. El contador vive en memoria por instancia (ADR 0009 del Frontend). Tabla completa de controles del Frontend: `Frontend-M6-DAPS2/docs/security/eje-d-evidencia.md`; resumen en [`07`](07-informe-seguridad.md).
+
+### 9.5 Análisis estático y de seguridad del Frontend
+
+Fuente: ADR-0008 del Frontend, `docs/agents/quality-security-ci.md` y `docs/security/zap.md` del repo Frontend. El backend no espeja estos análisis: se miran allá.
+
+| Qué | Resultado |
+|---|---|
+| SonarCloud | Quality Gate **bloqueante** desde FE #972 (ticket #926): el job `sonar` usa `sonar.qualitygate.wait=true`, se saltea sin `SONAR_TOKEN` y corre con la cobertura fusionada de los 4 shards. Que `sonar` figure como check requerido en la protección de `develop` del Frontend no se verificó |
+| Trivy | 0 HIGH/CRITICAL en dependencias, imagen y configuración (ADR-0008, medido sobre `main` @ `06bab02`, 16/11/2026). No frena el merge, solo el check |
+| OWASP ZAP | Baseline contra Vercel: 0 High, 3 Medium, 7 Low, 15 informativas. Activo (sin autenticar) contra la app construida en el CI: 0 High, 2 Medium, 8 Low, 14 informativas. Run [43763194531](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43763194531) del 15/11, archivado en `docs/security/zap-2026-11-15/`. Los Medium de CSP y anti-clickjacking se cerraron en FE #958 (`next.config.mjs` y `src/proxy.ts`); el reporte archivado es anterior y no se volvió a escanear. El activo autenticado del Frontend no existe (el login pasa por M1 real); la superficie autenticada la cubre el activo del backend |

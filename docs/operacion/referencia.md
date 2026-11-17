@@ -24,8 +24,14 @@ IP de salida de Render, para el alta del puerto 5671 del Core (rangos públicos,
 
 | Archivo | Cuándo corre | Qué hace |
 |---|---|---|
-| [`ci.yml`](../../.github/workflows/ci.yml) | PR y push a `develop`, `test`, `main` | Jobs `build` (docs:check, generate, build, lint, OpenAPI al día) y `test` (`test:cov`), obligatorios por branch protection; `e2e` y `secrets` (gitleaks) se miran pero no bloquean. El job `deploy` corre solo en push a `main` y solo si `build` y `test` pasan: hace `POST` al Deploy Hook de Render con el commit exacto |
+| [`ci.yml`](../../.github/workflows/ci.yml) | PR y push a `develop`, `test`, `main` | Jobs `build` (docs:check, generate, build, lint, OpenAPI al día) y `test` (`test:cov`), obligatorios por branch protection; `sonar` (espera el Quality Gate de SonarCloud y falla si da rojo; se saltea sin `SONAR_TOKEN`), `e2e`, `secrets` (gitleaks con `.gitleaks.toml`), `secrets-default` (gitleaks por defecto y trufflehog, como lo corre la cátedra), `audit` y `trivy` corren en el mismo workflow; la cobertura mínima de `test` es 90 % (`vitest.config.ts`). `e2e` y `secrets` se miran pero no bloquean. El job `deploy` corre solo en push a `main` y solo si `build` y `test` pasan: hace `POST` al Deploy Hook de Render con el commit exacto |
 | [`keepalive.yml`](../../.github/workflows/keepalive.yml) | Cron `*/10 * * * *` (en la práctica cada 2-3 horas) y a mano | Pega a `RENDER_HEALTH_URL` con `--max-time 180`; si la variable no existe avisa y sale sin fallar; si la respuesta no es 200 el job queda rojo |
+| [`api-tests.yml`](../../.github/workflows/api-tests.yml) | PR y push a `develop`, `test`, `main` | Levanta backend y base, corre `api:coverage`, la colección Newman (`test/api/`, éxito y error en las 152 operaciones) y Schemathesis (solo `GET`, bloqueante) |
+| [`codeql.yml`](../../.github/workflows/codeql.yml) | PR y push a `develop`, `test`, `main`; cron semanal (miércoles) | CodeQL |
+| [`mutation.yml`](../../.github/workflows/mutation.yml) | Lunes 06:00 UTC y a mano | Mutation testing (Stryker) del dominio |
+| [`dast.yml`](../../.github/workflows/dast.yml) | Lunes 06:00 UTC y a mano | OWASP ZAP: baseline contra Render y activo autenticado contra un `docker compose` efímero (ver [`testing.md`](../testing.md)) |
+| [`g1-arranque.yml`](../../.github/workflows/g1-arranque.yml) | PR que toca el arranque (`docker-compose.yml`, `docker/`, `Dockerfile`, `prisma/`, `README.md`), push a `main` y a mano (`frontend_ref` opcional) | Un `docker compose up --build` en limpio hasta el login por el BFF; falla si tarda más de 15 minutos (ver [`testing.md`](../testing.md#arranque-del-sistema-completo-criterio-g1-698)) |
+| [`close-issues.yml`](../../.github/workflows/close-issues.yml) | PR mergeado a `develop` o `test` | Cierra los issues referenciados con `Closes/Fixes/Resolves #N` (GitHub solo lo hace al llegar a `main`) |
 
 Configuración en GitHub:
 
@@ -38,7 +44,7 @@ En Render, **Auto-Deploy va apagado** (si no, hay doble deploy) y el **Health Ch
 
 ## Variables de entorno del backend
 
-Son las 34 claves de [`src/config/env.validation.ts`](../../src/config/env.validation.ts), una vez cada una. El ejemplo comentado está en [`.env.example`](../../.env.example). Los **secretos** se cargan solo en el panel de Render, nunca en el repo, en capturas ni en logs. "Dónde" es Render salvo que diga otra cosa.
+Son las 35 claves de [`src/config/env.validation.ts`](../../src/config/env.validation.ts), una vez cada una. El ejemplo comentado está en [`.env.example`](../../.env.example). Los **secretos** se cargan solo en el panel de Render, nunca en el repo, en capturas ni en logs. "Dónde" es Render salvo que diga otra cosa.
 
 ### Servidor y base
 
@@ -96,6 +102,7 @@ Son las 34 claves de [`src/config/env.validation.ts`](../../src/config/env.valid
 | `CORE_SUBSCRIPTION_MAX_ATTEMPTS` | `4` (default, 1 a 10) | Opcional. Rige solo al crear la suscripción: cambiarla después no actualiza las ya registradas | Render |
 | `CORE_REGISTER_ON_BOOT` | `true` (default); acepta `true`/`false`/`1`/`0` sin distinguir mayúsculas | Opcional. Con más de una réplica conviene `false` y correr `npm run core:register` en el deploy | Render |
 | `NEIGHBORHOODS_CATALOG_FILE` | `prisma/data/m9-barrios.json` (ruta a un JSON con los barrios en el formato de M9) | Opcional, **solo local y CI** (donde no hay M9): el catálogo de barrios sale de ese archivo y no se consulta al Core. Con la ruta mal puesta o sin barrios válidos el arranque falla. **Con `NODE_ENV=production` la app no arranca**: en producción sin catálogo real sigue siendo 503 | No va en Render |
+| `M1_TIMEOUT_MS` | `4000` (500 a 60000) | Opcional: espera máxima a M1 por consulta en ms; vencida, el alta/edición de cuadrillas responde 503 «M1 no responde, reintentá en unos segundos» ([ADR-009](../decisiones/adr-009-rest-m6-a-m1-consultas-de-identidad.md)) | Render |
 | `M1_BASE_URL` | `https://ciudadanos-m1-backend.onrender.com` (sin credenciales, query ni hash; en producción `https://`) | Opcional: sin ella el cliente de M1 queda deshabilitado y la validación de cuadrillas no corre. Necesita `CORE_API_URL` y `CORE_MODULE_SECRET` ([ADR-009](../decisiones/adr-009-rest-m6-a-m1-consultas-de-identidad.md)) | Render |
 
 ### Cloudflare R2 (evidencia)

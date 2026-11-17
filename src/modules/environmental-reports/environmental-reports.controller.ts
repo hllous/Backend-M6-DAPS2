@@ -24,11 +24,14 @@ import {
   CreateEnvironmentalReportDto,
   EnvironmentalReportResponseDto,
   QueryEnvironmentalReportsDto,
+  CloseReportDto,
   ReportStatusChangeDto,
   RequestInformationDto,
 } from './dto';
-import { ErrorResponseDto } from '../../common/dto';
+import { ErrorResponseDto, PaginatedResponseDto, PaginationQueryDto } from '../../common/dto';
+import { AuditHistoryItemDto } from '../../common/audit/dto';
 import { ApiETag, ETagInterceptor, IfMatch } from '../../common/etag';
+import { M6Role } from '../../auth/m6-role';
 import { AuthenticatedUser } from '../../auth/jwt.strategy';
 import {
   ApiPaginatedResponse,
@@ -289,21 +292,56 @@ export class EnvironmentalReportsController {
     return this.reportsService.requestInformation(id, dto, actor);
   }
 
-  @Post(':id/close')
+  @Get(':id/history')
+  @Roles(...ROLES_AMBIENTAL, M6Role.M6_AUDITOR)
+  @ApiOperation({
+    summary: 'Historial del expediente',
+    description:
+      'Los pasos del expediente (cierre, derivación, desestimación, etc.) con su estado anterior y nuevo y el motivo (`note`) que escribió quien decidió. Paginado, del más reciente al más antiguo. No incluye quién actuó ni las lecturas de datos sensibles, y el motivo de lo que resuelve M4 va en null (la decisión de la sanción se lee en el acta). Es lo que `GET /audit` da al admin y al auditor, pero acotado a un expediente y legible por Oficina Ambiental.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID del expediente', format: 'uuid' })
+  @ApiPaginatedResponse(AuditHistoryItemDto, 'Historial paginado del expediente')
+  @ApiResponse(AUTH)
+  @ApiResponse(NOT_FOUND)
+  @ApiResponse(SERVER)
   @ApiBadRequestParams()
+  async findHistory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<AuditHistoryItemDto>> {
+    return this.reportsService.findHistory(id, query);
+  }
+
+  @Post(':id/close')
   @ApiETag({ ifMatch: true })
   @Roles(...ROLES_AMBIENTAL)
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    type: CloseReportDto,
+    required: false,
+    examples: {
+      conMotivo: {
+        summary: 'Cierre con motivo',
+        value: { reason: 'Se verificó que el vecino regularizó la situación.' },
+      },
+      sinMotivo: { summary: 'Cierre sin motivo', value: {} },
+    },
+  })
   @ApiOperation({
     summary: 'Cerrar el expediente',
     description:
-      'Cierra desde FORWARDED, DISMISSED, NO_VIOLATION, SANCTIONED o NOTICE_ISSUED. El cierre por vencimiento del plazo de M4 lo hace el sistema solo, sin pasar por acá.',
+      'Cierra desde FORWARDED, DISMISSED, NO_VIOLATION, SANCTIONED o NOTICE_ISSUED. El cierre por vencimiento del plazo de M4 lo hace el sistema solo, sin pasar por acá. El body es opcional: con `reason`, el motivo queda en el historial y viaja a M2 como nota interna (el vecino no la ve).',
   })
   @ApiParam({ name: 'id', description: 'UUID del expediente', format: 'uuid' })
   @ApiResponse({
     status: 200,
     description: 'Expediente cerrado',
     type: EnvironmentalReportResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Id mal formado, o motivo vacío o de más de 500 caracteres',
+    type: ErrorResponseDto,
   })
   @ApiResponse(AUTH)
   @ApiResponse(NOT_FOUND)
@@ -313,7 +351,8 @@ export class EnvironmentalReportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: AuthenticatedUser,
     @IfMatch() ifMatch?: string,
+    @Body() dto?: CloseReportDto,
   ): Promise<EnvironmentalReportResponseDto> {
-    return this.reportsService.close(id, actor, ifMatch);
+    return this.reportsService.close(id, actor, ifMatch, dto?.reason);
   }
 }

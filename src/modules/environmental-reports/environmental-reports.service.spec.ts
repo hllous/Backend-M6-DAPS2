@@ -11,6 +11,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { QueryEnvironmentalReportsDto, RequestInformationDto } from './dto';
+import { PaginationQueryDto } from '../../common/dto';
 import { erroresUpdateTicketStatus } from '../../events/update-ticket-status-schema.testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
@@ -82,7 +83,10 @@ describe('EnvironmentalReportsService', () => {
       $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueueMany: vi.fn().mockResolvedValue(undefined) };
-    audit = { record: vi.fn().mockResolvedValue(undefined) };
+    audit = {
+      record: vi.fn().mockResolvedValue(undefined),
+      findHistory: vi.fn().mockResolvedValue({ data: [], meta: {} }),
+    };
     service = new EnvironmentalReportsService(
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,
@@ -656,6 +660,41 @@ describe('EnvironmentalReportsService', () => {
       });
     });
 
+    it('close sin motivo no manda internalMessage ni nota de auditoría', async () => {
+      const { encolado } = await transicionar(S.NO_VIOLATION, (s) => s.close(ID, ACTOR));
+
+      expect(encolado[0].payload).not.toHaveProperty('internalMessage');
+      expect(audit.record.mock.calls[0][1].note).toBeUndefined();
+    });
+
+    it('close con motivo lo deja en el historial y lo manda a M2 solo como internalMessage', async () => {
+      const { encolado } = await transicionar(S.NO_VIOLATION, (s) =>
+        s.close(ID, ACTOR, undefined, 'Regularizó la situación'),
+      );
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ action: 'CLOSE', note: 'Regularizó la situación' }),
+      );
+      expect(encolado[0].payload).toMatchObject({
+        updateType: 'RESOLVED',
+        internalMessage: 'Regularizó la situación',
+        publicMessage: 'Su denuncia ambiental fue cerrada.',
+      });
+    });
+
+    it.each([S.FORWARDED, S.DISMISSED])(
+      'close con motivo desde %s lo audita pero no publica nada',
+      async (desde) => {
+        const { encolado } = await transicionar(desde, (s) =>
+          s.close(ID, ACTOR, undefined, 'Archivo'),
+        );
+
+        expect(encolado).toEqual([]);
+        expect(audit.record.mock.calls[0][1].note).toBe('Archivo');
+      },
+    );
+
     /**
      * #146: `RETURNED` dejó el ticket en `IN_REVIEW` y `REJECTED` en `CANCELLED`.
      * §8.2 solo acepta `RESOLVED` desde `ROUTED` o `IN_PROGRESS`: M2 lo
@@ -1139,7 +1178,18 @@ describe('EnvironmentalReportsService', () => {
         fromStatus: S.UNDER_REVIEW,
         toStatus: S.FORWARDED,
         actor: ACTOR,
+        // El motivo queda como nota para el historial (#728).
+        note: 'motivo',
       });
+    });
+
+    it('desestimar deja el motivo como nota de la auditoría', async () => {
+      await transicionar(S.UNDER_REVIEW, (s) => s.dismiss(ID, 'no corresponde', ACTOR));
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ action: 'DISMISS', note: 'no corresponde' }),
+      );
     });
 
     it('una transición inválida no audita', async () => {
@@ -1209,6 +1259,27 @@ describe('EnvironmentalReportsService', () => {
       });
       prisma.environmentalReport.update.mockRejectedValue(err);
       await expect(service.startReview(ID, ACTOR)).rejects.toBe(err);
+    });
+  });
+
+  describe('findHistory', () => {
+    it('lee el historial de auditoría del expediente, con la paginación recibida', async () => {
+      const query = new PaginationQueryDto();
+      const res = await service.findHistory(ID, query);
+      expect(prisma.environmentalReport.findUnique).toHaveBeenCalledWith({
+        where: { id: ID },
+        select: { id: true },
+      });
+      expect(audit.findHistory).toHaveBeenCalledWith('ENVIRONMENTAL_REPORT', ID, query);
+      expect(res).toBe(await audit.findHistory.mock.results[0].value);
+    });
+
+    it('404 si el expediente no existe, sin consultar la auditoría', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(null);
+      await expect(service.findHistory(ID, new PaginationQueryDto())).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(audit.findHistory).not.toHaveBeenCalled();
     });
   });
 });

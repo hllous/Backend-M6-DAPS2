@@ -22,6 +22,8 @@
 
 **Replay de un `eventId` viejo tras purgar el inbox (aceptado, 5/11, #517).** Un job diario borra de `inbox_event` las filas procesadas hace más de `INBOX_RETENTION_DAYS` (180 por defecto). Pasado ese plazo, un evento con el mismo `eventId` ya no se detectaría como duplicado y se reprocesaría. Mitigación: el plazo es largo, el Core reintenta en minutos y no en meses, y el `POST /events/inbox` manual es solo de admin. `0` apaga la purga.
 
+**Balde de rate limit compartido entre operadores autenticados (aceptado, 16/11/2026).** El BFF manda `X-M6-BFF-Key` y la IP del vecino solo en `/api/public/*`; en las rutas autenticadas el backend cuenta la IP de salida del BFF, así que todos los operadores comparten 600/min por endpoint (30/min en `POST /evidence`). Un operador ruidoso puede consumir el balde de los demás. Decisión del equipo; ver la nota del 16/11 en [ADR-010](../decisiones/adr-010-rate-limit-global.md).
+
 ## Plan B si M2 no resuelve
 
 El riesgo no es que M2 diga que no: es que la reunión pase y el evento de derivación siga sin aparecer.

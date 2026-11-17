@@ -69,6 +69,8 @@ const outboxDispatcherStub: Pick<OutboxDispatcher, 'dispatchPending' | 'dispatch
 export async function createTestApp(
   /** Para pisar providers puntuales (p. ej. el storage de evidencia) sin tocar el resto. */
   customize: (builder: TestingModuleBuilder) => TestingModuleBuilder = (b) => b,
+  /** Lo que `main.ts` agrega antes de `listen` (Swagger, CORS) y una suite necesita ver. */
+  beforeInit: (app: NestExpressApplication) => void = () => undefined,
 ): Promise<NestExpressApplication> {
   const moduleRef = await customize(
     Test.createTestingModule({ imports: [AppModule] })
@@ -77,6 +79,7 @@ export async function createTestApp(
   ).compile();
 
   const app = configureApp(moduleRef.createNestApplication<NestExpressApplication>());
+  beforeInit(app);
   await app.init();
   return app;
 }

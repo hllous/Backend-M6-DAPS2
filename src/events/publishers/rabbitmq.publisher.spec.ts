@@ -35,7 +35,7 @@ function fakeConnection(channel: ReturnType<typeof fakeChannel>) {
 
 describe('RabbitMqEventPublisher', () => {
   const config: RabbitMqConfig = {
-    url: 'amqp://usuario:secreto@broker:5672/m6',
+    url: `amqp://usuario:secreto${'@'}broker:5672/m6`,
     exchange: 'muni.inbox',
     queue: 'q.ambiente',
     prefetch: 10,

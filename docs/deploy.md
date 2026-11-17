@@ -4,7 +4,7 @@ La documentación de despliegue se dividió en [`docs/operacion/`](operacion/REA
 
 | Documento | Contenido |
 |---|---|
-| [referencia.md](operacion/referencia.md) | URLs, workflows (`ci.yml`, `keepalive.yml`) y la tabla única de variables de entorno |
+| [referencia.md](operacion/referencia.md) | URLs, los 8 workflows (`ci.yml`, `keepalive.yml`, `api-tests.yml`, `codeql.yml`, `mutation.yml`, `dast.yml`, `g1-arranque.yml`, `close-issues.yml`) y la tabla única de variables de entorno |
 | [desplegar.md](operacion/desplegar.md) | Verificación con `curl`, deploy automático y manual, checklist de DevOps, sync de zonas (#421) y migración de cuadrillas (#365) |
 | [runbooks.md](operacion/runbooks.md) | Qué hacer cuando algo falla: Render dormido, base caída, bus, evento rechazado, `JWT_SECRET`, rollback |
 | [historial.md](operacion/historial.md) | Fotos fechadas del estado del despliegue (no son el estado actual) |

@@ -23,7 +23,7 @@ Node 24 (`.nvmrc`). Antes de dar algo por terminado: build, lint, typecheck y te
 |---|---|
 | Build / lint (sin autofix) | `npm run build` / `npm run lint:check` |
 | Tipos de specs, seed y scripts (Vitest y `nest build` no los chequean; el CI sí) | `npm run typecheck` |
-| Tests unitarios / cobertura (umbral 85%) | `npm test` / `npm run test:cov` |
+| Tests unitarios / cobertura (umbral 90%, global y por archivo con umbral propio) | `npm test` / `npm run test:cov` |
 | e2e (Postgres real, ver `docs/testing.md`) | `npm run test:e2e` |
 | Regenerar `docs/api/openapi.json` | `npm run openapi:generate` |
 | Prisma | `npm run prisma:migrate:dev` · `prisma:generate` · `prisma:seed` |
@@ -38,7 +38,7 @@ Detalle y cómo leer cada resultado: [docs/testing.md](docs/testing.md). Decisi�
 |---|---|---|
 | `build` y `test` (con `lcov`) | jobs de `ci.yml` | El merge (checks requeridos) |
 | `e2e`, `audit` (`npm audit`), `secrets` (gitleaks) | jobs de `ci.yml` | `audit` frena el deploy; `e2e` y `secrets` no son requeridos |
-| `sonar`: SonarCloud con el `lcov` de `test`; se saltea sin `SONAR_TOKEN` y corre en PR y en push a `main`. Config: `sonar-project.properties` | job de `ci.yml` | **Nada todavía**: gate no bloqueante (Opción C, paso 2 pendiente en #660) |
+| `sonar`: SonarCloud con el `lcov` de `test`; se saltea sin `SONAR_TOKEN` y corre en PR y en push a `main`. Config: `sonar-project.properties` | job de `ci.yml` | El job falla si el Quality Gate da rojo (`qualitygate.wait=true`, #660); frena el merge cuando `sonar` es check requerido en la protección de ramas |
 | `trivy`: `fs`, `image` y `config`, SARIF a Code Scanning; gate sobre HIGH/CRITICAL **con fix**. Sin fix: `.trivyignore` con justificación | job de `ci.yml` | El deploy (`deploy` depende de `trivy`), no el merge |
 | `dast`: ZAP baseline contra Render y activo autenticado contra un `docker compose` efímero | `.github/workflows/dast.yml`; a demanda y los lunes | Falla ante un High; no se engancha al deploy |
 

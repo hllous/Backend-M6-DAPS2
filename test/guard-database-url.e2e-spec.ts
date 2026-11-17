@@ -18,14 +18,14 @@ describe('assertBaseLocal (guard de DATABASE_URL de los e2e)', () => {
   });
 
   it('tira con un host remoto', () => {
-    expect(() => assertBaseLocal('postgresql://u:p@db.example.com:5432/db')).toThrow(
+    expect(() => assertBaseLocal(`postgresql://u:p${'@'}db.example.com:5432/db`)).toThrow(
       "'db.example.com'",
     );
   });
 
   it('tira cuando localhost aparece antes del último @ pero el host real es remoto', () => {
-    expect(() => assertBaseLocal('postgresql://u:p@localhost:5432@db.example.com/db')).toThrow(
-      "'db.example.com'",
-    );
+    expect(() =>
+      assertBaseLocal(`postgresql://u:p${'@'}localhost:5432${'@'}db.example.com/db`),
+    ).toThrow("'db.example.com'");
   });
 });

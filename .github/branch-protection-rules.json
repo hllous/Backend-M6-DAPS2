@@ -16,7 +16,10 @@
           "strict_required_status_checks_policy": true,
           "required_status_checks": [
             {"context": "build"},
-            {"context": "test"}
+            {"context": "test"},
+            {"context": "e2e"},
+            {"context": "sonar"},
+            {"context": "secrets"}
           ]
         }
       },
@@ -42,7 +45,10 @@
           "strict_required_status_checks_policy": true,
           "required_status_checks": [
             {"context": "build"},
-            {"context": "test"}
+            {"context": "test"},
+            {"context": "e2e"},
+            {"context": "sonar"},
+            {"context": "secrets"}
           ]
         }
       },
@@ -68,7 +74,10 @@
           "strict_required_status_checks_policy": true,
           "required_status_checks": [
             {"context": "build"},
-            {"context": "test"}
+            {"context": "test"},
+            {"context": "e2e"},
+            {"context": "sonar"},
+            {"context": "secrets"}
           ]
         }
       },

@@ -18,3 +18,7 @@ ADR-008 dejaba el rate limit general «para después de la entrega» y `Throttle
 ## Consecuencias
 
 Cualquier endpoint puede responder 429. El BFF debe mandar la clave y sobrescribir `X-Forwarded-For`; si no, sus usuarios comparten un balde de 600/min por endpoint.
+
+## Nota de corrección 2026-11-16
+
+La consecuencia «el BFF debe mandar la clave» no se cumplió ni se va a exigir en todo el BFF. El equipo decidió el 16/11/2026 que `X-M6-BFF-Key` y la IP del vecino en `X-Forwarded-For` se mandan solo en `/api/public/*`, donde hay que distinguir al vecino anónimo. En las rutas autenticadas se acepta el balde compartido: el tracker usa `req.ip`, que es la IP de salida del BFF, y todos los operadores comparten 600/min por endpoint (`THROTTLE_LIMIT` y `THROTTLE_TTL_MS`, `src/config/env.validation.ts`; `POST /evidence`, 30/min). Riesgo aceptado: un operador ruidoso puede consumir el balde de los demás en ese endpoint.

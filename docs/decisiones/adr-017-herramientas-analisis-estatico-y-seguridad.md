@@ -106,7 +106,7 @@ Cómo sumar tres herramientas sin tumbar G3, sin atacar producción, sin duplica
 
 **SonarCloud desde el CI (job `sonar`).** El análisis corre en un job que depende de `test`; `test` publica el `lcov` de Vitest como artifact y `sonar` lo descarga, así no se vuelven a correr los tests. Se saltea si no hay `SONAR_TOKEN` (PR desde un fork). Corre en los PR y en el push a `main`, porque el plan gratuito solo analiza la rama principal y los PR. Configuración en `sonar-project.properties`; el alta (organización `hllous`, proyecto, secret) la hizo el líder.
 
-**Opción C del gate.** Paso 1: `sonar.qualitygate.wait=false` y el job no es check requerido. Paso 2: cuando el gate esté verde, `wait=true` y check requerido en los PR a `develop` (#660, **pendiente**). Un gate rojo sobre el tag tumbaría G3, y la fase no bloqueante cubre solo la transición. Gate "Sonar way", que evalúa **código nuevo**; por eso el informe de ejecución reporta aparte las métricas del código total contra el criterio de la cátedra.
+**Opción C del gate.** Paso 1: `sonar.qualitygate.wait=false` y el job no es check requerido. Paso 2: cuando el gate esté verde, `wait=true` y check requerido en los PR a `develop` (#660: `wait=true` aplicado en el CI el 16/11/2026; el check requerido lo configura el líder en la protección de ramas). Un gate rojo sobre el tag tumbaría G3, y la fase no bloqueante cubre solo la transición. Gate "Sonar way", que evalúa **código nuevo**; por eso el informe de ejecución reporta aparte las métricas del código total contra el criterio de la cátedra.
 
 **Exclusiones alineadas con Vitest.** Las exclusiones de cobertura de Sonar son las de `coverage.exclude` de `vitest.config.ts`, más el complemento de `coverage.include` (lo que Vitest no mide: seed, scripts, e2e, workflows). Así el número de Sonar es comparable con el del informe: **las mismas líneas sin cubrir en las dos herramientas**. De duplicación se excluyen las migraciones de Prisma y los DTO (repetitivos por diseño) y los specs (arrange/act/assert parecidos); no se excluye nada del análisis de bugs y vulnerabilidades: `src`, `test`, `scripts`, workflows y `Dockerfile` cuentan.
 
@@ -139,7 +139,7 @@ Cómo sumar tres herramientas sin tumbar G3, sin atacar producción, sin duplica
 ### Negative Consequences
 
 - El gate de Sonar **no es bloqueante** todavía (#660): un PR con un hallazgo nuevo puede mergearse con el check en rojo.
-- Hay un Medium de ZAP que es artefacto del entorno efímero (CORS `*`) y otro de producción aceptado (CSP en `/api/docs`, DEF-19).
+- Hay un Medium de ZAP que es artefacto del entorno efímero (CORS `*`) y otro de producción (CSP ausente en `/api/docs`, DEF-19), corregido en #696 con una CSP propia compatible con Swagger UI.
 - El activo se arma con los ejemplos del OpenAPI: la mayoría de las respuestas son 4xx; no prueba ausencia de fallas de lógica de negocio.
 - Trivy y ZAP no bloquean el merge: es política, no un olvido.
 
@@ -173,3 +173,11 @@ Validación: las corridas finales sobre `main` del 16/11/2026 están enlazadas e
 - [`docs/QA/06-registro-defectos.md`](../QA/06-registro-defectos.md) (DEF-13, DEF-25, DEF-26).
 - Criterios de Testing y Aseguramiento de Calidad, Clase 15 (secciones 2, 5, 7 y 9).
 - Spec equivalente del Frontend: [hllous/Frontend-M6-DAPS2#922](https://github.com/hllous/Frontend-M6-DAPS2/issues/922).
+
+## Nota de corrección 2026-11-16 (#700)
+
+El paso 2 de la opción C se aplicó: `sonar.qualitygate.wait=true` en el CI, así que el job `sonar` falla si el gate da rojo, y la cobertura mínima del repo pasó a 90 % (#660). Lo que la consecuencia «el gate de Sonar no es bloqueante todavía» describe vale solo hasta ese cambio. Que `sonar` sea check requerido en la protección de ramas sigue dependiendo del líder.
+
+## Nota de corrección 2026-11-16 (#692)
+
+`sonar` quedó como check requerido en la protección de ramas, junto con `build`, `test`, `e2e` y `secrets` (`.github/branch-protection-rules.json`). La frase anterior, que lo hacía depender del líder, ya no aplica: el paso 2 de la opción C está completo.

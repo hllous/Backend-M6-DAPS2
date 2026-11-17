@@ -28,7 +28,8 @@ import {
   RequestInformationDto,
 } from './dto';
 import { ifMatchWhere, isConditional, preconditionFailed } from '../../common/etag';
-import { PaginatedResponseDto } from '../../common/dto';
+import { PaginatedResponseDto, PaginationQueryDto } from '../../common/dto';
+import { AuditHistoryItemDto } from '../../common/audit/dto';
 
 /**
  * Transiciones válidas del expediente ambiental.
@@ -278,6 +279,25 @@ export class EnvironmentalReportsService {
     return this.toResponseDto(report);
   }
 
+  /**
+   * Historial del expediente con el motivo de cada decisión (#728). Misma pertenencia que
+   * el detalle: cualquier expediente existente. No deja fila `READ`: el historial no trae
+   * la identidad del denunciante ni otro dato Tier 2 (ADR-005).
+   */
+  async findHistory(
+    id: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<AuditHistoryItemDto>> {
+    const report = await this.prisma.environmentalReport.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!report) {
+      throw new NotFoundException(`Expediente ambiental con id '${id}' no encontrado`);
+    }
+    return this.audit.findHistory('ENVIRONMENTAL_REPORT', id, query);
+  }
+
   // ─── Acciones ─────────────────────────────────────
 
   /** RECEIVED → UNDER_REVIEW */
@@ -335,6 +355,7 @@ export class EnvironmentalReportsService {
         }),
       ],
       ifMatch,
+      reason,
     );
   }
 
@@ -360,6 +381,7 @@ export class EnvironmentalReportsService {
         }),
       ],
       ifMatch,
+      reason,
     );
   }
 
@@ -375,6 +397,7 @@ export class EnvironmentalReportsService {
     id: string,
     actor: AuditActor,
     ifMatch?: string,
+    reason?: string,
   ): Promise<EnvironmentalReportResponseDto> {
     const report = this.assertNoPendingRequest(await this.getReport(id));
     const yaInformado = report.status === S.FORWARDED || report.status === S.DISMISSED;
@@ -388,10 +411,13 @@ export class EnvironmentalReportsService {
         ? []
         : this.ticketEvents(report, actor.actorId ?? null, {
             updateType: 'RESOLVED',
+            // El motivo es nota privada: el texto para el vecino no cambia.
             publicMessage: 'Su denuncia ambiental fue cerrada.',
+            internalMessage: reason,
             details: { resolution: { type: 'ACTION_COMPLETED' } },
           }),
       ifMatch,
+      reason,
     );
   }
 
@@ -583,6 +609,7 @@ export class EnvironmentalReportsService {
     events: OutboxEntry[] = [],
     // If-Match del request (ADR-012): se valida antes que el estado y hace atómico el UPDATE.
     ifMatch?: string,
+    note?: string,
   ): Promise<EnvironmentalReportResponseDto> {
     const stale = ifMatchWhere(ifMatch, report);
     this.assertTransition(report.status, target);
@@ -612,6 +639,7 @@ export class EnvironmentalReportsService {
           fromStatus: report.status,
           toStatus: target,
           actor,
+          note,
         });
         await this.outbox.enqueueMany(tx, events);
         return row;
