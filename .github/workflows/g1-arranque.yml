@@ -7,7 +7,7 @@
 # tarda más de 15 minutos. Después repite `docker compose up` sobre la misma
 # base para probar que el seed de demo es idempotente.
 #
-# El frontend se construye desde su repo (FRONTEND_REF, default del compose: main).
+# El frontend se construye desde su repo (FRONTEND_REF, default del compose: v2.0-entrega4).
 # Corre en los PR que tocan el arranque, en push a main y a demanda.
 # ──────────────────────────────────────────────────────────────
 
@@ -138,7 +138,7 @@ jobs:
             echo "### G1: sistema completo con \`docker compose up --build\`"
             echo "- Desde el comando hasta el login real a través del BFF: **$(( total / 60 )) min $(( total % 60 )) s** (límite: 15 min)"
             echo "- Backend \`/health/ready\`, seed de demo (código 0), frontend en :3001, login de \`$CUENTA\` con rol M6_ADMIN y \`GET /api/zones\` por el BFF: OK"
-            echo "- Frontend: \`${FRONTEND_REF:-main}\`"
+            echo "- Frontend: \`${FRONTEND_REF:-v2.0-entrega4}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Dentro de los 15 minutos
