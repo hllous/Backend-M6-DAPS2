@@ -19226,6 +19226,165 @@
           }
         },
         {
+          "name": "GET /environmental-reports/{id}/history - exito 200",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.get('baseUrl'), tok = pm.variables.get('token');",
+                  "const cache = (n, k) => pm.collectionVariables.get('cache:' + n + k);",
+                  "const pedir = (url) => new Promise((ok, ko) => pm.sendRequest({ url, header: { Authorization: 'Bearer ' + tok } }, (e, r) => e ? ko(e) : ok(r.json())));",
+                  "const prefijos = [{\"ruta\":\"/environmental-reports\",\"param\":\"id\"}];",
+                  "(async () => {",
+                  "  const previos = [];",
+                  "  for (let i = 0; i < prefijos.length; i++) {",
+                  "    let ruta = prefijos[i].ruta; previos.forEach((v, j) => { ruta = ruta.replace('{p' + j + '}', v); });",
+                  "    let id = cache(ruta, '');",
+                  "    if (!id) {",
+                  "      const j = await pedir(base + ruta + '?pageSize=1');",
+                  "      const fila = (Array.isArray(j) ? j : j.data)[0];",
+                  "      id = fila && (fila[prefijos[i].param] ?? fila.id);",
+                  "      pm.collectionVariables.set('cache:' + ruta, id);",
+                  "    }",
+                  "    previos.push(id); pm.variables.set('p' + i, id);",
+                  "  }",
+                  "})();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('es JSON', () => pm.response.to.be.json);",
+                  "pm.test('trae [\"data\",\"meta\"]', () => pm.expect(pm.response.json()).to.include.all.keys(...[\"data\",\"meta\"]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/environmental-reports/{{p0}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "environmental-reports",
+                "{{p0}}",
+                "history"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {},
+            "description": "Historial del expediente"
+          }
+        },
+        {
+          "name": "GET /environmental-reports/{id}/history - 401 sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/environmental-reports/00000000-0000-4000-8000-000000000000/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "environmental-reports",
+                "00000000-0000-4000-8000-000000000000",
+                "history"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {},
+            "description": "Historial del expediente"
+          }
+        },
+        {
+          "name": "GET /environmental-reports/{id}/history - 400/404 id inexistente o cuerpo invalido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400 o 404', () => pm.expect(pm.response.code).to.be.oneOf([400,404]));",
+                  "pm.test('error con statusCode y message', () => { const j = pm.response.json(); pm.expect(j).to.have.property('statusCode'); pm.expect(j).to.have.property('message'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/environmental-reports/00000000-0000-4000-8000-000000000000/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "environmental-reports",
+                "00000000-0000-4000-8000-000000000000",
+                "history"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Historial del expediente"
+          }
+        },
+        {
           "name": "POST /environmental-reports/{id}/start-review - 401 sin token",
           "event": [
             {

@@ -60,6 +60,8 @@ stateDiagram-v2
 
 **`NOTICE_ISSUED → CLOSED` por vencimiento de plazo no es un atajo, es el diseño.** M4 no publica ningún evento cuando decide que no corresponde castigo, así que sin ese cierre el expediente quedaría abierto para siempre. Cierra sin `SanctionOutcome`: una desestimación y una demora de M4 se ven igual, y esa imprecisión se aceptó a cambio de no depender de que otro grupo agregue un evento. El barrido corre **cada hora y también al arrancar** (#150): en el free tier de Render el servicio duerme, y sin el barrido de arranque el cierre esperaba a que coincidieran el despertar y la hora en punto. Ver [bloqueantes.md](../integracion/resueltos.md#resueltos--no-repreguntar).
 
+**El motivo de cada decisión se lee en `GET /environmental-reports/:id/history`** (#728), para `M6_ADMIN`, `M6_OFICINA_AMBIENTAL` y `M6_AUDITOR`: son las filas de auditoría del expediente (ver [auditoria.md](auditoria.md)) sin `READ` y sin actor, paginadas. El `note` de lo que escribe M4 sale en `null`: es la decisión de la sanción (Tier 2) y se lee en el acta, que sí se audita. La pertenencia es la del detalle: cualquier expediente existente.
+
 ## Qué publica y qué consume
 
 - Al emitirse el acta: [`environmentalViolationDetected`](../eventos/publicados/environmentalViolationDetected.md) → M4.

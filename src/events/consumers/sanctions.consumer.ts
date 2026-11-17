@@ -1,13 +1,13 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { EnvironmentalReportStatus as S, SanctionDecision } from '@prisma/client';
-import { AuditService } from '../../common/audit/audit.service';
+import { M4_ACTOR_ID } from '../../common/audit/audit-actors';
+import { AuditActor, AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboxService } from '../inbox/inbox.service';
 import { ConsumedEvent } from '../inbox/consumed-events';
 import { Data, esUuid, requerido } from '../inbox/payload-validation';
-import { sistema } from './system-audit';
 
-const M4 = sistema('m4');
+const M4: AuditActor = { userId: M4_ACTOR_ID, roles: [] };
 
 const validarActa = (d: Data): string[] =>
   requerido(d, ['sourceViolationId', 'violationId'], 'uuid', esUuid);

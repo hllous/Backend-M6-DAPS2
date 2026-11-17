@@ -11,6 +11,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { QueryEnvironmentalReportsDto, RequestInformationDto } from './dto';
+import { PaginationQueryDto } from '../../common/dto';
 import { erroresUpdateTicketStatus } from '../../events/update-ticket-status-schema.testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../../events/outbox/outbox.service';
@@ -82,7 +83,10 @@ describe('EnvironmentalReportsService', () => {
       $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     outbox = { enqueueMany: vi.fn().mockResolvedValue(undefined) };
-    audit = { record: vi.fn().mockResolvedValue(undefined) };
+    audit = {
+      record: vi.fn().mockResolvedValue(undefined),
+      findHistory: vi.fn().mockResolvedValue({ data: [], meta: {} }),
+    };
     service = new EnvironmentalReportsService(
       prisma as unknown as PrismaService,
       outbox as unknown as OutboxService,
@@ -1174,7 +1178,18 @@ describe('EnvironmentalReportsService', () => {
         fromStatus: S.UNDER_REVIEW,
         toStatus: S.FORWARDED,
         actor: ACTOR,
+        // El motivo queda como nota para el historial (#728).
+        note: 'motivo',
       });
+    });
+
+    it('desestimar deja el motivo como nota de la auditoría', async () => {
+      await transicionar(S.UNDER_REVIEW, (s) => s.dismiss(ID, 'no corresponde', ACTOR));
+
+      expect(audit.record).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ action: 'DISMISS', note: 'no corresponde' }),
+      );
     });
 
     it('una transición inválida no audita', async () => {
@@ -1244,6 +1259,27 @@ describe('EnvironmentalReportsService', () => {
       });
       prisma.environmentalReport.update.mockRejectedValue(err);
       await expect(service.startReview(ID, ACTOR)).rejects.toBe(err);
+    });
+  });
+
+  describe('findHistory', () => {
+    it('lee el historial de auditoría del expediente, con la paginación recibida', async () => {
+      const query = new PaginationQueryDto();
+      const res = await service.findHistory(ID, query);
+      expect(prisma.environmentalReport.findUnique).toHaveBeenCalledWith({
+        where: { id: ID },
+        select: { id: true },
+      });
+      expect(audit.findHistory).toHaveBeenCalledWith('ENVIRONMENTAL_REPORT', ID, query);
+      expect(res).toBe(await audit.findHistory.mock.results[0].value);
+    });
+
+    it('404 si el expediente no existe, sin consultar la auditoría', async () => {
+      prisma.environmentalReport.findUnique.mockResolvedValue(null);
+      await expect(service.findHistory(ID, new PaginationQueryDto())).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(audit.findHistory).not.toHaveBeenCalled();
     });
   });
 });
