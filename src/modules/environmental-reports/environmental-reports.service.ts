@@ -28,7 +28,8 @@ import {
   RequestInformationDto,
 } from './dto';
 import { ifMatchWhere, isConditional, preconditionFailed } from '../../common/etag';
-import { PaginatedResponseDto } from '../../common/dto';
+import { PaginatedResponseDto, PaginationQueryDto } from '../../common/dto';
+import { AuditHistoryItemDto } from '../../common/audit/dto';
 
 /**
  * Transiciones válidas del expediente ambiental.
@@ -276,6 +277,25 @@ export class EnvironmentalReportsService {
       throw new NotFoundException(`Expediente ambiental con id '${id}' no encontrado`);
     }
     return this.toResponseDto(report);
+  }
+
+  /**
+   * Historial del expediente con el motivo de cada decisión (#728). Misma pertenencia que
+   * el detalle: cualquier expediente existente. No deja fila `READ`: el historial no trae
+   * la identidad del denunciante ni otro dato Tier 2 (ADR-005).
+   */
+  async findHistory(
+    id: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<AuditHistoryItemDto>> {
+    const report = await this.prisma.environmentalReport.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!report) {
+      throw new NotFoundException(`Expediente ambiental con id '${id}' no encontrado`);
+    }
+    return this.audit.findHistory('ENVIRONMENTAL_REPORT', id, query);
   }
 
   // ─── Acciones ─────────────────────────────────────
