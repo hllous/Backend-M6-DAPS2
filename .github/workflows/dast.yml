@@ -97,11 +97,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Solo backend (y sus dependencias): el frontend y el M1 falso del compose no hacen
+      # falta acá, y el proxy de registro usa el puerto 3001 del frontend.
       - name: Levantar el stack (base, broker y backend descartables)
-        run: $COMPOSE up -d --build --wait --wait-timeout 300
+        run: $COMPOSE up -d --build --wait --wait-timeout 300 backend
 
       - name: Sembrar el seed de demo
-        run: $COMPOSE --profile seed run --rm seed
+        run: $COMPOSE run --rm seed
 
       - name: Esperar /health/ready
         run: |

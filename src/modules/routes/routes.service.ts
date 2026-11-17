@@ -15,7 +15,7 @@ import {
   SetRouteStopsDto,
   UpdateRouteDto,
 } from './dto';
-import { PaginatedResponseDto } from '../../common/dto';
+import { PaginatedResponseDto, buildOrderBy } from '../../common/dto';
 
 // Listado y detalle traen las paradas igual: en orden y con la zona embebida,
 // para que quien dibuje el recorrido no tenga que pedir /zones aparte solo para
@@ -84,7 +84,7 @@ export class RoutesService {
         where,
         skip: query.skip,
         take: query.take,
-        orderBy: { code: 'asc' },
+        orderBy: buildOrderBy(query, 'code'),
         include: STOPS_INCLUDE,
       }),
       this.prisma.route.count({ where }),

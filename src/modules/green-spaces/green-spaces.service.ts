@@ -7,7 +7,7 @@ import {
   QueryGreenSpacesDto,
   GreenSpaceResponseDto,
 } from './dto';
-import { PaginatedResponseDto } from '../../common/dto';
+import { PaginatedResponseDto, buildOrderBy } from '../../common/dto';
 
 @Injectable()
 export class GreenSpacesService {
@@ -58,7 +58,7 @@ export class GreenSpacesService {
         where,
         skip: query.skip,
         take: query.take,
-        orderBy: { name: 'asc' },
+        orderBy: buildOrderBy(query, 'name'),
       }),
       this.prisma.greenSpace.count({ where }),
     ]);

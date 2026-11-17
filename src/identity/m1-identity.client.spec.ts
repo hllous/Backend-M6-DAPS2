@@ -27,7 +27,7 @@ describe('M1IdentityClient', () => {
 
   const cliente = (baseUrl?: string) =>
     new M1IdentityClient(
-      { getOrThrow: () => ({ baseUrl }) } as unknown as ConfigService,
+      { getOrThrow: () => ({ baseUrl, timeoutMs: 5000 }) } as unknown as ConfigService,
       core as unknown as CoreClient,
     );
 
@@ -130,6 +130,18 @@ describe('M1IdentityClient', () => {
     expect(err).toBeInstanceOf(IdentityUnavailableError);
     expect((err as Error).message).toBe('No se pudo consultar a M1 (TimeoutError)');
     expect((err as Error).message).not.toContain(TOKEN);
+  });
+
+  it('usa el timeout configurado para cortar la espera a M1', async () => {
+    const spy = vi.spyOn(AbortSignal, 'timeout');
+    fetchMock.mockResolvedValue(json(ACTOR));
+    const c = new M1IdentityClient(
+      { getOrThrow: () => ({ baseUrl: BASE, timeoutMs: 1234 }) } as unknown as ConfigService,
+      core as unknown as CoreClient,
+    );
+    await c.findEmployeeBySub('1042');
+    expect(spy).toHaveBeenCalledWith(1234);
+    spy.mockRestore();
   });
 
   it('200 sin JSON es error tipado sin citar el cuerpo', async () => {

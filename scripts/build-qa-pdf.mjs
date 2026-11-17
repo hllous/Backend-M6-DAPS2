@@ -54,6 +54,21 @@ for (const f of INFORME) {
   });
 }
 
+// Documentación del producto (docs/producto/): un PDF por documento (build/producto/).
+for (const [file, title, subtitle] of [
+  ['BRD.md', 'BRD', 'Documento de requisitos de negocio'],
+  ['documentacion-funcional.md', 'Documentación funcional', 'Comportamiento del sistema'],
+  ['documento-de-diseno.md', 'Documento de diseño', 'Arquitectura, patrones y ADR'],
+]) {
+  DOCS.push({
+    out: join('producto', file.replace(/\.md$/, '')),
+    title,
+    subtitle,
+    files: [`../producto/${file}`],
+    version: 'Versión 1.0 · 17/11/2026',
+  });
+}
+
 const docsDir = join(root, 'docs');
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
 
@@ -74,13 +89,24 @@ function inlineImages(md, fileDir) {
   });
 }
 
-function cover({ title, subtitle }) {
-  const fecha = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
+// Integrantes y roles (los confirmó el equipo); van en la portada de cada PDF.
+const EQUIPO = [
+  ['Facundo Iriarte', 'Product Owner'],
+  ['Benjamin Martinez', 'Desarrollador'],
+  ['Nicolas Llousas', 'Desarrollador'],
+  ['Bautista Castro', 'DevOps'],
+  ['Santiago Peralta', 'QA'],
+  ['Miqueas Quintieri', 'Scrum Master'],
+];
+
+function cover({ title, subtitle, version = 'Versión 2.2 · 16/11/2026' }) {
+  const fecha = version;
   return `<div class="cover">
 <p class="cover-kicker">Desarrollo de Aplicaciones II · 2.º C 2026 · UADE</p>
 <p class="cover-title">${title}</p>
 <p class="cover-sub">${subtitle}</p>
 <p class="cover-meta"><strong>Grupo 04</strong> · Módulo 6 — Ambiente e Higiene<br>${fecha}</p>
+<p class="cover-team">${EQUIPO.map(([nombre, rol]) => `${nombre} · ${rol}`).join('<br>')}</p>
 </div>
 
 `;
@@ -112,7 +138,7 @@ ${rows.join('')}
 `;
 }
 
-function build({ out, title, subtitle, files, toc }) {
+function build({ out, title, subtitle, files, toc, version }) {
   const parts = [];
   for (const f of files) {
     const p = join(qaDir, f);
@@ -128,7 +154,7 @@ function build({ out, title, subtitle, files, toc }) {
   mkdirSync(dirname(join(buildDir, out)), { recursive: true });
   const mdPath = join(buildDir, `${out}.md`);
   const pdfPath = join(buildDir, `${out}.pdf`);
-  writeFileSync(mdPath, cover({ title, subtitle }) + (toc ? tocHtml(files) : '') + parts.join('\n\n'), 'utf8');
+  writeFileSync(mdPath, cover({ title, subtitle, version }) + (toc ? tocHtml(files) : '') + parts.join('\n\n'), 'utf8');
 
   const configPath = join(buildDir, 'md-to-pdf.config.json');
   writeFileSync(
@@ -137,6 +163,7 @@ function build({ out, title, subtitle, files, toc }) {
       basedir: docsDir,
       dest: pdfPath,
       stylesheet: [join(qaDir, 'pdf.css')],
+      script: [{ path: join(root, 'scripts', 'build-qa-pdf-pagina.js') }],
       document_title: title,
       pdf_options: {
         format: 'A4',

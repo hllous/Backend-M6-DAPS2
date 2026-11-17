@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ConflictException, Logger } from '@nestj
 import { Prisma, Tree, TreeSurvey } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTreeDto, UpdateTreeDto, QueryTreesDto, TreeResponseDto } from './dto';
-import { PaginatedResponseDto } from '../../common/dto';
+import { PaginatedResponseDto, buildOrderBy } from '../../common/dto';
 
 /**
  * El último relevamiento de cada árbol, para que el listado pueda pintarse por
@@ -86,7 +86,7 @@ export class TreesService {
         where,
         skip: query.skip,
         take: query.take,
-        orderBy: { surveyCode: 'asc' },
+        orderBy: buildOrderBy(query, 'surveyCode'),
         include: ULTIMO_RELEVAMIENTO,
       }),
       this.prisma.tree.count({ where }),

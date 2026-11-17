@@ -47,7 +47,7 @@ export default () => {
       registerOnBoot: parsed.CORE_REGISTER_ON_BOOT,
     },
     neighborhoodsCatalogFile: parsed.NEIGHBORHOODS_CATALOG_FILE,
-    m1: { baseUrl: parsed.M1_BASE_URL },
+    m1: { baseUrl: parsed.M1_BASE_URL, timeoutMs: parsed.M1_TIMEOUT_MS },
     corsOrigins: parsed.CORS_ORIGINS?.split(',')
       .map((o) => o.trim())
       .filter(Boolean),

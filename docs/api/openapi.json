@@ -3147,6 +3147,36 @@
             }
           },
           {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "code",
+              "type": "string",
+              "enum": [
+                "code",
+                "name",
+                "active",
+                "createdAt"
+              ]
+            }
+          },
+          {
             "name": "active",
             "required": false,
             "in": "query",
@@ -4336,6 +4366,37 @@
             }
           },
           {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "name",
+              "type": "string",
+              "enum": [
+                "name",
+                "crewType",
+                "defaultShift",
+                "active",
+                "createdAt"
+              ]
+            }
+          },
+          {
             "name": "active",
             "required": false,
             "in": "query",
@@ -5325,6 +5386,37 @@
             }
           },
           {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "plate",
+              "type": "string",
+              "enum": [
+                "plate",
+                "vehicleType",
+                "capacity",
+                "active",
+                "createdAt"
+              ]
+            }
+          },
+          {
             "name": "active",
             "required": false,
             "in": "query",
@@ -5842,6 +5934,37 @@
               "maximum": 100,
               "default": 20,
               "type": "number"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "code",
+              "type": "string",
+              "enum": [
+                "code",
+                "containerType",
+                "status",
+                "capacityLiters",
+                "createdAt"
+              ]
             }
           },
           {
@@ -7520,6 +7643,36 @@
               "maximum": 100,
               "default": 20,
               "type": "number"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "surveyCode",
+              "type": "string",
+              "enum": [
+                "surveyCode",
+                "species",
+                "active",
+                "createdAt"
+              ]
             }
           },
           {
@@ -9326,6 +9479,36 @@
             }
           },
           {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "name",
+              "type": "string",
+              "enum": [
+                "name",
+                "spaceType",
+                "active",
+                "createdAt"
+              ]
+            }
+          },
+          {
             "name": "active",
             "required": false,
             "in": "query",
@@ -9854,6 +10037,36 @@
               "maximum": 100,
               "default": 20,
               "type": "number"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden. Sin `sort` aplica al orden por defecto del recurso.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo por el que se ordena todo el resultado (antes de paginar). Sin él se usa el orden por defecto del recurso.",
+            "schema": {
+              "example": "code",
+              "type": "string",
+              "enum": [
+                "code",
+                "name",
+                "active",
+                "createdAt"
+              ]
             }
           },
           {
@@ -14433,9 +14646,137 @@
         ]
       }
     },
+    "/environmental-reports/{id}/history": {
+      "get": {
+        "description": "Los pasos del expediente (cierre, derivación, desestimación, etc.) con su estado anterior y nuevo y el motivo (`note`) que escribió quien decidió. Paginado, del más reciente al más antiguo. No incluye quién actuó ni las lecturas de datos sensibles, y el motivo de lo que resuelve M4 va en null (la decisión de la sanción se lee en el acta). Es lo que `GET /audit` da al admin y al auditor, pero acotado a un expediente y legible por Oficina Ambiental.",
+        "operationId": "EnvironmentalReportsController_findHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del expediente",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-indexed)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Registros por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historial paginado del expediente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AuditHistoryItemDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Falta el rol de M6: se requiere alguno de M6_ADMIN, M6_OFICINA_AMBIENTAL, M6_AUDITOR (code ROLE_REQUIRED). También 403 si el token no es de personal municipal",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Expediente no encontrado",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Historial del expediente",
+        "tags": [
+          "environmental-reports"
+        ]
+      }
+    },
     "/environmental-reports/{id}/close": {
       "post": {
-        "description": "Cierra desde FORWARDED, DISMISSED, NO_VIOLATION, SANCTIONED o NOTICE_ISSUED. El cierre por vencimiento del plazo de M4 lo hace el sistema solo, sin pasar por acá.",
+        "description": "Cierra desde FORWARDED, DISMISSED, NO_VIOLATION, SANCTIONED o NOTICE_ISSUED. El cierre por vencimiento del plazo de M4 lo hace el sistema solo, sin pasar por acá. El body es opcional: con `reason`, el motivo queda en el historial y viaja a M2 como nota interna (el vecino no la ve).",
         "operationId": "EnvironmentalReportsController_close",
         "parameters": [
           {
@@ -14459,6 +14800,28 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseReportDto"
+              },
+              "examples": {
+                "conMotivo": {
+                  "summary": "Cierre con motivo",
+                  "value": {
+                    "reason": "Se verificó que el vecino regularizó la situación."
+                  }
+                },
+                "sinMotivo": {
+                  "summary": "Cierre sin motivo",
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Expediente cerrado",
@@ -14480,7 +14843,7 @@
             }
           },
           "400": {
-            "description": "Parámetro de ruta o de query inválido (UUID mal formado, valor fuera de rango o propiedad no declarada)",
+            "description": "Id mal formado, o motivo vacío o de más de 500 caracteres",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -17517,7 +17880,7 @@
           "instance": {
             "type": "string",
             "example": "/containers/123e4567-e89b-12d3-a456-426614174000",
-            "description": "RFC 9457: ruta de la request, con tokens de la query redactados (igual a path)"
+            "description": "RFC 9457: ruta de la request, sin la query (igual a path)"
           },
           "statusCode": {
             "type": "number",
@@ -17542,7 +17905,13 @@
           },
           "path": {
             "type": "string",
-            "example": "/containers/123e4567-e89b-12d3-a456-426614174000"
+            "example": "/containers/123e4567-e89b-12d3-a456-426614174000",
+            "description": "Ruta de la request, sin la query"
+          },
+          "traceId": {
+            "type": "string",
+            "example": "3f0c1a52-9a43-4b47-8f2c-1d3e5b7a9c01",
+            "description": "Id de correlación del request: el mismo del header X-Request-Id y del log del servidor. Citarlo al reportar un 500"
           }
         },
         "required": [
@@ -17555,7 +17924,8 @@
           "message",
           "error",
           "timestamp",
-          "path"
+          "path",
+          "traceId"
         ]
       },
       "MeCrewDto": {
@@ -23037,6 +23407,58 @@
         "required": [
           "message"
         ]
+      },
+      "AuditHistoryItemDto": {
+        "type": "object",
+        "properties": {
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-11-02T14:30:00.000Z",
+            "description": "Cuándo ocurrió"
+          },
+          "action": {
+            "type": "string",
+            "example": "CLOSE",
+            "description": "Acción realizada"
+          },
+          "fromStatus": {
+            "type": "string",
+            "nullable": true,
+            "example": "FORWARDED",
+            "description": "Estado anterior"
+          },
+          "toStatus": {
+            "type": "string",
+            "nullable": true,
+            "example": "CLOSED",
+            "description": "Estado nuevo"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "example": "Se verificó que el vecino regularizó la situación.",
+            "description": "Motivo que escribió quien decidió (hasta 500 caracteres, no debería contener datos personales); null si no lo hubo"
+          }
+        },
+        "required": [
+          "occurredAt",
+          "action",
+          "fromStatus",
+          "toStatus",
+          "note"
+        ]
+      },
+      "CloseReportDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo del cierre. Queda en el historial del expediente y viaja a M2 como nota interna (el vecino no la ve).",
+            "example": "Se verificó que el vecino regularizó la situación.",
+            "maxLength": 500
+          }
+        }
       },
       "CreateRepairRequestDto": {
         "type": "object",

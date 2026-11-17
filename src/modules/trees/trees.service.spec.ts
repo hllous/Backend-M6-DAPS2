@@ -175,7 +175,10 @@ describe('TreesService', () => {
     it('ordena por código de censo', async () => {
       await service.findAll({ page: 1, pageSize: 20 } as any);
 
-      expect(prisma.tree.findMany.mock.calls[0][0].orderBy).toEqual({ surveyCode: 'asc' });
+      expect(prisma.tree.findMany.mock.calls[0][0].orderBy).toEqual([
+        { surveyCode: 'asc' },
+        { id: 'asc' },
+      ]);
     });
 
     it('sin filtros no impone where, pagina y no consulta relevamientos crudos', async () => {

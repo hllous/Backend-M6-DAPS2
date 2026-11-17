@@ -127,8 +127,10 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   # sonar — Análisis en SonarCloud con la cobertura del job `test` (#657).
   #
-  # Paso 1 de la opción C de #656: el gate NO bloquea (qualitygate.wait=false)
-  # y el job no es check obligatorio de la branch protection. Se saltea sin
+  # Paso 2 de la opción C de #656 (#660): el scanner espera el resultado del
+  # Quality Gate (qualitygate.wait=true, hasta 5 min) y el job falla si el gate
+  # da rojo. Que además frene el merge depende de que `sonar` sea check
+  # requerido en la branch protection (lo configura el líder). Se saltea sin
   # SONAR_TOKEN (PRs de forks, que no reciben secrets). Configuración del
   # proyecto en sonar-project.properties.
   # ──────────────────────────────────────────────────────────────
@@ -166,7 +168,7 @@ jobs:
         with:
           # En el disparo manual el scanner vería la rama de trabajo como una rama
           # más (el plan Free la rechaza): se fuerza `main` solo ahí.
-          args: -Dsonar.qualitygate.wait=false ${{ github.event_name == 'workflow_dispatch' && '-Dsonar.branch.name=main' || '' }}
+          args: -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300 ${{ github.event_name == 'workflow_dispatch' && '-Dsonar.branch.name=main' || '' }}
 
   # ──────────────────────────────────────────────────────────────
   # e2e — La app completa contra un Postgres de verdad.
@@ -281,6 +283,88 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
             git /repo --redact --no-banner --log-opts="--all"
+
+  # secrets-default: lo mismo que `secrets` pero como lo corre la cátedra:
+  # gitleaks con la configuración POR DEFECTO (se borra .gitleaks.toml y se respeta
+  # .gitleaksignore, que es lo que ve la cátedra; el historial no se toca) y trufflehog,
+  # sobre todas las ramas y tags. Muestra qué ve una herramienta
+  # sin nuestras excepciones (frena si gitleaks por defecto encuentra algo en el historial, o si
+  # trufflehog verifica una credencial viva). Los reportes se publican como artifact con los
+  # valores redactados (en trufflehog se eliminan Raw/RawV2).
+  secrets-default:
+    name: secrets-default
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (historial completo, todas las ramas y tags)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Carpeta de reportes
+        run: echo "REPORTS=$RUNNER_TEMP/secrets-reports" >> "$GITHUB_ENV"
+
+      - name: Gitleaks con configuración por defecto
+        continue-on-error: true
+        run: |
+          rm -f .gitleaks.toml
+          mkdir -p "$REPORTS"
+          docker run --rm -v "$PWD:/repo" -v "$REPORTS:/reports" zricethezav/gitleaks:v8.30.1 \
+            git /repo --redact --no-banner --log-opts="--all" \
+            --report-format json --report-path /reports/gitleaks-default.json || true # se evalúa en el último paso
+          # Estado actual de los archivos (no el historial).
+          docker run --rm -v "$PWD:/repo" -v "$REPORTS:/reports" zricethezav/gitleaks:v8.30.1 \
+            dir /repo --redact --no-banner \
+            --report-format json --report-path /reports/gitleaks-default-worktree.json
+
+      - name: Trufflehog (acción oficial, historial de la rama)
+        continue-on-error: true
+        uses: trufflesecurity/trufflehog@3bd2b5887eb0efb8fa18bfd1d296032924e4ffdc # v3.99.9
+        with:
+          head: HEAD
+          version: 3.99.9
+          extra_args: --results=verified,unknown,unverified,filtered_unverified
+
+      - name: Trufflehog JSON sobre todas las ramas y tags
+        continue-on-error: true
+        run: |
+          mkdir -p "$REPORTS"
+          docker run --rm -v "$PWD:/tmp" -w /tmp ghcr.io/trufflesecurity/trufflehog:3.99.9 \
+            git file:///tmp/ --json --no-update \
+            --results=verified,unknown,unverified,filtered_unverified \
+            > "$REPORTS/trufflehog-raw.jsonl"
+          jq -c 'del(.Raw, .RawV2)' "$REPORTS/trufflehog-raw.jsonl" \
+            > "$REPORTS/trufflehog-default.jsonl"
+          rm "$REPORTS/trufflehog-raw.jsonl"
+          # Estado actual de los archivos (no el historial).
+          printf '/\\.git/\n' > "$RUNNER_TEMP/th-exclude.txt"
+          docker run --rm -v "$PWD:/tmp" -v "$RUNNER_TEMP/th-exclude.txt:/th-exclude.txt" -w /tmp \
+            ghcr.io/trufflesecurity/trufflehog:3.99.9 \
+            filesystem /tmp --json --no-update --exclude-paths=/th-exclude.txt \
+            --results=verified,unknown,unverified,filtered_unverified \
+            | jq -c 'del(.Raw, .RawV2)' > "$REPORTS/trufflehog-default-worktree.jsonl"
+
+      # Frenantes del job: algún hallazgo de gitleaks por defecto en el historial
+      # (los valores de juguete ya conocidos están en .gitleaksignore) o una
+      # credencial VERIFICADA como viva por trufflehog. Trufflehog sin verificar y
+      # el estado actual de los archivos son informativos.
+      - name: Fallar ante hallazgos de gitleaks o verificados de trufflehog
+        run: |
+          g=$(jq 'length' "$REPORTS/gitleaks-default.json")
+          v=$(jq -s '[.[] | select(.Verified == true)] | length' "$REPORTS/trufflehog-default.jsonl" "$REPORTS/trufflehog-default-worktree.jsonl")
+          echo "gitleaks (historial, sin .gitleaks.toml): $g hallazgos; trufflehog verificados: $v"
+          test "$g" -eq 0 && test "$v" -eq 0
+
+      - name: Publicar reportes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secrets-default-reports
+          path: ${{ runner.temp }}/secrets-reports/
+          if-no-files-found: warn
+          retention-days: 14
 
   # ──────────────────────────────────────────────────────────────
   # audit — Vulnerabilidades de dependencias de producción.

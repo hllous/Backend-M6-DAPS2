@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { DomainAuditLog, Prisma } from '@prisma/client';
 import { M6Role } from '../../auth/m6-role';
 import { PaginatedResponseDto } from '../dto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { M4_ACTOR_ID } from './audit-actors';
 import { AuditEntityType } from './audit-entity-type';
-import { AuditLogResponseDto, QueryAuditDto } from './dto';
+import { AuditHistoryItemDto, AuditLogResponseDto, QueryAuditDto } from './dto';
+import { PaginationQueryDto } from '../dto';
 
 /** Quien actuó: sale del token (`req.user`), nunca del body; en eventos entrantes es `system:<módulo>` (p. ej. `system:m3`). */
 export interface AuditActor {
@@ -81,22 +83,13 @@ export class AuditService {
 
   /** Historial de una entidad, el más reciente primero. */
   async findAll(query: QueryAuditDto): Promise<PaginatedResponseDto<AuditLogResponseDto>> {
-    const where: Prisma.DomainAuditLogWhereInput = {
-      ...(query.entityType && { entityType: query.entityType }),
-      ...(query.entityId && { entityId: query.entityId }),
-    };
-    const [rows, total] = await Promise.all([
-      this.prisma.domainAuditLog.findMany({
-        where,
-        skip: query.skip,
-        take: query.take,
-        // id desempata filas del mismo instante.
-        orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
-      }),
-      this.prisma.domainAuditLog.count({ where }),
-    ]);
-    return new PaginatedResponseDto(
-      rows.map((r) => ({
+    return this.paginate(
+      {
+        ...(query.entityType && { entityType: query.entityType }),
+        ...(query.entityId && { entityId: query.entityId }),
+      },
+      query,
+      (r) => ({
         id: r.id,
         entityType: r.entityType,
         entityId: r.entityId,
@@ -107,10 +100,46 @@ export class AuditService {
         actorRoles: r.actorRoles,
         note: r.note,
         occurredAt: r.occurredAt,
-      })),
-      total,
-      query.page,
-      query.pageSize,
+      }),
     );
+  }
+
+  /**
+   * Historial de una entidad para quien no puede leer `GET /audit` (#728): sin actor ni
+   * ids, y sin las filas `READ` (son la auditoría de lecturas Tier 2, no pasos de la
+   * entidad). Quien llama ya validó que la entidad existe.
+   */
+  async findHistory(
+    entityType: AuditEntityType,
+    entityId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<AuditHistoryItemDto>> {
+    return this.paginate({ entityType, entityId, action: { not: 'READ' } }, query, (r) => ({
+      occurredAt: r.occurredAt,
+      action: r.action,
+      fromStatus: r.fromStatus,
+      toStatus: r.toStatus,
+      // El `note` de lo que escribe M4 es la decisión de la sanción (Tier 2, ADR-005):
+      // sale del acta, que se audita al leerla. Acá no se entrega sin fila `READ`.
+      note: r.actorUserId === M4_ACTOR_ID ? null : r.note,
+    }));
+  }
+
+  private async paginate<T>(
+    where: Prisma.DomainAuditLogWhereInput,
+    query: PaginationQueryDto,
+    map: (row: DomainAuditLog) => T,
+  ): Promise<PaginatedResponseDto<T>> {
+    const [rows, total] = await Promise.all([
+      this.prisma.domainAuditLog.findMany({
+        where,
+        skip: query.skip,
+        take: query.take,
+        // id desempata filas del mismo instante.
+        orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      }),
+      this.prisma.domainAuditLog.count({ where }),
+    ]);
+    return new PaginatedResponseDto(rows.map(map), total, query.page, query.pageSize);
   }
 }

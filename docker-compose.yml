@@ -1,15 +1,20 @@
 # ═══════════════════════════════════════════════════════════════
-# M6 Ambiente, Higiene y Servicios Urbanos — backend en local
+# M6 Ambiente, Higiene y Servicios Urbanos — sistema completo en local
 #
-#   docker compose up --build      # un solo comando: base + broker + backend
-#   docker compose --profile seed run --rm seed   # (opcional) datos de demo
+#   docker compose up --build      # un solo comando, sin .env (criterio G1, #698)
 #
-# SOLO PARA DESARROLLO LOCAL. Antes del primer arranque: cp .env.example .env
-# (las credenciales se leen de .env; si falta una, compose corta con el mensaje).
-# En Render van otras (ver docs/operacion/referencia.md).
+# Levanta PostgreSQL, RabbitMQ, el backend (aplica las migraciones al arrancar),
+# el seed de demo (corre solo y es idempotente: un segundo `up` no duplica nada),
+# el M1 falso y el frontend en http://localhost:3001.
+#
+# SOLO PARA DESARROLLO LOCAL Y DEMO. Cada variable tiene un default que sirve tal
+# cual; un .env (cp .env.example .env) o el entorno solo hacen falta para cambiarlas.
+# Ninguno de estos valores es un secreto: en Render van otros (docs/operacion/referencia.md).
 #
 # El Core de M9 no se levanta acá: RabbitMQ local hace de bus, con el mismo
 # exchange (muni.inbox, fanout) y la misma cola (q.ambiente) que crea el Core.
+# M1 tampoco: el M1 falso del repo del frontend firma los JWT con el mismo
+# JWT_SECRET que valida el backend.
 # ═══════════════════════════════════════════════════════════════
 
 # Nombre del stack ("Módulo 6 - Ambiente"). Compose solo admite minúsculas, números,
@@ -17,12 +22,25 @@
 # Es el prefijo de contenedores, red y volúmenes, y lo que muestra Docker Desktop.
 name: modulo-6-ambiente
 
+# Valores comunes a varios servicios. Se pisan desde .env o el entorno.
+x-db-url: &db-url postgresql://${POSTGRES_USER:-m6}:${POSTGRES_PASSWORD:-cambiame}@postgres:5432/${POSTGRES_DB:-m6_ambiente}?schema=public
+# El mismo placeholder de .env.example (no es un secreto): con NODE_ENV=production
+# el backend no arranca con él.
+x-jwt-secret: &jwt-secret ${JWT_SECRET:-Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==}
+
+# Imagen del frontend: se construye desde su repo, sin clonarlo a mano. FRONTEND_REF
+# elige la rama o el tag (default v2.0-entrega4, el tag de la entrega; para probar la última versión: FRONTEND_REF=main).
+x-frontend-build: &frontend-build
+  context: ./docker/frontend-demo
+  additional_contexts:
+    frontend: https://github.com/hllous/Frontend-M6-DAPS2.git#${FRONTEND_REF:-v2.0-entrega4}
+
 services:
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-m6}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env (cp .env.example .env)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cambiame}
       POSTGRES_DB: ${POSTGRES_DB:-m6_ambiente}
     ports:
       - "127.0.0.1:5432:5432"
@@ -37,8 +55,8 @@ services:
   rabbitmq:
     image: rabbitmq:4.4-management-alpine
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Falta RABBITMQ_USER en .env (cp .env.example .env)}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env (cp .env.example .env)}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-m6}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-cambiame}
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672" # consola de administración: http://localhost:15672
@@ -64,7 +82,7 @@ services:
       - |
         set -e
         api=http://rabbitmq:15672/api
-        auth=${RABBITMQ_USER:?Falta RABBITMQ_USER en .env (cp .env.example .env)}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env (cp .env.example .env)}
+        auth=${RABBITMQ_USER:-m6}:${RABBITMQ_PASSWORD:-cambiame}
         json='Content-Type: application/json'
         # El healthcheck de rabbitmq da "healthy" antes de que escuche la consola (15672):
         # sin reintentos, el primer `docker compose up` en frío fallaba con "exit 7".
@@ -85,11 +103,11 @@ services:
       # La imagen trae NODE_ENV=production, que exige amqps y prohíbe estos valores.
       NODE_ENV: development
       PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-m6}:${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env (cp .env.example .env)}@postgres:5432/${POSTGRES_DB:-m6_ambiente}?schema=public
-      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env (cp .env.example .env)}
+      DATABASE_URL: *db-url
+      JWT_SECRET: *jwt-secret
       # Sin M9 local, el catálogo de barrios sale del snapshot que trae la imagen (prisma/ se copia entera).
       NEIGHBORHOODS_CATALOG_FILE: prisma/data/m9-barrios.json
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env (cp .env.example .env)}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env (cp .env.example .env)}@rabbitmq:5672/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-m6}:${RABBITMQ_PASSWORD:-cambiame}@rabbitmq:5672/
     ports:
       - "3000:3000"
     healthcheck:
@@ -99,23 +117,67 @@ services:
       retries: 12
       start_period: 40s
 
-  # Opcional: carga los datos de demo (docs/seed.md). Usa la etapa "builder" de
-  # la imagen, que trae ts-node y el seed. La base es la del compose.
+  # Carga los datos de demo (docs/seed.md) cuando el backend ya migró la base, y
+  # termina. Corre en cada `up` y es idempotente: no duplica nada (lo operativo solo
+  # se crea en una base sin servicios). Usa la etapa "builder" de la imagen, que trae
+  # ts-node y el seed.
   seed:
-    profiles: ["seed"]
     build:
       context: .
       target: builder
     depends_on:
       backend:
         condition: service_healthy
+    restart: "no"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-m6}:${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env (cp .env.example .env)}@postgres:5432/${POSTGRES_DB:-m6_ambiente}?schema=public
+      DATABASE_URL: *db-url
       SEED_CONFIRM_REMOTE: "1" # el seed solo corre contra localhost salvo que se confirme
     volumes:
       # El seed lee los barrios y comunas de CABA; docs/ no entra en la imagen (.dockerignore).
       - ./docs/geojson:/app/docs/geojson:ro
     command: ["npx", "prisma", "db", "seed"]
+
+  # Frontend (Next.js) con su BFF, en http://localhost:3001. Corre con `next dev`:
+  # el build de producción rechaza a propósito un M1 de loopback y el M1 falso (ver
+  # docker/frontend-demo/Dockerfile). El BFF llama al backend por la red del compose.
+  frontend:
+    build: *frontend-build
+    depends_on:
+      backend:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    environment:
+      M6_AUTH_MODE: real-m1
+      M6_BACKEND_ORIGIN: http://backend:3000
+      M1_BASE_URL: http://127.0.0.1:3120/api/v1/
+      M1_FAKE_ENABLED: "true"
+      # Sin el service worker de mocks: todo dato sale del backend real.
+      NEXT_PUBLIC_DISABLE_MSW: "true"
+    ports:
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/api/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+
+  # M1 falso (scripts/fake-m1.mjs del frontend): login y refresh con las cuentas de
+  # demo, con JWT firmados con el JWT_SECRET del backend. Solo acepta conexiones de
+  # loopback, así que comparte la red del contenedor del frontend: el BFF lo llama
+  # en 127.0.0.1:3120 y no se publica afuera.
+  fake-m1:
+    build: *frontend-build
+    network_mode: "service:frontend"
+    depends_on:
+      frontend:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      FAKE_M1_PORT: "3120"
+      M1_FAKE_JWT_SECRET: *jwt-secret
+    command: ["node", "scripts/fake-m1.mjs"]
 
 volumes:
   postgres-data:

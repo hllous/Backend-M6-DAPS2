@@ -10,6 +10,7 @@ import {
   ReportStatusChangeDto,
   RequestInformationDto,
 } from './dto';
+import { PaginationQueryDto } from '../../common/dto';
 import type { Mocked } from 'vitest';
 
 const ID = '11111111-1111-1111-1111-111111111111';
@@ -28,6 +29,7 @@ describe('EnvironmentalReportsController', () => {
       create: vi.fn().mockResolvedValue(RESULT),
       findAll: vi.fn().mockResolvedValue({ items: [RESULT] }),
       findOne: vi.fn().mockResolvedValue(RESULT),
+      findHistory: vi.fn().mockResolvedValue({ data: [] }),
       startReview: vi.fn().mockResolvedValue(RESULT),
       forward: vi.fn().mockResolvedValue(RESULT),
       dismiss: vi.fn().mockResolvedValue(RESULT),
@@ -41,6 +43,12 @@ describe('EnvironmentalReportsController', () => {
     const dto = {} as CreateEnvironmentalReportDto;
     await expect(controller.create(dto, USER)).resolves.toBe(RESULT);
     expect(service.create).toHaveBeenCalledWith(dto, USER);
+  });
+
+  it('findHistory delega el id y la paginación', async () => {
+    const query = {} as PaginationQueryDto;
+    await controller.findHistory(ID, query);
+    expect(service.findHistory).toHaveBeenCalledWith(ID, query);
   });
 
   it('findAll delega la query', async () => {
@@ -98,7 +106,12 @@ describe('EnvironmentalReportsController', () => {
 
   it('close delega id y userId', async () => {
     await controller.close(ID, USER);
-    expect(service.close).toHaveBeenCalledWith(ID, USER, undefined);
+    expect(service.close).toHaveBeenCalledWith(ID, USER, undefined, undefined);
+  });
+
+  it('close pasa el motivo del body', async () => {
+    await controller.close(ID, USER, undefined, { reason: 'Archivo' });
+    expect(service.close).toHaveBeenCalledWith(ID, USER, undefined, 'Archivo');
   });
 
   it('requestInformation delega el id, el dto y el actor', async () => {

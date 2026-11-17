@@ -82,7 +82,7 @@ Todo cambio entra por PR. La rama de integración es `develop`: ahí apuntan los
 ### Checklist mínima antes de mergear
 
 - [ ] El código compila y los tests pasan localmente
-- [ ] Cobertura de tests ≥ 85% en los archivos tocados (la verifica el CI con `npm run test:cov`; umbrales en `coverage.thresholds` de `vitest.config.ts`)
+- [ ] Cobertura de tests ≥ 90% en los archivos tocados (la verifica el CI con `npm run test:cov`; umbrales en `coverage.thresholds` de `vitest.config.ts`)
 - [ ] Si es un endpoint: cumple el [estándar Swagger](docs/api/estandar-swagger.md)
 - [ ] Si es un evento nuevo o cambia un payload: `docs/eventos/` actualizada y schema JSON actualizado
 - [ ] Si es una decisión técnica: hay un ADR en [`docs/decisiones/`](docs/decisiones/)
@@ -126,7 +126,7 @@ Si vas a hacer un cambio grande en la doc de dominio (`docs/entidades/`, `docs/e
 ## Testing
 
 - Todo lo que se codea tiene tests unitarios asociados en el mismo PR.
-- Cobertura mínima **85%** (requisito del TPO, no negociable).
+- Cobertura mínima **90%** en el repo (`vitest.config.ts`, #660); el TPO exige 85% y no es negociable.
 - Tests de integración para endpoints y consumers de eventos.
 - No commitear tests que están fallando o marcados como `skip` sin justificación en el PR.
 

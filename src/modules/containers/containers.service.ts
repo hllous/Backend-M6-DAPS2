@@ -15,7 +15,7 @@ import {
   ConfirmRelocationDto,
   ContainerStatusHistoryResponseDto,
 } from './dto';
-import { PaginatedResponseDto, PaginationQueryDto } from '../../common/dto';
+import { PaginatedResponseDto, PaginationQueryDto, buildOrderBy } from '../../common/dto';
 import { ifMatchWhere, isConditional, preconditionFailed } from '../../common/etag';
 
 /**
@@ -130,7 +130,7 @@ export class ContainersService {
         where,
         skip: query.skip,
         take: query.take,
-        orderBy: { code: 'asc' },
+        orderBy: buildOrderBy(query, 'code'),
       }),
       this.prisma.container.count({ where }),
     ]);

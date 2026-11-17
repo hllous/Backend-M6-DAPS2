@@ -637,6 +637,7 @@ describe('CrewsService', () => {
         .create({ ...base, leaderUserId: '9' } as any, ACTOR)
         .catch((e) => e);
       expect(err).toBeInstanceOf(ServiceUnavailableException);
+      expect(err.message).toBe('M1 no responde, reintentá en unos segundos');
       expect(err.message).not.toContain('secreto');
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });

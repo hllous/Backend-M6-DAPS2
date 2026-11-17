@@ -1,23 +1,26 @@
 # 03 · Matriz de trazabilidad
 
-> Versión 2.1 · 16/11/2026 (las filas de herramientas de análisis y DEF-13 se actualizaron con la Entrega 4; el resto, medido el 10/11/2026). Relaciona **HU → criterio de aceptación → caso de prueba → test automatizado → resultado → defecto**. Las HU y los criterios están en [02-historias-y-criterios.md](02-historias-y-criterios.md) y los casos en [04-especificacion-casos.md](04-especificacion-casos.md).
+> Versión 2.2 · 16/11/2026
+
+Relaciona **HU → criterio de aceptación → caso de prueba → test automatizado → resultado → defecto**. Las HU y los criterios están en [02-historias-y-criterios.md](02-historias-y-criterios.md) y los casos en [04-especificacion-casos.md](04-especificacion-casos.md).
 
 ## Cómo leerla
 
-- **Test automatizado:** archivo y nombre del test (`describe`/`it`) del backend; se muestran hasta dos por criterio. `FE:` es un test del repo del frontend: solo verificamos el nombre del archivo, no su contenido.
-- **Resultado:** **Pasó** significa que el test citado existe en el archivo y que la corrida completa no tuvo fallos: R08 (local sobre `1d600d2`: 2746 unitarios y 312 e2e, y 4 de 4 en RabbitMQ real) y, para la suite completa, R09 (local sobre `142e1a3`: 2854 unitarios y 343 e2e, 0 fallos; el cotejo por nombre de cada test se hizo con R08). Los tests saltados no figuran en ninguna fila. «Corregido: ACT-nn» es un criterio que cambió después de la HU (ver más abajo) y cuya corrección tiene CI verde en el commit que la introdujo.
-- **Defecto:** «—» si no hay ninguno registrado; si no, el `DEF-xx` de [06-registro-defectos.md](06-registro-defectos.md) o el issue. Los defectos transversales sin criterio propio están en la tabla «Defectos y pruebas sin criterio propio» del final.
-- **Marcas:** **HUECO** = el criterio no tiene ningún test automatizado verificado (solo prueba manual o nada). **SOLO FE** = solo tiene un test del frontend, sin verificar.
-
+- **Test automatizado:** archivo y nombre del test del backend (hasta dos por criterio). `FE:` es un test del repo del frontend, citado por nombre de archivo.
+- **Resultado:** **Pasó** = el test citado existe y la corrida completa (3056 unitarios, 410 e2e y 8 de RabbitMQ real) no tuvo fallos. «Corregido: ACT-nn» es un criterio que cambió después de la HU.
+- **Defecto:** «—» si no hay ninguno; si no, el `DEF-xx` de [06-registro-defectos.md](06-registro-defectos.md).
+- **Marcas:** **HUECO** = ningún test automatizado. **FE ejecutado** = lo cubre un test del frontend leído contra el texto del criterio y ejecutado el 16/11 (Eje A, FE #979, mergeado en `develop` del Frontend); las demás citas `FE:` se verificaron solo por nombre de archivo.
 
 ## HU-01 — Catálogos con tablas filtrables, componentes uniformes y estados de carga
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU01-1** (Feliz) lo abro → puedo ordenar y filtrar con el mismo componente de tabla que Servicios | CP-001 | **SOLO FE**: `catalog-shell.spec.ts`<br>FE: `zones-catalog.spec.ts` | Corregido (ACT-F1); sin ejecutar | — |
-| **CA-HU01-2** (Feliz) la pantalla carga → veo un esqueleto con la forma final, no un spinner suelto ni la tabla vacía | CP-002 | **SOLO FE**: `catalog-a-loading.spec.ts`<br>FE: `catalog-b-loading.spec.ts`<br>(+1 más) | Corregido (ACT-F1); sin ejecutar | — |
-| **CA-HU01-3** (Alternativo) corre el guard de shadcn en el CI del frontend → no quedan componentes de UI escritos a mano fuera del registro | CP-003 | **HUECO** sin test: Guard de CI del frontend citado por Trello; no se localizó el script en esta pasada. | Corregido (ACT-F1); sin ejecutar | — |
-| **CA-HU01-4** (Error) abro un catálogo → la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía | CP-004 | **SOLO FE**: `failure-journeys.spec.ts` | No ejecutado (solo test del frontend, sin verificar) | — |
+| **CA-HU01-1** (Feliz) lo abro → puedo ordenar y filtrar con el mismo componente de tabla que Servicios | CP-001 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts` (orden y filtro en Zonas; paginación de a 20 en Vehículos)<br>FE: `catalog-shell.spec.ts`, `zones-catalog.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)); el orden por columna sobre todo el resultado en los catálogos con paginación del servidor pasó en el CI de [Frontend #990](https://github.com/hllous/Frontend-M6-DAPS2/pull/990) ([run 43990689433](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43990689433)), con tests de unidad y de componente (`catalog-sort*.test.ts`, `use-catalog-sort.test.tsx`, `catalog-sort-panels.test.tsx`), sin e2e propio | DEF-39 (cerrado: el backend acepta `sort` y `order` desde #712, CA-HU01-5, y el frontend los usa desde [Frontend #990](https://github.com/hllous/Frontend-M6-DAPS2/pull/990), que cierra [Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983)) |
+| **CA-HU01-2** (Feliz) la pantalla carga → veo un esqueleto con la forma final, no un spinner suelto ni la tabla vacía | CP-002 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts` (esqueleto mientras carga)<br>FE: `catalog-a-loading.spec.ts`, `catalog-b-loading.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU01-3** (Alternativo) corre el guard de shadcn en el CI del frontend → no quedan componentes de UI escritos a mano fuera del registro | CP-003 | **FE ejecutado**: `src/components/ui/shadcn-guard.test.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU01-4** (Error) abro un catálogo → la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía | CP-004 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts` (500 y timeout del BFF → `role=alert`)<br>FE: `failure-journeys.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). Desde FE #978 el timeout del BFF es de 5 s y responde 503 | DEF-33 (cerrado) |
+| **CA-HU01-5** (Alternativo) pido un listado paginado con `?sort=<campo>&order=asc\|desc` → el orden se aplica a todo el resultado antes de paginar y desempata por id; sin `sort` ni `order` el orden no cambia, y con solo `order` se invierte el orden por defecto | CP-383, CP-384, CP-385 | `sort-query.dto.spec.ts` › «acepta un campo de la lista y ambos sentidos»<br>`catalog-sort.e2e-spec.ts` › «order=desc invierte todo el resultado y pagina sobre ese orden»<br>(+5 más) | Pasó | — |
+| **CA-HU01-6** (Error) envío un `sort` fuera de la lista (también una columna real no visible) o un `order` inválido → recibo 400 | CP-386, CP-387, CP-388 | `sort-query.dto.spec.ts` › «rechaza un sort fuera de la lista (también una columna real no visible)»<br>`catalog-sort.e2e-spec.ts` › «un sort fuera de la lista da 400»<br>(+1 más) | Pasó | — |
 
 ## HU-02 — Alta de zonas operativas y recorridos con paradas
 
@@ -47,7 +50,7 @@
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
 | **CA-HU04-1** (Feliz) lo suspendo eligiendo un motivo y escribiendo una nota → el backend guarda reason y note en campos distintos | CP-028 | `services.service.spec.ts` › «suspender guarda el motivo»<br>`services.service.spec.ts` › «suspender guarda la nota opcional» | Pasó (corregido: ACT-15) | — |
-| **CA-HU04-2** (Feliz) abro su detalle → veo el motivo y la nota por separado (statusNote) | CP-029 | `services.service.spec.ts` › «suspender guarda la nota opcional»<br>FE: `services.spec.ts` | Pasó (solo la parte backend; la del frontend no se ejecutó) | — |
+| **CA-HU04-2** (Feliz) abro su detalle → veo el motivo y la nota por separado (statusNote) | CP-029 | `services.service.spec.ts` › «suspender guarda la nota opcional»<br>FE: `services.spec.ts` | Pasó (parte backend) | — |
 | **CA-HU04-3** (Alternativo) suspendo (o la nota son solo espacios) → la suspensión se acepta igual y la nota queda null | CP-030 | `services.service.spec.ts` › «suspender con nota de solo espacios la guarda como null» | Pasó (corregido: ACT-15) | — |
 | **CA-HU04-4** (Error) intento suspenderlo → recibo 409 nombrando las transiciones válidas desde el estado actual | CP-031, CP-335 | `services.service.spec.ts` › «rechaza una transicion invalida nombrando las validas»<br>`services-lifecycle.e2e-spec.ts` › «rechaza con 409 una transición que la tabla no admite»<br>(+1 más) | Pasó | — |
 | **CA-HU04-5** (Error) envío una nota de más de 500 caracteres → recibo 400 y el servicio no cambia de estado | CP-032 | `length-limits.dtos.spec.ts` › «%s: el tope pasa y tope+1 falla» | Pasó | — |
@@ -85,6 +88,7 @@
 | **CA-HU07-5** (Error) intento iniciarlo → recibo 409 (sin vehículo) o 403 NOT_ASSIGNED (sin cuadrilla) y el servicio sigue SCHEDULED | CP-067 | `services.service.spec.ts` › «no deja iniciar sin vehiculo si el tipo lo exige»<br>`services-lifecycle.e2e-spec.ts` › «no deja iniciar sin cuadrilla y sí después de asignarla» | Pasó | — |
 | **CA-HU07-6** (Alternativo) aviso una demora (POST /services/:id/delay-notices) → el estado no cambia; START solo se acepta antes de arrancar y DURATION solo con la cuadrilla trabajando (la combinación cruzada da 40… | CP-068, CP-069, CP-070, CP-071 | `services-delay-assignment.spec.ts` › «un servicio que no arrancó admite START»<br>`services-delay-assignment.spec.ts` › «no toca el estado del servicio»<br>(+3 más) | Pasó | — |
 | **CA-HU07-7** (Error) falla la escritura del contenedor dentro de la transacción de cierre → el cierre se revierte completo: el servicio sigue IN_PROGRESS, el contenedor no cambia y no queda fila en el outbox | CP-072, CP-073, CP-074 | `containers-close.e2e-spec.ts` › «revierte el cierre del servicio si falla la escritura del contenedor dentro de la transacción»<br>`containers-close.e2e-spec.ts` › «no cierra el servicio si falta la ubicación nueva del contenedor en RELOCATING»<br>(+2 más) | Pasó | — |
+| **CA-HU07-8** (Falla externa) lo inicio y lo cierro → el servicio queda COMPLETED igual y los avisos hacia M2 (PROGRESS al iniciar, RESOLVED con ACTION_COMPLETED al cerrar) quedan PENDING en el outbox, escritos en la misma transacción de cada cambio, para que el dispatcher los reenvíe | CP-395 | `services-lifecycle.e2e-spec.ts` › «proyecta hacia M2 los cambios del servicio nacido de un reclamo»<br>`services-rules-mutation.spec.ts` › «al completar avisa RESOLVED con resolución ACTION_COMPLETED» | Pasó | — |
 
 ## HU-08 — Adjuntar evidencia fotográfica con reintento seguro
 
@@ -92,7 +96,7 @@
 |---|---|---|---|---|
 | **CA-HU08-1** (Feliz) lo subo con POST /evidence con Idempotency-Key → recibo 201, la evidencia queda asociada al dueño y el objeto almacenado no conserva EXIF ni GPS | CP-075 | `attachments.service.spec.ts` › «sube el archivo y persiste el Attachment cuando el owner existe»<br>`attachments.service.spec.ts` › «sube el archivo sin los metadatos»<br>(+1 más) | Pasó | — |
 | **CA-HU08-2** (Alternativo) repito el POST /evidence → recibo el Attachment existente y no se vuelve a subir el archivo | CP-076 | `attachments.service.spec.ts` › «con una Idempotency-Key ya usada, devuelve el attachment existente sin volver a subir»<br>`attachments.service.spec.ts` › «tambien lo borra cuando pierde la carrera de la Idempotency-Key» | Pasó | — |
-| **CA-HU08-3** (Error) subo un archivo cuyo contenido no coincide con el tipo declarado, de más de 10 MB, de un tipo no permitido o sin Idempotency-Key → recibo 400 (contenido, tipo o clave), 413 (más de 10 MB)… | CP-077, CP-078, CP-079, CP-080 | `attachments.service.spec.ts` › «rechaza un archivo cuyo contenido no coincide con lo declarado»<br>`attachments.service.spec.ts` › «rechaza un archivo que supera el tamaño máximo»<br>(+2 más) | Pasó (corregido: ACT-F6); parte FE sin ejecutar | Corregido en FE #380, #435, #438 |
+| **CA-HU08-3** (Error) subo un archivo cuyo contenido no coincide con el tipo declarado, de más de 10 MB, de un tipo no permitido o sin Idempotency-Key → recibo 400 (contenido, tipo o clave), 413 (más de 10 MB)… | CP-077, CP-078, CP-079, CP-080 | `attachments.service.spec.ts` › «rechaza un archivo cuyo contenido no coincide con lo declarado»<br>`attachments.service.spec.ts` › «rechaza un archivo que supera el tamaño máximo»<br>(+2 más) | Pasó (corregido: ACT-F6) | Corregido en FE #380, #435, #438 |
 | **CA-HU08-4** (Error) subo o listo evidencia → recibo 403 NOT_ASSIGNED (ajeno) o 404 (dueño inexistente) | CP-081, CP-082 | `crew-ownership.e2e-spec.ts` › «SERVICE: el ajeno recibe 403 NOT_ASSIGNED; el integrante y el líder suben (201)»<br>`crew-ownership.e2e-spec.ts` › «un dueño inexistente es 404, no 403» | Pasó (corregido: ACT-04) | — |
 | **CA-HU08-5** (Falla externa) subo un archivo válido → recibo 503 (sin R2), no se persiste nada y la Idempotency-Key queda libre; si falla la escritura de la fila, el archivo se borra del bucket | CP-083, CP-084 | `attachments.service.spec.ts` › «el camino válido responde 503 y no persiste nada (la Idempotency-Key queda libre)»<br>`attachments.service.spec.ts` › «borra el archivo del bucket si la fila no se puede escribir» | Pasó | — |
 | **CA-HU08-6** (Error) la leo (GET /evidence?ownerType=&ownerId=) → recibo 403 NOT_ASSIGNED (Campo ajeno) o 404 (dueño inexistente); Campo lee lo propio y Oficina, Admin y Auditoría leen cualquiera | CP-299, CP-300, CP-301, CP-302 | `attachments.service.spec.ts` › «Campo sobre un servicio de otra cuadrilla: 403 NOT_ASSIGNED y no consulta evidencia»<br>`attachments.service.spec.ts` › «Campo sobre lo propio lee»<br>(+2 más) | Pasó (corregido: ACT-05) | Corregido en #466 |
@@ -112,9 +116,9 @@
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU10-1** (Feliz) elijo una o más prioridades (GET /tree-interventions?priority=) → solo veo las intervenciones con esa prioridad y la paginación cuenta sobre el total filtrado | CP-099 | `tree-interventions.service.spec.ts` › «filtra por prioridad combinada con tipo y estado»<br>FE: `tree-interventions.spec.ts` | Pasó (solo la parte backend; la del frontend no se ejecutó) | — |
-| **CA-HU10-2** (Error) llamo al endpoint → recibo 400 con el error estándar | CP-100 | **HUECO** sin test: La validación del enum la hace el ValidationPipe; no se encontró un test específico del filtro priority en esta pasada. | No ejecutado (sin test automatizado) | — |
-| **CA-HU10-3** (Alternativo) recargo → vuelvo a ver todas las intervenciones | CP-101 | `tree-interventions.service.spec.ts` › «filtra por tipo y estado»<br>FE: `tree-interventions.spec.ts` | Pasó (solo la parte backend; la del frontend no se ejecutó) | — |
+| **CA-HU10-1** (Feliz) elijo una o más prioridades (GET /tree-interventions?priority=) → solo veo las intervenciones con esa prioridad y la paginación cuenta sobre el total filtrado | CP-099 | `tree-interventions.service.spec.ts` › «filtra por prioridad combinada con tipo y estado»<br>FE: `tree-interventions.spec.ts` | Pasó (parte backend) | — |
+| **CA-HU10-2** (Error) llamo al endpoint → recibo 400 con el error estándar | CP-100 | **HUECO** sin test: la validación del enum la hace el ValidationPipe | Hueco | — |
+| **CA-HU10-3** (Alternativo) recargo → vuelvo a ver todas las intervenciones | CP-101 | `tree-interventions.service.spec.ts` › «filtra por tipo y estado»<br>FE: `tree-interventions.spec.ts` | Pasó (parte backend) | — |
 
 ## HU-11 — Gestión de contenedores (desborde, daño, vaciado, reparación y reubicación)
 
@@ -153,7 +157,7 @@
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU14-1** (Feliz) elijo "desde" y "hasta" (GET /environmental-reports?from=&to=) → veo solo las denuncias del rango, inclusivo, en día argentino (UTC-3) y meta.total refleja el rango | CP-134 | `environmental-reports.service.spec.ts` › «from/to filtran updatedAt por días argentinos, to inclusivo»<br>FE: `environmental-reports.spec.ts` | Pasó (solo la parte backend; la del frontend no se ejecutó) | — |
+| **CA-HU14-1** (Feliz) elijo "desde" y "hasta" (GET /environmental-reports?from=&to=) → veo solo las denuncias del rango, inclusivo, en día argentino (UTC-3) y meta.total refleja el rango | CP-134 | `environmental-reports.service.spec.ts` › «from/to filtran updatedAt por días argentinos, to inclusivo»<br>FE: `environmental-reports.spec.ts` | Pasó (parte backend) | — |
 | **CA-HU14-2** (Error) filtro → recibo 400 sin consultar la base y el formulario me avisa | CP-135, CP-136 | `environmental-reports.service.spec.ts` › «from posterior a to da 400 y no consulta la base»<br>`query-environmental-reports.dto.spec.ts` | Pasó (corregido: ACT-18) | — |
 | **CA-HU14-3** (Alternativo) filtro → el rango queda abierto de ese lado | CP-137 | `environmental-reports.service.spec.ts` › «acepta solo from o solo to» | Pasó (corregido: ACT-18) | — |
 | **CA-HU14-4** (Alternativo) filtro por varios estados (status repetido o separado por comas) → veo los expedientes de cualquiera de esos estados (OR), los duplicados se ignoran, meta.total ya viene filtrado y un val… | CP-311, CP-312, CP-313 | `environmental-reports.service.spec.ts` › «status con varios valores filtra con in y count usa el mismo where»<br>`environmental-reports.service.spec.ts` › «sin status el where no trae la clave»<br>(+1 más) | Pasó (corregido: ACT-18) | — |
@@ -189,6 +193,8 @@
 | **CA-HU17-2** (Alternativo) M4 publica closureUpdate ORDERED o LIFTED → ORDERED registra la clausura como resolución y LIFTED registra el levantamiento y cierra | CP-164, CP-165 | `consumers.spec.ts` › «closureUpdate ORDERED registra la clausura»<br>`consumers.spec.ts` › «closureUpdate LIFTED registra el levantamiento» | Pasó | — |
 | **CA-HU17-3** (Error) llega al inbox → por HTTP recibo 400 y no se guarda la fila; un acta ya resuelta no se resuelve dos veces; sin sourceViolationId el consumidor lo descarta | CP-166, CP-167 | `environmental-flow.e2e-spec.ts` › «rechaza con 400 una multa sin sourceViolationId válido y no guarda la fila»<br>`consumers.spec.ts` › «sin sourceViolationId no sabemos que acta resolvieron: se descarta»<br>(+1 más) | Pasó | — |
 | **CA-HU17-4** (Falla externa) vence el plazo (deadlineAt, SANCTION_DEADLINE_DAYS) de un expediente NOTICE_ISSUED → el sistema lo cierra solo (NOTICE_ISSUED → CLOSED) y no toca los que no están vencidos | CP-168, CP-169 | `report-deadline.sweeper.spec.ts` › «cierra solo los NOTICE_ISSUED con el plazo vencido»<br>`report-deadline.sweeper.spec.ts` › «si la base no responde al arrancar, no tumba el arranq» | Pasó | — |
+| **CA-HU17-5** (Alternativo) hago POST /environmental-reports/:id/close con `{ reason }` opcional → el motivo queda en el historial y viaja a M2 como `internalMessage` sin cambiar el `publicMessage`; sin body o sin `reason` cierra como siempre | CP-389, CP-390, CP-391, CP-392 | `environmental-flow.e2e-spec.ts` › «con motivo: queda en el historial y viaja como internalMessage»<br>`environmental-reports.service.spec.ts` › «close con motivo lo deja en el historial y lo manda a M2 solo como internalMessage»<br>(+5 más) | Pasó | — |
+| **CA-HU17-6** (Error) envío un `reason` de más de 500 caracteres, vacío, que no sea texto, o un campo no declarado → recibo 400 y el expediente no se cierra | CP-393, CP-394 | `status-change.dto.spec.ts` › «rechaza %j con 400»<br>`environmental-flow.e2e-spec.ts` › «motivo de más de 500 caracteres: 400 y no cierra» | Pasó | — |
 
 ## HU-18 — Pedirle información adicional al vecino (INFORMATION_REQUIRED)
 
@@ -206,6 +212,7 @@
 | **CA-HU19-1** (Feliz) M6 arranca con CORE_REGISTER_ON_BOOT activo o se ejecuta npm run core:register → quedan registradas 6 publicaciones y 8 suscripciones (weatherAlertIssued es simulado y no se suscribe), co… | CP-179 | `core-registry.service.spec.ts` › «registra lo que sale del código: 8 suscripciones (sin weatherAlertIssued) y 6 publicaciones» | Pasó (corregido: ACT-25) | Corregido en #266, #381, #391 |
 | **CA-HU19-2** (Alternativo) se ejecuta el registro → crea solo lo que falta, loguea lo que sobra sin borrarlo y no duplica nada; el modo simulacro no hace ningún POST | CP-180, CP-181 | `core-registry.service.spec.ts` › «crea solo lo que falta y loguea lo que sobra sin borrarlo»<br>`core-registry.service.spec.ts` › «correrlo dos veces no duplica nada»<br>(+1 más) | Pasó (corregido: ACT-25) | Corregido en #266, #381, #391 |
 | **CA-HU19-3** (Falla externa) M6 intenta registrarse → el arranque de M6 no se bloquea, el registro se reintenta con backoff y abandona al llegar a los intentos máximos; con una respuesta paginada incompleta no crea n… | CP-182, CP-183, CP-184 | `core-registry.service.spec.ts` › «una falla del Core no tira la app: se reintenta con backoff y se complet»<br>`core-registry.service.spec.ts` › «abandona tras los intentos máximos»<br>(+2 más) | Pasó | — |
+| **CA-HU19-4** (Error) M6 sincroniza su registro → un cuerpo que no es lista falla con ese motivo sin crear nada a ciegas; los nombres inválidos se ignoran (no figuran entre los sobrantes) y la lectura se corta en 200 entradas | CP-396, CP-397 | `core-registry.service.spec.ts` › «un error HTTP o una respuesta que no es lista falla sin crear nada a ciegas»<br>`core-registry.service.spec.ts` › «ignora nombres sin forma de evento y corta la lista en 200 entradas» | Pasó | — |
 
 ## HU-20 — Adaptar M6 al contrato de integración definitivo de M9
 
@@ -251,9 +258,9 @@
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU24-1** (Feliz) M6 publica en muni.inbox y consume de q.ambiente → los eventos de ida y vuelta se ven funcionando | CP-219, CP-340 | `rabbitmq-real.e2e-spec.ts` › «procesa un mensaje válido»<br>**Parcial:** cubre el consumo contra un RabbitMQ real (contenedor propio, cola propia). La publicación del outbox a `muni.inbox` y el Core de M9 no tienen test automatizado; esa parte quedó en el historial de integración (#299, #442). | Pasó, parcial: solo el consumo contra RabbitMQ real | Pendiente BE #299 y #442 (no es un defecto registrado) |
-| **CA-HU24-2** (Alternativo) ejecuto la prueba pasiva desde Render (BE #442) → se verifica TCP/TLS, autenticación y checkQueue de q.ambiente sin publicar ni consumir, y se documenta el eventId del evento pruebaConexi… | CP-220 | **HUECO** sin test: Prueba manual en el ambiente desplegado; la evidencia está en el historial de integración (#442, cerrado el 05/11; la prueba con el Core real quedó en el historial de integración, sin test automatizado).<br>Nota: el chequeo pasivo de la cola corre contra un RabbitMQ real local en test/rabbitmq-real.e2e-spec.ts (sin TLS ni Render); no reemplaza esta prueba. | No ejecutado (la prueba pasiva desde Render no tiene test automatizado) | #442 cerrado el 05/11; sin test automatizado (no es un defecto registrado) |
-| **CA-HU24-3** (Error) M6 arranca el consumidor → loguea el motivo y falla el setup para que recovery reintente, sin declarar colas ni bindings propios | CP-221, CP-341 | `rabbitmq.consumer.spec.ts` › «sin la cola (falta suscribirse en el Core) loguea y falla el setup para que recovery reintente»<br>`rabbitmq.consumer.spec.ts` › «verifica la cola del Core en modo pasivo, sin declarar ni bindear nada»<br>(+1 más) | Pasó | Pendiente BE #299 (no es un defecto registrado) |
+| **CA-HU24-1** (Feliz) M6 publica en muni.inbox y consume de q.ambiente → los eventos de ida y vuelta se ven funcionando | CP-219, CP-340 | `rabbitmq-real.e2e-spec.ts` › «procesa un mensaje válido»<br>`outbox-rabbitmq-real.e2e-spec.ts` › «publica las filas PENDING al exchange y las marca SENT»<br>(+3 más) | Pasó, parcial: consumo y publicación contra un RabbitMQ real propio; el Core de M9 se probó a mano (historial de integración, #299, #442) | DEF-03 (cerrado, #299, #442) |
+| **CA-HU24-2** (Alternativo) ejecuto la prueba pasiva desde Render (BE #442) → se verifica TCP/TLS, autenticación y checkQueue de q.ambiente sin publicar ni consumir, y se documenta el eventId del evento pruebaConexionM6 | CP-220 | **HUECO** sin test: prueba manual en el ambiente desplegado; evidencia en el historial de integración (#442) | Hueco | DEF-03 (cerrado, #442) |
+| **CA-HU24-3** (Error) M6 arranca el consumidor → loguea el motivo y falla el setup para que recovery reintente, sin declarar colas ni bindings propios | CP-221, CP-341 | `rabbitmq.consumer.spec.ts` › «sin la cola (falta suscribirse en el Core) loguea y falla el setup para que recovery reintente»<br>`rabbitmq.consumer.spec.ts` › «verifica la cola del Core en modo pasivo, sin declarar ni bindear nada»<br>(+1 más) | Pasó | DEF-03 (cerrado, #299) |
 | **CA-HU24-4** (Falla externa) M6 intenta publicar → el nack del broker se propaga, la fila queda PENDING y tras 5 intentos FAILED, y se reproduce con retry sin duplicar efecto en el receptor | CP-222, CP-223 | `rabbitmq.publisher.spec.ts` › «el nack del broker se propaga, para que el dispatcher deje la fila PENDING»<br>`rabbitmq.publisher.spec.ts` › «si la conexión falla, un intento posterior vuelve a probar»<br>(+2 más) | Pasó (corregido: ACT-11) | DEF-15 (corregido, #642): el corte al Core pasó de 10 s a 5 s; un usuario lo espera solo al dar de alta o editar una cuadrilla, o al sumarle integrantes, sin token de módulo en caché |
 
 ## HU-25 — Un ticket devuelto puede volver a derivarse a M6 y reactiva su expediente
@@ -269,18 +276,19 @@
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU26-1** (Feliz) se muestra una fecha → está en formato argentino dd/mm/aaaa hh:mm y en el día local | CP-230 | **SOLO FE**: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts`<br>FE: `services-period.spec.ts` | Corregido (ACT-F4); sin ejecutar | — |
-| **CA-HU26-2** (Feliz) lo veo → leo el nombre o el código, no el UUID | CP-231 | **SOLO FE**: `service-vehicle-labels.spec.ts` | Corregido (ACT-F4); sin ejecutar | — |
-| **CA-HU26-3** (Error) se muestra la fecha → se muestra el día de Argentina (UTC-3), no el de UTC | CP-232 | **SOLO FE**: `Frontend-M6-DAPS2/src/lib/argentina-date.test.ts` | No ejecutado (solo test del frontend, sin verificar) | — |
+| **CA-HU26-1** (Feliz) se muestra una fecha → está en formato argentino dd/mm/aaaa, hh:mm y en el día local | CP-230 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). El formato real lleva coma («06/09/2026, 14:05»): se corrigió el texto del criterio, no el código | — |
+| **CA-HU26-2** (Feliz) lo veo → leo el nombre o el código, no el UUID | CP-231 | **FE ejecutado**: `e2e/service-vehicle-labels.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU26-3** (Alternativo) se muestra la fecha → se muestra el día de Argentina (UTC-3), no el de UTC | CP-232 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts`<br>FE: `src/lib/argentina-date.test.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU26-4** (Error) el frontend lo formatea → lo muestra tal cual, sin convertirlo en otra fecha | CP-398 | **FE ejecutado**: `src/lib/argentina-date.test.ts` («returns values that are not dates untouched», «formats leap day and returns impossible calendar days unchanged») | Pasó (FE, ejecutado el 16/11 en local sobre el commit de FE #979: 27 de 27 tests del archivo) | — |
 
 ## HU-27 — Consultar sin login el estado de mi denuncia, cuándo pasa el servicio y dónde están los puntos verdes
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU27-1** (Feliz) consulto GET /public/reports/:ticketId sin token → recibo 200 con la etapa (una de siete), el tipo, la dirección y las fechas, sin identidad del inspector, hallazgos, checklist ni acta | CP-233 | `citizen-portal.service.spec.ts` › «devuelve exactamente los campos públicos, ni uno más»<br>`citizen-portal.service.spec.ts` › «colapsa el estado interno a una etapa que el vecino puede leer»<br>(+2 más) | Pasó (solo la parte backend; la del frontend no se ejecutó) | — |
+| **CA-HU27-1** (Feliz) consulto GET /public/reports/:ticketId sin token → recibo 200 con la etapa (una de siete), el tipo, la dirección y las fechas, sin identidad del inspector, hallazgos, checklist ni acta | CP-233 | `citizen-portal.service.spec.ts` › «devuelve exactamente los campos públicos, ni uno más»<br>`citizen-portal.service.spec.ts` › «colapsa el estado interno a una etapa que el vecino puede leer»<br>(+2 más) | Pasó (parte backend) | — |
 | **CA-HU27-2** (Alternativo) las hago sin fechas → veo los próximos 30 días desde hoy en Argentina, sin servicios cancelados ni datos de cuadrilla, vehículo o notas; y solo los puntos verdes activos con los residuos … | CP-234, CP-235 | `citizen-portal.service.spec.ts` › «sin fechas mira los próximos 30 días y saltea los cancelados»<br>`citizen-portal.service.spec.ts` › «sin from arranca hoy en Argentina aunque en UTC ya sea mañana»<br>(+2 más) | Pasó | — |
 | **CA-HU27-3** (Error) consulto el seguimiento → recibo 404 sin datos y sin confirmar si el ticket existe en M2 | CP-236, CP-237 | `citizen-portal.service.spec.ts` › «un reclamo sin expediente da 404 sin decir si el ticket existe en M2» | Pasó | — |
-| **CA-HU27-4** (Error) consulto → recibo 429; con la X-M6-BFF-Key correcta se cuenta la IP del vecino y con una clave incorrecta se ignora X-Forwarded-For | CP-238, CP-239 | `client-tracker.spec.ts` › «con la clave correcta usa la IP del vecino»<br>`client-tracker.spec.ts` › «con clave incorrecta (mismo largo) ignora el X-Forwarded-For» | Pasó (corregido: ACT-06) | Hueco de prueba: sin test de 429 de punta a punta. Corregido en #470; DEF-07 (cerrado, #580) |
+| **CA-HU27-4** (Error) consulto → recibo 429; con la X-M6-BFF-Key correcta se cuenta la IP del vecino y con una clave incorrecta se ignora X-Forwarded-For | CP-238, CP-239 | `client-tracker.spec.ts` › «con la clave correcta usa la IP del vecino»<br>`client-tracker.spec.ts` › «con clave incorrecta (mismo largo) ignora el X-Forwarded-For» | Pasó (corregido: ACT-06) | Corregido en #470; DEF-07 (cerrado, #568): el e2e del 429 prueba el límite global |
 | **CA-HU27-5** (Error) la hago → recibo 401, y solo /health y los cuatro /public/* son accesibles sin JWT | CP-240, CP-241 | `services-lifecycle.e2e-spec.ts` › «rechaza con 401 un pedido sin token»<br>`route-roles.spec.ts` › «solo los públicos esperados saltean la autorización»<br>(+1 más) | Pasó | — |
 
 ## HU-28 — Tablero de indicadores (cobertura, cumplimiento, incidencias y residuos)
@@ -300,8 +308,8 @@
 |---|---|---|---|---|
 | **CA-HU29-1** (Error) llamo a un endpoint de gestión → recibo 401 | CP-249 | `auth-roles.e2e-spec.ts` › «sin token da 401» | Pasó (corregido: ACT-01) | — |
 | **CA-HU29-2** (Error) intento emitir un acta o programar un servicio → recibo 403 con code ROLE_REQUIRED y el cuerpo no revela qué rol faltaba | CP-250 | `auth-roles.e2e-spec.ts` › «$grupo: $method $path»<br>`auth-roles.e2e-spec.ts` › «el 403 por rol no revela qué rol faltaba»<br>(+1 más) | Pasó (corregido: ACT-01) | — |
-| **CA-HU29-3** (Feliz) programo un servicio → recibo 2xx; y un GET permitido devuelve 200 también al auditor, que no puede escribir | CP-251, CP-252 | `auth-roles.e2e-spec.ts` › «$grupo: $method $path»<br>`auth-roles.e2e-spec.ts` › «un GET permitido devuelve 200 y el auditor lee pero no escribe»<br>(+1 más) | Pasó (corregido: ACT-01) | — |
-| **CA-HU29-4** (Feliz) consulto GET /me → el menú muestra solo las capacidades que devuelve GET /me (roles, cuadrillas e isAssignedInspector) | CP-253 | `demo-personas.e2e-spec.ts` › «GET /me: el líder y el integrante ven su cuadrilla con su rol»<br>FE: `access-roles.spec.ts`<br>(+1 más) | Pasó (solo la parte backend; la del frontend no se ejecutó) | — |
+| **CA-HU29-3** (Alternativo) programo un servicio → recibo 2xx; y un GET permitido devuelve 200 también al auditor, que no puede escribir | CP-251, CP-252 | `auth-roles.e2e-spec.ts` › «$grupo: $method $path»<br>`auth-roles.e2e-spec.ts` › «un GET permitido devuelve 200 y el auditor lee pero no escribe»<br>(+1 más) | Pasó (corregido: ACT-01) | — |
+| **CA-HU29-4** (Feliz) consulto GET /me → el menú muestra solo las capacidades que devuelve GET /me (roles, cuadrillas e isAssignedInspector) | CP-253 | `demo-personas.e2e-spec.ts` › «GET /me: el líder y el integrante ven su cuadrilla con su rol»<br>FE: `access-roles.spec.ts`<br>(+1 más) | Pasó (parte backend) | — |
 | **CA-HU29-5** (Error) lo uso → 401 para los tokens inválidos, 403 para el ciudadano y para el empleado sin roles (salvo GET /me, que responde) | CP-254, CP-255, CP-256 | `jwt-auth.guard.spec.ts` › «rechaza a un ciudadano con 403 y mensaje claro»<br>`demo-personas.e2e-spec.ts` › «el ciudadano queda afuera, también de GET /me»<br>(+3 más) | Pasó (corregido: ACT-02, ACT-03) | — |
 | **CA-HU29-6** (Error) intento cambiar los roles (PUT o DELETE /role-assignments/:userId) → recibo 409 (quitaría el último admin) o 400 (mezcla Oficina y Campo, rol inexistente o repetido) y no cambia nada | CP-257, CP-258, CP-259 | `role-assignments.e2e-spec.ts` › «no deja el sistema sin M6_ADMIN cuando no hay admins de bootstrap»<br>`role-assignments.e2e-spec.ts` › «exclusividad Oficina/Campo: 400 y no cambia nada»<br>(+1 más) | Pasó | — |
 | **CA-HU29-7** (Falla externa) llega un JWT de M1 → un rol desconocido no autoriza (nunca roles de M6); un rol de M6 asignado que el rol de M1 ya no permite queda dormido; los roles se leen de la base en cada request | CP-260, CP-261 | `m1-role.adapter.spec.ts` › «valor desconocido %p: ninguno y warn»<br>`jwt.strategy.spec.ts` › «sin filas en la tabla no hay roles efectivos (el rol de M1 solo no autoriza)»<br>(+2 más) | Pasó | — |
@@ -310,66 +318,67 @@
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU30-1** (Feliz) inicio sesión por el BFF (POST {M1}/auth/usuario/login) y consulto GET /me → recibo 200 con mis roles de M6; el JWT de M1 va en una cookie sellada httpOnly y nunca llega al navegador | CP-262 | FE: `real-m1-login.spec.ts`<br>`jwt.strategy.spec.ts` › «acepta un access token de M1 y lo mapea a roles de M6» | Pasó (solo la parte backend; la del frontend no se ejecutó) | Pendiente BE #488 y FE #800 (no es un defecto registrado) |
-| **CA-HU30-2** (Error) llamo a un endpoint protegido → recibo 401 (hoy sucede en Render hasta que se cargue el secreto vigente de M1) | CP-263 | `jwt.strategy.spec.ts` › «rechaza: %s» | Pasó | Al 03/11, pendiente BE #488: Render rechazaba el token con 401 hasta cargar el secreto vigente de M1. #488 se cerró el 03/11 y el login real se verificó ese día (no se repitió en esta pasada) |
-| **CA-HU30-3** (Error) navego → el BFF reintenta una vez con refresh y, si falla, redirige al login con el aviso de sesión vencida | CP-264 | **SOLO FE**: `failure-journeys.spec.ts`<br>FE: `entry-and-roles.spec.ts` | Corregido (ACT-F7); sin ejecutar | — |
-| **CA-HU30-4** (Falla externa) inicio sesión → el BFF corta a los 15 s con un mensaje de error; un build deployado en un modo distinto de real-m1 falla al arrancar (fail closed, FE #800) | CP-265 | **SOLO FE**: `real-m1-login.spec.ts` | No ejecutado (solo test del frontend, sin verificar) | Pendiente FE #800 |
+| **CA-HU30-1** (Feliz) inicio sesión por el BFF (POST {M1}/auth/usuario/login) y consulto GET /me → recibo 200 con mis roles de M6; el JWT de M1 va en una cookie sellada httpOnly y nunca llega al navegador | CP-262 | FE: `real-m1-login.spec.ts`<br>`jwt.strategy.spec.ts` › «acepta un access token de M1 y lo mapea a roles de M6» | Pasó (parte backend) | — |
+| **CA-HU30-2** (Error) llamo a un endpoint protegido → recibo 401  | CP-263 | `jwt.strategy.spec.ts` › «rechaza: %s» | Pasó | — |
+| **CA-HU30-3** (Alternativo) navego → el BFF reintenta una vez con refresh y, si falla, redirige al login con el aviso de sesión vencida | CP-264 | **FE ejecutado**: `src/lib/m1-refresh.test.ts`<br>FE: `e2e/failure-journeys.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
+| **CA-HU30-4** (Falla externa) inicio sesión → el BFF corta a los 90 s con un mensaje de error; un build deployado en un modo distinto de real-m1 falla al arrancar (fail closed, FE #800) | CP-265 | **FE ejecutado**: `src/app/api/session/login/route.test.ts`<br>FE: `real-m1-login.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). El criterio decía 15 s; el código corta a 90 s (`LOGIN_TIMEOUT_MS`) y se corrigió el texto | — |
 
 ## HU-31 — Seguridad de la Clase 11 (SEC-W01 a W06, SEC-I01, SEC-I02, SEC-D01, SEC-D02)
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU31-1** (Error) se invoca sin token, con token vencido, con firma de otro secreto o con alg "none" → los cuatro casos responden 401 con el formato de error estándar y sin datos del recurso | CP-266 | `jwt.strategy.spec.ts` › «rechaza: %s»<br>`services-lifecycle.e2e-spec.ts` › «rechaza con 401 un pedido sin token» | Pasó (corregido: ACT-02) | Corregido en #354, #448 |
-| **CA-HU31-2** (Error) envía POST /services con un body válido → recibe 403 y no se crea ningún servicio | CP-267 | `auth-roles.e2e-spec.ts` › «$grupo: $method $path»<br>`roles.guard.spec.ts` › «rechaza con ROLE_REQUIRED si no tiene ninguno» | Pasó (corregido: ACT-01) | Corregido en #161, #235 |
+| **CA-HU31-1** (Error) se invoca sin token, con token vencido, con firma de otro secreto o con alg "none" → los cuatro casos responden 401 con el formato de error estándar y sin datos del recurso | CP-266 | `jwt.strategy.spec.ts` › «rechaza: %s»<br>`security-live.e2e-spec.ts` › «JWT inválido → 401» | Pasó (corregido: ACT-02) | Corregido en #354, #448 |
+| **CA-HU31-2** (Error) envía POST /services con un body válido → recibe 403 y no se crea ningún servicio | CP-267 | `auth-roles.e2e-spec.ts` › «$grupo: $method $path»<br>`security-live.e2e-spec.ts` › «BFLA: rol sin permiso → 403 ROLE_REQUIRED» | Pasó (corregido: ACT-01) | Corregido en #161, #235 |
 | **CA-HU31-3** (Error) consulta con el publicId, con un ticketId válido o más de 20 veces por minuto → 404 sin datos, solo etapa, tipo, dirección y fechas, y 429 respectivamente | CP-268, CP-342 | `citizen-portal.service.spec.ts` › «devuelve exactamente los campos públicos, ni uno más»<br>`citizen-portal.service.spec.ts` › «un reclamo sin expediente da 404 sin decir si el ticket existe en M2»<br>(+1 más) | Pasó | DEF-07 (cerrado, #580): ahora hay e2e del 429 |
-| **CA-HU31-4** (Error) envía PATCH /services/:id con status "COMPLETED" u otro campo fuera del DTO → recibe 400 y el estado en la base no cambia | CP-269, CP-343 | `services-lifecycle.e2e-spec.ts` › «rechaza con 400 un body con propiedades que el DTO no declara»<br>`security-input.e2e-spec.ts` › «PATCH /services/:id rechaza %j con 400 y no persiste»<br>(+1 más) | Pasó | — |
-| **CA-HU31-5** (Error) se invoca el endpoint → responde 500 con mensaje genérico, sin stack ni SQL; el id de correlación en el log no está implementado (limitación conocida) | CP-270 | `http-exception.filter.spec.ts` › «deja en 500 cualquier error no contemplado»<br>`http-exception.filter.spec.ts` › «traduce P2025 a 404 en vez de dejarlo salir como 500» | Pasó | Limitación conocida: sin id de correlación en el 500. DEF-10 (cerrado, #590, PR #597): el formato de error ahora es RFC 9457 (CP-349 a CP-353) |
+| **CA-HU31-4** (Error) envía PATCH /services/:id con status "COMPLETED" u otro campo fuera del DTO → recibe 400 y el estado en la base no cambia | CP-269, CP-343 | `services-lifecycle.e2e-spec.ts` › «rechaza con 400 un body con propiedades que el DTO no declara»<br>`security-input.e2e-spec.ts` › «PATCH /services/:id rechaza %j con 400 y no persiste»<br>`security-live.e2e-spec.ts` › «mass assignment → 400 y nada persistido» | Pasó | — |
+| **CA-HU31-5** (Error) se invoca el endpoint → responde 500 con mensaje genérico, sin stack ni SQL, con un traceId igual al header X-Request-Id y al log; path e instance sin query | CP-270, CP-380, CP-382 | `http-exception.filter.spec.ts` › «deja en 500 cualquier error no contemplado»<br>`security-live.e2e-spec.ts` › «un 500 devuelve Problem Details con traceId y sin stack; el log tiene el mismo traceId»<br>(+1 más) | Pasó | DEF-10 (cerrado, #590): el formato de error es RFC 9457 (CP-349 a CP-353) |
 | **CA-HU31-6** (Error) se sube a POST /evidence → 400, 413 y 201 sin EXIF respectivamente | CP-271, CP-344 | `attachments.service.spec.ts` › «rechaza un archivo cuyo contenido no coincide con lo declarado»<br>`attachments.service.spec.ts` › «rechaza un archivo que supera el tamaño máximo»<br>(+2 más) | Pasó | — |
 | **CA-HU31-7** (Alternativo) llega por segunda vez → se registra como duplicate, sin volver a aplicar el efecto | CP-272 | `inbox.e2e-spec.ts` › «descarta el mismo eventId sin volver a aplicarlo» | Pasó | — |
 | **CA-HU31-8** (Error) llega al inbox → 400 con qué corregir, sin efecto ni fila; la DLQ es del Core (decisión documentada) | CP-273 | `inbox.e2e-spec.ts` › «rechaza con 400 el payload inválido y no guarda la fila»<br>`inbox-validation.spec.ts` › «el 400 no vuelca el contenido recibido» | Pasó | — |
 | **CA-HU31-9** (Error) se procesa con éxito o falla → ningún log contiene el token, secretos ni datos personales en claro; el LoggingInterceptor registra solo método, URL, estado y duración | CP-274, CP-347 | `logging.interceptor.spec.ts` › «deja pasar la respuesta y loguea método, url y status»<br>`roles.guard.spec.ts` › «loguea la denegación con usuario, ruta y roles requeridos, sin token»<br>(+2 más) | Pasó | DEF-22 (cerrado, #581): los logs registraban el `access_token` de la query |
 | **CA-HU31-10** (Error) las lee → se registra quién, cuándo y qué recurso consultó, sin copiar el contenido | CP-275 | `src/common/audit/audit.service.spec.ts` › «recordRead deja una fila READ por recurso, sin estados ni nota»<br>`src/common/audit/audit.service.spec.ts` › «recordRead propaga la falla: sin auditoría no hay lectura»<br>`environmental-inspections.service.spec.ts` › «findNotice falla cerrado si no se puede auditar la lectura»<br>`outbox-admin.service.spec.ts` › «environmentalViolationDetected audita la lectura sobre el acta del payload (#643)»<br>`inbox-admin.service.spec.ts` › «un evento de M4 se audita sobre la resolución del acta»<br>`environmental-flow.e2e-spec.ts` › «leer el acta con su resolución deja una fila READ por recurso, con el actor y sin contenido (#643)» | Pasó | Cerrado con #643 (DEF-09): `AuditService.recordRead` en los tres `GET` con datos Tier 2; `GET /audit` no se audita a sí mismo (riesgo aceptado, `entidades/auditoria.md`) |
 | **CA-HU31-11** (Falla externa) corre el dispatcher → la fila queda FAILED con lastError y deja de barrerse, y solo M6_ADMIN la reencola con retry, con auditoría del actor; la DLQ y el backoff del reintento de entrada s… | CP-276 | `outbox-dispatcher.service.spec.ts` › «al agotar los intentos la marca FAILED y deja de tomarla»<br>`outbox-retry.e2e-spec.ts` › «FAILED → retry → PENDING → el dispatcher lo publica → SENT, y queda auditado» | Pasó (corregido: ACT-11) | — |
-| **CA-HU31-12** (Alternativo) se ejecuta → queda una fila de auditoría de solo agregado con el actor del token, el estado de origen y destino y el motivo que el flujo ya pedía, en la misma transacción; una transición … | CP-331, CP-332, CP-333, CP-334 | `audit.e2e-spec.ts` › «cada transición del contenedor deja una fila con el actor del token»<br>`audit.service.spec.ts` › «record guarda estados y recorta la nota»<br>(+3 más) | Pasó (corregido: ACT-12) | — |
+| **CA-HU31-12** (Feliz) se ejecuta → queda una fila de auditoría de solo agregado con el actor del token, el estado de origen y destino y el motivo que el flujo ya pedía, en la misma transacción; una transición … | CP-331, CP-332, CP-333, CP-334 | `audit.e2e-spec.ts` › «cada transición del contenedor deja una fila con el actor del token»<br>`audit.service.spec.ts` › «record guarda estados y recorta la nota»<br>(+3 más) | Pasó (corregido: ACT-12) | — |
+| **CA-HU31-13** (Error) se corre el guion de seguridad en vivo → JWT inválido 401, rol sin permiso 403, cuadrilla ajena 403 sin datos, mass assignment 400, inyección sin 500, origen ajeno sin CORS, cabeceras presentes y logs sin tokens | CP-373 a CP-379 | `security-live.e2e-spec.ts` › «JWT inválido → 401»<br>`security-live.e2e-spec.ts` › «BOLA: Campo sobre un recurso de otra cuadrilla → 403, nunca el dato»<br>(+5 más) | Pasó | — |
+| **CA-HU31-14** (Error) corre npm run api:coverage → toda operación del OpenAPI tiene caso de éxito y de error, o una excepción con motivo; si falta alguno, falla | CP-381 | `scripts/check-api-coverage.spec.ts` › «toda operación del OpenAPI tiene caso de éxito y de error, o una excepción con motivo» | Pasó | — |
 
 ## HU-32 — Release hardening (Fase 8): observabilidad, promoción y rollback, WCAG 2.2 AA, privacidad y GA
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU32-1** (Feliz) corre axe con las etiquetas WCAG en el CI → no hay violaciones críticas de accesibilidad | CP-277 | **SOLO FE**: `accessibility.spec.ts` | No ejecutado (solo test del frontend, sin verificar) | — |
+| **CA-HU32-1** (Feliz) corre axe con las etiquetas WCAG en el CI → no hay violaciones críticas de accesibilidad | CP-277 | **FE ejecutado**: `e2e/accessibility.spec.ts` (63 tests: 21 pantallas × 360, 768 y 1280 px) | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). 0 violaciones axe (wcag2a/aa/21aa/22aa) y Lighthouse accesibilidad 100 en 7 pantallas: `Frontend-M6-DAPS2/docs/evidencia/eje-a-2026-11-16/` | Corregidas en FE #979: `aria-valid-attr-value` del mapa (critical), contraste de `TabsTrigger` y `scrollable-region-focusable` de los tableros |
 | **CA-HU32-2** (Alternativo) consulto GET /health y GET /health/ready → liveness responde 200 sin consultar la base y readiness responde 200 con la base arriba | CP-278 | `health.controller.spec.ts` › «liveness devuelve ok sin tocar la base»<br>`health.controller.spec.ts` › «ready devuelve 200 con la base arriba» | Pasó | — |
 | **CA-HU32-3** (Error) consulto GET /health/ready → recibo 503 sin filtrar el error de la base | CP-279 | `health.controller.spec.ts` › «ready responde 503 sin filtrar el error de la base»<br>`health.controller.spec.ts` › «ready responde 503 si la base no contesta a tiempo» | Pasó | — |
-| **CA-HU32-4** (Error) se inspeccionan los headers de seguridad (CSP, X-Frame-Options, HSTS, Referrer-Policy) → están presentes (hoy no lo están en el frontend: limitación conocida; en el backend hay nosniff, X… | CP-280, CP-345, CP-346 | `security-headers.middleware.spec.ts` › «pone las cabeceras base y sigue la cadena»<br>`security-headers.middleware.spec.ts` › «agrega HSTS solo en producción»<br>(+2 más) | Pasó | Limitación conocida: el frontend no define CSP ni headers de seguridad; DEF-19 (abierto): `/api/docs` sin CSP |
+| **CA-HU32-4** (Error) se inspeccionan los headers de seguridad (CSP, X-Frame-Options, HSTS, Referrer-Policy) → están presentes (en el backend hay nosniff, X… | CP-280, CP-345, CP-346 | `security-headers.middleware.spec.ts` › «pone las cabeceras base y sigue la cadena»<br>`security-headers.middleware.spec.ts` › «agrega HSTS solo en producción»<br>(+2 más) | Pasó | En `/api/docs` rige una CSP propia (`DOCS_CSP`, #701) |
 
 ## HU-33 — e2e con datos deterministas y shards balanceados
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU33-1** (Feliz) corre npm run test:e2e → migra la base local y ejecuta las suites de test/ contra Postgres real | CP-281 | **HUECO** sin test automatizado (no hay un test que pruebe la ejecución de los e2e)<br>Es la propia ejecución del job `e2e` del CI (`.github/workflows/ci.yml`, Postgres 16); el 08/11 se midió a mano. | Medición manual: `npm run test:e2e` migró la base local y pasó 19 suites / 312 tests contra Postgres 16 en 3 corridas idénticas; en el CI corre en el job `e2e`. No es un test automatizado | DEF-14 (abierto): el job `e2e` no es check obligatorio |
+| **CA-HU33-1** (Feliz) corre npm run test:e2e → migra la base local y ejecuta las suites de test/ contra Postgres real | CP-281 | **HUECO** sin test automatizado: es la ejecución del job `e2e` del CI (`.github/workflows/ci.yml`, Postgres 16) | Pasó en el CI: 25 suites, 410 tests | — |
 | **CA-HU33-2** (Error) arrancan los e2e → el guard aborta antes de migrar y no toca la base desplegada | CP-282 | `guard-database-url.e2e-spec.ts` › «tira con un host remoto»<br>`guard-database-url.e2e-spec.ts` › «tira si no hay DATABASE_URL»<br>(+1 más) | Pasó | — |
 | **CA-HU33-3** (Alternativo) corro el script → la segunda corrida no cambia nada y el simulacro no toca la base | CP-283 | `crew-user-id-migration.e2e-spec.ts` › «es idempotente: la segunda corrida no cambia nada»<br>`crew-user-id-migration.e2e-spec.ts` › «el simulacro imprime el plan, reporta lo que no tiene mapeo y no toca nada» | Pasó | — |
-| **CA-HU33-4** (Error) comparo los resultados → son idénticos (0 tests inestables) | CP-284 | **HUECO** sin test automatizado (es una medición, no un test)<br>Se corrió 3 veces seguidas `npm test` y `npm run test:e2e`, y la repetición también se hizo en el CI. | Medición manual: 3 corridas seguidas de `npm test` (2746 pasan en las tres) y de `npm run test:e2e` (312 pasan en las tres). Repetidas también en el CI. Reserva: [#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554) (e2e intermitente; DEF-24 cerrado por decisión del equipo el 09/11, sin causa confirmada) | 3 corridas idénticas (ver `05`, sección 2.1); DEF-24 / [#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554) (cerrado por decisión del equipo el 09/11, sin causa confirmada) |
+| **CA-HU33-4** (Error) comparo los resultados → son idénticos (0 tests inestables) | CP-284 | **HUECO** sin test automatizado: es una medición | Pasó: 3 corridas locales idénticas (131 archivos, 3056 tests) y el CI con el mismo resultado | DEF-24 / [#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554) (cerrado por decisión del equipo) |
 
 ## Resumen de cobertura de la matriz
 
-Contado con un script que lee las filas de esta matriz (un criterio cuenta como «con test del backend» si cita al menos una ruta `src/` o `test/`; «solo FE» si solo cita el frontend; «hueco» si no cita ninguno).
+Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/`, `test/` o `scripts/`; «FE ejecutado» si lo cubre solo un test del frontend leído y ejecutado; «hueco» si no cita ninguno.
 
-- HU con criterios: 33. Criterios: 175. Casos: 372 (334 iniciales, CP-335 a CP-348 y CP-349 a CP-372, estos últimos sin criterio propio; ver [04-especificacion-casos.md](04-especificacion-casos.md)). Los 348 anteriores cubren los 175 criterios; los 24 nuevos no cambian ese conteo.
-- Todas las HU y todos los criterios tienen al menos un caso (175 de 175).
-- Criterios con al menos un test automatizado del backend verificado: **161** (92,0 %). Dos de ellos son **parciales** (CA-HU24-1, solo el consumo contra RabbitMQ real; ver «Cobertura parcial declarada»).
-- Criterios cubiertos solo por un test del frontend (sin verificar su contenido): **9** (5,1 %).
-- Criterios sin test automatizado (**huecos**): **5** (2,9 %): CA-HU01-3, CA-HU10-2, CA-HU24-2, CA-HU33-1 y CA-HU33-4. Los dos últimos se midieron a mano (ver su resultado) pero no son un test.
-- **Resultado:** de los 161 criterios con test del backend, los 161 tienen el resultado **Pasó** (los tests citados existen por nombre y la corrida completa no tuvo ningún fallo). No hay criterios fallados ni bloqueados. Los 9 «solo FE» y los 5 huecos no se ejecutaron en esta corrida.
+- HU con criterios: 33. Criterios: **184**. Casos: **398** ([04](04-especificacion-casos.md)). Todos los criterios tienen al menos un caso.
+- Con test automatizado del backend: **169** (91,8 %). Cinco son parciales (ver «Cobertura parcial declarada»).
+- Con test del frontend ejecutado (Eje A, FE #979): **11** (6,0 %): CA-HU01-1 a CA-HU01-4, CA-HU26-1 a CA-HU26-4, CA-HU30-3, CA-HU30-4 y CA-HU32-1. El orden de CA-HU01-1 en los catálogos paginados se cubre con tests de unidad y de componente (DEF-39, [Frontend #990](https://github.com/hllous/Frontend-M6-DAPS2/pull/990)).
+- **Huecos: 4** (2,2 %): CA-HU10-2, CA-HU24-2, CA-HU33-1 y CA-HU33-4.
+- Resultado: **180 de 184 criterios ejecutados y pasados (97,8 %)**: los 169 con test del backend y los 11 del frontend; 0 fallados, 0 bloqueados, 4 sin test automatizado (los huecos). Umbral: ≥ 95 % y ningún Must fallado: cumple. Sin contar los parciales sigue por encima del 95 %.
 
-| HU | Criterios | Con test del backend | Solo FE | Huecos |
+| HU | Criterios | Con test del backend | FE ejecutado | Huecos |
 |---|---|---|---|---|
-| HU-01 | 4 | 0 | 3 | 1 |
+| HU-01 | 6 | 2 | 4 | 0 |
 | HU-02 | 7 | 7 | 0 | 0 |
 | HU-03 | 6 | 6 | 0 | 0 |
 | HU-04 | 6 | 6 | 0 | 0 |
 | HU-05 | 6 | 6 | 0 | 0 |
 | HU-06 | 5 | 5 | 0 | 0 |
-| HU-07 | 7 | 7 | 0 | 0 |
+| HU-07 | 8 | 8 | 0 | 0 |
 | HU-08 | 6 | 6 | 0 | 0 |
 | HU-09 | 6 | 6 | 0 | 0 |
 | HU-10 | 3 | 2 | 0 | 1 |
@@ -379,33 +388,32 @@ Contado con un script que lee las filas de esta matriz (un criterio cuenta como 
 | HU-14 | 4 | 4 | 0 | 0 |
 | HU-15 | 5 | 5 | 0 | 0 |
 | HU-16 | 8 | 8 | 0 | 0 |
-| HU-17 | 4 | 4 | 0 | 0 |
+| HU-17 | 6 | 6 | 0 | 0 |
 | HU-18 | 4 | 4 | 0 | 0 |
-| HU-19 | 3 | 3 | 0 | 0 |
+| HU-19 | 4 | 4 | 0 | 0 |
 | HU-20 | 5 | 5 | 0 | 0 |
 | HU-21 | 5 | 5 | 0 | 0 |
 | HU-22 | 5 | 5 | 0 | 0 |
 | HU-23 | 5 | 5 | 0 | 0 |
 | HU-24 | 4 | 3 | 0 | 1 |
 | HU-25 | 4 | 4 | 0 | 0 |
-| HU-26 | 3 | 0 | 3 | 0 |
+| HU-26 | 4 | 0 | 4 | 0 |
 | HU-27 | 5 | 5 | 0 | 0 |
 | HU-28 | 6 | 6 | 0 | 0 |
 | HU-29 | 7 | 7 | 0 | 0 |
 | HU-30 | 4 | 2 | 2 | 0 |
-| HU-31 | 12 | 12 | 0 | 0 |
+| HU-31 | 14 | 14 | 0 | 0 |
 | HU-32 | 4 | 3 | 1 | 0 |
 | HU-33 | 4 | 2 | 0 | 2 |
-| **Total** | **175** | **161** | **9** | **5** |
+| **Total** | **184** | **169** | **11** | **4** |
 
 ## Correcciones posteriores a las HU
 
-Relevamiento de lo corregido o agregado después del volcado de Trello y de la matriz SEC: issues cerrados en backend y frontend, PR mergeados y CI de develop. El detalle de cada cambio está en las subsecciones "Actualizaciones posteriores a la HU" de [02-historias-y-criterios.md](02-historias-y-criterios.md).
+Lo corregido o agregado después de la HU (issues cerrados y PR mergeados). Cada criterio lleva su marca ACT en [02-historias-y-criterios.md](02-historias-y-criterios.md).
 
 - Correcciones relevadas: **39** (31 de backend con test, 7 de frontend y 1 aclaración).
 - Criterios con corrección posterior: **78** de 175 (44,6 %), de los cuales **50** son criterios nuevos agregados por la corrección y 28 ya existían en la HU.
-- **Con evidencia de CI (Pasó): 71** criterios.
-- **Sin evidencia de CI: 7** criterios: 7 corregidos solo en el frontend (sin test verificado) y 0 de backend sin CI confirmado.
+- Con test del backend que pasa: **71** criterios. Solo frontend: **7**.
 - Casos marcados como Corregido: **116** de 334, con evidencia de CI: 111.
 
 | ID | Issues y PR | Criterios | Estado |
@@ -441,49 +449,44 @@ Relevamiento de lo corregido o agregado después del volcado de Trello y de la m
 | ACT-29 | #452; PR #462 (donde entran los tests de este cambio) | CA-HU16-7 (agregado) | Pasó |
 | ACT-30 | #453; PR #482 | CA-HU11-7 (agregado) | Pasó |
 | ACT-31 | #325; PR #330 | CA-HU16-8 (agregado) | Pasó |
-| ACT-F1 | FE #528, #520, #525 | CA-HU01-1 (agregado), CA-HU01-2 (agregado), CA-HU01-3 (agregado) | Sin ejecutar (frontend) |
+| ACT-F1 | FE #528, #520, #525 | CA-HU01-1 (agregado), CA-HU01-2 (agregado), CA-HU01-3 (agregado) | Pasó en el frontend (Eje A, FE #979) |
 | ACT-F2 | FE #617 | CA-HU04-2 (agregado) | Sin ejecutar (frontend) |
 | ACT-F3 | FE #621, #622 | CA-HU10-1 (agregado), CA-HU14-1 (agregado) | Sin ejecutar (frontend) |
-| ACT-F4 | FE #321 | CA-HU26-1 (agregado), CA-HU26-2 (agregado) | Sin ejecutar (frontend) |
+| ACT-F4 | FE #321 | CA-HU26-1 (agregado), CA-HU26-2 (agregado) | Pasó en el frontend (Eje A, FE #979) |
 | ACT-F5 | FE #469 | CA-HU29-4 (agregado) | Sin ejecutar (frontend) |
 | ACT-F6 | FE #380, #435, #438 | CA-HU08-3 (corregido) | Sin ejecutar (frontend) |
-| ACT-F7 | FE #379, #381, #437 | CA-HU30-3 (agregado) | Sin ejecutar (frontend) |
+| ACT-F7 | FE #379, #381, #437 | CA-HU30-3 (agregado) | Pasó en el frontend (Eje A, FE #979) |
 | ACT-N1 | BE #285, FE #413 | aclaración | No aplica |
-
-### Correcciones sin evidencia de CI
-
-Las de frontend (ACT-F1 a ACT-F7): sus issues están cerrados, pero no ejecutamos ni leímos el test que las cubre, así que no se escribe «Pasó». Los 31 cambios de backend tienen evidencia: el test existe en `develop` y el CI fue verde en el commit que lo introdujo y en el HEAD.
 
 ### Cobertura parcial declarada
 
 Criterios contados como cubiertos por tener al menos un test del backend, pero con algún caso que se prueba a mano, que se prueba solo en parte o que no tiene test:
 
-- **CA-HU12-5**: CP-121 (La regla de fecha futura figura en docs/api/endpoints.md; no se localizó un test específico en esta pasada.)
-- **CA-HU24-1**: CP-219 y CP-340. El e2e `rabbitmq-real` prueba el **consumo** contra un RabbitMQ real (contenedor propio, cola propia, no `q.ambiente`). La **publicación** del outbox a `muni.inbox` contra un broker real y el Core de M9 no tienen test automatizado; esa parte quedó en el historial de integración ([`../integracion/historial.md`](../integracion/historial.md)).
-- **CA-HU27-3**: CP-236 (Regla documentada (docs/api/endpoints.md, #145); no se localizó un test específico.)
-- **CA-HU27-4**: CP-238. Existe un e2e del 429 (`test/throttler.e2e-spec.ts`), pero prueba el límite **global** sobre `GET /zones` con `THROTTLE_LIMIT=3`; el límite propio del portal (20 por minuto en seguimiento) sigue sin e2e de 429. El test de cuenta por IP del BFF es `client-tracker.spec.ts`.
-- **CA-HU30-1**: CP-262 (la verificación en el ambiente desplegado esperó a cargar el secreto vigente, BE #488, ya cerrado)
+- **CA-HU12-5**: CP-121 (regla de fecha futura de `docs/api/endpoints.md`)
+- **CA-HU24-1**: CP-219 y CP-340. El consumo y la publicación del outbox se prueban contra un RabbitMQ real propio (`rabbitmq-real` y `outbox-rabbitmq-real`); la prueba contra el Core de M9 es manual (historial de integración).
+- **CA-HU27-3**: CP-236 (regla de `docs/api/endpoints.md`, #145)
+- **CA-HU27-4**: CP-238. El e2e del 429 (`test/throttler.e2e-spec.ts`) prueba el límite **global** sobre `GET /zones` con `THROTTLE_LIMIT=3`; el tope propio del portal (20 por minuto) no tiene e2e. El test de cuenta por IP del BFF es `client-tracker.spec.ts`.
 - **CA-HU31-3**: CP-268 y CP-342. El 429 está probado en el límite global, no en el del portal.
-- **CA-HU31-4**: CP-343. El caso exacto de la tarjeta (`PATCH /services/:id` con `status`) ahora tiene test propio (`security-input.e2e-spec.ts`).
 
-### Listado de huecos y criterios solo con test del frontend
+### Huecos y criterios cubiertos solo por el frontend
 
-| Criterio | Estado | Detalle | Plan |
-|---|---|---|---|
-| CA-HU01-1 | Solo FE | puedo ordenar y filtrar con el mismo componente de tabla que Servicios | Verificar el contenido del test del frontend o sumar uno de backend |
-| CA-HU01-2 | Solo FE | veo un esqueleto con la forma final, no un spinner suelto ni la tabla vacía | Verificar el contenido del test del frontend o sumar uno de backend |
-| CA-HU01-3 | Hueco | Guard de CI del frontend citado por Trello; no se localizó el script en esta pasada. | Sumar un test automatizado o ejecutar la prueba manual y adjuntar evidencia |
-| CA-HU01-4 | Solo FE | la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía | Verificar el contenido del test del frontend o sumar uno de backend |
-| CA-HU10-2 | Hueco | La validación del enum la hace el ValidationPipe; no se encontró un test específico del filtro priority en esta pasada. | Sumar un test automatizado o ejecutar la prueba manual y adjuntar evidencia |
-| CA-HU24-2 | Hueco | La prueba pasiva desde Render (TCP/TLS, autenticación y `checkQueue` de `q.ambiente`) no tiene test automatizado; #442 cerrado el 05/11 con la prueba en el historial de integración. El `rabbitmq-real` corre contra un broker local, sin TLS ni Render, y no la reemplaza | Dejar la prueba manual con su evidencia del historial |
-| CA-HU26-1 | Solo FE | está en formato argentino dd/mm/aaaa hh:mm y en el día local | Verificar el contenido del test del frontend o sumar uno de backend |
-| CA-HU26-2 | Solo FE | leo el nombre o el código, no el UUID | Verificar el contenido del test del frontend o sumar uno de backend |
-| CA-HU26-3 | Solo FE | se muestra el día de Argentina (UTC-3), no el de UTC | Verificar el contenido del test del frontend o sumar uno de backend |
-| CA-HU30-3 | Solo FE | el BFF reintenta una vez con refresh y, si falla, redirige al login con el aviso de sesión vencida | Verificar el contenido del test del frontend o sumar uno de backend |
-| CA-HU30-4 | Solo FE | Fail closed de FE #800 pendiente. | Verificar el contenido del test del frontend o sumar uno de backend |
-| CA-HU32-1 | Solo FE | no hay violaciones críticas de accesibilidad | Verificar el contenido del test del frontend o sumar uno de backend |
-| CA-HU33-1 | Hueco, medido a mano | Es la propia ejecución del job `e2e` del CI. Se corrió `npm run test:e2e` en local (312 tests pasan, 3 corridas). No es un test | Aceptar como medición manual con evidencia |
-| CA-HU33-4 | Hueco, medido a mano | Tres corridas seguidas idénticas de `npm test` y `npm run test:e2e`, en local y repetidas en el CI (ver [05-informe-ejecucion.md](05-informe-ejecucion.md), sección 2.1). El DEF-24 ([#554](https://github.com/hllous/Backend-M6-DAPS2/issues/554), e2e intermitente) se cerró por decisión del equipo sin causa confirmada, y tres corridas iguales no prueban que no exista | Reabrir DEF-24 si vuelve a aparecer |
+| Criterio | Estado | Detalle |
+|---|---|---|
+| CA-HU01-1 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts`; orden en catálogos paginados con tests de unidad y de componente (FE #990) |
+| CA-HU01-2 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` |
+| CA-HU01-3 | FE ejecutado | `src/components/ui/shadcn-guard.test.ts` |
+| CA-HU01-4 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` |
+| CA-HU10-2 | Hueco | el 400 del filtro `priority` lo da el ValidationPipe; sin test propio |
+| CA-HU24-2 | Hueco | prueba pasiva desde Render (TCP/TLS, autenticación y `checkQueue` de `q.ambiente`); la evidencia está en el historial de integración (#442) |
+| CA-HU26-1 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` y `src/lib/argentina-date.test.ts` |
+| CA-HU26-2 | FE ejecutado | `e2e/service-vehicle-labels.spec.ts` |
+| CA-HU26-3 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` y `src/lib/argentina-date.test.ts` |
+| CA-HU26-4 | FE ejecutado | `src/lib/argentina-date.test.ts` |
+| CA-HU30-3 | FE ejecutado | `src/lib/m1-refresh.test.ts` y `e2e/failure-journeys.spec.ts` |
+| CA-HU30-4 | FE ejecutado | `src/app/api/session/login/route.test.ts` |
+| CA-HU32-1 | FE ejecutado | `e2e/accessibility.spec.ts` (63 tests) |
+| CA-HU33-1 | Hueco | ejecución del job `e2e` del CI; no es un test |
+| CA-HU33-4 | Hueco | repetición de corridas; es una medición, no un test |
 
 ## Defectos y pruebas sin criterio propio
 
@@ -491,18 +494,18 @@ Defectos del [registro](06-registro-defectos.md) que no cuelgan de un criterio c
 
 | Qué | Referencia | Estado |
 |---|---|---|
-| Sin control de concurrencia optimista (`ETag` / `If-Match`) | DEF-05; CP-354 a CP-361; `src/common/etag.spec.ts`, `src/modules/services/services-if-match.spec.ts`, `test/etag-if-match.e2e-spec.ts` (12 tests) | **Cerrado** (#591, PR #597), en el alcance de [ADR-012](../decisiones/adr-012-concurrencia-optimista-etag.md): transiciones de contenedores, servicios, intervenciones y expedientes, y `PATCH` de contenedores y servicios. Pasó en R09 |
-| `Idempotency-Key` solo en `POST /evidence` | DEF-06; CP-362 a CP-369; `src/common/idempotency/idempotency.interceptor.spec.ts`, `test/idempotency.e2e-spec.ts` (8 tests) | **Cerrado** (#592, PR #597) en 21 `POST` de creación, con la limitación de [ADR-013](../decisiones/adr-013-idempotency-key.md) (guardado no atómico). Pasó en R09 |
-| Errores sin formato Problem Details | DEF-10 (también colgado de CA-HU31-5); CP-349 a CP-353; `src/common/filters/http-exception.filter.spec.ts`, `test/problem-details.e2e-spec.ts` (9 tests) | **Cerrado** (#590, PR #597), [ADR-011](../decisiones/adr-011-errores-problem-details-rfc-9457.md). Sigue sin id de correlación en el 500. Pasó en R09 |
-| Hallazgo H-1 de Schemathesis: los `GET` con entrada no declaran el 400 | DEF-20; CP-370; `src/openapi-contract.spec.ts` | **Cerrado** (#593, PR #597). `status_code_conformance` es bloqueante en el CI. Pasó en R09 |
-| Hallazgo H-2 de Schemathesis: `GET /neighborhoods` da 503 sin M9 | DEF-21; CP-371 y CP-372; `test/neighborhoods-catalog.e2e-spec.ts` | **Cerrado** (#594, PR #597). Pasó en R09 |
+| Sin control de concurrencia optimista (`ETag` / `If-Match`) | DEF-05; CP-354 a CP-361; `src/common/etag.spec.ts`, `src/modules/services/services-if-match.spec.ts`, `test/etag-if-match.e2e-spec.ts` (12 tests) | **Cerrado** (#591, PR #597), en el alcance de [ADR-012](../decisiones/adr-012-concurrencia-optimista-etag.md): transiciones de contenedores, servicios, intervenciones y expedientes, y `PATCH` de contenedores y servicios. |
+| `Idempotency-Key` solo en `POST /evidence` | DEF-06; CP-362 a CP-369; `src/common/idempotency/idempotency.interceptor.spec.ts`, `test/idempotency.e2e-spec.ts` (8 tests) | **Cerrado** (#592, PR #597) en 21 `POST` de creación, con la limitación de [ADR-013](../decisiones/adr-013-idempotency-key.md) (guardado no atómico). |
+| Errores sin formato Problem Details | DEF-10 (también colgado de CA-HU31-5); CP-349 a CP-353; `src/common/filters/http-exception.filter.spec.ts`, `test/problem-details.e2e-spec.ts` (9 tests) | **Cerrado** (#590, PR #597), [ADR-011](../decisiones/adr-011-errores-problem-details-rfc-9457.md). `traceId` en todo error (CA-HU31-5). |
+| Hallazgo H-1 de Schemathesis: los `GET` con entrada no declaran el 400 | DEF-20; CP-370; `src/openapi-contract.spec.ts` | **Cerrado** (#593, PR #597). `status_code_conformance` es bloqueante en el CI. |
+| Hallazgo H-2 de Schemathesis: `GET /neighborhoods` da 503 sin M9 | DEF-21; CP-371 y CP-372; `test/neighborhoods-catalog.e2e-spec.ts` | **Cerrado** (#594, PR #597). |
 | Dependencias de producción con vulnerabilidades (tras #619: 0 críticas, 0 altas, 8 moderadas; tras #628: 0) | DEF-08 | Cerrado (#619, #628) |
-| Faltaban SonarCloud, Trivy y ZAP; el SCA (`npm audit`), Dependabot, CodeQL y gitleaks ya estaban | DEF-13; spec [#656](https://github.com/hllous/Backend-M6-DAPS2/issues/656) | **Cerrado** (16/11/2026), ver las tres filas siguientes |
-| **SonarCloud**: Quality Gate y métricas del código total (HU-31) | Job `sonar` de `ci.yml` (#657, PR #662); `sonar-project.properties`; DEF-27 y DEF-28 | **Gate OK** sobre `main` (16/11): 0 bugs, 0 vulnerabilidades, duplicación 1,2 %, ratings A/A/A, hotspots 100 %, cobertura 97,3 %. **No bloqueante**: #660 pendiente. Ver [05](05-informe-ejecucion.md) 5.2 y [07](07-informe-seguridad.md) 5.5 |
-| **Trivy**: dependencias, imagen y configuración (HU-31) | Job `trivy` de `ci.yml` (#658, PR #663); `.trivyignore` (vacío); DEF-26. Prueba en rojo: PR descartable #664 | **0 HIGH/CRITICAL** en `fs`, `image` y `config` sobre `main` ([run 43786978363](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43786978363)). Frena el deploy, no el merge. Ver [07](07-informe-seguridad.md) 5.2 |
-| **OWASP ZAP**: baseline contra Render y activo autenticado contra un entorno efímero (HU-31) | Workflow `dast.yml` (#659, PR #669); `.github/dast/`; DEF-25 | **0 High** en los dos ([run 43788946357](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43788946357)), 1 Medium en cada uno justificada. Evidencia en `evidencia/zap-2026-11-15/`. Ver [07](07-informe-seguridad.md) 5.2 |
+| Faltaban SonarCloud, Trivy y ZAP en el CI | DEF-13; [#656](https://github.com/hllous/Backend-M6-DAPS2/issues/656) | **Cerrado**, ver las tres filas siguientes |
+| **SonarCloud**: Quality Gate y métricas del código total (HU-31) | Job `sonar` de `ci.yml` (#657, PR #662); `sonar-project.properties`; DEF-27 y DEF-28 | **Gate OK**: 0 bugs, 0 vulnerabilidades, duplicación 1,2 %, ratings A/A/A, hotspots 100 %, cobertura 97,3 %; bloqueante (#660). Ver [05](05-informe-ejecucion.md) sección 7 |
+| **Trivy**: dependencias, imagen y configuración (HU-31) | Job `trivy` de `ci.yml` (#658, PR #663); `.trivyignore` (vacío); DEF-26. Prueba en rojo: PR descartable #664 | **0 HIGH/CRITICAL** en `fs`, `image` y `config`. Frena el deploy, no el merge. Ver [07](07-informe-seguridad.md) 5.1 |
+| **OWASP ZAP**: baseline contra Render y activo autenticado contra un entorno efímero (HU-31) | Workflow `dast.yml` (#659, PR #669); `.github/dast/`; DEF-25 | **0 High** en los dos ([run 43895156093](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43895156093)), 1 Medium en cada uno justificada. Ver [07](07-informe-seguridad.md) 5.2 |
 | `CORS_ORIGINS` opcional; desde #642 obligatoria en producción | DEF-18 | Cerrado (#642) |
 | Primer `docker compose up` en frío fallaba por `rabbitmq-setup` | DEF-23 | Cerrado (#584) |
-| Inyección SQL y XSS almacenado en campos de texto | CP-348, `test/security-input.e2e-spec.ts` (9 tests: 3 payloads × zona, expediente y servicio). La API guarda los payloads como texto y los devuelve idénticos; no los rechaza ni los escapa | Pasó en R08 |
-| Colección Newman (455 requests ejecutados, 435 definidos, 763 assertions, 0 fallidas) y Schemathesis (4388 casos en el paso de esquema y 4384 en `status_code_conformance`, solo `GET`) | `test/api/`, `.github/workflows/api-tests.yml`; ver [05-informe-ejecucion.md](05-informe-ejecucion.md) | Corren en el CI; no están mapeadas criterio por criterio |
-| Prueba de carga con k6 (50 usuarios, 5 min, `GET /services`, `/containers` y `/zones`) | `test/perf/k6-criticos.js` y `test/perf/resultados/2026-11-09/`; ver [05-informe-ejecucion.md](05-informe-ejecucion.md) sección 2.2 | Hecha en local con lecturas (p(95) 32,84 ms, 0,00 % de error); no corre en el CI. También se corrió contra el despliegue y con escrituras |
+| Inyección SQL y XSS almacenado en campos de texto | CP-348, `test/security-input.e2e-spec.ts` (9 tests: 3 payloads × zona, expediente y servicio). La API guarda los payloads como texto y los devuelve idénticos; no los rechaza ni los escapa | Pasó |
+| Colección Newman (570 requests, 1015 assertions, 0 fallidas; éxito en 151 de 152 operaciones y error en 149 de 152) y Schemathesis (4681 casos de esquema y 4674 en `status_code_conformance`, solo `GET`) | `test/api/`, `scripts/check-api-coverage.mjs`, `.github/workflows/api-tests.yml`; ver [05-informe-ejecucion.md](05-informe-ejecucion.md) | Corren en el CI; la cobertura por operación se exige con `npm run api:coverage` (CA-HU31-14) |
+| Prueba de carga con k6 (50 usuarios, 5 min, `GET /services`, `/containers` y `/zones`) | `test/perf/k6-criticos.js` y `test/perf/resultados/2026-11-09/`; ver [05-informe-ejecucion.md](05-informe-ejecucion.md) sección 2.1 | Local, solo lecturas: p(95) 32,84 ms, 0,00 % de error; no corre en el CI |
