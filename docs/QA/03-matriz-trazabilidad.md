@@ -15,7 +15,7 @@ Relaciona **HU → criterio de aceptación → caso de prueba → test automatiz
 
 | Criterio | Casos | Test automatizado | Resultado | Defecto |
 |---|---|---|---|---|
-| **CA-HU01-1** (Feliz) lo abro → puedo ordenar y filtrar con el mismo componente de tabla que Servicios | CP-001 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts` (orden y filtro en Zonas; paginación de a 20 en Vehículos)<br>FE: `catalog-shell.spec.ts`, `zones-catalog.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)), **parcial**: los catálogos con paginación del servidor todavía no ordenan por columna en la tabla | DEF-39 (cerrado: el backend acepta `sort` y `order` desde #712, CA-HU01-5); falta que el frontend los use ([Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983)) |
+| **CA-HU01-1** (Feliz) lo abro → puedo ordenar y filtrar con el mismo componente de tabla que Servicios | CP-001 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts` (orden y filtro en Zonas; paginación de a 20 en Vehículos)<br>FE: `catalog-shell.spec.ts`, `zones-catalog.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)); el orden por columna sobre todo el resultado en los catálogos con paginación del servidor pasó en el CI de [Frontend #990](https://github.com/hllous/Frontend-M6-DAPS2/pull/990) ([run 43990689433](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43990689433)), con tests de unidad y de componente (`catalog-sort*.test.ts`, `use-catalog-sort.test.tsx`, `catalog-sort-panels.test.tsx`), sin e2e propio | DEF-39 (cerrado: el backend acepta `sort` y `order` desde #712, CA-HU01-5, y el frontend los usa desde [Frontend #990](https://github.com/hllous/Frontend-M6-DAPS2/pull/990), que cierra [Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983)) |
 | **CA-HU01-2** (Feliz) la pantalla carga → veo un esqueleto con la forma final, no un spinner suelto ni la tabla vacía | CP-002 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts` (esqueleto mientras carga)<br>FE: `catalog-a-loading.spec.ts`, `catalog-b-loading.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
 | **CA-HU01-3** (Alternativo) corre el guard de shadcn en el CI del frontend → no quedan componentes de UI escritos a mano fuera del registro | CP-003 | **FE ejecutado**: `src/components/ui/shadcn-guard.test.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)) | — |
 | **CA-HU01-4** (Error) abro un catálogo → la pantalla muestra un mensaje de error con aria-live o role="alert" y no una tabla vacía | CP-004 | **FE ejecutado**: `e2e/qa-criterios-fe.spec.ts` (500 y timeout del BFF → `role=alert`)<br>FE: `failure-journeys.spec.ts` | Pasó (FE, CI del PR FE #979, [run 43906206165](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43906206165)). Desde FE #978 el timeout del BFF es de 5 s y responde 503 | DEF-33 (cerrado) |
@@ -363,7 +363,7 @@ Un criterio cuenta como «con test del backend» si cita al menos una ruta `src/
 
 - HU con criterios: 33. Criterios: **181**. Casos: **394** ([04](04-especificacion-casos.md)). Todos los criterios tienen al menos un caso.
 - Con test automatizado del backend: **167** (92,3 %). Cinco son parciales (ver «Cobertura parcial declarada»).
-- Con test del frontend ejecutado (Eje A, FE #979): **10** (5,5 %): CA-HU01-1 a CA-HU01-4, CA-HU26-1 a CA-HU26-3, CA-HU30-3, CA-HU30-4 y CA-HU32-1. CA-HU01-1 es parcial (DEF-39, [Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983)).
+- Con test del frontend ejecutado (Eje A, FE #979): **10** (5,5 %): CA-HU01-1 a CA-HU01-4, CA-HU26-1 a CA-HU26-3, CA-HU30-3, CA-HU30-4 y CA-HU32-1. El orden de CA-HU01-1 en los catálogos paginados se cubre con tests de unidad y de componente (DEF-39, [Frontend #990](https://github.com/hllous/Frontend-M6-DAPS2/pull/990)).
 - **Huecos: 4** (2,2 %): CA-HU10-2, CA-HU24-2, CA-HU33-1 y CA-HU33-4.
 - Resultado: **177 de 181 criterios ejecutados y pasados (97,8 %)**: los 167 con test del backend y los 10 del frontend; 0 fallados, 0 bloqueados, 4 sin test automatizado (los huecos). Umbral: ≥ 95 % y ningún Must fallado: cumple. Sin contar los parciales sigue por encima del 95 %.
 
@@ -459,7 +459,6 @@ Lo corregido o agregado después de la HU (issues cerrados y PR mergeados). Cada
 
 Criterios contados como cubiertos por tener al menos un test del backend, pero con algún caso que se prueba a mano, que se prueba solo en parte o que no tiene test:
 
-- **CA-HU01-1**: CP-001. El test del frontend prueba orden y filtro en Zonas y la paginación de a 20 en Vehículos; la tabla de los catálogos con paginación del servidor no ordena todavía por columna. El backend ya acepta `sort` y `order` (#712); falta que el frontend los use ([Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983)).
 - **CA-HU12-5**: CP-121 (regla de fecha futura de `docs/api/endpoints.md`)
 - **CA-HU24-1**: CP-219 y CP-340. El consumo y la publicación del outbox se prueban contra un RabbitMQ real propio (`rabbitmq-real` y `outbox-rabbitmq-real`); la prueba contra el Core de M9 es manual (historial de integración).
 - **CA-HU27-3**: CP-236 (regla de `docs/api/endpoints.md`, #145)
@@ -470,7 +469,7 @@ Criterios contados como cubiertos por tener al menos un test del backend, pero c
 
 | Criterio | Estado | Detalle |
 |---|---|---|
-| CA-HU01-1 | FE ejecutado (parcial) | `e2e/qa-criterios-fe.spec.ts`; orden en catálogos paginados pendiente en Frontend #983 |
+| CA-HU01-1 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts`; orden en catálogos paginados con tests de unidad y de componente (FE #990) |
 | CA-HU01-2 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` |
 | CA-HU01-3 | FE ejecutado | `src/components/ui/shadcn-guard.test.ts` |
 | CA-HU01-4 | FE ejecutado | `e2e/qa-criterios-fe.spec.ts` |

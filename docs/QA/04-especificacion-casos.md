@@ -18,7 +18,7 @@ Módulo 6 «Ambiente e Higiene», Grupo 04. Cada caso apunta a un criterio de [0
 
 | ID | Criterio | Escenario | Tipo | Test | Estado |
 |---|---|---|---|---|---|
-| CP-001 | CA-HU01-1 | Usuario con cualquier rol de M6; catálogo con más de 20 registros; Zonas: ordenar por nombre y filtrar por texto; página 2 | Positivo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `catalog-shell.spec.ts`, `zones-catalog.spec.ts` | Pasó (FE, Eje A, FE #979); parcial: orden de catálogos paginados en Frontend #983 |
+| CP-001 | CA-HU01-1 | Usuario con cualquier rol de M6; catálogo con más de 20 registros; Zonas: ordenar por nombre y filtrar por texto; página 2 | Positivo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `catalog-shell.spec.ts`, `zones-catalog.spec.ts` | Pasó (FE, Eje A, FE #979); orden de catálogos paginados en FE #990 (tests de unidad y de componente) |
 | CP-002 | CA-HU01-2 | Backend demorado a propósito (mock con retardo); Abrir Servicios y un catálogo de cada grupo | Positivo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `catalog-a-loading.spec.ts`, `catalog-b-loading.spec.ts` | Pasó (FE, Eje A, FE #979) |
 | CP-003 | CA-HU01-3 | Pipeline de CI del repo Frontend-M6-DAPS2; Ejecutar el job de CI del frontend | Positivo | FE: `src/components/ui/shadcn-guard.test.ts` | Pasó (FE, Eje A, FE #979) |
 | CP-004 | CA-HU01-4 | Backend devolviendo 500 o sin responder; Abrir Zonas con GET /zones fallando | Negativo | FE: `e2e/qa-criterios-fe.spec.ts`<br>FE: `failure-journeys.spec.ts` | Pasó (FE, Eje A, FE #979) |
