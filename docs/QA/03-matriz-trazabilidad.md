@@ -417,7 +417,7 @@ Lo corregido o agregado después de la HU (issues cerrados y PR mergeados). Cada
 - Casos marcados como Corregido: **116** de 334, con evidencia de CI: 111.
 
 | ID | Issues y PR | Criterios | Estado |
-|---|---|---|---|---|
+|---|---|---|---|
 | ACT-01 | #161, #235; PR #366, #369 | CA-HU31-2 (corregido), CA-HU29-1 (agregado), CA-HU29-2 (agregado), CA-HU29-3 (agregado), CA-HU11-5 (agregado) | Pasó |
 | ACT-02 | #354, #448; PR #358, #450 | CA-HU31-1 (corregido), CA-HU29-5 (agregado) | Pasó |
 | ACT-03 | #359; PR #362 | CA-HU29-5 (agregado), CA-HU23-5 (agregado) | Pasó |
