@@ -29,11 +29,11 @@ x-db-url: &db-url postgresql://${POSTGRES_USER:-m6}:${POSTGRES_PASSWORD:-cambiam
 x-jwt-secret: &jwt-secret ${JWT_SECRET:-Q0hBTkdFX01FX2xvY2FsX2Rldl9zZWNyZXRfbTZfMzJieXRlcw==}
 
 # Imagen del frontend: se construye desde su repo, sin clonarlo a mano. FRONTEND_REF
-# elige la rama o el tag (default main; para la entrega se fija al tag v2.0-entrega4).
+# elige la rama o el tag (default v2.0-entrega4, el tag de la entrega; para probar la última versión: FRONTEND_REF=main).
 x-frontend-build: &frontend-build
   context: ./docker/frontend-demo
   additional_contexts:
-    frontend: https://github.com/hllous/Frontend-M6-DAPS2.git#${FRONTEND_REF:-main}
+    frontend: https://github.com/hllous/Frontend-M6-DAPS2.git#${FRONTEND_REF:-v2.0-entrega4}
 
 services:
   postgres:

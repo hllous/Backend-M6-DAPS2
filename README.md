@@ -57,7 +57,7 @@ Volver a correr `docker compose up` es seguro: los datos de demo no se duplican.
 
 ### Opcional
 
-- **Otra versión del frontend**: `FRONTEND_REF=<rama o tag> docker compose up --build` (por defecto, `main`). Para la entrega está previsto fijarlo al tag `v2.0-entrega4`, que todavía no existe en el repositorio del frontend (pendiente de crear); hasta entonces, lo probado es `main`.
+- **Otra versión del frontend**: `FRONTEND_REF=<rama o tag> docker compose up --build` (por defecto, el tag `v2.0-entrega4` de la entrega; por ejemplo `FRONTEND_REF=main` para la última versión de `main`).
 - **Cambiar usuarios o claves locales**: `cp .env.example .env` y editarlo. Sin `.env`, el compose usa los valores de ejemplo, que valen solo en tu máquina.
 - **Puertos ocupados**: el sistema usa 3000, 3001, 5432, 5672 y 15672.
 
