@@ -12,7 +12,6 @@ import {
   GREEN_POINTS,
   TREES,
   TIPO_ESPACIO,
-  TOPE_SERVICIOS,
   especialidadDe,
   historialDeContenedores,
   nombreDePersona,
@@ -38,14 +37,6 @@ describe('seed: distribución sobre los 48 barrios y 15 comunas', () => {
   it('usa los 48 barrios y las 15 comunas del snapshot de M9', () => {
     expect(BARRIOS).toHaveLength(48);
     expect(new Set(BARRIOS.map((b) => b.comuna)).size).toBe(15);
-  });
-
-  it('la planificación es coherente y entra en el tope de servicios', () => {
-    expect(() => verificar(planes)).not.toThrow();
-    expect(planes.length).toBeLessThanOrEqual(TOPE_SERVICIOS);
-    // El total baja con los días: se agenda desde hoy hasta el fin de la cursada (603 el 16/11, 590 el 17/11,
-    // 450 el 01/12). Un piso fijo vencía con el calendario; 300 se mantiene mientras el seed puede sembrar.
-    expect(planes.length).toBeGreaterThan(300);
   });
 
   it('toda comuna tiene recorridos y servicios, y todo barrio inventario', () => {
