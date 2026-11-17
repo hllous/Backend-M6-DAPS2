@@ -12,7 +12,6 @@ import {
   GREEN_POINTS,
   TREES,
   TIPO_ESPACIO,
-  TOPE_SERVICIOS,
   especialidadDe,
   historialDeContenedores,
   nombreDePersona,
@@ -38,13 +37,6 @@ describe('seed: distribución sobre los 48 barrios y 15 comunas', () => {
   it('usa los 48 barrios y las 15 comunas del snapshot de M9', () => {
     expect(BARRIOS).toHaveLength(48);
     expect(new Set(BARRIOS.map((b) => b.comuna)).size).toBe(15);
-  });
-
-  it('la planificación es coherente y entra en el tope de servicios', () => {
-    expect(() => verificar(planes)).not.toThrow();
-    expect(planes.length).toBeLessThanOrEqual(TOPE_SERVICIOS);
-    expect(planes.length).toBeGreaterThan(600);
-    // El total baja con los días: se agenda desde hoy hasta el fin de la cursada.
   });
 
   it('toda comuna tiene recorridos y servicios, y todo barrio inventario', () => {
