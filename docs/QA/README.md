@@ -13,7 +13,7 @@
 | 2. Matriz de trazabilidad | `03-matriz-trazabilidad.md` | 184 criterios: 180 ejecutados y pasados (169 con test del backend y 11 con test del frontend) y 4 huecos |
 | 3. Especificación de casos | `04-especificacion-casos.md` | 398 casos, 68,1 % negativos o de borde |
 | 4. Informe de ejecución | `05-informe-ejecucion.md` | 3056 unitarios, 410 e2e y 8 de RabbitMQ real; cobertura 98,71 % de líneas; mutation 76,11 %; pipeline 2 min 23 s; Quality Gate OK. Frontend (sección 9): Eje A, cobertura 90,20 % con umbral, `retries: 0`, If-Match/412 y timeout de 5 s, 429 en el login |
-| 5. Registro de defectos | `06-registro-defectos.md` | 2 abiertos (0 Bloqueantes, 0 Críticos, 0 Mayores y 2 Menores) y 36 cerrados |
+| 5. Registro de defectos | `06-registro-defectos.md` | 1 abierto (0 Bloqueantes, 0 Críticos, 0 Mayores y 1 Menor) y 37 cerrados |
 | 6. Informe de seguridad | `07-informe-seguridad.md` | Matriz SEC, pruebas generales (BOLA en vivo y decisión de ADR-008), Trivy, ZAP, gitleaks, SonarCloud |
 | 7. Declaración y plan de IA | Gobernanza de IA (Clase 14), `Clase14_Grupo4_Ambiente_IA.pdf`; no versionada en este repo | Se entrega en Teams junto con este paquete |
 | 8. Lecciones aprendidas | `08-lecciones-aprendidas.md` | Tres defectos tardíos y seis más de la semana de testing |
