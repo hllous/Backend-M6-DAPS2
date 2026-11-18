@@ -67,7 +67,7 @@ Medidas de calidad:
 | Pipeline de CI | 2 min 23 s | ≤ 15 min | QA 05 §4 |
 | Defectos abiertos | 0 bloqueantes, 0 críticos, 0 mayores, 2 menores | ≤ 3 mayores | QA 01 §5 |
 
-Hay 4 criterios sin test automatizado (QA 01 §5, que remite a la matriz de trazabilidad). La mutation del frontend no tiene medición completa (QA 01 §2, DEF-35).
+Hay 4 criterios sin test automatizado (QA 01 §5, que remite a la matriz de trazabilidad). La mutation del frontend tiene medición completa: 66,51 % con umbral de 65 (QA 01 §2, DEF-35 cerrado).
 
 ## 4. Alcance
 

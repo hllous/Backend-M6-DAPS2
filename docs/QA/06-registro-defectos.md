@@ -22,12 +22,12 @@ La severidad es una propuesta: la deciden el líder y el QA y la valida el PO.
 | Bloqueante | 0 | Sí |
 | Crítica | 0 | Sí |
 | Mayor | 0 | Sí |
-| Menor | 2 (DEF-35 y DEF-38) | Sí |
-| **Total abierto** | **2** | |
+| Menor | 1 (DEF-38) | Sí |
+| **Total abierto** | **1** | |
 
-Registrados: 38 (DEF-01 a DEF-40, sin DEF-04 ni DEF-11). Abiertos: 2. Cerrados: 36 (sección 4).
+Registrados: 38 (DEF-01 a DEF-40, sin DEF-04 ni DEF-11). Abiertos: 1. Cerrados: 37 (sección 4).
 
-El estado del Frontend se verificó contra `origin/develop` del repo Frontend del 16/11 (`0519d95`, tras FE #977, #978, #979, #980, #982 y #985) y se recontrastó con `93c4cc7` (tras FE #986): los números de issue y PR citados existen y su estado coincide; FE #983 se cerró con FE #990 (mergeado el 16/11) y FE #968 (DEF-34) se cerró como «not planned».
+El estado del Frontend se verificó contra `origin/develop` del repo Frontend del 16/11 (`0519d95`, tras FE #977, #978, #979, #980, #982 y #985) y se recontrastó con `93c4cc7` (tras FE #986): los números de issue y PR citados existen y su estado coincide; FE #983 se cerró con FE #990 (mergeado el 16/11) y FE #968 (DEF-34) se cerró como «not planned». DEF-35 se cerró el 17/11 con FE #996 (mergeado en `2b1471a`).
 
 ## 3. Defectos abiertos
 
@@ -39,7 +39,6 @@ Ninguno abierto.
 
 | ID | Hallazgo | Evidencia | Issue / workaround |
 |---|---|---|---|
-| DEF-35 | Frontend: mutation testing configurado, con la medición completa postergada. La cobertura ya tiene umbral exigido en el CI desde FE #985 (sentencias 90,20 %, líneas 93,03 %, funciones 88,05 %, ramas 83,58 %; umbrales 90/92/87/83); queda abierto por el mutation | `vitest.config.ts` (`coverage.thresholds`); `stryker.config.json` y `.github/workflows/mutation.yml` del Frontend | [Frontend #975](https://github.com/hllous/Frontend-M6-DAPS2/issues/975) (cobertura, cerrado). Stryker configurado con `break: 60` ([Frontend #986](https://github.com/hllous/Frontend-M6-DAPS2/pull/986)); queda abierto como **postergado**: la medición completa quedó postergada: la corrida [run 43952775688](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/43952775688) se canceló sin cifra global (el shard 0 y el job `mutation score` no terminaron); sobre los 15 de 16 shards que sí terminaron el score es 56,40 % (7990 de 14166 mutantes válidos), **por debajo del `break` de 60**. El backend tiene mutation 76,11 % |
 | DEF-38 | Backend (resto de DEF-19): Swagger UI público en `/api/docs` también en producción; la evidencia se sirve por URL pública del bucket (key UUID aleatoria) y los PDF conservan sus metadatos | `src/swagger-config.ts` (`SwaggerModule.setup('api/docs', …)` sin condición de entorno); `src/modules/attachments/storage/r2-evidence.storage.ts` | Sin issue. Riesgo aceptado: el OpenAPI no expone datos y cada ruta exige token; la key de la evidencia no es adivinable. Mejora: ocultar `/api/docs` en producción y URLs firmadas |
 
 ### Hallazgo de proceso abierto
@@ -83,6 +82,7 @@ Ninguno abierto.
 | DEF-32 | El frontend no enviaba `If-Match` ni manejaba el 412: el BFF propaga `ETag` e `If-Match` y la interfaz avisa que el registro cambió | [Frontend #973](https://github.com/hllous/Frontend-M6-DAPS2/issues/973) |
 | DEF-33 | El timeout del BFF al backend era de 15 s: ahora 5 s con aborto real | [Frontend #974](https://github.com/hllous/Frontend-M6-DAPS2/issues/974) |
 | DEF-34 | Frontend (severidad Menor): `Idempotency-Key` solo se envía en la carga de evidencia (`src/app/api/evidence/route.ts`); las altas de `src/lib/containers.ts` y `services.ts` no la mandan ni el frontend bloquea el doble envío. Cerrado como no planificado: riesgo aceptado por decisión del equipo (16/11/2026). El backend la soporta como opcional en 21 `POST` de creación (ADR-013), pero el doble envío desde el frontend sigue siendo posible; workaround: anular el duplicado desde la UI | [Frontend #968](https://github.com/hllous/Frontend-M6-DAPS2/issues/968) (cerrado, not planned) |
+| DEF-35 | Frontend: mutation testing sin medición completa (56,40 % sobre 15 de 16 shards, bajo el `break` de 60). Causa: el merge de shards contaba dos veces los archivos que llegaban enteros en más de un shard, y dos tests abortaban el dry run de Stryker. Con la medición corregida el baseline es 62,46 % (5303 de 8490, run [44189163682](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/44189163682)); con tests nuevos sobre `indicators`, `referrals`, `operational-zones`, `use-reference-catalog` y las rutas BFF (vía `src/mocks`) queda en **66,51 %** (5647 de 8490 mutantes válidos, run [44215371447](https://github.com/hllous/Frontend-M6-DAPS2/actions/runs/44215371447)), con `break: 65` ([Frontend #988](https://github.com/hllous/Frontend-M6-DAPS2/issues/988), PR [#996](https://github.com/hllous/Frontend-M6-DAPS2/pull/996)) | [Frontend #988](https://github.com/hllous/Frontend-M6-DAPS2/issues/988) |
 | DEF-36 | El pedido a M1 esperaba hasta 10 s con M1 caído: ahora 4 s (`M1_TIMEOUT_MS`), menos que el corte del BFF, y el 503 llega a tiempo | [#693](https://github.com/hllous/Backend-M6-DAPS2/issues/693), [#713](https://github.com/hllous/Backend-M6-DAPS2/issues/713) |
 | DEF-37 | Backend: M6 no puede ver ni reprocesar la DLQ. Cerrado por decisión de diseño: la DLQ es del Core (ADR-007, `m9.md`); M6 hace `nack` sin reencolar y el Core reintenta y la expone en `GET /api/v1/dlq`. Sin ensayar contra el Core real | [#694](https://github.com/hllous/Backend-M6-DAPS2/issues/694), [procedimiento](../integracion/m9.md#qué-pasa-con-un-mensaje-que-falla-procedimiento-de-la-demo) |
 | DEF-39 | Los listados de catálogos con paginación del servidor no aceptaban un parámetro de orden (CA-HU01-1 parcial, encontrado al automatizar el Eje A). El backend acepta `sort` y `order` en 7 listados desde #712 (CA-HU01-5 y CA-HU01-6). La tabla del frontend los usa desde [Frontend #990](https://github.com/hllous/Frontend-M6-DAPS2/pull/990), que cierra [Frontend #983](https://github.com/hllous/Frontend-M6-DAPS2/issues/983) | [#703](https://github.com/hllous/Backend-M6-DAPS2/issues/703), [PR #712](https://github.com/hllous/Backend-M6-DAPS2/pull/712) |
