@@ -121,6 +121,20 @@ Los consumers de eventos reusan las tablas: `sourcesOf` (`outbound-responses.con
 
 ---
 
+## Nota de corrección (2026-11-17)
+
+El patrón State se implementa como **tabla de transiciones declarativa más una función guard**, no como una clase por estado. La tabla es un `Record<Estado, Estado[]>` (`VALID_TRANSITIONS`, `CONTAINER_TRANSITIONS`, `REPORT_TRANSITIONS`, `REPAIR_TRANSITIONS`, `CLOSURE_TRANSITIONS`, `OUTBOX_TRANSITIONS`) y el guard (`assertTransition` / `transition()`) lanza `ConflictException` (409) si el destino no figura en la lista del estado actual. Es el patrón State sin la jerarquía de clases, y es una decisión deliberada (Opción D contra B):
+
+- **Pocos estados, sin comportamiento propio:** cada enum de estado de `prisma/schema.prisma` tiene entre 3 y 11 valores (7 el de servicio, ver `VALID_TRANSITIONS` en `services.service.ts`). Lo que cambia entre estados es qué destinos se permiten; la lógica de cada acción (cuadrilla, vehículo, motivo, eventos al outbox) es la misma sin importar el estado de origen y vive en el service, así que una clase por estado quedaría casi vacía.
+- **Fuente única legible contra el diagrama:** cada tabla se compara línea a línea con el diagrama de `docs/entidades/`; con clases, la regla quedaría repartida en N archivos.
+- **Reusable fuera del service:** los consumers consultan la misma tabla (`sourcesOf` en `outbound-responses.consumer.ts`, `REPORT_TRANSITIONS` en `tickets.consumer.ts`); una jerarquía de clases atada a la entidad cargada no sirve para eso.
+- **Testeable con casos parametrizados:** una tabla se recorre completa en un test (`services-transitions.spec.ts`, `tree-interventions-transitions.spec.ts`, `outbound-requests.transitions.spec.ts`), incluidos los estados finales con lista vacía.
+- **409 uniforme:** el mensaje se arma en un único punto con las transiciones válidas desde el estado actual (ADR-011).
+
+Costo asumido: la tabla no expresa precondiciones ni comportamiento por estado (ya figura en Consecuencias negativas). Si algún estado ganara comportamiento propio, se reevalúa la Opción B para esa entidad. La frase «tablas de a lo sumo seis estados» de Consecuencias quedó corta: el expediente ambiental tiene 11 y el servicio 7; el argumento no cambia, porque lo que crece es la tabla y no el comportamiento.
+
+---
+
 ## 7. References
 
 - Issue #621. [ADR-011](adr-011-errores-problem-details-rfc-9457.md), [ADR-012](adr-012-concurrencia-optimista-etag.md) (el `If-Match` hace atómico el cambio de estado).
