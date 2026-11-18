@@ -2,7 +2,7 @@
 
 > Versión 2.2 · 16/11/2026
 
-Backend del Módulo 6 (Grupo 04), medido sobre `develop` @ `53cde64`. Local: Windows, Node 24. CI: último run de `develop` ([CI 43927922346](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43927922346), [API tests 43927922082](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43927922082), [CodeQL 43927922293](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43927922293)).
+Backend del Módulo 6 (Grupo 04), medido sobre `develop` @ `53cde64`. Local: Windows, Node 24. CI: último run de `develop` ([CI 43927922346](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43927922346), [API tests 44182379421](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/44182379421), sobre `develop` @ `35ee0e3` del 17/11/2026, que ya incluye #728, [CodeQL 43927922293](https://github.com/hllous/Backend-M6-DAPS2/actions/runs/43927922293)).
 
 ## 1. Cómo se obtuvieron los números
 
@@ -23,13 +23,13 @@ Backend del Módulo 6 (Grupo 04), medido sobre `develop` @ `53cde64`. Local: Win
 | Unitario | 131 | **3056** | 3056 | 0 | 0 | 26 s en el CI; 80 s con cobertura en local |
 | e2e con Postgres 16 | 25 | **410** | 410 | 0 | 0 | 36 s |
 | e2e con RabbitMQ real | 2 | **8** | 8 | 0 | 0 | 11 s |
-| Newman (`test/api/`) | 1 colección | 570 requests, 1015 assertions | 1015 | 0 | — | 6,8 s |
-| Schemathesis: esquema y errores de servidor | 65 de 152 operaciones (`GET`) | 4681 casos | 4681 | 0 | 0 | 14 s |
-| Schemathesis: `status_code_conformance` (bloqueante) | 65 de 152 operaciones (`GET`) | 4674 casos | 4203 | 0 | 471 | 12 s |
+| Newman (`test/api/`) | 1 colección | 573 requests, 1021 assertions | 1021 | 0 | — | 7,9 s |
+| Schemathesis: esquema y errores de servidor | 66 de 153 operaciones (`GET`) | 4764 casos | 4764 | 0 | 0 | 16 s |
+| Schemathesis: `status_code_conformance` (bloqueante) | 66 de 153 operaciones (`GET`) | 4745 casos | 4266 | 0 | 479 | 14 s |
 | Mutation (Stryker) | 26 archivos de dominio | 3068 mutantes evaluados | **76,11 %** | — | — | 4 min 39 s |
 | Carga (k6) | — | 14 850 requests | p(95) 32,84 ms; 0,00 % de error | 0 | — | 5 min |
 
-Total automatizado de tests: **3474** (3056 unitarios + 410 e2e + 8 de RabbitMQ real). Bloqueados: 0. Los 471 casos salteados de Schemathesis son 404 por datos de prueba y 429 en 3 operaciones del portal público.
+Total automatizado de tests: **3474** (3056 unitarios + 410 e2e + 8 de RabbitMQ real). Bloqueados: 0. Los 479 casos salteados de Schemathesis son 404 por datos de prueba y 429 en 3 operaciones del portal público.
 
 Los e2e cubren: ciclo de servicios, pertenencia de Campo, inbox e idempotencia, outbox con reintento (también contra RabbitMQ real), flujo ambiental, cortes de calle, cierre de contenedores con rollback, roles por endpoint, auditoría, extracciones, solicitud de información, personas de demo, migración de cuadrillas, guard de la base, límite de tasa (429), seguridad de entrada, seguridad en vivo, errores en Problem Details, ETag e `If-Match`, `Idempotency-Key` y catálogo local de barrios (detalle en `docs/testing.md`).
 
@@ -107,11 +107,11 @@ Los tres workflows corren en paralelo: el pipeline completo termina con `CI` a l
 
 | Qué | Estado |
 |---|---|
-| `docs/api/openapi.json` | 103 rutas, 152 operaciones, 29 tags; el CI regenera el archivo y falla si queda desactualizado |
+| `docs/api/openapi.json` | 104 rutas, 153 operaciones, 29 tags; el CI regenera el archivo y falla si queda desactualizado |
 | `src/openapi-contract.spec.ts` | 7 tests: schema de toda respuesta 200/201; errores como `application/problem+json`; 403 en todo `GET` autenticado; 400 en todo `GET` con parámetros; `openapi.json` al día; sin `type: object` sin forma; `minimum`/`maximum` en `@Min`, `@Max`, `@IsLatitude` y `@IsLongitude` |
 | Eventos publicados | 6 `.schema.json` más `_shared.schema.json`, validados con `ajv` en `src/events/payloads.spec.ts` |
-| Newman (`npm run api:coverage`) | Éxito en **151 de 152** operaciones y error en **149 de 152**; las 4 excepciones están en `test/api/PENDIENTES.md`. El script falla si una operación queda sin caso ni excepción |
-| Schemathesis | Solo `GET` (65 de 152 operaciones); cobertura de esquema: parámetros 55,1 %, respuestas 20,8 % |
+| Newman (`npm run api:coverage`) | Éxito en **152 de 153** operaciones (+1 con excepción justificada) y error en **150 de 153** (+3 con excepción justificada); las 4 excepciones están en `test/api/PENDIENTES.md`. El script falla si una operación queda sin caso ni excepción |
+| Schemathesis | Solo `GET` (66 de 153 operaciones); cobertura de esquema: operaciones 43,1 %, parámetros 55,4 %, respuestas 20,8 % |
 | Transición inválida → 409 | 114 tests parametrizados para servicios, reparaciones, cortes e intervenciones; `it.each` en contenedores y expedientes |
 | Problem Details (ADR-011) | `traceId` igual al header `X-Request-Id` y al log del 500; `path` e `instance` sin query; `test/problem-details.e2e-spec.ts` |
 | ETag e `If-Match` (ADR-012) | `test/etag-if-match.e2e-spec.ts` (concurrencia real `[200, 412]`) |
