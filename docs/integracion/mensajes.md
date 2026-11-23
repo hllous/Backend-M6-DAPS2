@@ -1,10 +1,30 @@
 # Mensajes a otros módulos
 
-> Registro de lo **enviado** a otros módulos, del más nuevo al más viejo. Acá solo quedan mensajes ya enviados, con su fecha y hora: los borradores y los pendientes no se guardan en este archivo. Enviarlos y anotar la hora es trabajo de una persona, no del repo. Al responder el módulo, la respuesta va a su ficha (`mX.md`) y la novedad al [historial](historial.md). Reordenado el 5/11/2026 (#312).
+> Registro de lo **enviado** a otros módulos y **todavía sin respuesta**, del más nuevo al más viejo. Acá solo quedan mensajes ya enviados, con su fecha y hora: los borradores y los pendientes no se guardan en este archivo. Enviarlos y anotar la hora es trabajo de una persona, no del repo. Al responder el módulo, la respuesta va a su ficha (`mX.md`), la novedad al [historial](historial.md) y el mensaje sale de acá. Depurado el 23/11/2026: se quitaron los mensajes respondidos, superados o cerrados (M1, M2, M3, M7, M9 y los de M4 de octubre y del 5/11 de las 14:06); el texto de cada uno queda en el historial de git (`git show 1729d90:docs/integracion/mensajes.md`).
 
-## Enviados el 5/11
+## Enviado el 23/11 a las 19:40 (M4)
 
-**→ M4 (Faltas / Sanciones), versión con plan B** — *enviado el 5 nov 2026 a las 14:36 ([#500](https://github.com/hllous/Backend-M6-DAPS2/issues/500)). Reemplaza al mensaje anterior de #500; redactado tras leer su contrato v1.2 RC del 2/11*
+**→ M4 (Faltas / Sanciones), respuesta sobre el typo del Core y el DEAD de `commercialFineGenerated`** — *enviado el 23 nov 2026 a las 19:40; espera respuesta de M4*
+
+> Hola! Contestamos sus dos puntos:
+>
+> **1. Nombre del evento ambiental.** M6 publica `environmentalViolationDetected`, escrito correctamente. El nombre con typo, `envirometnalViolationDetected`, es solo del registro del Core. Lo teníamos anotado desde el 27/10 como pendiente de su lado. Tienen que suscribirse al nombre correcto y dar de baja el del typo. Si siguen suscriptos solo al del typo, no les va a llegar nada.
+>
+> **2. `commercialFineGenerated` en DEAD.** Nuestro consumidor rechaza (nack) el mensaje si falta `sourceViolationId` (o `violationId`) o si no tiene forma de UUID. Ese campo tiene que ser el `violationId` del acta que les derivamos en `environmentalViolationDetected`. No sirve un id propio de ustedes (`FINE-…`, `EST-…`) ni uno inventado. También se rechaza si el sobre trae un `correlationId` que no es UUID. Si el UUID es válido pero el acta no existe en M6, no da DEAD: lo descartamos con un aviso y confirmamos la recepción.
+>
+> No podemos confirmar la causa sin ver el mensaje, porque los inválidos no quedan guardados de nuestro lado. ¿Nos pasan el `eventId` y el `data` que mandaron? Con eso les decimos exactamente qué campo falló. Para la prueba, usen el `violationId` de un acta real derivada desde M6.
+>
+> **Para coordinar la prueba ambiental**, necesitamos primero tres respuestas que tienen pendientes desde hace semanas:
+>
+> 1. La búsqueda de establecimientos por REST (dirección, CUIT o barrio) del #500, que les pedimos el 5/11. Si no la implementan, el inspector carga el `establishmentId` a mano, pero necesitamos que lo confirmen.
+> 2. Los nombres exactos que emiten hoy en el Core (`commercialFineGenerated` y `closureUpdate`, o los viejos `commercialFineIssued` y `closureOrdered`).
+> 3. Si `decidedAt` y `externalRef` viajan en los eventos reales.
+>
+> Avisen cuando lo tengan y coordinamos.
+
+## Enviado el 5/11 (M4)
+
+**→ M4 (Faltas / Sanciones), versión con plan B** — *enviado el 5 nov 2026 a las 14:36 ([#500](https://github.com/hllous/Backend-M6-DAPS2/issues/500)); sin respuesta al 23/11. Redactado tras leer su contrato v1.2 RC del 2/11*
 
 > Leímos su contrato integral v1.2 RC del 2/11. Nuestro `environmentalViolationDetected` coincide con lo que dicen recibir, incluido `FORMAL_NOTICE`. Dos cosas para destrabar la derivación de actas:
 >
@@ -12,291 +32,3 @@
 > 2. **UUID de integración:** el §11 dice que el mapeo `EST-…` → UUID todavía no está persistido. El `establishmentId` que les mandemos tiene que ser ese UUID estable. ¿Cuándo lo tendrían?
 >
 > Estamos en la recta final. Si no llegan, del lado nuestro el inspector cargaría el `establishmentId` a mano. Necesitamos saberlo hoy o mañana para decidir.
-
-**→ M2 (Atención Ciudadana), aviso de la regla de adjuntos** — *enviado el 5 nov 2026 a las 14:24 ([#499](https://github.com/hllous/Backend-M6-DAPS2/issues/499)). Reemplaza a la consulta anterior de #499*
-
-> Les avisamos cómo queda del lado nuestro lo de los adjuntos, para que no tengan que decidir nada: M6 **solo informa el estado del ticket** en `updateTicketStatus` (resuelto, en curso, qué pasó) con el mensaje público. **No mandamos fotos ni evidencia**: las de inspección son de uso interno y no salen de M6, así que el vecino no ve ninguna desde nosotros. La forma de `attachments[]` que publicaron no cambia y la seguimos respetando por si en algún momento mandamos alguno. Si ven algún problema con esto, avísennos; si no, lo damos por cerrado.
-
-**→ M2 (Atención Ciudadana)** — *enviado el 5 nov 2026 a las 14:06 ([#499](https://github.com/hllous/Backend-M6-DAPS2/issues/499)); reemplazado por el aviso de arriba*
-
-> Una consulta sobre los adjuntos de `updateTicketStatus`. Mantenemos la forma que publicaron (`{ fileName, contentType, url, sizeBytes? }`, sin `attachmentId`) y no la vamos a cambiar. Lo que necesitamos saber es **qué adjuntos puede ver el vecino** en el seguimiento de su ticket: ¿todos los que mandamos, o solo los que marquemos de alguna manera? ¿Hay alguna condición (estado del ticket, tipo de archivo)? Del lado nuestro, las fotos de inspección son evidencia interna y no las mandamos; solo viajarían archivos pensados para el vecino. Con su respuesta dejamos la regla documentada.
-
-**→ M4 (Faltas / Sanciones)** — *enviado el 5 nov 2026 a las 14:06 ([#500](https://github.com/hllous/Backend-M6-DAPS2/issues/500)); reemplazado por la versión con plan B*
-
-> Seguimos esperando la búsqueda de establecimientos por REST: sin `establishmentId` no podemos derivar un acta a ustedes. Para cerrarlo necesitamos tres cosas: (1) la consulta (ruta y parámetros: dirección, CUIT o barrio); (2) qué identificador estable devuelven y es el que mandamos como `establishmentId`; (3) qué responden cuando no hay coincidencias y cuando hay varias. Con eso documentamos el contrato y habilitamos la derivación.
-
-## Enviado el 3/11 (M1)
-
-**→ M1 (Ciudadanos)** — *enviado el 3 nov 2026 con el CSV de todas las cuentas (1.510); espera respuesta de M1*
-
-> Gracias por las respuestas. Anotamos la opción B (RS256 local, solo en `/integraciones/v1/**`) y esperamos la URL final para probar con un module-token real de Ambiente. Adjuntamos el CSV con las columnas de `cuenta_empleado` (`empleado_id`, `mail`, `nombre_empleado`, `apellido_empleado`, `rol`, `activo`, `uuid`): 1.510 empleados, las 12 cuentas de login (`10000`–`10011`) y los integrantes de las cuadrillas, todos `EMPLEADO`; `uuid` queda vacío para que lo genere M1. `empleado_id` tiene que ser el `sub` que figure en el token. Las contraseñas de las 12 de login van por privado. Sobre el 401 que vimos: nuestro backend desplegado rechaza el token de `admin@municipio.gob.ar`; para descartar un error de firma necesitamos el secreto HS256 vigente y su largo (base64). Si sigue igual, les pasamos header y payload decodificados con la fecha de la prueba.
-
-## Enviado el 02/11 a las 19:38 (M1)
-
-> Redactado y enviado el 02/11 a las 19:38 para pedir los usuarios de empleado de la demo ([#488](https://github.com/hllous/Backend-M6-DAPS2/issues/488)). Las contraseñas se piden por privado, no se escriben en el repo. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
-
-**→ M1 (Ciudadanos)** — 12 usuarios de empleado para la demo — *enviado el 02/11 a las 19:38*
-
-> Hola M1, para pasar del login de demo al login real necesitamos **12 cuentas de empleado** (`sub_type` `EMPLEADO`) en su ambiente hosteado. Si pueden, con `user_id` del 10000 al 10011, en este orden: 10000 y 10001 con rol `RESPONSABLE_AREA`; 10002 a 10006 `ADMINISTRATIVO` (personal de oficina); 10007 y 10008 `AUDITOR`; 10009 y 10010 `ADMINISTRATIVO` (líder e integrante de una cuadrilla de campo); 10011 `ADMINISTRATIVO` (inspector). Si no pueden fijar el `user_id`, pásennos los reales y los `actorId` y adaptamos nuestro seed. Las cuadrillas completas no hace falta cargarlas: sus integrantes no inician sesión y los identificamos por `sub` en nuestra base. Una pregunta: ¿ya tienen una forma de crear empleados (panel o endpoint de administración)? Si la hay y nos dan acceso, las creamos nosotros; si no, no hace falta que construyan nada. Las contraseñas, por el grupo de POs y no por acá. — M6 Ambiente
-
-## Enviado el 02/11 a las 19:20 (M1)
-
-> Redactado y enviado el 02/11 a las 19:20 para trasladar la respuesta de M9 sobre el module-token (ver [`m9.md`](m9.md)). Al responder M1, mover la respuesta a [`m1.md`](m1.md).
-
-**→ M1 (Ciudadanos)** — autenticación del REST entre módulos, según M9 — *enviado el 02/11 a las 19:20*
-
-> Hola M1, M9 respondió sobre la autenticación de sus consultas REST. Resumen: el token de `POST /api/v1/auth/module-token` se puede usar tal cual contra ustedes, sin pedir uno por destino. Es RS256 y dura 15 minutos, con `sub` `module:<modulo>` (nosotros `module:ambiente`), `kind` `module`, `iss` `muni-core`, `aud` `muni-platform` y `jti`. **No lleva `scope`**, así que su permiso local `CONSULTA_INTERMODULO`, aplicado tras verificar `kind == "module"`, es el camino correcto. Para validar la firma el Core **no publica JWKS**; hay dos opciones: (A) reenviar el `Authorization` a `GET /api/v1/auth/me` del Core (200 con `{kind, module, …}` o 401) o (B) validar RS256 localmente con la clave pública PEM, que M9 les pasa por privado. ¿Cuál van a usar? Del lado nuestro mandamos ese token como Bearer cuando sus rutas estén desplegadas. — M6 Ambiente
-
-## Enviado el 02/11 a las 19:15 (M1)
-
-> Redactado y enviado el 02/11 a las 19:15 tras probar el login de la cuenta de empleado contra el M1 hosteado. **El secreto no se pide por el chat de los módulos ni se escribe en el repo:** va por el grupo de POs. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
-
-**→ M1 (Ciudadanos)** — secreto del JWT vigente del ambiente hosteado — *enviado el 02/11 a las 19:15*
-
-> Hola M1, probamos el login de la cuenta de empleado en su ambiente hosteado y funciona: el token es HS256, con `iss` `modulo1-ciudadanos`, `sub` `1`, `sub_type` `EMPLEADO`, `rol` `RESPONSABLE_AREA`, `typ` `access` y `actorId`. Pero nuestro backend desplegado lo rechaza con 401, así que el secreto que nos pasaron el 22/10 ya no coincide con el que firma hoy. ¿Nos pasan el `APP_JWT_SECRET` vigente del ambiente hosteado, por el grupo de POs y no por acá? Confirmen también el largo de la clave en bytes (para saber si el algoritmo seguirá siendo HS256) y si cambia cuando redesplieguen, para no quedar desfasados otra vez. — M6 Ambiente
-
-## Enviado el 02/11 a las 18:46 (M9)
-
-> Redactado y enviado el 02/11 a las 18:46 por la consulta de M1 sobre la autenticación de su REST entre módulos. Al responder M9, mover la respuesta a [`m9.md`](m9.md).
-
-**→ M9 (Core)** — module-token para consultas REST entre módulos — *enviado el 02/11 a las 18:46*
-
-> Hola M9, M1 va a exponer consultas REST de ciudadano y organización para otros módulos y todavía no valida ningún token en ellas. Nos pidió cerrar con ustedes si corresponde usar entre módulos el token de `POST /api/v1/auth/module-token` (RS256, `kind="module"`, `sub=module:<modulo>`). Necesitamos saber: (1) si el Core autoriza ese uso, o si M1 debe emitir otro tipo de credencial; (2) dónde publican la clave pública o el JWKS para que M1 valide la firma; (3) qué claims puede verificar M1 (`module`, `iss`, `exp`) y si hay un scope o permiso para consultas intermódulo; (4) si el token de M6 vale tal cual contra M1 o hay que pedir uno por destino. M1 lo tiene preparado como permiso local `CONSULTA_INTERMODULO`, sin scope del Core confirmado. — M6 Ambiente
-
-## Enviado el 02/11 a las 18:42 (M1)
-
-> Redactado y enviado el 02/11 a las 18:42 como respuesta a la contestación de M1 sobre `actorId`, el REST de consulta y las cuadrillas. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
-
-**→ M1 (Ciudadanos)** — cuadrillas, `actorId` y autenticación del REST — *enviado el 02/11 a las 18:42*
-
-> Hola M1, gracias por la respuesta. Confirmamos:
->
-> - **Cuadrillas:** todos los integrantes, también los de contratistas y cooperativas, deben estar registrados como `EMPLEADO`. La pertenencia a la empresa y a la cuadrilla la administramos nosotros.
-> - **`actorId`:** conservamos `sub` como clave interna y vamos a leer `actorId` para `updatedBy.id`.
-> - **Consultas REST:** no las integramos hasta que estén desplegadas y cerremos la autenticación. Cuando las migren, avísennos con la URL final. La consulta `actores?actorType=EMPLEADO&sub=…` es la que más nos sirve para cargar las cuadrillas.
-> - **Autenticación entre módulos:** lo consultamos con el Core (M9) y les contamos qué responde sobre el module-token, la clave pública y el scope. Si ustedes lo cierran antes, avísennos. — M6 Ambiente
-
-## Enviado el 02/11 a las 10:37 (M3)
-
-> Redactado y enviado el 02/11 a las 10:37 como respuesta al aviso de M3 de que su consumo y sus `workOrder*` están desplegados. Al responder M3, mover la respuesta a [`m3.md`](m3.md).
-
-**→ M3 (Obras públicas)** — prueba `requestId` → `sourceRequestId` y schema único de `streetClosureRequested` — *enviado el 02/11 a las 10:37*
-
-> Hola M3, gracias por el aviso. Cruzamos sus schemas nuevos contra lo que consumimos: `workOrderScheduled` y `workOrderCompleted` coinciden, no tenemos nada que cambiar. Sobre sus tres puntos:
->
-> 1. **Prueba:** de acuerdo. Disparamos un `infrastructureRepairRequested` desde M6 y les pasamos el `requestId` apenas lo generemos; necesitamos que devuelvan `workOrderScheduled` y `workOrderCompleted` con ese valor en `sourceRequestId`. ¿Cuándo les viene bien y en qué cola esperan?
-> 2. **`containerDamaged` y `treeRiskDetected`:** confirmado, siguen siendo avisos sin respuesta. No emitan `workOrder*` hacia M6 para esos casos.
-> 3. **`streetClosureRequested`:** el Core solo puede tener un schema. Proponemos el suyo como base, con tres ajustes:
->    - `affectedSections` estructurado `{street, from, to, direction}`, con `direction` ∈ `FORWARD`, `REVERSE`, `BOTH`. M7 ya lo exige y nosotros lo adoptamos antes de la E2E (hoy mandamos strings).
->    - `closureType` obligatorio en el schema (nosotros ya lo mandamos siempre).
->    - `data.sourceModule` como enum con los valores que lee M7 (hoy `"obras"` de ustedes y `"M6"` de nosotros), no como constante. El `sourceModule` del sobre queda por productor (`obras` / `ambiente`).
->
->    ¿Qué valor de `data.sourceModule` recibe M7 hoy de ustedes: `obras` o `M3`? ¿Lo coordinan ustedes con M7 y el Core o lo hacemos entre los tres? — M6 Ambiente
-
-## Enviado el 02/11 a las 10:31 (M1)
-
-> Redactado y enviado el 02/11 a las 10:31 como respuesta a la propuesta de M1 de resolver ciudadano y organización por REST. Al responder M1, mover la respuesta a [`m1.md`](m1.md).
-
-**→ M1 (Ciudadanos)** — consultas REST de ciudadano y organización, claims del token — *enviado el 02/11 a las 10:31*
-
-> Hola M1, gracias por revisar. Sí, ciudadano por `citizenId` UUID y organización por `organizationId` UUID, con búsqueda adicional por CUIT, nos sirve. Tenemos dos usos concretos:
->
-> - **Cuadrillas:** cada cuadrilla de M6 apunta a una organización (la empresa contratista), a un líder y a integrantes, todos de M1. Hoy guardamos los nombres a mano y no podemos validar que la organización exista ni que esté activa.
-> - **Reclamos:** necesitamos identificar al denunciante cuando el reclamo no es anónimo.
->
-> Para cerrar la integración necesitamos que nos confirmen cómo nos pasan esa información:
->
-> 1. **¿Qué viaja en el token?** ¿Vienen `actorId`, `actorType` y `citizenId` en todos los access tokens, también en los de empleados? ¿Viene algún dato de organización, por ejemplo `organizationId`? ¿Qué más trae (nombre, `rol`, `sub_type`)?
-> 2. **¿Qué se consulta por REST?** URL base, endpoints, parámetros y la respuesta de ciudadano y de organización. ¿Qué campos devuelve cada uno y qué pasa si no existe o está dado de baja?
-> 3. **Autenticación entre módulos:** ¿se usa el module-token RS256 de §3 de la v3.0? ¿Qué permisos o scope necesita M6 para consultar, y qué campos puede ver?
-> 4. **¿Cómo conseguimos el `actorId` de cada empleado de una cuadrilla antes de que haga login?** Las cuadrillas se cargan antes de que la persona se autentique, y hoy las identificamos por `sub` numérico. ¿Hay una consulta de `sub` a `actorId`?
-> 5. **Ambiente:** ¿cuándo van a estar hosteados para probar? Mientras tanto, mándennos los ejemplos sanitizados de token y de respuestas y los validamos.
->
-> Sobre `actorId`: hoy usamos `sub` como clave interna y no la vamos a cambiar. Queremos leer `actorId` para el `updatedBy.id` de `updateTicketStatus`, porque M2 exige UUID. — M6 Ambiente
-
-## Enviado el 28/10 a las 17:47 (M7)
-
-> Redactado el 28/10 tras recibir `M6_a_M7_Contrato_Cortes_Final_2026-10-28.md` ([#447](https://github.com/hllous/Backend-M6-DAPS2/issues/447)). **Enviado el mismo 28/10 a las 17:47** (el PO lo manda al recibirlo); al responder M7, mover la respuesta a [`m7.md`](m7.md).
-
-**→ M7 (Tránsito)** — validación del contrato final de cortes — *enviado el 28/10 a las 17:47*
-
-> Hola M7, gracias por el contrato final de cortes. Lo revisamos contra nuestro código; esto es lo que ya cumplimos y lo que necesitamos de ustedes:
->
-> **Ya cumplimos:** sobre con `sourceModule: "ambiente"` y `eventVersion: "1.0"`, fechas con offset, y en `data`: `closureRequestId`, `sourceModule`, `sourceRef`, `reason`, `affectedSections`, `requestedFrom`, `requestedTo` y `requestedAt`. Un corte `APPROVED` que nunca se activa lo damos por vencido sin esperar evento, y un `ACTIVE` vencido lo cerramos al recibir su `streetClosureEnded`.
->
-> **Diferencias que tenemos que cerrar con ustedes:**
-> 1. **`affectedSections`:** hoy les mandamos un array de strings (por ejemplo `"Av. Rivadavia entre Castro y Medrano"`), no tramos `{street, from, to, direction}`. ¿Nos pasan la forma exacta, los valores válidos de `direction` y si es obligatorio? ¿Aceptan los strings actuales mientras adaptamos?
-> 2. **Prórrogas (`previousClosureRequestId`):** hoy no lo mandamos ni tenemos flujo de prórroga. ¿Es requisito para esta entrega o queda fuera de alcance?
-> 3. **`closureType`:** para nosotros es opcional (a veces no viaja). ¿Lo toleran ausente o lo mandamos siempre (`TOTAL`/`PARTIAL`)?
-> 4. **Nombres en sus respuestas:** leemos `startDate`/`endDate` para el período autorizado en `streetClosureApproved` y `rejectionReason` (o `reason`) en `streetClosureRejected`. El contrato dice «período autorizado» y «motivo» sin nombrarlos: ¿son esos? Si usan otros, nuestro barrido de vencimiento no encuentra la ventana.
-> 5. **`data.sourceModule`:** confirmamos que sigue siendo `"M6"` en el `data` (el 20/10 nos dijeron que lo leen así), aunque el sobre diga `ambiente`.
->
-> **Suscripciones:** nosotros estamos suscriptos a `streetClosureEnded`; vamos a verificar contra el Core qué tenemos registrado del nombre con typo antes de la prueba. ¿Ya declararon y publican `streetClosureEnded` en el Core? Cuando lo confirmen hacemos la prueba E2E con un corte activo que termine y después retiramos la suscripción al typo. ¿Qué horario les sirve?
->
-> Mientras no respondan no tocamos el formato del evento. — M6 Ambiente
-
-## Enviado el 28/10 a las 12:40 (grupo general)
-
-> Redactado el 28/10 a las 12:40 ([#442](https://github.com/hllous/Backend-M6-DAPS2/issues/442), [#299](https://github.com/hllous/Backend-M6-DAPS2/issues/299), [#328](https://github.com/hllous/Backend-M6-DAPS2/issues/328)). **Enviado el mismo 28/10**; el horario es una propuesta, al responder los módulos anotar el acordado en [`m9.md`](m9.md).
-
-**→ Grupo general (M9 y todos los módulos)** — primera prueba de M6 contra el Core real — *enviado el 28/10 a las 12:40*
-
-> *28/10/2026, 12:40.* Hola a todos, somos M6 (Ambiente). Con el 5671 habilitado (gracias M9) vamos a hacer nuestra **primera prueba contra el Core real**. Como el ambiente es único y compartido, la avisamos antes:
->
-> 1. **Prueba pasiva** (TCP/TLS, autenticación y `q.ambiente` en modo pasivo): no publicamos ni consumimos, no afecta a nadie.
-> 2. **Prueba de circulación con un evento exclusivo, `pruebaConexionM6`:** creamos esa suscripción solo a `q.ambiente`. M9 publica un evento de ese tipo por HTTP con datos ficticios y nosotros lo recibimos por AMQP. **No llega a ningún otro módulo** y no se publica ningún evento de negocio nuestro.
-> 3. Al terminar, damos de baja la suscripción de prueba.
->
-> **Horario propuesto: hoy 28/10 a las 16:00, unos 30 minutos.** Si a algún módulo le molesta (por ejemplo, está probando con el Core ahora), que lo diga y lo movemos. **M9:** ¿alguien puede publicar el `pruebaConexionM6` en ese horario? Les avisamos al empezar y al terminar. — M6 Ambiente
-
-## Enviado el 27/10 a las 11:14 (M9)
-
-> Redactado el 27/10 a las 11:14 ([#412](https://github.com/hllous/Backend-M6-DAPS2/issues/412), [#376](https://github.com/hllous/Backend-M6-DAPS2/issues/376)). **Enviado el mismo 27/10**; al responder M9, mover la respuesta a [`m9.md`](m9.md).
-
-**→ M9 (Core)** — barrios, zonas, red del 5671 y evento de prueba — *enviado el 27/10 a las 11:14*
-
-> *27/10/2026, 11:14.* Gracias por cargar los barrios reales de CABA. Cuatro puntos:
->
-> 1. **Identificador de barrio.** En `location.neighborhoodId` (lo que mandamos a M2 y M3) y en nuestra tabla de zonas, ¿qué debemos guardar y enviar: el `codigo` (slug, ej. `palermo`) o el `id` UUID? Hoy pensamos guardar el UUID porque M2 lo exige en ese campo. ¿El `id` es estable (no cambia al cargar o actualizar barrios) y sigue viniendo en la respuesta de `GET /api/v1/catalogos/barrios`?
-> 2. **Zonas.** ¿Las zonas administrativas del Core son ahora las 15 comunas (`comuna-1` a `comuna-15`)? Les avisamos que nuestras zonas operativas son propias de M6 y van **por barrio**: no usamos las comunas para armarlas.
-> 3. **Red.** Les pasamos el 20/10 los rangos de salida de Render para el 5671: `74.220.48.0/24` y `74.220.56.0/24`. ¿Pueden revisar si se habilitaron en el firewall? Entendemos que hoy el 5671 admite una sola IP y que lo abre quien administra la instancia; si es otra persona, ¿nos dicen a quién pedírselo?
-> 4. **Prueba aislada.** Proponemos el tipo de evento `pruebaConexionM6`, suscripto solo a `q.ambiente`, para probar la circulación sin alcanzar a otros módulos. El horario lo coordinamos en el grupo general (a definir).
-
-## Enviados el 26/10 (M1)
-
-**→ M1 (Ciudadanos)** — *enviado el 26/10; M1 respondió el mismo día (URL del login: la remiten a Discord y al documento; la cuenta se comparte; su programa no está hosteado; ver [`m1.md`](m1.md#respuesta-al-seguimiento-2610-cuenta-compartida-y-m1-no-hosteado))*
-
-> Gracias. Dos datos más: ¿cuál es la URL base del login? Y esa cuenta (la de empleado que nos pasaron) ¿es compartida entre grupos? Si lo es, más adelante pedimos una propia con rol `RESPONSABLE_AREA`.
-
-**→ M1 (Ciudadanos)** — usuario empleado y admin de roles — *enviado el 26 oct 2026, sin respuesta todavía* (respondían: «¿Para qué necesitan un usuario admin? Hoy el endpoint de login solo sirve para autenticar ciudadanos, no empleados. Es más, el id es distinto»)
-
-> Necesitamos un admin porque M6 autoriza por rol y, sin al menos un usuario con rol, toda nuestra API responde 403. Les pedimos:
->
-> 1. Un usuario **empleado** con rol `RESPONSABLE_AREA` (o cómo lo registramos) y su `user_id` numérico, para cargarlo como administrador inicial de roles de M6.
->
-> Y nos ayudaría que nos aclaren:
->
-> 2. ¿El login sirve o no para empleados? Su v2.1 dice que `POST /auth/usuario/login` entrega token para `CIUDADANO` y `EMPLEADO`.
-> 3. ¿Qué quiere decir «el id es distinto»? Su doc dice que el `sub` del token es el `user_id` (bigint) del login. Si no coinciden, se nos rompe la pertenencia de Campo.
-> 4. ¿`POST /auth/refresh` y el logout siguen existiendo?
-
-## Enviados el 21/10
-
-> Redactados el 21/10 y enviados ese mismo día por el PO (#345, #347). Cuando respondan, mover la respuesta a la ficha (`m2.md`, `m7.md`, `m9.md`).
-
-**→ M7 (Tránsito)** — respuesta a sus dos mensajes del 20/10 — *enviado el 21 oct 2026; respondido el 23/10 (UUID o `null`, ver [historial](historial.md))*
-
-> Gracias por las respuestas, nos ordenan mucho. Sí, estamos de acuerdo: a partir de ahora **dejamos de emitir `urbanServiceScheduled` y `treePruningScheduled`**, y `treeRiskDetected` va solo a M3. Lo único que les mandamos es `streetClosureRequested`. Cuando un servicio o una poda necesita cortar la calle, la solicitud la pedimos siempre con ese evento, con `sourceRef` apuntando al servicio o a la poda que origina el corte. No cambia nada de su lado ni del payload que ya tienen.
->
-> Y gracias por contestar los cuatro puntos: (1) los cortes `ACTIVE` vencidos los cierran ustedes y siempre publican `streetClosureEnded`; (2) los `APPROVED` que nunca se activan vencen sin evento y nuestro margen de 6 horas es el mecanismo correcto; (3) el nombre que se publica es `streetClosureEnded` y el `streetClousureEnded` del catálogo es un error de carga que coordinan con M9; (4) no necesitan cuadrilla en el corte, solo la franja completa `requestedFrom` / `requestedTo`. Con eso cerramos de nuestro lado.
-
-**→ M9 (Core)** — corrección al registro — *enviado el 21 oct 2026, sin respuesta todavía*
-
-> Una corrección a lo que les contamos para el registro de publicaciones: **M6 publica 6 eventos, no 8**. Quedan `updateTicketStatus`, `containerDamaged`, `treeRiskDetected`, `environmentalViolationDetected`, `infrastructureRepairRequested` y `streetClosureRequested`. **No registren `urbanServiceScheduled` ni `treePruningScheduled`**: M7 no los consume y dejamos de emitirlos. Las suscripciones no cambian.
-
-**→ M2 (Atención Ciudadana)** — emitimos `INFORMATION_REQUIRED` — *enviado el 21 oct 2026, sin respuesta todavía*
-
-> Les avisamos que M6 pasa a ser productor real de `updateTicketStatus` con `updateType: INFORMATION_REQUIRED`. Lo emitimos cuando el operador le pide más información al vecino durante la revisión de la denuncia: lleva `publicMessage` con lo que se le pide y `requiredBy` (fecha límite, siempre futura); solo sale si el ticket está `IN_PROGRESS` o `ROUTED`, o si todavía no conocemos su estado. Dos confirmaciones: (1) cuando la solicitud vence o se cancela, ¿M2 emite un `ticketUpdated` con el estado al que vuelve el ticket? Nosotros cerramos la solicitud al recibir cualquier `ticketUpdated` de cambio de estado cuyo `currentStatus` ya no sea `PENDING_INFORMATION`. (2) Si mandamos `STARTED` con el ticket ya `IN_PROGRESS`, ¿lo registran y confirman sin aplicar, sin `nack`?
->
-> Además, en el contrato nuevo (el Acuerdo y los Sobres del 21/10) M6 publica 6 eventos; los dos que dejamos de emitir (`urbanServiceScheduled` y `treePruningScheduled`) no los consumía M2, así que no cambia nada de su lado.
-
-**→ M1 (Ciudadanos)** — seguimiento a su guía v2.1 y a lo que aclaró el PO — *enviado el 21 oct 2026, sin respuesta todavía*
-
-> Gracias por la guía v2.1 y por las aclaraciones: con la lista de roles (`CIUDADANO`, `MESA_ENTRADAS`, `ADMINISTRATIVO`, `RESPONSABLE_AREA`, `AUDITOR`, `SERVICIO`), el `user_id` igual al `citizenId` y el contrato del token (HS256, clave compartida en base64, claims `iss`, `sub`, `rol`, `typ`, 15 minutos, sin `aud`) ya sabemos cómo validar. Nos quedan unos puntos:
->
-> 1. **Secreto:** quedamos a la espera del valor de `APP_JWT_SECRET` por el grupo de POs. Sin él no podemos validar tokens reales en el despliegue.
-> 2. **Refresh y logout:** el PO nos dijo que ya no están, pero el PDF todavía documenta `POST /auth/refresh` y el logout. ¿Cuál vale? A nosotros no nos cambia (no aceptamos refresh), pero queremos que el contrato quede claro.
-> 3. **Sobre de eventos:** el del documento sigue siendo el viejo (`producer`, `subject`, `eventId` `M1-EVT-…`). Para publicar por el Core tienen que usar el sobre del Core, y el `correlationId` tiene que ser un UUID: un valor como `M6-REQ-000045` lo rechaza el Core y también nuestro buzón de entrada.
-> 4. **`auth: false`:** ¿qué significa en la respuesta del login? ¿Un login fallido responde 401 o 200 con `auth: false`?
-
-**→ M2 (Atención Ciudadana)** — ids numéricos en `updatedBy.id` — *enviado el 21 oct 2026, sin respuesta todavía*
-
-> M1 nos confirma que sus ids de usuario son numéricos: el `user_id` del login es el `citizenId`, y su base es numérica. Nos dice también que ustedes van a tener que adaptar `updatedBy.id`, que en la v1.78 exige un UUID. Mientras tanto mandamos `id: null` (salvo que el identificador ya sea un UUID). ¿Qué acepta M2 para identificar a quien actúa desde otro módulo: un número, un string o `null`?
-
-## Enviados el 20/10 (07:45)
-
-> El 20/10 a las 07:45 se mandaron a M1, M2, M7 y M9; respondieron M9, M7 y M2, M1 no. Se dejan como registro.
-
-**→ M2 (Atención Ciudadana)** — *enviado el 20 oct 2026 a las 07:45; M2 respondió el mismo día (ver la sección de M2). Se deja el texto como registro.*
-
-> Cruzamos la v1.75 y no cambia nada de lo que implementamos: el sobre del Core, `updateTicketStatus` y `ticketUpdated` coinciden con lo que ya enviamos y consumimos. `publicId` ya viaja en nuestro modelo como referencia humana y respetamos que no es credencial (no lo usamos para autorizar ni lo aceptamos en el seguimiento público). Nos queda un pedido que ya va por la sexta versión (v1.75): **necesitamos mandarles la fecha y la franja horaria agendadas de un servicio**, y hoy no hay campo. `progress` es un `Int` de porcentaje y §8.2 de la v1.75 mantiene "details obligatorio: Ninguno" para `STARTED`/`PROGRESS`. ¿Lo mandamos como texto dentro de `publicMessage`, o definen algo tipo `details.schedule { scheduledDate, windowFrom, windowTo }`? Con cualquiera de las dos respuestas cerramos el tema; lo que no podemos es seguir sin lugar donde ponerlo.
-
-> Y una confirmación: en el paquete de schemas, el ejemplo `PROGRESS_programacion` manda la fecha y la franja como texto en `publicMessage`. ¿Es la forma oficial de informar la programación? Si lo es, cerramos el pedido. ¿Esperan un `STARTED` antes, aunque el área todavía no haya empezado el trabajo? Y gracias por el paquete: contrastamos nuestros `updateTicketStatus` con su validador y no hay diferencias.
-
-> *(Sobre `occurredAt`: ya no hace falta consultarlo. El sobre del Core que M2 también adopta fija ISO 8601 con offset.)*
-
-**→ M7 (Obras / Espacio público)** — *enviado el 20/10 a las 07:45; M7 respondió el 20/10 (ver la sección de M7). Se deja el texto como registro.*
-
-> Tres diferencias de enums entre su documento y nuestro catálogo, que mandan nuestros valores (ADR-003): `ServiceOrigin` tiene cinco valores (`PLANNED`, `TICKET`, `WEATHER_ALERT`, `INSPECTION`, `MANUAL`), no `SCHEDULED`/`INTERNAL`; `TreeHealthStatus` conserva `WEAKENED` y `DISEASED` separados, no los colapsa en `DECLINING`; y `TreeInterventionType` distingue `FORMATION_PRUNING` de `SAFETY_PRUNING` y usa `REMOVAL`, no `FELLING`. Además, en `streetClosureRequested` mandamos `sourceModule: "M6"`, siguiendo su tabla de campos: su prosa decía `requestingModule` y nos quedamos con la tabla. Si prefieren al revés, avisen y lo cambiamos.
-
-> Y una precisión sobre el sobre nuevo del Core (el que fijó M9 el 7/10 para toda la cohorte): en `streetClosureRequested` el sobre va a traer `sourceModule: "ambiente"` y `data.sourceModule` sigue siendo `"M6"`, porque así lo exige el schema que acordamos. ¿Cuál de los dos leen para rutear la respuesta? Los tres eventos de respuesta nos siguen llegando con `closureRequestId`.
-
-**→ M3 y M7, juntos** — *a M3 enviado el 5 oct 2026; a M7 enviado el 20 oct a las 07:45, respondió el mismo día*
-
-> Aviso operativo: `location.neighborhoodId` les va a llegar **vacío** hasta que M9 publique el catálogo de barrios. El campo pasó a opcional y viaja ausente. Mientras tanto, `location.street` lleva la dirección completa sin partir en calle y número, porque así la guarda nuestro modelo.
-
-**→ M9 (Core)** — *enviado el 20/10 a las 07:45; M9 respondió el 20/10 (ver la sección de M9). Se deja el texto como registro de lo que se preguntó.*
-
-> Gracias por el contrato del 7/10: ya adaptamos M6 (exchange `muni.inbox` y cola `q.ambiente` en modo pasivo, sobre del Core, `nack` sin requeue, cliente del token de módulo). Dos cosas las asumimos nosotros y no hace falta que contesten: usamos `occurredAt` (el `occuredAt` de la tabla es un typo, su ejemplo lo escribe bien) y nuestro `sourceModule` es `"ambiente"`, como la cola. Nos quedan estas dudas, que cambian código según cómo se respondan:
->
-> 1. Si publicamos por AMQP a `muni.inbox`, ¿dónde se valida que `sourceModule` coincida con el módulo del token? El 403 que describen es una respuesta HTTP. ¿Se valida por el usuario AMQP, va el token en un header, o hay un endpoint HTTP para publicar?
-> 2. ¿Hay un usuario AMQP por módulo, con qué permisos (configure/write/read), vhost, y se usa `amqps`?
-> 3. ¿`maxAttempts` es el largo de la cadena 15 s → 1 m → 5 m → 15 m? ¿Qué pasa si es otro valor?
-> 4. Cuando entregan en `q.ambiente`, ¿mandan el sobre tal cual se publicó o agregan campos (por ejemplo `receivedAt`)?
-> 5. ¿`muni.inbox` siempre tiene al menos una cola bindeada? Publicamos con `mandatory: true` y contamos un `basic.return` como fallo.
-> 6. ¿`q.ambiente` es clásica o quorum, y con qué argumentos? La verificamos en modo pasivo y queremos evitar sorpresas.
-> 7. Con la DLQ y la auditoría del Core, ¿siguen haciendo falta `eventProcessingFailed` y `eventRejected`? Proponemos sacarlos.
-> 8. Para `correlationId` y `causationId`, ¿qué validador de UUID usan: RFC estricto (versión y variante) o cualquier 8-4-4-4-12? ¿Y prefieren `causationId` omitido o en `null` cuando no hay causa? Hoy lo omitimos.
-> 9. Siguen sin respuesta desde agosto y septiembre: el catálogo de barrios con `neighborhoodId` estable, si "zona" de ustedes es lo mismo que nuestra zona operativa (que agrupa barrios), si alguien publica `notificationSent`, y la lista de eventos propios del Core.
->
-> Y para poder probar: ¿se confirma la fecha de las URLs de los ambientes (aprox. 13/10) y cómo nos entregan las credenciales?
-
-**→ M9 (Core), seguimiento ([#300](https://github.com/hllous/Backend-M6-DAPS2/issues/300))** — *enviado el 20 oct 2026; sin respuesta todavía*
-
-> Hola M9, gracias por la respuesta, muy clara. Ya abrimos los issues de nuestro lado: publicar con `userId`, los ajustes por el re-serializado del sobre (`null`, `occurredAt`, UUID) y la prueba contra su Core local. Dos puntos en los que el enunciado no coincide con lo que nos cuentan, y que conviene resolver entre todos:
->
-> 1. **Barrios y zonas.** El TPO, §9 Core, dice que el Core administra «Barrios, zonas y catálogos globales», y §11 que cada dato tiene un único módulo propietario. Ustedes responden que no tienen datos maestros y que podría ser de Ciudadanos, pero hasta donde vemos nadie más lo tiene asignado. Sin ese catálogo, M3, M6 y M7 mandamos los eventos sin barrio. ¿Lo pueden revisar? Si lo consideran de otro módulo, ¿de cuál y quién lo confirma? Si no nos ponemos de acuerdo, se lo llevamos a la cátedra. Sobre «zona»: tienen razón en que no hay choque, M6 administra sus zonas operativas (§6) y agrupan barrios.
-> 2. **`NotificacionEnviada` / `NotificacionFallida`.** El TPO pone las notificaciones en el Core (§9) y esos eventos figuran como consumidos por varios módulos, el nuestro incluido. Entendemos que hoy no existen en su catálogo. ¿Piensan publicarlos, o hay que sacarlos de todos los módulos? Mientras tanto no tenemos handler.
->
-> Y dos preguntas técnicas:
->
-> 3. ¿`exclude_none` también quita los `null` dentro de `data`? Si sí, un schema que exija un campo en `null` lo va a ver ausente.
-> 4. Sobre el usuario AMQP: ¿se va a llamar `ambiente`, como la cola y nuestro `sourceModule`? ¿Cuándo se activa la validación del `user-id`? Queremos tener listo el publisher.
->
-> Sobre el despliegue: M3 y M7 esperan lo mismo que nosotros. ¿Hay un plazo aproximado para decidir dónde se despliega? Entretanto probamos contra el Core local. Y las credenciales, cuando existan, que lleguen por privado al PO. ¡Gracias! — M6 Ambiente
-
-**→ M1 (Ciudadanos), Issue #161** — *enviado el 20 oct 2026 a las 07:45; sin respuesta todavía*
-
-> Gracias por la lista de roles y por confirmar que el id es el `citizenId`. Para poder autorizar en M6 nos quedan estas dudas: **1)** El JWT: el login que tenemos documentado devuelve `{ user_id, dni, role, auth }` y no trae token. ¿Dónde viaja (en la respuesta, en un header, en una cookie)? ¿Con qué algoritmo está firmado y cómo obtenemos la clave para validarlo (JWKS o clave pública)? ¿Qué claims trae (`sub`, `role`, `exp`, `iss`, `aud`) y cuánto dura? Si pueden pasarnos un token de ejemplo, mejor. **2)** ¿El usuario tiene un área o módulo asociado? Un `RESPONSABLE_AREA` de Rentas y uno de Ambiente tienen el mismo rol: si el token no dice el área, no podemos darle permisos en M6 solo por ese rol. **3)** ¿El `user_id` del login es el mismo número que el `citizenId`? ¿Y el `USR-M1-14` que usan en `updatedBy.id` de los eventos? ¿Pueden mandarlo como string? Como `bigint`, en JSON pierde precisión por encima de 2^53. **4)** ¿Un usuario puede tener más de un rol? **5)** ¿Qué significa `auth: false`? ¿Un login fallido responde 401 o 200 con `auth: false`? **6)** ¿Quién tiene el rol `SERVICIO`? ¿Es lo mismo que el token de servicio que definió M9? Y aparte: en el catálogo v2 estaban `/refresh` y `/logout`, que no aparecen en este documento. ¿Siguen vigentes?
-
-> Sobre los eventos del mismo documento: **1)** `citizenInfoDelivered` y `organizationInfoDelivered` responden a una consulta de M6, pero no vemos qué evento la dispara ni con qué payload. Hoy no los consumimos; si algún día los necesitamos, ¿cómo se piden? **2)** Siguen en el sobre viejo de M2 (`producer`, `subject`, `eventId` `M1-EVT-…`). El Core fijó el suyo el 7/10 para toda la cohorte (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `sourceModule`, `correlationId`, `causationId`, `data`; sin campos extra). Nuestro inbox rechaza un `correlationId` que no es UUID, como el `M6-REQ-000045` de sus ejemplos. **3)** Sus ejemplos de `updateTicketStatus` de M2 (`COMPLETED`, `UPDATED`, `ADDITIONAL_INFO_REQUIRED`, `statusChangedAt`, `AREA_USER`) son del contrato viejo: vale el de M2 v1.75 (`STARTED`, `PROGRESS`, `INFORMATION_REQUIRED`, `RETURNED`, `RESOLVED`, `REJECTED`; `updatedBy` `EXTERNAL_USER` o `SYSTEM`). **4)** `organizationInfoDelivered` sigue con `cuit: 3311` (parece el `organizationId`) y `status: "ACTIVA"`, mientras `organizationRegistered` dice `ACTIVE`.
-
-**→ M2 (Atención Ciudadana), Issue #170** — *enviado el 20 oct 2026 a las 07:45; M2 respondió el mismo día. Se deja el texto como registro.*
-
-> ¿Un ticket puede derivarse dos veces al mismo módulo, con el mismo `ticketId`, después de una devolución (`RETURNED` → `IN_REVIEW` → `ROUTED`)? Si es así, ¿cómo distinguimos ese segundo `ROUTED` de un reintento del primero?
->
-> Y relacionado (#275): ¿una re-derivación de otro módulo a M6 siempre emite un `ROUTED` nuevo? Si un ticket pasa, por ejemplo, de M3 a M6 sin `ROUTED`, no abrimos expediente y los cambios posteriores de ese ticket terminan en la DLQ del Core.
-
-**→ M7 (Tránsito)** — *respondido el 20/10; superado por la sección del 21/10 (#345)*
-
-> Cuatro puntos del documento «Payloads actualizados Core v4»: (1) Su lista de eventos que reciben de Obras y Ambiente incluye solo `streetClosureRequested`: no figuran `urbanServiceScheduled`, `treePruningScheduled` ni `treeRiskDetected`, que nosotros les enviamos. ¿Los van a consumir? Si no, los sacamos de nuestros destinatarios. (2) Un corte `APPROVED` que nunca se activa pasa a `EXPIRED` **sin publicar nada** de su lado. Lo resolvimos por tiempo: pasados `endDate` + **6 horas de gracia** sin recibir `streetClosureEnded`, lo damos por vencido y dejamos para reprogramar el servicio que dependía. ¿Les sirve esa gracia? ¿Un corte `ACTIVE` publica siempre su `Ended` al vencer `endDate`? (3) Confirmen que publican `streetClosureEnded` bien escrito, porque M3 dice que el catálogo del Core tiene `streetClousureEnded`. (4) `treePruningScheduled` lo emitimos solo cuando el servicio ya tiene cuadrilla y franja, que ustedes exigen.
-
-**→ M4 (Habilitaciones)** — *respondido el 21/10 (ver `m4.md`)*
-
-> Cuatro confirmaciones sobre su contrato de octubre: (1) en `environmentalViolationDetected` mandamos `suggestedAction` con cuatro valores: `WARNING`, `FORMAL_NOTICE`, `FINE`, `CLOSURE`. Su documento lista tres; ¿toleran `FORMAL_NOTICE`? El campo no es vinculante. (2) ¿`commercialFineGenerated` también nos lo rutean a nosotros, o solo `closureUpdate`? (3) ¿`actId` y `externalRef` son el mismo dato? (4) ¿Dejaron de publicar `ticketInProgress`? Aclaración: `sourceViolationId` reproduce exactamente el `violationId` UUID que les mandamos.
-
-## Enviado el 5/10 (M3)
-
-**→ M3 (Infraestructura)** — *enviado el 5 oct 2026, dentro del cierre del contrato*
-
-> En `treeRiskDetected`, `TreeHealthStatus` conserva `WEAKENED` y `DISEASED` como valores separados; no existe `DECLINING` de nuestro lado (ADR-003).
-
-## Enviado hacia el 2/10 (M9)
-
-**→ M9 (Core), datos del broker RabbitMQ** — *enviado hacia el 2 oct 2026, fecha y hora exactas no registradas (el texto se redactó en el commit `c24908a`, 2 oct 2026 08:49)*
-
-> Pedido de los datos para enchufar el bus real, tras el anuncio del 27/09 de que la cohorte pasa de Kafka a RabbitMQ: URL del broker (host, puerto, vhost, TLS), credenciales AMQP de M6 y cómo recibirlas sin pasarlas por el repo, exchange (nombre y tipo, común o por módulo), routing key, nombre de cola, dead-letter exchange con política de reintentos y TTL, tipo de cola y permisos. Además: formato exacto del mensaje, si hay un usuario AMQP por módulo, si hay alternate exchange y un ambiente de prueba compartido con fecha estimada. Aclaraba que sin esos datos M6 arranca igual (outbox + log y la ingesta manual por `POST /events/inbox`).
->
-> **Respuesta de M9:** el 7/10 fijó el contrato de integración para toda la cohorte (exchange `fanout` común `muni.inbox`, una cola por módulo, reintentos a cargo del Core); ver [ADR-007](../decisiones/adr-007-contrato-de-integracion-del-core.md).
->
-> *El texto completo se borró de `devops/MENSAJE-M9-RABBITMQ.md` en [#535](https://github.com/hllous/Backend-M6-DAPS2/issues/535); queda en el historial de git: `git show c24908a:devops/MENSAJE-M9-RABBITMQ.md`.*
